@@ -340,11 +340,6 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
         "anki_miner.gui.widgets.panels.frequency_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda _parent, _title, body, *a, **kw: warnings.append(body),
-    )
     panel = FrequencySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((FreqEntry(source_id="foreign", enabled=True),))
@@ -354,7 +349,7 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
 
     assert panel.get_chain() == ()
     assert payload.read_text(encoding="utf-8") == "foreign"
-    assert any("left untouched" in body for body in warnings)
+    assert "left in place" in panel.issue_banner().current_issue().summary
 
 
 def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monkeypatch):
@@ -406,12 +401,6 @@ def test_add_button_emits_add_requested(qapp, qtbot, tmp_path):
 
 def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, monkeypatch):
     _make_source_on_disk(tmp_path, "jpdb")
-    warned: list[str] = []
-    monkeypatch.setattr(
-        fsp_mod.QMessageBox,
-        "warning",
-        lambda _parent, _title, body, *a, **kw: warned.append(body),
-    )
     panel = FrequencySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((FreqEntry(source_id="jpdb", enabled=True),))
@@ -419,12 +408,12 @@ def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, m
 
     panel.remove(0)
 
-    # Refused: entry kept, dir kept, warning shown.
+    # Refused: entry kept, dir kept, issue reported on the panel itself (D24).
     assert len(panel.get_chain()) == 1
     assert (tmp_path / "jpdb").exists()
-    assert len(warned) == 1
-    assert "Indexed resources are in use" in warned[0]
-    assert all(task in warned[0] for task in ("mining", "startup prewarm", "card backfill"))
+    summary = panel.issue_banner().current_issue().summary
+    assert "Indexed resources are in use" in summary
+    assert all(task in summary for task in ("mining", "startup prewarm", "card backfill"))
 
 
 # ---------------------------------------------------------------------------

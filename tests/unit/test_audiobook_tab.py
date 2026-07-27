@@ -455,26 +455,25 @@ class TestPerItemSignals:
         # The row states the item is running (D31: one word, no live detail).
         assert tab._row_widgets[item_a].state_label.text() == "Running"
 
-    def test_item_progress_determinate(self, tab, tmp_path):
+    def test_item_progress_says_what_the_item_is_doing(self, tab, tmp_path):
         _add_pair(tab, tmp_path)
         tab._on_mine_clicked()
         tab._on_item_started(0)
 
-        tab._on_item_progress(0, "Extracting audio", 42)
+        tab._on_item_progress(0, "Extracting audio")
 
-        assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.progress_bar.value() == 42
         assert "Extracting audio" in tab.progress_widget.status_label.text()
 
-    def test_item_progress_indeterminate(self, tab, tmp_path):
-        _add_pair(tab, tmp_path)
+    def test_item_progress_never_moves_the_queue_bar(self, tab, tmp_path):
+        """D18: the bar counts finished items; a part-done item is not one."""
+        _add_pair(tab, tmp_path, "vol1")
+        _add_pair(tab, tmp_path, "vol2")
         tab._on_mine_clicked()
         tab._on_item_started(0)
 
-        tab._on_item_progress(0, "Fetching definitions", -1)
+        tab._on_item_progress(0, "Fetching definitions")
 
-        assert tab.progress_widget.progress_bar.maximum() == 0  # indeterminate
-        assert "Fetching definitions" in tab.progress_widget.status_label.text()
+        assert tab.progress_widget.progress_bar.value() == 0
 
     def test_item_finished_success_marks_completed(self, tab, tmp_path):
         item = _add_pair(tab, tmp_path)
@@ -658,13 +657,13 @@ class TestWorkerFinished:
         _add_pair(tab, tmp_path)
         tab._on_mine_clicked()
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Extracting", -1)
+        tab._on_item_progress(0, "Extracting")
         tab._on_stop_all_clicked()
         assert tab.stop_button.text() == "Cancelling…"
 
         tab._on_worker_finished()
 
-        assert tab.stop_button.text() == "Stop All"
+        assert tab.stop_button.text() == "Cancel"
         assert tab.stop_button.isEnabled()
         assert tab.progress_widget.progress_bar.maximum() == 100
         assert tab.progress_widget.status_label.text() == "Cancelled"
@@ -756,13 +755,12 @@ class TestRemoveAndClear:
         _add_pair(tab, tmp_path, "vol2")
         tab._on_mine_clicked()
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Extracting audio", 42)
+        tab._on_item_progress(0, "Extracting audio")
 
         tab._on_clear_clicked()
 
+        # The live line survives — Clear did not wipe it.
         assert "Extracting audio" in tab.progress_widget.status_label.text()
-        # Composed whole-run value: item 1 of 2 at 42% -> 21%.
-        assert tab.progress_widget.progress_bar.value() == 21
 
 
 class TestShutdown:

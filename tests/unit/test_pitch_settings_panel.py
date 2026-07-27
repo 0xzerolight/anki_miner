@@ -161,16 +161,6 @@ def test_remove_foreign_dir_is_chain_only(qapp, qtbot, tmp_path, confirm_remove,
     foreign = tmp_path / "foreign"
     foreign.mkdir()
     (foreign / "keep.txt").write_text("user data", encoding="utf-8")
-    warnings: list[tuple] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda *a, **kw: warnings.append(a) or 0,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.pitch_settings_panel.QMessageBox.warning",
-        lambda *a, **kw: warnings.append(a) or 0,
-    )
     panel = PitchSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((PitchSourceEntry("foreign"),), registry_meta={"foreign": _make_meta("foreign")})

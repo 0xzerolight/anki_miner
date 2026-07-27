@@ -29,9 +29,10 @@ from typing import Any, Generic, Literal, TypeVar
 from uuid import uuid4
 
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
+from PyQt6.QtWidgets import QProgressDialog, QWidget
 
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
+from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.gui.workers.base_worker import CancellableWorker, SingleCallWorker
 from anki_miner.gui.workers.import_worker import ImportWorker
 
@@ -130,6 +131,17 @@ class ModalImportFlowMixin:
     _scan_worker: SingleCallWorker | None = None
     _scan_generation: int = 0
     _active_batch_cancel_hook: Callable[[], None] | None = None
+
+    def _report_import_issue(self, summary: str, details: str = "") -> None:
+        """Report an import failure where the user started it (decision D24).
+
+        The owning chain panel when the flow has one — that is where the list
+        and the retry are — otherwise the Settings surface hosting the flow. A
+        modal here stopped a run the user had walked away from; the banner does
+        not, and the raw worker message stays behind Details.
+        """
+        origin = getattr(self, "_panel", None) or self._parent
+        report_screen_issue(origin, ScreenIssue(summary=summary, details=details))
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
         """Toggle import-trigger buttons — provided by the concrete flow."""
@@ -354,7 +366,7 @@ class ModalImportFlowMixin:
         cancel_label: str,
         determinate: bool,
         join_noun: str,
-        failure_title: str,
+        failure_summary: str,
         refusal_message: str,
         cancelling_label: str,
         missing_result_message: str,
@@ -373,7 +385,8 @@ class ModalImportFlowMixin:
                 positive total or an indeterminate ``(0, 0)`` range for zero.
             join_noun: Plain-English noun for the predecessor-refusal warning log
                 (e.g. ``"frequency import worker"``) — not user-facing.
-            failure_title: Translated title for the terminal failure dialog.
+            failure_summary: Translated sentence shown when the import fails.
+                A banner summary, so no path and no exception text (D24).
             refusal_message: Translated warning shown when an earlier import
                 worker is still finishing.
             cancelling_label: Translated locked-state label shown after cancel.
@@ -386,7 +399,7 @@ class ModalImportFlowMixin:
                 exception raised after the worker imported successfully.
         """
         if self._join_active_import_worker(join_noun) is not None:
-            QMessageBox.warning(self._parent, failure_title, refusal_message)
+            self._report_import_issue(refusal_message)
             worker.deleteLater()
             self._set_import_buttons_enabled(True)
             return
@@ -429,11 +442,11 @@ class ModalImportFlowMixin:
                         if on_success_error is not None:
                             on_success_error(exc)
                         else:
-                            QMessageBox.warning(self._parent, failure_title, str(exc))
+                            self._report_import_issue(failure_summary, str(exc))
                 elif state.kind == "failed":
-                    QMessageBox.warning(self._parent, failure_title, state.error or missing_result_message)
+                    self._report_import_issue(failure_summary, state.error or missing_result_message)
                 elif state.kind is None:
-                    QMessageBox.warning(self._parent, failure_title, missing_result_message)
+                    self._report_import_issue(missing_result_message)
                 # Cancellation intentionally closes silently.
 
             self._finish_modal_import_dialog(
@@ -490,7 +503,7 @@ class ModalImportFlowMixin:
         cancelling_label: str,
         determinate: bool,
         join_noun: str,
-        failure_title: str,
+        failure_summary: str,
         missing_result_message: str,
         trace_id: str,
         on_finished: Callable[[_ChainedImportResult[_JobT]], None],
@@ -545,7 +558,7 @@ class ModalImportFlowMixin:
                 if on_finished_error is not None:
                     on_finished_error(exc, result)
                 else:
-                    QMessageBox.warning(self._parent, failure_title, str(exc))
+                    self._report_import_issue(failure_summary, str(exc))
 
             self._finish_modal_import_dialog(
                 state=state,

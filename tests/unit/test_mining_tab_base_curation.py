@@ -1,16 +1,24 @@
-"""MiningTabBase curation bridge guards (Issue #60)."""
+"""MiningTabBase curation bridge guards (Issue #60).
+
+The curator is presented with ``show()``, not ``exec()`` (decision D33), so the
+fakes here are real ``QDialog`` subclasses: they carry real ``finished`` /
+``destroyed`` signals, which is what the tab's resolver listens to. A fake with
+only an ``exec()`` method would never resolve and every test would hang at the
+gate. The window-lifecycle contract itself lives in
+``test_mining_tab_base_curation_window.py``; this file keeps the surrounding
+bridge guards.
+"""
 
 import contextlib
 import threading
 import time
 from unittest.mock import Mock, patch
 
-from PyQt6.QtCore import Qt, QThread, QTimer
+from PyQt6.QtCore import Qt, QThread
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QDialog
 
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
@@ -35,6 +43,43 @@ class _CurationWorker(QThread):
     def run(self):
         self.thread_obj = QThread.currentThread()
         self.result = self._tab._curation_bridge(self._words)
+
+
+def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
+    """Build a real-``QDialog`` curator stand-in plus its instance list.
+
+    ``decision`` of ``"accept"``/``"reject"`` self-resolves the moment the tab
+    shows the window, which is the closest analogue of the old inline ``exec()``
+    for tests that only care what the tab does with the answer. ``"wait"``
+    leaves it open so the test can drive Cancel/close/shutdown itself.
+    """
+    created: list = []
+
+    class _FakeCurationDialog(QDialog):
+        def __init__(self, words, parent=None, **kwargs):
+            super().__init__(parent)
+            self.words = list(words)
+            self.kwargs = kwargs
+            self.shown_on = None
+            self.deleted_later = False
+            created.append(self)
+
+        def show(self):
+            self.shown_on = QThread.currentThread()
+            super().show()
+            if decision == "accept":
+                self.accept()
+            elif decision == "reject":
+                self.reject()
+
+        def get_selected_words(self):
+            return list(selection)
+
+        def deleteLater(self):  # noqa: N802
+            self.deleted_later = True
+            super().deleteLater()
+
+    return _FakeCurationDialog, created
 
 
 def _drain_until(predicate, timeout_ms=3000, step_ms=10):
@@ -110,10 +155,11 @@ def test_matching_token_build_callback_pops_dialog(qapp, qtbot):
     tab._curation_live_token = 5
     tab._curation_event.clear()
 
-    with patch(f"{MODULE}.WordCurationDialog") as dlg:
+    cls, created = _fake_dialog_cls()
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._show_curation_dialog(["w"], None, None, 5)
 
-    dlg.assert_called_once()
+    assert len(created) == 1
     assert tab._curation_event.is_set()
 
 
@@ -129,82 +175,43 @@ def test_curation_bridge_delivers_dialog_on_gui_thread(qapp, qtbot):
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
-    recorded = {}
-
-    class _FakeDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def exec(self):
-            recorded["dialog_thread"] = QThread.currentThread()
-            return WordCurationDialog.DialogCode.Accepted
-
-        def get_selected_words(self):
-            return ["picked"]
-
-        def deleteLater(self):  # noqa: N802
-            pass
-
+    cls, created = _fake_dialog_cls()
     worker = _CurationWorker(tab, ["w1", "w2"])
-    with patch(f"{MODULE}.WordCurationDialog", _FakeDialog):
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         worker.start()
         assert _drain_until(worker.isFinished), "worker did not finish — bridge hung"
     worker.wait()
 
     # Dialog ran on the GUI thread, NOT the worker thread.
-    assert recorded["dialog_thread"] is qapp.thread()
-    assert recorded["dialog_thread"] is not worker.thread_obj
+    assert created[0].shown_on is qapp.thread()
+    assert created[0].shown_on is not worker.thread_obj
     # Worker unblocked and received the GUI's selection.
     assert worker.result == ["picked"]
 
 
 def test_cancel_during_active_dialog_releases_worker(qapp, qtbot):
-    """Cancelling while the dialog is open must reject it and unblock the worker.
+    """Cancelling while the window is open must reject it and unblock the worker.
 
-    The fake dialog's exec spins the event loop (like a real modal) until a
-    scheduled _cancel_active_curation_dialog rejects it; the worker then resumes
-    with ``None`` — the orchestrator's cancelled-result contract (distinct from
-    an empty list, which means "confirmed with nothing selected").
+    Non-modal presentation means the GUI thread is free while the curator sits
+    open, so the cancel is simply issued from the test once the window exists;
+    the worker then resumes with ``None`` — the orchestrator's cancelled-result
+    contract (distinct from an empty list, "confirmed with nothing selected").
     """
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
-    state = {"rejected": False, "thread": None}
-
-    class _BlockingFakeDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def exec(self):
-            state["thread"] = QThread.currentThread()
-            while not state["rejected"]:
-                QApplication.processEvents()
-            return WordCurationDialog.DialogCode.Rejected
-
-        def reject(self):
-            state["rejected"] = True
-
-        def get_selected_words(self):  # pragma: no cover - not reached on reject
-            return ["should-not-be-used"]
-
-        def deleteLater(self):  # noqa: N802
-            pass
-
+    cls, created = _fake_dialog_cls(decision="wait")
     worker = _CurationWorker(tab, ["w1"])
-    with patch(f"{MODULE}.WordCurationDialog", _BlockingFakeDialog):
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         worker.start()
-        # Fire the cancel from the GUI thread once the dialog is up (timer is
-        # serviced by the exec() processEvents spin).
-        QTimer.singleShot(100, tab._cancel_active_curation_dialog)
+        assert _drain_until(lambda: bool(created)), "curation window never opened"
+        assert not worker.isFinished(), "worker released before the user decided"
+        tab._cancel_active_curation_dialog()
         assert _drain_until(worker.isFinished), "worker did not finish after cancel"
     worker.wait()
 
-    assert state["thread"] is qapp.thread()
+    assert created[0].shown_on is qapp.thread()
     assert worker.result is None  # cancelled → None (distinct from empty selection)
 
 
@@ -283,59 +290,33 @@ def test_on_curation_requested_after_poison_releases_without_dialog(qapp, qtbot)
 
 
 def test_on_curation_requested_schedules_dialog_delete_later(qapp, qtbot):
-    """OVH-016: after exec() the dialog is scheduled for deletion via deleteLater()
-    so its Qt widget tree (table, player stack) is freed deterministically instead
-    of accumulating per-session until Python GC."""
+    """OVH-016: once the decision is in, the window is scheduled for deletion via
+    deleteLater() so its Qt widget tree (table, player stack) is freed
+    deterministically instead of accumulating per-session until Python GC."""
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
-    delete_later_called = []
-
-    class _FakeDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def exec(self):
-            return WordCurationDialog.DialogCode.Accepted
-
-        def get_selected_words(self):
-            return []
-
-        def deleteLater(self):  # noqa: N802
-            delete_later_called.append(True)
-
-    with patch(f"{MODULE}.WordCurationDialog", return_value=_FakeDialog()):
+    cls, created = _fake_dialog_cls(selection=())
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._on_curation_requested(["w1"])
-        assert _drain_until(lambda: bool(delete_later_called)), "deleteLater() not called (off-thread)"
+        assert _drain_until(lambda: bool(created) and created[0].deleted_later), "deleteLater() not called"
 
-    assert delete_later_called, "deleteLater() was not called on the curation dialog"
+    assert created[0].deleted_later, "deleteLater() was not called on the curation window"
 
 
 def test_on_curation_requested_schedules_delete_later_on_reject(qapp, qtbot):
-    """deleteLater must also be called when the dialog is rejected (None result)."""
+    """deleteLater must also be called when the window is rejected (None result)."""
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
-    delete_later_called = []
-
-    class _FakeDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def exec(self):
-            return WordCurationDialog.DialogCode.Rejected
-
-        def get_selected_words(self):  # pragma: no cover
-            return []
-
-        def deleteLater(self):  # noqa: N802
-            delete_later_called.append(True)
-
-    with patch(f"{MODULE}.WordCurationDialog", return_value=_FakeDialog()):
+    cls, created = _fake_dialog_cls(decision="reject")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._on_curation_requested(["w1"])
-        assert _drain_until(lambda: bool(delete_later_called)), "deleteLater() not called (off-thread)"
+        assert _drain_until(lambda: bool(created) and created[0].deleted_later), "deleteLater() not called"
 
-    assert delete_later_called, "deleteLater() must be called on rejection too"
+    assert created[0].deleted_later, "deleteLater() must be called on rejection too"
 
 
 # ---------------------------------------------------------------------------
@@ -365,31 +346,14 @@ def test_build_curation_context_runs_off_gui_thread(qapp, qtbot):
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
 
-    dialog_thread: dict = {}
-
-    class _FakeDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def exec(self):
-            dialog_thread["id"] = threading.get_ident()
-            return WordCurationDialog.DialogCode.Rejected
-
-        def get_selected_words(self):  # pragma: no cover
-            return []
-
-        def deleteLater(self):  # noqa: N802
-            pass
-
-    with patch(f"{MODULE}.WordCurationDialog", _FakeDialog):
+    cls, created = _fake_dialog_cls(decision="reject")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._on_curation_requested(["w1"])
         assert _drain_until(tab._curation_event.is_set), "event never set"
 
-    # Build ran off the GUI thread; the dialog ran ON the GUI thread.
+    # Build ran off the GUI thread; the window was shown ON the GUI thread.
     assert build_thread["id"] != threading.get_ident()
-    assert dialog_thread["id"] == threading.get_ident()
+    assert created[0].shown_on is qapp.thread()
 
 
 def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtbot):
@@ -432,27 +396,6 @@ def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtb
 # ---------------------------------------------------------------------------
 
 
-def _reject_dialog_cls():
-    """A fake WordCurationDialog whose exec() rejects (Cancel / window-X / Esc)."""
-
-    class _RejectDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def exec(self):
-            return WordCurationDialog.DialogCode.Rejected
-
-        def get_selected_words(self):  # pragma: no cover - not consumed on reject
-            return ["should-not-be-used"]
-
-        def deleteLater(self):  # noqa: N802
-            pass
-
-    return _RejectDialog
-
-
 def test_reject_cancels_running_worker(qapp, qtbot):
     """A user reject cancels the running worker so the queue loop's between-items
     _cancel_event check stops the run instead of re-popping the curator per item."""
@@ -461,7 +404,8 @@ def test_reject_cancels_running_worker(qapp, qtbot):
     tab._init_curation_bridge()
     tab.worker_thread = Mock()  # _Bare has no worker; a queue tab supplies one
 
-    with patch(f"{MODULE}.WordCurationDialog", _reject_dialog_cls()):
+    cls, _created = _fake_dialog_cls(decision="reject")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._show_curation_dialog(["w1"], None, None)
 
     tab.worker_thread.cancel.assert_called_once()
@@ -481,22 +425,8 @@ def test_empty_accept_continues_without_cancel(qapp, qtbot):
     tab._init_curation_bridge()
     tab.worker_thread = Mock()
 
-    class _EmptyAcceptDialog:
-        DialogCode = WordCurationDialog.DialogCode
-
-        def __init__(self, *args, **kwargs):
-            pass
-
-        def exec(self):
-            return WordCurationDialog.DialogCode.Accepted
-
-        def get_selected_words(self):
-            return []  # confirmed, nothing selected
-
-        def deleteLater(self):  # noqa: N802
-            pass
-
-    with patch(f"{MODULE}.WordCurationDialog", _EmptyAcceptDialog):
+    cls, _created = _fake_dialog_cls(selection=())
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._show_curation_dialog(["w1"], None, None)
 
     tab.worker_thread.cancel.assert_not_called()
@@ -511,7 +441,8 @@ def test_reject_without_worker_thread_does_not_raise(qapp, qtbot):
     tab._init_curation_bridge()
     assert getattr(tab, "worker_thread", "MISSING") == "MISSING"  # no such attr
 
-    with patch(f"{MODULE}.WordCurationDialog", _reject_dialog_cls()):
+    cls, _created = _fake_dialog_cls(decision="reject")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
         tab._show_curation_dialog(["w1"], None, None)  # must not raise
 
     assert tab._curation_result is None

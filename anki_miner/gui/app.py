@@ -484,6 +484,7 @@ def _wire_presenter(window: "MainWindow", presenter: "GUIPresenter") -> None:
     presenter.warning_signal.connect(window._on_warning_message)
     presenter.error_signal.connect(window._on_error_message)
     presenter.processing_result_signal.connect(window._on_processing_result)
+    presenter.run_details_signal.connect(window._on_run_details)
 
 
 def register_mining_tab(

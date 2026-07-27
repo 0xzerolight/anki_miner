@@ -28,7 +28,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -37,8 +36,9 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.constants import VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.services.asr import _engine, model_manager
@@ -89,6 +89,7 @@ class SubtitleCreationTab(_ToolTabBase):
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
+            run_problem=self.tr("Some files could not be transcribed."),
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
@@ -140,6 +141,7 @@ class SubtitleCreationTab(_ToolTabBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
     def _create_input_section(self) -> QFrame:
         group = QFrame()
@@ -158,12 +160,10 @@ class SubtitleCreationTab(_ToolTabBase):
         layout.addLayout(lang_row)
 
         # Engine notice (shown when engine unavailable)
+        # The destination named here has to be the real one: the page this
+        # sentence used to send people to does not exist (D24, string 1).
         self.engine_notice_label = QLabel(
-            self.tr(
-                "ASR engine not available. "
-                "Install the [asr] extra (faster-whisper + ctranslate2) and "
-                "download a model in Settings → ASR to enable subtitle generation."
-            )
+            self.tr("Transcription is not ready. Open Settings → Transcription & Alignment to finish setup.")
         )
         self.engine_notice_label.setObjectName("helper-text")
         self.engine_notice_label.setWordWrap(True)
@@ -362,16 +362,19 @@ class SubtitleCreationTab(_ToolTabBase):
 
         # Model-downloaded guard
         if not model_manager.is_downloaded(self.config.asr_model, self.config.asr_models_root):
-            QMessageBox.warning(
-                self,
-                self.tr("Model Not Downloaded"),
-                tr_format(
-                    self.tr(
-                        "The selected ASR model (%1) has not been downloaded yet.\n"
-                        "Go to Settings → ASR to download it before generating subtitles."
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=tr_format(
+                        self.tr(
+                            "The transcription model %1 is not installed. "
+                            "Open Settings → Transcription & Alignment to install it."
+                        ),
+                        self.config.asr_model,
                     ),
-                    self.config.asr_model,
+                    action_id="settings.subtitles",
+                    action_text=self.tr("Open Transcription Settings"),
                 ),
+                action=lambda: reveal_settings(self, "subtitles"),
             )
             return
 
@@ -411,47 +414,29 @@ class SubtitleCreationTab(_ToolTabBase):
         if not self.file_selector.isHidden():
             path_str = self.file_selector.path_or_none()
             if path_str is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No File Selected"),
-                    self.tr("Select a video file before generating subtitles."),
-                )
+                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file before generating subtitles.")))
                 return []
             p = Path(path_str)
             if not p.is_file():
-                QMessageBox.warning(
-                    self,
-                    self.tr("File Not Found"),
-                    self.tr("Video file not found: ") + path_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That video file no longer exists."), details=path_str)
                 )
                 return []
             return [p]
         else:
             path_str = self.folder_selector.path_or_none()
             if path_str is None:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Folder Selected"),
-                    self.tr("Select a folder before generating subtitles."),
-                )
+                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a folder before generating subtitles.")))
                 return []
             folder = Path(path_str)
             if not folder.is_dir():
-                QMessageBox.warning(
-                    self,
-                    self.tr("Folder Not Found"),
-                    self.tr("Folder not found: ") + path_str,
-                )
+                self.show_screen_issue(ScreenIssue(summary=self.tr("That folder no longer exists."), details=path_str))
                 return []
             files = sorted(
                 f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
             )
             if not files:
-                QMessageBox.warning(
-                    self,
-                    self.tr("No Video Files"),
-                    self.tr("No video files found in the selected folder."),
-                )
+                self.show_screen_issue(ScreenIssue(summary=self.tr("No video files were found in that folder.")))
                 return []
             return files
 

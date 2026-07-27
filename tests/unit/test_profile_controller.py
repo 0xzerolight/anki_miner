@@ -33,7 +33,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
@@ -173,9 +172,12 @@ def theme_applies(monkeypatch, qapp):
 
 @pytest.fixture(autouse=True)
 def warnings_shown(monkeypatch):
-    """Capture the refusal dialogs (the fake window is not a QWidget parent)."""
+    """Capture the refusals, now reported as screen issues (D24)."""
     shown: list[str] = []
-    monkeypatch.setattr(QMessageBox, "warning", lambda parent, title, text, *a, **k: shown.append(text))
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.profile_controller.report_screen_issue",
+        lambda origin, issue: shown.append(issue.summary) or True,
+    )
     return shown
 
 
@@ -525,7 +527,7 @@ class TestSwitchRefusals:
 
         assert window.header.last_active_id == "a"
 
-    def test_a_refusal_surfaces_a_dialog(self, controller, window, profile_a, profile_b, warnings_shown):
+    def test_a_refusal_is_reported_on_the_window(self, controller, window, profile_a, profile_b, warnings_shown):
         _two_profiles(profile_a, profile_b)
         window.resources_ready = False
 
@@ -1236,7 +1238,7 @@ class TestCreateFromCurrent:
         assert ProfileStore.read_profile("a").anki_deck_name == "Deck A edited"
         assert window.header.last_active_id == "anime"
 
-    def test_a_duplicate_name_is_refused_with_a_dialog(self, controller, profile_a, warnings_shown):
+    def test_a_duplicate_name_is_refused_and_reported(self, controller, profile_a, warnings_shown):
         _seed("a", profile_a, "A")
         _activate("a", profile_a)
 

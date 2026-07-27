@@ -159,16 +159,12 @@ class PitchImportFlow(ModalImportFlowMixin):
             )
 
         def on_success_error(exc: Exception) -> None:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("PitchImportFlow", "Configuration Update Failed"),
-                tr_format(
-                    QCoreApplication.translate(
-                        "PitchImportFlow",
-                        "Import completed, but the configuration update failed: %1",
-                    ),
-                    str(exc),
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "PitchImportFlow",
+                    "The import finished, but the settings could not be updated.",
                 ),
+                str(exc),
             )
 
         self._run_modal_import(
@@ -177,7 +173,7 @@ class PitchImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("PitchImportFlow", "Cancel"),
             determinate=False,
             join_noun="pitch import worker",
-            failure_title=QCoreApplication.translate("PitchImportFlow", "Import Failed"),
+            failure_summary=QCoreApplication.translate("PitchImportFlow", "The pitch source could not be imported."),
             refusal_message=QCoreApplication.translate(
                 "PitchImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),
@@ -229,9 +225,8 @@ class PitchImportFlow(ModalImportFlowMixin):
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("PitchImportFlow", "Scan Failed"),
+                self._report_import_issue(
+                    QCoreApplication.translate("PitchImportFlow", "That folder could not be scanned."),
                     message,
                 )
 
@@ -257,9 +252,7 @@ class PitchImportFlow(ModalImportFlowMixin):
         # metadata falls back to the stable source id instead of the persisted
         # copy's generic "source" stem.
         if not self._panel.request_resource_release():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("PitchImportFlow", "Re-import Blocked"),
+            self._report_import_issue(
                 QCoreApplication.translate(
                     "PitchImportFlow",
                     "Indexed resources are in use by mining, startup prewarm, or card backfill. "
@@ -303,7 +296,7 @@ class PitchImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("PitchImportFlow", "Cancel"),
             determinate=False,
             join_noun="pitch import worker",
-            failure_title=QCoreApplication.translate("PitchImportFlow", "Re-import Failed"),
+            failure_summary=QCoreApplication.translate("PitchImportFlow", "The pitch source could not be re-imported."),
             refusal_message=QCoreApplication.translate(
                 "PitchImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),

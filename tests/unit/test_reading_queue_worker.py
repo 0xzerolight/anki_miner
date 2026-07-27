@@ -387,14 +387,17 @@ def test_progress_callback_routes_to_item_progress_signal(make_worker, mock_proc
     worker.run()
 
     cb = captured_cb[0]
+    cb.on_stage(4, 5, "Fetching definitions")
     cb.on_start(10, "Fetching definitions")
     cb.on_progress(5, "word-05")
     cb.on_complete()
 
+    # Text only, with a true within-stage count. A stage ending is not the item
+    # ending, so on_complete says nothing.
     assert caps["progress"].calls == [
-        (0, "Fetching definitions", 0),
-        (0, "word-05", 50),
-        (0, "Complete", 100),
+        (0, "Stage 4 of 5 · Fetching definitions"),
+        (0, "Stage 4 of 5 · Fetching definitions"),
+        (0, "Stage 4 of 5 · Fetching definitions · word-05 (5 of 10)"),
     ]
 
 

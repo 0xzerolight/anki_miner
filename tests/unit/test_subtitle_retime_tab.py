@@ -260,10 +260,9 @@ def test_single_mode_missing_subtitle_warns(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.video_file_selector.set_path(str(video))
 
-    with patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as warn:
-        pairs = tab._collect_pairs()
+    pairs = tab._collect_pairs()
 
-    warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     assert pairs == []
 
 
@@ -276,10 +275,9 @@ def test_single_mode_missing_video_warns(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.subtitle_file_selector.set_path(str(sub))
 
-    with patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as warn:
-        pairs = tab._collect_pairs()
+    pairs = tab._collect_pairs()
 
-    warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     assert pairs == []
 
 
@@ -401,13 +399,10 @@ def test_folder_mode_no_pairs_warns(qtbot, tmp_path):
     tab.video_folder_selector.set_path(str(video_folder))
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
-    with (
-        patch(_FIND_PAIRS, return_value=[]),
-        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as warn,
-    ):
+    with patch(_FIND_PAIRS, return_value=[]):
         pairs = tab._collect_pairs()
 
-    warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     assert pairs == []
 
 
@@ -417,10 +412,9 @@ def test_folder_mode_missing_video_folder_warns(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.folder_mode_button.click()
 
-    with patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as warn:
-        pairs = tab._collect_pairs()
+    pairs = tab._collect_pairs()
 
-    warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     assert pairs == []
 
 
@@ -909,8 +903,7 @@ def test_on_retime_uses_cached_availability_without_reprobe(qtbot, tmp_path):
         assert which.call_count == 1
         # No files selected -> _on_retime bails after the (cached) guard, no re-probe.
         # Patch the no-files warning modal so it does not block under offscreen Qt.
-        with patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning"):
-            tab._on_retime()
+        tab._on_retime()
         assert which.call_count == 1
 
 
@@ -940,12 +933,9 @@ def test_tracks_clicked_warns_when_no_video(qtbot, tmp_path):
     """No video selected -> warning, ffprobe never runs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.video_file_selector.set_path("")
-    with (
-        patch(_LIST_STREAMS) as mock_list,
-        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as mock_warn,
-    ):
+    with patch(_LIST_STREAMS) as mock_list:
         tab._on_tracks_clicked()
-    mock_warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     mock_list.assert_not_called()
 
 
@@ -953,12 +943,9 @@ def test_tracks_clicked_warns_when_video_missing(qtbot, tmp_path):
     """Selected video path that is not a file -> warning, ffprobe never runs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.video_file_selector.set_path(str(tmp_path / "nope.mkv"))
-    with (
-        patch(_LIST_STREAMS) as mock_list,
-        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as mock_warn,
-    ):
+    with patch(_LIST_STREAMS) as mock_list:
         tab._on_tracks_clicked()
-    mock_warn.assert_called_once()
+    assert tab.issue_banner().current_issue() is not None
     mock_list.assert_not_called()
 
 
@@ -1095,10 +1082,9 @@ def test_tracks_probe_error_is_handled(qtbot, tmp_path):
     with (
         patch(_LIST_STREAMS, side_effect=RuntimeError("ffprobe boom")),
         patch(_TRACKS_DIALOG) as mock_class,
-        patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.warning") as mock_warn,
     ):
         tab._on_tracks_clicked()
-        qtbot.waitUntil(lambda: mock_warn.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
     mock_class.assert_not_called()
     assert tab.tracks_button.isEnabled()

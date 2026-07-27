@@ -105,6 +105,17 @@ class TestItNeverInventsAPercentage:
         assert "Extracting media" in bar.task_button.text()
         assert "%" not in bar.task_button.text()
 
+    def test_a_cancelling_run_says_so_instead_of_a_percentage(self, bar, registry):
+        """The percentage stops being true the moment the run is being abandoned."""
+        handle = registry.start(_spec(), now=0.0)
+        handle.count(current=17, total=100, detail="", now=1.0)
+
+        handle.cancelling(now=2.0)
+
+        text = bar.task_button.text()
+        assert "Cancelling…" in text
+        assert "17%" not in text
+
     def test_a_bare_task_is_still_named(self, bar, registry):
         registry.start(_spec(), now=0.0)
 

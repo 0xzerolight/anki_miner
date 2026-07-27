@@ -157,19 +157,21 @@ class TestItemSlots:
         tab._on_item_started(0)
         assert "Mining pasted text" in tab.overall_progress_widget.status_label.text()
 
-    def test_item_progress_drives_bar(self, tab):
+    def test_item_progress_updates_the_line_only(self, tab):
+        """D18: the bar counts finished items; a part-done item is not one."""
         _mine(tab)
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Definitions", 50)
-        assert tab.overall_progress_widget.progress_bar.value() == 50
+        tab._on_item_progress(0, "Definitions")
+        assert tab.overall_progress_widget.progress_bar.value() == 0
+        assert "Definitions" in tab.overall_progress_widget.status_label.text()
 
-    def test_item_progress_negative_pct_holds_bar(self, tab):
+    def test_item_progress_never_starts_a_marquee(self, tab):
         _mine(tab)
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Working", 50)
-        before = tab.overall_progress_widget.progress_bar.value()
-        tab._on_item_progress(0, "Still working", -1)
-        assert tab.overall_progress_widget.progress_bar.value() == before
+        tab._on_item_progress(0, "Working")
+        tab._on_item_progress(0, "Still working")
+        assert tab.overall_progress_widget.progress_bar.maximum() == 100
+        assert "Still working" in tab.overall_progress_widget.status_label.text()
 
     def test_item_finished_success_logs_and_forwards(self, tab):
         _mine(tab)

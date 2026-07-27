@@ -15,6 +15,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 
 MOD = "anki_miner.gui.controllers.dictionary_import_flow"
+COMMON = "anki_miner.gui.controllers.import_flow_common"
 
 
 def _run_scan_sync(work, on_done, on_error):
@@ -87,12 +88,12 @@ def test_unrelated_saved_zip_is_not_pinned_to_slot(tmp_path: Path):
     flow = _make_flow(dicts_root)
 
     with (
-        patch(f"{MOD}.QMessageBox.warning") as warning,
+        patch(f"{COMMON}.report_screen_issue") as reported,
         patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
     ):
         flow.reimport_dict("expected")
 
-    warning.assert_called_once()
+    reported.assert_called_once()
     yomitan.assert_not_called()
     assert source_zip.is_file()
 
@@ -160,14 +161,14 @@ def test_reimport_without_recoverable_source_reports_dialog(tmp_path: Path):
     flow = _make_flow(tmp_path / "dicts")
 
     with (
-        patch(f"{MOD}.QMessageBox.warning") as warning,
+        patch(f"{COMMON}.report_screen_issue") as reported,
         patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
         patch(f"{MOD}.ImportWorker.for_jmdict_repair") as jmdict,
     ):
         flow.reimport_dict("broken")
 
-    warning.assert_called_once()
-    assert "recoverable source" in warning.call_args.args[2].lower()
+    reported.assert_called_once()
+    assert "recoverable source" in reported.call_args.args[1].summary.lower()
     yomitan.assert_not_called()
     jmdict.assert_not_called()
 
@@ -204,14 +205,17 @@ def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wir
             patch("anki_miner.gui.controllers.import_flow_common.QProgressDialog", return_value=dialog),
             patch("anki_miner.gui.controllers.import_flow_common.QTimer", return_value=MagicMock()),
             patch(f"{MOD}.QMessageBox.information") as info,
-            patch(f"{MOD}.QMessageBox.warning", side_effect=lambda *a, **k: events.append("warning")) as warning,
+            patch(
+                f"{COMMON}.report_screen_issue",
+                side_effect=lambda *a, **k: events.append("warning"),
+            ) as reported,
         ):
             flow.add_dict()
             worker.import_finished.connect.call_args[0][0]("promoted", {"entry_count": 7})
 
             assert events == []
             assert info.call_count == 0
-            assert warning.call_count == 0
+            assert reported.call_count == 0
 
             worker.finished.connect.call_args[0][0]()
     finally:
@@ -219,11 +223,11 @@ def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wir
 
     assert events == ["chain", "persist", "warning"]
     assert info.call_count == 0
-    assert warning.call_count == 1
-    warning_text = warning.call_args.args[2].lower()
-    assert "import completed" in warning_text
-    assert "configuration update failed" in warning_text
-    assert "disk full" in warning_text
+    assert reported.call_count == 1
+    issue = reported.call_args.args[1]
+    assert issue.summary == "The import finished, but the settings could not be updated."
+    assert "disk full" not in issue.summary, "the exception belongs in Details (D24)"
+    assert "disk full" in issue.details
     assert flow._panel._add_btn.isEnabled()
 
 

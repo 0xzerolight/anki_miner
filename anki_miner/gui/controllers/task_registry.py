@@ -75,6 +75,10 @@ class TaskSnapshot:
     run_token: int
     is_running: bool
     outcome: TaskOutcome | None
+    #: Cancel has been requested and the worker has not stopped yet. Still
+    #: running: a run is not over until it actually ends, and pretending
+    #: otherwise is how a cancel comes to look like a hang.
+    cancelling: bool
     stage_index: int | None
     stage_total: int | None
     stage_name: str
@@ -83,6 +87,9 @@ class TaskSnapshot:
     detail: str
     elapsed_s: float
     no_update_age_s: float
+    #: How long the cancel has been waiting. Views use it to decide when the
+    #: wait has gone on long enough to be worth naming.
+    cancelling_age_s: float
 
     @property
     def fraction(self) -> float | None:
@@ -113,6 +120,19 @@ class TaskHandle:
         """Report real counts. ``total`` stays None when none genuinely exists."""
         self._registry._write(self, now, current=current, total=total, detail=detail, moved=True)
 
+    def cancelling(self, now: float | None = None) -> None:
+        """Record that Cancel was pressed and the run has not stopped yet.
+
+        From here on the registry stops accepting numeric position: the moment
+        cancellation is requested the app can no longer vouch for where the run
+        will get to, so it freezes what it last knew rather than continuing to
+        publish figures it is about to abandon. Words still get through, and the
+        clock keeps running so the wait reads as a wait.
+
+        Idempotent: pressing Cancel again does not restart the wait.
+        """
+        self._registry._begin_cancelling(self, now)
+
     def finish(self, outcome: TaskOutcome, now: float | None = None) -> None:
         """Mark the run terminal, keeping its counts for the receipt."""
         self._registry._finish(self, outcome, now)
@@ -130,6 +150,7 @@ class TaskRegistry(QObject):
         self._order: list[str] = []
         self._started_at: dict[str, float] = {}
         self._last_move_at: dict[str, float] = {}
+        self._cancelling_at: dict[str, float] = {}
         self._next_token = 0
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_INTERVAL_MS)
@@ -149,6 +170,7 @@ class TaskRegistry(QObject):
             run_token=token,
             is_running=True,
             outcome=None,
+            cancelling=False,
             stage_index=None,
             stage_total=None,
             stage_name="",
@@ -157,9 +179,11 @@ class TaskRegistry(QObject):
             detail="",
             elapsed_s=0.0,
             no_update_age_s=0.0,
+            cancelling_age_s=0.0,
         )
         self._started_at[spec.task_id] = moment
         self._last_move_at[spec.task_id] = moment
+        self._cancelling_at.pop(spec.task_id, None)
         if spec.task_id not in self._order:
             self._order.append(spec.task_id)
 
@@ -188,10 +212,12 @@ class TaskRegistry(QObject):
         for task_id, snap in list(self._snapshots.items()):
             if not snap.is_running:
                 continue
+            cancelling_at = self._cancelling_at.get(task_id)
             self._snapshots[task_id] = replace(
                 snap,
                 elapsed_s=moment - self._started_at[task_id],
                 no_update_age_s=moment - self._last_move_at[task_id],
+                cancelling_age_s=0.0 if cancelling_at is None else moment - cancelling_at,
             )
             self.snapshot_changed.emit(task_id)
 
@@ -202,6 +228,26 @@ class TaskRegistry(QObject):
         """Stop the tick. The registry holds nothing else that needs releasing."""
         self._timer.stop()
 
+    #: Position fields dropped once a cancel is in flight. Everything else --
+    #: notably ``detail`` and ``stage_name`` -- keeps flowing, because words
+    #: about what the run is waiting on are not a claim about how far it will get.
+    _FROZEN_ON_CANCEL = ("current", "total", "stage_index", "stage_total")
+
+    def _begin_cancelling(self, handle: TaskHandle, now: float | None) -> None:
+        snap = self._snapshots.get(handle.task_id)
+        if snap is None or snap.run_token != handle.run_token or not snap.is_running:
+            return
+        moment = self._now(now)
+        # Pressing Cancel again republishes the wait; it does not restart it.
+        started = self._cancelling_at.setdefault(handle.task_id, moment)
+        self._snapshots[handle.task_id] = replace(
+            snap,
+            cancelling=True,
+            elapsed_s=moment - self._started_at[handle.task_id],
+            cancelling_age_s=moment - started,
+        )
+        self.snapshot_changed.emit(handle.task_id)
+
     def _write(self, handle: TaskHandle, now: float | None, *, moved: bool, **fields) -> None:
         snap = self._snapshots.get(handle.task_id)
         if snap is None or snap.run_token != handle.run_token or not snap.is_running:
@@ -211,10 +257,15 @@ class TaskRegistry(QObject):
         if moved:
             self._last_move_at[handle.task_id] = moment
 
+        if snap.cancelling:
+            fields = {k: v for k, v in fields.items() if k not in self._FROZEN_ON_CANCEL}
+
+        cancelling_at = self._cancelling_at.get(handle.task_id)
         self._snapshots[handle.task_id] = replace(
             snap,
             elapsed_s=moment - self._started_at[handle.task_id],
             no_update_age_s=0.0 if moved else snap.no_update_age_s,
+            cancelling_age_s=0.0 if cancelling_at is None else moment - cancelling_at,
             **fields,
         )
         self.snapshot_changed.emit(handle.task_id)

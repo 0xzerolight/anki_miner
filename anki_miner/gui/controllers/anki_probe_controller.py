@@ -16,9 +16,10 @@ from dataclasses import replace
 
 from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QMessageBox, QWidget
+from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker, FetchNotetypesWorker
@@ -192,6 +193,16 @@ class AnkiProbeController:
         self._anki_panel.set_fetch_fields_button_enabled(True)
         self._anki_panel.set_notetype_status(False, message)
 
+    def _report(self, summary: str, details: str = "") -> None:
+        """Report a probe failure on the Settings page that asked for it (D24).
+
+        A modal here interrupted a user who was in the middle of editing the
+        very field that would fix it. ``report_screen_issue`` walks up from the
+        panel to Settings' own banner, so the failure sits beside the
+        AnkiConnect address rather than on top of it.
+        """
+        report_screen_issue(self._parent, ScreenIssue(summary=summary, details=details))
+
     # === Excluded decks (Issue #38) ===
 
     def fetch_decks(self) -> None:
@@ -212,10 +223,12 @@ class AnkiProbeController:
         try:
             service = AnkiService(probe_config)
         except ValueError as e:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("AnkiProbeController", "Add Deck"),
-                tr_format(QCoreApplication.translate("AnkiProbeController", "Cannot build AnkiService: %1"), e),
+            self._report(
+                QCoreApplication.translate(
+                    "AnkiProbeController",
+                    "The deck list could not be requested. Check the AnkiConnect address in Settings.",
+                ),
+                str(e),
             )
             return
 
@@ -232,12 +245,11 @@ class AnkiProbeController:
             return
         self._filtering_panel.set_add_deck_button_enabled(True)
         if not deck_names:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("AnkiProbeController", "Add Deck"),
+            self._report(
                 QCoreApplication.translate(
-                    "AnkiProbeController", "Could not fetch decks. Is Anki running with AnkiConnect?"
-                ),
+                    "AnkiProbeController",
+                    "No decks came back. Check that Anki is running with the AnkiConnect add-on.",
+                )
             )
             return
         self._filtering_panel.set_available_decks(deck_names)
@@ -247,9 +259,11 @@ class AnkiProbeController:
         if not self._alive(self._filtering_panel):
             return
         self._filtering_panel.set_add_deck_button_enabled(True)
-        QMessageBox.warning(
-            self._parent,
-            QCoreApplication.translate("AnkiProbeController", "Add Deck"),
+        self._report(
+            QCoreApplication.translate(
+                "AnkiProbeController",
+                "The deck list could not be read from Anki.",
+            ),
             message,
         )
 

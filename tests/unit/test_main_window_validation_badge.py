@@ -151,13 +151,10 @@ class TestStartupValidationLogging:
         assert "/home/secret" not in records[0].getMessage()
 
     def test_manual_validation_stays_quiet(self, window_with_settings, caplog, monkeypatch):
-        from anki_miner.gui import main_window as main_window_module
 
         window, _settings_tab = window_with_settings
         target = logging.getLogger("anki_miner.gui.main_window")
         monkeypatch.setattr(target, "propagate", True)
-        warning_calls = []
-        monkeypatch.setattr(main_window_module.QMessageBox, "warning", lambda *args: warning_calls.append(args))
         window._validation_silent = False
         result = _result(
             ankiconnect_ok=False,
@@ -167,5 +164,11 @@ class TestStartupValidationLogging:
         with caplog.at_level(logging.INFO, logger=target.name):
             window._on_validation_result(result)
 
-        assert len(warning_calls) == 1
+        # Reported in the window's own banner, not a modal that stops a batch
+        # halfway through (D24).
+        issue = window.issue_banner().current_issue()
+        assert issue is not None
+        assert issue.summary == "Some system checks need attention."
+        assert "not reachable" not in issue.summary
+        assert "not reachable" in issue.details
         assert _startup_validation_records(caplog) == []

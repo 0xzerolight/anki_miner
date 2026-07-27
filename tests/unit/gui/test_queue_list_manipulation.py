@@ -491,6 +491,46 @@ def test_a_run_without_a_registry_still_works(queue) -> None:
     assert tab.current_job_strip.isVisibleTo(tab) is False
 
 
+def test_cancelling_reaches_the_strip(queue) -> None:
+    """D22: the surfaces watching the run learn it is cancelling, not just the button."""
+    tab, add = queue
+    registry = TaskRegistry()
+    tab.bind_task_registry(registry)
+    add("alpha")
+    tab._on_mine_clicked()
+    tab._on_item_started(0)
+
+    try:
+        tab._on_stop_all_clicked()
+
+        snapshot = registry.snapshot(tab.TASK_ID)
+        assert snapshot is not None
+        assert snapshot.cancelling
+        assert "Cancelling…" in tab.current_job_strip.line_label.full_text
+    finally:
+        registry.shutdown()
+
+
+def test_progress_after_cancel_cannot_move_the_published_counts(queue) -> None:
+    tab, add = queue
+    registry = TaskRegistry()
+    tab.bind_task_registry(registry)
+    add("alpha")
+    add("beta")
+    tab._on_mine_clicked()
+    tab._on_item_started(0)
+
+    try:
+        tab._on_stop_all_clicked()
+        tab._on_item_progress(0, "Stage 5 of 5 · Creating Anki cards")
+
+        snapshot = registry.snapshot(tab.TASK_ID)
+        assert snapshot is not None
+        assert snapshot.current == 0
+    finally:
+        registry.shutdown()
+
+
 def test_the_strip_collapses_when_the_run_ends(queue) -> None:
     tab, add = queue
     registry = TaskRegistry()

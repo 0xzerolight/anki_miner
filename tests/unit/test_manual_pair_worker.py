@@ -99,15 +99,20 @@ def test_cancel_before_run_skips_processing_and_emit(tmp_path, qapp):
     worker.run()
 
     proc.process_episode.assert_not_called()
-    assert results == []
+    # Nothing ran, so the receipt is empty -- but it is still a receipt, so the
+    # tab has one terminal signal to react to on every exit path.
+    assert results == [[]]
 
 
-def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path, qapp):
-    """Cancelling between pairs discards the accumulated partial results.
+def test_cancelling_still_reports_the_cards_already_created(tmp_path, qapp):
+    """D20/D22: a cancel must never hide work that already happened.
 
-    Pin the contract: the result_ready emit is guarded by check_cancelled(),
-    so a batch cancelled after the first pair must NOT hand a truncated list to
-    the GUI — the run goes silent and the queue/summary state is left untouched.
+    The emit used to be guarded by check_cancelled(), so cancelling after pair 1
+    had written its cards to Anki left the user with no record that those cards
+    existed — the run simply went silent while the notes sat in their
+    collection. The tab's run receipt needs them: "Cancelled — 1 of 3 episodes
+    completed" is only possible if the partial list arrives. The tab guards its
+    own completion painting on its cancel flag, so this cannot read as success.
     """
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)
@@ -131,8 +136,9 @@ def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path, qapp):
 
     # Only pair 1 ran (loop-top check stops pair 2) ...
     assert processed == [p1.video]
-    # ... and the partial result list is never emitted.
-    assert results == []
+    # ... and what it produced is still reported, exactly once.
+    assert len(results) == 1
+    assert [r.cards_created for r in results[0]] == [3]
 
 
 def test_per_pair_error_reported_and_batch_continues(tmp_path, qapp):
@@ -439,7 +445,7 @@ def test_factory_path_error_emits_error_signal(tmp_path, qapp):
     assert "registry scan failed" in errors[0]
 
 
-def test_factory_path_cancel_before_run_skips_factory_and_is_silent(tmp_path, qapp):
+def test_factory_path_cancel_before_run_skips_factory(tmp_path, qapp):
     """A pre-run cancel must not invoke the factory and must not raise (the
     processor is still None when cancel() runs)."""
     called: list[bool] = []
@@ -458,7 +464,8 @@ def test_factory_path_cancel_before_run_skips_factory_and_is_silent(tmp_path, qa
 
     assert called == []
     assert worker.episode_processor is None
-    assert results == []
+    # An empty receipt, not silence: the tab gets one terminal signal per run.
+    assert results == [[]]
 
 
 def test_both_processor_and_factory_raises(tmp_path, qapp):

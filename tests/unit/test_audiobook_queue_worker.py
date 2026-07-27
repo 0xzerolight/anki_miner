@@ -343,10 +343,11 @@ def test_progress_callback_routes_to_item_progress_signal(make_worker, mock_proc
     cb.on_progress(5, "word-05")
     cb.on_complete()
 
+    # Text only, with a true within-stage count. A stage ending is not the item
+    # ending, so on_complete says nothing.
     assert caps["progress"].calls == [
-        (0, "Extracting media", 0),
-        (0, "word-05", 50),
-        (0, "Complete", 100),
+        (0, "Extracting media"),
+        (0, "word-05 (5 of 10)"),
     ]
 
 

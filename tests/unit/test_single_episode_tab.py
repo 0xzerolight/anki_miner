@@ -23,6 +23,35 @@ def tab(qapp, qtbot, test_config):
     widget.deleteLater()
 
 
+def _recording_curation_dialog_cls():
+    """Real-``QDialog`` curator stand-in that records its construction kwargs.
+
+    The curator is shown, not exec()'d (decision D33): the tab connects a
+    resolver to ``finished`` and returns. A ``MagicMock`` has no real signal, so
+    the parked worker would never be released — hence a real ``QDialog`` that
+    confirms itself the moment the tab shows it.
+    """
+    from PyQt6.QtWidgets import QDialog
+
+    created: list = []
+
+    class _RecordingCurationDialog(QDialog):
+        def __init__(self, words, parent=None, **kwargs):
+            super().__init__(parent)
+            self.words = list(words)
+            self.kwargs = kwargs
+            created.append(self)
+
+        def show(self):
+            super().show()
+            self.accept()
+
+        def get_selected_words(self):
+            return []
+
+    return _RecordingCurationDialog, created
+
+
 # ---------------------------------------------------------------------------
 # 1. Initial state
 # ---------------------------------------------------------------------------
@@ -71,13 +100,10 @@ def test_override_resets_on_video_path_change(tab):
 
 
 def test_tracks_clicked_warns_when_no_video(tab):
-    with (
-        patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams") as mock_list,
-        patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn,
-    ):
+    with patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams") as mock_list:
         tab.video_selector.get_path = MagicMock(return_value="")
         tab._on_tracks_clicked()
-        mock_warn.assert_called_once()
+        assert tab.issue_banner().current_issue() is not None
         mock_list.assert_not_called()
 
 
@@ -406,8 +432,6 @@ def test_timing_button_hidden_during_processing_and_restored(tab, tmp_path):
 def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_processor, tmp_path, qtbot):
     """Dialog receives a CurationMediaContext and lookup_fn when files are set
     and a worker with a live processor is present."""
-    from PyQt6.QtWidgets import QDialog
-
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -435,25 +459,20 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_proce
     mock_parser_cls = MagicMock()
     mock_parser_cls.return_value.parse_raw_entries.return_value = [fake_entry]
 
-    mock_dialog_instance = MagicMock()
-    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Accepted
-    mock_dialog_instance.DialogCode = QDialog.DialogCode
-    mock_dialog_instance.get_selected_words.return_value = []
-    mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
-    mock_dialog_cls.DialogCode = QDialog.DialogCode
+    dialog_cls, created = _recording_curation_dialog_cls()
 
     words: list = []
     with (
         patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
-        patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", mock_dialog_cls),
+        patch("anki_miner.gui.widgets._mining_tab_base.WordCurationDialog", dialog_cls),
     ):
         tab._on_curation_requested(words)
         # The context build (subtitle parse) runs off-thread; wait for the
         # GUI-thread callback to construct the dialog.
-        qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
+        qtbot.waitUntil(lambda: bool(created), timeout=3000)
 
-    mock_dialog_cls.assert_called_once()
-    call_args, call_kwargs = mock_dialog_cls.call_args
+    assert len(created) == 1
+    call_kwargs = created[0].kwargs
     assert call_kwargs.get("lookup_fn") is fake_lookup
     ctx = call_kwargs.get("media_context")
     assert ctx is not None
@@ -472,8 +491,6 @@ def test_curation_requested_passes_media_context_and_lookup_fn(tab, facade_proce
 
 def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path, qtbot):
     """When subtitle parsing raises, dialog is still called with media_context=None."""
-    from PyQt6.QtWidgets import QDialog
-
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -486,11 +503,7 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path,
     mock_parser_cls = MagicMock()
     mock_parser_cls.return_value.parse_raw_entries.side_effect = RuntimeError("bad file")
 
-    mock_dialog_instance = MagicMock()
-    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
-    mock_dialog_instance.DialogCode = QDialog.DialogCode
-    mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
-    mock_dialog_cls.DialogCode = QDialog.DialogCode
+    dialog_cls, created = _recording_curation_dialog_cls()
 
     tab.worker_thread = None  # no worker — lookup_fn will also be None
 
@@ -498,14 +511,14 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path,
         patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
         patch(
             "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
-            mock_dialog_cls,
+            dialog_cls,
         ),
     ):
         tab._on_curation_requested([])
-        qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
+        qtbot.waitUntil(lambda: bool(created), timeout=3000)
 
-    mock_dialog_cls.assert_called_once()
-    _, call_kwargs = mock_dialog_cls.call_args
+    assert len(created) == 1
+    call_kwargs = created[0].kwargs
     assert call_kwargs.get("media_context") is None
     assert call_kwargs.get("lookup_fn") is None
     assert tab._curation_event.is_set()
@@ -518,8 +531,6 @@ def test_curation_requested_parse_error_passes_none_media_context(tab, tmp_path,
 
 def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path, qtbot):
     """When worker_thread is None, lookup_fn=None is passed regardless of files."""
-    from PyQt6.QtWidgets import QDialog
-
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -533,23 +544,19 @@ def test_curation_requested_no_worker_passes_none_lookup_fn(tab, tmp_path, qtbot
     mock_parser_cls = MagicMock()
     mock_parser_cls.return_value.parse_raw_entries.return_value = [fake_entry]
 
-    mock_dialog_instance = MagicMock()
-    mock_dialog_instance.exec.return_value = QDialog.DialogCode.Rejected
-    mock_dialog_instance.DialogCode = QDialog.DialogCode
-    mock_dialog_cls = MagicMock(return_value=mock_dialog_instance)
-    mock_dialog_cls.DialogCode = QDialog.DialogCode
+    dialog_cls, created = _recording_curation_dialog_cls()
 
     with (
         patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser_cls),
         patch(
             "anki_miner.gui.widgets._mining_tab_base.WordCurationDialog",
-            mock_dialog_cls,
+            dialog_cls,
         ),
     ):
         tab._on_curation_requested([])
-        qtbot.waitUntil(lambda: mock_dialog_cls.called, timeout=3000)
+        qtbot.waitUntil(lambda: bool(created), timeout=3000)
 
-    _, call_kwargs = mock_dialog_cls.call_args
+    call_kwargs = created[0].kwargs
     assert call_kwargs.get("lookup_fn") is None
     assert tab._curation_event.is_set()
 
@@ -898,7 +905,7 @@ def test_timing_empty_entries_shows_info_and_reenables(tab, tmp_path, qtbot):
     assert tab.timing_button.isEnabled()
 
 
-def test_timing_parse_error_shows_critical_and_reenables(tab, tmp_path, qtbot):
+def test_timing_parse_error_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -911,14 +918,11 @@ def test_timing_parse_error_shows_critical_and_reenables(tab, tmp_path, qtbot):
     mock_parser_cls = MagicMock()
     mock_parser_cls.return_value.parse_raw_entries.side_effect = RuntimeError("bad file")
 
-    with (
-        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
-        patch("PyQt6.QtWidgets.QMessageBox.critical") as mock_crit,
-    ):
+    with patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls):
         tab._on_timing_clicked()
-        qtbot.waitUntil(lambda: mock_crit.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    mock_crit.assert_called_once()
+    assert "bad file" in tab.issue_banner().current_issue().details
     assert tab.timing_button.isEnabled()
 
 
@@ -984,7 +988,7 @@ def test_tracks_empty_streams_shows_info_and_reenables(tab, tmp_path, qtbot):
     assert tab.tracks_button.isEnabled()
 
 
-def test_tracks_probe_error_shows_warning_and_reenables(tab, tmp_path, qtbot):
+def test_tracks_probe_error_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
@@ -995,12 +999,13 @@ def test_tracks_probe_error_shows_warning_and_reenables(tab, tmp_path, qtbot):
             "anki_miner.gui.widgets.single_episode_tab.list_audio_streams",
             side_effect=RuntimeError("ffprobe blew up"),
         ),
-        patch("PyQt6.QtWidgets.QMessageBox.warning") as mock_warn,
     ):
         tab._on_tracks_clicked()
-        qtbot.waitUntil(lambda: mock_warn.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    mock_warn.assert_called_once()
+    issue = tab.issue_banner().current_issue()
+    assert issue.summary == "Audio tracks could not be read."
+    assert "ffprobe blew up" in issue.details
     assert tab.tracks_button.isEnabled()
 
 

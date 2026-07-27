@@ -48,9 +48,10 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, configure_scrolled_page
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, SubtitleTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
@@ -154,6 +155,7 @@ class CondenseTab(_ToolTabBase):
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
+            run_problem=self.tr("Some files could not be condensed."),
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source"),
@@ -259,6 +261,7 @@ class CondenseTab(_ToolTabBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
     def _create_input_section(self) -> QFrame:
         group = QFrame()
@@ -601,15 +604,29 @@ class CondenseTab(_ToolTabBase):
         """Disable the embedded-subtitle-track row when an explicit sub is picked."""
         self.subtitle_track_row_widget.setEnabled(not new_path.strip())
 
+    def _report_probe_failure(self, summary: str, details: str) -> None:
+        """One shape for both ffprobe failures: sentence here, ffprobe output in Details."""
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=summary,
+                details=details,
+                action_id="settings.media",
+                action_text=self.tr("Open Media Settings"),
+            ),
+            action=lambda: reveal_settings(self, "media"),
+        )
+
     def _on_audio_tracks_clicked(self) -> None:
         """Open AudioTracksDialog to pick which audio track to condense."""
         media_path = self.media_file_selector.path_or_none()
         if media_path is None:
-            QMessageBox.warning(self, self.tr("No Media File Selected"), self.tr("Select a media file first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file first.")))
             return
         media_file = Path(media_path)
         if not media_file.is_file():
-            QMessageBox.warning(self, self.tr("File Not Found"), self.tr("Media file not found: ") + media_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That media file no longer exists."), details=media_path)
+            )
             return
 
         ffprobe_cmd = resolve_ffprobe(self.config)
@@ -661,11 +678,7 @@ class CondenseTab(_ToolTabBase):
                 self.audio_tracks_button.setEnabled(True)
             except RuntimeError:
                 return
-            QMessageBox.warning(
-                self,
-                self.tr("Probe Failed"),
-                self.tr("Failed to detect audio tracks. Check that ffprobe is installed."),
-            )
+            self._report_probe_failure(self.tr("Audio tracks could not be read."), msg)
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
@@ -673,11 +686,13 @@ class CondenseTab(_ToolTabBase):
         """Open SubtitleTracksDialog to pick which embedded subtitle track to use."""
         media_path = self.media_file_selector.path_or_none()
         if media_path is None:
-            QMessageBox.warning(self, self.tr("No Media File Selected"), self.tr("Select a media file first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file first.")))
             return
         media_file = Path(media_path)
         if not media_file.is_file():
-            QMessageBox.warning(self, self.tr("File Not Found"), self.tr("Media file not found: ") + media_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That media file no longer exists."), details=media_path)
+            )
             return
 
         ffprobe_cmd = resolve_ffprobe(self.config)
@@ -727,11 +742,7 @@ class CondenseTab(_ToolTabBase):
                 self.subtitle_tracks_button.setEnabled(True)
             except RuntimeError:
                 return
-            QMessageBox.warning(
-                self,
-                self.tr("Probe Failed"),
-                self.tr("Failed to detect subtitle tracks. Check that ffprobe is installed."),
-            )
+            self._report_probe_failure(self.tr("Subtitle tracks could not be read."), msg)
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
@@ -820,30 +831,20 @@ class CondenseTab(_ToolTabBase):
         sub_str = self.subtitle_file_selector.path_or_none()
 
         if media_str is None:
-            QMessageBox.warning(
-                self,
-                self.tr("No Media File Selected"),
-                self.tr("Select a media file before condensing."),
-            )
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file before condensing.")))
             return []
 
         media = Path(media_str)
         if not media.is_file():
-            QMessageBox.warning(
-                self,
-                self.tr("File Not Found"),
-                self.tr("Media file not found: ") + media_str,
-            )
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That media file no longer exists."), details=media_str))
             return []
 
         external_sub: Path | None = None
         if sub_str is not None:
             sub = Path(sub_str)
             if not sub.is_file():
-                QMessageBox.warning(
-                    self,
-                    self.tr("File Not Found"),
-                    self.tr("Subtitle file not found: ") + sub_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=sub_str)
                 )
                 return []
             external_sub = sub
@@ -855,19 +856,13 @@ class CondenseTab(_ToolTabBase):
         sub_folder_str = self.subtitle_folder_selector.path_or_none()
 
         if media_folder_str is None:
-            QMessageBox.warning(
-                self,
-                self.tr("No Media Folder Selected"),
-                self.tr("Select a media folder before condensing."),
-            )
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media folder before condensing.")))
             return []
 
         media_folder = Path(media_folder_str)
         if not media_folder.is_dir():
-            QMessageBox.warning(
-                self,
-                self.tr("Folder Not Found"),
-                self.tr("Media folder not found: ") + media_folder_str,
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That media folder no longer exists."), details=media_folder_str)
             )
             return []
 
@@ -876,10 +871,8 @@ class CondenseTab(_ToolTabBase):
         if sub_folder_str is not None:
             sub_folder = Path(sub_folder_str)
             if not sub_folder.is_dir():
-                QMessageBox.warning(
-                    self,
-                    self.tr("Folder Not Found"),
-                    self.tr("Subtitle folder not found: ") + sub_folder_str,
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
                 )
                 return []
             return self._pair_folder_items(media_folder, sub_folder)
@@ -889,11 +882,7 @@ class CondenseTab(_ToolTabBase):
             f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
         )
         if not media_files:
-            QMessageBox.warning(
-                self,
-                self.tr("No Media Files"),
-                self.tr("No media files found in the selected folder."),
-            )
+            self.show_screen_issue(ScreenIssue(summary=self.tr("No media files were found in that folder.")))
             return []
         return [CondenseItem(m, None) for m in media_files]
 
@@ -923,10 +912,8 @@ class CondenseTab(_ToolTabBase):
             )
 
         if not file_pairs:
-            QMessageBox.warning(
-                self,
-                self.tr("No Pairs Matched"),
-                self.tr("No subtitle files could be matched to the media files in the selected folders."),
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("No subtitle file could be matched to any media file in those folders."))
             )
             return []
 

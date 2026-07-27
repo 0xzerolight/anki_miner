@@ -12,7 +12,7 @@ per-item body.
 
 * ``item_started(int)`` — idx fired before the item is mined. Items removed
   mid-run via :meth:`skip_item` are silently skipped.
-* ``item_progress(int, str, int)`` — idx, label, pct.
+* ``item_progress(int, str)`` — idx, label.
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Attempts is always 1 (no retry). Fires
   exactly once per item that runs.

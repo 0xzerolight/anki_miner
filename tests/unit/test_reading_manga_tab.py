@@ -334,13 +334,12 @@ class TestMineSeries:
         tab._on_item_started(1)
         assert "Volume 2/3" in tab.overall_progress_widget.status_label.text()
 
-    def test_item_progress_composes_across_volumes(self, tab):
-        """Volume 2's own 50% renders as (1 + 0.5)/3 = 50% of the whole run —
-        the bar never resets at a volume boundary."""
+    def test_item_progress_names_the_volume_without_moving_the_bar(self, tab):
+        """D18: the bar counts finished volumes; volume 2 being half-done is not one."""
         _mine(tab, _series(3))
         tab._on_item_started(1)
-        tab._on_item_progress(1, "Fetching definitions", 50)
-        assert tab.overall_progress_widget.progress_bar.value() == 50
+        tab._on_item_progress(1, "Fetching definitions")
+        assert tab.overall_progress_widget.progress_bar.value() == 0
         text = tab.overall_progress_widget.status_label.text()
         assert "Volume 2/3" in text and "Fetching definitions" in text
 
@@ -426,23 +425,20 @@ class TestPerItemSignalsReadOnly:
         assert "Solo Vol" in tab.overall_progress_widget.status_label.text()
         assert tab.overall_progress_widget.progress_bar.maximum() == 100
 
-    def test_item_progress_determinate(self, tab):
+    def test_item_progress_updates_the_line_only(self, tab):
         _mine(tab, [_make_ref()])
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Fetching definitions", 42)
-        # Single item: composed value equals the item's own percent.
-        assert tab.overall_progress_widget.progress_bar.value() == 42
+        tab._on_item_progress(0, "Fetching definitions")
+        assert tab.overall_progress_widget.progress_bar.value() == 0
         assert "Fetching definitions" in tab.overall_progress_widget.status_label.text()
 
-    def test_item_progress_indeterminate_holds_bar(self, tab):
-        """pct < 0 holds the composed bar (status update only) — a mid-run
-        marquee would read as a reset."""
+    def test_item_progress_never_starts_a_marquee(self, tab):
+        """A bar that sweeps mid-run reads as a reset, and says nothing true."""
         _mine(tab, [_make_ref()])
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Fetching definitions", 42)
-        tab._on_item_progress(0, "Parsing", -1)
+        tab._on_item_progress(0, "Fetching definitions")
+        tab._on_item_progress(0, "Parsing")
         assert tab.overall_progress_widget.progress_bar.maximum() == 100
-        assert tab.overall_progress_widget.progress_bar.value() == 42
         assert "Parsing" in tab.overall_progress_widget.status_label.text()
 
     def test_item_finished_success_logs_and_forwards(self, tab):

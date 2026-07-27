@@ -44,6 +44,7 @@ from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.utils.i18n import tr_format
@@ -120,6 +121,9 @@ class ReadingTextTab(_ReadingMiningTabBase):
         layout.addWidget(self._progress_header(self.tr("Progress")))
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
+        # The durable end state of this same card (D20). Pasted text is always
+        # one item, so the receipt never needs a noun to count.
+        self._install_receipt(layout, self.overall_progress_widget)
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()
@@ -227,7 +231,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
-        self.overall_progress_widget.set_status(self.tr("Cancelling…"))
+        self._freeze_run_bar(self.overall_progress_widget)
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)
@@ -239,14 +243,10 @@ class ReadingTextTab(_ReadingMiningTabBase):
             return
         self.overall_progress_widget.set_status(self.tr("Mining pasted text…"))
 
-    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Drive the run bar; ``pct < 0`` holds it with a status update."""
-        status = label or None
-        if pct < 0:
-            if status:
-                self.overall_progress_widget.set_status(status)
-            return
-        self.overall_progress_widget.set_composed(idx, pct, len(self._run_items), status)
+    def _on_item_progress(self, idx: int, label: str) -> None:
+        """Say what the run is doing. The bar counts finished items only."""
+        if label:
+            self.overall_progress_widget.set_status(label)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.
@@ -275,6 +275,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
         else:
             message = str(error) if error is not None else result_error_text(result)
             self.log_widget.append_error(tr_format(self.tr("Failed: %1."), message))
+
+        # The bar's only honest denominator: items that reached a terminal state
+        # out of items in the run.
+        done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
+        self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""

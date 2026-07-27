@@ -1,11 +1,12 @@
 """GUI presenter implementation using Qt signals for thread-safe communication."""
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QObject, pyqtSignal
 
 from anki_miner.models import (
     ProcessingResult,
     ValidationResult,
 )
+from anki_miner.utils.i18n import tr_format
 
 
 class GUIPresenter(QObject):
@@ -27,6 +28,7 @@ class GUIPresenter(QObject):
     error_signal = pyqtSignal(str)
     validation_result_signal = pyqtSignal(object)  # ValidationResult
     processing_result_signal = pyqtSignal(object)  # ProcessingResult
+    run_details_signal = pyqtSignal(object)  # ProcessingResult, on user request
 
     def __init__(self, parent=None):
         """Initialize the GUI presenter.
@@ -68,6 +70,28 @@ class GUIPresenter(QObject):
         """
         self.error_signal.emit(message)
 
+    def show_stage(self, index: int, total: int, name: str) -> None:
+        """Announce which pipeline stage the run has reached.
+
+        Deliberately routed through ``info_signal`` rather than a signal of its
+        own: every Activity Log in the app is already connected to it, so the
+        stage line appears everywhere the run is being watched without a second
+        wiring pass that some screen would inevitably be left out of.
+
+        Args:
+            index: 1-based position of this stage
+            total: How many stages this pipeline has
+            name: The stage's own name, e.g. ``Extracting media``
+        """
+        self.info_signal.emit(
+            tr_format(
+                QCoreApplication.translate("GUIPresenter", "Step %1 of %2 — %3"),
+                index,
+                total,
+                name,
+            )
+        )
+
     def show_validation_result(self, result: ValidationResult) -> None:
         """Display the result of system validation.
 
@@ -83,3 +107,11 @@ class GUIPresenter(QObject):
             result: The processing result to display
         """
         self.processing_result_signal.emit(result)
+
+    def show_run_details(self, result: ProcessingResult) -> None:
+        """Open the full details of a finished run, because the user asked.
+
+        Args:
+            result: The whole run, aggregated into one result
+        """
+        self.run_details_signal.emit(result)

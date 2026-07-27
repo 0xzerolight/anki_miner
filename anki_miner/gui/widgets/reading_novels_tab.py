@@ -153,6 +153,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         layout.addWidget(self._progress_header(self.tr("Progress")))
         self.progress_widget = ProgressWidget()
         layout.addWidget(self.progress_widget)
+        # The durable end state of this same card (D20).
+        self._install_receipt(layout, self.progress_widget, item_noun=self.tr("books"))
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()
@@ -392,7 +394,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
-        self.progress_widget.set_status(self.tr("Cancelling…"))
+        self._freeze_run_bar(self.progress_widget)
 
     # ------------------------------------------------------------------
     # Per-item signal slots (READ-ONLY on item state — the worker owns it)
@@ -421,8 +423,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             # Status only — the composed bar never resets between items.
             self.progress_widget.set_status(tr_format(self.tr("Mining: %1"), item.title))
 
-    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Compose the book's percent into the run bar (pct < 0 holds the bar)."""
+    def _on_item_progress(self, idx: int, label: str) -> None:
+        """Say what the book is doing. The bar counts finished books only."""
         title = getattr(self, "_current_item_title", "")
         status: str | None
         if label and title:
@@ -431,11 +433,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             status = label
         else:
             status = title or None
-        if pct < 0:
-            if status:
-                self.progress_widget.set_status(status)
-            return
-        self.progress_widget.set_composed(idx, pct, len(self._run_items), status)
+        if status:
+            self.progress_widget.set_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and forward a success result to the presenter.

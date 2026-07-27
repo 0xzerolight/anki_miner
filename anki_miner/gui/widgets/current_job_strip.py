@@ -27,6 +27,11 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSnapshot
 
+#: How long a cancel has to keep waiting before the strip explains itself. Below
+#: this the worker almost always stops first, and a line that appears and
+#: vanishes within a second is noise.
+CANCEL_EXPLANATION_DELAY_S = 2.0
+
 
 class CurrentJobStrip(QWidget):
     """Renders the one bound run, and collapses when there is nothing to say."""
@@ -121,6 +126,23 @@ class CurrentJobStrip(QWidget):
         stands in only when the run has not yet said anything more specific.
         """
         parts: list[str] = []
+
+        if snapshot.cancelling:
+            parts.append(self.tr("Cancelling…"))
+            # Most cancels land within a second, and narrating those reads as
+            # nervousness. Past that, silence starts to look like a hang, so the
+            # wait names whatever the run last said it was doing.
+            if snapshot.cancelling_age_s >= CANCEL_EXPLANATION_DELAY_S:
+                waiting_for = snapshot.detail or snapshot.stage_name
+                parts.append(
+                    tr_format(self.tr("Finishing %1"), waiting_for)
+                    if waiting_for
+                    else self.tr("Finishing the current item")
+                )
+            if snapshot.total:
+                parts.append(tr_format(self.tr("%1 / %2"), snapshot.current, snapshot.total))
+            parts.append(format_clock(snapshot.elapsed_s))
+            return " · ".join(parts)
 
         if snapshot.stage_name:
             if snapshot.stage_index is not None and snapshot.stage_total:

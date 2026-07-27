@@ -57,7 +57,7 @@ def test_single_cancel_click_cancels_worker_and_sets_button_state(single_tab):
     single_tab._on_cancel_clicked()
 
     worker.cancel.assert_called_once_with()
-    assert single_tab.cancel_button.text() == "Cancelling..."
+    assert single_tab.cancel_button.text() == "Cancelling…"
     assert not single_tab.cancel_button.isEnabled()
 
 
@@ -67,7 +67,7 @@ def test_single_cancel_click_with_no_worker_is_safe(single_tab):
 
     single_tab._on_cancel_clicked()  # must not raise
 
-    assert single_tab.cancel_button.text() == "Cancelling..."
+    assert single_tab.cancel_button.text() == "Cancelling…"
     assert not single_tab.cancel_button.isEnabled()
 
 
@@ -77,7 +77,7 @@ def test_single_cancel_click_sets_status_to_cancelling(single_tab):
 
     single_tab._on_cancel_clicked()
 
-    single_tab.progress_widget.set_status.assert_called_once_with("Cancelling...")
+    single_tab.progress_widget.set_status.assert_called_once_with("Cancelling…")
 
 
 def test_single_cancel_click_releases_active_curation_dialog(single_tab):
@@ -118,7 +118,7 @@ def test_batch_cancel_click_cancels_worker_and_sets_button_state(batch_tab):
     batch_tab._on_cancel_clicked()
 
     worker.cancel.assert_called_once_with()
-    assert batch_tab.cancel_button.text() == "Cancelling..."
+    assert batch_tab.cancel_button.text() == "Cancelling…"
     assert not batch_tab.cancel_button.isEnabled()
 
 
@@ -127,7 +127,7 @@ def test_batch_cancel_click_with_no_worker_is_safe(batch_tab):
 
     batch_tab._on_cancel_clicked()  # must not raise
 
-    assert batch_tab.cancel_button.text() == "Cancelling..."
+    assert batch_tab.cancel_button.text() == "Cancelling…"
     assert not batch_tab.cancel_button.isEnabled()
 
 
@@ -148,7 +148,7 @@ def test_batch_cancel_click_sets_current_progress_status(batch_tab):
 
     batch_tab._on_cancel_clicked()
 
-    batch_tab.overall_progress_widget.set_status.assert_called_once_with("Cancelling...")
+    batch_tab.overall_progress_widget.set_status.assert_called_once_with("Cancelling…")
 
 
 def test_batch_show_cancel_state_hides_actions_and_reveals_cancel(batch_tab):
@@ -159,7 +159,8 @@ def test_batch_show_cancel_state_hides_actions_and_reveals_cancel(batch_tab):
     assert batch_tab.process_pairs_button.isHidden()
     assert not batch_tab.cancel_button.isHidden()
     assert batch_tab.cancel_button.isEnabled()
-    assert batch_tab.cancel_button.text() == "■ Cancel"
+    # D22: one verb, everywhere. The glyph was the last survivor of "Stop".
+    assert batch_tab.cancel_button.text() == "Cancel"
 
 
 def test_batch_restore_buttons_hides_cancel_and_shows_actions(batch_tab):
@@ -181,15 +182,17 @@ def test_batch_restore_buttons_hides_cancel_and_shows_actions(batch_tab):
 
 
 def test_single_cancel_recovery_shows_cancelled(single_tab):
+    single_tab.progress_widget.set_percent(40)
     single_tab.worker_thread = MagicMock(name="Worker")
     single_tab._on_cancel_clicked()
-    assert single_tab.progress_widget.status_label.text() == "Cancelling..."
+    assert single_tab.progress_widget.status_label.text() == "Cancelling…"
 
     # QThread.finished fires even though result_ready was suppressed.
     single_tab._restore_buttons()
 
     assert single_tab.progress_widget.status_label.text() == "Cancelled"
-    assert single_tab.progress_widget.progress_bar.value() == 0
+    # Frozen where the run really got to, not zeroed (D22).
+    assert single_tab.progress_widget.progress_bar.value() == 40
 
 
 def test_single_run_start_reset_clears_end_state(single_tab):

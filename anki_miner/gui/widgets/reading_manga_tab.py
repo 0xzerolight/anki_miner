@@ -176,6 +176,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         layout.addWidget(self._progress_header(self.tr("Progress")))
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
+        # The durable end state of this same card (D20).
+        self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("volumes"))
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()
@@ -406,7 +408,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         worker.cancel()
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
-        self.overall_progress_widget.set_status(self.tr("Cancelling…"))
+        self._freeze_run_bar(self.overall_progress_widget)
 
     # ------------------------------------------------------------------
     # Curation context (D8 amended: manga shows page images)
@@ -458,13 +460,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         # Status only — the composed whole-run bar never resets between volumes.
         self.overall_progress_widget.set_status(self._current_item_title)
 
-    def _on_item_progress(self, idx: int, label: str, pct: int) -> None:
-        """Compose the volume's percent into the whole-run bar.
-
-        ``idx`` doubles as the count of volumes already finished (items run
-        sequentially), so the composed value is monotone across volume
-        boundaries. ``pct < 0`` holds the bar with a status update.
-        """
+    def _on_item_progress(self, idx: int, label: str) -> None:
+        """Say what the volume is doing. The bar counts finished volumes only."""
         title = getattr(self, "_current_item_title", "")
         status: str | None
         if label and title:
@@ -473,11 +470,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             status = label
         else:
             status = title or None
-        if pct < 0:
-            if status:
-                self.overall_progress_widget.set_status(status)
-            return
-        self.overall_progress_widget.set_composed(idx, pct, len(self._run_items), status)
+        if status:
+            self.overall_progress_widget.set_status(status)
 
     def _on_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
         """Log the outcome and advance the overall bar (series runs only).

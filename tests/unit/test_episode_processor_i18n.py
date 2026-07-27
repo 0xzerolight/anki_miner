@@ -16,13 +16,24 @@ def test_unique_words_plural_renders(qapp):
     assert msg == "Found 3 unique word(s)"
 
 
-def test_step1_subtitle_arg_renders(qapp):
-    """%1 in Step 1/5 message is substituted via tr_format()."""
+def test_subtitle_source_arg_renders(qapp):
+    """%1 in the parse-stage source line is substituted via tr_format()."""
     msg = tr_format(
-        QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing subtitles: %1"),
+        QCoreApplication.translate("EpisodeProcessor", "Subtitles: %1"),
         "episode01.ass",
     )
-    assert msg == "Step 1/5 — Parsing subtitles: episode01.ass"
+    assert msg == "Subtitles: episode01.ass"
+
+
+def test_stage_line_renders_position_and_name(qapp):
+    """The stage line states the position; the number is no longer baked in."""
+    msg = tr_format(
+        QCoreApplication.translate("GUIPresenter", "Step %1 of %2 — %3"),
+        3,
+        5,
+        "Extracting media",
+    )
+    assert msg == "Step 3 of 5 — Extracting media"
 
 
 def test_known_word_db_synced_multi_arg_renders(qapp):

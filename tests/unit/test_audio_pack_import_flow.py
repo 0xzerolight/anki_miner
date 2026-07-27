@@ -141,11 +141,15 @@ def stub_worker(monkeypatch):
 
 
 def _capture_warnings(monkeypatch) -> list[tuple[str, str]]:
+    """Capture reported screen issues as ``(summary, whole text)`` (D24).
+
+    Import failures are no longer modals: they land in the owning panel's
+    banner, so the seam moved from ``QMessageBox.warning`` to the reporter.
+    """
     captured: list[tuple[str, str]] = []
     monkeypatch.setattr(
-        QMessageBox,
-        "warning",
-        lambda parent, title, body, *a, **kw: captured.append((title, body)) or 0,
+        "anki_miner.gui.controllers.import_flow_common.report_screen_issue",
+        lambda origin, issue: captured.append((issue.summary, f"{issue.summary}\n{issue.details}".strip())) or True,
     )
     return captured
 
@@ -296,7 +300,7 @@ class TestAddPackSingleHappyPath:
         assert tab.audio_panel._add_btn.isEnabled()
         assert infos == []
         assert len(warnings) == 1
-        assert "import completed" in warnings[0][1].lower()
+        assert "import finished" in warnings[0][1].lower()
         assert "audio config write failed" in warnings[0][1]
 
     def test_worker_called_and_chain_updated_on_success(self, tab, monkeypatch, stub_worker, tmp_path):

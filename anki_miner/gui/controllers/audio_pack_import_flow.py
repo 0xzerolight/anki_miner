@@ -165,10 +165,9 @@ class AudioPackImportFlow(ModalImportFlowMixin):
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
-                QMessageBox.warning(
-                    self._parent,
-                    QCoreApplication.translate("AudioPackImportFlow", "Scan Failed"),
-                    tr_format(QCoreApplication.translate("AudioPackImportFlow", "Could not scan folder: %1"), message),
+                self._report_import_issue(
+                    QCoreApplication.translate("AudioPackImportFlow", "That folder could not be scanned."),
+                    message,
                 )
 
             self._run_latest_scan(
@@ -188,9 +187,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         # Unknown pack_ids land after all known ones (stable sort).
         packs.sort(key=lambda pd_fmt: _PACK_PRIORITY.get(derive_pack_id(pd_fmt[0].name), len(_PACK_PRIORITY)))
         if not packs:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("AudioPackImportFlow", "No Audio Packs Found"),
+            self._report_import_issue(
                 tr_format(
                     QCoreApplication.translate(
                         "AudioPackImportFlow",
@@ -273,16 +270,12 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             exc: Exception,
             _result: _ChainedImportResult[tuple[Path, str]],
         ) -> None:
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("AudioPackImportFlow", "Configuration Update Failed"),
-                tr_format(
-                    QCoreApplication.translate(
-                        "AudioPackImportFlow",
-                        "Import completed, but the configuration update failed: %1",
-                    ),
-                    str(exc),
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "AudioPackImportFlow",
+                    "The import finished, but the settings could not be updated.",
                 ),
+                str(exc),
             )
 
         self._run_chained_imports(
@@ -293,7 +286,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             cancelling_label=QCoreApplication.translate("AudioPackImportFlow", "Cancelling…"),
             determinate=False,
             join_noun="audio pack import worker",
-            failure_title=QCoreApplication.translate("AudioPackImportFlow", "Configuration Update Failed"),
+            failure_summary=QCoreApplication.translate("AudioPackImportFlow", "The audio pack could not be imported."),
             missing_result_message=QCoreApplication.translate(
                 "AudioPackImportFlow", "The import worker finished without a completion result."
             ),
@@ -324,9 +317,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             return
 
         if not self._panel.request_resource_release():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("AudioPackImportFlow", "Re-import Blocked"),
+            self._report_import_issue(
                 QCoreApplication.translate(
                     "AudioPackImportFlow",
                     "Indexed resources are in use by mining, startup prewarm, or card backfill. "
@@ -369,7 +360,9 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             cancel_label=QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
             determinate=False,
             join_noun="audio pack import worker",
-            failure_title=QCoreApplication.translate("AudioPackImportFlow", "Re-import Failed"),
+            failure_summary=QCoreApplication.translate(
+                "AudioPackImportFlow", "The audio pack could not be re-imported."
+            ),
             refusal_message=QCoreApplication.translate(
                 "AudioPackImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),

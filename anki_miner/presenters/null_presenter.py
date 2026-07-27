@@ -25,6 +25,10 @@ class NullPresenter:
         """Display an error message (no-op)."""
         pass
 
+    def show_stage(self, index: int, total: int, name: str) -> None:
+        """Announce a pipeline stage (no-op)."""
+        pass
+
     def show_validation_result(self, result: ValidationResult) -> None:
         """Display the result of system validation (no-op)."""
         pass
@@ -33,9 +37,17 @@ class NullPresenter:
         """Display the result of processing an episode (no-op)."""
         pass
 
+    def show_run_details(self, result: ProcessingResult) -> None:
+        """Open the full details of a finished run (no-op)."""
+        pass
+
 
 class NullProgressCallback:
     """Null implementation of progress callback (testing)."""
+
+    def on_stage(self, index: int, total: int, name: str) -> None:
+        """Called when the pipeline enters a stage (no-op)."""
+        pass
 
     def on_start(self, total: int, description: str) -> None:
         """Called when an operation starts (no-op)."""

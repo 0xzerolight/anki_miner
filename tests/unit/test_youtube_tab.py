@@ -662,26 +662,38 @@ class TestPerItemSignals:
         assert "Mining 1 of 3" in tab.progress_widget.status_label.text()
         assert "Sample Video" in tab.progress_widget.status_label.text()
 
-    def test_item_progress_determinate(self, tab):
+    def test_item_progress_says_what_the_item_is_doing(self, tab):
         item = _add_ready_item(tab)
         tab._on_mine_clicked()
         tab._on_item_started(0)
 
-        tab._on_item_progress(0, "Downloading", 42)
+        tab._on_item_progress(0, "Downloading · 42%")
 
-        assert tab.progress_widget.progress_bar.maximum() == 100
-        assert tab.progress_widget.progress_bar.value() == 42
-        assert "Downloading" in tab.progress_widget.status_label.text()
+        assert "Downloading · 42%" in tab.progress_widget.status_label.text()
         assert item.status == YouTubeItemStatus.PROCESSING
 
-    def test_item_progress_indeterminate(self, tab):
+    def test_item_progress_never_moves_the_queue_bar(self, tab):
+        """D18: the bar counts finished items; a part-done item is not one."""
         _add_ready_item(tab)
+        _add_ready_item(tab, "https://youtu.be/v2")
         tab._on_mine_clicked()
         tab._on_item_started(0)
 
-        tab._on_item_progress(0, "Merging", -1)
-        assert tab.progress_widget.progress_bar.maximum() == 0  # indeterminate
-        assert "Merging" in tab.progress_widget.status_label.text()
+        tab._on_item_progress(0, "Downloading · 90%")
+
+        assert tab.progress_widget.progress_bar.value() == 0
+
+    def test_item_progress_keeps_the_queue_position_visible(self, tab):
+        _add_ready_item(tab)
+        _add_ready_item(tab, "https://youtu.be/v2")
+        tab._on_mine_clicked()
+        tab._on_item_started(1)
+
+        tab._on_item_progress(1, "Extracting media")
+
+        text = tab.progress_widget.status_label.text()
+        assert "Mining 2 of 2" in text
+        assert "Extracting media" in text
 
     def test_item_finished_success_marks_completed(self, tab):
         item = _add_ready_item(tab)
@@ -847,18 +859,17 @@ class TestWorkerFinished:
 
         tab._on_worker_finished()
 
-        assert tab.stop_button.text() == "Stop All"
+        assert tab.stop_button.text() == "Cancel"
         assert tab.stop_button.isEnabled()
 
     def test_worker_finished_resets_progress_after_merging(self, tab):
-        """Regression: progress bar left on ``Merging`` (indeterminate) gets reset on run end."""
+        """Regression: a run that ended mid-phase still lands on a clean summary."""
         _add_ready_item(tab)
         tab._on_mine_clicked()
         tab._on_item_started(0)
-        # Simulate the fetcher's final indeterminate emit — last signal before
-        # the mining pipeline short-circuits on a zero-unknown-word run.
-        tab._on_item_progress(0, "Merging", -1)
-        assert tab.progress_widget.progress_bar.maximum() == 0  # indeterminate
+        # Simulate the fetcher's final emit — last signal before the mining
+        # pipeline short-circuits on a zero-unknown-word run.
+        tab._on_item_progress(0, "Merging")
         assert "Merging" in tab.progress_widget.status_label.text()
 
         tab._on_queue_finished()
@@ -875,7 +886,7 @@ class TestWorkerFinished:
         _add_ready_item(tab)
         tab._on_mine_clicked()
         tab._on_item_started(0)
-        tab._on_item_progress(0, "Merging", -1)
+        tab._on_item_progress(0, "Merging")
         tab._on_stop_all_clicked()
         # Note: no _on_queue_finished — worker.run() returned early on cancel.
 
@@ -883,11 +894,12 @@ class TestWorkerFinished:
 
         assert tab.worker_thread is None
         assert tab._run_items == []
-        assert tab.stop_button.text() == "Stop All"
+        assert tab.stop_button.text() == "Cancel"
         assert tab.stop_button.isEnabled()
+        # Frozen, not zeroed: nothing had finished, so 0 is the truth here —
+        # but the bar is determinate, not still sweeping as if work continued.
         assert tab.progress_widget.progress_bar.maximum() == 100
         assert tab.progress_widget.status_label.text() == "Cancelled"
-        assert tab.progress_widget.progress_bar.value() == 0
 
     def test_worker_finished_completion_summary_current_run_only(self, tab):
         """The completion banner counts the current run, not accumulated rows."""
@@ -1033,15 +1045,13 @@ class TestRemoveAndClear:
         tab._on_mine_clicked()
         tab._on_item_started(0)  # item1 -> PROCESSING
         # Live progress emit for the in-flight item.
-        tab._on_item_progress(0, "Downloading video", 42)
+        tab._on_item_progress(0, "Downloading video · 42%")
         assert "Downloading" in tab.progress_widget.status_label.text()
 
         tab._on_clear_clicked()
 
-        # Bar still reflects the in-flight item — Clear did not reset it.
-        # (Composed whole-run value: item 1 of 2 at 42% -> 21%.)
+        # The live line survives — Clear did not wipe it.
         assert "Downloading" in tab.progress_widget.status_label.text()
-        assert tab.progress_widget.progress_bar.value() == 21
 
 
 class TestShutdown:

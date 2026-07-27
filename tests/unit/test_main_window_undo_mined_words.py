@@ -1,7 +1,7 @@
 """Tests for OVH-030: Undo reverts source='mined' known-words rows.
 
 When the user clicks Undo after a mining run, the undo_callback in
-_on_processing_result must revert the session's source='mined' rows from
+_on_run_details must revert the session's source='mined' rows from
 known_words.db so those words are re-mineable on the next run.
 
 Issue #42 invariant: source='user' and source='anki' rows are NEVER touched.
@@ -99,7 +99,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[10, 11],
             mined_forms=["食べる", "走る"],
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
         captured["cb"]([10, 11])
 
         db = KnownWordDB(db_path)
@@ -126,7 +126,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[20],
             mined_forms=["食べる"],
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
         captured["cb"]([20])
 
         db = KnownWordDB(db_path)
@@ -154,7 +154,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[30],
             mined_forms=["走る"],
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
         captured["cb"]([30])
 
         db = KnownWordDB(db_path)
@@ -186,7 +186,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[40],
             mined_forms=["食べる"],
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
         captured["cb"]([40])
 
         db = KnownWordDB(db_path)
@@ -211,7 +211,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[50],
             mined_forms=["食べる"],
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
         # Must not raise, must not create the DB file (is_available() guard).
         captured["cb"]([50])
 
@@ -237,7 +237,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[],
             mined_forms=[],  # empty — nothing to revert
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
         captured["cb"]([])
 
         db = KnownWordDB(db_path)
@@ -263,7 +263,7 @@ class TestUndoRevertsMinedWords:
             card_ids=[50],
             mined_forms=["食べる"],
         )
-        main_window._on_processing_result(result)
+        main_window._on_run_details(result)
 
         with patch.object(kw_module.KnownWordDB, "remove_words", side_effect=Exception("db blow-up")):
             # Must not raise — undo must succeed even if known_words.db revert fails.

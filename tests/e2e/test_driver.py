@@ -197,7 +197,7 @@ def test_process_drives_real_tab_fake_anki(tmp_path: Path, qtbot, fake_anki) -> 
     creation against ``FakeAnkiConnect``. Asserts the returned
     ``ProcessingResult`` reports the full expected lemma set, every word became
     a card (bypass mode: dedup off, card-everything), the phase markers reached
-    Step 5/5, the deck read-back through the real ``AnkiGateway`` matches, a
+    Step 5 of 5, the deck read-back through the real ``AnkiGateway`` matches, a
     screenshot was written, and teardown is clean.
     """
     e2e = E2EConfig(test_home=tmp_path, ankiconnect_url=fake_anki.url)
@@ -255,9 +255,9 @@ def test_process_drives_real_tab_fake_anki(tmp_path: Path, qtbot, fake_anki) -> 
         # Activity log must contain markers for every phase, through card creation.
         log = driver.log_text()
         assert log.strip(), "activity log is empty after process run"
-        assert "Step 1/5" in log, f"'Step 1/5' not found in log: {log[:500]}"
-        assert "Step 2/5" in log, f"'Step 2/5' not found in log: {log[:500]}"
-        assert "Step 5/5" in log, f"'Step 5/5' not found in log: {log[:500]}"
+        assert "Step 1 of 5" in log, f"'Step 1 of 5' not found in log: {log[:500]}"
+        assert "Step 2 of 5" in log, f"'Step 2 of 5' not found in log: {log[:500]}"
+        assert "Step 5 of 5" in log, f"'Step 5 of 5' not found in log: {log[:500]}"
     finally:
         driver.teardown()
 

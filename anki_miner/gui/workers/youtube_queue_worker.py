@@ -22,10 +22,11 @@ Signal shapes (exact):
 * ``item_started(int)`` — idx fired before the first attempt for the item.
   Items removed mid-run via :meth:`try_skip_item` are silently skipped: no
   ``item_started`` / ``item_finished`` for them.
-* ``item_progress(int, str, int)`` — idx, label, pct. ``pct`` is an
-  ``int(round(0..100))`` percentage covering the WHOLE item as one
-  continuous sweep — download fills 0-30, mining fills 30-100 — or ``-1``
-  for indeterminate phases (the merge step between download and mining).
+* ``item_progress(int, str)`` — idx, label. Text only. The download's own
+  percentage is real and is stated in the label; it is deliberately NOT
+  folded into a whole-item percentage with mining, because the two phases
+  have no known duration ratio (the old 30/70 split was a guess that made
+  the bar sprint and then stall).
 * ``item_finished(int, object, object, int)`` — idx, result-or-None,
   error-string-or-None, attempts. Fires exactly once per item that
   completes (cancel during retry path returns early instead).
@@ -57,6 +58,8 @@ import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import NoJapaneseSubtitlesError, YouTubeFetchError
 from anki_miner.gui.workers._queue_progress import (
@@ -67,6 +70,7 @@ from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -206,10 +210,7 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
                 f"READY item {item.url!r} missing video_id, resolved_sub_mode, or video_info — probe step incomplete"
             )
 
-        # Mining occupies the 30-100 band of the item's percent; the fetch
-        # phase fills 0-30 (see _emit_fetch_progress) so one item is a single
-        # continuous sweep with no backward jump at the fetch->mine boundary.
-        mining_cb = _QueueMiningProgressAdapter(idx, self.item_progress.emit, band=(30, 100))
+        mining_cb = _QueueMiningProgressAdapter(idx, self.item_progress.emit)
 
         assert self._processor is not None  # built at run() start
         return self._processor.process_youtube_url(
@@ -240,21 +241,26 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         self._curation_subtitle = fetched.subtitle_file
 
     def _emit_fetch_progress(self, idx: int, label: str, frac: float | None) -> None:
-        """Translate fetcher progress into the ``item_progress`` signal.
+        """State the download's own progress, as text, in the item's label.
 
-        ``frac`` is a float in [0.0, 1.0] for determinate progress, or
-        ``None`` for indeterminate stages (e.g. merging). Out-of-range
-        floats are clamped defensively; yt-dlp occasionally emits tail
-        values >1.0 — unclamped they would overshoot the mining band's
-        30% start and produce a backward step at the fetch->mine boundary.
+        ``frac`` is a float in [0.0, 1.0] for determinate progress, or ``None``
+        for indeterminate stages (e.g. merging), which say nothing numeric at
+        all. Out-of-range floats are clamped defensively; yt-dlp occasionally
+        emits tail values >1.0.
 
-        The fetch maps into the 0-30 band of the item percent (mining takes
-        30-100 via the adapter band above) so the whole item reads as one
-        continuous sweep.
+        The percentage is the download's and stays labelled as the download's.
+        Blending it with mining into one item percentage required a fixed
+        duration ratio between the two, which nobody has.
         """
         if frac is None:
-            pct = -1
-        else:
-            clamped = max(0.0, min(1.0, frac))
-            pct = int(round(clamped * 30))
-        self.item_progress.emit(idx, label, pct)
+            self.item_progress.emit(idx, label)
+            return
+        clamped = max(0.0, min(1.0, frac))
+        self.item_progress.emit(
+            idx,
+            tr_format(
+                QCoreApplication.translate("YouTubeQueueWorker", "%1 · %2%"),
+                label,
+                int(round(clamped * 100)),
+            ),
+        )

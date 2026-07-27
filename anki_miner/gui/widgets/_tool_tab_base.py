@@ -36,7 +36,7 @@ from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
-from anki_miner.gui.widgets.base import configure_card_layout
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -66,12 +66,15 @@ class _ToolTabStrings:
     cancelling: str
     cancelled: str
     failed: str
+    #: Banner summary for a file the run could not process. The failing file's
+    #: message goes in Details, never here (D24).
+    run_problem: str
     complete_template: str
     select_output_folder: str
     output_default: str
 
 
-class _ToolTabBase(QWidget):
+class _ToolTabBase(ScreenIssueHost, QWidget):
     """Behaviour shared by the file-processing tool tabs. See module docstring."""
 
     # --- Attributes the subclass provides (declared for the type checker) ---
@@ -130,10 +133,24 @@ class _ToolTabBase(QWidget):
         layout.addWidget(self.progress_widget)
 
         self.log_widget = LogWidget()
+        # The Activity console already carries a typed problem channel; a second
+        # "something failed" signal would be two answers to one question (D24).
+        self.log_widget.problem_logged.connect(self._on_log_problem)
         layout.addWidget(self.log_widget)
 
         group.setLayout(layout)
         return group
+
+    def _on_log_problem(self, level: str, message: str) -> None:
+        """Raise a logged ERROR to the screen banner.
+
+        WARNING stays in the log on purpose: a long run produces many, and a
+        banner that rewrites itself once per warning is noise rather than a
+        report. An ERROR is a file that did not get processed.
+        """
+        if level != "ERROR":
+            return
+        self.show_screen_issue(ScreenIssue(summary=self._strings.run_problem, details=message))
 
     # ------------------------------------------------------------------
     # Output location slots
@@ -160,9 +177,10 @@ class _ToolTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _on_file_progress(self, idx: int, pct: int, message: str) -> None:
-        # Compose the intra-file fraction into the whole-run bar so long files
-        # show live movement, not a bar frozen per file.
-        self.progress_widget.set_composed(idx, pct, self._item_total(), message)
+        # The bar counts finished files; the intra-file percentage a tool
+        # reports is shown in the message instead of being folded into the bar,
+        # where it made a long file look like a stalled run.
+        self.progress_widget.set_composed(idx, 0, self._item_total(), message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
         # Whole-file advance in the same percent unit system as set_composed
@@ -195,7 +213,8 @@ class _ToolTabBase(QWidget):
         self.cancel_button.setText(self._strings.cancel)
         self.cancel_button.setEnabled(True)
         if self._cancelled or outcome is TerminalOutcome.CANCELLED:
-            self.progress_widget.reset()
+            # No reset(): the frozen bar still says how many files got done
+            # before the user stopped it.
             self.progress_widget.set_status(self._strings.cancelled)
         elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
             self.progress_widget.reset()
@@ -218,11 +237,14 @@ class _ToolTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _on_cancel(self) -> None:
+        """Cancel the run: one verb, no prompt, no invented progress after it."""
         self._cancelled = True
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self._strings.cancelling)
         self.cancel_button.setEnabled(False)
+        self.progress_widget.freeze()
+        self.progress_widget.set_status(self._strings.cancelling)
 
     # ------------------------------------------------------------------
     # Close contract

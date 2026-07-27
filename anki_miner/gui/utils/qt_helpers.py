@@ -71,6 +71,23 @@ def urls_from_event(event: QDropEvent | QDragEnterEvent) -> list[QUrl]:
     return list(mime.urls())
 
 
+def reveal_settings(origin: QWidget, subtab: str) -> None:
+    """Take the user to a Settings destination from wherever ``origin`` lives.
+
+    The repair inside a screen-issue banner ("Open Media Settings") has to get
+    somewhere, and a tab does not hold a reference to the window that owns it.
+    Resolved by duck typing against the top-level window's ``reveal_capability``
+    — the same self-healing, stable-key lookup the Find a Feature browser uses,
+    so no screen ever learns a tab index. A window without it (a bare widget in
+    a test) is a no-op, not a crash.
+    """
+    from anki_miner.gui.capabilities import CapabilityTarget
+
+    reveal = getattr(origin.window(), "reveal_capability", None)
+    if callable(reveal):
+        reveal(CapabilityTarget("settings", subtab))
+
+
 def configure_table_header(
     table: QTableWidget,
     resize_mode: QHeaderView.ResizeMode = QHeaderView.ResizeMode.Stretch,

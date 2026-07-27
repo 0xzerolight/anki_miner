@@ -59,7 +59,7 @@ from anki_miner.gui.resources.styles.theme import (
     ThemeGroupEntry,
     assess_theme_contrast,
 )
-from anki_miner.gui.widgets.base import SettingAnchorHost
+from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
@@ -95,7 +95,7 @@ FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
 ZOOM_PRESETS = (75, 100, 125, 150, 175, 200)
 
 
-class UISettingsPanel(SettingAnchorHost, QWidget):
+class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     """Settings panel for UI language, zoom, text size, and theme selection.
 
     Signals:
@@ -191,6 +191,8 @@ class UISettingsPanel(SettingAnchorHost, QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
         layout.setSpacing(SPACING.sm)
+
+        self.install_issue_banner(layout)
 
         # Language row (restart-to-apply). Merged in from the former
         # LanguagePanel; Qt captures tr() strings at construction, so a language
@@ -753,12 +755,33 @@ class UISettingsPanel(SettingAnchorHost, QWidget):
         )
 
     def _open_themes_folder(self) -> None:
-        """Open (creating if necessary) the user themes directory."""
+        """Open (creating if necessary) the user themes directory.
+
+        A failure here used to reach the log and nowhere else, so the button
+        simply did nothing (D24). The repair offered is the *parent* folder, not
+        a retry: an mkdir refused for permissions will be refused again, and the
+        parent is where the user can see and fix why.
+        """
         try:
             self._themes_root.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             logger.warning("Could not create themes dir %s: %s", self._themes_root, e)
+            parent = self._themes_root.parent
+
+            def _open_parent() -> None:
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(parent)))
+
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("The themes folder could not be opened."),
+                    details=f"{self._themes_root}: {e}",
+                    action_id="ui.themes-folder-parent",
+                    action_text=self.tr("Open Parent Folder"),
+                ),
+                action=_open_parent,
+            )
             return
+        self.clear_screen_issue()
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._themes_root)))
 
     def _on_manage_profiles(self) -> None:

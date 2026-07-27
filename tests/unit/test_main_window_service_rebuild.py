@@ -77,7 +77,7 @@ def test_update_config_rebuilds_validation_service(main_window, monkeypatch):
 def test_undo_callback_uses_rebuilt_anki_service(main_window, monkeypatch):
     """The Undo delete path must target the rebuilt (current-config) service.
 
-    Drives _on_processing_result so the actual undo_callback is exercised,
+    Drives _on_run_details so the actual undo_callback is exercised,
     proving no stale captured reference survives a config change.
     """
     from anki_miner.gui import main_window as mw_module
@@ -119,7 +119,7 @@ def test_undo_callback_uses_rebuilt_anki_service(main_window, monkeypatch):
         cards_created=1,
         card_ids=[42],
     )
-    main_window._on_processing_result(result)
+    main_window._on_run_details(result)
 
     captured["cb"]([42])
 

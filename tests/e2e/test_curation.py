@@ -5,9 +5,9 @@ Drives the REAL curation bridge (``MiningTabBase._curation_bridge`` →
 ``tests/unit/test_mining_tab_base_curation.py``: a real ``QThread`` calls the
 worker-side bridge, the responder patches ``WordCurationDialog`` at its import
 site in ``_mining_tab_base``, and we spin the GUI event loop with ``_drain_until``
-until the worker returns. This proves the fake's ``DialogCode.Accepted`` equals
-the value its ``exec()`` returns in the real slot, and that each policy maps the
-offered words to the right selection.
+until the worker returns. This proves the fake actually resolves the non-modal
+curator (releasing the parked worker) and that each policy maps the offered words
+to the right selection.
 
 Qt-only (no Anki / no ffmpeg) → default suite, no pytest marker.
 """
@@ -153,19 +153,23 @@ def test_full_window_patches_and_restores_extra_dialogs(qapp, qtbot):
     assert setup_wizard.run_setup_wizard is orig_wizard
 
 
-def test_dialogcode_accepted_is_real_enum(qapp, qtbot):
-    """The fake's DialogCode.Accepted must be the real enum member.
+def test_fake_resolves_itself_on_show(qapp, qtbot):
+    """The fake must answer through ``finished``, not a return value.
 
-    The slot compares ``dialog.exec() == WordCurationDialog.DialogCode.Accepted``
-    where ``WordCurationDialog`` is the patched fake, so the fake's enum and the
-    value returned by ``exec()`` must be identical objects — guaranteed by reusing
-    the real enum.
+    The curator is shown, never exec()'d (D33): the tab connects its resolver to
+    ``finished`` and returns immediately. A fake that only returned a DialogCode
+    would leave every soak run parked at the curation gate forever.
     """
     import anki_miner.gui.widgets._mining_tab_base as base
-    from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog as RealDialog
 
     with AutoCurationResponder(policy="all"):
         fake = base.WordCurationDialog
-        assert fake.DialogCode is RealDialog.DialogCode
         inst = fake(["x"], None)
-        assert inst.exec() == fake.DialogCode.Accepted
+        qtbot.addWidget(inst)
+        codes: list[int] = []
+        inst.finished.connect(codes.append)
+
+        inst.show()
+
+        assert codes == [inst.DialogCode.Accepted]
+        assert inst.get_selected_words() == ["x"]

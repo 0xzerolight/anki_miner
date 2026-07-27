@@ -313,7 +313,7 @@ def test_inprocess_fake_soak_gui_checks_populated_and_pass(
     After each session ``run_one_session`` calls ``_check_gui_state`` and stores
     the result in ``SessionReport.gui_checks``.  For a healthy process run
     every check must be ``ok=True`` (buttons idle, log non-empty, phase markers
-    through Step 5/5 present, progress advanced).  A failing check would also
+    through Step 5 of 5 present, progress advanced).  A failing check would also
     set ``session.ok=False`` which would make the overall soak ``FAIL`` —
     verified by the verdict assertion.
     """
@@ -339,13 +339,13 @@ def test_inprocess_fake_soak_gui_checks_populated_and_pass(
         # Verify the expected check keys are present.
         assert "buttons_idle" in s.gui_checks
         assert "log_nonempty" in s.gui_checks
-        assert "log_contains:Step 1/5" in s.gui_checks
-        assert "log_contains:Step 2/5" in s.gui_checks
+        assert "log_contains:Step 1 of 5" in s.gui_checks
+        assert "log_contains:Step 2 of 5" in s.gui_checks
         # Phase markers recorded in order when all common markers found.
         assert "log_markers_in_order" in s.gui_checks
         # Cards were created every session, so the phase-5 marker is asserted.
-        assert "log_contains:Step 5/5" in s.gui_checks
-        assert s.gui_checks["log_contains:Step 5/5"]["ok"] is True
+        assert "log_contains:Step 5 of 5" in s.gui_checks
+        assert s.gui_checks["log_contains:Step 5 of 5"]["ok"] is True
         # Progress state is ALWAYS recorded as data.
         assert "progress_value" in s.gui_checks, "progress_value must be recorded in gui_checks"
         assert "progress_text" in s.gui_checks, "progress_text must be recorded in gui_checks"
@@ -775,7 +775,7 @@ def test_build_gateway_adopt_deck_allows_existing(tmp_path: Path) -> None:
 def _make_mock_driver(
     *,
     buttons_idle: bool = True,
-    log: str = "Step 1/5\nStep 2/5\n",
+    log: str = "Step 1 of 5\nStep 2 of 5\n",
     progress_value: int = 0,
     progress_text: str = "",
 ) -> object:
@@ -803,13 +803,13 @@ def _call_check_gui_state(**kwargs):
 
 
 def test_check_gui_state_process_cards_created_zero_no_step5_passes() -> None:
-    """Process run, cards_created==0, log has Step 1/5+2/5 but NOT Step 5/5 → PASS.
+    """Process run, cards_created==0, log has Step 1 of 5+2/5 but NOT Step 5 of 5 → PASS.
 
     Models the faithful soak early-return path: all words already known, pipeline
-    returns before phase 5, progress never advances.  Both log_contains:Step 5/5
+    returns before phase 5, progress never advances.  Both log_contains:Step 5 of 5
     and progress_not_stuck must be ok=True (data-only, never a failure).
     """
-    log = "Step 1/5\nStep 2/5\nAll words already in Anki!\n"
+    log = "Step 1 of 5\nStep 2 of 5\nAll words already in Anki!\n"
     driver = _make_mock_driver(log=log, progress_value=0, progress_text="")
     checks = _call_check_gui_state(
         driver=driver,
@@ -817,10 +817,10 @@ def test_check_gui_state_process_cards_created_zero_no_step5_passes() -> None:
         cards_created=0,
     )
 
-    # Step 5/5 absent from log but ok=True because cards_created==0.
-    step5 = checks.get("log_contains:Step 5/5")
-    assert step5 is not None, "log_contains:Step 5/5 must be recorded"
-    assert step5["actual"] is False, "Step 5/5 should not be in log"
+    # Step 5 of 5 absent from log but ok=True because cards_created==0.
+    step5 = checks.get("log_contains:Step 5 of 5")
+    assert step5 is not None, "log_contains:Step 5 of 5 must be recorded"
+    assert step5["actual"] is False, "Step 5 of 5 should not be in log"
     assert step5["ok"] is True, "ok must be True when cards_created==0 (early return)"
 
     # progress_not_stuck recorded as data-only (ok=True) even though stuck.
@@ -829,18 +829,18 @@ def test_check_gui_state_process_cards_created_zero_no_step5_passes() -> None:
     assert stuck_check["actual"] is True, "progress IS stuck (value=0, idle status)"
     assert stuck_check["ok"] is True, "ok must be True when cards_created==0"
 
-    # All other checks pass (buttons idle, log non-empty, Step 1/5 + 2/5 present).
+    # All other checks pass (buttons idle, log non-empty, Step 1 of 5 + 2/5 present).
     failed = [n for n, c in checks.items() if not c["ok"]]
     assert not failed, f"unexpected failures: {failed}"
 
 
 def test_check_gui_state_process_cards_created_positive_missing_step5_fails() -> None:
-    """Process run, cards_created>0, log MISSING Step 5/5 → FAIL.
+    """Process run, cards_created>0, log MISSING Step 5 of 5 → FAIL.
 
     Regression guard: a genuine bug (cards created but phase-5 marker absent)
-    must still be caught.  ok must be False for log_contains:Step 5/5.
+    must still be caught.  ok must be False for log_contains:Step 5 of 5.
     """
-    log = "Step 1/5\nStep 2/5\n"  # Step 5/5 deliberately absent
+    log = "Step 1 of 5\nStep 2 of 5\n"  # Step 5 of 5 deliberately absent
     driver = _make_mock_driver(log=log, progress_value=50, progress_text="Processing")
     checks = _call_check_gui_state(
         driver=driver,
@@ -848,10 +848,10 @@ def test_check_gui_state_process_cards_created_positive_missing_step5_fails() ->
         cards_created=5,
     )
 
-    step5 = checks.get("log_contains:Step 5/5")
+    step5 = checks.get("log_contains:Step 5 of 5")
     assert step5 is not None
     assert step5["actual"] is False
-    assert step5["ok"] is False, "ok must be False when cards_created>0 and Step 5/5 absent"
+    assert step5["ok"] is False, "ok must be False when cards_created>0 and Step 5 of 5 absent"
 
 
 def test_check_gui_state_process_cards_created_positive_stuck_progress_fails() -> None:
@@ -860,7 +860,7 @@ def test_check_gui_state_process_cards_created_positive_stuck_progress_fails() -
     Regression guard: a genuine stuck-progress bug (cards created but progress
     never advanced) must still be caught.  ok must be False for progress_not_stuck.
     """
-    log = "Step 1/5\nStep 2/5\nStep 5/5\n"
+    log = "Step 1 of 5\nStep 2 of 5\nStep 5 of 5\n"
     driver = _make_mock_driver(log=log, progress_value=0, progress_text="")
     checks = _call_check_gui_state(
         driver=driver,
@@ -875,12 +875,12 @@ def test_check_gui_state_process_cards_created_positive_stuck_progress_fails() -
 
 
 def test_check_gui_state_process_cards_created_positive_healthy_passes() -> None:
-    """Process run, cards_created>0, Step 5/5 present, progress advanced → PASS.
+    """Process run, cards_created>0, Step 5 of 5 present, progress advanced → PASS.
 
     The happy path (smoke / bypass mode): cards were created, phase 5 ran,
     progress advanced beyond 0.  All checks must be ok=True.
     """
-    log = "Step 1/5\nStep 2/5\nStep 5/5\n"
+    log = "Step 1 of 5\nStep 2 of 5\nStep 5 of 5\n"
     driver = _make_mock_driver(log=log, progress_value=100, progress_text="Complete")
     checks = _call_check_gui_state(
         driver=driver,
@@ -891,7 +891,7 @@ def test_check_gui_state_process_cards_created_positive_healthy_passes() -> None
     failed = [n for n, c in checks.items() if not c["ok"]]
     assert not failed, f"unexpected failures in healthy process run: {failed}"
 
-    step5 = checks["log_contains:Step 5/5"]
+    step5 = checks["log_contains:Step 5 of 5"]
     assert step5["ok"] is True and step5["actual"] is True
 
     stuck_check = checks["progress_not_stuck"]

@@ -1,9 +1,10 @@
-"""Auto-responder for the blocking word-curation modal (E2E soak harness).
+"""Auto-responder for the word-curation window (E2E soak harness).
 
-Unattended/looped mining runs would otherwise stall forever on the modal
-``WordCurationDialog``. :class:`AutoCurationResponder` is a context manager that
-patches that dialog (and, in ``full_window`` mode, the post-run results +
-first-run welcome dialogs) with no-op fakes so a run completes without a human.
+Unattended/looped mining runs would otherwise stall forever waiting for a human
+to answer ``WordCurationDialog``. :class:`AutoCurationResponder` is a context
+manager that patches that dialog (and, in ``full_window`` mode, the post-run
+results + first-run welcome dialogs) with no-op fakes so a run completes without
+a human.
 
 The headline soak feature drives the bare mining tab (``full_window=False``):
 it only needs the curation dialog patched. ``full_window=True`` additionally
@@ -18,13 +19,13 @@ module). Patching the *definition* site would not affect that already-bound name
 so the responder patches the name as imported INTO ``_mining_tab_base`` — exactly
 what ``tests/unit/test_mining_tab_base_curation.py`` does.
 
-DialogCode equality
--------------------
-The slot compares ``dialog.exec() == WordCurationDialog.DialogCode.Accepted``,
-where ``WordCurationDialog`` is this module's fake. So the fake's
-``DialogCode.Accepted`` and the value its ``exec()`` returns must be the *same*
-object. The responder captures the REAL ``WordCurationDialog.DialogCode`` before
-patching and reuses it for both, which guarantees the equality holds.
+Why the fake is a real QDialog
+------------------------------
+The curator is presented with ``show()``, not ``exec()`` (decision D33). The tab
+connects its resolver to ``finished`` and returns; nothing else releases the
+parked worker. A fake that only implemented ``exec()`` would leave every soak run
+hung at the curation gate, so the fake subclasses ``QDialog`` and accepts itself
+from ``show()`` — the same instant the old ``exec()`` fake used to answer.
 """
 
 from __future__ import annotations
@@ -48,40 +49,31 @@ _SETUP_WIZARD_TARGET = "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wi
 def _make_fake_curation_dialog(responder: AutoCurationResponder) -> type:
     """Build a fake ``WordCurationDialog`` class bound to ``responder``.
 
-    Captures the REAL ``DialogCode`` enum so the fake's ``Accepted`` member and
-    the value returned by ``exec()`` are the identical object the real slot
-    compares against.
+    A real ``QDialog``, so the tab's ``finished``-connected resolver fires and
+    the parked mining worker is released — see the module docstring.
     """
-    from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog as _Real
+    from PyQt6.QtWidgets import QDialog
 
-    real_dialog_code = _Real.DialogCode
-
-    class _FakeCurationDialog:
-        # Reuse the real enum so ``exec() == DialogCode.Accepted`` holds in the
-        # real slot regardless of which side resolves the name.
-        DialogCode = real_dialog_code
-
+    class _FakeCurationDialog(QDialog):
         def __init__(self, *args: Any, **kwargs: Any) -> None:
             # Real call site: WordCurationDialog(words, parent, mark_known_callback=...,
             # media_context=..., lookup_fn=...). First positional arg is the offered
-            # words list.
+            # words list, the second the owning tab.
+            super().__init__(args[1] if len(args) > 1 else kwargs.get("parent"))
             offered = list(args[0]) if args else list(kwargs.get("words", []))
             self._offered = offered
             responder.offered.append(offered)
 
-        def exec(self) -> Any:
+        def show(self) -> None:
             # Always "accept": even policy="none" confirms an empty selection
-            # (completed, 0 cards) rather than cancelling (None).
-            return real_dialog_code.Accepted
+            # (completed, 0 cards) rather than cancelling (None). The tab has
+            # already connected its resolver, so accepting here resolves the
+            # item exactly as a human clicking Confirm would.
+            super().show()
+            self.accept()
 
         def get_selected_words(self) -> list:
             return responder._select(self._offered)
-
-        def reject(self) -> None:  # pragma: no cover - cancel path; not hit on accept
-            """No-op: the cancel path calls this on an open dialog."""
-
-        def deleteLater(self) -> None:  # match QDialog surface for teardown guard
-            pass
 
     return _FakeCurationDialog
 

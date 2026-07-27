@@ -33,7 +33,6 @@ from anki_miner.models import (
 )
 from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.audio_stage import AudioStage
-from anki_miner.orchestration.stage_weighted_progress import StageWeightedProgress
 from anki_miner.services import (
     AnkiService,
     DefinitionService,
@@ -56,6 +55,12 @@ from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.timing import timed_phase
 
 logger = logging.getLogger(__name__)
+
+#: The mining pipeline is exactly five stages long: parse, filter, media,
+#: definitions, cards. Their *order* and *count* are the only whole-run
+#: position knowable in advance -- their relative durations are not, which is
+#: why no stage weight lives anywhere in this module any more.
+PIPELINE_STAGE_COUNT = 5
 
 
 if TYPE_CHECKING:
@@ -455,6 +460,31 @@ class EpisodeProcessor:
             new_words_found=ctx.new_words_found,
         )
 
+    def _announce_stage(
+        self,
+        progress_callback: ProgressCallback | None,
+        index: int,
+        name: str,
+    ) -> None:
+        """Say which of the five pipeline stages this run has reached.
+
+        The pipeline knows its stage position exactly, and knows nothing
+        whatever about how the stages compare in duration. Stage weights used
+        to supply that missing comparison as constants; because they were
+        guesses the bar raced through short stages and then sat on a long one.
+        Both channels therefore carry the position and nothing else: the
+        presenter writes the log line, the per-run callback updates the run's
+        own state.
+
+        Args:
+            progress_callback: The run's progress callback, if it has one.
+            index: 1-based stage position.
+            name: The stage's own name.
+        """
+        self.presenter.show_stage(index, PIPELINE_STAGE_COUNT, name)
+        if progress_callback is not None:
+            progress_callback.on_stage(index, PIPELINE_STAGE_COUNT, name)
+
     def _report_no_mineable_words(self, ctx: _EpisodeContext) -> None:
         """Emit the terminal message when no mineable words remain.
 
@@ -484,6 +514,7 @@ class EpisodeProcessor:
         self,
         ctx: _EpisodeContext,
         subtitle_file: Path,
+        progress_callback: ProgressCallback | None = None,
         want_line_index: bool = False,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None]:
         """Phase 1: parse subtitles into tokenized words (and optionally a line index).
@@ -493,11 +524,13 @@ class EpisodeProcessor:
         via ``want_line_index`` (interactive curation uses it to offer
         alternative example sentences per word).
         """
+        self._announce_stage(
+            progress_callback,
+            1,
+            QCoreApplication.translate("EpisodeProcessor", "Parsing subtitles"),
+        )
         self.presenter.show_info(
-            tr_format(
-                QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing subtitles: %1"),
-                subtitle_file.name,
-            )
+            tr_format(QCoreApplication.translate("EpisodeProcessor", "Subtitles: %1"), subtitle_file.name)
         )
         line_index: list[LineLemmas] | None = None
         if self.config.use_i_plus_one_filter or want_line_index:
@@ -516,6 +549,7 @@ class EpisodeProcessor:
         all_words: list[TokenizedWord],
         line_index: list[LineLemmas] | None,
         cross_episode_counts: dict[str, int] | None,
+        progress_callback: ProgressCallback | None = None,
     ) -> list[TokenizedWord]:
         """Phase 2: attach frequency data, filter against known vocab, apply optional filters.
 
@@ -592,21 +626,21 @@ class EpisodeProcessor:
             )
 
         # Filter against existing vocabulary.
+        self._announce_stage(
+            progress_callback,
+            2,
+            QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
+        )
         if self.config.include_known_words:
             # Deck Builder "include everything" mode: skip known-words subtraction
             # entirely — including the Issue #42 user ignore list — and mine all
             # words that passed POS/subtype filtering. Coverage-deck builds
             # intentionally re-card words the user already knows.
             self.presenter.show_info(
-                QCoreApplication.translate(
-                    "EpisodeProcessor", "Step 2/5 — Known-words filter bypassed (include everything mode)"
-                )
+                QCoreApplication.translate("EpisodeProcessor", "Known-words filter bypassed (include everything mode)")
             )
             unknown_words = all_words
         else:
-            self.presenter.show_info(
-                QCoreApplication.translate("EpisodeProcessor", "Step 2/5 — Filtering against known vocabulary")
-            )
             # User-curated ignore list (Issue #42): always applied on the normal
             # mining path, regardless of the use_known_words_db toggle. The DB
             # object is always present now, but the file may not exist for users
@@ -1040,8 +1074,10 @@ class EpisodeProcessor:
     ) -> list[tuple[TokenizedWord, MediaData]]:
         """Phase 3: extract media (screenshots + audio; audio + cover art when
         ``audio_only``) for each unknown word."""
-        self.presenter.show_info(
-            QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Extracting media from video")
+        self._announce_stage(
+            progress_callback,
+            3,
+            QCoreApplication.translate("EpisodeProcessor", "Extracting media"),
         )
 
         # Resolve the animated screenshot format once and announce any fallback
@@ -1103,7 +1139,11 @@ class EpisodeProcessor:
         list[tuple[str | None, str | None]],
     ]:
         """Phase 4: look up definitions, optional glossaries, and pitch accents."""
-        self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 4/5 — Fetching definitions"))
+        self._announce_stage(
+            progress_callback,
+            4,
+            QCoreApplication.translate("EpisodeProcessor", "Fetching definitions"),
+        )
         words_with_media = [word for word, _ in media_results]
         # Keyed on mined_form (the card-front spelling), NOT lemma: unidic's
         # canonical lemma collapses kanji variants (殺る → 遣る), so lemma-keyed
@@ -1214,7 +1254,11 @@ class EpisodeProcessor:
         that were created — carried onto ``ProcessingResult`` so the Undo
         callback can revert ``source='mined'`` rows in known_words.db (OVH-030).
         """
-        self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Step 5/5 — Creating Anki cards"))
+        self._announce_stage(
+            progress_callback,
+            5,
+            QCoreApplication.translate("EpisodeProcessor", "Creating Anki cards"),
+        )
         card_data: list[CardPayload] = []
         # Self-contained PER-FIELD glossary styling: collect the dictionary CSS
         # entries ONCE per episode (collect_dictionary_css_entries does registry
@@ -1608,7 +1652,9 @@ class EpisodeProcessor:
             # path too — not just the i+1 filter.
             want_line_index = curation_callback is not None
             with timed_phase("parse", logger):
-                all_words, line_index = self._phase1_parse(ctx, subtitle_file, want_line_index=want_line_index)
+                all_words, line_index = self._phase1_parse(
+                    ctx, subtitle_file, progress_callback, want_line_index=want_line_index
+                )
             if not all_words:
                 self.presenter.show_warning(
                     QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
@@ -1618,7 +1664,7 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("filter", logger):
-                unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts)
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts, progress_callback)
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
@@ -1638,30 +1684,12 @@ class EpisodeProcessor:
                     return outcome
                 unknown_words = outcome
 
-            # Wrap the raw callback so the bar reflects whole-episode progress
-            # instead of resetting 0->100 per stage. One weight per stage that
-            # reports progress, in firing order: extract, definitions,
-            # [glossaries if mapped], cards.
-            stage_progress = progress_callback
-            if progress_callback is not None:
-                # StageWeightedProgress normalizes these internally, so the
-                # individual values only express relative weight — sums need
-                # not equal 1.0.
-                stage_weights = [0.40]  # extract
-                if self._expression_audio_active:
-                    stage_weights.append(0.10)  # expression audio (right after extract)
-                stage_weights.append(0.25)  # definitions
-                if self.config.anki_fields.get("glossary"):
-                    stage_weights.append(0.10)  # glossaries
-                stage_weights.append(0.25)  # cards
-                stage_progress = StageWeightedProgress(progress_callback, stage_weights)
-
             with timed_phase("extract", logger):
                 media_results = self._phase3_extract(
                     ctx,
                     video_file,
                     unknown_words,
-                    stage_progress,
+                    progress_callback,
                     run_temp_folder,
                     audio_track_override,
                     audio_only=audio_only,
@@ -1678,16 +1706,14 @@ class EpisodeProcessor:
             )
 
             with timed_phase("lookup", logger):
-                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, progress_callback)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("cards", logger):
                 cards_created, created_note_ids, mined_forms = self._phase5_create(
-                    ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+                    ctx, media_results, definitions, glossaries, pitch_data, progress_callback
                 )
-            if isinstance(stage_progress, StageWeightedProgress):
-                stage_progress.finish()
             result = ctx.build_result(
                 cards_created=cards_created,
                 card_ids=created_note_ids,
@@ -1774,15 +1800,9 @@ class EpisodeProcessor:
         """
         # Label-only kind split: manga cards carry a distinct page image each,
         # while a book attaches one cover to every card (txt and subtitles have
-        # none) — so the image-stage wording differs. The three emissions below
-        # stay strictly UNCONDITIONAL (band accounting must not depend on kind);
-        # only the text varies. Derived once here, used at the three sites.
+        # none) — so the image-stage wording differs. Only the text varies.
+        # Derived once here, used at the two sites below.
         is_book = document.kind in ("book", "subtitle")
-        step_banner = (
-            QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing card images")
-            if is_book
-            else QCoreApplication.translate("EpisodeProcessor", "Step 3/5 — Preparing page images")
-        )
         image_stage_desc = (
             QCoreApplication.translate("EpisodeProcessor", "Preparing card images")
             if is_book
@@ -1793,7 +1813,7 @@ class EpisodeProcessor:
             if is_book
             else QCoreApplication.translate("EpisodeProcessor", "Page image: %1")
         )
-        self.presenter.show_info(step_banner)
+        self._announce_stage(progress_callback, 3, image_stage_desc)
         images_dir = run_temp_folder / "images"
         units_by_index = {unit.index: unit for unit in document.units}
         picture_mapped = bool(self.config.anki_fields.get("picture"))
@@ -1809,10 +1829,9 @@ class EpisodeProcessor:
 
         media_results: list[tuple[TokenizedWord, MediaData]] = []
 
-        # The image band is consumed UNCONDITIONALLY (on_start / per-ref
-        # on_progress / on_complete) — even for text-only volumes with zero
-        # image refs — so StageWeightedProgress does not advance into the next
-        # band's weight on an imageless run (same discipline as expression audio).
+        # on_start fires even for text-only volumes with zero image refs, so the
+        # stage still declares its true denominator (which is then legitimately
+        # zero) rather than going silent.
         if progress_callback is not None:
             progress_callback.on_start(
                 len(unknown_words),
@@ -1984,9 +2003,14 @@ class EpisodeProcessor:
             # want_line_index itself — otherwise the filter gets an empty index
             # and silently drops every word.
             want_line_index = self.config.use_i_plus_one_filter or curation_callback is not None
+            self._announce_stage(
+                progress_callback,
+                1,
+                QCoreApplication.translate("EpisodeProcessor", "Parsing text"),
+            )
             self.presenter.show_info(
                 tr_format(
-                    QCoreApplication.translate("EpisodeProcessor", "Step 1/5 — Parsing text: %1"),
+                    QCoreApplication.translate("EpisodeProcessor", "Text: %1"),
                     document.title,
                 )
             )
@@ -2009,7 +2033,7 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("filter", logger):
-                unknown_words = self._phase2_filter(ctx, all_words, line_index, None)
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, None, progress_callback)
             # Reading-specific in-document occurrence floor (reuses the
             # cross-episode filter's <=1 early-return). counts is the parse
             # Counter — replaces the episode path's count_lemmas(subtitle_file).
@@ -2034,41 +2058,22 @@ class EpisodeProcessor:
                     return outcome
                 unknown_words = outcome
 
-            # Wrap only phases 3'/4/5 in one weighted sweep (no parse/filter
-            # bands). Bands, in firing order: image prep, [expression audio],
-            # [sentence TTS], definitions, [glossaries], cards — renormalized
-            # internally.
-            stage_progress = progress_callback
-            if progress_callback is not None:
-                stage_weights = [0.40]  # image prep
-                if self._expression_audio_active:
-                    stage_weights.append(0.10)  # expression audio
-                if self._reading_tts_active:
-                    stage_weights.append(0.10)  # sentence TTS
-                stage_weights.append(0.25)  # definitions
-                if self.config.anki_fields.get("glossary"):
-                    stage_weights.append(0.10)  # glossaries
-                stage_weights.append(0.25)  # cards
-                stage_progress = StageWeightedProgress(progress_callback, stage_weights)
-
             with timed_phase("reading-media", logger):
                 media_results = self._phase3_reading_media(
-                    ctx, document, unknown_words, stage_progress, run_temp_folder
+                    ctx, document, unknown_words, progress_callback, run_temp_folder
                 )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("lookup", logger):
-                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, stage_progress)
+                definitions, glossaries, pitch_data = self._phase4_lookup(ctx, media_results, progress_callback)
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("cards", logger):
                 cards_created, created_note_ids, mined_forms = self._phase5_create(
-                    ctx, media_results, definitions, glossaries, pitch_data, stage_progress
+                    ctx, media_results, definitions, glossaries, pitch_data, progress_callback
                 )
-            if isinstance(stage_progress, StageWeightedProgress):
-                stage_progress.finish()
             result = ctx.build_result(
                 cards_created=cards_created,
                 card_ids=created_note_ids,

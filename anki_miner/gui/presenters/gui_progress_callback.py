@@ -15,6 +15,7 @@ class GUIProgressCallback(QObject):
     """
 
     # Signals for thread-safe communication
+    stage_signal = pyqtSignal(int, int, str)  # index, total, stage name
     start_signal = pyqtSignal(int, str)  # total, description
     progress_signal = pyqtSignal(int, str)  # current, item_description
     complete_signal = pyqtSignal()
@@ -27,6 +28,19 @@ class GUIProgressCallback(QObject):
             parent: Optional parent QObject
         """
         super().__init__(parent)
+
+    def on_stage(self, index: int, total: int, name: str) -> None:
+        """Called when the pipeline enters one of its numbered stages.
+
+        Forwarded verbatim: the position is the whole point, and any arithmetic
+        here would be the invented percentage this replaced.
+
+        Args:
+            index: 1-based position of this stage
+            total: How many stages this pipeline has
+            name: The stage's own name
+        """
+        self.stage_signal.emit(index, total, name)
 
     def on_start(self, total: int, description: str) -> None:
         """Called when an operation starts.

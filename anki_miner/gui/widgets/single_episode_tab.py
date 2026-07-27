@@ -31,13 +31,14 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     configure_card_layout,
     configure_expanding_container,
     configure_scrolled_page,
@@ -185,6 +186,9 @@ class SingleEpisodeTab(MiningTabBase):
 
         self.progress_widget = ProgressWidget()
         layout.addWidget(self.progress_widget)
+        # The durable end state of this same card (D20). One episode per run,
+        # so the receipt never needs a noun to count.
+        self._install_receipt(layout, self.progress_widget)
 
         # Log widget (already has its own header and styling)
         self.log_widget = LogWidget()
@@ -204,6 +208,7 @@ class SingleEpisodeTab(MiningTabBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
@@ -343,15 +348,19 @@ class SingleEpisodeTab(MiningTabBase):
         if sibling is not None:
             self.subtitle_selector.set_path(str(sibling))
 
+    def _open_media_settings(self) -> None:
+        """Repair action for a probe failure: the ffmpeg/ffprobe paths live there."""
+        reveal_settings(self, "media")
+
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
         video_path = self.video_selector.path_or_none()
         if video_path is None:
-            QMessageBox.warning(self, self.tr("Missing Video File"), self.tr("Select a video file first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
             return
         if not self.video_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
             )
             return
 
@@ -400,10 +409,14 @@ class SingleEpisodeTab(MiningTabBase):
         def _on_probe_error(msg: str) -> None:
             self.tracks_button.setEnabled(True)
             logger.error("Failed to probe audio tracks: %s", msg)
-            QMessageBox.warning(
-                self,
-                self.tr("Probe Failed"),
-                self.tr("Failed to detect audio tracks. Check that ffprobe is installed."),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Audio tracks could not be read."),
+                    details=msg,
+                    action_id="settings.media",
+                    action_text=self.tr("Open Media Settings"),
+                ),
+                action=self._open_media_settings,
             )
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
@@ -418,18 +431,18 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.path_or_none()
 
         if video_path is None or subtitle_path is None:
-            QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose both a video file and a subtitle file.")))
             return
 
         if not self.video_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
             )
             return
 
         if not self.subtitle_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Subtitle file not found: %1"), subtitle_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=subtitle_path)
             )
             return
 
@@ -472,8 +485,8 @@ class SingleEpisodeTab(MiningTabBase):
         def _on_parse_error(msg: str) -> None:
             self.timing_button.setEnabled(True)
             logger.error("Failed to parse subtitles: %s", msg)
-            QMessageBox.critical(
-                self, self.tr("Parse Error"), self.tr("Failed to parse subtitles. Check the file format.")
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("The subtitles could not be read. Check the file format."), details=msg)
             )
 
         run_off_thread(self, _parse, _on_parsed, _on_parse_error)
@@ -488,18 +501,18 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.path_or_none()
 
         if video_path is None or subtitle_path is None:
-            QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose both a video file and a subtitle file.")))
             return
 
         if not self.video_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
             )
             return
 
         if not self.subtitle_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Subtitle file not found: %1"), subtitle_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=subtitle_path)
             )
             return
 
@@ -522,13 +535,15 @@ class SingleEpisodeTab(MiningTabBase):
         self.log_widget.clear_log()
         self.progress_widget.reset()
         self._cancel_requested = False
+        # One episode per run, so the receipt counts notes and never items.
+        self._begin_receipt(1)
 
         # Hide action buttons, show cancel button
         self._is_processing = True
         self.process_button.hide()
         self.timing_button.hide()
         self.tracks_button.hide()
-        self.cancel_button.setText(self.tr("\u25a0 Cancel"))
+        self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
 
@@ -566,6 +581,10 @@ class SingleEpisodeTab(MiningTabBase):
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
         self.worker_thread.finished.connect(self._restore_buttons)
+        # Seal the receipt on the thread's own end, which is emitted after
+        # run() returns: by then the result (or the error) has been delivered,
+        # including the committed-notes result a cancelled run still produces.
+        self.worker_thread.finished.connect(self._on_run_thread_finished)
         # Test seam: let any listener attach to the worker BEFORE it starts (so a
         # connect-before-start cannot miss an immediate emit). No-op in normal use.
         self.worker_created.emit(self.worker_thread)
@@ -597,14 +616,20 @@ class SingleEpisodeTab(MiningTabBase):
         return media_context, self._lookup_fn_from_processor(proc)
 
     def _on_cancel_clicked(self) -> None:
-        """Handle cancel button click."""
+        """Cancel the run: one verb, no prompt, and no invented progress after it.
+
+        The bar freezes where it truly was rather than continuing towards a
+        finish that will not happen, and the button states plainly that the
+        request has been made and is being waited on.
+        """
         self._cancel_requested = True
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
-        self.cancel_button.setText(self.tr("Cancelling..."))
+        self.cancel_button.setText(self.tr("Cancelling…"))
         self.cancel_button.setEnabled(False)
-        self.progress_widget.set_status(self.tr("Cancelling..."))
+        self.progress_widget.freeze()
+        self.progress_widget.set_status(self.tr("Cancelling…"))
 
     def _restore_buttons(self) -> None:
         """Restore normal button state after processing ends."""
@@ -615,10 +640,12 @@ class SingleEpisodeTab(MiningTabBase):
         self.tracks_button.show()
         # Cancel recovery lives HERE (QThread.finished always fires), not in
         # the result slot: the worker suppresses result_ready on a cancelled
-        # run (and on curation reject), so "Cancelling..." would otherwise be
+        # run (and on curation reject), so "Cancelling…" would otherwise be
         # stranded forever.
         if self._cancel_requested:
-            self.progress_widget.reset()
+            # Deliberately no reset(): zeroing the bar at the end of a cancel
+            # erases how far the run actually got, which is the one thing the
+            # user wants to know when they stop something.
             self.progress_widget.set_status(self.tr("Cancelled"))
 
     def _on_processing_finished(self, result) -> None:
@@ -627,6 +654,9 @@ class SingleEpisodeTab(MiningTabBase):
         Args:
             result: ProcessingResult object
         """
+        # Recorded first: the receipt is sealed on the thread's own end, which
+        # arrives after this, and it needs this result in it.
+        self._record_receipt_result(result)
         self._restore_buttons()
 
         if not self._cancel_requested:
@@ -667,6 +697,7 @@ class SingleEpisodeTab(MiningTabBase):
         Args:
             error_message: Error message
         """
+        self._mark_receipt_failed()
         self._restore_buttons()
 
         # Show error

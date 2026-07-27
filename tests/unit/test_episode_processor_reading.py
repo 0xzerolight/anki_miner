@@ -150,18 +150,29 @@ def _make_processor(
 
 
 class _RecordingProgress:
-    """Captures the global pct values (and stage/item labels) emitted through a StageWeightedProgress."""
+    """Captures exactly what the pipeline claims to know about its position.
+
+    There is no whole-run percentage to record any more: the pipeline reports
+    its stage (1..5) and, inside a stage, a true local count against a declared
+    total. ``counts`` therefore holds per-stage item numbers, not a global sweep.
+    """
 
     def __init__(self) -> None:
-        self.pcts: list[int] = []
+        self.stages: list[tuple[int, int, str]] = []
+        self.starts: list[tuple[int, str]] = []
         self.start_descs: list[str] = []
+        self.counts: list[int] = []
         self.progress_descs: list[str] = []
 
+    def on_stage(self, index: int, total: int, name: str) -> None:
+        self.stages.append((index, total, name))
+
     def on_start(self, total: int, description: str) -> None:  # noqa: D401
+        self.starts.append((total, description))
         self.start_descs.append(description)
 
     def on_progress(self, current: int, item_description: str) -> None:
-        self.pcts.append(current)
+        self.counts.append(current)
         self.progress_descs.append(item_description)
 
     def on_complete(self) -> None:
@@ -169,6 +180,16 @@ class _RecordingProgress:
 
     def on_error(self, item_description: str, error_message: str) -> None:
         pass
+
+
+#: The reading pipeline's five stages, in the order they must be announced.
+READING_STAGES = [
+    (1, 5, "Parsing text"),
+    (2, 5, "Filtering against known vocabulary"),
+    (3, 5, "Preparing page images"),
+    (4, 5, "Fetching definitions"),
+    (5, 5, "Creating Anki cards"),
+]
 
 
 def _parse_returning(words, line_index, counts):
@@ -657,7 +678,7 @@ def test_expression_audio_after_images(test_config):
 
     assert fetcher.fetch_candidates.call_count == 2  # once per word
     assert order == ["prep", "prep", "fetch", "fetch"]  # every image before any audio
-    assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
+    assert rec.stages == READING_STAGES
 
 
 def test_note_ids_reset_at_run_start(test_config):
@@ -680,8 +701,13 @@ def test_note_ids_reset_at_run_start(test_config):
 
 
 @pytest.mark.parametrize("glossary", [True, False])
-def test_progress_bands_monotonic_reaches_100(test_config, glossary):
-    """11. Emitted pct sequence monotonic, reaches 100, every band consumed."""
+def test_every_stage_is_announced_once_in_order(test_config, glossary):
+    """11. The five stages are announced exactly once each, in order.
+
+    The optional glossary lookup lives *inside* stage 4 and does not add a
+    stage: the pipeline is five stages long whatever the field mapping, so the
+    denominator the user sees cannot silently change between runs.
+    """
     fields = dict(test_config.anki_fields)
     if glossary:
         fields["glossary"] = "Glossary"
@@ -697,18 +723,29 @@ def test_progress_bands_monotonic_reaches_100(test_config, glossary):
         prep.return_value = Path("/tmp/reading_p.jpg")
         proc.process_reading(_document([_unit(0), _unit(1), _unit(2)]), progress_callback=rec)
 
-    assert rec.pcts == sorted(rec.pcts)  # monotonic non-decreasing
-    assert rec.pcts[-1] == 100
-    assert all(0 <= p <= 100 for p in rec.pcts)
-    # bands: image + defs + [gloss] + cards, each ticking once per word, plus
-    # one label-refresh on_progress at each later-stage boundary (bands - 1),
-    # plus finish.
-    bands = 4 if glossary else 3
-    assert len(rec.pcts) == bands * len(words) + (bands - 1) + 1
+    assert rec.stages == READING_STAGES
 
 
-def test_zero_image_document_consumes_image_band(test_config):
-    """11b. Text-only volume (no image refs) still consumes the 0.40 image band."""
+def test_within_stage_counts_never_exceed_their_declared_total(test_config):
+    """11a. Every count is a real position inside its own stage's own total."""
+    words = [_word("犬", 0), _word("猫", 1), _word("鳥", 2)]
+    counts = collections.Counter({"犬": 1, "猫": 1, "鳥": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    proc = _make_processor(test_config, subtitle_parser=sp)
+
+    rec = _RecordingProgress()
+    with patch(_IMG) as prep:
+        prep.return_value = Path("/tmp/reading_p.jpg")
+        proc.process_reading(_document([_unit(0), _unit(1), _unit(2)]), progress_callback=rec)
+
+    assert rec.starts  # every reporting stage declares its own denominator
+    assert all(total == len(words) for total, _ in rec.starts)
+    assert rec.counts and max(rec.counts) <= len(words)
+
+
+def test_text_only_document_still_declares_the_image_stage(test_config):
+    """11b. A text-only volume announces stage 3 with a real total of zero work."""
     units = [_unit(0, image_ref=None), _unit(1, image_ref=None)]
     words = [_word("犬", 0), _word("猫", 1)]
     counts = collections.Counter({"犬": 1, "猫": 1})
@@ -721,9 +758,8 @@ def test_zero_image_document_consumes_image_band(test_config):
         proc.process_reading(_document(units), progress_callback=rec)
 
     prep.assert_not_called()
-    assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
-    # image (2) + defs (2) + cards (2) + 2 boundary label-refreshes + finish (1)
-    assert len(rec.pcts) == 3 * len(words) + (3 - 1) + 1
+    assert rec.stages == READING_STAGES
+    assert (len(words), "Preparing page images") in rec.starts
 
 
 def test_book_image_stage_strings(test_config):
@@ -744,12 +780,12 @@ def test_book_image_stage_strings(test_config):
             progress_callback=rec,
         )
 
-    infos = [c.args[0] for c in presenter.show_info.call_args_list]
-    assert "Step 3/5 — Preparing card images" in infos  # step banner
+    stages = [c.args for c in presenter.show_stage.call_args_list]
+    assert (3, 5, "Preparing card images") in stages  # stage announcement
     assert rec.start_descs[0] == "Preparing card images"  # on_start desc
     assert f"Card image: {words[0].mined_form}" in rec.progress_descs  # per-word
     # No manga wording leaks into a book run.
-    assert "Step 3/5 — Preparing page images" not in infos
+    assert (3, 5, "Preparing page images") not in stages
     assert "Preparing page images" not in rec.start_descs
     assert "Page image: 犬" not in rec.progress_descs
 
@@ -769,15 +805,15 @@ def test_manga_image_stage_strings_unchanged(test_config):
         prep.return_value = Path("/tmp/reading_p.jpg")
         proc.process_reading(_document(units, kind="manga"), progress_callback=rec)
 
-    infos = [c.args[0] for c in presenter.show_info.call_args_list]
-    assert "Step 3/5 — Preparing page images" in infos  # step banner
+    stages = [c.args for c in presenter.show_stage.call_args_list]
+    assert (3, 5, "Preparing page images") in stages  # stage announcement
     assert rec.start_descs[0] == "Preparing page images"  # on_start desc
     assert f"Page image: {words[0].mined_form}" in rec.progress_descs  # per-word
     assert "Card image: 犬" not in rec.progress_descs
 
 
-def test_book_progress_bands_match_manga(test_config):
-    """T2. Book run emits the same band structure as manga — change is label-only."""
+def test_book_stages_match_manga(test_config):
+    """T2. Book run announces the same stages as manga — the change is label-only."""
     words = [_word("犬", 0), _word("猫", 1), _word("鳥", 2)]
     counts = collections.Counter({"犬": 1, "猫": 1, "鳥": 1})
     sp = MagicMock()
@@ -792,12 +828,8 @@ def test_book_progress_bands_match_manga(test_config):
             progress_callback=rec,
         )
 
-    assert rec.pcts == sorted(rec.pcts)  # monotonic non-decreasing
-    assert rec.pcts[-1] == 100
-    # Identical band math to manga (test 11): image + defs + cards, one tick per
-    # word, plus a boundary label-refresh per later stage, plus finish.
-    bands = 3
-    assert len(rec.pcts) == bands * len(words) + (bands - 1) + 1
+    # Identical stage structure to manga (test 11), with only stage 3 reworded.
+    assert rec.stages == [s if s[0] != 3 else (3, 5, "Preparing card images") for s in READING_STAGES]
 
 
 def test_warnings_emitted_before_phase1(test_config):
@@ -892,10 +924,10 @@ def test_subtitle_kind_locks_label_and_image_wording(test_config):
     # Source label: series-prefixed like manga, with the cue-time unit label.
     assert _sources(anki)[0] == "MyShow — Ep01 @ 1:23"
     # Image-stage wording: book-style, never manga's "page images".
-    infos = [c.args[0] for c in presenter.show_info.call_args_list]
-    assert "Step 3/5 — Preparing card images" in infos
+    stages = [c.args for c in presenter.show_stage.call_args_list]
+    assert (3, 5, "Preparing card images") in stages
     assert rec.start_descs[0] == "Preparing card images"
-    assert "Step 3/5 — Preparing page images" not in infos
+    assert (3, 5, "Preparing page images") not in stages
     assert "Preparing page images" not in rec.start_descs
 
 
@@ -953,9 +985,9 @@ class TestReadingSentenceTts:
             proc.process_reading(_document([_unit(0)]), progress_callback=rec)
 
         fetcher.fetch.assert_not_called()
-        # Band math identical to the pre-feature default (image+defs+cards).
-        assert len(rec.pcts) == 3 * len(words) + (3 - 1) + 1
-        assert rec.pcts[-1] == 100
+        # An inactive optional sub-stage changes no stage count: the pipeline is
+        # five stages long regardless of which optional work is switched on.
+        assert rec.stages == READING_STAGES
 
     def test_gate_matrix(self, test_config):
         """Gate inactive when: master off / audio unmapped / both providers off / no fetcher."""
@@ -999,7 +1031,7 @@ class TestReadingSentenceTts:
             proc.process_reading(_document(units), progress_callback=rec)
 
         assert order == ["prep", "prep", "expr", "expr", "tts", "tts"]
-        assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
+        assert rec.stages == READING_STAGES
 
     def test_sentence_audio_sets_media_fields(self, test_config, tmp_path):
         """A fetch hit lands on media.audio_path/audio_filename; cards carry it."""
@@ -1096,9 +1128,10 @@ class TestReadingSentenceTts:
 
         fetcher.fetch.assert_not_called()
         assert res.cards_created == 1
-        # 4 bands active (image/tts/defs/cards), every one fully consumed.
-        assert rec.pcts == sorted(rec.pcts) and rec.pcts[-1] == 100
-        assert len(rec.pcts) == 4 * 1 + (4 - 1) + 1
+        # The skipped sentence still ticks its sub-operation's true count, so
+        # the TTS pass does not silently under-report how far it got.
+        assert rec.stages == READING_STAGES
+        assert (1, "Generating sentence audio") in rec.starts
 
     def test_band_consumed_when_zero_words(self, test_config):
         """Active gate + zero mineable words: band still consumed, progress sane."""

@@ -188,6 +188,122 @@ class TestSilenceAndElapsed:
         assert snap.elapsed_s == 10.0
 
 
+class TestCancelling:
+    """D22: Cancel is one verb with an honest waiting state, and no prompt.
+
+    Between the click and the worker actually stopping, the app must stop
+    claiming progress it can no longer vouch for, keep the clock running so the
+    wait is visibly a wait rather than a hang, and after a couple of seconds say
+    what it is waiting for.
+    """
+
+    def test_cancelling_is_still_running(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+
+        handle.cancelling(now=1.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.cancelling
+        assert snap.is_running  # not terminal until the worker actually stops
+
+    def test_the_bar_freezes_at_its_last_true_value(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+        handle.count(current=3, total=12, detail="Episode 3", now=1.0)
+
+        handle.cancelling(now=2.0)
+        handle.count(current=9, total=12, detail="Episode 9", now=3.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert (snap.current, snap.total) == (3, 12)
+
+    def test_the_stage_position_freezes_too(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+        handle.stage(index=3, total=5, name="Extracting media", now=1.0)
+
+        handle.cancelling(now=2.0)
+        handle.stage(index=5, total=5, name="Creating Anki cards", now=3.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert (snap.stage_index, snap.stage_total) == (3, 5)
+
+    def test_phase_text_still_gets_through(self, registry):
+        """Words are not a claim about position, so they stay live."""
+        handle = registry.start(_spec(), now=0.0)
+        handle.cancelling(now=1.0)
+
+        handle.count(current=99, total=99, detail="Waiting for Anki", now=2.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.detail == "Waiting for Anki"
+
+    def test_the_clock_keeps_running(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+        handle.cancelling(now=2.0)
+
+        registry.tick(now=9.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.elapsed_s == 9.0
+
+    def test_it_reports_how_long_the_cancel_has_been_waiting(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+        handle.cancelling(now=2.0)
+
+        registry.tick(now=5.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.cancelling_age_s == 3.0
+
+    def test_a_run_that_was_never_cancelled_has_no_cancel_age(self, registry):
+        registry.start(_spec(), now=0.0)
+
+        registry.tick(now=5.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert not snap.cancelling
+        assert snap.cancelling_age_s == 0.0
+
+    def test_cancelling_twice_does_not_restart_the_wait(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+        handle.cancelling(now=2.0)
+
+        handle.cancelling(now=6.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.cancelling_age_s == 4.0
+
+    def test_a_stale_handle_cannot_start_a_cancel(self, registry):
+        stale = registry.start(_spec(), now=0.0)
+        stale.finish(TaskOutcome.CANCELLED, now=1.0)
+        registry.start(_spec(), now=2.0)
+
+        stale.cancelling(now=3.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert not snap.cancelling
+
+    def test_the_partial_counts_survive_into_the_terminal_state(self, registry):
+        handle = registry.start(_spec(), now=0.0)
+        handle.count(current=3, total=12, detail="Episode 3", now=1.0)
+        handle.cancelling(now=2.0)
+
+        handle.finish(TaskOutcome.CANCELLED, now=4.0)
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert (snap.current, snap.total) == (3, 12)
+        assert snap.outcome is TaskOutcome.CANCELLED
+
+
 class TestChangeSignal:
     def test_emits_on_start(self, registry, qtbot):
         with qtbot.waitSignal(registry.snapshot_changed, timeout=1000) as blocker:

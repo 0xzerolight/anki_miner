@@ -644,10 +644,14 @@ class RecordingProgress:
     """A real ProgressCallback implementation that records all calls for assertion."""
 
     def __init__(self):
+        self.stages = []
         self.starts = []
         self.progresses = []
         self.completes = 0
         self.errors = []
+
+    def on_stage(self, index: int, total: int, name: str) -> None:
+        self.stages.append((index, total, name))
 
     def on_start(self, total: int, description: str) -> None:
         self.starts.append((total, description))

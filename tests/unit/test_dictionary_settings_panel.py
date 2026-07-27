@@ -350,11 +350,6 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
     )
-    warnings: list[str] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda _parent, _title, body, *a, **kw: warnings.append(body),
-    )
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((ChainEntry(kind="indexed", dict_id="foreign", enabled=True),))
@@ -364,7 +359,7 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
 
     assert panel.get_chain() == ()
     assert payload.read_text(encoding="utf-8") == "foreign"
-    assert any("left untouched" in body for body in warnings)
+    assert "left in place" in panel.issue_banner().current_issue().summary
 
 
 def test_remove_symlink_slot_is_chain_only(qtbot, monkeypatch, tmp_path):
@@ -380,10 +375,6 @@ def test_remove_symlink_slot_is_chain_only(qtbot, monkeypatch, tmp_path):
     monkeypatch.setattr(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda *a, **kw: QMessageBox.StandardButton.Yes,
-    )
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda *a, **kw: QMessageBox.StandardButton.Ok,
     )
     panel = DictionarySettingsPanel(root)
     qtbot.addWidget(panel)
@@ -677,10 +668,6 @@ def test_right_click_remove_metadata_less_unproved_row_uses_chain_only_prompt(
         "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.question",
         lambda _parent, _title, body, *a, **kw: prompts.append(body) or QMessageBox.StandardButton.Yes,
     )
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.chain_settings_panel_base.QMessageBox.warning",
-        lambda *a, **kw: QMessageBox.StandardButton.Ok,
-    )
 
     item = panel._list.item(0)
     pos = panel._list.visualItemRect(item).center()
@@ -863,12 +850,6 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
     rmtree_calls: list[Path] = []
     monkeypatch.setattr(dsp_mod, "robust_rmtree", lambda p, **_kw: rmtree_calls.append(Path(p)))
 
-    warned: list[str] = []
-    monkeypatch.setattr(
-        "anki_miner.gui.widgets.panels.dictionary_settings_panel.QMessageBox.warning",
-        lambda parent, title, body, *a, **kw: warned.append(body) or QMessageBox.StandardButton.Ok,
-    )
-
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain(
@@ -886,8 +867,10 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
 
     assert rmtree_calls == [], "rmtree must not run when release callback refuses"
     assert dict_dir.exists()
-    assert any("Indexed resources are in use" in body for body in warned), warned
-    assert all(task in warned[0] for task in ("mining", "startup prewarm", "card backfill"))
+    # Reported in place, not in a modal that would sit over the panel (D24).
+    summary = panel.issue_banner().current_issue().summary
+    assert "Indexed resources are in use" in summary
+    assert all(task in summary for task in ("mining", "startup prewarm", "card backfill"))
     assert changed == []
     assert [e.dict_id for e in panel.get_chain()[:1]] == ["a"]
 

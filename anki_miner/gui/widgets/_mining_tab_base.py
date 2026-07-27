@@ -20,15 +20,21 @@ import threading
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
+from functools import partial
+from time import monotonic, time
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QBoxLayout, QDialog, QWidget
 
+from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.widgets.base import ScreenIssueHost
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
+from anki_miner.gui.widgets.inline_receipt import InlineReceipt
+from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
 
@@ -54,17 +60,18 @@ _WORKER_JOIN_TIMEOUT_MS = 5000
 _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 
 
-class MiningTabBase(QWidget):
+class MiningTabBase(ScreenIssueHost, QWidget):
     """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the
     progress slots and drag-drop event handlers. The base provides:
 
-    - :meth:`_wire_progress_callback` to connect the four signals to the four slots.
+    - :meth:`_wire_progress_callback` to connect the five signals to the five slots.
     - :meth:`_setup_drag_drop` to enable drag-and-drop on the widget.
     - A default :meth:`dragMoveEvent` implementation (identical across all callers).
-    - Default ``_on_progress_*`` slots that drive a single ``self.progress_widget``
-      via the percentage-scaled ``set_progress`` path.
+    - Default ``_on_progress_*`` slots that drive a single ``self.progress_widget``:
+      the bar advances one notch per completed pipeline stage, and everything
+      finer-grained goes to the status line as a true count.
 
     Tabs with one progress widget (``SingleEpisodeTab``, ``DeckBuilderTab``) use the
     defaults as-is. ``BatchProcessingTab`` owns two widgets (overall + current) and
@@ -87,16 +94,18 @@ class MiningTabBase(QWidget):
     # ------------------------------------------------------------------
 
     def _wire_progress_callback(self, callback: GUIProgressCallback) -> None:
-        """Connect the four progress signals to the matching ``_on_progress_*`` slots.
+        """Connect the five progress signals to the matching ``_on_progress_*`` slots.
 
-        The base defines all four slots; subclasses may override them. Signatures
+        The base defines all five slots; subclasses may override them. Signatures
         must match the signals declared on :class:`GUIProgressCallback`:
 
+        - ``stage_signal(int, int, str)`` -> ``_on_progress_stage``
         - ``start_signal(int, str)``      -> ``_on_progress_start``
         - ``progress_signal(int, str)``   -> ``_on_progress_update``
         - ``complete_signal()``           -> ``_on_progress_complete``
         - ``error_signal(str, str)``      -> ``_on_progress_error``
         """
+        callback.stage_signal.connect(self._on_progress_stage)
         callback.start_signal.connect(self._on_progress_start)
         callback.progress_signal.connect(self._on_progress_update)
         callback.complete_signal.connect(self._on_progress_complete)
@@ -106,39 +115,57 @@ class MiningTabBase(QWidget):
     # Progress slot defaults
     # ------------------------------------------------------------------
 
-    def _on_progress_start(self, total: int, description: str) -> None:
-        """Default start slot for single-``progress_widget`` tabs.
+    @property
+    def _stage_line(self) -> QueueMiningProgressAdapter:
+        """Formatter that turns pipeline events into one truthful status line.
 
-        Uses the percentage-scaled ``set_progress`` path (NOT ``set_value``):
-        ``set_determinate`` pins the bar max at 100 and ``set_progress`` converts
-        ``current/total`` to a percentage. Subclasses with more than one item
-        per run (``BatchProcessingTab``, ``DeckBuilderTab``) override these
-        slots.
+        The same object the queue workers use for their row label, reused here
+        so a single-run screen and a queued run word the current phase
+        identically. It formats only; it holds no progress the bar reads.
         """
-        self.progress_widget.set_determinate(total)  # type: ignore[attr-defined]
-        self.progress_widget.set_status(description)  # type: ignore[attr-defined]
+        line = getattr(self, "_stage_line_store", None)
+        if line is None:
+            line = QueueMiningProgressAdapter(0, lambda _idx, label: self._set_progress_status(label))
+            self._stage_line_store = line
+        return line
 
-    def _on_progress_update(self, current: int, item_description: str) -> None:
-        """Default update slot: scale ``current`` against the stored total.
+    def _set_progress_status(self, label: str) -> None:
+        """Where the stage line is written. Overridden by multi-bar tabs."""
+        self.progress_widget.set_status(label)  # type: ignore[attr-defined]
 
-        Passing the raw ``current`` to ``set_value`` would paint the item index
-        as a percentage (clamping to 100% past item 100); ``set_progress``
-        divides by the total first.
+    def _on_progress_stage(self, index: int, total: int, name: str) -> None:
+        """Default stage slot: advance the bar by *completed stages only*.
+
+        ``(index - 1) / total`` is the only whole-run ratio the pipeline can
+        prove. Work inside the stage moves the status line, never the bar —
+        blending a guessed within-stage fraction into it is what made the bar
+        race and then sit.
         """
         widget = self.progress_widget  # type: ignore[attr-defined]
-        widget.set_progress(current, widget.total, item_description)
+        if total > 0:
+            widget.set_percent(int((index - 1) / total * 100))
+        self._stage_line.on_stage(index, total, name)
+
+    def _on_progress_start(self, total: int, description: str) -> None:
+        """Default start slot: name the sub-operation; leave the bar alone.
+
+        Each pipeline stage opens its own ``on_start``, so touching the bar here
+        would reset it several times per run.
+        """
+        self._stage_line.on_start(total, description)
+
+    def _on_progress_update(self, current: int, item_description: str) -> None:
+        """Default update slot: report the true count inside the current stage."""
+        self._stage_line.on_progress(current, item_description)
 
     def _on_progress_complete(self) -> None:
-        """Default complete slot.
+        """Default complete slot: silent.
 
-        Deliberately a neutral "Complete" — the previous "<phase> — done" text
-        used a phase frozen at the FIRST stage description (the pipeline's
-        StageWeightedProgress forwards on_start exactly once per run), so it
-        read "Extracting media — done" at the end of every run. The result
-        handlers replace this with a meaningful summary via
+        Each of the five stages closes with its own ``on_complete``, so writing
+        "Complete" here would flash it four times before the run was anywhere
+        near done. The result handlers own the one terminal summary, via
         ``show_completion``.
         """
-        self.progress_widget.set_status(self.tr("Complete"))  # type: ignore[attr-defined]
 
     def _on_progress_error(self, item: str, error: str) -> None:
         """Default per-item error handler: append a failure line to ``self.log_widget``.
@@ -148,6 +175,149 @@ class MiningTabBase(QWidget):
         base, or should override this method.
         """
         self.log_widget.append_error(tr_format(self.tr("Failed: %1 — %2"), item, error))  # type: ignore[attr-defined]
+
+    # ------------------------------------------------------------------
+    # Inline run receipts (D20, D23)
+    # ------------------------------------------------------------------
+
+    #: Receipt state, declared on the class so every mining tab inherits the
+    #: no-receipt default. A screen that never calls :meth:`_install_receipt`
+    #: (Deck Builder, under D3) keeps them and every hook below is a no-op.
+    _receipt_widget: InlineReceipt | None = None
+    _receipt_accumulator: RunReceiptAccumulator | None = None
+    _receipt_noun: str = ""
+
+    def _install_receipt(self, layout: QBoxLayout, anchor: QWidget, *, item_noun: str = "") -> InlineReceipt:
+        """Put a receipt directly under ``anchor`` in ``layout`` and return it.
+
+        ``anchor`` is the screen's progress widget: the receipt is the state that
+        progress card ends in, so it belongs in the same place rather than in a
+        dialog arriving over whatever the user was doing. Inserted by layout
+        position rather than by rebuilding the card, so W2 can later move the
+        pair into its pinned action host without touching this model.
+
+        The layout is passed in rather than looked up through
+        ``anchor.parentWidget()``: every mining tab builds its whole page before
+        calling ``setLayout``, so at this point the anchor has no parent widget
+        to ask.
+
+        Args:
+            layout: The box layout the anchor was added to.
+            anchor: The widget the receipt appears beneath.
+            item_noun: This screen's plural noun for one run item ("episodes",
+                "videos", "books"). Used only above one item.
+        """
+        receipt = InlineReceipt()
+        index = layout.indexOf(anchor)
+        layout.insertWidget(index + 1 if index >= 0 else layout.count(), receipt)
+        receipt.details_requested.connect(self._open_run_details)
+        self._receipt_widget = receipt
+        self._receipt_noun = item_noun
+        return receipt
+
+    def _begin_receipt(self, items_total: int, *, item_noun: str | None = None) -> None:
+        """Start accumulating a run, clearing the previous run's receipt.
+
+        Args:
+            items_total: Items handed to the worker, frozen at launch.
+            item_noun: Overrides the installed noun for this run (Batch mines
+                episodes on one path and whole series on the other).
+        """
+        if self._receipt_widget is None:
+            return
+        if item_noun is not None:
+            self._receipt_noun = item_noun
+        monotonic_start, wall_start = self._receipt_now()
+        self._receipt_accumulator = RunReceiptAccumulator(
+            items_total,
+            monotonic_start=monotonic_start,
+            wall_start=wall_start,
+        )
+        self._receipt_widget.clear()
+
+    def _record_receipt_result(self, result: object | None, error: object = None) -> None:
+        """Record one item from the ``(result, error)`` pair its worker emitted."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_result(result, error)
+
+    def _record_receipt_counts(self, *, notes_added: int, failed: bool) -> None:
+        """Record one item that reported counts but no result object."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_counts(notes_added=notes_added, failed=failed)
+
+    def _mark_receipt_failed(self) -> None:
+        """Note a run-level fatal (a preflight refusal, a worker exception)."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.mark_failed()
+
+    def _on_run_thread_finished(self) -> None:
+        """Seal the receipt when the run's own worker thread actually ends.
+
+        Connected to ``QThread.finished`` by the tabs whose terminal signals do
+        not converge anywhere else. ``finished`` is emitted after ``run()``
+        returns, so every result and error the run emitted has already been
+        delivered by the time this arrives.
+
+        A worker leaked by a timed-out teardown finishes *under* a later run, so
+        a sender that is not the current worker is ignored rather than allowed
+        to seal the run the user is watching.
+        """
+        sender = self.sender()
+        worker = getattr(self, "worker_thread", None)
+        if sender is not None and worker is not None and sender is not worker:
+            return
+        self._finish_receipt(
+            cancelled=bool(getattr(self, "_cancel_requested", False)),
+            fatal=bool(getattr(self, "_run_failed", False)),
+        )
+
+    def _finish_receipt(self, *, cancelled: bool = False, fatal: bool = False) -> None:
+        """Seal the run and show its receipt. Idempotent; safe on every path.
+
+        Args:
+            cancelled: The user asked to stop. Outranks every other outcome.
+            fatal: A run-level failure (preflight refusal, worker exception).
+        """
+        accumulator = self._receipt_accumulator
+        widget = self._receipt_widget
+        if accumulator is None or widget is None:
+            return
+        if cancelled:
+            accumulator.mark_cancel_requested()
+        if fatal:
+            accumulator.mark_failed()
+        monotonic_now, wall_now = self._receipt_now()
+        receipt = accumulator.finish(monotonic_now=monotonic_now, wall_now=wall_now)
+        # Cleared first: a second terminal signal for the same run must not
+        # produce a second receipt with a longer clock.
+        self._receipt_accumulator = None
+        widget.show_receipt(receipt, item_noun=self._receipt_noun)
+
+    def _open_run_details(self) -> None:
+        """Open the finished run's details, because the user clicked for them.
+
+        Routed through the screen's presenter — the same channel every other
+        result already travels — so the receipt itself owns no dialog, no
+        ``AnkiService`` and no undo policy.
+        """
+        widget = self._receipt_widget
+        receipt = widget.receipt if widget is not None else None
+        aggregate = receipt.aggregate_result() if receipt is not None else None
+        if aggregate is None:
+            return
+        # Two spellings across the family: the queue bases keep the presenter
+        # private, Single/Batch expose it. Resolved late so a presenter attached
+        # after construction still receives the request.
+        presenter = getattr(self, "_presenter", None) or getattr(self, "presenter", None)
+        show = getattr(presenter, "show_run_details", None)
+        if callable(show):
+            with contextlib.suppress(Exception):
+                show(aggregate)
+
+    @staticmethod
+    def _receipt_now() -> tuple[float, float]:
+        """Return ``(monotonic, wall)`` now. Patched by tests to fix the clock."""
+        return monotonic(), time()
 
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding
@@ -340,6 +510,17 @@ class MiningTabBase(QWidget):
         self._curation_token = 0
         self._curation_live_token = 0
         self._curation_emit_tokens: deque[int] = deque()
+        # Presentation identity for the non-modal curator window (D33). The
+        # curator is shown, not exec()'d, so the frame that opens it returns
+        # long before the user decides; resolution happens later, in a signal
+        # handler. _curation_dialog_seq stamps every presentation and
+        # _curation_pending_dialog names the one still awaiting a decision
+        # (0 = none). _resolve_curation acts only on a matching stamp, which
+        # makes it exactly-once (finished then destroyed both fire for a normal
+        # accept) and stops a torn-down run's late callback from resolving the
+        # item that is live now.
+        self._curation_dialog_seq = 0
+        self._curation_pending_dialog = 0
         self._curation_requested.connect(self._on_curation_requested)
 
     def _curation_bridge(self, words: list) -> list | None:
@@ -462,11 +643,11 @@ class MiningTabBase(QWidget):
             return None
 
     def _on_curation_requested(self, words: list) -> None:
-        """GUI-thread slot: build context OFF-THREAD, then exec the dialog.
+        """GUI-thread slot: build context OFF-THREAD, then present the curator.
 
         ``_build_curation_context`` parses the episode subtitle (up to ~1s for a
         large file) and is pure (reads worker attrs + parses → returns plain
-        data), so the whole call runs on a worker thread; the dialog is then
+        data), so the whole call runs on a worker thread; the window is then
         shown from the GUI-thread :meth:`_show_curation_dialog` callback.
 
         CRITICAL invariant: ``_curation_event`` MUST be set on EVERY path so the
@@ -475,9 +656,14 @@ class MiningTabBase(QWidget):
         * cancel/poison before dispatch → set here, return;
         * cancel/poison after the parse → set in :meth:`_show_curation_dialog`;
         * build error → :meth:`_show_curation_dialog` is still called (table-only),
-          which sets it via its ``finally``;
-        * dialog construction/exec raising → the ``finally`` in
-          :meth:`_show_curation_dialog`.
+          so the user still curates and the window still resolves;
+        * the user accepting, rejecting, closing or Esc-ing the window, and a
+          window destroyed without deciding → :meth:`_resolve_curation`;
+        * construction / ``show()`` raising → the ``except`` in
+          :meth:`_show_curation_dialog`;
+        * tab Cancel, run teardown and app shutdown →
+          :meth:`_cancel_active_curation_dialog` (which reaches the resolver via
+          ``reject()``) plus :meth:`_poison_curation_gate`.
         """
         # Pop the token for THIS emission (FIFO) so the build callbacks can detect
         # if a teardown/new run supersedes them while the context build is in
@@ -517,19 +703,31 @@ class MiningTabBase(QWidget):
         lookup_fn: Callable[[str], list[tuple[str, str]]] | None,
         token: int | None = None,
     ) -> None:
-        """GUI-thread: exec the curation dialog, ALWAYS release the worker.
+        """GUI-thread: present the curator as a non-modal window (D33).
 
         Re-checks cancel/poison first because a cancel/shutdown may have landed
         during the off-thread context build; in that case the worker is released
-        as cancelled (None) without popping a dialog. Otherwise the ``finally``
-        guarantees ``_curation_event`` is set even if dialog construction/exec
-        raises — otherwise ``_curation_bridge`` hangs forever.
+        as cancelled (None) without popping a window.
+
+        The window is **shown, never exec()'d**: the mining item waits for this
+        decision, but the rest of Anki Miner stays usable while the user reads,
+        searches and previews. That means this method returns while the user is
+        still deciding, so it must NOT release the gate — releasing belongs to
+        :meth:`_resolve_curation`, connected to ``finished``. (Under ``exec()``
+        a ``finally`` did the release, which is correct only because ``exec()``
+        returns *after* the decision; keeping it here would cancel every item
+        the instant its curator opened.)
+
+        The one release this frame still owns is failure: if construction or
+        ``show()`` raises, nothing will ever emit ``finished``, so the parked
+        ``_curation_bridge`` would hang forever. The ``except`` resolves that
+        case and re-raises.
 
         ``token`` identifies the run whose off-thread build produced this call.
         When it no longer matches the live run (a teardown/new run intervened
         while the build was in flight), the build is stale: the originating
         worker was already released by the teardown poison, so this returns
-        without popping a dialog or touching the live run's event. ``None``
+        without popping a window or touching the live run's event. ``None``
         (a direct call with no originating build) skips the check.
         """
         if token is not None and token != self._curation_live_token:
@@ -539,6 +737,7 @@ class MiningTabBase(QWidget):
             self._curation_result = None
             self._curation_event.set()
             return
+        dialog: WordCurationDialog | None = None
         try:
             dialog = WordCurationDialog(
                 words,
@@ -547,44 +746,117 @@ class MiningTabBase(QWidget):
                 media_context=media_context,
                 lookup_fn=lookup_fn,
             )
+            self._curation_dialog_seq += 1
+            presentation = self._curation_dialog_seq
+            self._curation_pending_dialog = presentation
             self._active_curation_dialog = dialog
-            if dialog.exec() == WordCurationDialog.DialogCode.Accepted:
-                # Accepted: the selection (possibly empty) is the result. An
-                # empty list is the "skip just this item" verb — the queue
-                # continues (it stays out of the reject branch below).
-                self._curation_result = dialog.get_selected_words()
-            else:
-                # Rejected (dialog Cancel / window-X / Esc, or a programmatic
-                # reject from the tab Cancel button / teardown / shutdown) means
-                # "stop the run", not "skip one item". None ⇒ cancelled result
-                # downstream; without cancelling the worker, a queue worker turns
-                # that cancelled result into a recorded item and advances, so the
-                # curator re-pops for every remaining queued item (manga/novel
-                # volumes, batch pairs, YouTube/audiobook items). Cancelling the
-                # running worker makes each loop's between-items _cancel_event
-                # check break the run. cancel() is an idempotent Event.set(), so
-                # the reject paths that already cancel are unaffected; it runs
-                # before the finally releases _curation_event, so _cancel_event is
-                # already set when the worker unparks.
-                self._curation_result = None
-                # Reject is a cancel origin: mark it so the tab's terminal
-                # handler shows "Cancelled" instead of a success summary
-                # (result slots are suppressed on cancelled runs).
-                self._cancel_requested = True
-                worker = getattr(self, "worker_thread", None)
-                if worker is not None:
-                    worker.cancel()
-        finally:
+            # WordCurationDialog connects `finished` -> `_stop_player` in its own
+            # __init__. Qt runs direct connections in connection order, so this
+            # later connection always sees a dialog whose mpv core, page decode
+            # and dictionary workers have already been released.
+            dialog.finished.connect(partial(self._resolve_curation, dialog, presentation))
+            # Guarded FALLBACK, not a second completion path: a curator destroyed
+            # without ever emitting `finished` (its parent tab went away) would
+            # otherwise strand the parked worker. Resolution is stamp-guarded, so
+            # the `destroyed` that follows every normal deleteLater() is a no-op.
+            dialog.destroyed.connect(partial(self._on_curation_dialog_destroyed, presentation))
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+        except Exception:
+            self._curation_pending_dialog = 0
             self._active_curation_dialog = None
+            self._curation_result = None
             self._curation_event.set()
-            # Schedule the dialog for deletion so its Qt widget tree (table,
-            # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is
-            # freed deterministically rather than accumulating per mining session
+            if dialog is not None:
+                with contextlib.suppress(RuntimeError):
+                    dialog.deleteLater()
+            raise
+
+    def _resolve_curation(
+        self,
+        dialog: WordCurationDialog | None,
+        presentation: int,
+        code: int,
+    ) -> None:
+        """Record one curator decision and release the parked worker, exactly once.
+
+        Connected to the curator's ``finished``; also reached through
+        :meth:`_on_curation_dialog_destroyed` with ``dialog=None``.
+
+        ``presentation`` binds this call to the window it was connected for. A
+        stamp that no longer matches ``_curation_pending_dialog`` means the
+        decision was already recorded (``finished`` then ``destroyed``) or the
+        window belongs to a run that has since been torn down — either way the
+        live run's event must not be touched, because a stale resolution would
+        feed one item's answer to a different item.
+
+        Ordering inside the guard is load-bearing:
+
+        * the worker is cancelled BEFORE the gate opens, so ``_cancel_event`` is
+          already set when the worker unparks and the queue loop's between-items
+          check breaks the run instead of re-popping the curator for every
+          remaining item;
+        * ``_curation_result`` is written BEFORE ``_curation_event.set()``,
+          because ``_curation_bridge`` reads it the moment ``wait()`` returns.
+        """
+        if presentation != self._curation_pending_dialog:
+            return
+        self._curation_pending_dialog = 0
+        self._active_curation_dialog = None
+
+        selection: list | None = None
+        if dialog is not None and code == QDialog.DialogCode.Accepted:
+            # Accepted: the selection (possibly empty) is the result. An empty
+            # list is the "skip just this item" verb — the queue continues.
+            try:
+                selection = dialog.get_selected_words()
+            except Exception:
+                logger.exception("Curation window could not report its selection; treating it as cancelled")
+        if selection is None:
+            # Rejected (dialog Cancel / window-X / Esc, a programmatic reject
+            # from the tab Cancel button / teardown / shutdown, or a destroyed
+            # window) means "stop the run", not "skip one item". None ⇒
+            # cancelled result downstream; without cancelling the worker, a
+            # queue worker turns that cancelled result into a recorded item and
+            # advances, so the curator re-pops for every remaining queued item
+            # (manga/novel volumes, batch pairs, YouTube/audiobook items).
+            # cancel() is an idempotent Event.set(), so the reject paths that
+            # already cancel are unaffected.
+            self._cancel_requested = True
+            # RuntimeError, not just AttributeError: the `destroyed` fallback can
+            # run after this tab's own C++ object is gone (the window outlived
+            # its parent), and sip raises from __getattr__ for a missing name on
+            # a deleted wrapper — which getattr's default does NOT swallow.
+            try:
+                worker = getattr(self, "worker_thread", None)
+            except RuntimeError:
+                worker = None
+            if worker is not None:
+                # Suppressed so a dead worker handle can never cost us the gate
+                # release below — a hung worker is worse than a missed cancel.
+                with contextlib.suppress(RuntimeError):
+                    worker.cancel()
+        self._curation_result = selection
+        self._curation_event.set()
+        if dialog is not None:
+            # Schedule the window for deletion so its Qt widget tree (table,
+            # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is freed
+            # deterministically rather than accumulating per mining session
             # until GC — OVH-016 / Issue #55 multimedia teardown.
-            # Guard for the case where dialog construction raised before the
-            # name was bound (NameError would be silently swallowed otherwise).
-            with contextlib.suppress(NameError, AttributeError):
+            with contextlib.suppress(RuntimeError):
                 dialog.deleteLater()
+
+    def _on_curation_dialog_destroyed(self, presentation: int, _obj: object = None) -> None:
+        """Guarded fallback for a curator destroyed without a decision.
+
+        Deliberately passes ``dialog=None``: the C++ object is already gone, so
+        touching it would raise. Only reaches a real release when the window
+        vanished before ``finished`` ever fired (its parent tab was destroyed
+        mid-review); after a normal accept/reject the stamp no longer matches
+        and this is a no-op.
+        """
+        self._resolve_curation(None, presentation, QDialog.DialogCode.Rejected)
 
     def shutdown(self) -> None:
         """Cancel any open curation dialog and poison the gate (OVH-003).
@@ -629,14 +901,21 @@ class MiningTabBase(QWidget):
                     self._leaked_runs.remove((worker, processor))
 
     def _cancel_active_curation_dialog(self) -> None:
-        """Reject any open curation dialog so the worker doesn't hang on cancel.
+        """Reject any open curation window so the worker doesn't hang on cancel.
 
-        Call from each tab's ``_on_cancel_clicked``. ``reject()`` triggers the
-        dialog's exec to return Rejected, whose ``finally`` sets the event and the
-        worker resumes with ``None`` → orchestrator returns a cancelled result.
-        Also sets ``_curation_cancelled`` so a cancel that arrives before the
-        dialog is built is remembered by :meth:`_on_curation_requested`.
+        Call from each tab's ``_on_cancel_clicked``. ``reject()`` emits
+        ``finished`` synchronously, which runs :meth:`_resolve_curation`: the
+        worker is cancelled, the event is set, and ``_curation_bridge`` resumes
+        with ``None`` → orchestrator returns a cancelled result. Also sets
+        ``_curation_cancelled`` so a cancel that arrives before the window is
+        built is remembered by :meth:`_on_curation_requested`.
+
+        ``RuntimeError`` is suppressed for the window whose C++ object has
+        already gone: its ``destroyed`` fallback has released the gate anyway,
+        and a raise here would abort the caller's cancel/teardown sequence.
         """
         self._curation_cancelled = True
-        if self._active_curation_dialog is not None:
-            self._active_curation_dialog.reject()
+        dialog = self._active_curation_dialog
+        if dialog is not None:
+            with contextlib.suppress(RuntimeError):
+                dialog.reject()
