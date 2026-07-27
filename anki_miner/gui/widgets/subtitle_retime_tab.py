@@ -79,6 +79,9 @@ class SubtitleRetimeTab(_ToolTabBase):
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
 
+    #: Where this tool last wrote — remembered separately from its inputs (D7).
+    OUTPUT_HISTORY_KEY = "tools.retime.output"
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -219,6 +222,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             label=self.tr("Video File:"),
             file_mode=True,
             file_filter=VIDEO_FILE_FILTER,
+            history_key="tools.retime.inputs",
         )
         layout.addWidget(self.video_file_selector)
 
@@ -226,6 +230,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             label=self.tr("Subtitle File:"),
             file_mode=True,
             file_filter=SUBTITLE_FILE_FILTER,
+            history_key="tools.retime.inputs",
         )
         layout.addWidget(self.subtitle_file_selector)
 
@@ -253,6 +258,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.video_folder_selector = FileSelector(
             label=self.tr("Video Folder:"),
             file_mode=False,
+            history_key="tools.retime.inputs",
         )
         self.video_folder_selector.hide()
         layout.addWidget(self.video_folder_selector)
@@ -260,6 +266,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.subtitle_folder_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
             file_mode=False,
+            history_key="tools.retime.inputs",
         )
         self.subtitle_folder_selector.hide()
         layout.addWidget(self.subtitle_folder_selector)

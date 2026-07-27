@@ -232,13 +232,21 @@ class BatchProcessingTab(MiningTabBase):
 
         # Video folder selector
         self.video_folder_selector = FileSelector(
-            label=self.tr("Video Folder:"), file_mode=False, file_filter="", label_width=label_w
+            label=self.tr("Video Folder:"),
+            file_mode=False,
+            file_filter="",
+            label_width=label_w,
+            history_key="video.batch.inputs",
         )
         layout.addWidget(self.video_folder_selector)
 
         # Subtitle folder selector
         self.subtitle_folder_selector = FileSelector(
-            label=self.tr("Subtitle Folder:"), file_mode=False, file_filter="", label_width=label_w
+            label=self.tr("Subtitle Folder:"),
+            file_mode=False,
+            file_filter="",
+            label_width=label_w,
+            history_key="video.batch.inputs",
         )
         layout.addWidget(self.subtitle_folder_selector)
 

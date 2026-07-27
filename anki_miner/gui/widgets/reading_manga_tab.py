@@ -215,6 +215,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             file_mode=True,
             file_filter=f"{self.tr('Manga')} ({_MANGA_FILTER_GLOB})",
             label_width=field_label_width(self.tr("Volume File:")),
+            history_key="reading.manga.inputs",
         )
         self.volume_file_selector.setToolTip(
             self.tr(
@@ -253,6 +254,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             file_mode=False,
             file_filter="",
             label_width=field_label_width(self.tr("Folder:")),
+            history_key="reading.manga.inputs",
         )
         self.volume_folder_selector.setToolTip(
             self.tr("A folder with one manga volume, or a series folder of many volumes.")

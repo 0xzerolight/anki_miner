@@ -290,13 +290,21 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Video file selector
         self.video_selector = FileSelector(
-            label=self.tr("Video File:"), file_mode=True, file_filter=VIDEO_FILE_FILTER, label_width=label_w
+            label=self.tr("Video File:"),
+            file_mode=True,
+            file_filter=VIDEO_FILE_FILTER,
+            label_width=label_w,
+            history_key="video.single.inputs",
         )
         layout.addWidget(self.video_selector)
 
         # Subtitle file selector
         self.subtitle_selector = FileSelector(
-            label=self.tr("Subtitle File:"), file_mode=True, file_filter=SUBTITLE_FILE_FILTER, label_width=label_w
+            label=self.tr("Subtitle File:"),
+            file_mode=True,
+            file_filter=SUBTITLE_FILE_FILTER,
+            label_width=label_w,
+            history_key="video.single.inputs",
         )
         layout.addWidget(self.subtitle_selector)
 

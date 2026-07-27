@@ -34,7 +34,8 @@ from typing import TYPE_CHECKING, Iterator
 
 from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -90,6 +91,11 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
     log_widget: LogWidget
     _availability_worker: SingleCallWorker | None = None
     _availability_generation: int = 0
+
+    #: Stable session key for this tool's remembered OUTPUT folder (D7), e.g.
+    #: ``"tools.condense.output"``. Left empty by a subclass that does not want
+    #: its output folder remembered; the chooser then behaves as it always did.
+    OUTPUT_HISTORY_KEY: str = ""
 
     def _run_availability_scan(
         self,
@@ -157,12 +163,24 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
     # ------------------------------------------------------------------
 
     def _on_choose_output(self) -> None:
+        """Pick a custom output folder, reopening where this tool last wrote.
+
+        Output has its own history key: where a tool's results go is rarely
+        where its inputs live, so sharing one anchor would send the user back to
+        the source library every time.
+        """
+        current = self._custom_output_dir
         folder = file_dialogs.get_existing_directory(
             self,
             self._strings.select_output_folder,
-            str(Path.home()),
+            resolve_start_dir(
+                str(current) if current is not None else None,
+                file_mode=False,
+                remembered_dir=session_state.remembered_directory(self.OUTPUT_HISTORY_KEY),
+            ),
         )
         if folder:
+            session_state.remember_accepted_path(self.OUTPUT_HISTORY_KEY, folder, file_mode=False)
             self._custom_output_dir = Path(folder)
             self.output_location_label.setText(folder)
             self.clear_output_button.show()

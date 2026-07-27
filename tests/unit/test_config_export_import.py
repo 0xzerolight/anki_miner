@@ -79,6 +79,29 @@ class TestExport:
             assert field_name not in settings
         assert settings["anki_deck_name"] == "Mining"
 
+    def test_export_carries_no_ui_session_state(self, export_path, tmp_path):
+        """Geometry, route and remembered folders are machine-local (D7).
+
+        They are excluded by construction rather than by an exclusion list:
+        they live in their own ``ui_state.ini`` and are not config fields at
+        all. This is the assertion that notices if that ever stops being true.
+        """
+        from PyQt6.QtCore import QByteArray
+
+        from anki_miner.gui.utils import session_state
+
+        session_state.save_geometry(QByteArray(b"blob"))
+        session_state.save_route("reading", {"reading": "manga"})
+        session_state.remember_accepted_path("reading.manga.inputs", str(tmp_path), file_mode=False)
+
+        GUIConfigManager.export_config(AnkiMinerConfig(), export_path)
+
+        raw = export_path.read_text(encoding="utf-8")
+        assert "ui_state" not in raw
+        assert "reading.manga.inputs" not in raw
+        settings = json.loads(raw)["settings"]
+        assert not [k for k in settings if "geometry" in k or "subtab" in k or "main_tab" in k]
+
     def test_export_retains_portable_values(self, export_path):
         config = AnkiMinerConfig(max_frequency_rank=12000, anki_deck_name="日本語")
         GUIConfigManager.export_config(config, export_path)

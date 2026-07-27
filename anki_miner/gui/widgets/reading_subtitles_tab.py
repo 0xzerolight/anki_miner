@@ -46,7 +46,8 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
@@ -69,6 +70,9 @@ _SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 _SUBTITLE_FILTER_GLOB = "*.srt *.ass *.ssa *.vtt"
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
+
+# Stable session key for the folder this tab's Add dialog reopens in (D7).
+_HISTORY_KEY = "reading.subtitles.inputs"
 
 # Item-data role stamping each list row with its ephemeral ``ReadingQueueItem``
 # at Mine time, so a mid-run Remove/Clear can route the removed row to the
@@ -265,14 +269,24 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         self._recompute_buttons()
 
     def _on_add_files_clicked(self) -> None:
-        """Multi-select subtitle files into the list."""
+        """Multi-select subtitle files into the list.
+
+        Reopens in the folder these files last came from (D7). The first
+        accepted file anchors the whole selection: a multi-select is one visit
+        to one folder, so the rest say nothing new.
+        """
         files, _ = file_dialogs.get_open_file_names(
             self,
             self.tr("Add Subtitle Files"),
-            "",
+            resolve_start_dir(
+                None,
+                file_mode=True,
+                remembered_dir=session_state.remembered_directory(_HISTORY_KEY),
+            ),
             f"{self.tr('Subtitles')} ({_SUBTITLE_FILTER_GLOB})",
         )
         if files:
+            session_state.remember_accepted_path(_HISTORY_KEY, files[0], file_mode=True)
             self._add_paths([Path(f) for f in files])
 
     def _on_remove_selected_clicked(self) -> None:

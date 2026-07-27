@@ -248,3 +248,32 @@ def test_close_writes_no_profile_file(qtbot, monkeypatch, patch_heavy_init, quie
 
     assert sorted(path.name for path in profiles_dir.iterdir()) == listing_before
     assert (profiles_dir / "default.json").read_bytes() == bytes_before
+
+
+def test_no_ui_session_state_reaches_a_profile_sidecar(
+    qtbot, monkeypatch, patch_heavy_init, quiet_boot, test_config, tmp_path
+):
+    """Geometry, route and remembered folders are machine-local (D7).
+
+    Switching profiles must not move the window or re-navigate the app, so a
+    sidecar carries none of it — it holds an ``AnkiMinerConfig`` snapshot, and
+    session state is not part of one.
+    """
+    from anki_miner.gui.utils import session_state
+
+    patch_heavy_init(test_config)
+    _record_saves(monkeypatch)
+    window = _window(qtbot, test_config)
+    window.commit_boot(suppress_optional=True)
+    session_state.remember_accepted_path("reading.manga.inputs", str(tmp_path), file_mode=False)
+
+    window.closeEvent(QCloseEvent())
+
+    for sidecar in ProfileStore.profiles_dir().iterdir():
+        raw = sidecar.read_text(encoding="utf-8")
+        assert "reading.manga.inputs" not in raw
+        assert "geometry" not in raw
+        assert "main_tab" not in raw
+    # The state really was written — just somewhere else.
+    assert session_state.state_file().parent == ProfileStore.profiles_dir().parent
+    assert session_state.remembered_directory("reading.manga.inputs") == str(tmp_path)

@@ -195,6 +195,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             label=self.tr("Audio File:"),
             file_filter=_AUDIO_FILTER,
             label_width=label_w,
+            history_key="audio.inputs",
         )
         self.audio_selector.path_changed.connect(self._on_audio_path_changed)
         queue_layout.addWidget(self.audio_selector)
@@ -203,6 +204,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             label=self.tr("Subtitle File:"),
             file_filter=_SUBTITLE_FILTER,
             label_width=label_w,
+            history_key="audio.inputs",
         )
         queue_layout.addWidget(self.subtitle_selector)
 
