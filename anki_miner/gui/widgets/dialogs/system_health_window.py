@@ -96,11 +96,13 @@ _COMPONENT_KEYS: dict[str, str] = {
     "alass": "tools.alass",
 }
 
-#: Row state → ``StatusBadge`` status. ``unknown`` reuses the badge's neutral
-#: "checking" look, which is what the status bar already paints for a probe that
-#: has not reported.
+#: Row state → ``StatusBadge`` status. ``unknown`` takes the neutral "pending"
+#: pill rather than the status bar's blue "checking" one: a row can be unknown
+#: because nothing is running and nothing ever asked (the deck check is skipped
+#: outright when Anki is unreachable), and "no information" should not look like
+#: work in progress.
 _BADGE_STATUS: dict[str, str] = {
-    HEALTH_UNKNOWN: "checking",
+    HEALTH_UNKNOWN: "pending",
     HEALTH_OK: "success",
     HEALTH_WARN: "warning",
     HEALTH_FAIL: "error",
@@ -261,8 +263,12 @@ class _HealthRow(QFrame):
         top.setContentsMargins(0, 0, 0, 0)
         top.setSpacing(SPACING.sm)
 
-        self.badge = StatusBadge("", status="checking", clickable=False)
-        self.badge.setObjectName("status-indicator")
+        # Keeps StatusBadge's own object name: the status-bar's
+        # ``status-indicator`` override only paints success and error, so a
+        # badge renamed to it would leave "Unknown" and "Needs attention" as
+        # bare text — the two states this screen exists to distinguish.
+        self.badge = StatusBadge("", status="pending", clickable=False)
+        self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         top.addWidget(self.badge)
 
         self.label = QLabel(label)
@@ -297,7 +303,7 @@ class _HealthRow(QFrame):
     def apply_check(self, check: HealthCheck, *, state_text: str, checked_text: str) -> None:
         """Repaint from one fact. Never stores it: the report is the truth."""
         self.badge.set_name(state_text)
-        self.badge.set_status(_BADGE_STATUS.get(check.state, "checking"))
+        self.badge.set_status(_BADGE_STATUS.get(check.state, "pending"))
         self.checked_label.setText(checked_text)
         self.detail_label.setText(check.detail)
         self.detail_label.setVisible(bool(check.detail))
@@ -372,12 +378,31 @@ class SystemHealthWindow(EnhancedDialog):
                 self._rows[key] = row
                 column.addWidget(row)
         column.addStretch()
+        self._align_badges()
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setWidget(container)
         return scroll
+
+    def _align_badges(self) -> None:
+        """Reserve the widest state word for every badge, so the labels line up.
+
+        Measured rather than hard-coded: the four state words are translated,
+        and a pixel width chosen against English clips the German ones.
+        """
+        rows = list(self._rows.values())
+        if not rows:
+            return
+        metrics = rows[0].badge.fontMetrics()
+        widest = max(
+            metrics.horizontalAdvance(self._state_text(state))
+            for state in (HEALTH_UNKNOWN, HEALTH_OK, HEALTH_WARN, HEALTH_FAIL)
+        )
+        # The badge is a pill: its QSS padding sits outside the measured text.
+        for row in rows:
+            row.badge.setMinimumWidth(widest + 2 * SPACING.sm)
 
     def _on_fix_requested(self, key: str) -> None:
         """Translate a row into the setting id that repairs it.
