@@ -205,22 +205,31 @@ QProgressBar::chunk {
     border-radius: ${border-radius-small}px;
 }
 
-/* ============== TABLE WIDGET STYLES ============== */
+/* ============== DATA VIEW STYLES ============== */
+/* Tables, lists and trees are one surface (decision D42): same frame, same
+ * cell padding, same selection. Lists used to be omitted here, so they fell
+ * back to the platform's selection colour and looked nothing like the table
+ * beside them. */
 
-QTableWidget {
+QTableWidget,
+QListWidget,
+QTreeWidget {
     border: 1px solid;
     border-radius: ${border-radius-default}px;
     gridline-color: transparent;
-    selection-background-color: transparent;
 }
 
-QTableWidget::item {
+QTableWidget::item,
+QListWidget::item,
+QTreeWidget::item {
     padding: ${spacing-xs}px;
     min-height: 24px;
     border: none;
 }
 
-QTableWidget::item:selected {
+QTableWidget::item:selected,
+QListWidget::item:selected,
+QTreeWidget::item:selected {
     border: none;
 }
 
@@ -798,57 +807,45 @@ QProgressBar::chunk {
     background-color: ${color-primary};
 }
 
-/* --- Tables --- */
+/* --- Data views: tables, lists and trees --- */
+/* One selection and one hover, whichever kind of view the pointer is over. */
 
-QTableWidget {
-    background-color: ${color-surface};
-    color: ${color-text};
-    border-color: ${color-border};
-}
-
-QTableWidget::item:hover {
-    background-color: ${color-surface-hover};
-}
-
-QTableWidget::item:selected {
-    background-color: ${color-table-selected-bg};
-    color: ${color-table-selected-text};
-}
-
-QTableWidget::item:alternate {
-    background-color: ${color-surface-alt};
-    color: ${color-text};
-}
-
-QTableWidget::item:alternate:hover {
-    background-color: ${color-surface-hover};
-}
-
-QTableWidget::item:alternate:selected {
-    background-color: ${color-table-selected-bg};
-    color: ${color-table-selected-text};
-}
-
+QTableWidget,
+QListWidget,
 QTreeWidget {
     background-color: ${color-surface};
     color: ${color-text};
     border-color: ${color-border};
 }
 
+QTableWidget::item:hover,
+QListWidget::item:hover,
 QTreeWidget::item:hover {
     background-color: ${color-surface-hover};
 }
 
+QTableWidget::item:selected,
+QListWidget::item:selected,
 QTreeWidget::item:selected {
     background-color: ${color-table-selected-bg};
     color: ${color-table-selected-text};
 }
 
+QTableWidget::item:alternate,
+QListWidget::item:alternate,
 QTreeWidget::item:alternate {
     background-color: ${color-surface-alt};
     color: ${color-text};
 }
 
+QTableWidget::item:alternate:hover,
+QListWidget::item:alternate:hover,
+QTreeWidget::item:alternate:hover {
+    background-color: ${color-surface-hover};
+}
+
+QTableWidget::item:alternate:selected,
+QListWidget::item:alternate:selected,
 QTreeWidget::item:alternate:selected {
     background-color: ${color-table-selected-bg};
     color: ${color-table-selected-text};

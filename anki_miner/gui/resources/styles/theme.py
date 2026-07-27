@@ -593,6 +593,12 @@ class Theme:
         palette.setColor(QPalette.ColorRole.Base, QColor(colors["surface"]))
         palette.setColor(QPalette.ColorRole.AlternateBase, QColor(colors["surface-alt"]))
         palette.setColor(QPalette.ColorRole.Text, QColor(colors["text"]))
+        # Selection, for the rows Qt draws itself rather than through QSS: an
+        # embedded row widget, a popup, a view the shared data-surface helper has
+        # not reached yet. Without these two the platform highlight showed up
+        # beside the themed one on the same screen (decision D42).
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(colors["table-selected-bg"]))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(colors["table-selected-text"]))
         app.setPalette(palette)
 
         # One setStyleSheet call. The previous setStyleSheet("") clear forced
