@@ -385,6 +385,56 @@ class TestTeardown:
             for worker in captured:
                 worker.wait(5000)
 
+    def test_close_mid_dictionary_lookup_detaches_laggard(self, qtbot, monkeypatch):
+        """A dictionary-only dialog gets the same unconditional drain.
+
+        Teardown used to run only for the manga-image pane, so a blocking
+        ``lookup_fn`` outlived the dialog and its callback painted a
+        ``deleteLater``-d QTextBrowser.
+        """
+        release = threading.Event()
+        started = threading.Event()
+        painted: list[str] = []
+
+        def blocking_lookup(term: str) -> list[tuple[str, str]]:
+            started.set()
+            release.wait(timeout=5)
+            return [("JMdict", "<div>late</div>")]
+
+        captured: list = []
+        real_run_off_thread = wcd.run_off_thread
+
+        def capturing(parent, work, on_done, on_error=None, **kwargs):
+            worker = real_run_off_thread(parent, work, on_done, on_error, **kwargs)
+            captured.append(worker)
+            return worker
+
+        monkeypatch.setattr(wcd, "run_off_thread", capturing)
+
+        dlg = WordCurationDialog([_make_word("食べる", 0)], lookup_fn=blocking_lookup)
+        qtbot.addWidget(dlg)
+        monkeypatch.setattr(dlg, "_render_definitions", lambda term, entries: painted.append(term))
+
+        try:
+            _select_row(dlg, 0)
+            _fire_timer(dlg)
+            assert captured, "no lookup worker dispatched"
+            worker = captured[0]
+            assert started.wait(timeout=5), "lookup never started"
+
+            dlg.reject()
+
+            assert dlg._closing
+            assert worker.parent() is None, "in-flight lookup was not detached from the dying dialog"
+        finally:
+            release.set()
+            for worker in captured:
+                worker.wait(5000)
+
+        # Let any queued cross-thread callback run; it must not paint.
+        qtbot.wait(50)
+        assert painted == []
+
     def test_post_drain_dispatch_blocked(self, qtbot, monkeypatch):
         """After reject, a pending timer/singleShot tick must not dispatch."""
         loader = MagicMock(side_effect=lambda ref: _qimage())
