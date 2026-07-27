@@ -2,9 +2,22 @@
 
 Provides Unity-style auto-sizing helpers that make widgets adapt to their content
 rather than using fixed dimensions.
+
+``apply_button_size`` and ``metric_row_height`` are the shared replacement for
+hard-coded pixel floors on controls and item-view rows. Derive geometry from live
+font metrics through them rather than writing another constant: a literal floor
+silently stops tracking the UI text scale, which is exactly how the 2026-07-25
+audit's row-crush and clipped-button findings were produced.
 """
 
-from PyQt6.QtWidgets import QLabel, QSizePolicy, QWidget
+from PyQt6.QtWidgets import QAbstractItemView, QLabel, QPushButton, QSizePolicy, QWidget
+
+from anki_miner.gui.resources.styles import SPACING
+
+#: Vertical breathing room above and below a button's text, per edge.
+_BUTTON_PADDING_Y = SPACING.xs
+#: Default breathing room above and below an item-view row's text, per edge.
+_ROW_PADDING_Y = SPACING.xxs
 
 
 def field_label_width(*texts: str) -> int:
@@ -71,6 +84,47 @@ def make_widget_shrink_to_fit(widget: QWidget) -> None:
         widget: The widget to modify
     """
     widget.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+
+
+def apply_button_size(button: QPushButton, *, square: bool = False) -> None:
+    """Give ``button`` a font-metric minimum height instead of a pixel floor.
+
+    Replaces per-call-site ``setMinimumHeight(...)`` constants so a control keeps
+    clearing its own text at every UI text scale. Deliberately touches geometry
+    only -- the caller's size policy is left alone, because stretch is a layout
+    decision the call site owns.
+
+    Args:
+        button: The button to size.
+        square: When True, also pin the width to the height, for glyph-only
+            controls such as the chain-editor reorder arrows.
+    """
+    button.ensurePolished()
+    height = button.fontMetrics().height() + 2 * _BUTTON_PADDING_Y
+    button.setMinimumHeight(height)
+
+    if square:
+        button.setMinimumWidth(height)
+        button.setMaximumWidth(height)
+
+
+def metric_row_height(view: QAbstractItemView, *, vertical_padding: int = _ROW_PADDING_Y) -> int:
+    """Return a row height for ``view`` derived from its rendered font.
+
+    Item views whose rows are sized from a constant crush their content once the
+    text scale rises (Issue #102's class). Sizing from ``fontMetrics`` keeps a row
+    tall enough for its own glyphs -- including CJK, which is taller than Latin at
+    the same point size.
+
+    Args:
+        view: The item view whose font decides the height.
+        vertical_padding: Breathing room applied to each edge.
+
+    Returns:
+        The row height in pixels.
+    """
+    view.ensurePolished()
+    return view.fontMetrics().height() + 2 * vertical_padding
 
 
 def configure_expanding_container(widget: QWidget) -> None:
