@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import QApplication
 from anki_miner.gui.widgets.base.queue_row import QueueRowWidget, state_word
 
 _HIGHLIGHT = QColor("#ff00ff")
+_HIGHLIGHTED_TEXT = QColor("#00ff00")
 
 
 @pytest.fixture(autouse=True)
@@ -33,6 +34,7 @@ def _pinned_style(qapp):
     qapp.setStyleSheet("")
     palette = QPalette()
     palette.setColor(QPalette.ColorRole.Highlight, _HIGHLIGHT)
+    palette.setColor(QPalette.ColorRole.HighlightedText, _HIGHLIGHTED_TEXT)
     palette.setColor(QPalette.ColorRole.Window, QColor("#000000"))
     palette.setColor(QPalette.ColorRole.Base, QColor("#000000"))
     qapp.setPalette(palette)
@@ -131,28 +133,35 @@ def test_selected_row_paints_the_palette_highlight(qtbot) -> None:
     QApplication.processEvents()
 
     columns = _painted(row)
-    assert any(c.red() > 0 and c.blue() > 0 for c in columns), "no highlight tint painted"
-    # The leading accent bar is the full-strength highlight.
-    assert columns[0] == _HIGHLIGHT
+    assert any(c.red() > 0 and c.blue() > 0 for c in columns), "no highlight wash painted"
 
 
-def test_unselected_row_paints_no_highlight(qtbot) -> None:
+def test_the_leading_marker_contrasts_with_the_selection(qtbot) -> None:
+    """The marker is HighlightedText, the one colour a theme guarantees legible."""
+    row = _row(qtbot)
+    row.set_selected(True)
+    QApplication.processEvents()
+
+    assert _painted(row)[0] == _HIGHLIGHTED_TEXT
+
+
+def test_unselected_row_paints_no_marker(qtbot) -> None:
     row = _row(qtbot)
     row.render_row(title="Episode 3", state="Ready", result="")
 
     columns = _painted(row)
 
-    assert columns[0] != _HIGHLIGHT
+    assert columns[0] != _HIGHLIGHTED_TEXT
 
 
-def test_deselecting_removes_the_highlight(qtbot) -> None:
+def test_deselecting_removes_the_marker(qtbot) -> None:
     row = _row(qtbot)
     row.set_selected(True)
 
     row.set_selected(False)
     QApplication.processEvents()
 
-    assert _painted(row)[0] != _HIGHLIGHT
+    assert _painted(row)[0] != _HIGHLIGHTED_TEXT
 
 
 # ---------------------------------------------------------------------------

@@ -44,8 +44,8 @@ _STATE_WORDS: dict[str, str] = {
     "complete": QT_TRANSLATE_NOOP("QueueRow", "Complete"),
 }
 
-#: Width of the leading accent bar on a selected row.
-_SELECTION_BAR_W = 3
+#: Width of the leading marker on a selected row.
+_SELECTION_BAR_W = 4
 #: Opacity of the highlight wash across the rest of a selected row. Low enough
 #: that the row's ordinary text colour stays readable over it in both light and
 #: dark themes, which a full-strength fill would not guarantee.
@@ -154,13 +154,17 @@ class QueueRowWidget(QFrame):
         if not self._selected:
             return
 
-        highlight = self.palette().color(QPalette.ColorRole.Highlight)
-        wash = QColor(highlight)
+        wash = QColor(self.palette().color(QPalette.ColorRole.Highlight))
         wash.setAlpha(_SELECTION_WASH_ALPHA)
+        # The marker is HighlightedText, not Highlight: the view has usually
+        # already painted Highlight behind the row, and a bar in the same colour
+        # as the thing behind it is not a marker. HighlightedText is the one
+        # colour every theme guarantees to be legible against its selection.
+        marker = self.palette().color(QPalette.ColorRole.HighlightedText)
 
         painter = QPainter(self)
         painter.fillRect(self.rect(), wash)
-        painter.fillRect(QRect(0, 0, _SELECTION_BAR_W, self.height()), highlight)
+        painter.fillRect(QRect(0, 0, _SELECTION_BAR_W, self.height()), marker)
         painter.end()
 
     # ------------------------------------------------------------------

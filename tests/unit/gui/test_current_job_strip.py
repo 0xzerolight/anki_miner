@@ -68,12 +68,25 @@ def test_strip_collapses_when_the_run_is_released(qtbot, registry) -> None:
 
 
 def test_binding_renders_the_running_task(qtbot, registry) -> None:
+    """Before the run says anything specific, its name is what there is to say."""
     strip = _strip(qtbot)
     handle = _start(registry)
 
     strip.bind(registry, handle.task_id, handle.run_token)
 
     assert "YouTube queue" in strip.line_label.full_text
+
+
+def test_the_title_gives_way_to_what_the_run_is_doing(qtbot, registry) -> None:
+    """The card above already names the queue; the strip spends its width on the item."""
+    strip = _strip(qtbot)
+    handle = _start(registry)
+    strip.bind(registry, handle.task_id, handle.run_token)
+
+    handle.count(current=1, total=3, detail="Episode 2", now=1.0)
+
+    assert "Episode 2" in strip.line_label.full_text
+    assert "YouTube queue" not in strip.line_label.full_text
 
 
 def test_stage_reaches_the_strip(qtbot, registry) -> None:

@@ -60,6 +60,7 @@ from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskSpec
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.models import MiningOutcome, classify_result, result_error_text
@@ -85,6 +86,9 @@ logger = logging.getLogger(__name__)
 # finishing plus AnkiConnect timeouts. Converts a worst-case hang into a bounded
 # delay while retaining the laggard for deferred close.
 _SHUTDOWN_WAIT_MS = 30_000
+
+#: Rows a queue list shows before it scrolls. Enough to see a batch as a batch.
+_VISIBLE_QUEUE_ROWS = 8
 
 
 @dataclass(frozen=True)
@@ -558,6 +562,10 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.list_widget.itemSelectionChanged.connect(self._on_queue_selection_changed)
+        # A list you can select, filter and reorder has to show enough rows to
+        # be worth doing any of that to. Measured in rows, not pixels, so it
+        # still holds eight of them at 1.5x text.
+        self.list_widget.setMinimumHeight(_VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget))
 
         model = self.list_widget.model()
         if model is not None:

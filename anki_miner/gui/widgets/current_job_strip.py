@@ -114,8 +114,13 @@ class CurrentJobStrip(QWidget):
 
         Every part is omitted when the registry has no honest value for it --
         there is no invented phase name and no synthetic percentage.
+
+        The run's title is deliberately *not* the first thing on the line: the
+        strip sits inside the card that already names the queue, and repeating
+        it there would spend the width on something the user is looking at. It
+        stands in only when the run has not yet said anything more specific.
         """
-        parts: list[str] = [snapshot.title]
+        parts: list[str] = []
 
         if snapshot.stage_name:
             if snapshot.stage_index is not None and snapshot.stage_total:
@@ -132,6 +137,9 @@ class CurrentJobStrip(QWidget):
 
         if snapshot.detail:
             parts.append(snapshot.detail)
+
+        if not parts:
+            parts.append(snapshot.title)
 
         if snapshot.total:
             parts.append(tr_format(self.tr("%1 / %2"), snapshot.current, snapshot.total))
