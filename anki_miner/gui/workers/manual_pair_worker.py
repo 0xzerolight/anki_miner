@@ -94,9 +94,18 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             self.episode_processor.cancel()
 
     def run(self):
-        """Process all pairs sequentially in background thread."""
+        """Process all pairs sequentially in background thread.
+
+        Every exit path that got past construction emits ``result_ready`` with
+        whatever was accumulated, cancellation included. It used to be emitted
+        only on an uncancelled run, so cancelling after a pair had already
+        written its notes to Anki left the user with no record that those notes
+        existed — the screen went quiet while the cards sat in their collection.
+        """
+        results: list = []
         try:
             if self.check_cancelled():
+                self.result_ready.emit(results)
                 return
 
             # Build the processor on the worker thread when a factory was
@@ -113,8 +122,6 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             if preflight_error is not None:
                 self.error.emit(preflight_error)
                 return
-
-            results = []
 
             # Report overall (pair-level) progress on the dedicated signals so
             # the tab's single overall bar can compose pair counts with the
@@ -172,8 +179,7 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             if self.progress_callback and not self.check_cancelled():
                 self.progress_callback.on_complete()
 
-            if not self.check_cancelled():
-                self.result_ready.emit(results)
+            self.result_ready.emit(results)
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             logger.exception("ManualPairWorkerThread unhandled exception")
