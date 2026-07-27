@@ -277,7 +277,9 @@ class ResourceDownloadWindow(EnhancedDialog):
 
         self.results_label = QLabel("")
         self.results_label.setWordWrap(True)
-        self.results_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        # Selectable: a failed item prints the URL to fetch by hand, and it is
+        # only useful if it can be copied.
+        self.results_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.results_label.hide()
         self.add_content(self.results_label)
 
@@ -305,8 +307,10 @@ class ResourceDownloadWindow(EnhancedDialog):
         self.retry_button = self.add_button(
             QCoreApplication.translate("ResourceDownloadDialog", "Retry setup"), "primary", self.retry_requested.emit
         )
+        # Quiet, not accent: when Retry setup is showing, the accent belongs to
+        # the one action that changes anything (D41 — one primary per footer).
         self.close_button = self.add_button(
-            QCoreApplication.translate("ResourceDownloadDialog", "Close"), "primary", self.close
+            QCoreApplication.translate("ResourceDownloadDialog", "Close"), "secondary", self.close
         )
         self.retry_button.hide()
         self.close_button.hide()
@@ -378,7 +382,10 @@ class ResourceDownloadSession(QObject):
     """
 
     #: Emits the ResourceDownloadOutcome, or None when the worker produced no
-    #: result at all. Never emitted more than once.
+    #: result at all. Emitted once when the run ends, and once more per
+    #: successful **Retry setup** — the summary is unchanged, ``activated`` is
+    #: not, and a consumer that stopped listening after the first would keep
+    #: showing an imported-but-inactive state that no longer exists.
     finished = pyqtSignal(object)
 
     #: Registry id this session reports under, so a view holding a session can

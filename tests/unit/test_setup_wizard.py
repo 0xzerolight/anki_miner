@@ -1103,6 +1103,39 @@ def test_resources_page_refuses_a_second_concurrent_run(qtbot, wiz_config, monke
     assert len(starts) == 1
 
 
+def test_resources_page_keeps_the_session_alive_for_retry_setup(qtbot, wiz_config, monkeypatch):
+    """Dropping the session on finish would leave the window's Retry button inert."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    session = MagicMock()
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: session)
+
+    wiz.resources_page._on_download_clicked()
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+    wiz.resources_page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=summary, activated=False)
+    )
+
+    assert wiz.resources_page._session is session
+    assert wiz.resources_page.download_button.isEnabled()
+
+    # A later Retry setup emits again; the page must follow it.
+    wiz.resources_page._on_download_finished(
+        ResourceDownloadOutcome(config=wiz_config, summary=summary, activated=True)
+    )
+    assert wiz.resources_page.status_label.text() == "Resources installed."
+
+
 def test_resources_page_clears_stale_status_when_download_does_not_start(qtbot, wiz_config, monkeypatch):
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod  # noqa: PLC0415
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415

@@ -662,7 +662,11 @@ class ResourcesPage(QWizardPage):
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
+        # Retained past the run's end: the terminal window offers Retry setup,
+        # which calls back into the session. Dropping the reference on finish
+        # would collect the session and leave that button inert.
         self._session: ResourceDownloadSession | None = None
+        self._download_running = False
 
     def isComplete(self) -> bool:
         return True  # Always skippable.
@@ -678,7 +682,7 @@ class ResourcesPage(QWizardPage):
         """
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
 
-        if self._session is not None:
+        if self._download_running:
             return
         self.status_label.clear()
         session = start_resource_download(
@@ -692,6 +696,7 @@ class ResourcesPage(QWizardPage):
         if session is None:
             return
         self._session = session
+        self._download_running = True
         self.download_button.setEnabled(False)
         session.finished.connect(self._on_download_finished)
 
@@ -712,10 +717,15 @@ class ResourcesPage(QWizardPage):
         return new_config
 
     def _on_download_finished(self, outcome: object) -> None:
-        """Report the run's real ending, including imported-but-not-active."""
+        """Report the run's real ending, including imported-but-not-active.
+
+        Fires again after a successful **Retry setup**, which is the point: the
+        status line has to stop saying the resources are inactive once they are
+        not.
+        """
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
 
-        self._session = None
+        self._download_running = False
         self.download_button.setEnabled(True)
         if not isinstance(outcome, ResourceDownloadOutcome):
             return
