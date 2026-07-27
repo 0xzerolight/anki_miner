@@ -20,16 +20,22 @@ from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QCoreApplication, QEventLoop, Qt, QTimer
+from PyQt6.QtCore import QCoreApplication, QEventLoop, QLocale, Qt, QTimer
 from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
+from anki_miner.gui.utils.progress_telemetry import format_data_size, format_transfer
 from anki_miner.gui.utils.run_off_thread import still_running
-from anki_miner.gui.workers.resource_download_worker import ResourceDownloadWorker
+from anki_miner.gui.workers.resource_download_worker import (
+    ResourceDownloadWorker,
+    ResourcePhase,
+    ResourceProgress,
+)
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.utils.progress_telemetry import TransferStats
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
 
 
@@ -62,6 +68,42 @@ class ResourceDownloadOutcome:
 
 
 _RETAINED_DOWNLOAD_WORKERS: set[ResourceDownloadWorker] = set()
+
+
+def resource_detail(
+    event: ResourceProgress,
+    *,
+    locale: QLocale,
+    stats: TransferStats | None = None,
+) -> str:
+    """The most specific true thing about one resource at this instant.
+
+    Each phase says only what it can back. The download line is the owner's
+    original request — amount of *this* download against its total, the rate,
+    the elapsed clock, and a remaining estimate only once the estimator is
+    willing to stand behind one. ``Installed`` deliberately appears nowhere:
+    that word belongs to activation, which happens after this worker is done.
+    """
+    if event.phase is ResourcePhase.DOWNLOADING:
+        if stats is None:
+            return QCoreApplication.translate("ResourceDownloadDialog", "Starting download…")
+        return format_transfer(locale, stats)
+
+    if event.phase is ResourcePhase.INSTALLING:
+        if not event.downloaded:
+            return QCoreApplication.translate("ResourceDownloadDialog", "Verifying and installing…")
+        return tr_format(
+            QCoreApplication.translate("ResourceDownloadDialog", "%1 downloaded · Verifying and installing…"),
+            format_data_size(locale, event.downloaded),
+        )
+
+    if event.phase is ResourcePhase.INDEXING:
+        return tr_format(
+            QCoreApplication.translate("ResourceDownloadDialog", "Building index · %1 entries"),
+            locale.toString(event.entries or 0),
+        )
+
+    return QCoreApplication.translate("ResourceDownloadDialog", "Activating")
 
 
 def run_resource_download(
@@ -150,18 +192,28 @@ def _run_download_modal(parent: QWidget, config: AnkiMinerConfig, download_dir: 
     deferred_cleanup_lock = Lock()
     deferred_cleanup_done = False
 
-    def on_item_progress(spec_id: str, cur: int, total_bytes: int, msg: str) -> None:
+    def on_item_progress(event: object) -> None:
+        from anki_miner.gui.workers.resource_download_worker import ResourceProgress
+
+        if not isinstance(event, ResourceProgress):
+            return
         if state.cancel_requested or state.summary is not None or state.terminal_handled or state.loop_unwound:
             return
-        name = names.get(spec_id, spec_id)
-        if total_bytes > 0:
-            dlg.setMaximum(total_bytes)
-            dlg.setValue(cur)
+        name = names.get(event.spec_id, event.display_name)
+        if event.total_bytes:
+            dlg.setMaximum(event.total_bytes)
+            dlg.setValue(event.downloaded)
         else:
             dlg.setRange(0, 0)
         if state.cancel_requested or state.summary is not None or state.terminal_handled or state.loop_unwound:
             return
-        dlg.setLabelText(tr_format(QCoreApplication.translate("ResourceDownloadDialog", "%1: %2"), name, msg))
+        dlg.setLabelText(
+            tr_format(
+                QCoreApplication.translate("ResourceDownloadDialog", "%1: %2"),
+                name,
+                resource_detail(event, locale=QLocale()),
+            )
+        )
 
     def on_item_done(spec_id: str, ok: bool, _detail: str) -> None:
         if state.cancel_requested or state.summary is not None or state.terminal_handled or state.loop_unwound:

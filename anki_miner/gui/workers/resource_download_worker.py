@@ -27,6 +27,7 @@ import contextlib
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -71,6 +72,98 @@ def _retype_for_suffix(temp: Path, url: str) -> Path:
     except OSError:
         return temp
     return retyped
+
+
+class ResourcePhase(Enum):
+    """Where one resource is in the pipeline.
+
+    Stated by the worker rather than inferred by the view: the phase used to be
+    guessed from English progress text, which meant a translated build, a
+    reworded importer message or a new importer silently broke the readout.
+
+    ``ACTIVATING`` is never emitted here. Only the config-owning caller can say
+    the resource is being switched on, and only it can say when it is genuinely
+    installed — which is the whole point of separating import from activation.
+    """
+
+    DOWNLOADING = "downloading"
+    #: Bytes are in; the archive is being validated and unpacked. Nothing
+    #: countable is happening yet.
+    INSTALLING = "installing"
+    #: Entries are being written and the count is real.
+    INDEXING = "indexing"
+    ACTIVATING = "activating"
+
+
+@dataclass(frozen=True)
+class ResourceProgress:
+    """One observation about one resource. Every number is one the app has.
+
+    ``total_bytes`` and ``entries`` are ``None`` rather than 0 when unknown —
+    a server that sends no Content-Length has not told us the download is
+    empty, and an importer that counts files has not told us how many entries
+    it wrote.
+    """
+
+    spec_id: str
+    display_name: str
+    phase: ResourcePhase
+    #: Bytes transferred. Retained across the install phases so the view can
+    #: keep saying how large the thing it is now unpacking was.
+    downloaded: int = 0
+    total_bytes: int | None = None
+    entries: int | None = None
+
+
+class _ItemPhaseReporter:
+    """Folds one resource's two progress streams into one phase sequence.
+
+    The download reports bytes; the importer reports either entries (the
+    dictionary route, which inserts row by row) or file indices (the frequency
+    and pitch routes, which walk bank files). Only the first is an entry count,
+    so only the first is allowed to claim one.
+    """
+
+    def __init__(self, spec: ResourceSpec, emit: Callable[[ResourceProgress], None], *, counts_entries: bool) -> None:
+        self._spec = spec
+        self._emit = emit
+        self._counts_entries = counts_entries
+        self._downloaded = 0
+        self._total_bytes: int | None = None
+        self._entries: int | None = None
+
+    def downloading(self, downloaded: int, total: int, _message: str) -> None:
+        """Record a byte observation from the downloader."""
+        self._downloaded = downloaded
+        self._total_bytes = total or None
+        self._publish(ResourcePhase.DOWNLOADING)
+
+    def installing(self) -> None:
+        """Announce the download→install transition before the importer runs."""
+        self._publish(ResourcePhase.INSTALLING)
+
+    def importing(self, current: int, _total: int, _message: str) -> None:
+        """Record an importer observation, promoting to INDEXING once counting.
+
+        The promotion latches: an importer that finishes inserting and then
+        emits an uncounted "Finalizing" step has not stopped indexing, and a
+        readout that drops back to a vaguer phase reads as going backwards.
+        """
+        if self._counts_entries and current > 0:
+            self._entries = max(current, self._entries or 0)
+        self._publish(ResourcePhase.INDEXING if self._entries else ResourcePhase.INSTALLING)
+
+    def _publish(self, phase: ResourcePhase) -> None:
+        self._emit(
+            ResourceProgress(
+                spec_id=self._spec.id,
+                display_name=self._spec.display_name,
+                phase=phase,
+                downloaded=self._downloaded,
+                total_bytes=self._total_bytes,
+                entries=self._entries,
+            )
+        )
 
 
 @dataclass
@@ -125,8 +218,9 @@ class ResourceDownloadSummary:
 class ResourceDownloadWorker(CancellableWorker):
     """Download + import a batch of recommended resources off the GUI thread."""
 
-    # (spec_id, current, total, message)
-    item_progress = pyqtSignal(str, int, int, str)
+    # Emits a ResourceProgress. Typed rather than (id, current, total, message)
+    # so the view reads a stated phase instead of matching English text.
+    item_progress = pyqtSignal(object)
     # (spec_id, ok, detail)
     item_done = pyqtSignal(str, bool, str)
     # Emits the ResourceDownloadSummary. Named *_summary to avoid colliding
@@ -150,13 +244,9 @@ class ResourceDownloadWorker(CancellableWorker):
         self._pitch_root = pitch_root
         self._download_dir = download_dir
 
-    def _progress_for(self, spec_id: str) -> Callable[[int, int, str], None]:
-        """Return a (current, total, message) callback that tags emits with spec_id."""
-
-        def emit(current: int, total: int, message: str) -> None:
-            self.item_progress.emit(spec_id, current, total, message)
-
-        return emit
+    def _reporter_for(self, spec: ResourceSpec) -> _ItemPhaseReporter:
+        """Return the phase reporter for one resource."""
+        return _ItemPhaseReporter(spec, self.item_progress.emit, counts_entries=spec.kind == "dict")
 
     def run(self) -> None:
         """Download + import each spec in order, isolating per-item failures."""
@@ -168,11 +258,12 @@ class ResourceDownloadWorker(CancellableWorker):
                 break
 
             temp: Path | None = None
+            reporter = self._reporter_for(spec)
             try:
                 temp = download_to_temp(
                     spec.url,
                     dest_dir=self._download_dir,
-                    progress=self._progress_for(spec.id),
+                    progress=reporter.downloading,
                     cancelled_check=lambda: self.is_cancelled,
                     read_timeout_seconds=1.0,
                 )
@@ -182,6 +273,11 @@ class ResourceDownloadWorker(CancellableWorker):
                     with contextlib.suppress(OSError):
                         temp.unlink()
                     break
+
+                # The bytes are in; everything after this is local work. Said
+                # before the importer starts so a multi-minute index build is
+                # never mistaken for a stalled download.
+                reporter.installing()
 
                 dict_id: str | None = None
                 source_id: str | None = None
@@ -196,7 +292,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         self._dicts_root,
                         overwrite=True,
                         cancel_check=lambda: self.is_cancelled,
-                        progress=self._progress_for(spec.id),
+                        progress=reporter.importing,
                         dict_id=spec.id,
                     )
                     dict_id = result.dict_id
@@ -220,7 +316,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         temp,
                         self._freqs_root,
                         cancel_check=lambda: self.is_cancelled,
-                        progress=self._progress_for(spec.id),
+                        progress=reporter.importing,
                         overwrite=True,
                     )
                     source_id = freq_result.source_id
@@ -237,7 +333,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         source_id=spec.id,
                         source_name=spec.display_name,
                         cancel_check=lambda: self.is_cancelled,
-                        progress=self._progress_for(spec.id),
+                        progress=reporter.importing,
                         overwrite=True,
                     )
                     source_id = pitch_result.source_id

@@ -28,13 +28,23 @@ from anki_miner.gui.widgets.dialogs.resource_download_dialog import (
 from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadResult,
     ResourceDownloadSummary,
+    ResourcePhase,
+    ResourceProgress,
 )
+
+_DL = ResourcePhase.DOWNLOADING
+_INSTALL = ResourcePhase.INSTALLING
+
+
+def _progress(phase: ResourcePhase, **kwargs) -> ResourceProgress:
+    return ResourceProgress(spec_id="jitendex", display_name="Jitendex", phase=phase, **kwargs)
+
 
 MOD = "anki_miner.gui.widgets.dialogs.resource_download_dialog"
 
 
 class _BarrierDownloadWorker(QThread):
-    item_progress = pyqtSignal(str, int, int, str)
+    item_progress = pyqtSignal(object)
     item_done = pyqtSignal(str, bool, str)
     finished_summary = pyqtSignal(object)
 
@@ -56,10 +66,10 @@ class _BarrierDownloadWorker(QThread):
         return super().wait(msecs)
 
     def run(self) -> None:
-        self.item_progress.emit("jitendex", 100, 100, "Downloaded")
+        self.item_progress.emit(_progress(_DL, downloaded=100, total_bytes=100))
         self.progress_emitted.set()
         threading.Event().wait(0.1)
-        self.item_progress.emit("jitendex", 0, 0, "Finalizing")
+        self.item_progress.emit(_progress(_INSTALL))
         self.unknown_emitted.set()
         threading.Event().wait(0.1)
         self.finished_summary.emit(self.summary)
@@ -68,7 +78,7 @@ class _BarrierDownloadWorker(QThread):
 
 
 class _CancelDownloadWorker(QThread):
-    item_progress = pyqtSignal(str, int, int, str)
+    item_progress = pyqtSignal(object)
     item_done = pyqtSignal(str, bool, str)
     finished_summary = pyqtSignal(object)
 
@@ -89,7 +99,7 @@ class _CancelDownloadWorker(QThread):
     def run(self) -> None:
         self.started_event.set()
         self.cancel_requested.wait(2.0)
-        self.item_progress.emit("jitendex", 1, 2, "Late progress")
+        self.item_progress.emit(_progress(_DL, downloaded=1, total_bytes=2))
         self.item_done.emit("jitendex", False, "Late result")
         self.allow_summary.wait(2.0)
         if self.summary is not None:
@@ -99,7 +109,7 @@ class _CancelDownloadWorker(QThread):
 
 
 class _UnwindDownloadWorker(QThread):
-    item_progress = pyqtSignal(str, int, int, str)
+    item_progress = pyqtSignal(object)
     item_done = pyqtSignal(str, bool, str)
     finished_summary = pyqtSignal(object)
 
@@ -552,3 +562,102 @@ def test_results_dialog_surfaces_failed_removal():
     body = _results_body(ResourceDownloadSummary(results=[result]))
     assert "Could not remove older copy" in body
     assert "Jitendex.org [2025-11-05]" in body
+
+
+# ---------------------------------------------------------------------------
+# Phase copy (D19): the four things a resource can honestly be doing, and the
+# transfer line the owner asked for by name.
+# ---------------------------------------------------------------------------
+
+
+def _event(phase, **kwargs):
+    from anki_miner.gui.workers.resource_download_worker import ResourceProgress
+
+    return ResourceProgress(spec_id="jitendex", display_name="Jitendex", phase=phase, **kwargs)
+
+
+def _phase(name: str):
+    from anki_miner.gui.workers.resource_download_worker import ResourcePhase
+
+    return getattr(ResourcePhase, name)
+
+
+def test_download_detail_is_the_owners_transfer_line():
+    from PyQt6.QtCore import QLocale
+
+    from anki_miner.gui.utils.progress_telemetry import TransferEstimator
+
+    estimator = TransferEstimator()
+    total = 600 * 1024 * 1024
+    estimator.update(downloaded=0, total=total, now=0.0)
+    for step in range(1, 6):
+        stats = estimator.update(downloaded=step * 32 * 1024 * 1024, total=total, now=float(step) * 8.0)
+
+    text = mod.resource_detail(
+        _event(_phase("DOWNLOADING"), downloaded=stats.downloaded, total_bytes=total),
+        locale=QLocale(QLocale.Language.English, QLocale.Country.UnitedStates),
+        stats=stats,
+    )
+
+    assert "160.0 MB / 600.0 MB" in text
+    assert "MB/s" in text
+    assert "Elapsed" in text
+    assert "left" in text
+
+
+def test_download_detail_without_a_sample_promises_nothing():
+    from PyQt6.QtCore import QLocale
+
+    text = mod.resource_detail(_event(_phase("DOWNLOADING")), locale=QLocale())
+
+    assert text == "Starting download…"
+
+
+def test_install_detail_keeps_the_transferred_size():
+    from PyQt6.QtCore import QLocale
+
+    text = mod.resource_detail(
+        _event(_phase("INSTALLING"), downloaded=600 * 1024 * 1024),
+        locale=QLocale(QLocale.Language.English, QLocale.Country.UnitedStates),
+    )
+
+    assert text == "600.0 MB downloaded · Verifying and installing…"
+
+
+def test_install_detail_omits_a_size_it_does_not_have():
+    from PyQt6.QtCore import QLocale
+
+    text = mod.resource_detail(_event(_phase("INSTALLING")), locale=QLocale())
+
+    assert text == "Verifying and installing…"
+
+
+def test_indexing_detail_states_the_real_entry_count():
+    from PyQt6.QtCore import QLocale
+
+    text = mod.resource_detail(
+        _event(_phase("INDEXING"), entries=184_200),
+        locale=QLocale(QLocale.Language.English, QLocale.Country.UnitedStates),
+    )
+
+    assert text == "Building index · 184,200 entries"
+
+
+def test_activating_detail_is_a_phase_not_a_claim_of_success():
+    from PyQt6.QtCore import QLocale
+
+    text = mod.resource_detail(_event(_phase("ACTIVATING")), locale=QLocale())
+
+    assert text == "Activating"
+    assert "Installed" not in text
+
+
+def test_no_detail_ever_carries_the_download_url():
+    from PyQt6.QtCore import QLocale
+
+    from anki_miner.gui.workers.resource_download_worker import ResourcePhase
+
+    locale = QLocale()
+    for phase in ResourcePhase:
+        text = mod.resource_detail(_event(phase, downloaded=10, entries=5), locale=locale)
+        assert "http" not in text

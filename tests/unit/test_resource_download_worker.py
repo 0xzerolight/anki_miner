@@ -580,3 +580,168 @@ def test_sweep_not_invoked_on_freq_or_pitch(tmp_path, monkeypatch):
 
     assert len(summaries[0].succeeded) == 2
     assert sweep_calls == []  # sweep only fires on the dict route
+
+
+# ---------------------------------------------------------------------------
+# Typed phase progress: the worker states which phase it is in, so the view
+# never has to infer one by matching English progress messages.
+# ---------------------------------------------------------------------------
+
+
+def _phase_events(worker) -> list:
+    events: list = []
+    worker.item_progress.connect(events.append)
+    return events
+
+
+def test_download_progress_carries_real_bytes_and_the_downloading_phase(tmp_path, monkeypatch):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "d.part"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_bytes(b"ZIP")
+        progress(0, 600, "Downloading")
+        progress(155, 600, "Downloading")
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", lambda *a, **kw: _FakeYomitanResult())
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *a, **kw: ([], []))
+
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    events = _phase_events(worker)
+    worker.run()
+
+    downloads = [e for e in events if e.phase is resource_download_worker.ResourcePhase.DOWNLOADING]
+    assert [(e.downloaded, e.total_bytes) for e in downloads] == [(0, 600), (155, 600)]
+    assert {e.display_name for e in downloads} == {"Jitendex"}
+    assert {e.spec_id for e in downloads} == {"jitendex"}
+
+
+def test_absent_content_length_reports_no_total_rather_than_zero(tmp_path, monkeypatch):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "d.part"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_bytes(b"ZIP")
+        progress(155, 0, "Downloading")
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", lambda *a, **kw: _FakeYomitanResult())
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *a, **kw: ([], []))
+
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    events = _phase_events(worker)
+    worker.run()
+
+    first = next(e for e in events if e.phase is resource_download_worker.ResourcePhase.DOWNLOADING)
+    assert first.total_bytes is None
+
+
+def test_install_phase_opens_before_the_importer_and_keeps_the_transferred_size(tmp_path, monkeypatch):
+    order: list[str] = []
+
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "d.part"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_bytes(b"ZIP")
+        progress(629_145_600, 629_145_600, "Downloading")
+        return temp
+
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+        order.append("import")
+        return _FakeYomitanResult()
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *a, **kw: ([], []))
+
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    events: list = []
+    worker.item_progress.connect(lambda e: (events.append(e), order.append(e.phase.value)))
+    worker.run()
+
+    installing = [e for e in events if e.phase is resource_download_worker.ResourcePhase.INSTALLING]
+    assert installing, "the download→install transition must be announced"
+    assert order.index("installing") < order.index("import")
+    assert installing[0].downloaded == 629_145_600
+    assert installing[0].entries is None
+
+
+def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypatch):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "d.part"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_bytes(b"ZIP")
+        return temp
+
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+        progress(0, 0, "Validating archive")
+        progress(184_200, 0, "Inserted 184,200 entries")
+        progress(0, 0, "Finalizing import")  # A message with no count is not a regression.
+        return _FakeYomitanResult()
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *a, **kw: ([], []))
+
+    worker = _make_worker([DICT_SPEC], tmp_path)
+    events = _phase_events(worker)
+    worker.run()
+
+    phases = [e.phase for e in events]
+    assert resource_download_worker.ResourcePhase.INDEXING in phases
+    indexed = [e for e in events if e.phase is resource_download_worker.ResourcePhase.INDEXING]
+    assert [e.entries for e in indexed] == [184_200, 184_200]
+    # Once entries are landing, nothing walks the phase back to installing.
+    assert phases.index(resource_download_worker.ResourcePhase.INDEXING) == len(phases) - 2
+
+
+def test_file_counting_importers_never_report_a_fabricated_entry_count(tmp_path, monkeypatch):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / "f.part"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_bytes(b"ZIP")
+        return temp
+
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+        progress(1, 4, "term_meta_bank_1.json")  # A file index, NOT entries.
+        return _FakeFreqResult()
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_frequency_source", fake_freq)
+
+    worker = _make_worker([FREQ_SPEC], tmp_path)
+    events = _phase_events(worker)
+    worker.run()
+
+    assert all(e.entries is None for e in events)
+    assert all(e.phase is not resource_download_worker.ResourcePhase.INDEXING for e in events)
+
+
+def test_each_resource_starts_its_own_phase_sequence(tmp_path, monkeypatch):
+    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+        temp = Path(dest_dir) / f"{Path(url).name}.part"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")
+        progress(10, 10, "Downloading")
+        return temp
+
+    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+        progress(99, 0, "Inserted 99 entries")
+        return _FakeYomitanResult()
+
+    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+        return _FakeFreqResult()
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_dict)
+    monkeypatch.setattr(resource_download_worker, "import_frequency_source", fake_freq)
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *a, **kw: ([], []))
+
+    worker = _make_worker([DICT_SPEC, FREQ_SPEC], tmp_path)
+    events = _phase_events(worker)
+    worker.run()
+
+    freq_events = [e for e in events if e.spec_id == "jpdb-freq"]
+    assert freq_events[0].phase is resource_download_worker.ResourcePhase.DOWNLOADING
+    assert all(e.entries is None for e in freq_events)
