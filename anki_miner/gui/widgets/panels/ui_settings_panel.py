@@ -67,13 +67,6 @@ from anki_miner.utils.i18n import tr_format
 logger = logging.getLogger(__name__)
 
 
-# Single dial that drives row geometry, glyph pixel size, and button bounding
-# box -- but read off the rendered font rather than frozen at a constant (D42).
-# The tree used to sit at a flat 36px while its text tracked the UI text scale,
-# so the theme list was the one data view in the app that did not share the
-# shared row height. ``_row_height_px`` below is that dial, re-derived on every
-# rebuild; everything the star cells size themselves from still hangs off it.
-
 # Unicode star glyphs. Routed through the font pipeline so hinting/AA stays
 # sharp at small sizes — no QPainter math, no devicePixelRatio handling.
 _STAR_FILLED = "★"
@@ -406,6 +399,11 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _apply_tree_metrics(self) -> None:
         """Re-derive the tree's row height, and the star sizes hanging off it.
 
+        ``_row_height_px`` is the single dial that drives row geometry, glyph
+        pixel size and the star's bounding box. It used to be a flat 36px while
+        the tree's text tracked the UI text scale, which made the theme list the
+        one data view in the app not sharing the shared row height (D42).
+
         Called on construction and before every rebuild, so a live text-size
         change reaches the theme list the next time it is populated rather than
         leaving it pinned to whatever the font was at app start.
@@ -510,10 +508,10 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         the font pipeline so it stays sharp without QPainter or
         devicePixelRatio handling.
 
-        Sizing auto-derives from ``self._row_height_px``: font is 60% of row
-        height, button bounding box is the larger of the glyph's line height
-        and ``self._row_height_px - 4``. The row height is re-derived from the
-        star scales with it — no separate QSS pixel values to keep in sync.
+        Sizing auto-derives from ``self._row_height_px``: the font is 60% of the
+        row height and the button box is the row less its 1-px margins. That row
+        height is itself re-derived from the tree's rendered font, so the star
+        tracks the UI text scale with no QSS pixel values to keep in sync.
 
         The QToolButton is wrapped in a QWidget+QHBoxLayout so it sits on the
         row's centerline regardless of cell padding — placing the button
