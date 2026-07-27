@@ -35,9 +35,11 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import install_no_scroll_on_inputs
-from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, capped_page_column, install_workflow_shell
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker
@@ -54,6 +56,22 @@ logger = logging.getLogger(__name__)
 
 _PREVIEW_ROW_CAP = 500
 _CELL_ELIDE = 120
+
+
+def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
+    """Re-role a button in place, using only the variants D41 already defines.
+
+    ``ModernButton`` carries its role in its object name, and Qt caches the
+    resolved stylesheet per widget, so the name change has to be followed by an
+    unpolish/polish or the button keeps painting its old role.
+    """
+    if button.objectName() == variant:
+        return
+    button.setObjectName(variant)
+    style = button.style()
+    if style is not None:
+        style.unpolish(button)
+        style.polish(button)
 
 
 class CardBackfillTab(QWidget):
@@ -123,16 +141,14 @@ class CardBackfillTab(QWidget):
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
         layout.addWidget(self.overwrite_checkbox)
 
-        buttons = QHBoxLayout()
-        self.scan_button = ModernButton(self.tr("Scan"), variant="secondary")
+        # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
+        # primary until a preview exists; after that Apply takes over and Scan
+        # stays reachable as the quiet way to rescan.
+        self.scan_button = ModernButton(self.tr("Scan"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
-        buttons.addWidget(self.scan_button)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self._cancel)
-        buttons.addWidget(self.cancel_button)
-        buttons.addStretch(1)
-        layout.addLayout(buttons)
 
         self.summary_label = QLabel("")
         self.summary_label.setWordWrap(True)
@@ -149,29 +165,55 @@ class CardBackfillTab(QWidget):
             header.setStretchLastSection(True)
         layout.addWidget(self.preview_table, stretch=1)
 
-        bottom = QHBoxLayout()
-        self.apply_button = ModernButton(self.tr("Apply"), variant="primary")
+        self.apply_button = ModernButton(self.tr("Apply"), variant="secondary")
         self.apply_button.setEnabled(False)
         self.apply_button.clicked.connect(self._start_apply)
-        bottom.addWidget(self.apply_button)
-        bottom.addStretch(1)
-        layout.addLayout(bottom)
+
+        install_no_scroll_on_inputs(container)
+
+        scroll_area = QScrollArea()
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        # Backfill has no activity log, so Activity is hidden rather than opened
+        # onto an empty panel.
+        self.action_bar = install_workflow_shell(outer, scroll_area, container, self.PAGE_WIDTH, log=None)
+        # The run's own status line and bar go beside the buttons that produce
+        # them, on the same capped column, instead of scrolling away under a
+        # 240px preview table.
+        outer.insertWidget(outer.count() - 1, capped_page_column(self._create_run_status(), self.PAGE_WIDTH))
+        self._sync_action_prominence()
+
+    def _create_run_status(self) -> QWidget:
+        """The one-line status and thin bar that sit directly above the actions."""
+        strip = QWidget()
+        strip_layout = QVBoxLayout(strip)
+        strip_layout.setContentsMargins(SPACING.sm, 0, SPACING.sm, 0)
+        strip_layout.setSpacing(SPACING.xxs)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setVisible(False)
-        layout.addWidget(self.progress_bar)
+        strip_layout.addWidget(self.progress_bar)
 
         self.status_label = QLabel("")
         self.status_label.setWordWrap(True)
-        layout.addWidget(self.status_label)
+        strip_layout.addWidget(self.status_label)
 
-        scroll_area = QScrollArea()
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
-        install_no_scroll_on_inputs(container)
+        return strip
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.addWidget(scroll_area)
+    def _sync_action_prominence(self) -> None:
+        """Put the action the user can actually take next on the right.
+
+        Before a valid preview there is only one honest move — Scan — and Apply
+        has nothing to apply. Once a preview exists Apply becomes the point of
+        the screen, and Scan stays visible so a rescan never needs the page
+        rebuilt.
+        """
+        has_plan = self._plan is not None
+        primary = self.apply_button if has_plan else self.scan_button
+        quiet = self.scan_button if has_plan else self.apply_button
+        _set_variant(primary, "primary")
+        _set_variant(quiet, "secondary")
+        self.action_bar.set_actions(primary, (self.cancel_button, quiet))
 
     # ------------------------------------------------------------------
     # Gating / config
@@ -205,6 +247,7 @@ class CardBackfillTab(QWidget):
         self.preview_table.setRowCount(0)
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
+        self._sync_action_prominence()
         self._refresh_checkbox_gates()
 
     def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker | SingleCallWorker]:
@@ -280,6 +323,7 @@ class CardBackfillTab(QWidget):
         self._plan = plan if plan.notes else None
         self._populate_preview(plan)
         self.apply_button.setEnabled(bool(plan.notes))
+        self._sync_action_prominence()
         self.status_label.setText("")
 
     def _populate_preview(self, plan: BackfillPlan) -> None:
@@ -364,6 +408,7 @@ class CardBackfillTab(QWidget):
             self.preview_table.setRowCount(0)
             self.apply_button.setEnabled(False)
             self.summary_label.setText("")
+            self._sync_action_prominence()
             self.status_label.setText(self.tr("Settings changed since this scan; re-scan before applying."))
             return
         answer = QMessageBox.question(
@@ -433,6 +478,7 @@ class CardBackfillTab(QWidget):
             self.progress_bar.setRange(0, 0)
         if not running:
             self._refresh_checkbox_gates()
+        self._sync_action_prominence()
 
     def _cancel(self) -> None:
         """Cancel the run: one verb, no prompt, and the button says it is waiting."""

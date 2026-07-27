@@ -95,7 +95,6 @@ class WorkflowActionBar(QWidget):
         self._registry: TaskRegistry | None = None
         self._task_id: str | None = None
         self._run_token: int | None = None
-        self._activity_log: QWidget | None = None
         self._drawer: QWidget | None = None
         self._splitter: QSplitter | None = None
         self._auto_open_armed = True
@@ -157,7 +156,6 @@ class WorkflowActionBar(QWidget):
                 to ``log`` itself; :func:`install_workflow_shell` passes the
                 splitter pane it wrapped the log in.
         """
-        self._activity_log = log
         self._drawer = drawer if drawer is not None else log
         self.activity_button.setVisible(log is not None)
         if log is None:
@@ -433,25 +431,33 @@ def install_workflow_shell(
 
     drawer: QWidget | None = None
     if log is not None:
-        drawer = _capped_column(log, kind)
+        drawer = capped_page_column(log, kind)
         drawer.setObjectName(ACTIVITY_DRAWER_OBJECT_NAME)
         splitter.addWidget(drawer)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
 
     layout.addWidget(splitter, 1)
-    layout.addWidget(_capped_column(bar, kind))
+    layout.addWidget(capped_page_column(bar, kind))
     bar.attach_activity(log, drawer)
     return bar
 
 
-def _capped_column(child: QWidget, kind: PageWidth) -> QWidget:
+def capped_page_column(child: QWidget, kind: PageWidth) -> QWidget:
     """Wrap ``child`` in a full-width host that centres it on the page column.
 
     The host spans the window so its background and top rule reach both edges;
     the child inside it stops at the same cap :func:`configure_scrolled_page`
     gives the scrolled content, so everything on the page shares one centre
-    line.
+    line. Public because anything else a page pins below its scroll -- Card
+    Backfill's run status, for one -- has to line up with the same column.
+
+    Args:
+        child: The widget to centre and cap.
+        kind: The page's declared ``PAGE_WIDTH``.
+
+    Returns:
+        The host widget to add to the page's top-level layout.
     """
     host = QWidget()
     row = QHBoxLayout()

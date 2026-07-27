@@ -32,11 +32,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
-from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
-from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, configure_card_layout
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssue,
+    ScreenIssueHost,
+    WorkflowActionBar,
+    configure_card_layout,
+    install_workflow_shell,
+)
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -140,6 +147,43 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
 
         group.setLayout(layout)
         return group
+
+    # ------------------------------------------------------------------
+    # Pinned action bar (D6)
+    # ------------------------------------------------------------------
+
+    #: This tool's pinned action bar, or ``None`` before it is installed.
+    action_bar: WorkflowActionBar | None = None
+
+    def _install_action_bar(
+        self,
+        layout: QVBoxLayout,
+        scroll: QScrollArea,
+        content: QWidget,
+        kind: PageWidth,
+    ) -> WorkflowActionBar:
+        """Frame this tool's page around a pinned bar carrying its own buttons.
+
+        The tools all name the same two controls — ``_primary_button`` and
+        ``cancel_button`` — so the bar is wired here rather than three times.
+        The button objects are the subclass's own, keeping each verb's label in
+        its own translation context.
+
+        Args:
+            layout: The tab's top-level layout.
+            scroll: The page's scroll area, not yet given its widget.
+            content: The column of cards, fully populated.
+            kind: The page's declared ``PAGE_WIDTH``.
+        """
+        bar = install_workflow_shell(layout, scroll, content, kind, log=self.log_widget)
+        bar.set_actions(self._primary_button, (self.cancel_button,))
+        self.action_bar = bar
+        return bar
+
+    def _begin_attempt(self) -> None:
+        """Re-arm the Activity drawer's one-shot auto-open. No-op without a bar."""
+        if self.action_bar is not None:
+            self.action_bar.begin_attempt()
 
     def _on_log_problem(self, level: str, message: str) -> None:
         """Raise a logged ERROR to the screen banner.
