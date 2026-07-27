@@ -37,4 +37,4 @@ def test_deck_builder_tab_after_video(wired_window):
 def test_deck_builder_tab_before_audio(wired_window):
     """Deck Builder must appear before Audio."""
     _window, titles, _tabs = wired_window
-    assert titles.index("Deck Builder") < titles.index("Audio")
+    assert titles.index("Deck Builder") < titles.index("Audiobooks")

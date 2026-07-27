@@ -77,7 +77,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(0) == "Generate"
     assert tab._inner_tabs.tabText(1) == "Retime"
     assert tab._inner_tabs.tabText(2) == "Condense"
-    assert tab._inner_tabs.tabText(3) == "Backfill"
+    assert tab._inner_tabs.tabText(3) == "Update Notes"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):

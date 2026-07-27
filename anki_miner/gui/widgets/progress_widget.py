@@ -1,4 +1,20 @@
-"""Enhanced progress widget with gradients and rich statistics."""
+"""Enhanced progress widget with gradients and rich statistics.
+
+The fill *catches up* to each new number rather than teleporting to it (D36-B),
+under three rules that keep the motion from becoming a second, prettier lie:
+
+* **Forward only.** A decrease, a reset, a cancel-freeze and the switch to or
+  from the busy marquee are all instant. A bar animating backwards reads as the
+  run undoing itself, and an animation still gliding across a *stalled* bar is
+  the app claiming progress it is not making.
+* **Never ahead of the truth.** W1-T6 deleted every fabricated denominator;
+  ``set_composed`` ignores the current item's own percentage for the same
+  reason. An animation is only ever aimed at a number a worker actually
+  reported, so it can lag the truth but never lead it.
+* **Not on the critical path.** The truthful value is recorded first and the
+  animation only moves the pixels, so freeze, reset and completion can snap to
+  the stored truth at any instant without waiting for anything.
+"""
 
 from time import time
 
@@ -6,7 +22,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QVBoxLayout, QWidget
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import FONT_SIZES, MOTION, SPACING
+from anki_miner.gui.utils import motion
 from anki_miner.gui.utils.fonts import make_scaled_monospace_font
 
 
@@ -86,6 +103,40 @@ class ProgressWidget(QWidget):
         # Set size policy to prevent compression
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
+    # ------------------------------------------------------------------
+    # The fill
+    # ------------------------------------------------------------------
+
+    def _snap_fill(self, value: int) -> None:
+        """Put the fill at ``value`` now, cancelling any catch-up in flight.
+
+        Stopping first is the load-bearing half: a running animation owns the
+        bar's ``value`` and would keep writing over whatever is set here on its
+        next tick, so a cancel or a reset would be visibly overruled a frame
+        later by the run it just ended.
+        """
+        for animation in motion.active_animations(self.progress_bar):
+            animation.stop()
+        self.progress_bar.setValue(value)
+
+    def _advance_fill(self, value: int) -> None:
+        """Catch the fill up to ``value``, or snap if the move is not forward.
+
+        Only a determinate bar moving forward is animated. Everything else --
+        a worker reporting a lower number, a bar currently sweeping as a busy
+        marquee -- lands instantly, because there is no honest journey to draw.
+        """
+        if self.progress_bar.maximum() > 0 and value > self.progress_bar.value():
+            motion.animate(
+                self.progress_bar,
+                b"value",
+                value,
+                duration=MOTION.state,
+                curve=motion.spatial_curve(),
+            )
+            return
+        self._snap_fill(value)
+
     def set_progress(self, current: int, total: int, description: str = "") -> None:
         """Set progress value and update status with statistics.
 
@@ -110,7 +161,7 @@ class ProgressWidget(QWidget):
             # Calculate percentage
             percentage = int((current / total) * 100)
             self._last_percent = percentage
-            self.progress_bar.setValue(percentage)
+            self._advance_fill(percentage)
 
         if description:
             self.status_label.setText(description)
@@ -145,8 +196,15 @@ class ProgressWidget(QWidget):
         if self._start_time is None and percent > 0:
             self._start_time = time()
 
+        # Coming back from the busy marquee is a mode change, not progress:
+        # the sweeping bar was never at a position, so there is nothing for the
+        # new value to travel from.
+        was_indeterminate = self.progress_bar.maximum() == 0
         self.progress_bar.setMaximum(100)
-        self.progress_bar.setValue(percent)
+        if was_indeterminate:
+            self._snap_fill(percent)
+        else:
+            self._advance_fill(percent)
 
         if status:
             self.status_label.setText(status)
@@ -195,7 +253,7 @@ class ProgressWidget(QWidget):
             message: Completion summary text
         """
         self.progress_bar.setMaximum(100)
-        self.progress_bar.setValue(100)
+        self._snap_fill(100)
         self.status_label.setText(message)
         if self._start_time is not None:
             elapsed = time() - self._start_time
@@ -222,7 +280,7 @@ class ProgressWidget(QWidget):
             return
         self._items_processed = value
         self._last_percent = value
-        self.progress_bar.setValue(value)
+        self._advance_fill(value)
         self._update_stats()
 
     @property
@@ -240,7 +298,7 @@ class ProgressWidget(QWidget):
         self._frozen = False
         self._last_percent = 0
         self.progress_bar.setMaximum(100)
-        self.progress_bar.setValue(0)
+        self._snap_fill(0)
         self.status_label.setText(self.tr("Ready"))
         self.stats_label.setText("")
         self._start_time = None
@@ -251,6 +309,10 @@ class ProgressWidget(QWidget):
         """Set progress bar to indeterminate mode (busy indicator)."""
         if self._frozen:
             return
+        # Stop the catch-up first: a running animation writing into a bar
+        # whose maximum is 0 keeps the marquee looking like tracked progress.
+        for animation in motion.active_animations(self.progress_bar):
+            animation.stop()
         self.progress_bar.setMinimum(0)
         self.progress_bar.setMaximum(0)
         self._start_time = None
@@ -269,7 +331,9 @@ class ProgressWidget(QWidget):
         """
         self._frozen = True
         self.progress_bar.setMaximum(100)
-        self.progress_bar.setValue(self._last_percent)
+        # Snap to the stored truth, not to wherever the catch-up had reached:
+        # a frozen bar must show the last number the run actually reported.
+        self._snap_fill(self._last_percent)
 
     def set_determinate(self, maximum: int = 100) -> None:
         """Set progress bar to determinate mode.
@@ -282,7 +346,7 @@ class ProgressWidget(QWidget):
         """
         self._total_items = maximum
         self.progress_bar.setMaximum(100)
-        self.progress_bar.setValue(0)
+        self._snap_fill(0)
         self._start_time = None
         self._items_processed = 0
 

@@ -246,3 +246,157 @@ def text_scale():
     original = Theme.get_font_scale()
     yield Theme.set_font_scale
     Theme.set_font_scale(original)
+
+
+@pytest.mark.motion
+class TestTheFillCatchesUp:
+    """The bar animates toward truthful increases only (D36-B, W4-T4).
+
+    Every test here opts into real animation timing, because the point being
+    defended is *when* the fill arrives. The rest of the suite runs under the
+    autouse instant-motion fixture and reads the truthful endpoint directly.
+    """
+
+    @staticmethod
+    def _running(widget):
+        from anki_miner.gui.utils import motion
+
+        return motion.active_animations(widget.progress_bar)
+
+    def test_a_forward_step_is_animated_rather_than_teleported(self, widget):
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+
+        widget.set_percent(80)
+
+        assert len(self._running(widget)) == 1
+        # The fill has not arrived yet -- that is the whole point.
+        assert widget.progress_bar.value() < 80
+
+    def test_it_starts_from_the_rendered_value_not_from_zero(self, widget):
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+
+        widget.set_percent(80)
+
+        assert self._running(widget)[0].startValue() == 20
+
+    def test_it_uses_the_house_curve_at_the_state_duration(self, widget):
+        from anki_miner.gui.resources.styles import MOTION
+        from anki_miner.gui.utils import motion
+
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+
+        widget.set_percent(80)
+
+        animation = self._running(widget)[0]
+        assert animation.duration() == MOTION.state
+        assert animation.easingCurve() == motion.spatial_curve()
+
+    def test_a_repeated_value_does_not_re_arm_the_animation(self, widget):
+        widget.set_percent(80)
+        widget.progress_bar.setValue(80)
+
+        widget.set_percent(80)
+
+        assert self._running(widget) == ()
+
+    def test_a_decrease_snaps_instead_of_running_backwards(self, widget):
+        widget.set_percent(80)
+        widget.progress_bar.setValue(80)
+
+        widget.set_percent(20)
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.value() == 20
+
+    def test_a_reset_lands_at_zero_immediately(self, widget):
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+        widget.set_percent(90)
+        assert self._running(widget)
+
+        widget.reset()
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.value() == 0
+
+    def test_a_cancel_freezes_at_the_truth_not_at_the_lagging_pixels(self, widget):
+        """A cancelled run shows the last number it reported, not the catch-up."""
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+        widget.set_percent(90)
+        assert widget.progress_bar.value() < 90
+
+        widget.freeze()
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.value() == 90
+
+    def test_switching_to_the_busy_marquee_stops_the_catch_up(self, widget):
+        """An animation still writing into a maximum-0 bar fakes tracked work."""
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+        widget.set_percent(90)
+        assert widget.progress_bar.value() < 90
+
+        widget.set_indeterminate()
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.maximum() == 0
+
+    def test_coming_back_from_the_marquee_snaps(self, widget):
+        """The sweep was never at a position, so there is no journey to draw."""
+        widget.set_indeterminate()
+
+        widget.set_percent(40)
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.value() == 40
+
+    def test_completion_lands_on_100_immediately(self, widget):
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+
+        widget.show_completion("done")
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.value() == 100
+
+    def test_set_determinate_starts_from_a_clean_zero(self, widget):
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+        widget.set_percent(90)
+
+        widget.set_determinate(12)
+
+        assert self._running(widget) == ()
+        assert widget.progress_bar.value() == 0
+
+    def test_the_animation_is_owned_by_the_bar(self, widget):
+        """An unparented QPropertyAnimation is collected mid-flight."""
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+
+        widget.set_percent(80)
+
+        assert self._running(widget)[0].parent() is widget.progress_bar
+
+    def test_a_second_step_retargets_rather_than_racing(self, widget):
+        widget.set_percent(20)
+        widget.progress_bar.setValue(20)
+        widget.set_percent(60)
+        first = self._running(widget)[0]
+
+        widget.set_percent(90)
+
+        assert self._running(widget) == (first,)
+        assert first.endValue() == 90
+
+
+def test_the_fill_never_animates_past_a_number_nobody_reported(widget):
+    """W1-T6 deleted the fabricated denominators; motion must not restore one."""
+    widget.set_composed(items_done=1, _item_pct=99, items_total=4, status="")
+
+    assert widget.progress_bar.value() == 25

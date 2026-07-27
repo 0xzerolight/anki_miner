@@ -7,6 +7,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
@@ -25,7 +26,9 @@ class ResultsDialog(EnhancedDialog):
     - Large success/error icon and message
     - Stat cards for key metrics (words, cards, time)
     - Error display if any
-    - Undo button to delete created cards (if card IDs are available)
+    - Undo button to delete the created notes (if note ids are available).
+      ``ProcessingResult.card_ids`` holds *note* ids -- the field name predates
+      the distinction and is load-bearing, so only the wording says "notes".
     - Modern styling with card layout
     """
 
@@ -60,9 +63,12 @@ class ResultsDialog(EnhancedDialog):
         self.setMinimumWidth(600)
         self.setMinimumHeight(400)
 
-        # Set header based on result
+        # Set header based on result. A successful run states what it produced
+        # rather than congratulating the user for it (D47-B) -- the number is
+        # the thing they opened the dialog to read, and "Success!" made them
+        # find it again in the stat cards below.
         if self.processing_result.success:
-            self.set_header("complete", self.tr("Success!"))
+            self.set_header("complete", result_copy.created_cards(self.processing_result.cards_created))
         else:
             self.set_header("error", self.tr("Completed with Errors"))
 
@@ -141,7 +147,7 @@ class ResultsDialog(EnhancedDialog):
         # Add undo button if callback and card IDs are available
         if self._undo_callback and self.processing_result.card_ids:
             self._undo_button = self.add_button(
-                tr_format(self.tr("Undo (%1 cards)"), len(self.processing_result.card_ids)),
+                tr_format(self.tr("Undo (%1 notes)"), len(self.processing_result.card_ids)),
                 "danger",
                 self._on_undo_clicked,
             )
@@ -164,7 +170,7 @@ class ResultsDialog(EnhancedDialog):
         reply = QMessageBox.question(
             self,
             self.tr("Confirm Undo"),
-            tr_format(self.tr("Delete %1 cards from Anki? This cannot be undone."), count),
+            tr_format(self.tr("Delete %1 notes from Anki? This cannot be undone."), count),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -186,7 +192,7 @@ class ResultsDialog(EnhancedDialog):
     def _on_undo_done(self, result: object) -> None:
         """GUI-thread continuation after the off-thread delete succeeds."""
         deleted = cast(int, result)
-        self._undo_button.setText(tr_format(self.tr("Undone (%1 cards deleted)"), deleted))
+        self._undo_button.setText(tr_format(self.tr("Undone (%1 notes deleted)"), deleted))
         self.undo_completed = True
         if self._on_undo_committed is not None:
             self._on_undo_committed(deleted)
@@ -194,6 +200,8 @@ class ResultsDialog(EnhancedDialog):
     def _on_undo_error(self, message: str) -> None:
         """GUI-thread continuation after the off-thread delete fails."""
         self._undo_button.setEnabled(True)
-        self._undo_button.setText(tr_format(self.tr("Undo (%1 cards)"), len(self.processing_result.card_ids)))
+        self._undo_button.setText(tr_format(self.tr("Undo (%1 notes)"), len(self.processing_result.card_ids)))
         logger.error("Undo failed: %s", message)
-        QMessageBox.critical(self, self.tr("Undo Failed"), self.tr("Failed to delete cards. Check Anki is running."))
+        QMessageBox.critical(
+            self, self.tr("Undo Failed"), self.tr("Failed to delete notes. Check that Anki is running.")
+        )

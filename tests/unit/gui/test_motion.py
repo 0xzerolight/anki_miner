@@ -11,6 +11,7 @@ keep the first motion from becoming the flaky kind:
   tests stay deterministic instead of sleeping.
 """
 
+import pytest
 from PyQt6.QtCore import QAbstractAnimation, QObject, pyqtProperty
 from PyQt6.QtWidgets import QWidget
 
@@ -92,6 +93,7 @@ class TestAnimate:
 
         assert anim.parent() is target
 
+    @pytest.mark.motion
     def test_retargets_instead_of_starting_a_second_animation(self, qtbot):
         target = _Fader()
 
@@ -101,6 +103,7 @@ class TestAnimate:
         assert first is second
         assert second.endValue() == 0.5
 
+    @pytest.mark.motion
     def test_a_retarget_starts_from_the_current_rendered_value(self, qtbot):
         """Restarting from the origin instead would visibly jump backwards."""
         target = _Fader()
@@ -146,6 +149,7 @@ class TestReducedMotionMode:
 
         assert not motion.active_animations(target)
 
+    @pytest.mark.motion
     def test_mode_is_restored_afterwards(self, qtbot):
         with motion.instant():
             pass

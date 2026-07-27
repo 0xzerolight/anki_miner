@@ -47,7 +47,7 @@ _MOKURO_REQUIRED_KEYS: tuple[str, ...] = (
 # order (``.cbz`` before ``.zip``); matched case-insensitively.
 _ARCHIVE_EXTS: tuple[str, ...] = (".cbz", ".zip")
 
-# Subtitle-file extensions mined as text (Reading → Subtitles sub-tab). No
+# Subtitle-file extensions mined as text (Reading → Subtitle Files sub-tab). No
 # MicroDVD ``.sub``: frame-based, pysubs2 needs a media-derived fps we don't
 # have without the video.
 _SUBTITLE_EXTS: tuple[str, ...] = (".srt", ".ass", ".ssa", ".vtt")

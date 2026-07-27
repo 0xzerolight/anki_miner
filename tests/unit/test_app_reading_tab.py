@@ -2,8 +2,8 @@
 
 Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
 calls ``anki_miner.gui.app.compose_main_window``, and asserts the
-"Reading" tab is present, correctly typed, ordered right after Audio, and that
-it nests the Manga/Novels/Subtitles/Text sub-tabs behind a single shared
+"Reading" tab is present, correctly typed, ordered right after Audiobooks, and that
+it nests the Manga/Novels/Subtitle Files/Text sub-tabs behind a single shared
 presenter.
 """
 
@@ -31,9 +31,9 @@ def test_reading_tab_is_correct_type(wired_window):
 
 
 def test_reading_tab_after_audio(wired_window):
-    """Reading must appear right after Audio."""
+    """Reading must appear right after Audiobooks."""
     _window, titles, _tabs = wired_window
-    assert titles.index("Reading") == titles.index("Audio") + 1
+    assert titles.index("Reading") == titles.index("Audiobooks") + 1
 
 
 def test_reading_tab_before_analytics(wired_window):
@@ -48,7 +48,7 @@ def test_reading_tab_nests_four_inner_tabs(wired_window):
     reading = tabs["Reading"]
     assert reading._inner_tabs.count() == 4
     labels = [reading._inner_tabs.tabText(i) for i in range(reading._inner_tabs.count())]
-    assert labels == ["Manga", "Novels", "Subtitles", "Text"]
+    assert labels == ["Manga", "Novels", "Subtitle Files", "Text"]
 
 
 def test_reading_tab_inner_child_types(wired_window):
