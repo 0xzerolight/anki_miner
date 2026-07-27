@@ -496,8 +496,14 @@ class SingleEpisodeTab(MiningTabBase):
                 parent=self,
                 audio_track_override=self._audio_track_override,
             )
-            if viewer.exec() == SubtitleViewer.DialogCode.Accepted:
+            # Nothing happens until exec() returns: the viewer holds a live mpv
+            # core and releases it on the way out, so navigating (or writing the
+            # offset) before then would race its teardown.
+            result = viewer.exec()
+            if result == SubtitleViewer.DialogCode.Accepted:
                 self.offset_spinbox.setValue(viewer.get_offset())
+            elif result == SubtitleViewer.ALIGN_REQUESTED:
+                self._hand_off_to_retime(video_file, subtitle_file)
 
         def _on_parse_error(msg: str) -> None:
             self.timing_button.setEnabled(True)
@@ -507,6 +513,37 @@ class SingleEpisodeTab(MiningTabBase):
             )
 
         run_off_thread(self, _parse, _on_parsed, _on_parse_error)
+
+    def _subtitles_container(self):
+        """The Subtitles tab that owns Retime, or None if this tab is unhosted.
+
+        Duck-typed on purpose: a stripped shell (tests, a future embedding) has
+        no Subtitles tab, and a hand-off that cannot land is a quiet no-op rather
+        than a crash.
+        """
+        from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
+
+        window = self.window()
+        return None if window is None else window.findChild(SubtitlesTab)
+
+    def _hand_off_to_retime(self, video_file: Path, subtitle_file: Path) -> None:
+        """Take the user to the automatic aligner with this pair loaded (D35).
+
+        The timing viewer aligns nothing itself; "Align automatically" closes it
+        and lands here. Navigation goes through the window's own capability
+        routing so this tab never learns a tab index.
+        """
+        from anki_miner.gui.capabilities import CapabilityTarget
+
+        container = self._subtitles_container()
+        if container is None:
+            logger.warning("No Subtitles tab to hand the alignment off to")
+            return
+
+        reveal = getattr(self.window(), "reveal_capability", None)
+        if callable(reveal):
+            reveal(CapabilityTarget("subtitles", "retime"))
+        container.open_retime(video_file, subtitle_file)
 
     def _start_processing(self) -> None:
         """Start episode processing."""

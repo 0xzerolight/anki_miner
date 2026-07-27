@@ -422,6 +422,24 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.video_folder_selector.hide()
         self.subtitle_folder_selector.hide()
 
+    def set_single_inputs(self, video_path: Path, subtitle_path: Path) -> None:
+        """Prefill single-file mode with an exact pair (D35 hand-off).
+
+        Called when the subtitle timing viewer's "Align automatically" closes:
+        the user already chose both files there, so nothing is re-derived and
+        nothing runs — the tool is simply put in front of them, loaded, with
+        Retime left for them to press.
+
+        Args:
+            video_path: The video the subtitle should be matched against.
+            subtitle_path: The subtitle file to retime.
+        """
+        self._on_file_mode()
+        # set_path goes through the field, so path_changed fires and the
+        # per-run audio-track pick is dropped with the video it belonged to.
+        self.video_file_selector.set_path(str(video_path))
+        self.subtitle_file_selector.set_path(str(subtitle_path))
+
     def _on_folder_mode(self) -> None:
         self.folder_mode_button.setChecked(True)
         self.file_mode_button.setChecked(False)
