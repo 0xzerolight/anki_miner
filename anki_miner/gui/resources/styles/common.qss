@@ -419,6 +419,23 @@ QFrame#divider {
 
 /* ============== CUSTOM WIDGET HELPERS ============== */
 
+/* Pinned workflow action bar (D6). It sits outside the page scroll, so the rule
+   above it is what tells the eye the page ended -- not a card border, because
+   the bar is not a card and must not read as more content. */
+QWidget#workflow-action-bar {
+    border-top: 1px solid;
+}
+
+/* Thin enough to be a rule under the page rather than a gauge; the counts and
+   the clock are text beside it. `max-height` as well as `height`, or Qt lets
+   the bar grow back to its style's own minimum in several themes. */
+QProgressBar#workflow-progress {
+    height: ${spacing-xxs}px;
+    max-height: ${spacing-xxs}px;
+    border: none;
+    border-radius: 0;
+}
+
 /* Log widget header */
 QWidget#log-header {
     border-top-left-radius: ${border-radius-default}px;
@@ -1155,6 +1172,16 @@ QMessageBox {
 }
 
 /* --- Custom Widgets --- */
+
+/* Pinned action bar: the page's own surface, separated by one divider line. */
+QWidget#workflow-action-bar {
+    background-color: ${color-surface};
+    border-color: ${color-divider};
+}
+
+QProgressBar#workflow-progress {
+    background-color: transparent;
+}
 
 /* Log header */
 QWidget#log-header {

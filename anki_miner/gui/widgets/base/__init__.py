@@ -26,8 +26,18 @@ from .sizing import (
     page_width_cap,
 )
 from .status_badge import StatusBadge
+from .workflow_action_bar import (
+    ACTION_BAR_OBJECT_NAME,
+    ACTIVITY_DRAWER_OBJECT_NAME,
+    WorkflowActionBar,
+    install_workflow_shell,
+)
 
 __all__ = [
+    "ACTION_BAR_OBJECT_NAME",
+    "ACTIVITY_DRAWER_OBJECT_NAME",
+    "WorkflowActionBar",
+    "install_workflow_shell",
     "AnimatedTabBar",
     "install_animated_tab_bar",
     "FormPanel",
