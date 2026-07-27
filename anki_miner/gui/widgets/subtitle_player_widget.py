@@ -75,6 +75,16 @@ class SubtitlePlayerWidget(QWidget):
     set_source is called.
     """
 
+    #: Emitted on the GUI thread once mpv has the file open, i.e. once seeking
+    #: is safe and playback can start. Consumers hang their "Loading…" state off
+    #: this rather than guessing from a timer.
+    source_loaded = pyqtSignal()
+
+    #: Emitted on the GUI thread when mpv gave up on the file. Payload is the
+    #: human-readable reason. Distinct from ``render_failed`` on the video
+    #: widget: that one still plays audio, this one plays nothing.
+    playback_failed = pyqtSignal(str)
+
     # Marshalling signals: emitted from python-mpv's event thread, delivered
     # queued on the GUI thread. object-typed on purpose — mpv properties are
     # nullable (see module docstring).
@@ -385,6 +395,16 @@ class SubtitlePlayerWidget(QWidget):
     # Public control API
     # ------------------------------------------------------------------
 
+    @property
+    def backend_available(self) -> bool:
+        """True when libmpv loaded, i.e. a player can exist at all.
+
+        Consumers use it to tell "still loading" apart from "there was never
+        going to be a picture" — the widget already explains the second case in
+        its own notice, so a consumer must not narrate it a second time.
+        """
+        return self._mpv_available
+
     def seek_seconds(self, seconds: float) -> None:
         """Seek to an absolute position.
 
@@ -467,6 +487,9 @@ class SubtitlePlayerWidget(QWidget):
         if self._pending_seek_ms is not None:
             pending, self._pending_seek_ms = self._pending_seek_ms, None
             self._seek_ms(pending)
+        # Announced last: a consumer reacting to this must find the player in
+        # its final loaded state, queued seek included.
+        self.source_loaded.emit()
 
     def _select_audio_track(self) -> None:
         """Pick the audio track from mpv's track-list.
@@ -534,6 +557,7 @@ class SubtitlePlayerWidget(QWidget):
     def _on_playback_error(self, message: str) -> None:
         """Surface a playback error in the subtitle strip (old-backend parity)."""
         self._set_cue_text(tr_format(self.tr("Video error: %1"), message))
+        self.playback_failed.emit(message)
 
     def _on_render_failed(self, reason: str) -> None:
         """mpv loaded but rendering is impossible on this display (broken GL).

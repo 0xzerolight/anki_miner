@@ -398,6 +398,39 @@ class TestObserverSlots:
         assert not widget.video_widget.isVisibleTo(widget)
 
 
+class TestLifecycleSignals:
+    """The public seam consumers build a loading/failed state on (D35)."""
+
+    def test_backend_available_reports_the_mpv_seam(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        assert widget.backend_available is True
+
+    def test_backend_unavailable_is_reported(self, qtbot):
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _widget(qtbot)
+        assert widget.backend_available is False
+
+    def test_source_loaded_emits_when_mpv_opens_the_file(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        with qtbot.waitSignal(widget.source_loaded, timeout=1000):
+            widget._on_file_loaded()
+
+    def test_source_loaded_not_emitted_without_a_player(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        seen = []
+        widget.source_loaded.connect(lambda: seen.append(True))
+        widget._on_file_loaded()  # no set_source yet: player is None
+        assert seen == []
+
+    def test_playback_failed_carries_the_reason(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        with qtbot.waitSignal(widget.playback_failed, timeout=1000) as blocker:
+            widget._on_playback_error("demux failure")
+        assert blocker.args == ["demux failure"]
+
+
 class TestTeardown:
     def test_release_detaches_before_terminate(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
