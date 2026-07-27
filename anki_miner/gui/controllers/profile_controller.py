@@ -655,8 +655,11 @@ class ProfileController:
     def _apply_theme() -> None:
         """Repaint the app once for the freshly seeded theme state.
 
-        Exactly one call per switch: each is a measured ~870 ms whole-app
-        stylesheet repolish on the GUI thread.
+        Exactly one call per switch: each is a whole-app stylesheet repolish on
+        the GUI thread, re-measured on the real composed window at 1647 ms
+        (1999 widgets, Qt 6.11). Re-installing an application stylesheet costs
+        ~800 ms even when the sheet is a single rule, so the count of calls is
+        the only lever here until D39-C removes the re-install entirely.
         """
         app = QApplication.instance()
         if isinstance(app, QApplication):

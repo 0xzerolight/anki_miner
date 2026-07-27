@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMenu, QStatusBar, QToo
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.progress_telemetry import format_clock
+from anki_miner.gui.utils.task_lines import format_task_summary
 from anki_miner.gui.widgets.base import StatusBadge
 
 if TYPE_CHECKING:
@@ -56,10 +57,13 @@ class StatusBarWidget(QStatusBar):
     Signals:
         system_status_clicked: Emitted when system status is clicked
         task_activated: Emitted with the task_id the user chose from the menu
+        mini_monitor_requested: Emitted when the task menu's monitor entry is
+            chosen. The strip does not own the monitor; the window does.
     """
 
     system_status_clicked = pyqtSignal()
     task_activated = pyqtSignal(str)
+    mini_monitor_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the status bar widget.
@@ -232,26 +236,18 @@ class StatusBarWidget(QStatusBar):
     def _task_line(self, snapshot: TaskSnapshot) -> str:
         """The most specific true thing known about one run.
 
-        The ladder matters: a percentage is printed only when the registry has a
-        real denominator, and otherwise the phase or the producer's own detail
-        stands in. There is no synthetic fallback percentage — inventing one is
-        what made progress race and then sit.
+        Delegated to the formatter every task surface shares, so the strip, the
+        queue line and the mini monitor cannot describe one run differently.
         """
-        if snapshot.cancelling:
-            # A percentage of a run that is being abandoned is not a forecast of
-            # anything, so it is dropped rather than left ticking beside
-            # "Cancelling…".
-            return f"{snapshot.title} · {self.tr('Cancelling…')}"
-        fraction = snapshot.fraction
-        if fraction is not None:
-            return f"{snapshot.title} {int(fraction * 100)}%"
-        for phase in (snapshot.stage_name, snapshot.detail):
-            if phase:
-                return f"{snapshot.title} · {phase}"
-        return snapshot.title
+        return format_task_summary(snapshot)
 
     def _rebuild_task_menu(self) -> None:
-        """List every running task, freshly, each time the menu opens."""
+        """List every running task, freshly, each time the menu opens.
+
+        The monitor entry sits under the runs rather than above them: the menu's
+        job is to name what is happening, and opening a window to watch one of
+        them is the follow-up question.
+        """
         self.task_menu.clear()
         if self._task_registry is None:
             return
@@ -260,6 +256,10 @@ class StatusBarWidget(QStatusBar):
             action.setData((snapshot.task_id, snapshot.run_token))
             action.triggered.connect(self._on_task_action_triggered)
             self.task_menu.addAction(action)
+        self.task_menu.addSeparator()
+        monitor_action = QAction(self.tr("Open mini monitor"), self.task_menu)
+        monitor_action.triggered.connect(self.mini_monitor_requested)
+        self.task_menu.addAction(monitor_action)
 
     def _on_task_action_triggered(self) -> None:
         """Ask to be taken to the chosen run, unless it has been superseded.

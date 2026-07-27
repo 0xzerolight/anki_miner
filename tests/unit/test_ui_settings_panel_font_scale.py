@@ -172,6 +172,27 @@ class TestRestartNow:
 
         assert not restart.restart_requested()
 
+    def test_a_deferred_close_keeps_the_intent(self, panel: UISettingsPanel, monkeypatch, tmp_path: Path) -> None:
+        """A worker outliving the join grace must not cancel the relaunch.
+
+        ``MainWindow`` refuses the close event while laggards run, hides itself
+        and quits from a poll once the last one exits — so ``close()`` reports
+        ``False`` for a shutdown that is still going to happen. Reading that as
+        "the user changed their mind" left the app closed and never relaunched,
+        exactly when it was busiest.
+        """
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        deferred = type(
+            "W",
+            (),
+            {"close": lambda s: False, "is_shutting_down": lambda s: True},
+        )()
+        monkeypatch.setattr(type(panel), "window", lambda self: deferred)
+
+        panel._on_restart_now()
+
+        assert restart.restart_requested()
+
 
 class TestSyncFromPendingConfig:
     def test_sync_reads_the_pending_value_not_the_running_theme(self, panel: UISettingsPanel) -> None:

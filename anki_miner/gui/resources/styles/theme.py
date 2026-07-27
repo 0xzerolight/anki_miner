@@ -665,6 +665,11 @@ class Theme:
         palette written afterwards would not reach anything until the next
         repolish. Measured in Qt 6.11, and it is why the two lines below cannot
         be reordered.
+
+        ``app.py`` also sets ``AA_UseStyleSheetPropagationInWidgetStyles``, which
+        lifts that freeze for the running application. Both belong: the attribute
+        is what lets a palette reach polished widgets at all, and this ordering is
+        what keeps the apply correct for a process that somehow starts without it.
         """
         if mode is None:
             mode = cls.get_current_mode()
@@ -675,16 +680,28 @@ class Theme:
         # Qt to unpolish + re-polish the entire widget tree twice per apply.
         #
         # This repolish is a deliberately-synchronous GUI-thread block that
-        # CANNOT be moved off-thread (Qt styling is main-thread only). Measured
-        # on the real composed window (1977 widgets, 35 KB sheet): ~850 ms, and
-        # it is dominated by the per-widget rule re-resolution rather than by
-        # the size of the sheet — a one-rule sheet costs the same order. The
-        # only way out is for no theme-dependent colour to be in a stylesheet at
-        # all (decision D39-C); until that lands this stays a real block, so the
-        # stall-watchdog pause below stays with it. It is a false-positive guard
-        # for a genuine synchronous block, not concealment, and it comes out
-        # with the block. This is the single chokepoint for every theme apply,
-        # so wrapping here covers all callers.
+        # CANNOT be moved off-thread (Qt styling is main-thread only). Re-measured
+        # on the real composed window (1999 widgets, 38 KB sheet), Qt 6.11:
+        #
+        #     swap the full sheet    1647 ms
+        #     swap a ONE-RULE sheet   791 ms
+        #     swap a whitespace sheet 930 ms
+        #     setPalette() alone        2 ms
+        #
+        # Read those four numbers together, because they say something sharper
+        # than "the repolish is slow": the floor for re-installing *any*
+        # application stylesheet is ~800 ms. Sheet size is worth roughly a
+        # factor of two on top; it is not the cost. So no amount of splitting,
+        # shrinking or deferring the sheet helps, and neither does moving colour
+        # out of *part* of it — the saving only arrives when the last
+        # theme-dependent colour leaves, because only then can this call go.
+        # D39-C is all-or-nothing by measurement.
+        #
+        # Until that lands this stays a real block, so the stall-watchdog pause
+        # below stays with it. It is a false-positive guard for a genuine
+        # synchronous block, not concealment, and it comes out with the block.
+        # This is the single chokepoint for every theme apply, so wrapping here
+        # covers all callers.
         #
         # Imported lazily: a module-level import would form a cycle
         # (theme -> gui.utils package __init__ -> fonts -> theme).

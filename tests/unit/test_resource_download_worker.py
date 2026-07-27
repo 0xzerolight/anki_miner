@@ -19,6 +19,7 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadWorker,
 )
 from anki_miner.services.resource_catalog import ResourceSpec
+from tests.unit._resume_key_assert import assert_stable_resume_key as _assert_stable_resume_key
 
 
 @dataclass
@@ -89,7 +90,17 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     download_dir.mkdir()
     download_calls: list[str] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         download_calls.append(url)
         assert read_timeout_seconds == 1.0
         temp = Path(dest_dir) / f"{Path(url).name}.part"
@@ -149,7 +160,17 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"DATA")
         return temp
@@ -191,7 +212,17 @@ def test_valid_pitch_download_imports_into_pitch_root(tmp_path, monkeypatch):
     download_dir.mkdir()
     pitch_root = tmp_path / "anki_miner_home" / "pitch"
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "accents.txt.part"
         temp.write_bytes(VALID_PITCH)
         return temp
@@ -224,7 +255,17 @@ def test_pitch_redownload_overwrites_pinned_slot(tmp_path, monkeypatch):
     download_dir.mkdir()
     pitch_root = tmp_path / "anki_miner_home" / "pitch"
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "accents.txt.part"
         temp.write_bytes(VALID_PITCH)
         return temp
@@ -259,7 +300,17 @@ def test_invalid_pitch_download_preserves_existing_slot(tmp_path, monkeypatch, p
     pitch_root = tmp_path / "anki_miner_home" / "pitch"
 
     # Seed a valid slot from a prior good download.
-    def good_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def good_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "accents.txt.part"
         temp.write_bytes(VALID_PITCH)
         return temp
@@ -277,7 +328,17 @@ def test_invalid_pitch_download_preserves_existing_slot(tmp_path, monkeypatch, p
     index = pitch_root / "kanjium-pitch" / "index.sqlite"
     old_hash = hashlib.sha256(index.read_bytes()).hexdigest()
 
-    def bad_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def bad_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "accents.txt.part"
         temp.write_bytes(payload)
         return temp
@@ -306,7 +367,17 @@ def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
     download_dir.mkdir()
     download_calls: list[str] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         download_calls.append(url)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"DATA")
@@ -342,7 +413,17 @@ def test_cancellation_after_completed_item_keeps_success_and_marks_rest_not_proc
     worker = _make_worker([DICT_SPEC, FREQ_SPEC, PITCH_SPEC], tmp_path)
     download_calls: list[str] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         download_calls.append(url)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"ZIP")
@@ -370,7 +451,17 @@ def test_cancellation_after_completed_item_keeps_success_and_marks_rest_not_proc
 def test_cancellation_exception_is_not_recorded_as_failure(tmp_path, monkeypatch):
     worker = _make_worker([DICT_SPEC, FREQ_SPEC], tmp_path)
 
-    def cancel_during_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def cancel_during_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         worker.cancel()
         raise SetupError("Failed to download: read timed out")
 
@@ -392,7 +483,17 @@ def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
     download_dir.mkdir()
     created_temps: list[Path] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"DATA")
         created_temps.append(temp)
@@ -420,7 +521,17 @@ def test_freq_route_imports_real_source_into_freqs_root(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         # download_to_temp always stages a ``.part`` file; the worker re-suffixes
         # it to .zip from the catalog URL before handing it to the importer.
         temp = Path(dest_dir) / "freq-download.part"
@@ -487,7 +598,17 @@ def _run_dict_download(tmp_path, monkeypatch, *, imported_source_name: str):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir(exist_ok=True)
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(b"ZIP")
         return temp
@@ -556,7 +677,17 @@ def test_sweep_not_invoked_on_freq_or_pitch(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")
         return temp
@@ -595,7 +726,17 @@ def _phase_events(worker) -> list:
 
 
 def test_download_progress_carries_real_bytes_and_the_downloading_phase(tmp_path, monkeypatch):
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "d.part"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_bytes(b"ZIP")
@@ -618,7 +759,17 @@ def test_download_progress_carries_real_bytes_and_the_downloading_phase(tmp_path
 
 
 def test_absent_content_length_reports_no_total_rather_than_zero(tmp_path, monkeypatch):
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "d.part"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_bytes(b"ZIP")
@@ -640,7 +791,17 @@ def test_absent_content_length_reports_no_total_rather_than_zero(tmp_path, monke
 def test_install_phase_opens_before_the_importer_and_keeps_the_transferred_size(tmp_path, monkeypatch):
     order: list[str] = []
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "d.part"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_bytes(b"ZIP")
@@ -668,7 +829,17 @@ def test_install_phase_opens_before_the_importer_and_keeps_the_transferred_size(
 
 
 def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypatch):
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "d.part"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_bytes(b"ZIP")
@@ -697,7 +868,17 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
 
 
 def test_file_counting_importers_never_report_a_fabricated_entry_count(tmp_path, monkeypatch):
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / "f.part"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_bytes(b"ZIP")
@@ -719,7 +900,17 @@ def test_file_counting_importers_never_report_a_fabricated_entry_count(tmp_path,
 
 
 def test_each_resource_starts_its_own_phase_sequence(tmp_path, monkeypatch):
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, read_timeout_seconds=None):
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
         temp = Path(dest_dir) / f"{Path(url).name}.part"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")

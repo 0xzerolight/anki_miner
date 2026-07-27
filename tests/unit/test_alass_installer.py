@@ -12,6 +12,7 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services import alass_installer
+from tests.unit._resume_key_assert import assert_stable_resume_key
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
@@ -36,7 +37,8 @@ def _make_zip_bytes(member_name: str, payload: bytes) -> bytes:
 def _fake_download_writing(payload: bytes):
     """Build a download_to_temp replacement that writes *payload* to a .part file."""
 
-    def _download(url, *, dest_dir, progress=None, cancelled_check=None):
+    def _download(url, *, dest_dir, progress=None, cancelled_check=None, resume_key=None, resume_root=None):
+        assert_stable_resume_key(resume_key)
         dest_dir = Path(dest_dir)
         dest_dir.mkdir(parents=True, exist_ok=True)
         if cancelled_check is not None and cancelled_check():

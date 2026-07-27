@@ -241,6 +241,9 @@ def _install_spec(
         progress=_on_progress if progress is not None else None,
         cancelled_check=cancelled_check,
         max_bytes=_MAX_BYTES,
+        # Keyed on the pinned checksum: a model bump changes the sha, so the
+        # old partial can never be resumed into the new file (D16-C).
+        resume_key=f"ggml-{spec.sha256[:16]}",
     )
     try:
         if cancel_event is not None and cancel_event.is_set():

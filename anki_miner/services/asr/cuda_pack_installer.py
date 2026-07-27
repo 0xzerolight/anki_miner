@@ -221,6 +221,11 @@ def install_cuda_pack(
             progress=_component_progress if progress is not None else None,
             cancelled_check=cancelled_check,
             max_bytes=_MAX_WHEEL_BYTES,
+            # Keyed on the pinned checksum, so the key names exactly the bytes
+            # it stands for: a version bump changes the sha and therefore the
+            # key, and a stale partial from the old wheel is never resumed
+            # into the new one (D16-C).
+            resume_key=f"cuda-{spec.component}-{spec.sha256[:16]}",
         )
         try:
             if cancel_event is not None and cancel_event.is_set():

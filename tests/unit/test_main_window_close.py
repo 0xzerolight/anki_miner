@@ -668,6 +668,21 @@ class TestCloseEventJoinTimeoutPolicy:
         assert "shutdown" in order and "join-cancel" in order
         assert order.index("shutdown") < order.index("join-cancel"), f"shutdown must precede join; got {order}"
 
+    def test_a_deferred_close_still_reports_the_app_as_shutting_down(self, main_window):
+        """D39b: *Restart now* must survive a laggard deferring the close.
+
+        The deferred arm ignores the event, so ``close()`` returns False for a
+        shutdown that is still going to happen; anything reading that as a
+        refusal (the restart-to-apply path did) undoes itself.
+        """
+        assert main_window.is_shutting_down() is False
+        main_window.background_tasks.update_worker = _FakeWorker(running=True, wait_result=False)
+
+        event = _trigger_close(main_window)
+
+        event.ignore.assert_called_once()
+        assert main_window.is_shutting_down() is True
+
     def test_poll_keeps_app_alive_while_laggard_runs(self, quit_calls, main_window):
         worker = _FakeWorker(running=True, wait_result=False)
         main_window.background_tasks.update_worker = worker

@@ -647,6 +647,51 @@ class QueuePanel(QFrame):
         """Add a series (for external shortcut binding)."""
         self._add_series()
 
+    def restore_item(
+        self,
+        *,
+        item_id: str,
+        display_name: str,
+        video_folder: Path,
+        subtitle_folder: Path,
+        subtitle_offset: float,
+        status: str,
+        cards_created: int,
+        retry_count: int,
+        error_message: str,
+    ) -> QueueItem | None:
+        """Re-add one row from a recovery snapshot, keeping its identity (D16-C).
+
+        Same construction path as an ordinary Add, then the stored id is
+        re-attached: the id is how the worker and the row find each other, so a
+        restored row that took a fresh one would be a different row wearing the
+        same name.
+
+        Returns:
+            The bound ``QueueItem``, or ``None`` when the row could not be bound
+            (its folders no longer validate).
+        """
+        widget = QueueItemWidget(display_name=display_name, parent=self.list_widget)
+        widget.removed.connect(lambda: self._remove_item(widget))
+        widget.edited.connect(lambda: self._edit_item(widget))
+        widget.set_folders(video_folder, subtitle_folder)
+        widget.subtitle_offset = subtitle_offset
+        self.register_widget(widget)
+
+        item = self._items.get(id(widget))
+        if item is None:
+            return None
+        item.id = item_id
+        widget.item_id = item_id
+        item.cards_created = cards_created
+        item.retry_count = retry_count
+        item.error_message = error_message
+        item.status = QueueItemStatus(status)
+        widget.set_cards_created(cards_created)
+        widget.set_status("complete" if item.status is QueueItemStatus.COMPLETED else status)
+        self._update_stats()
+        return item
+
     def runnable_items(self) -> list[QueueItem]:
         """The bound, runnable rows a Process Queue click should mine.
 

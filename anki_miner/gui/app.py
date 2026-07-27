@@ -29,6 +29,8 @@ from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui import restart
+from anki_miner.gui.controllers import recovery_controller
+from anki_miner.gui.controllers.recovery_controller import RecoveryController
 from anki_miner.gui.i18n import install_translators
 from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
 from anki_miner.gui.main_window import MainWindow, open_log_folder
@@ -371,6 +373,25 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
         return
     if config.ui_zoom != 1.0:
         os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
+
+
+def _configure_qt_application_policy() -> None:
+    """Set the Qt-wide policies that only take effect before ``QApplication``.
+
+    ``AA_UseStyleSheetPropagationInWidgetStyles`` is the load-bearing one.
+    Measured in Qt 6.11: *any* non-empty application stylesheet freezes palette
+    propagation completely — even a rule that matches nothing at all. A
+    ``QApplication.setPalette()`` afterwards reaches no already-polished widget,
+    so everything ``Theme.build_palette()`` assembles stays inert until the next
+    full repolish. This attribute is the only thing that unfreezes it.
+
+    It is verified pixel-identical on the real composed window across all 29
+    shipped themes, so it changes nothing on screen today. What it buys is the
+    precondition for a palette-only theme apply (decision D39-C): without it,
+    dropping the stylesheet re-install would simply stop themes working.
+    """
+    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_UseStyleSheetPropagationInWidgetStyles, True)
 
 
 def _ensure_default_dicts_root(config: AnkiMinerConfig | None) -> None:
@@ -1079,6 +1100,29 @@ def compose_main_window(
     return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
 
 
+def offer_recovery(window: MainWindow) -> bool:
+    """Ask once whether to pick up what the last session left (D16-C).
+
+    Called after translators are installed and every tab is registered: the
+    question is translated, and "Restore" has to have somewhere to put the rows.
+    Restore refills the queues and leaves the partial downloads on disk for the
+    next transfer to continue — that transfer still has to prove to itself that
+    the artifact is unchanged, and silently starts over if it cannot. Discard
+    removes both, under the runtime-state roots only.
+
+    Returns:
+        True when the user chose Restore.
+    """
+    inventory = recovery_controller.take_inventory()
+    if not inventory:
+        return False
+    if not RecoveryController(window).offer(inventory):
+        recovery_controller.discard_all()
+        return False
+    window.restore_queue_snapshots()
+    return True
+
+
 def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
     """Run installed-artifact assertions over two event-loop ticks."""
 
@@ -1160,7 +1204,48 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
 
 @_rollback_workers_on_startup_fault
 def main():
-    """Launch the Anki Miner GUI application."""
+    """Launch the Anki Miner GUI application.
+
+    This is the one place that decides what happens in what order at startup.
+    Several independent features each contribute a small hook here rather than a
+    boot state machine of their own, and the sequence below is the composition
+    of all of them. ``tests/unit/test_boot_order.py`` pins it.
+
+    1. Pre-Qt: scrub the bootloader env, attach the log sink, decode the config,
+       and seed the three settings Qt only reads once — dialog mode, default
+       ``dicts_root``, and ``QT_SCALE_FACTOR`` (whole-UI zoom is therefore
+       restart-to-apply by nature).
+    2. ``QApplication``, then the crash net, then ``initialize_application_fonts``
+       — before the first widget, so every widget is measured against the face it
+       will be drawn with (D44-B).
+    3. Translators, also before the first widget: widgets capture their ``tr()``
+       strings at construction and language is restart-to-apply. The theme is
+       seeded next; a broken local theme must not block an unstyled GUI.
+    4. The single-instance lock, and the destructive store repair that is only
+       safe while we hold it. It is taken *after* the application and the
+       translators because its conflict prompt is a translated modal — the one
+       place the ideal "lock first" order is not available — and *before* any
+       window is composed, which is what the guard is actually for.
+    5. ``compose_main_window``: build the seven tabs, bind them to the task
+       registry, then restore the saved geometry and route (D7). Restoration is
+       last inside that call because the route is addressed by stable key, and
+       still ahead of ``show()`` so the window is never painted at one size and
+       then jumped to another. W1-T7's queue/download **Restore or Discard**
+       offer belongs at the end of this step, for the same two reasons.
+    6. ``commit_boot``: reconcile settings profiles, stamp the version, then
+       either offer first-run setup or release the optional startup work behind
+       it (D26). Boot used to start the JMdict migration and let the wizard
+       cancel it two lines later. Every optional job — validation, the update
+       checks, the migration, the stale-dictionary scan and the prewarm — is
+       started from that one gate, never from here, or the wizard could not be
+       made to precede it.
+    7. ``show()``, then the two things that need a painted window: the stall
+       watchdog and the stats load.
+    8. ``app.exec()``. Its result is captured rather than passed straight to
+       ``sys.exit`` so a requested restart (D39b) can release the instance lock
+       and start the replacement only after the loop has returned and this
+       process is finished with its stores.
+    """
     _scrub_pyinstaller_env()
     installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
 
@@ -1239,8 +1324,7 @@ def main():
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
     _apply_ui_zoom(_early_config)
 
-    # Enable high DPI scaling
-    QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    _configure_qt_application_policy()
 
     # Create application
     app = QApplication(sys.argv)
@@ -1310,6 +1394,15 @@ def main():
     # boundary. No startup worker is started before this returns successfully.
     window.commit_boot(suppress_optional=installer_smoke)
 
+    # Offer what the last session left behind (D16-C). After translators and
+    # every addTab, so the question is translated and Restore has somewhere to
+    # put the rows; skipped in the installer smoke, where no modal may open.
+    if not installer_smoke:
+        try:
+            offer_recovery(window)
+        except Exception:
+            logger.exception("Could not offer the previous session's downloads and queues")
+
     # Show window first so the user sees the UI immediately. The stats DB open
     # runs off-thread below. The YouTube tab's episode processor is built even
     # lazier — on first Mine click — because the dictionary chain dominates
@@ -1330,25 +1423,9 @@ def main():
 
     _start_stats_load(window, stats_service, analytics_tab)
 
-    # Pre-warm the shared MeCab tagger (get_shared_tagger) AND the dictionary
-    # chain off the GUI thread, scheduled on the next event-loop tick so it
-    # never blocks the first paint. The first Mine builds these on the GUI
-    # thread today, freezing the UI for seconds; warming them in the background
-    # makes that first real Mine materially faster. The worker warms the SHARED
-    # tagger singleton that mining reuses (it builds its own sqlite connections
-    # for the dict chain and discards those — connections are unsafe across
-    # threads). Best-effort: clicking Mine before it finishes simply takes
-    # today's cold path. The window's background-task controller holds the
-    # reference (so the QThread isn't GC'd mid-run and shutdown can join it)
-    # and clears it once the built-in ``finished`` signal fires.
-    def _start_prewarm() -> None:
-        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
-
-        worker = PrewarmWorker(window.get_config())
-        window.background_tasks.set_prewarm(worker)
-        worker.start()
-
-    QTimer.singleShot(0, _start_prewarm)
+    # The tagger/dictionary prewarm is NOT started here. It is optional startup
+    # work like every other, so it waits behind first-run setup with the rest —
+    # see MainWindow._start_post_setup_boot_once.
 
     # Run event loop. The exit code is captured rather than handed straight to
     # sys.exit so a requested restart (D39b-A) can start the replacement only

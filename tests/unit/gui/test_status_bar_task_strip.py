@@ -214,6 +214,28 @@ class TestTheMenuListsEveryRunningJob:
         assert any("17%" in a.text() for a in bar.task_menu.actions())
 
 
+class TestTheMenuOffersTheMiniMonitor:
+    def test_the_monitor_entry_sits_below_the_runs(self, bar, registry):
+        registry.start(_spec("a", "Mining Samurai Champloo"), now=0.0)
+
+        bar.task_menu.aboutToShow.emit()
+
+        labels = [a.text() for a in bar.task_menu.actions()]
+        assert labels[-1] == "Open mini monitor"
+
+    def test_choosing_it_asks_for_the_monitor(self, bar, registry, qtbot):
+        registry.start(_spec("a", "Mining Samurai Champloo"), now=0.0)
+        bar.task_menu.aboutToShow.emit()
+        action = bar.task_menu.actions()[-1]
+
+        with qtbot.waitSignal(bar.mini_monitor_requested, timeout=1000):
+            action.trigger()
+
+    def test_the_strip_does_not_own_the_monitor(self, bar):
+        """It emits a request. Building and showing the window is the window's."""
+        assert not hasattr(bar, "_mini_job_monitor")
+
+
 class TestActivationRoutesToTheOwningScreen:
     def test_choosing_a_job_asks_for_its_task(self, bar, registry, qtbot):
         registry.start(_spec("a", "Mining Samurai Champloo"), now=0.0)

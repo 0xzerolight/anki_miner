@@ -38,7 +38,7 @@ from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.keyboard_shortcuts import (
@@ -56,6 +56,7 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
     SystemHealthWindow,
 )
 from anki_miner.gui.widgets.header_widget import HeaderWidget
+from anki_miner.gui.widgets.mini_job_monitor import MiniJobMonitor
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
@@ -122,6 +123,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # close runs closeEvent again after the window has been hidden, and the
         # hidden window's geometry is not what the user left behind.
         self._session_state_saved = False
+        # Set once closeEvent has committed to quitting — see is_shutting_down.
+        self._close_committed = False
 
         # Load configuration
         self.config = config if config is not None else GUIConfigManager.load_config()
@@ -170,6 +173,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # first time it is asked for.
         self._health_report = HealthReport.unknown()
         self._system_health_window: SystemHealthWindow | None = None
+
+        # The floating job monitor (D53). Built the first time it is asked for,
+        # and read-only: it observes self.task_registry and holds nothing else.
+        self._mini_job_monitor: MiniJobMonitor | None = None
 
         # Connect presenter signals
         self._connect_presenter_signals()
@@ -257,9 +264,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         all be made to happen exactly once each: the offer can be refused and
         re-offered, and a refusal must not consume the one-time work either.
 
-        Deliberately not a state machine. It starts the same four jobs
-        ``commit_boot`` always started, in the same order; the only new thing is
-        that it can be called from more than one place and still run once.
+        Deliberately not a state machine. It starts the same jobs ``commit_boot``
+        always started, in the same order; the only new thing is that it can be
+        called from more than one place and still run once.
         """
         if self._post_setup_boot_started:
             return
@@ -272,6 +279,27 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
         self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
         QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
+        QTimer.singleShot(0, self._start_prewarm)
+
+    def _start_prewarm(self) -> None:
+        """Warm the shared MeCab tagger and the dictionary chain off-thread.
+
+        The first Mine otherwise builds both on the GUI thread — ``fugashi``
+        plus every installed dictionary's sqlite index — and freezes for
+        seconds. Best-effort: clicking Mine before it finishes simply takes the
+        cold path. ``BackgroundTaskController`` holds the reference so the
+        QThread is not collected mid-run and shutdown can join it.
+
+        Scheduled on the next event-loop turn, so it never blocks the first
+        paint, and from the one-shot boot step, so it never runs *during* the
+        first-run wizard: a zero timer fires inside a modal dialog's nested
+        event loop, and this reads the dictionary slot that wizard replaces.
+        """
+        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
+
+        worker = PrewarmWorker(self.get_config())
+        self.background_tasks.set_prewarm(worker)
+        worker.start()
 
     @staticmethod
     def _run_optional_boot_step(name: str, step: Callable[[], None]) -> None:
@@ -320,6 +348,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.status_bar = StatusBarWidget()
         self.status_bar.system_status_clicked.connect(self._on_system_status_clicked)
         self.status_bar.task_activated.connect(self._on_task_activated)
+        self.status_bar.mini_monitor_requested.connect(self.open_mini_job_monitor)
         self.status_bar.bind_task_registry(self.task_registry)
         self.setStatusBar(self.status_bar)
 
@@ -676,6 +705,52 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             session_state.save_route(self._current_main_tab_key(), self._current_subtab_keys())
         except Exception:
             logger.exception("Could not save the UI session state")
+        self.save_queue_snapshots()
+
+    def iter_queue_screens(self) -> list[QWidget]:
+        """Every screen that can describe its queue durably (D16-C).
+
+        Discovered by capability rather than by a hand-kept list: a queue can
+        live inside a container tab (Video, Reading), and a list that had to be
+        edited whenever a sub-tab moved would silently stop saving one.
+        """
+        return [widget for widget in self.findChildren(QWidget) if getattr(widget, "QUEUE_STATE_KEY", None)]
+
+    def save_queue_snapshots(self) -> None:
+        """Write every screen's queue so quitting does not discard it (D16-C).
+
+        Called from the top of ``closeEvent``, before anything is joined or
+        hidden — a queue read after teardown has begun is a queue that may
+        already have been emptied. Best-effort per screen: one screen that
+        cannot describe itself must not stop the others being saved, and none of
+        it may stop the window closing.
+        """
+        for screen in self.iter_queue_screens():
+            try:
+                snapshot = screen.queue_snapshot()  # type: ignore[attr-defined]
+            except Exception:
+                logger.exception("Could not read the queue on %s", type(screen).__name__)
+                continue
+            queue_state_store.save(snapshot)
+
+    def restore_queue_snapshots(self) -> int:
+        """Refill every screen from its stored queue; return the rows restored.
+
+        Nothing is started. A row that was mid-run comes back saying it was
+        interrupted, and only an explicit later action of the user's turns it
+        back into work.
+        """
+        restored = 0
+        for screen in self.iter_queue_screens():
+            key = getattr(screen, "QUEUE_STATE_KEY", "")
+            snapshot = queue_state_store.load(key)
+            if snapshot is None:
+                continue
+            try:
+                restored += screen.restore_queue_snapshot(snapshot)  # type: ignore[attr-defined]
+            except Exception:
+                logger.exception("Could not restore the queue on %s", type(screen).__name__)
+        return restored
 
     def reveal_capability(self, target: "CapabilityTarget") -> None:
         """Bring the tab that hosts ``target`` to the front (and its sub-tab).
@@ -1448,6 +1523,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 return False
         return True
 
+    def is_shutting_down(self) -> bool:
+        """True once ``closeEvent`` has committed to quitting the application.
+
+        ``QWidget.close()`` reports ``False`` for a close the shutdown policy
+        *deferred* as well as for one that was refused: the deferred arm ignores
+        the event so Qt keeps the window and its still-running QThreads alive,
+        then quits from a poll once the last laggard exits. A caller that reads
+        that ``False`` as "the window is staying" undoes work that should still
+        happen — the restart-to-apply path (D39b) cancelled its own relaunch
+        that way whenever a worker outlived the join grace.
+        """
+        return self._close_committed
+
     def closeEvent(self, event) -> None:
         """Handle window close event.
 
@@ -1466,6 +1554,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # attempt during that poll cannot overwrite the good value (D7).
         self._save_session_state()
 
+        # Past this point the application is going, on both arms below: the
+        # immediate one accepts the event, and the deferred one ignores it only
+        # to keep the running QThreads alive until the poll quits. Callers that
+        # asked for the close need to be able to tell those two apart from a
+        # genuine refusal — see is_shutting_down.
+        self._close_committed = True
+
         # Claim the one-time optional-boot slot before anything is joined. A
         # first-run wizard can still be open when the app is asked to quit, and
         # its exit path would otherwise start a validation, an update check and
@@ -1478,6 +1573,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # facts for an app that is no longer running.
         if self._system_health_window is not None:
             self._system_health_window.close()
+
+        # The monitor declines WA_QuitOnClose, so it cannot hold the application
+        # open — but a window reporting on a run that is being torn down should
+        # not be left on screen while the workers are joined.
+        if self._mini_job_monitor is not None:
+            self._mini_job_monitor.close()
 
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
@@ -1552,6 +1653,39 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         window.show()
         window.raise_()
         window.activateWindow()
+
+    def open_mini_job_monitor(self) -> None:
+        """Show the floating job monitor, building it on first use (D53).
+
+        One parented, modeless instance for the window's lifetime. It opens on
+        the run the status strip is already naming, so the two start out saying
+        the same thing -- but only on the first build: reopening must not throw
+        away the job the user went in and picked. Closing it hides it; it owns
+        no worker, so there is nothing to cancel on the way out and nothing to
+        rebuild on the way back in.
+        """
+        monitor = self._mini_job_monitor
+        if monitor is None:
+            monitor = MiniJobMonitor(self.task_registry, self)
+            monitor.show_main_window_requested.connect(self.reveal_main_window)
+            self._mini_job_monitor = monitor
+            displayed = self.status_bar.displayed_run
+            if displayed is not None:
+                monitor.watch(*displayed)
+        monitor.show()
+        monitor.raise_()
+        monitor.activateWindow()
+
+    def reveal_main_window(self) -> None:
+        """Bring the application back to the front, un-minimising it if needed.
+
+        ``showNormal`` rather than ``show`` because the usual reason to press
+        the monitor's button is that the main window is minimised, and ``show``
+        on a minimised window leaves it minimised.
+        """
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def _publish_health(self, report: HealthReport) -> None:
         """Record the latest readiness facts and repaint the screen if it is up."""

@@ -159,7 +159,7 @@ class HeaderWidget(QWidget):
         self.theme_combo = QComboBox()
         self.theme_combo.setAccessibleName(self.tr("Theme"))
         # Issue #99's hazard, with an unusually expensive payload: a wheel over
-        # this combo changes theme, and each change costs a measured ~870ms
+        # this combo changes theme, and each change costs a re-measured 1647 ms
         # whole-app stylesheet repolish on the GUI thread. Without StrongFocus a
         # single scroll gesture fires several of them back to back. StrongFocus
         # alone is not enough — QComboBox::wheelEvent is gated on the

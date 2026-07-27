@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+from uuid import uuid4
 
 from anki_miner.models.mining_queue import MiningQueue
 from anki_miner.models.youtube import SubMode, VideoInfo
@@ -33,6 +34,11 @@ class YouTubeQueueItem:
     cards_created: int = 0
     error_message: str | None = None
     display_title: str | None = None  # shown while status is PROBING (set by playlist expansion)
+    #: Stable identity that survives quitting (D16-C). Runtime identity is still
+    #: the object (``eq=False``); this is what a restored snapshot re-attaches so
+    #: a row keeps its place across a restart. ``video_info`` deliberately does
+    #: NOT survive — it is probe output over a workspace that may be gone.
+    item_id: str = field(default_factory=lambda: str(uuid4()))
 
 
 class YouTubeQueue(MiningQueue[YouTubeQueueItem]):

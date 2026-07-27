@@ -18,6 +18,7 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.asr import cuda_pack_installer
+from tests.unit._resume_key_assert import assert_stable_resume_key as _assert_stable_resume_key
 
 
 def _make_wheel(members: dict[str, bytes]) -> bytes:
@@ -72,7 +73,10 @@ def _patch_download(monkeypatch, *, sha_real: bool = True):
     """Patch download_to_temp to write the right fake wheel per component."""
     wheels = _retarget_specs(monkeypatch, real_sha=sha_real)
 
-    def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None):
+    def fake_download(
+        url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None, resume_key=None, resume_root=None
+    ):
+        _assert_stable_resume_key(resume_key)
         if progress is not None:
             progress(0, len(wheels[url]), "downloading")
         dest_dir.mkdir(parents=True, exist_ok=True)
@@ -216,7 +220,10 @@ class TestInstall:
     def test_bad_zip_raises(self, tmp_path, monkeypatch):
         _force_linux(monkeypatch)
 
-        def bad_download(url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None):
+        def bad_download(
+            url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None, resume_key=None, resume_root=None
+        ):
+            _assert_stable_resume_key(resume_key)
             dest_dir.mkdir(parents=True, exist_ok=True)
             part = dest_dir / "bad.part"
             part.write_bytes(b"not a zip")
@@ -258,7 +265,10 @@ class TestCancel:
             dataclasses.replace(cuda_pack_installer._LINUX_CUDNN_SPEC, sha256=cudnn_sha),
         )
 
-        def fake_download(url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None):
+        def fake_download(
+            url, *, dest_dir, progress=None, cancelled_check=None, max_bytes=None, resume_key=None, resume_root=None
+        ):
+            _assert_stable_resume_key(resume_key)
             dest_dir.mkdir(parents=True, exist_ok=True)
             part = dest_dir / "fake.part"
             part.write_bytes(_CUDNN_WHEEL)

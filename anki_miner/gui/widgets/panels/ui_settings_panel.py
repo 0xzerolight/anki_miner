@@ -95,6 +95,19 @@ FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
 ZOOM_PRESETS = (75, 100, 125, 150, 175, 200)
 
 
+def _window_is_shutting_down(window: QWidget) -> bool:
+    """True when ``close()`` returned ``False`` because the close was DEFERRED.
+
+    ``MainWindow`` refuses the close event while worker threads outlive the join
+    grace: it hides itself, keeps the running QThreads alive and quits from a
+    poll once the last one exits. ``QWidget.close()`` therefore reports the same
+    ``False`` for a shutdown that is still going to happen as for a refusal.
+    Duck-typed rather than imported — ``main_window`` imports this panel.
+    """
+    probe = getattr(window, "is_shutting_down", None)
+    return callable(probe) and bool(probe())
+
+
 class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     """Settings panel for UI language, zoom, text size, and theme selection.
 
@@ -992,7 +1005,8 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         deferred-close handling all happen exactly as they do for a normal quit.
         The replacement is started by ``gui.app`` after ``app.exec()`` returns.
         A refused close (a tab vetoing it, or the user cancelling) clears the
-        intent again so a later ordinary quit does not silently relaunch.
+        intent again so a later ordinary quit does not silently relaunch — but a
+        *deferred* close is not a refusal, see :func:`_window_is_shutting_down`.
         """
         if restart.resolve_relaunch_target() is None:
             self.show_screen_issue(
@@ -1005,7 +1019,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.clear_screen_issue()
         restart.request_restart()
         window = self.window()
-        if window is not None and not window.close():
+        if window is not None and not window.close() and not _window_is_shutting_down(window):
             restart.clear_restart_request()
 
     # ---- Language --------------------------------------------------------

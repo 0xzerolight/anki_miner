@@ -331,6 +331,10 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     # Cancel
     # ------------------------------------------------------------------
 
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this screen's own Cancel."""
+        self._on_cancel()
+
     def _on_cancel(self) -> None:
         """Cancel the run: one verb, no prompt, no invented progress after it."""
         self._cancelled = True

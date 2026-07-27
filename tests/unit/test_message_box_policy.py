@@ -75,6 +75,9 @@ LEDGER: dict[str, str] = {
     "gui/widgets/settings_tab.py::SettingsTab._on_rebuild_known_words": "confirm",
     "gui/widgets/settings_tab.py::SettingsTab._on_reset_to_defaults_clicked": "confirm",
     "gui/widgets/youtube_playlist_flow.py::PlaylistAddController._ask_playlist_choice": "choice",
+    # D16-C's one startup question. Not an error: nothing failed, and neither
+    # Restore nor Discard is an answer the app could pick for the user.
+    "gui/controllers/recovery_controller.py::RecoveryController.offer": "choice",
     # --- Success reports for a foreground action ----------------------------
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.add_pack.on_finished": "notice",
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.reimport_pack.on_success": "notice",
