@@ -9,7 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
@@ -37,7 +37,7 @@ from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
@@ -103,6 +103,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._shortcut_work_in_flight = False
         self._boot_committed = False
         self._stale_dict_prompt_handled = False
+        # Set the first time closeEvent persists geometry + route. A deferred
+        # close runs closeEvent again after the window has been hidden, and the
+        # hidden window's geometry is not what the user left behind.
+        self._session_state_saved = False
 
         # Load configuration
         self.config = config if config is not None else GUIConfigManager.load_config()
@@ -535,6 +539,109 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if type(self.tabs.widget(i)).__name__ == class_name:
                 return i
         return -1
+
+    def _current_main_tab_key(self) -> str | None:
+        """The stable key of the main tab on show, by class name; ``None`` if unmapped."""
+        current = self.tabs.currentWidget()
+        if current is None:
+            return None
+        class_name = type(current).__name__
+        for key, registered in self._MAIN_TAB_CLASSES.items():
+            if registered == class_name:
+                return key
+        return None
+
+    def _current_subtab_keys(self) -> dict[str, str]:
+        """Every container's current sub-tab, not only the visible one.
+
+        Saving just the front container would erase where Reading was left the
+        moment the user switched to Tools before quitting.
+        """
+        keys: dict[str, str] = {}
+        for key in self._MAIN_TAB_CLASSES:
+            index = self._main_tab_index(key)
+            if index < 0:
+                continue
+            current = getattr(self.tabs.widget(index), "current_subtab_key", None)
+            if not callable(current):
+                continue
+            subtab = current()
+            if subtab:
+                keys[key] = subtab
+        return keys
+
+    def restore_session_state(self) -> None:
+        """Reopen at the geometry and route the last session ended on (D7).
+
+        Called by ``app.compose_main_window`` once every tab is registered —
+        the route is addressed by stable key, so the containers have to exist —
+        and before ``show()``, so the window is never painted at one size and
+        then moved.
+
+        ``restoreGeometry`` is the authority on a stored blob: it restores the
+        maximised/full-screen state along with the normal geometry and already
+        relocates a window saved on a monitor that no longer exists back onto an
+        available screen. Nothing calls ``setGeometry`` after it succeeds — that
+        would un-maximise the window it just restored. The centred default is
+        only for an absent or unusable blob.
+
+        Scroll positions are not restored, here or anywhere: nothing writes them,
+        so every restored page opens at the top.
+        """
+        blob = session_state.load_geometry()
+        if blob is None or not self.restoreGeometry(blob):
+            self._apply_default_geometry()
+
+        main_tab, subtabs = session_state.load_route()
+        # Sub-tabs first: switching the main tab afterwards lands on a container
+        # that is already showing the right inner page.
+        for container_key, subtab_key in subtabs.items():
+            index = self._main_tab_index(container_key)
+            if index < 0:
+                continue
+            open_subtab = getattr(self.tabs.widget(index), "open_subtab", None)
+            if callable(open_subtab):
+                open_subtab(subtab_key)
+        if main_tab:
+            index = self._main_tab_index(main_tab)
+            if index >= 0:
+                self.tabs.setCurrentIndex(index)
+
+    def _apply_default_geometry(self) -> None:
+        """1280x800 centred on the primary screen — the no-saved-state default.
+
+        Clamped to the screen's available area so the default cannot start
+        partly off a small display; ``setMinimumSize`` still floors it.
+        """
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            self.resize(WINDOW_DEFAULT_WIDTH, WINDOW_DEFAULT_HEIGHT)
+            return
+        available = screen.availableGeometry()
+        rect = QRect(
+            0,
+            0,
+            min(WINDOW_DEFAULT_WIDTH, available.width()),
+            min(WINDOW_DEFAULT_HEIGHT, available.height()),
+        )
+        rect.moveCenter(available.center())
+        self.setGeometry(rect)
+
+    def _save_session_state(self) -> None:
+        """Persist geometry + route exactly once, at the top of closeEvent.
+
+        Best-effort by construction: ``session_state`` swallows and logs its own
+        failures, and this is wrapped anyway so nothing about a convenience can
+        stop the window from closing.
+        """
+        if self._session_state_saved:
+            return
+        self._session_state_saved = True
+        try:
+            session_state.save_geometry(self.saveGeometry())
+            session_state.save_route(self._current_main_tab_key(), self._current_subtab_keys())
+        except Exception:
+            logger.exception("Could not save the UI session state")
 
     def reveal_capability(self, target: "CapabilityTarget") -> None:
         """Bring the tab that hosts ``target`` to the front (and its sub-tab).
@@ -1299,6 +1406,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         Args:
             event: Close event
         """
+        # Where the user was, captured BEFORE anything can move or hide the
+        # window: background_tasks.shutdown below may hand off to the deferred
+        # close path, which hides the window and polls — and a hidden window's
+        # geometry is not what the user left behind. One-shot, so a second close
+        # attempt during that poll cannot overwrite the good value (D7).
+        self._save_session_state()
+
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
         # which stops debounce scheduling and begins worker teardown; persist
