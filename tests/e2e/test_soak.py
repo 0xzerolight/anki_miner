@@ -33,6 +33,7 @@ from tests.e2e.anki_gateway import AnkiGateway, AnkiUnreachableError
 from tests.e2e.artifacts import RunDir
 from tests.e2e.config import E2EConfig
 from tests.e2e.fixtures_subtitle import EXPECTED_LEMMAS, SUBTITLE_LINES
+from tests.e2e.screenshot_diff import SCREENSHOT_DIFF_WARN_THRESHOLD
 from tests.e2e.soak import (
     SessionReport,
     SoakReport,
@@ -896,3 +897,60 @@ def test_check_gui_state_process_cards_created_positive_healthy_passes() -> None
 
     stuck_check = checks["progress_not_stuck"]
     assert stuck_check["ok"] is True and stuck_check["actual"] is False
+
+
+# --------------------------------------------------------------------------
+# Visual-regression escalation (pure: no Qt, no Anki)
+# --------------------------------------------------------------------------
+
+
+def _assembled(diffs: list[float | None], **kwargs) -> SoakReport:
+    """Assemble a report for sessions carrying ``diffs``, everything else healthy."""
+    from tests.e2e.instrumentation import StateSnapshot
+    from tests.e2e.soak import _assemble_report
+
+    sessions = [
+        SessionReport(
+            index=i,
+            ok=True,
+            cards_created=4,
+            screenshot=f"session-{i}.png",
+            screenshot_diff=d,
+            snapshot_post=StateSnapshot(index=i),
+        )
+        for i, d in enumerate(diffs)
+    ]
+    return _assemble_report(
+        mode="inprocess",
+        sessions=sessions,
+        e2e=E2EConfig(test_home=Path("/nonexistent")),
+        test_home=Path("/nonexistent"),
+        bypass_known_words=False,
+        run_dir=kwargs["run_dir"],
+    )
+
+
+def test_a_diff_above_the_threshold_still_escalates_to_warn(tmp_path: Path) -> None:
+    """The visual-regression detector must keep its teeth.
+
+    A soak whose sessions render identically is the only reason its verdict is
+    PASS; a session that draws something else has to say so. This is the guard
+    on the escalation itself, so tightening the layout under it can never
+    quietly turn the detector off.
+    """
+    run_dir = RunDir(tmp_path / "runs", label="teeth")
+
+    report = _assembled([None, SCREENSHOT_DIFF_WARN_THRESHOLD + 0.01], run_dir=run_dir)
+
+    assert report.verdict == "WARN"
+    assert report.config["screenshot_diff_warn_sessions"] == [1]
+
+
+def test_identical_renders_leave_the_verdict_alone(tmp_path: Path) -> None:
+    """A soak that renders identically every session stays PASS."""
+    run_dir = RunDir(tmp_path / "runs", label="clean")
+
+    report = _assembled([None, 0.0, 0.0], run_dir=run_dir)
+
+    assert report.verdict == "PASS"
+    assert report.config["screenshot_diff_warn_sessions"] == []
