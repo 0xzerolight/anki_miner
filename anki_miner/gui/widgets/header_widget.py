@@ -88,7 +88,10 @@ class HeaderWidget(QWidget):
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QHBoxLayout()
-        layout.setContentsMargins(SPACING.md, SPACING.sm, SPACING.md, SPACING.sm)
+        # Vertical margins are deliberately tighter than horizontal: in an
+        # 800px-tall window height is the scarce axis, and this row sits above
+        # every screen. Horizontal breathing room costs nothing by comparison.
+        layout.setContentsMargins(SPACING.md, SPACING.xxs, SPACING.md, SPACING.xxs)
 
         # Left side: App branding
         branding_layout = QVBoxLayout()
