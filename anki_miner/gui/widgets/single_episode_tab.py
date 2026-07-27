@@ -185,6 +185,9 @@ class SingleEpisodeTab(MiningTabBase):
 
         self.progress_widget = ProgressWidget()
         layout.addWidget(self.progress_widget)
+        # The durable end state of this same card (D20). One episode per run,
+        # so the receipt never needs a noun to count.
+        self._install_receipt(layout, self.progress_widget)
 
         # Log widget (already has its own header and styling)
         self.log_widget = LogWidget()
@@ -522,6 +525,8 @@ class SingleEpisodeTab(MiningTabBase):
         self.log_widget.clear_log()
         self.progress_widget.reset()
         self._cancel_requested = False
+        # One episode per run, so the receipt counts notes and never items.
+        self._begin_receipt(1)
 
         # Hide action buttons, show cancel button
         self._is_processing = True
@@ -566,6 +571,10 @@ class SingleEpisodeTab(MiningTabBase):
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
         self.worker_thread.finished.connect(self._restore_buttons)
+        # Seal the receipt on the thread's own end, which is emitted after
+        # run() returns: by then the result (or the error) has been delivered,
+        # including the committed-notes result a cancelled run still produces.
+        self.worker_thread.finished.connect(self._on_run_thread_finished)
         # Test seam: let any listener attach to the worker BEFORE it starts (so a
         # connect-before-start cannot miss an immediate emit). No-op in normal use.
         self.worker_created.emit(self.worker_thread)
@@ -635,6 +644,9 @@ class SingleEpisodeTab(MiningTabBase):
         Args:
             result: ProcessingResult object
         """
+        # Recorded first: the receipt is sealed on the thread's own end, which
+        # arrives after this, and it needs this result in it.
+        self._record_receipt_result(result)
         self._restore_buttons()
 
         if not self._cancel_requested:
@@ -675,6 +687,7 @@ class SingleEpisodeTab(MiningTabBase):
         Args:
             error_message: Error message
         """
+        self._mark_receipt_failed()
         self._restore_buttons()
 
         # Show error

@@ -278,6 +278,8 @@ class AudiobookTab(_ListQueueMiningTabBase):
         progress_layout.addWidget(SectionHeader(self.tr("Progress")))
         self.progress_widget = ProgressWidget()
         progress_layout.addWidget(self.progress_widget)
+        # The durable end state of this same card (D20).
+        self._install_receipt(progress_layout, self.progress_widget, item_noun=self.tr("audiobooks"))
 
         progress_card.setLayout(progress_layout)
         layout.addWidget(progress_card)

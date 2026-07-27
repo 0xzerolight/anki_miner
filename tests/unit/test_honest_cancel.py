@@ -178,7 +178,12 @@ def test_retrying_two_failures_after_eight_successes_counts_zero_of_two(batch):
 
 def test_a_cancelled_batch_reports_its_cards_without_a_dialog(batch, monkeypatch):
     """The worker now hands over what it did on every exit; the tab must show
-    that without popping "Batch Processing Complete" at someone who cancelled."""
+    that without popping "Batch Processing Complete" at someone who cancelled.
+
+    The record lives in the run receipt rather than a log line (D20): the log
+    scrolls and the bar resets, and both used to throw the counts away at
+    exactly the moment they became interesting.
+    """
     from PyQt6.QtWidgets import QMessageBox
 
     for name in ("information", "warning"):
@@ -187,14 +192,17 @@ def test_a_cancelled_batch_reports_its_cards_without_a_dialog(batch, monkeypatch
             name,
             MagicMock(side_effect=AssertionError(f"QMessageBox.{name} after Cancel")),
         )
+    batch._begin_receipt(4, item_noun="episodes")
     batch._on_batch_started(4)
     batch._on_cancel_clicked()
 
     batch._on_processing_finished([MagicMock(cards_created=7, success=True)])
+    batch._finish_receipt(cancelled=True)
 
-    log = batch.log_widget.text_edit.toPlainText()
-    assert "1 of 4 episodes finished" in log
-    assert "7 cards created" in log
+    summary = batch._receipt_widget.summary_label.text()
+    assert "Cancelled" in summary
+    assert "1 of 4 episodes" in summary
+    assert "7 notes added" in summary
     assert "Complete" not in batch.overall_progress_widget.status_label.text()
 
 

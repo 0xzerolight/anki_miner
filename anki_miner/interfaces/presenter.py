@@ -80,3 +80,15 @@ class PresenterProtocol(Protocol):
             result: The processing result to display
         """
         ...
+
+    def show_run_details(self, result: ProcessingResult) -> None:
+        """Open the full details of a finished run, because the user asked.
+
+        Distinct from :meth:`show_processing_result`, which every item reports
+        and which must never interrupt: this one is raised by **View details**
+        on a run receipt, so it is allowed to open the detail surface.
+
+        Args:
+            result: The whole run, aggregated into one result.
+        """
+        ...

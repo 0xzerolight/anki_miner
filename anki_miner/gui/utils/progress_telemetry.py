@@ -48,6 +48,48 @@ SUSPEND_GAP_S = 30.0
 
 
 @dataclass(frozen=True)
+class ActiveDuration:
+    """How long a run actually worked, and how much of the span it slept through."""
+
+    active_s: float
+    suspended_s: float
+
+    @property
+    def suspended(self) -> bool:
+        """Whether the machine slept long enough to be worth saying so."""
+        return self.suspended_s >= SUSPEND_GAP_S
+
+
+def active_duration(
+    *,
+    monotonic_start: float,
+    monotonic_now: float,
+    wall_start: float,
+    wall_now: float,
+) -> ActiveDuration:
+    """Measure a span in active time, excluding any suspend, and flag it.
+
+    The two clocks are the whole mechanism. A suspended machine freezes the
+    monotonic clock and never the wall clock, so the *difference* between the
+    two spans is the time the process was not running. Reading it this way needs
+    no ticker and produces no false positive: on a platform whose monotonic
+    clock does keep counting through sleep the two spans simply agree, and
+    nothing is excluded rather than something being guessed.
+
+    Args:
+        monotonic_start: ``time.monotonic()`` when the run began.
+        monotonic_now: ``time.monotonic()`` now.
+        wall_start: ``time.time()`` when the run began.
+        wall_now: ``time.time()`` now.
+    """
+    active = max(0.0, monotonic_now - monotonic_start)
+    # Clamped: a wall clock corrected backwards (NTP, a manual change) must not
+    # subtract from a span it knows nothing about.
+    suspended = max(0.0, (wall_now - wall_start) - active)
+    return ActiveDuration(active_s=active, suspended_s=suspended)
+
+
+@dataclass(frozen=True)
 class TransferStats:
     """A snapshot of one transfer. ``None`` means "not known", never "zero"."""
 
@@ -182,6 +224,22 @@ def format_clock(seconds: float) -> str:
     if hours:
         return f"{hours}:{minutes:02d}:{secs:02d}"
     return f"{minutes:02d}:{secs:02d}"
+
+
+def format_duration_words(seconds: float) -> str:
+    """Format a duration as ``40m 12s``, or ``3h 04m 12s`` once it reaches an hour.
+
+    The spelled-out form is for prose -- a finished run's receipt reads as a
+    sentence, and ``40:12`` inside one reads as a timestamp. Live readouts keep
+    :func:`format_clock`, which is what a clock ticking in place should look
+    like.
+    """
+    total = max(0, int(seconds))
+    hours, rest = divmod(total, 3600)
+    minutes, secs = divmod(rest, 60)
+    if hours:
+        return f"{hours}h {minutes:02d}m {secs:02d}s"
+    return f"{minutes:02d}m {secs:02d}s"
 
 
 def format_transfer(locale: QLocale, stats: TransferStats) -> str:

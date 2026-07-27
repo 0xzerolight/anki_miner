@@ -115,7 +115,8 @@ class AppDriver:
         tab: The mounted ``SingleEpisodeTab`` (pass to ``qtbot.addWidget``).
         episode_tab_index: Index of ``tab`` in ``window.tabs``.
         window_results_seen: How many times the window's ``_on_processing_result``
-            slot fired (each pops the patched ``ResultsDialog``).
+            slot fired (it counts the session's notes; since D20 it opens no
+            dialog — the run's summary is the tab's inline receipt).
         dialog_blocked: ``True`` if a (patched) dialog ever failed to return — a
             non-blocking-dialog invariant the tests assert stays ``False``.
     """
@@ -161,7 +162,7 @@ class AppDriver:
             self.window.tabs.setCurrentIndex(self.episode_tab_index)
             # Wire the tab's presenter result into the window's result slot
             # (register_mining_tab's processing_result connection) through a spy
-            # so a run pops the patched ResultsDialog and we can count it.
+            # so we can count the results a run delivered to the window.
             self._tab_driver.presenter.processing_result_signal.connect(self._on_window_result)
         except Exception:
             # Construction failed after the patches were entered — unwind them so
@@ -177,19 +178,18 @@ class AppDriver:
         return self._tab_driver.tab
 
     def _on_window_result(self, result: ProcessingResult) -> None:
-        """Spy slot: forward to the window's real handler and count the dialog.
+        """Spy slot: forward to the window's real handler and count the result.
 
-        Wraps ``MainWindow._on_processing_result`` (which builds + ``exec()``s the
-        patched ``ResultsDialog``). If that handler ever raised or hung the count
-        would not advance / ``dialog_blocked`` would flip — both asserted by tests.
+        Wraps ``MainWindow._on_processing_result``. If that handler ever raised
+        or hung the count would not advance / ``dialog_blocked`` would flip —
+        both asserted by tests.
         """
         before = self.window_results_seen
         try:
             self.window._on_processing_result(result)
         finally:
             self.window_results_seen = before + 1
-            # The patched ResultsDialog.exec() returns immediately; reaching here
-            # confirms the slot did not block on a modal loop.
+            # Reaching here confirms the slot did not block on a modal loop.
             self.dialog_blocked = False
 
     # ----- input + run actions (delegate to the composed tab driver) ----

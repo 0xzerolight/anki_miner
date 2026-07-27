@@ -105,12 +105,14 @@ def test_cancel_before_run_skips_processing_and_emit(tmp_path, qapp):
 
 
 def test_cancelling_still_reports_the_cards_already_created(tmp_path, qapp):
-    """D22: a cancel must never hide work that already happened.
+    """D20/D22: a cancel must never hide work that already happened.
 
-    The accumulated results were previously emitted only when the run was NOT
-    cancelled, so cancelling after pair 1 had written its cards to Anki left the
-    user with no record that those cards existed — the run simply went silent
-    while the notes sat in their collection.
+    The emit used to be guarded by check_cancelled(), so cancelling after pair 1
+    had written its cards to Anki left the user with no record that those cards
+    existed — the run simply went silent while the notes sat in their
+    collection. The tab's run receipt needs them: "Cancelled — 1 of 3 episodes
+    completed" is only possible if the partial list arrives. The tab guards its
+    own completion painting on its cancel flag, so this cannot read as success.
     """
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)
@@ -134,7 +136,7 @@ def test_cancelling_still_reports_the_cards_already_created(tmp_path, qapp):
 
     # Only pair 1 ran (loop-top check stops pair 2) ...
     assert processed == [p1.video]
-    # ... and what it produced is still reported.
+    # ... and what it produced is still reported, exactly once.
     assert len(results) == 1
     assert [r.cards_created for r in results[0]] == [3]
 

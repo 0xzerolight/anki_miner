@@ -179,6 +179,10 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             if self.progress_callback and not self.check_cancelled():
                 self.progress_callback.on_complete()
 
+            # Emitted on the cancelled path too: the pairs already mined created
+            # real notes, and the run's receipt has to be able to say so. The
+            # tab guards its own completion painting on its cancel flag, so this
+            # cannot read as a finished run.
             self.result_ready.emit(results)
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI

@@ -176,6 +176,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         layout.addWidget(self._progress_header(self.tr("Progress")))
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
+        # The durable end state of this same card (D20).
+        self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("volumes"))
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()
