@@ -136,6 +136,28 @@ class TestPickerSelection:
         plain = next(w for w in selected if w.lemma == "走る")
         assert plain.sentence == "公園を走る"
 
+    def test_detail_panel_follows_the_picked_sentence(self, qtbot, mixed_words):
+        """The panel restates what will be mined, so it must show the PICK."""
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        assert dlg.detail_sentence.text() == "朝ごはんを食べる"
+
+        dlg.sentence_list.setCurrentRow(1)
+
+        assert dlg.detail_sentence.text() == "パンを食べる"
+
+    def test_detail_panel_keeps_the_pick_when_the_row_is_refocused(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(2)
+
+        _select_and_fire(dlg, 1)
+        _select_and_fire(dlg, 0)
+
+        assert dlg.detail_sentence.text() == "早く食べなさい"
+
     def test_untouched_word_returns_original(self, qtbot, mixed_words):
         dlg = WordCurationDialog(mixed_words)
         qtbot.addWidget(dlg)

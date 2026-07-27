@@ -78,13 +78,13 @@ class TestWordCurationDialogSelection:
 
     def test_word_count_label_updates(self, dialog):
         """Word count label should reflect current selection."""
-        assert "3 of 3" in dialog.word_count_label.text()
+        assert "3 included" in dialog.word_count_label.text()
 
         dialog._deselect_all()
-        assert "0 of 3" in dialog.word_count_label.text()
+        assert "0 included" in dialog.word_count_label.text()
 
         dialog._select_all()
-        assert "3 of 3" in dialog.word_count_label.text()
+        assert "3 included" in dialog.word_count_label.text()
 
 
 def _apply_search(dialog, text: str) -> None:
@@ -149,41 +149,56 @@ class TestMultiRowSelection:
         """The table must allow Ctrl/Shift+Click multi-row selection."""
         assert dialog.table.selectionMode() == QTableWidget.SelectionMode.ExtendedSelection
 
-    def test_select_all_acts_on_selection_when_2plus_selected(self, dialog):
-        """With 2+ rows highlighted, Select All checks only those rows."""
+    def test_include_highlighted_acts_only_on_the_highlight(self, dialog):
+        """ "Include highlighted" checks exactly the highlighted rows."""
         dialog._deselect_all()
         _select_rows(dialog, [0, 2])
-        dialog._select_all()
+        dialog._include_highlighted()
 
         states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
         assert states[0] == Qt.CheckState.Checked
         assert states[1] == Qt.CheckState.Unchecked
         assert states[2] == Qt.CheckState.Checked
 
-    def test_deselect_all_acts_on_selection_when_2plus_selected(self, dialog):
-        """With 2+ rows highlighted, Deselect All unchecks only those rows."""
-        # Start with all checked (default), then highlight rows 0 and 1.
-        _select_rows(dialog, [0, 1])
+    def test_include_highlighted_honours_a_single_row(self, dialog):
+        """One highlighted row is a target like any other.
+
+        The rule this replaces — "highlighted rows if 2+, else all visible" —
+        turned "include this word" into "include all 84" with no indication
+        (decision D32).
+        """
         dialog._deselect_all()
+        _select_rows(dialog, [1])
+        dialog._include_highlighted()
 
         states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
-        assert states[0] == Qt.CheckState.Unchecked
-        assert states[1] == Qt.CheckState.Unchecked
-        assert states[2] == Qt.CheckState.Checked
+        assert states == [
+            Qt.CheckState.Unchecked,
+            Qt.CheckState.Checked,
+            Qt.CheckState.Unchecked,
+        ]
 
-    def test_select_all_falls_back_to_visible_when_no_selection(self, dialog):
-        """No highlighted rows -> Select All affects every visible row."""
-        dialog._deselect_all()
+    def test_include_highlighted_is_disabled_without_a_highlight(self, dialog):
         _select_rows(dialog, [])
+        assert not dialog.include_highlighted_button.isEnabled()
+
+        _select_rows(dialog, [1])
+        assert dialog.include_highlighted_button.isEnabled()
+
+    def test_visible_verbs_ignore_the_highlight_entirely(self, dialog):
+        """ "Include/Exclude visible" mean the same thing whatever is highlighted —
+        that is the point of naming the target on the button."""
+        _select_rows(dialog, [1])
+        dialog._deselect_all()
+        assert dialog.get_selected_words() == []
+
         dialog._select_all()
         assert len(dialog.get_selected_words()) == 3
 
-    def test_select_all_falls_back_to_visible_when_single_row_selected(self, dialog):
-        """One highlighted row is below the 2+ threshold -> all visible rows."""
+    def test_select_all_covers_every_visible_row_with_no_selection(self, dialog):
         dialog._deselect_all()
-        _select_rows(dialog, [1])
+        _select_rows(dialog, [])
         dialog._select_all()
-        # All three visible rows should be checked, not just the highlighted one.
         assert len(dialog.get_selected_words()) == 3
 
     def test_toggle_selected_rows_flips_all_to_checked_when_any_unchecked(self, dialog):
@@ -207,9 +222,9 @@ class TestMultiRowSelection:
         dialog._deselect_all()
         # Hide rows 1 and 2 by searching for the lemma in row 0.
         _apply_search(dialog, "食べる")
-        # Highlight every row (incl. hidden) and run Select All.
+        # Highlight every row (incl. hidden) and include the highlight.
         _select_rows(dialog, [0, 1, 2])
-        dialog._select_all()
+        dialog._include_highlighted()
         _apply_search(dialog, "")
 
         states = [dialog.table.item(row, 0).checkState() for row in range(dialog.table.rowCount())]
@@ -217,6 +232,112 @@ class TestMultiRowSelection:
         assert states[0] == Qt.CheckState.Checked
         assert states[1] == Qt.CheckState.Unchecked
         assert states[2] == Qt.CheckState.Unchecked
+
+
+class TestBulkButtonLabels:
+    """D32 — each bulk verb names its own fixed target and counts it live."""
+
+    def test_visible_buttons_count_the_visible_rows(self, dialog):
+        assert dialog.select_all_button.text() == "Include visible (3)"
+        assert dialog.deselect_all_button.text() == "Exclude visible (3)"
+
+    def test_visible_counts_are_unaffected_by_the_highlight(self, dialog):
+        _select_rows(dialog, [1])
+        assert dialog.select_all_button.text() == "Include visible (3)"
+        assert dialog.deselect_all_button.text() == "Exclude visible (3)"
+
+    def test_highlighted_button_counts_the_highlight(self, dialog):
+        _select_rows(dialog, [0, 2])
+        assert dialog.include_highlighted_button.text() == "Include highlighted (2)"
+
+    def test_highlighted_button_counts_a_single_row(self, dialog):
+        _select_rows(dialog, [1])
+        assert dialog.include_highlighted_button.text() == "Include highlighted (1)"
+
+    def test_visible_counts_follow_the_search_filter(self, dialog):
+        _apply_search(dialog, "食べる")
+        assert dialog.select_all_button.text() == "Include visible (1)"
+        assert dialog.deselect_all_button.text() == "Exclude visible (1)"
+
+    def test_highlight_count_discounts_rows_hidden_by_search(self, dialog):
+        _select_rows(dialog, [0, 1, 2])
+        _apply_search(dialog, "食べる")
+        assert dialog.include_highlighted_button.text() == "Include highlighted (1)"
+
+
+class TestCurationCounter:
+    """D32 — one counter line: position, included total, filtered total."""
+
+    def test_counter_reports_position_included_and_shown(self, dialog):
+        dialog.table.setCurrentCell(0, 0)
+        assert dialog.word_count_label.text() == "Word 1 of 3 · 3 included · 3 shown of 3"
+
+    def test_counter_position_follows_the_focused_row(self, dialog):
+        dialog.table.setCurrentCell(2, 0)
+        assert dialog.word_count_label.text() == "Word 3 of 3 · 3 included · 3 shown of 3"
+
+    def test_counter_position_is_the_ordinal_among_visible_rows(self, dialog):
+        # Hide rows 0 and 1; the surviving row is the FIRST visible one.
+        _apply_search(dialog, "泳ぐ")
+        dialog.table.setCurrentCell(2, 0)
+        assert dialog.word_count_label.text() == "Word 1 of 1 · 3 included · 1 shown of 3"
+
+    def test_counter_drops_the_position_without_a_focused_row(self, dialog):
+        dialog.table.setCurrentCell(-1, -1)
+        assert dialog.word_count_label.text() == "3 included · 3 shown of 3"
+
+    def test_counter_position_is_recomputed_after_a_sort(self, dialog):
+        """Sorting moves the focused word without touching the selection, so the
+        counter has to follow the sort indicator, not only itemSelectionChanged."""
+        dialog.table.setCurrentCell(0, 0)  # 食べるた — last in code-point order
+        assert dialog.word_count_label.text().startswith("Word 1 of 3")
+
+        dialog.table.sortItems(1, Qt.SortOrder.AscendingOrder)
+
+        assert dialog.table.currentRow() == 2
+        assert dialog.word_count_label.text().startswith("Word 3 of 3")
+
+    def test_counter_included_total_tracks_checkboxes(self, dialog):
+        dialog.table.setCurrentCell(0, 0)
+        _select_rows(dialog, [1])
+        dialog._toggle_selected_rows()  # S — exclude the highlighted row
+        assert dialog.word_count_label.text() == "Word 1 of 3 · 2 included · 3 shown of 3"
+
+
+class TestKeyHints:
+    """D32 — the keyboard contract is stated on the screen, not only in docs."""
+
+    def test_key_hint_line_is_present(self, dialog):
+        text = dialog.key_hint_label.text()
+        for key in ("S", "Ctrl+A", "Ctrl+D", "Ctrl+Enter"):
+            assert key in text
+
+
+class TestConfirmShortcut:
+    """Only Return was window-scoped (it fired from the Search box); it becomes
+    Ctrl+Return via the shared primary-action helper."""
+
+    def test_no_bare_return_shortcut_anywhere_in_the_dialog(self, dialog):
+        from PyQt6.QtGui import QKeySequence, QShortcut
+
+        keys = {sc.key().toString() for sc in dialog.findChildren(QShortcut)}
+        assert QKeySequence(Qt.Key.Key_Return).toString() not in keys
+
+    def test_ctrl_return_confirms(self, dialog):
+        from PyQt6.QtGui import QKeySequence, QShortcut
+
+        matches = [sc for sc in dialog.findChildren(QShortcut) if sc.key() == QKeySequence("Ctrl+Return")]
+        assert matches, "no Ctrl+Return confirm shortcut"
+        matches[0].activated.emit()
+        assert dialog.result() == dialog.DialogCode.Accepted
+
+    def test_no_footer_button_is_the_dialog_default(self, dialog):
+        """A default button would re-create the bare-Enter commit on kana input."""
+        from PyQt6.QtWidgets import QPushButton
+
+        buttons = dialog.findChildren(QPushButton)
+        assert buttons
+        assert not any(b.isDefault() or b.autoDefault() for b in buttons)
 
 
 def _find_table_shortcut(dialog, key_str):
@@ -387,7 +508,7 @@ class TestAddToKnownWords:
         dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
-        dlg._select_all()  # acts on all visible rows
+        dlg._select_all()  # acts on the highlighted row — the marked one
         assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
 
     def test_falls_back_to_current_row_when_no_selection(self, qtbot, make_tokenized_words):

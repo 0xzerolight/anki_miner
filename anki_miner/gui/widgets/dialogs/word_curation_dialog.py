@@ -19,6 +19,7 @@ from PyQt6.QtGui import QColor, QFont, QImage, QKeySequence, QPixmap, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -26,6 +27,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMenu,
+    QPushButton,
     QSplitter,
     QStyle,
     QTableWidget,
@@ -37,6 +39,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.fonts import make_scaled_font
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     CELL_PADDING,
     CellRole,
@@ -46,6 +49,7 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
+from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
 from anki_miner.models import TokenizedWord
@@ -83,8 +87,12 @@ class CurationMediaContext:
 class WordCurationDialog(QDialog):
     """Dialog for selecting which words to include in card creation.
 
-    Shows a table of words with checkboxes. Users can search/filter,
-    select/deselect all, and confirm their selection.
+    Shows a table of words with checkboxes. Users search/filter, include or
+    exclude in bulk, and confirm. It is a primary interactive surface, not a
+    confirmation step: the app automates the mining mechanics, and a user
+    frequently picks the words by hand, so every bulk verb names and counts its
+    own target, a counter states position/included/shown, and a detail strip
+    restates the focused row.
 
     When ``media_context`` is supplied and its video file exists, an embedded
     ``SubtitlePlayerWidget`` is shown in the right pane so the user can preview
@@ -140,8 +148,15 @@ class WordCurationDialog(QDialog):
         self._candidate_list_words: list[TokenizedWord] = []
         self._populating_candidates = False
 
-        # Lookup result cache keyed by lemma (empty results are cached too).
+        # Lookup result cache keyed by term (empty results are cached too).
+        # The fetch itself runs off the GUI thread: at most one request is in
+        # flight, the newest queued request replaces any older one, and every
+        # callback is checked against _lookup_gen so a fast scroll can never
+        # paint an entry the user has already scrolled past.
         self._lookup_cache: dict[str, list[tuple[str, str]]] = {}
+        self._lookup_gen = 0
+        self._lookup_inflight = False
+        self._pending_lookup: tuple[str, str | None] | None = None
 
         # Debounce timer for row-focus changes (avoid hammering lookup on arrow-key scroll).
         self._focus_timer = QTimer(self)
@@ -160,7 +175,7 @@ class WordCurationDialog(QDialog):
 
         self._setup_ui()
         self._populate_table()
-        self._update_word_count()
+        self._refresh_summary()
         self.finished.connect(self._stop_player)
         add_min_max_buttons(self)
 
@@ -219,7 +234,23 @@ class WordCurationDialog(QDialog):
 
         layout.addLayout(footer_layout)
         self.setLayout(layout)
+        self._disown_default_button()
         self._setup_shortcuts()
+
+    def _disown_default_button(self) -> None:
+        """Leave this dialog with no default button at all.
+
+        A push button inside a QDialog is auto-default, and Qt clicks whichever
+        one ends up default on a bare Return — from anywhere in the dialog,
+        including the Search field. Return is also how a Japanese input method
+        commits a composition, so leaving a default here means typing kana into
+        Search silently fires a bulk action or commits the whole review.
+        Confirmation is Ctrl+Return instead (see :meth:`_setup_shortcuts`); every
+        button here stays reachable by mouse and by Space.
+        """
+        for button in self.findChildren(QPushButton):
+            button.setAutoDefault(False)
+            button.setDefault(False)
 
     def _build_left_pane(self) -> QWidget:
         """Build the left pane containing the search bar, bulk-action buttons, and table."""
@@ -243,16 +274,21 @@ class WordCurationDialog(QDialog):
 
         controls_layout.addSpacing(16)
 
-        _bulk_tooltip = self.tr("Acts on 2+ highlighted rows (Ctrl/Shift+Click), else all visible rows.")
-        self.select_all_button = ModernButton(self.tr("Select All"), variant="secondary")
+        # Three bulk verbs, each with ONE fixed target named in its own label and
+        # counted live by _refresh_bulk_labels. Nothing here changes meaning with
+        # the selection, so no tooltip is needed to disambiguate — and the
+        # "Exclude highlighted" verb is the S key, which is on the hint line.
+        self.select_all_button = ModernButton(variant="secondary")
         self.select_all_button.clicked.connect(self._select_all)
-        self.select_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.select_all_button)
 
-        self.deselect_all_button = ModernButton(self.tr("Deselect All"), variant="secondary")
+        self.deselect_all_button = ModernButton(variant="secondary")
         self.deselect_all_button.clicked.connect(self._deselect_all)
-        self.deselect_all_button.setToolTip(_bulk_tooltip)
         controls_layout.addWidget(self.deselect_all_button)
+
+        self.include_highlighted_button = ModernButton(variant="secondary")
+        self.include_highlighted_button.clicked.connect(self._include_highlighted)
+        controls_layout.addWidget(self.include_highlighted_button)
 
         # Add to local known/ignore list (Issue #42). Acts on the highlighted
         # rows, or the current row when nothing is highlighted — deliberately NOT
@@ -307,16 +343,93 @@ class WordCurationDialog(QDialog):
 
         self.table.itemChanged.connect(self._on_item_changed)
 
-        # Row-focus wiring — independent of checkbox state (itemSelectionChanged only).
-        if self._show_player or self._show_image or self._show_dict or self._has_candidates:
-            self.table.itemSelectionChanged.connect(self._on_row_focus_changed)
+        # Row-focus wiring — independent of checkbox state. Always connected: the
+        # detail panel and the target/position summary exist even on a plain
+        # table-only dialog, and _on_row_focus_changed is what keeps both truthful.
+        #
+        # BOTH signals are needed, and neither implies the other:
+        #   * currentCellChanged is the cursor. It fires even when the selection
+        #     does not change — including when the cursor is cleared while a
+        #     modifier is held, because Qt derives the selection command from
+        #     QGuiApplication::keyboardModifiers().
+        #   * itemSelectionChanged is the highlight, which the "Include
+        #     highlighted (N)" count reads and which can change without the
+        #     cursor moving (Ctrl+Click).
+        self.table.currentCellChanged.connect(lambda *_: self._on_row_focus_changed())
+        self.table.itemSelectionChanged.connect(self._on_row_focus_changed)
+        if header_view:
+            # Sorting relocates the focused word without changing the selection,
+            # so itemSelectionChanged alone would leave a stale "Word N of M".
+            header_view.sortIndicatorChanged.connect(lambda *_: self._refresh_summary())
 
         # Right-click context menu (always present; useful for #43)
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._on_table_context_menu)
 
         vbox.addWidget(self.table)
+        vbox.addWidget(self._build_detail_panel())
+        vbox.addWidget(self._build_key_hints())
         return container
+
+    def _build_detail_panel(self) -> QFrame:
+        """Build the always-visible detail strip for the focused row.
+
+        Restates the focused word's card front, its kana reading and the full
+        sentence, so a keyboard user reading down the table never has to hover a
+        truncated cell. Plain text throughout (decision D45-B): no furigana, and
+        no chance of a sentence's own characters being interpreted as markup.
+
+        Object names are the contract W3 styles against; the sentence strip
+        reserves exactly two lines so the panel's height never moves as the
+        cursor travels.
+        """
+        self.detail_panel = QFrame()
+        self.detail_panel.setObjectName("curator-detail")
+        vbox = QVBoxLayout(self.detail_panel)
+        vbox.setContentsMargins(SPACING.sm, SPACING.xs, SPACING.sm, SPACING.xs)
+        vbox.setSpacing(SPACING.xxs)
+
+        top = QHBoxLayout()
+        top.setSpacing(SPACING.sm)
+
+        self.detail_expression = QLabel()
+        self.detail_expression.setObjectName("curator-detail-expression")
+        self.detail_expression.setFont(self._make_font(15, QFont.Weight.Bold))
+        top.addWidget(self.detail_expression)
+
+        self.detail_reading = QLabel()
+        self.detail_reading.setObjectName("curator-detail-reading")
+        top.addWidget(self.detail_reading)
+        top.addStretch()
+        vbox.addLayout(top)
+
+        self.detail_sentence = QLabel()
+        self.detail_sentence.setObjectName("curator-detail-sentence")
+        self.detail_sentence.setWordWrap(True)
+        self.detail_sentence.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        two_lines = 2 * metric_row_height(self.detail_sentence, vertical_padding=0)
+        self.detail_sentence.setMinimumHeight(two_lines)
+        self.detail_sentence.setMaximumHeight(two_lines)
+        vbox.addWidget(self.detail_sentence)
+
+        for label in (self.detail_expression, self.detail_reading, self.detail_sentence):
+            label.setTextFormat(Qt.TextFormat.PlainText)
+            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+
+        return self.detail_panel
+
+    def _build_key_hints(self) -> QLabel:
+        """One quiet line naming the keys this screen answers to."""
+        if self._show_player:
+            text = self.tr(
+                "S include/exclude · Space play/pause · Ctrl+A include · Ctrl+D exclude · Ctrl+Enter confirm"
+            )
+        else:
+            text = self.tr("S include/exclude · Ctrl+A include · Ctrl+D exclude · Ctrl+Enter confirm")
+        self.key_hint_label = QLabel(text)
+        self.key_hint_label.setObjectName("curator-key-hints")
+        self.key_hint_label.setFont(self._make_font(11))
+        return self.key_hint_label
 
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
@@ -438,19 +551,24 @@ class WordCurationDialog(QDialog):
         toggle_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         toggle_shortcut.activated.connect(self._toggle_selected_rows)
 
-        # Ctrl+A: Select all words (scoped to table so it doesn't override text selection in search)
+        # Ctrl+A: include every visible word — the same verb as the "Include
+        # visible" button, so the two can never disagree. (Scoped to the table so
+        # it doesn't override text selection in Search.)
         select_all_shortcut = QShortcut(QKeySequence("Ctrl+A"), self.table)
         select_all_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         select_all_shortcut.activated.connect(self._select_all)
 
-        # Ctrl+D: Deselect all words (scoped to table)
+        # Ctrl+D: exclude every visible word (scoped to table)
         deselect_all_shortcut = QShortcut(QKeySequence("Ctrl+D"), self.table)
         deselect_all_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         deselect_all_shortcut.activated.connect(self._deselect_all)
 
-        # Enter/Return: Confirm selection
-        enter_shortcut = QShortcut(QKeySequence(Qt.Key.Key_Return), self.table)
-        enter_shortcut.activated.connect(self.accept)
+        # Ctrl+Return (and the keypad's Ctrl+Enter): confirm the selection.
+        # A bare Return can NOT be used here: this dialog owns a Search field, and
+        # a Japanese input method commits a composition with Return — the old
+        # window-scoped Return shortcut turned "accept this kana" into "accept the
+        # entire review". Scoped to the dialog so it also works from Search.
+        primary_action_shortcut(self, self.accept)
 
     def _toggle_play_pause(self) -> None:
         """Space: toggle player play/pause (no-op when the player pane is hidden)."""
@@ -584,7 +702,7 @@ class WordCurationDialog(QDialog):
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
         """Called when any table item changes (e.g. checkbox toggled)."""
         if item.column() == 0:
-            self._update_word_count()
+            self._refresh_summary()
 
     def _on_search_changed(self, _text: str) -> None:
         """Restart the debounce timer on each keystroke.
@@ -617,33 +735,66 @@ class WordCurationDialog(QDialog):
                     break
             self.table.setRowHidden(row, not visible)
 
+        # The filter is what "visible" means, so both the bulk target and the
+        # counter change under it.
+        self._refresh_summary()
+
     # ------------------------------------------------------------------
     # Signal handlers — row focus → player + dictionary
     # ------------------------------------------------------------------
 
     def _on_row_focus_changed(self) -> None:
-        """Handle itemSelectionChanged — debounce and schedule _on_focus_timer_fired.
+        """Handle a cursor or highlight change — refresh the summary, debounce the panes.
+
+        The detail panel and the target/position summary are pure string work, so
+        they update immediately: on the app's most keyboard-driven screen they must
+        answer the arrow key, not the debounce timer. Only the expensive panes
+        (player seek, page decode, dictionary lookup) go through the timer.
 
         MUST NOT read or write checkbox state; checkbox changes are handled by
         _on_item_changed (itemChanged signal) and kept independent.
         """
-        current_row = self.table.currentRow()
-        if current_row < 0:
+        self._refresh_summary()
+
+        word, original_index = self._focused_word()
+        if word is None or original_index is None:
+            self._render_detail(None)
             return
 
-        # Resolve focused row → original word via the col-0 UserRole index.
-        # The table is sortable, so visual row ≠ original word index.
-        check_item = self.table.item(current_row, 0)
-        if check_item is None:
-            return
-        original_index = check_item.data(Qt.ItemDataRole.UserRole)
-        if original_index is None or not (0 <= original_index < len(self._words)):
-            return
+        self._render_detail(self._chosen.get(original_index, word))
 
-        self._pending_word = self._words[original_index]
+        self._pending_word = word
         self._pending_index = original_index
         # (Re)start the debounce timer — rapid arrow-key scrolling only fires once.
         self._focus_timer.start()
+
+    def _focused_word(self) -> tuple[TokenizedWord | None, int | None]:
+        """The word under the cursor and its original index, or ``(None, None)``.
+
+        Resolves through the col-0 ``UserRole`` index because the table is
+        sortable, so the visual row is not the word's index.
+        """
+        current_row = self.table.currentRow()
+        if current_row < 0:
+            return None, None
+        check_item = self.table.item(current_row, 0)
+        if check_item is None:
+            return None, None
+        original_index = check_item.data(Qt.ItemDataRole.UserRole)
+        if original_index is None or not (0 <= original_index < len(self._words)):
+            return None, None
+        return self._words[original_index], original_index
+
+    def _render_detail(self, word: TokenizedWord | None) -> None:
+        """Fill (or clear) the detail strip. ``word`` is the user's chosen variant."""
+        expression = word.mined_form if word is not None else ""
+        reading = word.reading if word is not None else ""
+        sentence = word.sentence if word is not None else ""
+        self.detail_expression.setText(expression)
+        self.detail_reading.setText(reading)
+        self.detail_sentence.setText(sentence)
+        # The strip is two lines tall by design; the tooltip carries the rest.
+        self.detail_sentence.setToolTip(sentence)
 
     def _on_focus_timer_fired(self) -> None:
         """Debounced handler: refresh sentence picker, seek player, look up definition."""
@@ -677,18 +828,114 @@ class WordCurationDialog(QDialog):
             self._lookup_and_render(word.mined_form, word.lemma)
 
     def _lookup_and_render(self, term: str, fallback_term: str | None = None) -> None:
-        """Fetch definition entries for ``term`` (with cache) and render into the
-        view, retrying once under ``fallback_term`` when the primary misses."""
-        if term not in self._lookup_cache:
-            assert self._lookup_fn is not None  # guarded by self._show_dict
-            self._lookup_cache[term] = self._lookup_fn(term)
+        """Show definition entries for ``term``, fetching them off the GUI thread.
 
+        ``lookup_fn`` reaches a SQLite index (and, in the worst case, a chain of
+        them), so it cannot run here: this is the app's most keyboard-driven
+        screen, and a query on the GUI thread stalls the arrow key that asked
+        for it. The 120 ms focus debounce already collapses a scroll into one
+        request; this adds the two guarantees a debounce cannot give —
+
+        * at most one request in flight, with only the NEWEST queued behind it,
+          so holding the down arrow never queues a backlog of dead lookups;
+        * a generation stamp on every request, so a result that arrives after
+          the user has moved on is cached but never painted.
+
+        ``fallback_term`` is the miss-only lemma retry: unidic's canonical lemma
+        collapses kanji variants (殺る → 遣る), so keying the pane on it showed
+        the wrong homograph. Both terms are fetched inside the one background
+        job, keeping the retry off the GUI thread as well.
+        """
+        if self._closing or not self._show_dict:
+            return
+
+        # Bump on EVERY request, cache hit included: a newer request must
+        # supersede whatever is in flight, or a slower earlier miss would repaint
+        # over the row the user is actually looking at.
+        self._lookup_gen += 1
+
+        entries = self._cached_entries(term, fallback_term)
+        if entries is not None:
+            self._pending_lookup = None
+            self._render_definitions(term, entries)
+            return
+
+        if self._lookup_inflight:
+            self._pending_lookup = (term, fallback_term)
+            return
+
+        self._dispatch_lookup(term, fallback_term, self._lookup_gen)
+
+    def _cached_entries(self, term: str, fallback_term: str | None) -> list[tuple[str, str]] | None:
+        """Entries resolvable from the cache alone, or ``None`` if a fetch is needed.
+
+        An empty list is a real answer (a cached miss), which is why the
+        "unresolved" signal is ``None`` rather than falsiness.
+        """
+        if term not in self._lookup_cache:
+            return None
         entries = self._lookup_cache[term]
-        if not entries and fallback_term and fallback_term != term:
-            if fallback_term not in self._lookup_cache:
-                assert self._lookup_fn is not None
-                self._lookup_cache[fallback_term] = self._lookup_fn(fallback_term)
-            entries = self._lookup_cache[fallback_term]
+        if entries or not fallback_term or fallback_term == term:
+            return entries
+        if fallback_term not in self._lookup_cache:
+            return None
+        return self._lookup_cache[fallback_term]
+
+    def _dispatch_lookup(self, term: str, fallback_term: str | None, gen: int) -> None:
+        """Run the (possibly two-term) query on a worker thread."""
+        lookup_fn = self._lookup_fn
+        assert lookup_fn is not None  # guarded by self._show_dict
+        self._lookup_inflight = True
+
+        def work() -> dict[str, list[tuple[str, str]]]:
+            fetched = {term: lookup_fn(term)}
+            if not fetched[term] and fallback_term and fallback_term != term:
+                fetched[fallback_term] = lookup_fn(fallback_term)
+            return fetched
+
+        run_off_thread(
+            self,
+            work,
+            lambda fetched: self._on_lookup_done(gen, term, fallback_term, fetched),
+            lambda message: self._on_lookup_failed(gen, term, message),
+        )
+
+    def _on_lookup_done(
+        self,
+        gen: int,
+        term: str,
+        fallback_term: str | None,
+        fetched: object,
+    ) -> None:
+        """GUI-thread landing point for a completed lookup."""
+        self._lookup_inflight = False
+        # Cache even a superseded result: it was a correct answer for its term,
+        # and scrolling back to that row must not re-query.
+        if isinstance(fetched, dict):
+            self._lookup_cache.update(fetched)
+        if gen == self._lookup_gen:
+            self._render_definitions(term, self._cached_entries(term, fallback_term) or [])
+        self._drain_pending_lookup()
+
+    def _on_lookup_failed(self, gen: int, term: str, message: str) -> None:
+        """GUI-thread landing point for a failed lookup."""
+        self._lookup_inflight = False
+        logger.warning("definition lookup failed for %s: %s", term, message)
+        if gen == self._lookup_gen:
+            self._render_definitions(term, [])
+        self._drain_pending_lookup()
+
+    def _drain_pending_lookup(self) -> None:
+        """Start the newest request that arrived while one was in flight."""
+        pending = self._pending_lookup
+        self._pending_lookup = None
+        if pending is not None and not self._closing:
+            self._lookup_and_render(*pending)
+
+    def _render_definitions(self, term: str, entries: list[tuple[str, str]]) -> None:
+        """Paint ``entries`` into the definition pane (GUI thread only)."""
+        if self._closing or not hasattr(self, "definition_view"):
+            return
         if not entries:
             escaped = html.escape(term)
             self.definition_view.setHtml(f'<p style="color:gray">No offline dictionary entry for <b>{escaped}</b></p>')
@@ -749,6 +996,9 @@ class WordCurationDialog(QDialog):
             return
         chosen = self._candidate_list_words[list_row]
         self._chosen[idx] = chosen
+
+        # The detail strip restates what will be mined, so it follows the pick.
+        self._render_detail(chosen)
 
         # Refresh the table's Sentence cell for this word (its visual row may
         # differ from idx because the table is sortable).
@@ -854,27 +1104,34 @@ class WordCurationDialog(QDialog):
         does not forward the dialog's close to the child player widget, so a
         still-running probe worker would otherwise outlive it.
 
-        Image teardown ordering is load-bearing: the dialog is deleteLater()'d
-        right after exec() returns, and destroying a running QThread child
-        aborts the process. ``_closing`` is set FIRST so a pending
-        ``_focus_timer`` tick or the uncancelable ``QTimer.singleShot(0)``
-        from ``_on_candidate_chosen`` — either can fire after this drain but
-        before the deferred delete — can no longer dispatch a fresh worker
-        onto the dying dialog (``_request_page_image`` early-returns on it).
+        Teardown ordering is load-bearing: the dialog is deleteLater()'d right
+        after exec() returns, and destroying a running QThread child aborts the
+        process. ``_closing`` is set FIRST so a pending ``_focus_timer`` tick or
+        the uncancelable ``QTimer.singleShot(0)`` from ``_on_candidate_chosen``
+        — either can fire after this drain but before the deferred delete — can
+        no longer dispatch a fresh worker onto the dying dialog
+        (``_request_page_image`` and ``_lookup_and_render`` early-return on it).
+
+        The drain is UNCONDITIONAL. It used to run only for the manga-image
+        pane, which was correct while that pane owned the only background work;
+        dictionary lookups are dispatched the same way now, and a dialog with no
+        tracked worker at all just drains an empty set.
         """
-        if self._show_image:
-            self._closing = True
-            self._focus_timer.stop()
-            # Late results are dropped before touching any widget: on_done/
-            # on_error check the generation (a plain Python attribute) first.
-            self._page_request_gen += 1
-            laggards = join_tracked_workers(self, timeout_ms=200)
-            for worker in laggards:
-                # A PIL decode is not cancelable mid-call; detach laggards so
-                # the dialog's destruction never destroys a running QThread.
-                # Detached workers finish harmlessly and the global off-thread
-                # registry still reaps them at app close.
-                worker.setParent(None)
+        self._closing = True
+        self._focus_timer.stop()
+        self._search_debounce_timer.stop()
+        # Late results are dropped before touching any widget: every callback
+        # checks its generation (a plain Python attribute) first.
+        self._page_request_gen += 1
+        self._lookup_gen += 1
+        self._pending_lookup = None
+        laggards = join_tracked_workers(self, timeout_ms=200)
+        for worker in laggards:
+            # Neither a PIL decode nor a dictionary query is cancelable mid-call;
+            # detach laggards so the dialog's destruction never destroys a
+            # running QThread. Detached workers finish harmlessly and the global
+            # off-thread registry still reaps them at app close.
+            worker.setParent(None)
         if self._show_player and hasattr(self, "player_widget"):
             self.player_widget.release()
 
@@ -921,41 +1178,52 @@ class WordCurationDialog(QDialog):
     # Bulk-action helpers
     # ------------------------------------------------------------------
 
-    def _target_rows(self) -> list[int]:
-        """Return rows for bulk actions: highlighted rows if 2+, else all visible.
-
-        Uses the QTableWidget multi-row selection (Ctrl/Shift+Click) when the
-        user has selected at least two rows. Falls back to every visible row so
-        legacy single-click + Select All behaviour is preserved.
-        """
-        selection_model = self.table.selectionModel()
-        if selection_model is not None:
-            selected = sorted(
-                {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
-            )
-            if len(selected) >= 2:
-                return selected
+    def _visible_rows(self) -> list[int]:
+        """Rows the search filter is currently showing, in visual order."""
         return [row for row in range(self.table.rowCount()) if not self.table.isRowHidden(row)]
 
+    def _highlighted_rows(self) -> list[int]:
+        """Visible rows in the table's selection (Ctrl/Shift+Click), in visual order."""
+        selection_model = self.table.selectionModel()
+        if selection_model is None:
+            return []
+        return sorted(
+            {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
+        )
+
     def _select_all(self) -> None:
-        """Check rows in the current bulk-action target set."""
-        self.table.blockSignals(True)
-        for row in self._target_rows():
-            item = self.table.item(row, 0)
-            if item and self._is_checkable(item):
-                item.setCheckState(Qt.CheckState.Checked)
-        self.table.blockSignals(False)
-        self._update_word_count()
+        """Include every visible row (decision D32).
+
+        There is no longer a target *mode*. This verb, its exclude twin and
+        :meth:`_include_highlighted` each own one fixed set, named and counted on
+        their own button. The rule they replace — "highlighted rows if 2+, else
+        all visible" — meant highlighting a single word and pressing a bulk
+        button silently acted on the whole filtered list, and nothing on screen
+        said which had happened.
+        """
+        self._set_check_state(self._visible_rows(), Qt.CheckState.Checked)
 
     def _deselect_all(self) -> None:
-        """Uncheck rows in the current bulk-action target set."""
+        """Exclude every visible row."""
+        self._set_check_state(self._visible_rows(), Qt.CheckState.Unchecked)
+
+    def _include_highlighted(self) -> None:
+        """Include exactly the highlighted rows.
+
+        The mirror verb — exclude the highlight — is the S key, which toggles it;
+        with every row checked by default, that IS the exclude gesture, so a
+        fourth button would only restate it.
+        """
+        self._set_check_state(self._highlighted_rows(), Qt.CheckState.Checked)
+
+    def _set_check_state(self, rows: list[int], state: Qt.CheckState) -> None:
         self.table.blockSignals(True)
-        for row in self._target_rows():
+        for row in rows:
             item = self.table.item(row, 0)
             if item and self._is_checkable(item):
-                item.setCheckState(Qt.CheckState.Unchecked)
+                item.setCheckState(state)
         self.table.blockSignals(False)
-        self._update_word_count()
+        self._refresh_summary()
 
     @staticmethod
     def _is_checkable(item: QTableWidgetItem) -> bool:
@@ -974,12 +1242,7 @@ class WordCurationDialog(QDialog):
         so the S key on a single-cursor view still toggles that one row
         (Space is now play/pause — Issue #55).
         """
-        selection_model = self.table.selectionModel()
-        rows: list[int] = []
-        if selection_model is not None:
-            rows = sorted(
-                {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
-            )
+        rows = self._highlighted_rows()
         if not rows:
             current = self.table.currentRow()
             if current < 0 or self.table.isRowHidden(current):
@@ -996,7 +1259,7 @@ class WordCurationDialog(QDialog):
         for item in items:
             item.setCheckState(new_state)
         self.table.blockSignals(False)
-        self._update_word_count()
+        self._refresh_summary()
 
     _toggle_current_row = _toggle_selected_rows
 
@@ -1007,13 +1270,9 @@ class WordCurationDialog(QDialog):
         ignoring an entire filtered list with one click would be too easy to
         trigger by accident.
         """
-        selection_model = self.table.selectionModel()
-        if selection_model is not None:
-            selected = sorted(
-                {index.row() for index in selection_model.selectedRows() if not self.table.isRowHidden(index.row())}
-            )
-            if selected:
-                return selected
+        highlighted = self._highlighted_rows()
+        if highlighted:
+            return highlighted
         current = self.table.currentRow()
         if current >= 0 and not self.table.isRowHidden(current):
             return [current]
@@ -1044,7 +1303,7 @@ class WordCurationDialog(QDialog):
         for row in rows:
             self._mark_row_known(row)
         self.table.blockSignals(False)
-        self._update_word_count()
+        self._refresh_summary()
 
     def _row_is_active(self, row: int) -> bool:
         """Whether a row hasn't already been marked known (checkbox still toggles)."""
@@ -1067,15 +1326,53 @@ class WordCurationDialog(QDialog):
                 item.setFont(font)
                 item.setForeground(grey)
 
+    def _refresh_summary(self) -> None:
+        """Re-derive everything on screen that describes the current state.
+
+        Called after every selection, sort, filter and checkbox change, because
+        the bulk-button labels and the counter are the only places the user can
+        read what a bulk action is about to do.
+        """
+        self._refresh_bulk_labels()
+        self._update_word_count()
+
+    def _refresh_bulk_labels(self) -> None:
+        """Put each bulk verb's own live count on its own button."""
+        visible = len(self._visible_rows())
+        highlighted = len(self._highlighted_rows())
+        for button, text in (
+            (self.select_all_button, tr_format(self.tr("Include visible (%1)"), visible)),
+            (self.deselect_all_button, tr_format(self.tr("Exclude visible (%1)"), visible)),
+            (self.include_highlighted_button, tr_format(self.tr("Include highlighted (%1)"), highlighted)),
+        ):
+            button.setText(text)
+            button.setAccessibleName(text)
+        # A verb with an empty target is a dead control, not a silent no-op.
+        self.include_highlighted_button.setEnabled(highlighted > 0)
+
     def _update_word_count(self) -> None:
-        """Update the word count label."""
-        selected = sum(
+        """Update the counter line: position, included total, filtered total."""
+        included = sum(
             1
             for row in range(self.table.rowCount())
             if (item := self.table.item(row, 0)) and item.checkState() == Qt.CheckState.Checked
         )
         total = len(self._words)
-        self.word_count_label.setText(tr_format(self.tr("%1 of %2 words selected"), selected, total))
+        visible = self._visible_rows()
+        shown = len(visible)
+        current = self.table.currentRow()
+        if current in visible:
+            text = tr_format(
+                self.tr("Word %1 of %2 · %3 included · %4 shown of %5"),
+                visible.index(current) + 1,
+                shown,
+                included,
+                shown,
+                total,
+            )
+        else:
+            text = tr_format(self.tr("%1 included · %2 shown of %3"), included, shown, total)
+        self.word_count_label.setText(text)
 
     def get_selected_words(self) -> list[TokenizedWord]:
         """Return the checked words, each as the sentence variant the user picked.

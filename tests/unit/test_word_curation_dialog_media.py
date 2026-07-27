@@ -6,6 +6,11 @@ Covers:
 3. Dictionary lookup rendered; cache prevents double-calls.
 4. Lookup uses word.lemma, not word.mined_form.
 5. Missing video file → no crash; table + dict still work.
+6. The lookup itself runs off the GUI thread, one request at a time, with a
+   generation guard so a fast scroll cannot paint a stale entry.
+
+The dictionary tests replace ``run_off_thread`` with a synchronous or deferred
+stub, exactly as ``test_word_curation_dialog_image.py`` does for page loads.
 """
 
 from __future__ import annotations
@@ -16,6 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt
 
+from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
     WordCurationDialog,
@@ -89,6 +95,36 @@ def existing_video(tmp_path):
     p = tmp_path / "test.mkv"
     p.write_bytes(b"")
     return p
+
+
+@pytest.fixture()
+def sync_off_thread(monkeypatch):
+    """Run every dispatched job inline, on the calling thread."""
+
+    def fake_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
+        try:
+            result = work()
+        except Exception as exc:  # noqa: BLE001 - mirrors SingleCallWorker's error path
+            if on_error is not None:
+                on_error(str(exc))
+            return MagicMock()
+        on_done(result)
+        return MagicMock()
+
+    monkeypatch.setattr(wcd, "run_off_thread", fake_run_off_thread)
+
+
+@pytest.fixture()
+def deferred_off_thread(monkeypatch):
+    """Capture (work, on_done, on_error) without running them — for overlap tests."""
+    pending: list[tuple] = []
+
+    def fake_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
+        pending.append((work, on_done, on_error))
+        return MagicMock()
+
+    monkeypatch.setattr(wcd, "run_off_thread", fake_run_off_thread)
+    return pending
 
 
 # ---------------------------------------------------------------------------
@@ -245,6 +281,7 @@ class TestPlayPauseHotkey:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("sync_off_thread")
 class TestDictionaryLookup:
     """Dictionary entries appear in definition_view; cache prevents re-calls."""
 
@@ -321,6 +358,7 @@ class TestDictionaryLookup:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("sync_off_thread")
 class TestLookupUsesMinedForm:
     """The pane queries the card-front spelling (mined_form) — unidic's lemma
     collapses kanji variants (殺る → 遣る), so a lemma-keyed pane showed the
@@ -405,7 +443,7 @@ class TestMissingVideo:
         qtbot.addWidget(dlg)
         assert not hasattr(dlg, "player_widget")
 
-    def test_nonexistent_video_dict_still_works(self, qtbot, words):
+    def test_nonexistent_video_dict_still_works(self, qtbot, words, sync_off_thread):
         """Even with bad video, dict lookup renders correctly."""
         ctx = _make_media_context(video_file=Path("/nonexistent/file.mkv"))
         call_count = 0
@@ -498,7 +536,7 @@ class TestStopOnClose:
 class TestDebounceCoalescing:
     """Rapid _on_row_focus_changed calls must produce only one lookup/seek."""
 
-    def test_rapid_changes_coalesce_to_last_row(self, qtbot, words):
+    def test_rapid_changes_coalesce_to_last_row(self, qtbot, words, sync_off_thread):
         """Two rapid focus changes → only the final word is looked up after the timer fires."""
         received: list[str] = []
 
@@ -536,3 +574,158 @@ class TestDebounceCoalescing:
         dlg._focus_timer.stop()
         dlg._on_focus_timer_fired()
         assert not dlg._focus_timer.isActive()
+
+
+# ---------------------------------------------------------------------------
+# 7. The lookup runs off the GUI thread, serialized, with a stale guard
+# ---------------------------------------------------------------------------
+
+
+def _entry_lookup(received: list[str]):
+    """A lookup_fn that records its calls and answers with the term it was given."""
+
+    def lookup(term: str) -> list[tuple[str, str]]:
+        received.append(term)
+        return [("JMdict", f"<div>{term} entry</div>")]
+
+    return lookup
+
+
+class TestLookupIsAsynchronous:
+    """The curator is the app's most keyboard-driven screen; a dictionary hit on
+    the GUI thread blocks arrow-key navigation for as long as the query takes."""
+
+    def test_lookup_is_dispatched_not_run_inline(self, qtbot, words, deferred_off_thread):
+        received: list[str] = []
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup(received))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        assert len(deferred_off_thread) == 1, "lookup was not handed to run_off_thread"
+        assert received == [], "lookup_fn ran on the GUI thread"
+
+        work, on_done, _ = deferred_off_thread[0]
+        on_done(work())
+
+        assert received == ["食べる"]
+        assert "食べる entry" in dlg.definition_view.toHtml()
+
+    def test_only_one_lookup_is_in_flight_at_a_time(self, qtbot, words, deferred_off_thread):
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+
+        assert len(deferred_off_thread) == 1
+
+    def test_only_the_latest_pending_request_is_kept(self, qtbot, deferred_off_thread):
+        received: list[str] = []
+        three = [
+            _make_word("食べる", start_time=1.0),
+            _make_word("走る", start_time=5.0),
+            _make_word("泳ぐ", start_time=9.0),
+        ]
+        dlg = WordCurationDialog(three, lookup_fn=_entry_lookup(received))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)  # dispatched
+        _select_row(dlg, 1)
+        _fire_timer(dlg)  # queued
+        _select_row(dlg, 2)
+        _fire_timer(dlg)  # replaces the queued one
+
+        work, on_done, _ = deferred_off_thread[0]
+        on_done(work())
+
+        assert len(deferred_off_thread) == 2
+        work2, on_done2, _ = deferred_off_thread[1]
+        on_done2(work2())
+
+        assert received == ["食べる", "泳ぐ"], "the skipped-over row was fetched anyway"
+        assert "泳ぐ entry" in dlg.definition_view.toHtml()
+
+    def test_stale_success_is_not_painted(self, qtbot, words, deferred_off_thread):
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)  # row 0 in flight
+
+        # Row 1 resolves from cache, so it paints immediately and supersedes.
+        dlg._lookup_cache["走る"] = [("JMdict", "<div>fresher</div>")]
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+        assert "fresher" in dlg.definition_view.toHtml()
+
+        work, on_done, _ = deferred_off_thread[0]
+        on_done(work())  # the superseded row-0 result lands late
+
+        html = dlg.definition_view.toHtml()
+        assert "fresher" in html
+        assert "食べる entry" not in html
+
+    def test_stale_error_is_not_painted(self, qtbot, words, deferred_off_thread):
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        dlg._lookup_cache["走る"] = [("JMdict", "<div>fresher</div>")]
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+
+        _, _, on_error = deferred_off_thread[0]
+        on_error("boom")
+
+        assert "fresher" in dlg.definition_view.toHtml()
+
+    def test_a_late_result_is_still_cached(self, qtbot, words, deferred_off_thread):
+        """Dropping a stale paint must not throw away the fetched entry."""
+        received: list[str] = []
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup(received))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+        dlg._lookup_cache["走る"] = [("JMdict", "<div>fresher</div>")]
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+
+        work, on_done, _ = deferred_off_thread[0]
+        on_done(work())
+
+        # Coming back to row 0 must not re-query.
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        assert received == ["食べる"]
+        assert "食べる entry" in dlg.definition_view.toHtml()
+
+    def test_cache_hit_renders_without_dispatching(self, qtbot, words, deferred_off_thread):
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
+        qtbot.addWidget(dlg)
+        dlg._lookup_cache["食べる"] = [("JMdict", "<div>cached</div>")]
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        assert deferred_off_thread == []
+        assert "cached" in dlg.definition_view.toHtml()
+
+    def test_failure_shows_the_placeholder(self, qtbot, words, deferred_off_thread):
+        dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+        _, _, on_error = deferred_off_thread[0]
+        on_error("boom")
+
+        assert "No offline dictionary entry" in dlg.definition_view.toHtml()
