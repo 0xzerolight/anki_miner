@@ -11,18 +11,25 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
-    QHeaderView,
     QLabel,
     QProgressBar,
     QScrollArea,
     QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils.qt_helpers import configure_table_header
+from anki_miner.gui.utils.qt_helpers import (
+    CellRole,
+    SortableTableWidgetItem,
+    configure_data_view,
+    configure_table_header,
+    data_row_height,
+    hold_numeric_columns,
+    install_copy_rows,
+    make_table_item,
+)
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import PageWidth, configure_scrolled_page
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
@@ -39,37 +46,37 @@ from anki_miner.utils.i18n import tr_format
 #: Rows a populated analytics table must show before it reads as "a table".
 MIN_VISIBLE_ROWS = 6
 
+#: Recent Sessions: date, series, episode, words, new words, cards.
+_SESSION_COUNT_COLUMNS = (3, 4, 5)
+#: The date needs one width and keeps it; only the two names should stretch.
+_SESSION_FIT_COLUMNS = (0, *_SESSION_COUNT_COLUMNS)
 
-def _configure_single_line_rows(table: QTableWidget) -> None:
-    """Pin rows to one line and size the height floor from that row height.
+#: Series Difficulty: rank, series, avg words, avg unknown, difficulty share.
+_DIFFICULTY_COUNT_COLUMNS = (0, 2, 3, 4)
+_DIFFICULTY_FIT_COLUMNS = _DIFFICULTY_COUNT_COLUMNS
 
-    Both analytics tables used ``ResizeToContents`` on the VERTICAL header. With
-    ``Stretch`` columns the cell text wraps, so rows grew to 59px (110px at 150%
-    text) and the flat 200px ``setMinimumHeight`` showed **0.78 rows of 20** --
-    the Issue #102 symptom on a tab that never got the #102 fix.
 
-    Two things were wrong and both are fixed here: content drove the row height,
-    and the floor was a font-independent constant. A floor is only meaningful
-    relative to the rows it holds, so derive it. This keeps working at any text
-    scale, which a hardcoded 200 could not.
+def _count(value: int) -> SortableTableWidgetItem:
+    """Build a count cell: grouped for reading, sorted on the number itself.
+
+    Grouping matches the dashboard cards above the table, and it is exactly why
+    the sort value has to be the integer -- "1,200" sorts before "900" as text.
     """
-    # The row height was never the thing to pin: ResizeToContents was only
-    # producing tall rows because wordWrap let the delegate ask for 2+ lines.
-    # Turning wrap off makes a row exactly one line, and ResizeToContents then
-    # tracks the font scale for free -- no pixel constant to go stale.
-    table.setWordWrap(False)
-    table.setTextElideMode(Qt.TextElideMode.ElideRight)
-    v_header = table.verticalHeader()
-    if v_header:
-        v_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+    return make_table_item(f"{value:,}", CellRole.NUMBER, sort_value=value)
 
-    # The floor is derived from that row height for the same reason: a flat 200
-    # showed 0.78 rows once rows grew. Derived, it holds at any text scale.
-    row_h = table.fontMetrics().height() + SPACING.sm * 2
-    h_header = table.horizontalHeader()
-    header_h = h_header.sizeHint().height() if h_header is not None else 0
+
+def _apply_height_floor(table: QTableWidget) -> None:
+    """Give ``table`` a minimum height measured in rows, not in pixels.
+
+    Both tables used to sit under a flat 200px floor while their rows grew with
+    the text scale, so at 150% the "table" showed 0.78 rows of 20 (Issue #102's
+    class). A floor only means anything relative to the rows it holds, so it is
+    derived from the same row height the shared data surface applies.
+    """
+    header = table.horizontalHeader()
+    header_h = header.sizeHint().height() if header is not None else 0
     frame = 2 * table.frameWidth()
-    table.setMinimumHeight(header_h + frame + MIN_VISIBLE_ROWS * row_h)
+    table.setMinimumHeight(header_h + frame + MIN_VISIBLE_ROWS * data_row_height(table))
 
 
 @dataclass(frozen=True)
@@ -158,7 +165,8 @@ class AnalyticsTab(QWidget):
         if a0 is not None and a0.type() == QEvent.Type.FontChange:
             for table in (getattr(self, "sessions_table", None), getattr(self, "difficulty_table", None)):
                 if table is not None:
-                    _configure_single_line_rows(table)
+                    configure_data_view(table)
+                    _apply_height_floor(table)
 
     def _setup_accessibility(self) -> None:
         self.setAccessibleName(self.tr("Analytics Tab"))
@@ -221,11 +229,14 @@ class AnalyticsTab(QWidget):
                 self.tr("Cards"),
             ]
         )
-        configure_table_header(self.sessions_table)
+        configure_table_header(self.sessions_table, fit_columns=_SESSION_FIT_COLUMNS)
         self.sessions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.sessions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.sessions_table.setSortingEnabled(True)
+        configure_data_view(self.sessions_table)
+        install_copy_rows(self.sessions_table)
 
-        _configure_single_line_rows(self.sessions_table)
+        _apply_height_floor(self.sessions_table)
         self.sessions_table.hide()
 
         layout.addWidget(self.sessions_table)
@@ -258,11 +269,14 @@ class AnalyticsTab(QWidget):
         self.difficulty_table.setHorizontalHeaderLabels(
             [self.tr("Rank"), self.tr("Series"), self.tr("Avg Words"), self.tr("Avg Unknown"), self.tr("Difficulty")]
         )
-        configure_table_header(self.difficulty_table)
+        configure_table_header(self.difficulty_table, fit_columns=_DIFFICULTY_FIT_COLUMNS)
         self.difficulty_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.difficulty_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.difficulty_table.setSortingEnabled(True)
+        configure_data_view(self.difficulty_table)
+        install_copy_rows(self.difficulty_table)
 
-        _configure_single_line_rows(self.difficulty_table)
+        _apply_height_floor(self.difficulty_table)
         self.difficulty_table.hide()
 
         layout.addWidget(self.difficulty_table)
@@ -369,22 +383,25 @@ class AnalyticsTab(QWidget):
         try:
             self.sessions_table.setRowCount(len(sessions))
             for row_idx, session in enumerate(sessions):
-                date_str = session.mined_at.strftime("%Y-%m-%d %H:%M")
                 items = [
-                    QTableWidgetItem(date_str),
-                    QTableWidgetItem(session.series_name),
-                    QTableWidgetItem(session.episode_name),
-                    QTableWidgetItem(str(session.total_words)),
-                    QTableWidgetItem(str(session.unknown_words)),
-                    QTableWidgetItem(str(session.cards_created)),
+                    # The date sorts by its instant: the printed form is a
+                    # string, and a string sorts by its first character.
+                    make_table_item(
+                        session.mined_at.strftime("%Y-%m-%d %H:%M"),
+                        sort_value=session.mined_at.timestamp(),
+                    ),
+                    make_table_item(session.series_name),
+                    make_table_item(session.episode_name),
+                    _count(session.total_words),
+                    _count(session.unknown_words),
+                    _count(session.cards_created),
                 ]
                 for col_idx, item in enumerate(items):
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    item.setToolTip(item.text())
                     self.sessions_table.setItem(row_idx, col_idx, item)
         finally:
             self.sessions_table.setSortingEnabled(was_sorting)
             self.sessions_table.setUpdatesEnabled(True)
+        hold_numeric_columns(self.sessions_table, _SESSION_COUNT_COLUMNS)
 
     def _update_difficulty_ranking(self, difficulties: list[DifficultyEntry]) -> None:
         has_difficulties = len(difficulties) > 0
@@ -397,21 +414,24 @@ class AnalyticsTab(QWidget):
         try:
             self.difficulty_table.setRowCount(len(difficulties))
             for row_idx, entry in enumerate(difficulties):
-                difficulty_pct = f"{entry.difficulty_score * 100:.1f}%"
                 items = [
-                    QTableWidgetItem(str(row_idx + 1)),
-                    QTableWidgetItem(entry.series_name),
-                    QTableWidgetItem(str(entry.total_words)),
-                    QTableWidgetItem(str(entry.unknown_words)),
-                    QTableWidgetItem(difficulty_pct),
+                    _count(row_idx + 1),
+                    make_table_item(entry.series_name),
+                    _count(entry.total_words),
+                    _count(entry.unknown_words),
+                    # Sorted on the share itself; "9.0%" would rank above "15.0%".
+                    make_table_item(
+                        f"{entry.difficulty_score * 100:.1f}%",
+                        CellRole.NUMBER,
+                        sort_value=entry.difficulty_score,
+                    ),
                 ]
                 for col_idx, item in enumerate(items):
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    item.setToolTip(item.text())
                     self.difficulty_table.setItem(row_idx, col_idx, item)
         finally:
             self.difficulty_table.setSortingEnabled(was_sorting)
             self.difficulty_table.setUpdatesEnabled(True)
+        hold_numeric_columns(self.difficulty_table, _DIFFICULTY_COUNT_COLUMNS)
 
     def _update_milestones(self, milestones: list[Milestone]) -> None:
         # Clear existing milestone widgets
