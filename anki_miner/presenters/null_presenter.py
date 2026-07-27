@@ -33,6 +33,10 @@ class NullPresenter:
         """Display the result of processing an episode (no-op)."""
         pass
 
+    def show_run_details(self, result: ProcessingResult) -> None:
+        """Open the full details of a finished run (no-op)."""
+        pass
+
 
 class NullProgressCallback:
     """Null implementation of progress callback (testing)."""

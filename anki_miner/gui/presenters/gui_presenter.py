@@ -27,6 +27,7 @@ class GUIPresenter(QObject):
     error_signal = pyqtSignal(str)
     validation_result_signal = pyqtSignal(object)  # ValidationResult
     processing_result_signal = pyqtSignal(object)  # ProcessingResult
+    run_details_signal = pyqtSignal(object)  # ProcessingResult, on user request
 
     def __init__(self, parent=None):
         """Initialize the GUI presenter.
@@ -83,3 +84,11 @@ class GUIPresenter(QObject):
             result: The processing result to display
         """
         self.processing_result_signal.emit(result)
+
+    def show_run_details(self, result: ProcessingResult) -> None:
+        """Open the full details of a finished run, because the user asked.
+
+        Args:
+            result: The whole run, aggregated into one result
+        """
+        self.run_details_signal.emit(result)

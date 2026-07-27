@@ -963,6 +963,7 @@ class MainWindow(QMainWindow):
         self.presenter.error_signal.connect(self._on_error_message)
         self.presenter.validation_result_signal.connect(self._on_validation_result)
         self.presenter.processing_result_signal.connect(self._on_processing_result)
+        self.presenter.run_details_signal.connect(self._on_run_details)
 
     def _on_info_message(self, message: str) -> None:
         """Handle info message from presenter.
@@ -1115,13 +1116,25 @@ class MainWindow(QMainWindow):
             reload_panels(self.config)
 
     def _on_processing_result(self, result: ProcessingResult) -> None:
-        """Handle processing result from presenter.
+        """Count one finished item into the session totals. Nothing more.
+
+        This used to execute a modal ``ResultsDialog`` per result, so a
+        twenty-item queue ended in twenty dialogs, each blocking the next until
+        it was clicked away (D20). The run's outcome now lands on the screen
+        that started it, as an inline receipt; the details surface opens from
+        that receipt's **View details**, through :meth:`_on_run_details`.
 
         Args:
-            result: Processing result to display
+            result: One item's processing result.
         """
-        # Update session statistics
         self.status_bar.increment_cards_created(result.cards_created)
+
+    def _on_run_details(self, result: ProcessingResult) -> None:
+        """Open the full details of a finished run, because the user asked.
+
+        Args:
+            result: The whole run, aggregated into one result by its receipt.
+        """
 
         # Create undo callback. This is the BLOCKING work handed to
         # ResultsDialog, which runs it off the GUI thread (a slow AnkiConnect
