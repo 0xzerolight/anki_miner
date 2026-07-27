@@ -7,6 +7,7 @@ from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.fonts import make_scaled_monospace_font
 
 
 class ProgressWidget(QWidget):
@@ -69,10 +70,11 @@ class ProgressWidget(QWidget):
 
         self.stats_label = QLabel("")
         self.stats_label.setObjectName("progress-stats")
-        stats_font = QFont("Consolas")
-        stats_font.setStyleHint(QFont.StyleHint.Monospace)
-        stats_font.setPixelSize(FONT_SIZES.caption)
-        self.stats_label.setFont(stats_font)
+        # The running clock. Fixed pitch so the digits do not shuffle sideways
+        # once a second, from the platform's own fixed font and at the text size
+        # the user chose. It used to ask for 'Consolas' — Windows-only — at a
+        # constant 12px that ignored the text-size setting (decision D44-B).
+        self.stats_label.setFont(make_scaled_monospace_font(FONT_SIZES.body_sm))
 
         stats_layout.addWidget(self.stats_label)
         stats_layout.addStretch()

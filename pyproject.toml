@@ -9,7 +9,10 @@ description = "Automated Japanese vocabulary mining from media with Anki integra
 readme = "README.md"
 requires-python = ">=3.11"
 license = "GPL-3.0-or-later"
-license-files = ["LICENSE"]
+# The OFL travels with the bundled Noto Sans JP fallback (see
+# anki_miner/gui/resources/fonts/PROVENANCE.md) — redistributing the font
+# without its licence would breach the OFL.
+license-files = ["LICENSE", "anki_miner/gui/resources/fonts/OFL.txt"]
 authors = [
     {name = "Anki Miner Contributors"}
 ]
@@ -125,6 +128,10 @@ include-package-data = true
 "anki_miner.services.dictionary.resources" = ["*.css"]
 "anki_miner.resources.wordsets" = ["*.txt"]
 "anki_miner.gui.resources.translations" = ["*.ts", "*.qm"]
+# Last-resort Japanese fallback face, its licence and its provenance record.
+# Declared explicitly rather than left to MANIFEST.in: a wheel that dropped the
+# font would render tofu on a bare Linux install and nothing would say why.
+"anki_miner.gui.resources.fonts" = ["*.otf", "*.txt", "*.md"]
 
 [tool.setuptools.dynamic]
 version = {attr = "anki_miner.__version__"}

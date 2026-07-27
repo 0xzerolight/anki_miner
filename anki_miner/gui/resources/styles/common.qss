@@ -3,7 +3,10 @@
  * Shared styles that apply across all themes
  *
  * Variables from _variables.py are substituted at load time:
- * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large
+ * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large,
+ *   japanese-body, japanese-feature
+ * - ${font-family-*}: interface, mono, japanese — resolved from the platform's own
+ *   font database by gui/utils/fonts.py (decision D44-B). Never a hard-coded stack.
  * - ${spacing-*}: xxs, xs, sm, md, lg, xl
  * - ${border-radius-*}: small, default, large
  */
@@ -11,7 +14,7 @@
 /* ============== BASE WIDGET STYLES ============== */
 
 QWidget {
-    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: ${font-family-interface};
     font-size: ${font-size-body}px;
     font-weight: 400;
 }
@@ -55,9 +58,24 @@ QLabel#field-label {
     border-radius: ${border-radius-small}px;
 }
 
-/* Japanese text support */
-*[japanese="true"] {
-    font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', sans-serif;
+/* ---- Japanese content (D45-B) -------------------------------------------
+   Japanese is content, not chrome: an explicitly Japanese face so kanji take
+   Japanese rather than Chinese glyph forms, at a reading size above the
+   surrounding interface text. The attribute selector outranks the QWidget type
+   rule above, which is the only way a widget escapes the interface font — a
+   stylesheet beats setFont() for family and size.
+
+   Set the property through gui/utils/fonts.apply_japanese_font(); nothing else
+   writes it. Leading is NOT here: Qt ignores line-height, so it is applied as a
+   QTextBlockFormat from Python. */
+*[japanese="body"] {
+    font-family: ${font-family-japanese};
+    font-size: ${font-size-japanese-body}px;
+}
+
+*[japanese="feature"] {
+    font-family: ${font-family-japanese};
+    font-size: ${font-size-japanese-feature}px;
 }
 
 /* ============== BUTTON BASE STYLES ============== */
@@ -182,12 +200,14 @@ QTextEdit {
     border-radius: ${border-radius-default}px;
     border: 1px solid;
     padding: ${spacing-sm}px;
-    font-family: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
     font-size: ${font-size-body-sm}px;
 }
 
+/* The activity log is machine output: fixed pitch so timestamps and levels line
+   up down the column. The family comes from the platform (D44-B) — 'Consolas'
+   and 'JetBrains Mono' exist on one desktop each. */
 QTextEdit#log-widget {
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: ${font-family-mono};
 }
 
 /* ============== PROGRESS BAR STYLES ============== */
@@ -426,11 +446,12 @@ QWidget#log-header {
     padding: ${spacing-xs}px ${spacing-sm}px;
 }
 
-/* Progress stats */
+/* Progress stats — the running clock. Fixed pitch from the platform so the
+   digits do not shuffle sideways once a second (D44-B). */
 QLabel#progress-stats {
     font-size: ${font-size-body-sm}px;
     padding: 2px 0;
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: ${font-family-mono};
 }
 
 /* Status badge */
@@ -656,7 +677,7 @@ QLabel#output-location-value {
 
 /* Read-only command display (copyable shell command in setup guidance) */
 QLineEdit#command-text {
-    font-family: monospace;
+    font-family: ${font-family-mono};
 }
 
 /* ============== THEME COLOR RULES ============== */
