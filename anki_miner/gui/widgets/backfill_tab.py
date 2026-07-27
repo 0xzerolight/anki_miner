@@ -124,7 +124,7 @@ class CardBackfillTab(QWidget):
         layout.addWidget(self.overwrite_checkbox)
 
         buttons = QHBoxLayout()
-        self.scan_button = ModernButton(self.tr("Scan"), variant="primary")
+        self.scan_button = ModernButton(self.tr("Scan"), variant="secondary")
         self.scan_button.clicked.connect(self._start_scan)
         buttons.addWidget(self.scan_button)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")

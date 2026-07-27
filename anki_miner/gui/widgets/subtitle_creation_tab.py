@@ -177,7 +177,7 @@ class SubtitleCreationTab(_ToolTabBase):
         mode_label = QLabel(self.tr("Mode:"))
         mode_row.addWidget(mode_label)
 
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="primary")
+        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
         self.file_mode_button.setCheckable(True)
         self.file_mode_button.setChecked(True)
         self.file_mode_button.setToolTip(self.tr("Transcribe one selected video file."))
@@ -279,7 +279,7 @@ class SubtitleCreationTab(_ToolTabBase):
         self._primary_button = self.generate_button
         btn_row.addWidget(self.generate_button)
 
-        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.clicked.connect(self._on_cancel)
         self.cancel_button.hide()
         btn_row.addWidget(self.cancel_button)

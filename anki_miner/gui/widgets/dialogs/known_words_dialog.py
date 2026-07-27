@@ -96,7 +96,7 @@ class KnownWordsManagerDialog(QDialog):
         self.import_button.clicked.connect(self._on_import)
         self.export_button = ModernButton(self.tr("Export…"), variant="secondary")
         self.export_button.clicked.connect(self._on_export)
-        self.reset_button = ModernButton(self.tr("Reset User List"), variant="danger")
+        self.reset_button = ModernButton(self.tr("Reset User List"), variant="critical")
         self.reset_button.clicked.connect(self._on_reset)
         buttons.addWidget(self.remove_button)
         buttons.addWidget(self.import_button)

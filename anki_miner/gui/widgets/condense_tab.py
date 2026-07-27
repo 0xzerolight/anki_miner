@@ -288,7 +288,7 @@ class CondenseTab(_ToolTabBase):
         mode_row.setSpacing(SPACING.xs)
         mode_row.addWidget(QLabel(self.tr("Mode:")))
 
-        self.file_mode_button = ModernButton(self.tr("Single File"), variant="primary")
+        self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
         self.file_mode_button.setCheckable(True)
         self.file_mode_button.setChecked(True)
         self.file_mode_button.setToolTip(self.tr("Condense one selected media file."))
@@ -509,7 +509,7 @@ class CondenseTab(_ToolTabBase):
         self._primary_button = self.condense_button
         btn_row.addWidget(self.condense_button)
 
-        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.clicked.connect(self._on_cancel)
         self.cancel_button.hide()
         btn_row.addWidget(self.cancel_button)

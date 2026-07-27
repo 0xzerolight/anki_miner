@@ -269,7 +269,7 @@ class BatchProcessingTab(MiningTabBase):
         self.process_pairs_button.setToolTip(self.tr("Process every episode pair found in the selected folders"))
         button_layout.addWidget(self.process_pairs_button)
 
-        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel processing"))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()

@@ -162,7 +162,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.tracks_button = ModernButton(self.tr("Tracks"), variant="secondary")
         self.tracks_button.setToolTip(self.tr("Manually choose which audio track to use for this episode"))
 
-        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel processing"))
         self.cancel_button.hide()
 

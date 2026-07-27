@@ -229,7 +229,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         self.mine_button.clicked.connect(self._on_mine_clicked)
         button_row.addWidget(self.mine_button)
 
-        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel the active run."))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()

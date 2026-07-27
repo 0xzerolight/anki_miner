@@ -134,7 +134,7 @@ class ProfileManagerDialog(QDialog):
         self.rename_button.clicked.connect(self._on_rename)
         buttons.addWidget(self.rename_button)
 
-        self.delete_button = ModernButton(self.tr("Delete"), variant="danger")
+        self.delete_button = ModernButton(self.tr("Delete"), variant="critical")
         self.delete_button.clicked.connect(self._on_delete)
         buttons.addWidget(self.delete_button)
 

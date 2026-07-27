@@ -282,6 +282,46 @@ class TestDialogDefaultHierarchy:
         assert [b.isDefault() for b in (new, delete, switch)] == [False, False, True]
 
 
+class TestCallSiteRoles:
+    """The classification itself, read out of the source."""
+
+    def test_exactly_two_call_sites_are_critical(self):
+        assert _roles_by_module()["critical"] == {
+            ("known_words_dialog.py", "Reset User List"),
+            ("profile_manager_dialog.py", "Delete"),
+        }
+
+    def test_no_cancel_or_stop_button_is_red(self):
+        red = _roles_by_module()["danger"] | _roles_by_module()["critical"]
+        stops = {(module, label) for module, label in red if label in {"Cancel", "Stop All"}}
+
+        assert stops == {(D3_FROZEN, "Cancel")}
+
+    @pytest.mark.parametrize(
+        "module",
+        [
+            "backfill_tab.py",
+            "condense_tab.py",
+            "reading_manga_tab.py",
+            "reading_novels_tab.py",
+            "subtitle_creation_tab.py",
+            "subtitle_retime_tab.py",
+        ],
+    )
+    def test_each_screen_offers_a_single_primary_action(self, module):
+        primaries = [label for label, variant in _button_roles(GUI_ROOT / "widgets" / module) if variant == "primary"]
+
+        assert len(primaries) == 1, primaries
+
+    def test_no_screen_anywhere_offers_two(self):
+        offenders = {
+            path.name: [label for label, variant in _button_roles(path) if variant == "primary"]
+            for path in sorted((GUI_ROOT / "widgets").glob("*_tab.py"))
+        }
+
+        assert {name: labels for name, labels in offenders.items() if len(labels) > 1} == {}
+
+
 # ------------------------------------------------------------- QSS accent map
 
 #: The complete list of selectors allowed to spend the accent colour (D41).

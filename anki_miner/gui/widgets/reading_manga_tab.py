@@ -261,7 +261,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.sm)
 
-        self.folder_mine_button = ModernButton(self.tr("Mine Folder"), variant="primary")
+        self.folder_mine_button = ModernButton(self.tr("Mine Folder"), variant="secondary")
         self.folder_mine_button.setToolTip(self.tr("Mine the selected folder's volume(s) into Anki cards."))
         self.folder_mine_button.clicked.connect(self._on_folder_mine_clicked)
         button_row.addWidget(self.folder_mine_button)
@@ -278,7 +278,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         row = QHBoxLayout()
         row.setSpacing(SPACING.sm)
 
-        self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
+        self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel the active run."))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()

@@ -243,7 +243,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         self.clear_button.setToolTip(self.tr("Remove every queued item that is not currently mining."))
         self.clear_button.clicked.connect(self._on_clear_clicked)
 
-        self.stop_button = ModernButton(self.tr("Stop All"), variant="danger")
+        self.stop_button = ModernButton(self.tr("Stop All"), variant="secondary")
         self.stop_button.setToolTip(self.tr("Cancel the active run."))
         self.stop_button.clicked.connect(self._on_stop_all_clicked)
 
