@@ -38,5 +38,5 @@ PATH_MAX_DISPLAY_LENGTH = 60
 # =============================================================================
 # LOG WIDGET CONFIGURATION
 # =============================================================================
-LOG_MAX_LINES = 1000  # Rotation trigger: rotate once line count reaches this
-LOG_ROTATION_THRESHOLD = 800  # Lines kept after rotation (trigger is LOG_MAX_LINES)
+LOG_MAX_LINES = 1000  # Retained entries; exceeding it trims back to the threshold
+LOG_ROTATION_THRESHOLD = 800  # Entries kept after a trim (trigger is LOG_MAX_LINES)
