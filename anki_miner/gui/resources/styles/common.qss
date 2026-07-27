@@ -1231,6 +1231,23 @@ QLineEdit[warning="true"] {
     border-width: 2px;
 }
 
+/* The control a settings search jumped to, for the moment after it lands.
+   A tint rather than a border: a border would change the control's size hint
+   and shift the whole form for as long as the mark is up. The selection colour
+   pair is the one every theme already tunes to mean "this is the one you
+   picked", so no new theme key is introduced.
+
+   The `:focus` copy is load-bearing, not redundant. A jump focuses its target,
+   and `QLineEdit:focus, QSpinBox:focus, …` above already sets a background;
+   that selector outranks a bare attribute selector, so without this the mark
+   silently loses on every control that can hold focus — which is all of them. */
+*[settingsSearchHit="true"],
+*[settingsSearchHit="true"]:focus {
+    background-color: ${color-table-selected-bg};
+    color: ${color-table-selected-text};
+    border-radius: ${border-radius-default}px;
+}
+
 /* --- Validation Badges --- */
 
 QLabel#validation-badge {

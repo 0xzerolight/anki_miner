@@ -66,6 +66,15 @@ from anki_miner.gui.widgets.panels import (
     YouTubeSettingsPanel,
 )
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
+from anki_miner.gui.widgets.settings_search import (
+    BREADCRUMB_SEPARATOR,
+    SEARCH_HIT_MS,
+    SettingSearchEntry,
+    SettingSearchSource,
+    SettingsSearchBox,
+    build_entries,
+    flash_search_hit,
+)
 from anki_miner.services.expression_audio_fetcher import purge_miss_markers
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
@@ -206,6 +215,13 @@ class SettingsTab(SettingAnchorHost, QWidget):
         # startup path for users who never open Settings; on every show it
         # would re-hit Anki each visit. Same pattern as BackfillTab.showEvent.
         self._names_requested = False
+        # Settings search (D11). The index is built at the END of construction,
+        # not here: anchors resolve their text lazily and must be read after the
+        # translators are installed, or the index is English for everyone.
+        self._search_entries: dict[str, SettingSearchEntry] = {}
+        self._pending_search_jump: SettingSearchEntry | None = None
+        #: Test seam — zero clears the jump mark on the next event-loop turn.
+        self._search_hit_ms = SEARCH_HIT_MS
         self._setup_ui()
         for panel in (self.dictionary_panel, self.audio_panel, self.frequency_panel, self.pitch_panel):
             panel.set_mutation_preflight(self.commit_pending_settings_for_mutation)
@@ -281,6 +297,14 @@ class SettingsTab(SettingAnchorHost, QWidget):
         self._debounce_timer.timeout.connect(self._commit_settings)
         self._wire_edit_signals()
 
+        # A search jump lands one turn late on purpose: the page it selects has
+        # not been laid out yet when open_subtab returns, so scrolling the
+        # control into view now would measure a geometry that no longer holds.
+        self._search_jump_timer = QTimer(self)
+        self._search_jump_timer.setSingleShot(True)
+        self._search_jump_timer.timeout.connect(self._reveal_pending_setting)
+        self.refresh_setting_search_index()
+
     def _setup_ui(self) -> None:
         """Set up the user interface."""
         layout = QVBoxLayout()
@@ -317,6 +341,16 @@ class SettingsTab(SettingAnchorHost, QWidget):
         )
 
         self._build_navigator()
+
+        # Search the settings by name (D11). Above the navigator because it
+        # addresses every destination, not the one currently open. It reveals
+        # nothing that was hidden — every setting is on its page already — it
+        # only saves the walk to the right page.
+        self.search_box = SettingsSearchBox()
+        self.search_box.setting_activated.connect(self.jump_to_setting)
+        self.ignore_setting_widget(self.search_box, "finds settings; is not one itself")
+        layout.addWidget(self.search_box)
+
         # Retained: _on_settings_subtab_changed and open_ui_subtab key off the
         # UI page; reading it from the map keeps a single source of truth.
         self._ui_subtab_index = self._subtab_index["ui"]
@@ -464,6 +498,9 @@ class SettingsTab(SettingAnchorHost, QWidget):
         heading_font = QFont(self.nav_list.font())
         heading_font.setBold(True)
         self._subtab_index: dict[str, int] = {}
+        # Where each destination sits, as the user reads it. Search shows this
+        # under a result so a stable key never has to be explained to anyone.
+        self._page_breadcrumbs: dict[str, str] = {}
         first_destination_row: int | None = None
         for heading, destinations in groups:
             item = QListWidgetItem(heading)
@@ -475,6 +512,7 @@ class SettingsTab(SettingAnchorHost, QWidget):
                 row.setData(Qt.ItemDataRole.UserRole, key)
                 self.nav_list.addItem(row)
                 self._subtab_index[key] = self.pages.addWidget(self._wrap_in_scroll_area(panel))
+                self._page_breadcrumbs[key] = f"{heading}{BREADCRUMB_SEPARATOR}{label}"
                 if first_destination_row is None:
                     first_destination_row = self.nav_list.count() - 1
 
@@ -868,6 +906,78 @@ class SettingsTab(SettingAnchorHost, QWidget):
         for host in self.setting_anchor_hosts():
             reasons.update(host.setting_ignore_reasons())
         return reasons
+
+    # ------------------------------------------------------------------
+    # Settings search (D11)
+    # ------------------------------------------------------------------
+
+    def setting_search_sources(self) -> tuple[SettingSearchSource, ...]:
+        """Every page's anchors paired with the breadcrumb they live under.
+
+        A panel's ``ANCHOR_NAMESPACE`` is its navigator key, which is what makes
+        an anchor id self-locating: ``filtering.max_frequency_spinbox`` names
+        both the page to open and the control to focus. This tab's own anchors
+        get no page — they sit below the navigator and are always on screen.
+        """
+        sources = [
+            SettingSearchSource(
+                page_key="",
+                breadcrumb=self.tr("Settings"),
+                anchors=super().setting_anchors(),
+            )
+        ]
+        for host in self.setting_anchor_hosts():
+            key = host.ANCHOR_NAMESPACE
+            sources.append(
+                SettingSearchSource(
+                    page_key=key,
+                    breadcrumb=self._page_breadcrumbs[key],
+                    anchors=host.setting_anchors(),
+                )
+            )
+        return tuple(sources)
+
+    def setting_search_entries(self) -> tuple[SettingSearchEntry, ...]:
+        """The current search index, in navigator order."""
+        return tuple(self._search_entries.values())
+
+    def refresh_setting_search_index(self) -> None:
+        """Rebuild the search index from the anchors registered right now.
+
+        Called once at the end of construction, when the translators are in
+        place. Call it again after registering or dropping anchors; nothing
+        rebuilds it implicitly, because nothing else knows when the set changed.
+        """
+        entries = build_entries(self.setting_search_sources())
+        self._search_entries = {entry.stable_id: entry for entry in entries}
+        self.search_box.set_entries(entries)
+
+    def jump_to_setting(self, stable_id: str) -> None:
+        """Open the page holding ``stable_id`` and reveal that exact control.
+
+        Unknown ids are ignored so a stale deep link cannot crash the UI. The
+        reveal itself is deferred one turn — see ``_search_jump_timer``.
+        """
+        entry = self._search_entries.get(stable_id)
+        if entry is None:
+            return
+        if entry.page_key:
+            self.open_subtab(entry.page_key)
+        self._pending_search_jump = entry
+        self._search_jump_timer.start(0)
+
+    def _reveal_pending_setting(self) -> None:
+        """Scroll to, focus, and mark the control a jump selected."""
+        entry = self._pending_search_jump
+        self._pending_search_jump = None
+        if entry is None:
+            return
+        anchor = entry.anchor
+        page = self.pages.widget(self._subtab_index[entry.page_key]) if entry.page_key else None
+        if isinstance(page, QScrollArea):
+            page.ensureWidgetVisible(anchor.scroll_widget)
+        anchor.focus_widget.setFocus(Qt.FocusReason.ShortcutFocusReason)
+        flash_search_hit(anchor.highlight_widget, duration_ms=self._search_hit_ms)
 
     def trigger_reimport_all(self, only_ids: frozenset[str] | None = None) -> None:
         """Run the Dictionary → Reimport All flow (4.0 migration prompt hook).
