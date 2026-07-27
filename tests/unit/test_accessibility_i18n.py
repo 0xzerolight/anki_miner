@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import QPushButton, QToolButton
 
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
-from anki_miner.gui.widgets.audiobook_queue_item_widget import AudiobookQueueItemWidget
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
@@ -21,9 +20,6 @@ from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.update_banner import UpdateBanner
-from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget
-from anki_miner.models.audiobook_queue import AudiobookQueueItem
-from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.services.update_checker import UpdateInfo
 
 
@@ -109,17 +105,8 @@ def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tm
     dictionary = DictionarySettingsPanel(tmp_path / "dicts")
     frequency = FrequencySettingsPanel(tmp_path / "freqs")
     audio = AudioPackSettingsPanel(tmp_path / "audio")
-    youtube = YouTubeQueueItemWidget(
-        YouTubeQueueItem(url="https://example.com/video", status=YouTubeItemStatus.PENDING)
-    )
-    audiobook = AudiobookQueueItemWidget(
-        AudiobookQueueItem(
-            audio_file=tmp_path / "book.m4b",
-            subtitle_file=tmp_path / "book.srt",
-        )
-    )
     ui = UISettingsPanel(tmp_path / "themes")
-    for widget in (banner, dictionary, frequency, audio, youtube, audiobook, ui):
+    for widget in (banner, dictionary, frequency, audio, ui):
         qtbot.addWidget(widget)
 
     dismiss = banner.findChild(QPushButton, "dismissBtn")
@@ -133,8 +120,6 @@ def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tm
         frequency._down_btn,
         audio._up_btn,
         audio._down_btn,
-        youtube.remove_button,
-        audiobook.remove_button,
         star,
     ]
 

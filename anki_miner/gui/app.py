@@ -901,6 +901,13 @@ def compose_main_window(
     )
     register_mining_tab(window, audiobook_tab, audiobook_presenter, QCoreApplication.translate("MainWindow", "Audio"))
 
+    # The two list queues publish their runs to the window's task registry, so
+    # each one's current-job strip has a snapshot to render and the status bar
+    # can name a queue run the user has navigated away from. Worker lifetime is
+    # unaffected: it stays with the tab.
+    video_tab.youtube_tab.bind_task_registry(window.task_registry)
+    audiobook_tab.bind_task_registry(window.task_registry)
+
     # Reading tab: a container nesting the Manga and Novels sub-tabs. Each child
     # owns its own worker/processor lifecycle and defers its dictionary-chain
     # build to the first Mine click (no prebuilt processor is shared across the
