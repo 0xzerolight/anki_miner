@@ -56,6 +56,7 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
     SystemHealthWindow,
 )
 from anki_miner.gui.widgets.header_widget import HeaderWidget
+from anki_miner.gui.widgets.mini_job_monitor import MiniJobMonitor
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
@@ -172,6 +173,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # first time it is asked for.
         self._health_report = HealthReport.unknown()
         self._system_health_window: SystemHealthWindow | None = None
+
+        # The floating job monitor (D53). Built the first time it is asked for,
+        # and read-only: it observes self.task_registry and holds nothing else.
+        self._mini_job_monitor: MiniJobMonitor | None = None
 
         # Connect presenter signals
         self._connect_presenter_signals()
@@ -343,6 +348,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.status_bar = StatusBarWidget()
         self.status_bar.system_status_clicked.connect(self._on_system_status_clicked)
         self.status_bar.task_activated.connect(self._on_task_activated)
+        self.status_bar.mini_monitor_requested.connect(self.open_mini_job_monitor)
         self.status_bar.bind_task_registry(self.task_registry)
         self.setStatusBar(self.status_bar)
 
@@ -1568,6 +1574,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self._system_health_window is not None:
             self._system_health_window.close()
 
+        # The monitor declines WA_QuitOnClose, so it cannot hold the application
+        # open — but a window reporting on a run that is being torn down should
+        # not be left on screen while the workers are joined.
+        if self._mini_job_monitor is not None:
+            self._mini_job_monitor.close()
+
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
         # which stops debounce scheduling and begins worker teardown; persist
@@ -1641,6 +1653,39 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         window.show()
         window.raise_()
         window.activateWindow()
+
+    def open_mini_job_monitor(self) -> None:
+        """Show the floating job monitor, building it on first use (D53).
+
+        One parented, modeless instance for the window's lifetime. It opens on
+        the run the status strip is already naming, so the two start out saying
+        the same thing -- but only on the first build: reopening must not throw
+        away the job the user went in and picked. Closing it hides it; it owns
+        no worker, so there is nothing to cancel on the way out and nothing to
+        rebuild on the way back in.
+        """
+        monitor = self._mini_job_monitor
+        if monitor is None:
+            monitor = MiniJobMonitor(self.task_registry, self)
+            monitor.show_main_window_requested.connect(self.reveal_main_window)
+            self._mini_job_monitor = monitor
+            displayed = self.status_bar.displayed_run
+            if displayed is not None:
+                monitor.watch(*displayed)
+        monitor.show()
+        monitor.raise_()
+        monitor.activateWindow()
+
+    def reveal_main_window(self) -> None:
+        """Bring the application back to the front, un-minimising it if needed.
+
+        ``showNormal`` rather than ``show`` because the usual reason to press
+        the monitor's button is that the main window is minimised, and ``show``
+        on a minimised window leaves it minimised.
+        """
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
 
     def _publish_health(self, report: HealthReport) -> None:
         """Record the latest readiness facts and repaint the screen if it is up."""

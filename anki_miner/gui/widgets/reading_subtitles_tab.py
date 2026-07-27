@@ -497,6 +497,10 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         self.overall_progress_widget.set_status(self.tr("Starting…"))
         self._recompute_buttons()
 
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this screen's own Cancel."""
+        self._on_cancel_clicked()
+
     def _on_cancel_clicked(self) -> None:
         """Cancel the active run."""
         self._cancel_requested = True

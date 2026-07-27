@@ -720,6 +720,10 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._run_succeeded = 0
         self._run_failed_count = 0
 
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this queue's own Stop."""
+        self._on_stop_all_clicked()
+
     def _on_stop_all_clicked(self) -> None:
         """Cancel the active run: one verb, no prompt, no invented progress after.
 

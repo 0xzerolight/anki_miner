@@ -142,3 +142,83 @@ def test_choosing_an_unknown_task_is_a_silent_noop(window):
     window.status_bar.task_activated.emit("never-registered")
 
     assert window.tabs.currentWidget() is before
+
+
+# ---------------------------------------------------------------------------
+# The mini job monitor (D53)
+# ---------------------------------------------------------------------------
+
+
+def test_the_status_bar_opens_the_mini_monitor(window):
+    window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+
+    window.status_bar.mini_monitor_requested.emit()
+
+    assert window._mini_job_monitor is not None
+    assert window._mini_job_monitor.isVisible()
+
+
+def test_reopening_reuses_the_one_window(window):
+    window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+
+    window.open_mini_job_monitor()
+    first = window._mini_job_monitor
+    first.close()
+    window.open_mini_job_monitor()
+
+    assert window._mini_job_monitor is first
+
+
+def test_it_opens_on_the_run_the_status_strip_is_naming(window):
+    window.task_registry.start(
+        TaskSpec("a", "Mining Samurai Champloo", CapabilityTarget("video", "single")),
+        now=0.0,
+    )
+    window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+
+    window.open_mini_job_monitor()
+
+    assert window._mini_job_monitor.watched_run == window.status_bar.displayed_run
+
+
+def test_show_main_window_brings_the_application_back(window):
+    window.open_mini_job_monitor()
+    window.showMinimized()
+
+    window._mini_job_monitor.show_main_window_requested.emit()
+
+    assert not window.isMinimized()
+
+
+def test_the_monitor_is_parented_to_the_window(window):
+    """So it is destroyed with the application rather than outliving it."""
+    window.open_mini_job_monitor()
+
+    assert window._mini_job_monitor.parent() is window
+
+
+def test_reopening_keeps_the_job_the_user_picked(window):
+    window.task_registry.start(
+        TaskSpec("a", "Mining Samurai Champloo", CapabilityTarget("video", "single")),
+        now=0.0,
+    )
+    second = window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+    window.open_mini_job_monitor()
+    window._mini_job_monitor.watch("dl", second.run_token)
+    window._mini_job_monitor.close()
+
+    window.open_mini_job_monitor()
+
+    assert window._mini_job_monitor.watched_run == ("dl", second.run_token)

@@ -609,6 +609,10 @@ class BatchProcessingTab(MiningTabBase):
         if self._cancel_requested:
             self.overall_progress_widget.set_status(self.tr("Cancelled"))
 
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this screen's own Cancel."""
+        self._on_cancel_clicked()
+
     def _on_cancel_clicked(self) -> None:
         """Cancel the run: one verb, no prompt, and no invented progress after it."""
         self._cancel_requested = True
