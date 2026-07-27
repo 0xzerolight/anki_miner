@@ -3,6 +3,7 @@
 from .eliding_label import ElidingLabel
 from .enhanced_dialog import EnhancedDialog
 from .form_panel import FormPanel
+from .setting_anchor import SettingAnchor, SettingAnchorHost, SettingTextProvider
 from .sizing import (
     configure_expanding_container,
     field_label_width,
@@ -14,6 +15,9 @@ from .status_badge import StatusBadge
 
 __all__ = [
     "FormPanel",
+    "SettingAnchor",
+    "SettingAnchorHost",
+    "SettingTextProvider",
     "StatusBadge",
     "ElidingLabel",
     "EnhancedDialog",
