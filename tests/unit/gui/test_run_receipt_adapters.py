@@ -224,6 +224,31 @@ class TestReadingReceipt:
 
         assert novels_tab._receipt_widget.summary_text == "Mining failed — 0 notes added in 00m 03s"
 
+    def test_a_multi_file_reading_run_counts_in_that_screens_own_noun(self, qtbot, test_config, clock, tmp_path):
+        from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
+
+        with patch(_READING_WORKER) as queue_cls:
+            queue_cls.side_effect = lambda *a, **kw: MagicMock(name="QueueWorker")
+            tab = ReadingSubtitlesTab(
+                config=test_config,
+                processor=MagicMock(name="EpisodeProcessor"),
+                presenter=MagicMock(name="Presenter"),
+            )
+            qtbot.addWidget(tab)
+            for name in ("ep01.srt", "ep02.srt"):
+                path = tmp_path / name
+                path.write_text("1\n00:00:01,000 --> 00:00:02,000\n本\n", encoding="utf-8")
+                tab._add_paths([path])
+            tab._on_mine_clicked()
+
+        tab._on_item_finished(0, _result(5), None, 1)
+        tab._on_item_finished(1, _result(4), None, 1)
+        clock["t"] += 74
+        tab._after_run_cleanup()
+
+        assert tab._receipt_widget.summary_text == "Mining complete — 2 subtitle files, 9 notes added in 01m 14s"
+        tab.deleteLater()
+
 
 # ---------------------------------------------------------------------------
 # Single episode
@@ -393,6 +418,13 @@ class TestBatchReceipt:
         message_box.information.assert_not_called()
 
 
+def _assert_receipt_follows(tab, anchor_name: str) -> None:
+    """The receipt is the next thing in the progress bar's own layout."""
+    anchor = getattr(tab, anchor_name)
+    layout = anchor.parentWidget().layout()
+    assert layout.itemAt(layout.indexOf(anchor) + 1).widget() is tab._receipt_widget
+
+
 @pytest.mark.parametrize(
     ("module", "cls_name", "anchor"),
     [
@@ -414,7 +446,32 @@ def test_every_reading_tab_installs_a_receipt_under_its_progress_bar(qtbot, test
         )
         qtbot.addWidget(widget)
 
-    progress = getattr(widget, anchor)
-    layout = progress.parentWidget().layout()
-    assert layout.itemAt(layout.indexOf(progress) + 1).widget() is widget._receipt_widget
+    _assert_receipt_follows(widget, anchor)
+    widget.deleteLater()
+
+
+def test_the_youtube_receipt_sits_under_its_progress_bar(youtube_tab):
+    _assert_receipt_follows(youtube_tab, "progress_widget")
+
+
+def test_the_single_episode_receipt_sits_under_its_progress_bar(single_tab):
+    _assert_receipt_follows(single_tab, "progress_widget")
+
+
+def test_the_batch_receipt_sits_under_its_progress_bar(batch_tab):
+    _assert_receipt_follows(batch_tab, "overall_progress_widget")
+
+
+def test_the_audiobook_receipt_sits_under_its_progress_bar(qtbot, test_config):
+    from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
+
+    with patch("anki_miner.gui.widgets.audiobook_tab.AudiobookQueueWorker"):
+        widget = AudiobookTab(
+            config=test_config,
+            processor=MagicMock(name="EpisodeProcessor"),
+            presenter=MagicMock(name="Presenter"),
+        )
+        qtbot.addWidget(widget)
+
+    _assert_receipt_follows(widget, "progress_widget")
     widget.deleteLater()
