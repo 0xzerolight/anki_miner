@@ -123,6 +123,82 @@ def test_elapsed_clock_is_shown(qtbot, registry) -> None:
     assert "01:35" in strip.line_label.full_text
 
 
+# ---------------------------------------------------------------------------
+# Cancelling (D22)
+# ---------------------------------------------------------------------------
+
+
+def test_cancelling_says_so_immediately(qtbot, registry) -> None:
+    strip = _strip(qtbot)
+    handle = _start(registry, now=0.0)
+    strip.bind(registry, handle.task_id, handle.run_token)
+    handle.count(current=3, total=10, detail="Extracting media", now=1.0)
+
+    handle.cancelling(now=2.0)
+
+    assert "Cancelling…" in strip.line_label.full_text
+
+
+def test_the_line_holds_the_last_true_count_while_cancelling(qtbot, registry) -> None:
+    strip = _strip(qtbot)
+    handle = _start(registry, now=0.0)
+    strip.bind(registry, handle.task_id, handle.run_token)
+    handle.count(current=3, total=10, detail="Extracting media", now=1.0)
+    handle.cancelling(now=2.0)
+
+    handle.count(current=9, total=10, detail="Creating Anki cards", now=3.0)
+
+    assert "3 / 10" in strip.line_label.full_text
+    assert "9 / 10" not in strip.line_label.full_text
+
+
+def test_a_short_cancel_does_not_explain_itself(qtbot, registry) -> None:
+    """Most cancels land instantly; narrating those is noise, not reassurance."""
+    strip = _strip(qtbot)
+    handle = _start(registry, now=0.0)
+    strip.bind(registry, handle.task_id, handle.run_token)
+    handle.count(current=3, total=10, detail="Extracting media", now=1.0)
+
+    handle.cancelling(now=2.0)
+
+    assert "Finishing" not in strip.line_label.full_text
+
+
+def test_a_cancel_that_keeps_waiting_names_what_it_waits_for(qtbot, registry) -> None:
+    strip = _strip(qtbot)
+    handle = _start(registry, now=0.0)
+    strip.bind(registry, handle.task_id, handle.run_token)
+    handle.count(current=3, total=10, detail="Extracting media", now=1.0)
+    handle.cancelling(now=2.0)
+
+    registry.tick(now=5.0)
+
+    text = strip.line_label.full_text
+    assert "Finishing Extracting media" in text
+
+
+def test_a_long_cancel_with_nothing_named_still_says_what_it_is_doing(qtbot, registry) -> None:
+    strip = _strip(qtbot)
+    handle = _start(registry, now=0.0)
+    strip.bind(registry, handle.task_id, handle.run_token)
+    handle.cancelling(now=2.0)
+
+    registry.tick(now=9.0)
+
+    assert "Finishing the current item" in strip.line_label.full_text
+
+
+def test_the_clock_keeps_running_through_a_cancel(qtbot, registry) -> None:
+    strip = _strip(qtbot)
+    handle = _start(registry, now=0.0)
+    strip.bind(registry, handle.task_id, handle.run_token)
+    handle.cancelling(now=2.0)
+
+    registry.tick(now=95.0)
+
+    assert "01:35" in strip.line_label.full_text
+
+
 def test_a_finished_run_collapses_the_strip(qtbot, registry) -> None:
     strip = _strip(qtbot)
     handle = _start(registry)

@@ -237,6 +237,11 @@ class StatusBarWidget(QStatusBar):
         stands in. There is no synthetic fallback percentage — inventing one is
         what made progress race and then sit.
         """
+        if snapshot.cancelling:
+            # A percentage of a run that is being abandoned is not a forecast of
+            # anything, so it is dropped rather than left ticking beside
+            # "Cancelling…".
+            return f"{snapshot.title} · {self.tr('Cancelling…')}"
         fraction = snapshot.fraction
         if fraction is not None:
             return f"{snapshot.title} {int(fraction * 100)}%"
