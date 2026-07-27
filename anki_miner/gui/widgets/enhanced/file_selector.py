@@ -24,7 +24,7 @@ from anki_miner.utils.i18n import tr_format
 
 #: A drop validator answers "may this path land here, and if not, why not".
 #: The reason is shown to the user verbatim, so it is a sentence, not a code.
-DropValidator = Callable[[Path], "tuple[bool, str]"]
+DropValidator = Callable[[Path], tuple[bool, str]]
 
 
 def accepts_suffixes(extensions: Iterable[str], reason: str) -> DropValidator:
