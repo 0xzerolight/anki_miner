@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>Cột mốc</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>Đã hoàn thành %1 phiên khai thác</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>Đã khai thác %1 series</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>Đã tạo %1 thẻ</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

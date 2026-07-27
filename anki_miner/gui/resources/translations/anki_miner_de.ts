@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>Meilensteine</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>%1 Mining-Sitzungen abgeschlossen</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>%1 Serien gesammelt</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>%1 Karten erstellt</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

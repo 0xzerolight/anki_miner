@@ -155,6 +155,18 @@
         <source>Milestones</source>
         <translation>マイルストーン</translation>
     </message>
+    <message>
+        <source>%1 mining sessions completed</source>
+        <translation>%1 回のマイニングセッションを完了</translation>
+    </message>
+    <message>
+        <source>%1 series mined</source>
+        <translation>%1 件のシリーズをマイニング</translation>
+    </message>
+    <message>
+        <source>%1 cards created</source>
+        <translation>%1 枚のカードを作成しました</translation>
+    </message>
 </context><context>
     <name>AnkiConnectPage</name>
     <message>

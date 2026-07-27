@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import Enum
 
 
 @dataclass
@@ -49,12 +50,27 @@ class DifficultyEntry:
     recorded_at: datetime = field(default_factory=datetime.now)
 
 
+class MilestoneKind(Enum):
+    """Which counter a milestone tracks.
+
+    The stable half of a milestone. Wording lives in the Analytics tab so it
+    goes through ``tr()``; anything spelled out here would ship untranslated.
+    """
+
+    CARDS = "cards"
+    SESSIONS = "sessions"
+    SERIES = "series"
+
+
 @dataclass
 class Milestone:
-    """A progress milestone achievement."""
+    """Progress towards one threshold of one counter.
 
-    name: str = ""
-    description: str = ""
+    Carries no prose: the kind plus the numbers are everything the view needs
+    to state the fact in the user's language.
+    """
+
+    kind: MilestoneKind
     threshold: int = 0
     current_value: int = 0
     achieved: bool = False

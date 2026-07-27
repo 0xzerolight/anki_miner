@@ -10,37 +10,21 @@ from pathlib import Path
 from anki_miner.models.stats import (
     DifficultyEntry,
     Milestone,
+    MilestoneKind,
     MiningSession,
     OverallStats,
 )
 
 logger = logging.getLogger(__name__)
 
-CARD_MILESTONES = [
-    (50, "First Steps", "Created 50 cards"),
-    (100, "Getting Started", "Created 100 cards"),
-    (250, "Building Momentum", "Created 250 cards"),
-    (500, "Dedicated Learner", "Created 500 cards"),
-    (1000, "Vocabulary Builder", "Created 1,000 cards"),
-    (2500, "Word Collector", "Created 2,500 cards"),
-    (5000, "Language Explorer", "Created 5,000 cards"),
-    (10000, "Master Miner", "Created 10,000 cards"),
-]
+# Ascending thresholds per counter. Numbers only, on purpose: any title or
+# blurb written here would reach the user untranslated (decision D47). The
+# Analytics tab states the fact, in the UI language.
+CARD_MILESTONES = [50, 100, 250, 500, 1000, 2500, 5000, 10000]
 
-SESSION_MILESTONES = [
-    (5, "Regular Miner", "Completed 5 mining sessions"),
-    (10, "Consistent Learner", "Completed 10 mining sessions"),
-    (25, "Mining Veteran", "Completed 25 mining sessions"),
-    (50, "Mining Expert", "Completed 50 mining sessions"),
-    (100, "Mining Master", "Completed 100 mining sessions"),
-]
+SESSION_MILESTONES = [5, 10, 25, 50, 100]
 
-SERIES_MILESTONES = [
-    (3, "Series Explorer", "Mined from 3 different series"),
-    (5, "Series Fan", "Mined from 5 different series"),
-    (10, "Series Enthusiast", "Mined from 10 different series"),
-    (25, "Series Connoisseur", "Mined from 25 different series"),
-]
+SERIES_MILESTONES = [3, 5, 10, 25]
 
 
 class StatsService:
@@ -279,16 +263,15 @@ class StatsService:
             stats = self.get_overall_stats()
         milestones: list[Milestone] = []
 
-        for milestone_list, current_value in [
-            (CARD_MILESTONES, stats.total_cards_created),
-            (SESSION_MILESTONES, stats.total_sessions),
-            (SERIES_MILESTONES, stats.series_count),
+        for kind, thresholds, current_value in [
+            (MilestoneKind.CARDS, CARD_MILESTONES, stats.total_cards_created),
+            (MilestoneKind.SESSIONS, SESSION_MILESTONES, stats.total_sessions),
+            (MilestoneKind.SERIES, SERIES_MILESTONES, stats.series_count),
         ]:
             selected = None
-            for threshold, name, description in milestone_list:
+            for threshold in thresholds:
                 selected = Milestone(
-                    name=name,
-                    description=description,
+                    kind=kind,
                     threshold=threshold,
                     current_value=current_value,
                     achieved=current_value >= threshold,
