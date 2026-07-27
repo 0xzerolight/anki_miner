@@ -17,9 +17,12 @@ from anki_miner.gui.utils.progress_telemetry import (
     ETA_MIN_ELAPSED_S,
     ETA_MIN_SAMPLES,
     STALL_AFTER_S,
+    SUSPEND_GAP_S,
     TransferEstimator,
+    active_duration,
     format_clock,
     format_data_size,
+    format_duration_words,
     format_transfer,
 )
 
@@ -56,6 +59,55 @@ class TestFormatClock:
 
     def test_negative_is_clamped(self):
         assert format_clock(-5) == "00:00"
+
+
+class TestFormatDurationWords:
+    def test_renders_the_receipt_form(self):
+        """The receipt spells its duration out; the strip uses the clock form."""
+        assert format_duration_words(40 * 60 + 12) == "40m 12s"
+        assert format_duration_words(8 * 60 + 17) == "08m 17s"
+
+    def test_seconds_only_runs_still_name_their_minutes(self):
+        assert format_duration_words(9) == "00m 09s"
+
+    def test_hours_are_prefixed(self):
+        assert format_duration_words(3 * 3600 + 4 * 60 + 12) == "3h 04m 12s"
+
+    def test_negative_is_clamped(self):
+        assert format_duration_words(-5) == "00m 00s"
+
+
+class TestActiveDuration:
+    def test_the_two_clocks_agreeing_means_no_sleep(self):
+        duration = active_duration(monotonic_start=10.0, monotonic_now=70.0, wall_start=500.0, wall_now=560.0)
+
+        assert duration.active_s == 60.0
+        assert duration.suspended_s == 0.0
+        assert duration.suspended is False
+
+    def test_wall_time_the_monotonic_clock_did_not_see_is_sleep(self):
+        """A suspended machine freezes the monotonic clock, never the wall one."""
+        duration = active_duration(monotonic_start=10.0, monotonic_now=70.0, wall_start=500.0, wall_now=4160.0)
+
+        assert duration.active_s == 60.0
+        assert duration.suspended_s == 3600.0
+        assert duration.suspended is True
+
+    def test_a_small_divergence_is_not_reported_as_sleep(self):
+        duration = active_duration(
+            monotonic_start=0.0,
+            monotonic_now=60.0,
+            wall_start=0.0,
+            wall_now=60.0 + SUSPEND_GAP_S - 1,
+        )
+
+        assert duration.suspended is False
+
+    def test_a_backwards_wall_clock_never_produces_negative_sleep(self):
+        duration = active_duration(monotonic_start=0.0, monotonic_now=60.0, wall_start=0.0, wall_now=10.0)
+
+        assert duration.active_s == 60.0
+        assert duration.suspended_s == 0.0
 
 
 class TestTransferEstimator:
