@@ -18,9 +18,10 @@ from dataclasses import dataclass
 from typing import cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QDialog, QWidget, QWizard
+from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWizard
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.validation_service import ValidationService
@@ -38,10 +39,17 @@ __all__ = ["SetupWizard", "SetupWizardOutcome", "run_setup_wizard"]
 
 @dataclass(frozen=True)
 class SetupWizardOutcome:
-    """Working config and first-run-offer consumption decision."""
+    """Working config, offer consumption, and whether to act on the setup.
+
+    ``open_video_mining`` is the last page's real first action (D26). Only an
+    accepted Finish sets it: Skip, Escape and the window close all leave setup
+    in whatever state the user walked away from, and taking them to a mining
+    screen would be answering a question they did not ask.
+    """
 
     config: AnkiMinerConfig
     consumes_first_run_offer: bool
+    open_video_mining: bool = False
 
 
 class SetupWizard(QWizard):
@@ -94,6 +102,11 @@ class SetupWizard(QWizard):
         self.setButtonText(QWizard.WizardButton.CustomButton1, self.tr("Skip Setup"))
         self.customButtonClicked.connect(self._on_custom_button)
 
+        # The end of setup is an action, not an acknowledgement (D26). There is
+        # exactly one final page, so naming the Finish button once here is the
+        # whole change — no extra control, no checkbox to read back.
+        self.setButtonText(QWizard.WizardButton.FinishButton, self.tr("Open Video Mining"))
+
         # Pages in order.
         self.ankiconnect_page = AnkiConnectPage(self)
         self.deck_page = DeckPage(self)
@@ -108,6 +121,61 @@ class SetupWizard(QWizard):
             self.done_page,
         ):
             self.addPage(page)
+
+        # Every page here can hold Japanese text in a field, so no button may be
+        # the Enter target. Re-applied on each page change because QWizard
+        # re-asserts its own default button when the page turns.
+        self.currentIdChanged.connect(self._drop_default_buttons)
+        self._drop_default_buttons()
+        primary_action_shortcut(self, self._activate_primary_action)
+
+    # --- IME-safe confirmation (D49) -------------------------------------
+
+    #: Buttons whose "default" status Qt would otherwise hand to Return.
+    _NAVIGATION_BUTTONS = (
+        QWizard.WizardButton.BackButton,
+        QWizard.WizardButton.NextButton,
+        QWizard.WizardButton.CommitButton,
+        QWizard.WizardButton.FinishButton,
+        QWizard.WizardButton.CancelButton,
+        QWizard.WizardButton.CustomButton1,
+    )
+
+    def _drop_default_buttons(self) -> None:
+        """Take Return away from the wizard's navigation buttons.
+
+        QWizard makes Next (then Finish) the dialog's default button, so a
+        Return pressed to commit kana in the deck or note-type combo advances
+        the wizard mid-composition and the user never sees what they typed.
+        Confirmation is ``Ctrl+Return`` / keypad ``Ctrl+Enter`` instead.
+        """
+        for button_id in self._NAVIGATION_BUTTONS:
+            button = self.button(button_id)
+            if isinstance(button, QPushButton):
+                button.setAutoDefault(False)
+                button.setDefault(False)
+
+    def _primary_action_button(self) -> QAbstractButton | None:
+        """The button ``Ctrl+Return`` would press: the live Finish, else Next.
+
+        ``None`` when neither is available — a page whose checks have not passed
+        is as unmovable by keyboard as it is by mouse.
+        """
+        for button_id in (QWizard.WizardButton.FinishButton, QWizard.WizardButton.NextButton):
+            button = self.button(button_id)
+            if button is not None and button.isVisible() and button.isEnabled():
+                return button
+        return None
+
+    def _activate_primary_action(self) -> None:
+        """Ctrl+Return advances through the live button and nothing else.
+
+        Routed through ``click()`` rather than ``next()`` / ``accept()`` so the
+        keyboard cannot reach past a gate the mouse is held behind.
+        """
+        button = self._primary_action_button()
+        if button is not None:
+            button.click()
 
     # --- working config -------------------------------------------------
 
@@ -280,5 +348,9 @@ def run_setup_wizard(parent: QWidget | None, config: AnkiMinerConfig) -> SetupWi
     """
     wizard = SetupWizard(config, parent)
     result = wizard.exec()
-    consumes = result == QDialog.DialogCode.Accepted.value or wizard._explicit_skip_requested
-    return SetupWizardOutcome(config=wizard.working_config(), consumes_first_run_offer=consumes)
+    accepted = result == QDialog.DialogCode.Accepted.value
+    return SetupWizardOutcome(
+        config=wizard.working_config(),
+        consumes_first_run_offer=accepted or wizard._explicit_skip_requested,
+        open_video_mining=accepted,
+    )
