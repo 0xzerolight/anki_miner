@@ -154,14 +154,13 @@ class MiningTabBase(QWidget):
         self._stage_line.on_progress(current, item_description)
 
     def _on_progress_complete(self) -> None:
-        """Default complete slot.
+        """Default complete slot: silent.
 
-        Deliberately a neutral "Complete" — the previous "<phase> — done" text
-        used a phase frozen at the FIRST stage description, so it read
-        "Extracting media — done" at the end of every run. The result handlers
-        replace this with a meaningful summary via ``show_completion``.
+        Each of the five stages closes with its own ``on_complete``, so writing
+        "Complete" here would flash it four times before the run was anywhere
+        near done. The result handlers own the one terminal summary, via
+        ``show_completion``.
         """
-        self.progress_widget.set_status(self.tr("Complete"))  # type: ignore[attr-defined]
 
     def _on_progress_error(self, item: str, error: str) -> None:
         """Default per-item error handler: append a failure line to ``self.log_widget``.
