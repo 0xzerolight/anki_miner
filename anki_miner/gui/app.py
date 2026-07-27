@@ -21,13 +21,14 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, QLockFile, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import QCoreApplication, QLockFile, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui import restart
 from anki_miner.gui.i18n import install_translators
 from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
 from anki_miner.gui.main_window import MainWindow, open_log_folder
@@ -417,6 +418,33 @@ def _acquire_instance_lock(
     if lock.tryLock(0):
         return lock, True
     return None, on_conflict()
+
+
+def _relaunch_if_requested(app: QApplication) -> None:
+    """Start the replacement process, if a restart was asked for (D39b-A).
+
+    Called only after ``app.exec()`` has returned, so the parent has already
+    completed its ordinary shutdown: settings flushed, workers cancelled and
+    joined, dictionaries released, config saved. The single-instance lock is
+    held for the process lifetime, so it is released here — before the child is
+    spawned — and the child therefore never meets a second-instance prompt and
+    never shares a live sqlite handle with us.
+
+    Failure is silent-but-logged on purpose: the user asked to restart, the app
+    is already closing, and there is no window left to report into.
+    """
+    if not restart.restart_requested():
+        return
+    restart.clear_restart_request()
+    program = restart.resolve_relaunch_target()
+    if program is None:
+        logger.warning("Restart was requested but the executable could not be resolved")
+        return
+    lock = getattr(app, "_instance_lock", None)
+    if lock is not None:
+        lock.unlock()
+    if not QProcess.startDetached(str(program), []):
+        logger.warning("Restart was requested but launching %s failed", program)
 
 
 def _confirm_second_instance(parent: QWidget | None = None) -> bool:
@@ -1322,8 +1350,12 @@ def main():
 
     QTimer.singleShot(0, _start_prewarm)
 
-    # Run event loop
-    sys.exit(app.exec())
+    # Run event loop. The exit code is captured rather than handed straight to
+    # sys.exit so a requested restart (D39b-A) can start the replacement only
+    # after the loop has returned and this process is done with its stores.
+    exit_code = app.exec()
+    _relaunch_if_requested(app)
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -346,6 +346,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.config.ui_zoom,
             self.config.ui_language,
             self.config.use_native_file_dialogs,
+            self.config.ui_font_scale,
         )
 
         self._build_navigator()
@@ -1043,13 +1044,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.config_changed.emit(new_config)
 
     def _on_font_scale_changed(self, scale: float) -> None:
-        """Fold the Themes panel font-scale change into the config and persist.
+        """Fold the UI panel's text-size change into the config and persist.
 
-        Mirrors :meth:`_on_theme_state_changed`: the Themes panel writes
-        through Theme directly (live preview); this slot reflects the new
-        scale into ``self.config`` and re-emits so the existing
-        ``config_changed`` → ``MainWindow.update_config`` chain persists
-        ``ui_font_scale`` to ``gui_config.json``.
+        Text size is restart-to-apply (D39b-A), so unlike theme nothing is made
+        live here: the panel reveals its restart note and this slot only folds
+        ``ui_font_scale`` into the config so the existing ``config_changed`` →
+        ``MainWindow.update_config`` chain writes it to ``gui_config.json``.
+        The running process keeps the boot scale until it is relaunched.
         """
         new_config = replace(self.config, ui_font_scale=scale)
         self.config_changed.emit(new_config)

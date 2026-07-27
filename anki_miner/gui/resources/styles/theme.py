@@ -581,35 +581,110 @@ class Theme:
         return compiled
 
     @classmethod
+    def build_palette(cls, mode: str | None = None) -> QPalette:
+        """Return the application palette for ``mode``, from exact theme tokens.
+
+        Every colour here is a value the theme author wrote, routed to the Qt
+        role that means the same thing. Nothing is derived, blended or repaired
+        (decision D43-A) — a palette role with no matching token simply keeps
+        Qt's own value rather than gaining an invented one.
+
+        Why this matters beyond tidiness: ``common.qss`` only reaches widgets it
+        has a selector for. Everything else Qt draws itself — combo popups,
+        item delegates, spin-box and scrollbar subcontrols, the disabled and
+        inactive colour groups, dialogs Qt creates on its own — and those read
+        the palette. With six roles in one group, all of that fell back to the
+        platform's colours and looked foreign on the same screen as the themed
+        widget beside it.
+
+        All three colour groups are filled. Active and Inactive are identical on
+        purpose: an unfocused Anki Miner window is still the same window, and Qt's
+        default Inactive dimming would make a theme look different depending on
+        which window has focus. Disabled takes the theme's own disabled tokens.
+        """
+        colors = cls.get_colors(mode)
+        palette = QPalette()
+
+        # role -> theme token. The routing table IS the contract; it is what the
+        # ownership test reads, so a new role must be added here and nowhere else.
+        shared: tuple[tuple[QPalette.ColorRole, str], ...] = (
+            (QPalette.ColorRole.Window, "background"),
+            (QPalette.ColorRole.WindowText, "text"),
+            (QPalette.ColorRole.Base, "input-bg"),
+            (QPalette.ColorRole.AlternateBase, "surface-alt"),
+            (QPalette.ColorRole.Text, "text"),
+            (QPalette.ColorRole.Button, "surface"),
+            (QPalette.ColorRole.ButtonText, "text"),
+            (QPalette.ColorRole.BrightText, "text-on-primary"),
+            (QPalette.ColorRole.PlaceholderText, "text-muted"),
+            (QPalette.ColorRole.ToolTipBase, "tooltip-bg"),
+            (QPalette.ColorRole.ToolTipText, "tooltip-text"),
+            # Selection, for the rows Qt draws itself rather than through QSS: an
+            # embedded row widget, a popup, a view the shared data-surface helper
+            # has not reached yet. Without these two the platform highlight showed
+            # up beside the themed one on the same screen (decision D42).
+            (QPalette.ColorRole.Highlight, "table-selected-bg"),
+            (QPalette.ColorRole.HighlightedText, "table-selected-text"),
+            # The one accent the palette carries. Qt 6.6+ uses Accent for the
+            # controls a platform style wants to tint; the app's own accent
+            # semantics stay where D41 put them.
+            (QPalette.ColorRole.Accent, "primary"),
+        )
+        # The theme's own "unavailable" tokens, not a dimmed copy of the above.
+        disabled: tuple[tuple[QPalette.ColorRole, str], ...] = (
+            (QPalette.ColorRole.Base, "input-disabled-bg"),
+            (QPalette.ColorRole.Button, "disabled"),
+            (QPalette.ColorRole.Text, "text-disabled"),
+            (QPalette.ColorRole.WindowText, "text-disabled"),
+            (QPalette.ColorRole.ButtonText, "text-disabled"),
+            (QPalette.ColorRole.PlaceholderText, "text-disabled"),
+        )
+
+        for group in (
+            QPalette.ColorGroup.Active,
+            QPalette.ColorGroup.Inactive,
+            QPalette.ColorGroup.Disabled,
+        ):
+            for role, key in shared:
+                value = colors.get(key)
+                if value:
+                    palette.setColor(group, role, QColor(value))
+        for role, key in disabled:
+            value = colors.get(key)
+            if value:
+                palette.setColor(QPalette.ColorGroup.Disabled, role, QColor(value))
+
+        return palette
+
+    @classmethod
     def apply_to_app(cls, app: QApplication, mode: str | None = None) -> None:
-        """Apply theme stylesheet and palette to the application."""
+        """Apply theme palette and stylesheet to the application.
+
+        The palette goes on first, and deliberately so: an application
+        stylesheet freezes every polished widget's palette at polish time, so a
+        palette written afterwards would not reach anything until the next
+        repolish. Measured in Qt 6.11, and it is why the two lines below cannot
+        be reordered.
+        """
         if mode is None:
             mode = cls.get_current_mode()
 
-        colors = cls.get_colors(mode)
-        palette = QPalette()
-        palette.setColor(QPalette.ColorRole.Window, QColor(colors["background"]))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor(colors["text"]))
-        palette.setColor(QPalette.ColorRole.Base, QColor(colors["surface"]))
-        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(colors["surface-alt"]))
-        palette.setColor(QPalette.ColorRole.Text, QColor(colors["text"]))
-        # Selection, for the rows Qt draws itself rather than through QSS: an
-        # embedded row widget, a popup, a view the shared data-surface helper has
-        # not reached yet. Without these two the platform highlight showed up
-        # beside the themed one on the same screen (decision D42).
-        palette.setColor(QPalette.ColorRole.Highlight, QColor(colors["table-selected-bg"]))
-        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(colors["table-selected-text"]))
-        app.setPalette(palette)
+        app.setPalette(cls.build_palette(mode))
 
         # One setStyleSheet call. The previous setStyleSheet("") clear forced
         # Qt to unpolish + re-polish the entire widget tree twice per apply.
         #
         # This repolish is a deliberately-synchronous GUI-thread block that
-        # CANNOT be moved off-thread (Qt styling is main-thread only) and can be
-        # a multi-second freeze on large widget trees / font-scale changes. Wrap
-        # it in the stall-watchdog pause so the unavoidable heartbeat gap is not
-        # reported as a (false-positive) stall. This is the single chokepoint
-        # for every theme/font-scale apply, so wrapping here covers all callers.
+        # CANNOT be moved off-thread (Qt styling is main-thread only). Measured
+        # on the real composed window (1977 widgets, 35 KB sheet): ~850 ms, and
+        # it is dominated by the per-widget rule re-resolution rather than by
+        # the size of the sheet — a one-rule sheet costs the same order. The
+        # only way out is for no theme-dependent colour to be in a stylesheet at
+        # all (decision D39-C); until that lands this stays a real block, so the
+        # stall-watchdog pause below stays with it. It is a false-positive guard
+        # for a genuine synchronous block, not concealment, and it comes out
+        # with the block. This is the single chokepoint for every theme apply,
+        # so wrapping here covers all callers.
         #
         # Imported lazily: a module-level import would form a cycle
         # (theme -> gui.utils package __init__ -> fonts -> theme).

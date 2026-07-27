@@ -57,6 +57,7 @@ def swapped_config(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
         ui_language="ja",
         use_native_file_dialogs=True,
         theme="dark",
+        ui_font_scale=1.25,
     )
 
 
@@ -114,9 +115,10 @@ class TestUIPanelLoadFromConfig:
     """Every UI-panel widget follows an external config swap."""
 
     def test_all_widgets_follow_the_swapped_config(self, ui_panel, swapped_config):
-        # The caller re-seeds Theme before reloading; do the same here.
+        # The caller re-seeds Theme before reloading; do the same here. Text
+        # size is NOT re-seeded: it is restart-to-apply (D39b-A), so the combo
+        # has to follow the incoming config rather than the running Theme.
         Theme.set_mode(swapped_config.theme)
-        Theme.set_font_scale(1.25)
 
         ui_panel.load_from_config(swapped_config)
 
