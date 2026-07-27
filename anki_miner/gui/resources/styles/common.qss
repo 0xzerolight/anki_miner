@@ -64,35 +64,32 @@ QLabel#field-label {
 
 /* ============== BUTTON BASE STYLES ============== */
 
+/* Every button carries the same 1px box in every role. Only its colour changes,
+   so keyboard focus can recolour the border without resizing anything — tabbing
+   along a row of buttons must not reflow the row. */
 QPushButton {
     min-height: 28px;
     padding: ${spacing-xxs}px ${spacing-sm}px;
     border-radius: ${border-radius-default}px;
     font-weight: 500;
-    border: none;
+    border: 1px solid;
 }
 
 /* Disabled buttons are dimmed by the themed QPushButton:disabled colour rule
    further down, not here: Qt's widget style engine ignores `opacity`. */
 
+/* Qt's own focus rect lands inside the rounded box and reads as noise. The
+   focus ring is the border recolour in the theme rules below. */
 QPushButton:focus {
     outline: none;
 }
 
-/* Button variants */
-QPushButton#primary {
-    font-weight: 600;
-}
-
-QPushButton#secondary {
-    border: 1px solid;
-}
-
-QPushButton#ghost {
-    background: transparent;
-}
-
-QPushButton#danger {
+/* Button variants (D41). `secondary` deliberately has no rules of its own: the
+   quiet bordered control IS the base button, so the object name is only how a
+   call site says out loud that it meant the ordinary one. */
+QPushButton#primary,
+QPushButton#danger,
+QPushButton#critical {
     font-weight: 600;
 }
 
@@ -656,43 +653,129 @@ QScrollArea > QWidget {
     background-color: ${color-background};
 }
 
-/* --- Buttons --- */
+/* --- Buttons ---
+   D41: accent is scarce. A button is quiet unless it is the one task action on
+   its screen, whatever Qt has made the dialog default, a checked toggle, or the
+   solid-red destruction of something unrecoverable. Ordering below matters: Qt
+   follows CSS2.1 specificity, so an id selector outranks a bare state and the
+   state rules that must win are spelled out per id. */
 
 QPushButton {
-    background-color: ${color-primary};
-    color: ${color-text-on-primary};
+    background-color: transparent;
+    color: ${color-text};
+    border-color: ${color-border};
 }
 
 QPushButton:hover {
-    background-color: ${color-primary-hover};
+    background-color: ${color-surface-hover};
 }
 
 QPushButton:pressed {
-    background-color: ${color-primary-pressed};
+    background-color: ${color-surface-alt};
 }
 
-QPushButton:disabled {
-    background-color: ${color-disabled};
-    color: ${color-text-on-primary};
-}
-
-QPushButton#secondary {
-    background-color: transparent;
-    color: ${color-primary};
-    border-color: ${color-primary};
-}
-
-QPushButton#secondary:hover {
-    background-color: ${color-primary-light};
-    border-color: ${color-primary-hover};
-}
-
+/* Ghost gives up its border too: a control that should barely be there. */
 QPushButton#ghost {
+    background-color: transparent;
     color: ${color-text};
+    border-color: transparent;
 }
 
 QPushButton#ghost:hover {
     background-color: ${color-surface-hover};
+}
+
+/* `danger` is an outline. A removal you can redo does not need to shout. */
+QPushButton#danger {
+    background-color: transparent;
+    color: ${color-error};
+    border-color: ${color-error};
+}
+
+QPushButton#danger:hover {
+    background-color: ${color-surface-hover};
+    color: ${color-error-hover};
+    border-color: ${color-error-hover};
+}
+
+/* `critical` is the only solid red in the app. Two call sites. */
+QPushButton#critical {
+    background-color: ${color-error};
+    color: ${color-text-on-primary};
+    border-color: ${color-error};
+}
+
+QPushButton#critical:hover {
+    background-color: ${color-error-hover};
+    border-color: ${color-error-hover};
+}
+
+/* The accent fill. `:default` is here so a dialog's Enter target keeps its
+   visual weight whatever variant the call site asked for. */
+QPushButton#primary,
+QPushButton:default {
+    background-color: ${color-primary};
+    color: ${color-text-on-primary};
+    border-color: ${color-primary};
+}
+
+QPushButton#ghost:default,
+QPushButton#danger:default {
+    background-color: ${color-primary};
+    color: ${color-text-on-primary};
+    border-color: ${color-primary};
+}
+
+QPushButton#primary:hover,
+QPushButton:default:hover {
+    background-color: ${color-primary-hover};
+}
+
+QPushButton#primary:pressed,
+QPushButton:default:pressed {
+    background-color: ${color-primary-pressed};
+}
+
+/* A checked toggle is state, and state is the other thing accent is for. */
+QPushButton:checked,
+QPushButton#ghost:checked {
+    background-color: ${color-primary};
+    color: ${color-text-on-primary};
+    border-color: ${color-primary};
+}
+
+QPushButton:checked:hover,
+QPushButton#ghost:checked:hover {
+    background-color: ${color-primary-hover};
+}
+
+/* Unavailable reads the same in every role. */
+QPushButton:disabled,
+QPushButton#primary:disabled,
+QPushButton#secondary:disabled,
+QPushButton#ghost:disabled,
+QPushButton#danger:disabled,
+QPushButton#critical:disabled {
+    background-color: ${color-disabled};
+    color: ${color-text-on-primary};
+    border-color: ${color-disabled};
+}
+
+/* Focus is the last word on the border, so it outlives every role above.
+   `border-focus` equals `primary` in 26 of the 29 shipped themes, so on a
+   filled button the ring is drawn in the colour that sits ON the fill. */
+QPushButton:focus,
+QPushButton#secondary:focus,
+QPushButton#ghost:focus,
+QPushButton#danger:focus {
+    border-color: ${color-border-focus};
+}
+
+QPushButton#primary:focus,
+QPushButton#critical:focus,
+QPushButton:default:focus,
+QPushButton:checked:focus {
+    border-color: ${color-text-on-primary};
 }
 
 QToolButton#starToggle {
@@ -705,15 +788,6 @@ QToolButton#starToggle:hover {
 
 QToolButton#starToggle:checked {
     color: ${color-warning};
-}
-
-QPushButton#danger {
-    background-color: ${color-error};
-    color: ${color-text-on-primary};
-}
-
-QPushButton#danger:hover {
-    background-color: ${color-error-hover};
 }
 
 /* --- Input Fields --- */
@@ -769,8 +843,10 @@ QTabBar::tab:hover {
     background-color: ${color-surface-hover};
 }
 
+/* The underline is the navigation indicator and keeps the accent; the label
+   goes back to ordinary text, so the accent means "you are here" exactly once. */
 QTabBar::tab:selected {
-    color: ${color-primary};
+    color: ${color-text};
     background-color: transparent;
     border-bottom: 3px solid ${color-primary};
 }
@@ -960,7 +1036,7 @@ QToolButton#discord_button {
 QToolButton#report_issue_button:hover,
 QToolButton#github_star_button:hover,
 QToolButton#discord_button:hover {
-    color: ${color-primary};
+    color: ${color-text};
     background-color: ${color-surface-hover};
 }
 
@@ -992,8 +1068,9 @@ QCheckBox::indicator, QRadioButton::indicator {
     border-color: ${color-border-subtle};
 }
 
+/* Hovering an unchecked box is not a state change; only checking it is. */
 QCheckBox::indicator:hover, QRadioButton::indicator:hover {
-    border-color: ${color-primary};
+    border-color: ${color-border};
 }
 
 QCheckBox::indicator:checked, QRadioButton::indicator:checked {
@@ -1062,8 +1139,9 @@ QFrame#stat-card {
     border-color: ${color-border};
 }
 
+/* A statistic is information, not an action: it reads as text. */
 QLabel#stat-value {
-    color: ${color-primary};
+    color: ${color-text};
 }
 
 QLabel#stat-label {
@@ -1154,13 +1232,17 @@ QFrame#update-banner QLabel {
     color: ${color-update-banner-text};
 }
 
+/* The banner paints its own two colours, so its buttons invert between them
+   rather than reaching for a translucent white that only worked on one theme. */
 QFrame#update-banner QPushButton {
+    background-color: transparent;
     color: ${color-update-banner-text};
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: ${color-update-banner-text};
 }
 
 QFrame#update-banner QPushButton:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: ${color-update-banner-text};
+    color: ${color-update-banner-bg};
 }
 
 /* --- Status Bar Widget --- */
@@ -1211,8 +1293,9 @@ QFrame#queue-item-card {
     border-color: ${color-border};
 }
 
+/* Pointing at a row is not selecting it: the hover surface says enough. */
 QFrame#queue-item-card:hover {
-    border-color: ${color-primary};
+    border-color: ${color-border};
     background-color: ${color-surface-hover};
 }
 
@@ -1224,13 +1307,14 @@ QLabel#queue-item-path {
     color: ${color-text-muted};
 }
 
+/* Entry counts are metadata about a row, not a call to act on it. */
 QLabel#queue-item-stats {
-    color: ${color-primary};
+    color: ${color-text-muted};
 }
 
 QLabel#queue-stats {
-    background-color: ${color-primary-light};
-    color: ${color-primary-dark};
+    background-color: ${color-surface-alt};
+    color: ${color-text};
 }
 
 QLabel#queue-status-badge[status="pending"] {
@@ -1296,9 +1380,4 @@ QLabel#output-location-value {
 
 QLabel#decorative {
     color: ${color-decorative};
-}
-
-QGroupBox#accent {
-    border: 2px solid;
-    border-color: ${color-primary};
 }

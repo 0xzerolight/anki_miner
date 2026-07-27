@@ -21,7 +21,7 @@ import re
 
 import pytest
 from PyQt6.QtGui import QColor, QPalette
-from PyQt6.QtWidgets import QLabel, QLineEdit
+from PyQt6.QtWidgets import QLabel, QLineEdit, QPushButton
 
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
@@ -150,11 +150,23 @@ class TestPlaceholderIntentIsExpressedProperly:
 class TestDisabledStylingSurvives:
     """The real disabled backgrounds are not collateral of the opacity removal."""
 
-    def test_disabled_button_keeps_its_background(self):
-        qss = Theme.get_stylesheet("dark")
-        colors = Theme.get_colors("dark")
+    def test_disabled_button_keeps_its_background(self, qapp, qtbot):
+        """Asserted by rendering, not by matching the rule's text: the disabled
+        declaration is shared by one selector per button role now, so a string
+        oracle would only be pinning today's selector list."""
+        button = QPushButton("Cancel")
+        button.setEnabled(False)
+        qtbot.addWidget(button)
+        try:
+            qapp.setStyleSheet(Theme.get_stylesheet("dark"))
+            button.resize(120, 32)
+            button.show()
 
-        assert f"QPushButton:disabled {{\n    background-color: {colors['disabled']};" in qss
+            painted = QColor.fromRgba(button.grab().toImage().pixel(60, 4))
+
+            assert painted == QColor(Theme.get_colors("dark")["disabled"])
+        finally:
+            qapp.setStyleSheet("")
 
     def test_disabled_input_keeps_its_background(self):
         qss = Theme.get_stylesheet("dark")
