@@ -60,7 +60,6 @@ QLabel#field-label {
 /* Japanese text support */
 *[japanese="true"] {
     font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', sans-serif;
-    line-height: 1.75;
 }
 
 /* ============== BUTTON BASE STYLES ============== */
@@ -73,9 +72,8 @@ QPushButton {
     border: none;
 }
 
-QPushButton:disabled {
-    opacity: 0.5;
-}
+/* Disabled buttons are dimmed by the themed QPushButton:disabled colour rule
+   further down, not here: Qt's widget style engine ignores `opacity`. */
 
 QPushButton:focus {
     outline: none;
@@ -131,14 +129,10 @@ QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
     border-width: 2px;
 }
 
-QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
-    opacity: 0.5;
-}
-
-/* Placeholder text */
-QLineEdit::placeholder {
-    font-style: italic;
-}
+/* Disabled inputs get their real background and text colour from the themed
+   :disabled rule further down — `opacity` is inert here.
+   Placeholder text is coloured there too, via `placeholder-text-color`; Qt has
+   no `::placeholder` pseudo-element and no way to italicise placeholders. */
 
 /* Spin box buttons */
 QSpinBox::up-button, QDoubleSpinBox::up-button,
@@ -192,7 +186,6 @@ QTextEdit {
     padding: ${spacing-sm}px;
     font-family: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
     font-size: ${font-size-body-sm}px;
-    line-height: 1.5;
 }
 
 QTextEdit#log-widget {
@@ -600,10 +593,10 @@ QLabel#validation-status {
     padding: ${spacing-xxs}px 0;
 }
 
-/* Helper/hint text */
+/* Helper/hint text. Dimming comes from the themed `color: ${color-text-muted}`
+   rule further down; `opacity` was inert. */
 QLabel#helper-text {
     font-size: ${font-size-small}px;
-    opacity: 0.7;
     font-style: italic;
     padding: 4px ${spacing-xs}px;
     min-height: 20px;
@@ -614,7 +607,6 @@ QLabel#helper-text {
 /* Output-location value: small muted helper styling but NOT italic */
 QLabel#output-location-value {
     font-size: ${font-size-small}px;
-    opacity: 0.7;
     padding: 4px ${spacing-xs}px;
     min-height: 20px;
     border-radius: ${border-radius-small}px;
@@ -725,8 +717,10 @@ QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabl
     color: ${color-text-disabled};
 }
 
-QLineEdit::placeholder {
-    color: ${color-text-muted};
+/* Qt has no `::placeholder` pseudo-element; `placeholder-text-color` on the
+   widget itself is the supported spelling (it writes QPalette::PlaceholderText). */
+QLineEdit {
+    placeholder-text-color: ${color-text-muted};
 }
 
 /* --- Group Boxes --- */

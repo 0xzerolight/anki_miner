@@ -3,7 +3,7 @@
 import logging
 import os
 import re
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -96,6 +96,85 @@ class ThemeGroupEntry:
     key: str
     variant_name: str
     display_name: str
+
+
+# --- Contrast assessment -------------------------------------------------
+#
+# Measurement ONLY. A theme renders exactly as its author wrote it; the app is
+# allowed to say "this pair measures 2.3:1" and nothing else. Do not grow this
+# into correction: no derived colours, no substitutions, no rejection, and no
+# new entries in REQUIRED_COLOR_KEYS (user themes in ~/.anki_miner/themes/ must
+# keep loading). Every function below is pure — it never touches the caller's
+# mapping or any Theme state.
+
+#: Label text on a primary button, measured against the button fill.
+CONTRAST_ROLE_PRIMARY_LABEL = "primary-label"
+#: Muted/secondary text, measured against the page behind it.
+CONTRAST_ROLE_MUTED_TEXT = "muted-text"
+#: Card surface, measured against the page it sits on.
+CONTRAST_ROLE_SURFACE_EDGE = "surface-edge"
+
+#: WCAG AA for normal body text.
+READABLE_CONTRAST_RATIO = 4.5
+#: Below this a bordered card is indistinguishable from the page.
+SURFACE_SEPARATION_RATIO = 1.10
+
+# (role, foreground key, background key, minimum acceptable ratio)
+_CONTRAST_CHECKS: tuple[tuple[str, str, str, float], ...] = (
+    (CONTRAST_ROLE_PRIMARY_LABEL, "text-on-primary", "primary", READABLE_CONTRAST_RATIO),
+    (CONTRAST_ROLE_MUTED_TEXT, "text-muted", "background", READABLE_CONTRAST_RATIO),
+    (CONTRAST_ROLE_SURFACE_EDGE, "surface", "background", SURFACE_SEPARATION_RATIO),
+)
+
+
+@dataclass(frozen=True)
+class ContrastIssue:
+    """One measured pair that falls below its threshold.
+
+    ``ratio`` is ``None`` when a colour could not be parsed — reported as
+    "unable to measure", never as a reason to replace the value.
+    """
+
+    role: str
+    ratio: float | None
+
+
+def _relative_luminance(color: QColor) -> float:
+    """WCAG 2.x relative luminance of an opaque sRGB colour."""
+
+    def channel(value: int) -> float:
+        srgb = value / 255.0
+        return srgb / 12.92 if srgb <= 0.03928 else ((srgb + 0.055) / 1.055) ** 2.4
+
+    return 0.2126 * channel(color.red()) + 0.7152 * channel(color.green()) + 0.0722 * channel(color.blue())
+
+
+def _contrast_ratio(foreground: str | None, background: str | None) -> float | None:
+    """Return the WCAG contrast ratio, or ``None`` if either value is unparseable."""
+    if not isinstance(foreground, str) or not isinstance(background, str):
+        return None
+    if not QColor.isValidColorName(foreground) or not QColor.isValidColorName(background):
+        return None
+    lighter, darker = sorted(
+        (_relative_luminance(QColor(foreground)), _relative_luminance(QColor(background))), reverse=True
+    )
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def assess_theme_contrast(colors: Mapping[str, str]) -> tuple[ContrastIssue, ...]:
+    """Measure the three readability-critical colour pairs in ``colors``.
+
+    Returns one :class:`ContrastIssue` per pair that measures below its
+    threshold, plus one for every pair that could not be measured. An empty
+    tuple means "nothing to warn about". Nothing is corrected or rejected —
+    see the module note above.
+    """
+    issues: list[ContrastIssue] = []
+    for role, foreground_key, background_key, threshold in _CONTRAST_CHECKS:
+        ratio = _contrast_ratio(colors.get(foreground_key), colors.get(background_key))
+        if ratio is None or ratio < threshold:
+            issues.append(ContrastIssue(role=role, ratio=ratio))
+    return tuple(issues)
 
 
 def validate_theme_data(data: dict) -> list[str]:

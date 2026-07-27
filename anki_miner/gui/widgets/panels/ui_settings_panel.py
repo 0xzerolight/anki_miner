@@ -15,6 +15,9 @@ This is the "UI" Settings sub-tab. Top to bottom it offers:
     discussion #27).
   - A "Revert" button that snaps back to whatever was active when the user
     opened the panel — preview safety without a separate Apply/Cancel button.
+  - A contrast note under the tree, stating the measured ratio when the live
+    theme is hard to read. Advisory only: the theme still renders exactly as
+    its author wrote it (D43-A).
 
 Persistence is handled by emitting ``state_changed`` / ``font_scale_changed`` /
 ``zoom_changed`` / ``language_changed`` (re-uses the ``config_changed``
@@ -48,8 +51,13 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
+    CONTRAST_ROLE_MUTED_TEXT,
+    CONTRAST_ROLE_PRIMARY_LABEL,
+    CONTRAST_ROLE_SURFACE_EDGE,
+    ContrastIssue,
     Theme,
     ThemeGroupEntry,
+    assess_theme_contrast,
 )
 from anki_miner.gui.widgets.base import SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -340,6 +348,16 @@ class UISettingsPanel(SettingAnchorHost, QWidget):
         # favorite toggle and profile switch, so search anchors the tree itself.
         self.register_setting("theme", self.tree, lambda: (intro.text(), self.open_folder_btn.text()))
 
+        # Themes render exactly as their author wrote them (D43-A). This line is
+        # the entire intervention: it states the measured ratio and nothing is
+        # corrected, substituted or rejected. Empty (and hidden) when the live
+        # theme measures fine.
+        self.contrast_warning = QLabel()
+        self.contrast_warning.setObjectName("helper-text")
+        self.contrast_warning.setWordWrap(True)
+        self.contrast_warning.setVisible(False)
+        layout.addWidget(self.contrast_warning)
+
         buttons = QHBoxLayout()
         buttons.setSpacing(SPACING.sm)
 
@@ -432,6 +450,10 @@ class UISettingsPanel(SettingAnchorHost, QWidget):
                         family_item.setExpanded(True)
         finally:
             self.tree.blockSignals(False)
+
+        # One call covers populate, Revert and load_from_config: the latter two
+        # both rebuild the tree through here.
+        self._refresh_contrast_warning()
 
     def _build_star_cell(self, key: str, is_favorite: bool) -> QWidget:
         """Build a centered star-button cell for the given theme row.
@@ -572,16 +594,64 @@ class UISettingsPanel(SettingAnchorHost, QWidget):
         key = item.data(self.COL_NAME, Qt.ItemDataRole.UserRole)
         if not isinstance(key, str):
             return
-        if key == Theme.get_current_mode():
-            return
-        Theme.set_mode(key)
-        self._apply_to_app(key)
-        # Avoid a full _populate() here — it rebuilt every row (including
-        # QPainter-drawn star icons) on each preview click and made theme
-        # switching feel laggy. The only visible mutation is the Active marker
-        # moving between two rows; update just those.
-        self._refresh_active_marker(key)
-        self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
+        if key != Theme.get_current_mode():
+            Theme.set_mode(key)
+            self._apply_to_app(key)
+            # Avoid a full _populate() here — it rebuilt every row (including
+            # QPainter-drawn star icons) on each preview click and made theme
+            # switching feel laggy. The only visible mutation is the Active
+            # marker moving between two rows; update just those.
+            self._refresh_active_marker(key)
+            self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
+        # Outside the "already active" guard: re-selecting the live theme must
+        # still restate its measured contrast rather than leave a stale line.
+        self._refresh_contrast_warning(key)
+
+    # ---- Contrast note ---------------------------------------------------
+
+    def _refresh_contrast_warning(self, key: str | None = None) -> None:
+        """Restate the measured contrast of ``key`` (default: the live theme).
+
+        Read-only: it measures the colours the theme author wrote and says so.
+        Nothing here may change, replace or refuse a colour — see D43-A and the
+        note above ``assess_theme_contrast``.
+        """
+        colors = Theme.get_colors(key if key is not None else Theme.get_current_mode())
+        text = self._contrast_warning_text(assess_theme_contrast(colors))
+        self.contrast_warning.setText(text)
+        self.contrast_warning.setVisible(bool(text))
+
+    def _contrast_warning_text(self, issues: tuple[ContrastIssue, ...]) -> str:
+        """Render ``issues`` as one sentence; empty string when there are none."""
+        if not issues:
+            return ""
+        # (measured template, unmeasurable text) per role. Both must stay
+        # literal tr() arguments — Qt extracts them statically.
+        phrases = {
+            CONTRAST_ROLE_PRIMARY_LABEL: (
+                self.tr("button labels %1:1"),
+                self.tr("button labels could not be measured"),
+            ),
+            CONTRAST_ROLE_MUTED_TEXT: (
+                self.tr("muted text %1:1"),
+                self.tr("muted text could not be measured"),
+            ),
+            CONTRAST_ROLE_SURFACE_EDGE: (
+                self.tr("cards against the page %1:1"),
+                self.tr("cards against the page could not be measured"),
+            ),
+        }
+        details: list[str] = []
+        for issue in issues:
+            phrase = phrases.get(issue.role)
+            if phrase is None:
+                continue
+            measured, unmeasurable = phrase
+            details.append(unmeasurable if issue.ratio is None else tr_format(measured, f"{issue.ratio:.1f}"))
+        return tr_format(
+            self.tr("Low contrast, shown exactly as the theme author wrote it: %1."),
+            ", ".join(details),
+        )
 
     def _refresh_active_marker(self, new_active_key: str) -> None:
         """Move the "Active" Status label to the row matching ``new_active_key``.
