@@ -17,6 +17,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFrame,
     QLabel,
+    QLayout,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -25,8 +26,11 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 
-#: Vertical breathing room above and below a button's text, per edge.
-_BUTTON_PADDING_Y = SPACING.xs
+#: Vertical breathing room above and below a button's text, per edge. It is the
+#: same step ``common.qss`` pads a button with, so this floor sits just under the
+#: height the stylesheet already produces: a floor is insurance against a control
+#: that clears no padding at all, not a second opinion about how tall a button is.
+_BUTTON_PADDING_Y = SPACING.xxs
 #: Default breathing room above and below an item-view row's text, per edge.
 _ROW_PADDING_Y = SPACING.xxs
 
@@ -154,6 +158,21 @@ def metric_row_height(widget: QWidget, *, vertical_padding: int = _ROW_PADDING_Y
     """
     widget.ensurePolished()
     return widget.fontMetrics().lineSpacing() + 2 * vertical_padding
+
+
+def configure_card_layout(layout: QLayout) -> None:
+    """Give a ``#card`` frame's layout the shared padding and gap (D40).
+
+    Fourteen screens hand-built the same card and each set its own margins, so
+    "the padding inside a card" was a decision taken thirty-odd times. It is one
+    decision: a card already sits inside a page with margins of its own, so its
+    inset only has to hold the content off the border.
+
+    Args:
+        layout: The card's top-level layout.
+    """
+    layout.setContentsMargins(SPACING.sm, SPACING.sm, SPACING.sm, SPACING.sm)
+    layout.setSpacing(SPACING.xs)
 
 
 class PageWidth(Enum):
