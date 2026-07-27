@@ -1,9 +1,9 @@
-"""Subtitles container tab — nests Generate, Retime, Condense, Card Backfill.
+"""Utilities container tab — nests Generate, Retime, Condense, Update Notes.
 
 Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 (Generate), :class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`
 (Retime), :class:`~anki_miner.gui.widgets.condense_tab.CondenseTab` (Condense),
-and :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Card Backfill)
+and :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Update Notes)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
 Close contract:
@@ -19,6 +19,7 @@ Close contract:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
 from PyQt6.QtCore import QCoreApplication
@@ -37,7 +38,7 @@ if TYPE_CHECKING:
 
 
 class SubtitlesTab(QWidget):
-    """Container tab holding Generate, Retime, Condense, Card Backfill inner tabs.
+    """Container tab holding Generate, Retime, Condense, Update Notes inner tabs.
 
     Args:
         config: Frozen application configuration.
@@ -75,7 +76,7 @@ class SubtitlesTab(QWidget):
         self.backfill_tab = CardBackfillTab(config)
         self._inner_tabs.addTab(
             self.backfill_tab,
-            QCoreApplication.translate("MainWindow", "Backfill"),
+            QCoreApplication.translate("MainWindow", "Update Notes"),
         )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
@@ -101,6 +102,16 @@ class SubtitlesTab(QWidget):
         index = self._subtab_index.get(key)
         if index is not None:
             self._inner_tabs.setCurrentIndex(index)
+
+    def open_retime(self, video_path: Path, subtitle_path: Path) -> None:
+        """Reveal Retime with a single-file pair already loaded (D35 hand-off).
+
+        The subtitle timing viewer's "Align automatically" ends here: the viewer
+        closes, and the user arrives at the aligner with both files in place and
+        only the Retime button left to press. Nothing starts by itself.
+        """
+        self.retime_tab.set_single_inputs(video_path, subtitle_path)
+        self.open_subtab("retime")
 
     def current_subtab_key(self) -> str | None:
         """The stable key of the sub-tab on show, or ``None`` if unmappable.

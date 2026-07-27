@@ -144,7 +144,7 @@ class SubtitlesSettingsPanel(FormPanel):
         suppress_optional_startup: bool = False,
     ) -> None:
         """Initialize the Subtitles settings panel."""
-        super().__init__(self.tr("Subtitles"), parent=parent)
+        super().__init__(self.tr("Transcription & Alignment"), parent=parent)
         self._suppress_optional_startup = suppress_optional_startup
         self._models_root = None
         self._bin_root: Path | None = None

@@ -21,8 +21,8 @@ file is appended to the list (deduped); a manga/novel drop earns a cross-tab
 hint instead. Subtitle curation is table-only (the base ``(None, None)``
 context — only manga overrides ``_build_curation_context``).
 
-Class name is deliberately ``ReadingSubtitlesTab`` — distinct from the Tools
-main tab's legacy ``SubtitlesTab`` class (whose display name is "Tools").
+Class name is deliberately ``ReadingSubtitlesTab`` — distinct from the Utilities
+main tab's legacy ``SubtitlesTab`` class (whose display name is "Utilities").
 """
 
 from __future__ import annotations
@@ -49,7 +49,12 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.qt_helpers import (
+    configure_data_view,
+    data_row_height,
+    install_copy_rows,
+    urls_from_event,
+)
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -74,6 +79,10 @@ _NOVEL_EXTS = (".epub", ".txt")
 
 # Stable session key for the folder this tab's Add dialog reopens in (D7).
 _HISTORY_KEY = "reading.subtitles.inputs"
+
+# How much of the file queue is always visible, counted in rows so the box
+# holds the same number of files at every text scale.
+_VISIBLE_FILE_ROWS = 4
 
 # Item-data role stamping each list row with its ephemeral ``ReadingQueueItem``
 # at Mine time, so a mid-run Remove/Clear can route the removed row to the
@@ -220,7 +229,11 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.file_list.setToolTip(self.tr("Subtitle files to mine, one card run per file, in list order."))
-        self.file_list.setMinimumHeight(96)
+        # The list IS the queue: its order is the mining order, so sorting is
+        # never enabled here. Copy hands back the full paths.
+        configure_data_view(self.file_list)
+        install_copy_rows(self.file_list)
+        self.file_list.setMinimumHeight(_VISIBLE_FILE_ROWS * data_row_height(self.file_list))
         card_layout.addWidget(self.file_list)
 
         list_button_row = QHBoxLayout()

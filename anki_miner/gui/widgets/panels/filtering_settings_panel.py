@@ -18,12 +18,17 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.utils.qt_helpers import configure_data_view, data_row_height, install_copy_rows
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.wordset_service import load_wordset_catalog
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+# How tall the excluded-deck list is allowed to grow, in rows rather than
+# pixels: a flat cap shows fewer decks the larger the user's text gets.
+_EXCLUDED_DECK_ROWS = 5
 
 # Built-in regex presets for common subtitle noise. Buttons append these to the
 # user's pattern with `|` so multiple presets can be stacked. Patterns target
@@ -144,7 +149,11 @@ class FilteringSettingsPanel(FormPanel):
 
         self.excluded_decks_list = QListWidget()
         self.excluded_decks_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
-        self.excluded_decks_list.setMaximumHeight(140)
+        # Deck names are stored in the order the user added them; sorting is not
+        # enabled. The cap is in rows so it still shows five decks at 150% text.
+        configure_data_view(self.excluded_decks_list)
+        install_copy_rows(self.excluded_decks_list)
+        self.excluded_decks_list.setMaximumHeight(_EXCLUDED_DECK_ROWS * data_row_height(self.excluded_decks_list))
         self.add_widget(
             self.excluded_decks_list,
             anchor="excluded_decks",

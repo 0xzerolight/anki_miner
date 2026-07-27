@@ -77,7 +77,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(0) == "Generate"
     assert tab._inner_tabs.tabText(1) == "Retime"
     assert tab._inner_tabs.tabText(2) == "Condense"
-    assert tab._inner_tabs.tabText(3) == "Backfill"
+    assert tab._inner_tabs.tabText(3) == "Update Notes"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -364,3 +364,21 @@ def test_no_worker_thread_attribute(qtbot, tmp_path):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     assert getattr(tab, "worker_thread", None) is None
     assert not hasattr(tab, "worker_thread")
+
+
+# ---------------------------------------------------------------------------
+# Hand-off from the subtitle timing viewer (D35)
+# ---------------------------------------------------------------------------
+
+
+def test_open_retime_prefills_and_reveals_the_retime_subtab(qtbot, tmp_path):
+    """The timing viewer's "Align automatically" lands on a filled-in Retime."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    subtitle = tmp_path / "ep01.ja.ass"
+
+    tab.open_retime(video, subtitle)
+
+    assert tab.current_subtab_key() == "retime"
+    assert tab.retime_tab.video_file_selector.get_path() == str(video)
+    assert tab.retime_tab.subtitle_file_selector.get_path() == str(subtitle)

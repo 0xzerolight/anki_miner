@@ -65,7 +65,7 @@ from anki_miner.gui.widgets.base import (
     field_label_width,
 )
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
@@ -83,9 +83,19 @@ logger = logging.getLogger(__name__)
 
 # Subtitle extensions probed (in order) for the same-stem auto-fill.
 _SUBTITLE_EXTS = (".srt", ".vtt", ".ass", ".ssa")
+# Audio extensions this tab mines. One list per kind: the Browse filter and the
+# drag-and-drop validator (D50) are both derived from it, so a format can never
+# be pickable and undroppable at the same time.
+_AUDIO_EXTS = (".m4b", ".mp3", ".m4a", ".aac", ".ogg", ".opus", ".flac", ".wav")
 
-_AUDIO_FILTER = "Audio Files (*.m4b *.mp3 *.m4a *.aac *.ogg *.opus *.flac *.wav)"
-_SUBTITLE_FILTER = "Subtitle Files (*.srt *.vtt *.ass *.ssa)"
+
+def _file_filter(label: str, extensions: tuple[str, ...]) -> str:
+    """Render a Qt file-dialog filter from one extension list."""
+    return f"{label} ({' '.join('*' + extension for extension in extensions)})"
+
+
+_AUDIO_FILTER = _file_filter("Audio Files", _AUDIO_EXTS)
+_SUBTITLE_FILTER = _file_filter("Subtitle Files", _SUBTITLE_EXTS)
 
 
 class AudiobookTab(_ListQueueMiningTabBase):
@@ -196,6 +206,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             file_filter=_AUDIO_FILTER,
             label_width=label_w,
             history_key="audio.inputs",
+            drop_validator=accepts_suffixes(_AUDIO_EXTS, self.tr("This field takes an audio file.")),
         )
         self.audio_selector.path_changed.connect(self._on_audio_path_changed)
         queue_layout.addWidget(self.audio_selector)
@@ -205,6 +216,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
             file_filter=_SUBTITLE_FILTER,
             label_width=label_w,
             history_key="audio.inputs",
+            drop_validator=accepts_suffixes(_SUBTITLE_EXTS, self.tr("This field takes a subtitle file.")),
         )
         queue_layout.addWidget(self.subtitle_selector)
 

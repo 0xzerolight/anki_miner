@@ -178,10 +178,10 @@ def test_composition_suppression_builds_every_tab_without_availability_probes(
     assert [composed.window.tabs.tabText(index) for index in range(composed.window.tabs.count())] == [
         "Video",
         "Deck Builder",
-        "Audio",
+        "Audiobooks",
         "Reading",
         "Analytics",
-        "Tools",
+        "Utilities",
         "Settings",
     ]
 

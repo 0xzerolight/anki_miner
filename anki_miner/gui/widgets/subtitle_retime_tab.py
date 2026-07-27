@@ -46,7 +46,7 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.alass_resolver import resolve_alass
@@ -229,6 +229,9 @@ class SubtitleRetimeTab(_ToolTabBase):
             file_mode=True,
             file_filter=VIDEO_FILE_FILTER,
             history_key="tools.retime.inputs",
+            drop_validator=accepts_suffixes(
+                FilePairMatcher.VIDEO_EXTENSIONS, self.tr("This field takes a video file.")
+            ),
         )
         layout.addWidget(self.video_file_selector)
 
@@ -237,6 +240,9 @@ class SubtitleRetimeTab(_ToolTabBase):
             file_mode=True,
             file_filter=SUBTITLE_FILE_FILTER,
             history_key="tools.retime.inputs",
+            drop_validator=accepts_suffixes(
+                FilePairMatcher.SUBTITLE_EXTENSIONS, self.tr("This field takes a subtitle file.")
+            ),
         )
         layout.addWidget(self.subtitle_file_selector)
 
@@ -428,6 +434,24 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.track_row_widget.show()
         self.video_folder_selector.hide()
         self.subtitle_folder_selector.hide()
+
+    def set_single_inputs(self, video_path: Path, subtitle_path: Path) -> None:
+        """Prefill single-file mode with an exact pair (D35 hand-off).
+
+        Called when the subtitle timing viewer's "Align automatically" closes:
+        the user already chose both files there, so nothing is re-derived and
+        nothing runs — the tool is simply put in front of them, loaded, with
+        Retime left for them to press.
+
+        Args:
+            video_path: The video the subtitle should be matched against.
+            subtitle_path: The subtitle file to retime.
+        """
+        self._on_file_mode()
+        # set_path goes through the field, so path_changed fires and the
+        # per-run audio-track pick is dropped with the video it belonged to.
+        self.video_file_selector.set_path(str(video_path))
+        self.subtitle_file_selector.set_path(str(subtitle_path))
 
     def _on_folder_mode(self) -> None:
         self.folder_mode_button.setChecked(True)

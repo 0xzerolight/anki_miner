@@ -1061,3 +1061,102 @@ def test_late_track_probe_does_not_override_after_source_change(tab, tmp_path, q
 
     dialog_cls.assert_not_called()
     assert tab._audio_track_override is None
+
+
+# ---------------------------------------------------------------------------
+# 25. Timing viewer hand-off to the automatic aligner (D35)
+# ---------------------------------------------------------------------------
+
+
+def _prime_timing_inputs(tab, tmp_path):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+    tab.subtitle_selector.get_path = MagicMock(return_value=str(fake_subs))
+    tab.subtitle_selector.is_valid = MagicMock(return_value=True)
+    return fake_video, fake_subs
+
+
+def _run_timing_with(tab, qtbot, viewer):
+    """Open the timing viewer with a stubbed instance but the REAL result codes.
+
+    The tab branches on ``SubtitleViewer.ALIGN_REQUESTED`` / ``DialogCode``; a
+    bare MagicMock class would answer those with fresh mocks and every branch
+    would silently miss.
+    """
+    from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer as RealViewer
+
+    mock_parser_cls = MagicMock()
+    mock_parser_cls.return_value.parse_raw_entries.return_value = [(0.0, 2.5, "テスト")]
+    viewer_cls = MagicMock(return_value=viewer)
+    viewer_cls.ALIGN_REQUESTED = RealViewer.ALIGN_REQUESTED
+    viewer_cls.DialogCode = RealViewer.DialogCode
+    with (
+        patch("anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", viewer_cls),
+        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", mock_parser_cls),
+    ):
+        tab._on_timing_clicked()
+        qtbot.waitUntil(lambda: viewer_cls.called, timeout=3000)
+
+
+def test_timing_align_result_hands_the_pair_to_retime(tab, tmp_path, qtbot):
+    """Align automatically routes to the existing Retime tool, prefilled."""
+    from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+    video, subs = _prime_timing_inputs(tab, tmp_path)
+    viewer = MagicMock()
+    viewer.exec.return_value = SubtitleViewer.ALIGN_REQUESTED
+
+    container = MagicMock()
+    with patch.object(type(tab), "_subtitles_container", return_value=container, create=True):
+        _run_timing_with(tab, qtbot, viewer)
+
+    container.open_retime.assert_called_once_with(video, subs)
+
+
+def test_timing_align_navigates_only_after_the_viewer_closed(tab, tmp_path, qtbot):
+    """exec() must have returned before anything navigates: mpv is down by then."""
+    from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+    _prime_timing_inputs(tab, tmp_path)
+    order: list[str] = []
+    viewer = MagicMock()
+    viewer.exec.side_effect = lambda: (order.append("exec"), SubtitleViewer.ALIGN_REQUESTED)[1]
+
+    container = MagicMock()
+    container.open_retime.side_effect = lambda *_: order.append("open_retime")
+    with patch.object(type(tab), "_subtitles_container", return_value=container, create=True):
+        _run_timing_with(tab, qtbot, viewer)
+
+    assert order == ["exec", "open_retime"]
+
+
+def test_timing_align_without_a_host_window_is_a_quiet_noop(tab, tmp_path, qtbot):
+    """A tab with no Subtitles container (tests, stripped shells) must not crash."""
+    from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+    _prime_timing_inputs(tab, tmp_path)
+    viewer = MagicMock()
+    viewer.exec.return_value = SubtitleViewer.ALIGN_REQUESTED
+
+    _run_timing_with(tab, qtbot, viewer)  # must not raise
+
+    assert tab.timing_button.isEnabled()
+
+
+def test_timing_align_does_not_apply_the_offset(tab, tmp_path, qtbot):
+    """Handing off is not accepting: the spinbox keeps its value."""
+    from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+    _prime_timing_inputs(tab, tmp_path)
+    tab.offset_spinbox.setValue(0.5)
+    viewer = MagicMock()
+    viewer.exec.return_value = SubtitleViewer.ALIGN_REQUESTED
+    viewer.get_offset.return_value = 9.0
+
+    _run_timing_with(tab, qtbot, viewer)
+
+    assert tab.offset_spinbox.value() == 0.5

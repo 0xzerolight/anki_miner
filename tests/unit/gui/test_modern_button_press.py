@@ -279,6 +279,7 @@ class TestPressFeedback:
         assert len(second) == 1
         assert second == first
 
+    @pytest.mark.motion
     def test_the_press_settles_at_the_press_duration(self, qtbot):
         button = ModernButton("Mine Episode")
         qtbot.addWidget(button)

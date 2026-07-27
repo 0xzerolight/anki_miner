@@ -1356,6 +1356,27 @@ QLineEdit[warning="true"] {
     border-width: 2px;
 }
 
+/* Drop targets while a drag is in the air (D50). Set by FileSelector on drag
+   enter and cleared on leave/drop, so a valid target says "Drop Video File
+   here" instead of leaving the user to guess whether releasing will do
+   anything. Placed AFTER the error/success rules on purpose: the three have
+   equal specificity, so load order decides, and what the drag will do now
+   outranks what the field held a moment ago.
+
+   `border-focus`, not `primary`: a lit drop target says "the interaction is
+   pointed HERE", which is what the focus border already means, and D41-B keeps
+   the accent itself scarce — one primary action, navigation, focus, checked
+   controls, progress. A drop target is none of those. */
+QLineEdit[dropState="valid"] {
+    border-color: ${color-border-focus};
+    border-width: 2px;
+}
+
+QLineEdit[dropState="invalid"] {
+    border-color: ${color-error};
+    border-width: 2px;
+}
+
 /* The control a settings search jumped to, for the moment after it lands.
    A tint rather than a border: a border would change the control's size hint
    and shift the whole form for as long as the mark is up. The selection colour

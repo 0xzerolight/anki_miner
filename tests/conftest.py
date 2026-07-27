@@ -320,6 +320,32 @@ def _guard_real_home():
 
 
 @pytest.fixture(autouse=True)
+def _instant_motion(request):
+    """Animations apply their end value immediately, unless a test wants time.
+
+    Every animated property in the app is written by ``QPropertyAnimation``,
+    which on ``start()`` sets the *start* value and only reaches the end value
+    after its duration has elapsed. A test that reads the property on the next
+    line therefore reads the old value, and one that waits reads whatever the
+    scheduler happened to allow — a wall-clock dependency in several hundred
+    assertions that have nothing to do with motion.
+
+    ``motion.instant()`` is the internal zero-duration path (D38-B: it is a test
+    hook, never a user setting). Marking a test ``@pytest.mark.motion`` opts back
+    into real timing, which is what the soak needs to see anything move.
+
+    Guarded on the module already being imported so non-GUI tests pay no forced
+    PyQt import.
+    """
+    _motion = sys.modules.get("anki_miner.gui.utils.motion")
+    if _motion is None or "motion" in request.keywords:
+        yield
+        return
+    with _motion.instant():
+        yield
+
+
+@pytest.fixture(autouse=True)
 def _drain_qt_deletes():
     """Flush pending Qt deletions after each test to prevent cross-test leaks.
 

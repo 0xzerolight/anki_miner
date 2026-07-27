@@ -508,7 +508,13 @@ class EpisodeProcessor:
                 )
             )
         else:
-            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "All words already in Anki!"))
+            # Kept byte-identical to ``gui.utils.result_copy.nothing_new_to_mine``
+            # (D47-B). Orchestration must not import the GUI, so the sentence is
+            # duplicated rather than shared; ``test_result_copy`` fails if the two
+            # drift apart.
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "No cards created. Every word is already in Anki.")
+            )
 
     def _phase1_parse(
         self,

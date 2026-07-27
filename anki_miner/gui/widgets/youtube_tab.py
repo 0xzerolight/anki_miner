@@ -36,6 +36,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -52,6 +53,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets._queue_mining_tab_base import (
     _ListQueueMiningTabBase,
@@ -71,6 +73,7 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.youtube_url import classify_youtube_url
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
@@ -178,6 +181,9 @@ class YouTubeTab(_ListQueueMiningTabBase):
             parent=self,
         )
 
+        # Drops are answered here rather than swallowed (D50); the add flow has
+        # to exist first, because a valid drop goes straight into it.
+        self._setup_drag_drop()
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
@@ -211,6 +217,11 @@ class YouTubeTab(_ListQueueMiningTabBase):
         self.url_edit = QLineEdit()
         self.url_edit.setPlaceholderText("https://www.youtube.com/watch?v=…")
         self.url_edit.returnPressed.connect(self._on_add_clicked)
+        # The tab handles every drop on this screen (D50), including the ones
+        # that land on the box itself: a QLineEdit would silently absorb the
+        # text and leave the user to press Add, and a link dropped on a screen
+        # whose whole purpose is queueing links should just queue.
+        self.url_edit.setAcceptDrops(False)
         url_row.addWidget(self.url_edit, 1)
 
         self.add_button = ModernButton(self.tr("Add"), variant="secondary")
@@ -319,6 +330,78 @@ class YouTubeTab(_ListQueueMiningTabBase):
         if not url:
             return
         self._add_flow.begin(url)
+
+    # ------------------------------------------------------------------
+    # Drag and drop (D50): one YouTube URL, added the ordinary way
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _dropped_youtube_url(event: QDragEnterEvent | QDropEvent) -> str | None:
+        """Return the one YouTube URL a drag carries, or ``None``.
+
+        A dragged link arrives as a URL and often as text as well; both are
+        read, and both are classified by the same parser the Add button uses,
+        so a link that drops is exactly a link that can be added.
+        """
+        mime = event.mimeData()
+        if mime is None:
+            return None
+        candidates = [url.toString() for url in urls_from_event(event)]
+        if mime.hasText():
+            candidates.append(mime.text())
+        for candidate in candidates:
+            text = candidate.strip()
+            if text and classify_youtube_url(text).kind != "unknown":
+                return text
+        return None
+
+    @staticmethod
+    def _carries_a_payload(event: QDragEnterEvent | QDropEvent) -> bool:
+        """Whether the drag holds anything this screen could have an answer to.
+
+        A queue reorder carries neither a URL nor text, and it belongs to the
+        list widget. Reacting to it would flash the URL box red every time a row
+        was dragged past the edge of the list.
+        """
+        mime = event.mimeData()
+        return mime is not None and (mime.hasUrls() or mime.hasText())
+
+    def _light_url_field(self, state: str) -> None:
+        """Mark the URL box as the destination while a drag is over the tab."""
+        self.url_edit.setProperty("dropState", state)
+        if style := self.url_edit.style():
+            style.unpolish(self.url_edit)
+            style.polish(self.url_edit)
+
+    def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:  # noqa: N802 - Qt override
+        """Light the URL box for a YouTube link; take anything else to refuse it."""
+        if event is None or not self._carries_a_payload(event):
+            return
+        self._light_url_field("valid" if self._dropped_youtube_url(event) is not None else "invalid")
+        event.acceptProposedAction()
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
+        """Unlight the URL box when the drag moves off the tab."""
+        self._light_url_field("")
+        if event is not None:
+            event.accept()
+
+    def dropEvent(self, event: QDropEvent | None) -> None:  # noqa: N802 - Qt override
+        """Queue a dropped YouTube link, or say why the payload was not one."""
+        if event is None:
+            return
+        self._light_url_field("")
+        url = self._dropped_youtube_url(event)
+        if url is None:
+            # A file is the common wrong payload here, and it has a right home.
+            self.log_widget.append_warning(
+                self.tr("Drop a YouTube link here. Local files are mined from the Video and Audio tabs.")
+            )
+            event.ignore()
+            return
+        self.url_edit.setText(url)
+        self._add_flow.begin(url)
+        event.acceptProposedAction()
 
     # ------------------------------------------------------------------
     # Per-tab adapters for the shared list-queue lifecycle

@@ -178,6 +178,7 @@ markers = [
     "asr: requires faster-whisper and a downloaded ASR model",
     "network: genuinely needs real network; suppresses the socket tripwire (tests/_network_tripwire.py)",
     "golden: Android-port engine parity contract; excluded from the default gate (runs on-demand + in android-engine-goldens.yml)",
+    "motion: needs real animation timing; opts out of the autouse instant-motion fixture",
 ]
 
 [tool.black]

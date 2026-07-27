@@ -93,11 +93,13 @@ class TestSliding:
 
         assert bar.property("underlineRect") == _underline_of(bar, 1)
 
+    @pytest.mark.motion
     def test_it_travels_at_the_navigation_duration(self, tabs):
         tabs.setCurrentIndex(1)
 
         assert tabs.tabBar().findChildren(QPropertyAnimation)[0].duration() == MOTION.navigation
 
+    @pytest.mark.motion
     def test_a_second_click_retargets_the_same_animation(self, tabs):
         """Queueing a second animation would tear; restarting would jump back."""
         bar = tabs.tabBar()

@@ -199,14 +199,27 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="card-backfill",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Backfill fields on existing cards"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Fill missing pitch, frequency, definition and reading fields on already-mined cards.",
+            "Fill missing pitch, frequency, definition and reading fields on already-mined notes.",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("subtitles", "backfill"),
-        keywords=("backfill", "fill fields", "pitch", "frequency", "existing cards", "bulk update", "old cards"),
+        # "backfill" and "existing cards" stay: the old words are what a
+        # returning user searches for, and a rename that loses them makes the
+        # screen unfindable to exactly the people who already knew it.
+        keywords=(
+            "backfill",
+            "update notes",
+            "fill fields",
+            "pitch",
+            "frequency",
+            "existing notes",
+            "existing cards",
+            "bulk update",
+            "old cards",
+        ),
     ),
     Capability(
         id="restyle-mined-cards",

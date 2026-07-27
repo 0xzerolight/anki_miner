@@ -4,7 +4,9 @@ This is the "UI" Settings sub-tab. Top to bottom it offers:
 
 * UI language picker (restart-to-apply; merged in from the former
   ``LanguagePanel``). Emits ``language_changed``.
-* Zoom (whole-UI scale, restart-to-apply) and Text size (live font scale).
+* Zoom (whole-UI scale) and Text size, both restart-to-apply (D39b-A). Text size
+  commits instantly and offers *Restart now* / *Later*; changing it relayouts the
+  whole window, so unlike theme there is no instant path to have.
 * The theme list (shipped + user-installed) with:
   - Live preview when a row is selected — the active theme actually changes so
     the user sees buttons, tables, scrollbars, banners react in real time.
@@ -48,6 +50,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui import restart
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import (
@@ -59,16 +62,13 @@ from anki_miner.gui.resources.styles.theme import (
     ThemeGroupEntry,
     assess_theme_contrast,
 )
+from anki_miner.gui.utils.qt_helpers import configure_data_view, data_row_height, install_copy_rows
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-
-# Single dial that drives row geometry, glyph pixel size, and button bounding
-# box. Bumped from 32 → 36 so the auto-sized star has comfortable headroom.
-_ROW_HEIGHT_PX = 36
 
 # Unicode star glyphs. Routed through the font pipeline so hinting/AA stays
 # sharp at small sizes — no QPainter math, no devicePixelRatio handling.
@@ -134,6 +134,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         ui_zoom: float = 1.0,
         ui_language: str = "en",
         use_native_file_dialogs: bool = False,
+        ui_font_scale: float = 1.0,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the panel.
@@ -148,19 +149,32 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
                 Language dropdown. Restart-to-apply, so it is passed in.
             use_native_file_dialogs: Seeds the "Use system file dialogs"
                 checkbox (Issue #100 — non-native Qt dialogs are the default).
+            ui_font_scale: The persisted UI font scale, used to seed the Text
+                size dropdown. Restart-to-apply (D39b-A), so the *pending*
+                config value is what the combo shows — never the running
+                ``Theme.get_font_scale()``, which stays on the boot value for
+                the life of the process.
             parent: Optional parent widget.
         """
         super().__init__(parent)
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
+        self._ui_font_scale = ui_font_scale
         self._use_native_file_dialogs = use_native_file_dialogs
         # Construction-time values = what Qt is actually running with: the panel
-        # is built once at app boot from the boot config, and both language and
-        # zoom only take effect at startup. ``load_from_config`` compares against
-        # these so an A → B → A round trip clears the restart note again instead
-        # of latching it on for the rest of the session.
+        # is built once at app boot from the boot config, and language, zoom and
+        # text size only take effect at startup. ``load_from_config`` compares
+        # against these so an A → B → A round trip clears the restart note again
+        # instead of latching it on for the rest of the session.
         self._boot_language = ui_language
         self._boot_zoom = ui_zoom
+        # Read from Theme, not from the argument: this is what the running
+        # process was actually styled with, which is the only honest baseline
+        # for "will change after restart".
+        self._boot_font_scale = Theme.get_font_scale()
+        # `Later` hides the note for the session without touching the persisted
+        # value; a fresh selection reveals it again.
+        self._font_scale_note_dismissed = False
         self._preview_baseline: str | None = None
         # The theme this panel last *saw*: the previous load's ``config.theme``,
         # or whatever the panel itself made live since. ``load_from_config``
@@ -176,6 +190,10 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # for the tri-state family star.
         self._star_buttons: dict[str, QToolButton] = {}
         self._family_records: dict[str, tuple[QTreeWidgetItem, str, list[ThemeGroupEntry]]] = {}
+        # Re-derived from the tree's own font by ``_apply_tree_metrics``; the
+        # seed only has to be positive so a star cell built before the tree
+        # exists cannot divide by nothing.
+        self._row_height_px = 36
 
         self._setup_ui()
         # Seed the language combo after the widgets exist (set_language reads
@@ -257,23 +275,26 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         layout.addWidget(self.zoom_restart_note)
 
         # Text size (global UI font scale) row. A styled QComboBox of discrete
-        # percent presets; apply maps the selected percent to a float scale.
-        # Unlike Zoom/Language this applies live, so it has no restart note.
+        # percent presets; the selected percent maps to a float scale.
+        # Restart-to-apply (D39b-A): the scale is baked into the one-time
+        # structural stylesheet at boot, and changing it relayouts every widget
+        # in the window, so there is no instant path the way there is for theme.
         font_row = QHBoxLayout()
         font_row.setSpacing(SPACING.sm)
 
+        font_tip = self.tr("Scale all UI text. Applies after restart.")
         font_label = QLabel(self.tr("Text size"))
-        font_label.setToolTip(self.tr("Scale all UI text. Applies live across the app."))
+        font_label.setToolTip(font_tip)
         font_row.addWidget(font_label)
 
         self.font_scale_combo = QComboBox()
         self.font_scale_combo.setObjectName("fontScaleCombo")
-        self.font_scale_combo.setToolTip(self.tr("Scale all UI text. Applies live across the app."))
+        self.font_scale_combo.setToolTip(font_tip)
         for p in FONT_SCALE_PRESETS:
             self.font_scale_combo.addItem(tr_format(self.tr("%1%"), p), p)
         # `activated` fires only on user interaction; `currentIndexChanged`
         # would also fire on the programmatic setCurrentIndex in
-        # _sync_font_scale_combo, re-triggering the expensive apply.
+        # _sync_font_scale_combo, falsely revealing the restart note.
         self.font_scale_combo.activated.connect(self._on_font_scale_selected)
         font_row.addWidget(self.font_scale_combo)
         self.register_setting(
@@ -287,6 +308,28 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         font_row.addStretch(1)
 
         layout.addLayout(font_row)
+
+        # Hidden until the user changes text size. Unlike the language/zoom
+        # notes this one carries actions, because the reward is worth offering
+        # rather than leaving the user to find the window button themselves.
+        # Both are quiet variants: a settings note must not become the primary
+        # action on the screen (D41).
+        self.font_scale_restart_row = QWidget()
+        font_note_layout = QHBoxLayout(self.font_scale_restart_row)
+        font_note_layout.setContentsMargins(0, 0, 0, 0)
+        font_note_layout.setSpacing(SPACING.sm)
+        self.font_scale_restart_note = QLabel(self.tr("Text size will change after restart."))
+        self.font_scale_restart_note.setWordWrap(True)
+        font_note_layout.addWidget(self.font_scale_restart_note)
+        self.restart_now_btn = ModernButton(self.tr("Restart now"), variant="secondary")
+        self.restart_now_btn.clicked.connect(self._on_restart_now)
+        font_note_layout.addWidget(self.restart_now_btn)
+        self.restart_later_btn = ModernButton(self.tr("Later"), variant="ghost")
+        self.restart_later_btn.clicked.connect(self._on_restart_later)
+        font_note_layout.addWidget(self.restart_later_btn)
+        font_note_layout.addStretch(1)
+        self.font_scale_restart_row.setVisible(False)
+        layout.addWidget(self.font_scale_restart_row)
 
         # File-dialog mode. Qt's built-in dialog is the default because the
         # OS-native one can hang the GUI thread on some Windows setups
@@ -341,8 +384,12 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             header.setSectionResizeMode(self.COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
             header.setStretchLastSection(False)
 
-        # Row min-height keeps the star button vertically centered.
-        self.tree.setStyleSheet(f"QTreeWidget::item {{ padding: 0; min-height: {_ROW_HEIGHT_PX}px; }}")
+        # The theme list is a data view like any other (D42): same scrolling,
+        # same selection, same row height rule. Its order is the theme
+        # hierarchy, so sorting is never enabled.
+        configure_data_view(self.tree)
+        install_copy_rows(self.tree, row_text=self._selected_theme_row_text)
+        self._apply_tree_metrics()
 
         self.tree.itemSelectionChanged.connect(self._on_row_selected)
         layout.addWidget(self.tree)
@@ -391,11 +438,47 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # ---- Population ------------------------------------------------------
 
+    def _apply_tree_metrics(self) -> None:
+        """Re-derive the tree's row height, and the star sizes hanging off it.
+
+        ``_row_height_px`` is the single dial that drives row geometry, glyph
+        pixel size and the star's bounding box. It used to be a flat 36px while
+        the tree's text tracked the UI text scale, which made the theme list the
+        one data view in the app not sharing the shared row height (D42).
+
+        Called on construction and before every rebuild, so a live text-size
+        change reaches the theme list the next time it is populated rather than
+        leaving it pinned to whatever the font was at app start.
+        """
+        self._row_height_px = data_row_height(self.tree)
+        # Row min-height keeps the star button vertically centered.
+        self.tree.setStyleSheet(f"QTreeWidget::item {{ padding: 0; min-height: {self._row_height_px}px; }}")
+
+    def _selected_theme_row_text(self, _row: int) -> str:
+        """Serialize the selected theme row for a copy.
+
+        The star is a widget, not a cell, so the state is read from the theme
+        model rather than scraped off the button: name, family, and whether the
+        theme is active or favorited. The tree is single-selection, so the row
+        index the shared helper passes is always this one item.
+        """
+        item = self.tree.currentItem()
+        if item is None:
+            return ""
+        key = item.data(self.COL_NAME, Qt.ItemDataRole.UserRole)
+        parent = item.parent()
+        family = parent.text(self.COL_NAME) if parent is not None else ""
+        fields = [item.text(self.COL_NAME), family, item.text(self.COL_STATUS)]
+        if key is not None and key in set(Theme.get_favorites()):
+            fields.append(self.tr("Favorite"))
+        return "\t".join(field for field in fields if field)
+
     def _populate(self) -> None:
         """Rebuild the tree from the current Theme state."""
         groups = Theme.get_themes_grouped()
         favorites = set(Theme.get_favorites())
         active = Theme.get_current_mode()
+        self._apply_tree_metrics()
 
         self.tree.blockSignals(True)
         try:
@@ -467,10 +550,10 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         the font pipeline so it stays sharp without QPainter or
         devicePixelRatio handling.
 
-        Sizing auto-derives from ``_ROW_HEIGHT_PX``: font is 60% of row
-        height, button bounding box is the larger of the glyph's line height
-        and ``_ROW_HEIGHT_PX - 4``. Change the row height constant and the
-        star scales with it — no separate QSS pixel values to keep in sync.
+        Sizing auto-derives from ``self._row_height_px``: the font is 60% of the
+        row height and the button box is the row less its 1-px margins. That row
+        height is itself re-derived from the tree's rendered font, so the star
+        tracks the UI text scale with no QSS pixel values to keep in sync.
 
         The QToolButton is wrapped in a QWidget+QHBoxLayout so it sits on the
         row's centerline regardless of cell padding — placing the button
@@ -494,13 +577,13 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Button always fits the row (cell padding is zeroed by the scoped
         # QSS rule on `#themesPanelTree`). 1-px margin on each side keeps
         # the button from butting up against the row divider.
-        side = _ROW_HEIGHT_PX - 2
+        side = self._row_height_px - 2
         button.setFixedSize(side, side)
         # 60% of row height gives a readable ★ glyph that fits comfortably
         # inside the button. Set via instance stylesheet so the base
         # `QWidget { font-size: 14px }` rule from common.qss can't override
         # it during a style re-polish.
-        font_px = int(_ROW_HEIGHT_PX * 0.6)
+        font_px = int(self._row_height_px * 0.6)
         button.setStyleSheet(f"font-size: {font_px}px;")
 
         wrapper = QWidget(self.tree)
@@ -536,14 +619,14 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         button.setObjectName("starToggle")
         button.setAutoRaise(True)
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        side = _ROW_HEIGHT_PX - 2
+        side = self._row_height_px - 2
         button.setFixedSize(side, side)
 
         keys = [e.key for e in entries]
         favorited_keys = [k for k in keys if k in favorites]
         n_fav = len(favorited_keys)
         n_total = len(keys)
-        font_size = int(_ROW_HEIGHT_PX * 0.6)
+        font_size = int(self._row_height_px * 0.6)
 
         if n_fav == 0:
             button.setText(_STAR_OUTLINE)
@@ -812,17 +895,18 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     # ---- Text size (font scale) -----------------------------------------
 
     def _sync_font_scale_combo(self) -> None:
-        """Select the combo entry matching the current Theme font scale.
+        """Select the combo entry matching the *pending* config font scale.
 
-        Signals are blocked so syncing from Theme state never re-triggers an
-        apply/emit (mirrors how ``_populate`` blocks the tree's signals). This
-        is belt-and-suspenders given we connect ``activated`` (user-only), but
-        keeps parity with the prior slider-sync pattern.
+        Deliberately not ``Theme.get_font_scale()``: text size is
+        restart-to-apply, so the running Theme keeps the boot value all session
+        while the combo has to show what the user chose and what was persisted.
 
-        A legacy custom scale that is not one of ``FONT_SCALE_PRESETS`` snaps
-        the display to the nearest preset.
+        Signals are blocked so syncing from config state never emits and falsely
+        reveals the restart note (belt-and-suspenders given ``activated`` is
+        user-only). A legacy custom scale that is not one of
+        ``FONT_SCALE_PRESETS`` snaps the display to the nearest preset.
         """
-        value = round(Theme.get_font_scale() * 100)
+        value = round(self._ui_font_scale * 100)
         idx = self._nearest_preset_index(value)
         self.font_scale_combo.blockSignals(True)
         try:
@@ -869,37 +953,60 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.native_dialogs_changed.emit(checked)
 
     def _on_font_scale_selected(self, index: int) -> None:
-        """Apply the preset the user picked from the dropdown."""
+        """Persist the preset the user picked and reveal the restart note.
+
+        No live restyle (D39b-A). The old path called ``Theme.set_font_scale``
+        and repolished the whole widget tree behind a wait cursor, which is the
+        ~900 ms dead window this decision exists to remove; the scale is baked
+        into the structural stylesheet compiled once at boot instead.
+        """
         percent = self.font_scale_combo.itemData(index)
         if percent is None:
             return
-        self._apply_font_scale(int(percent))
+        self._ui_font_scale = int(percent) / 100.0
+        # A new choice always speaks up again, even after a previous `Later`.
+        self._font_scale_note_dismissed = False
+        self._refresh_font_scale_note()
+        self.font_scale_changed.emit(self._ui_font_scale)
 
-    def _apply_font_scale(self, value: int) -> None:
-        """Apply ``value`` percent as the global UI font scale and persist.
+    def _refresh_font_scale_note(self) -> None:
+        """Show the restart note exactly while the pending scale differs."""
+        pending = self._ui_font_scale != self._boot_font_scale
+        self.font_scale_restart_row.setVisible(pending and not self._font_scale_note_dismissed)
 
-        Restyles the whole app (so text rescales live) then emits
-        ``font_scale_changed`` so the settings tab can fold the new scale into
-        the config and persist it.
+    def _on_restart_later(self) -> None:
+        """Dismiss the note for this session; the choice stays persisted."""
+        self._font_scale_note_dismissed = True
+        self._refresh_font_scale_note()
 
-        The restyle repolishes the entire widget tree synchronously on the GUI
-        thread (a multi-second freeze for large trees). We can't avoid that
-        cost, so we show a busy cursor while it runs and pump events once so
-        the cursor actually paints before the blocking work begins.
+    def _on_restart_now(self) -> None:
+        """Relaunch the app so the new text size takes effect.
+
+        The executable is resolved *first*: if we cannot name what to launch,
+        nothing closes and the panel says so inline. Recoverable failures never
+        open a modal (D24), and the banner this host already owns is the place
+        for it.
+
+        On success the intent is recorded and the ordinary ``close()`` runs, so
+        the settings flush, worker cancellation/join, dictionary release and
+        deferred-close handling all happen exactly as they do for a normal quit.
+        The replacement is started by ``gui.app`` after ``app.exec()`` returns.
+        A refused close (a tab vetoing it, or the user cancelling) clears the
+        intent again so a later ordinary quit does not silently relaunch.
         """
-        scale = value / 100.0
-        app = QApplication.instance()
-        app = app if isinstance(app, QApplication) else None
-        if app is not None:
-            app.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
-            app.processEvents()  # let the cursor paint before the blocking restyle
-        try:
-            Theme.set_font_scale(scale)
-            self._apply_to_app(Theme.get_current_mode())
-        finally:
-            if app is not None:
-                app.restoreOverrideCursor()
-        self.font_scale_changed.emit(scale)
+        if restart.resolve_relaunch_target() is None:
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Could not restart automatically. Close and reopen Anki Miner to apply it."),
+                    details=self.tr("The Anki Miner executable could not be located from this process."),
+                )
+            )
+            return
+        self.clear_screen_issue()
+        restart.request_restart()
+        window = self.window()
+        if window is not None and not window.close():
+            restart.clear_restart_request()
 
     # ---- Language --------------------------------------------------------
 
@@ -944,10 +1051,12 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         ``setChecked``/``setCurrentIndex`` would write the panel's *stale* state
         straight back into the config being loaded.
 
-        Text size and the active theme live on the ``Theme`` singleton (the
-        panel writes through it for live preview), so they are re-read from
-        there rather than set here — callers that swap the whole config re-seed
-        ``Theme`` before calling.
+        The active theme lives on the ``Theme`` singleton (the panel writes
+        through it for live preview), so it is re-read from there rather than
+        set here — callers that swap the whole config re-seed ``Theme`` before
+        calling. Text size does not: it is restart-to-apply, so the running
+        ``Theme`` scale is the *boot* value and the config carries the pending
+        one.
         """
         # Blocks signals internally.
         self.set_language(config.ui_language)
@@ -957,6 +1066,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._ui_zoom = config.ui_zoom
         self._sync_zoom_combo()  # blocks signals internally
 
+        # Same shape as zoom: the pending config value drives the combo, and the
+        # process keeps running at the boot scale until it is relaunched.
+        self._ui_font_scale = config.ui_font_scale
         self._sync_font_scale_combo()  # blocks signals internally
 
         self._use_native_file_dialogs = config.use_native_file_dialogs
@@ -997,3 +1109,4 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         self.language_restart_note.setVisible(config.ui_language != self._boot_language)
         self.zoom_restart_note.setVisible(config.ui_zoom != self._boot_zoom)
+        self._refresh_font_scale_note()

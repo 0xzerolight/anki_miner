@@ -39,6 +39,6 @@ def test_running_backfill_scan_refuses_window_fanout(wired_window) -> None:
     window, _titles, tabs = wired_window
     worker = MagicMock(spec=BackfillScanWorker)
     worker.isRunning.return_value = True
-    tabs["Tools"].backfill_tab.worker_thread = worker
+    tabs["Utilities"].backfill_tab.worker_thread = worker
 
     assert window.release_dictionary_resources() is False

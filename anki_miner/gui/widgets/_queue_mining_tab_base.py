@@ -59,6 +59,7 @@ from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QListWidget, QListWidgetItem
 
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
+from anki_miner.gui.utils.qt_helpers import configure_data_view, install_copy_rows
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base.sizing import metric_row_height
@@ -643,6 +644,11 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
         self.list_widget.itemSelectionChanged.connect(self._on_queue_selection_changed)
+        # The queue is a data view like the tables (D42): the same scrolling and
+        # the same row-height floor. Sorting stays off -- this order IS the
+        # mining order. Rows are widgets, so copy goes through the row itself.
+        configure_data_view(self.list_widget)
+        install_copy_rows(self.list_widget, row_text=self._queue_row_copy_text)
         # A list you can select, filter and reorder has to show enough rows to
         # be worth doing any of that to. Measured in rows, not pixels, so it
         # still holds eight of them at 1.5x text.
@@ -1294,6 +1300,18 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         # would quietly reset the view the user narrowed.
         list_item.setHidden(not self._row_visible(item, self._queue_search.strip().casefold()))
         self._refresh_queue_counts()
+
+    def _queue_row_copy_text(self, row: int) -> str:
+        """Serialize one queue row for the shared copy shortcut.
+
+        The row is an embedded widget, so there is no cell text to lift; the
+        widget states its own line. Owns no queue state -- it reads what the row
+        is already showing.
+        """
+        list_item = self.list_widget.item(row)
+        widget = self.list_widget.itemWidget(list_item) if list_item is not None else None
+        copy_text = getattr(widget, "copy_text", None)
+        return copy_text() if callable(copy_text) else ""
 
     # ------------------------------------------------------------------
     # Curation bridge
