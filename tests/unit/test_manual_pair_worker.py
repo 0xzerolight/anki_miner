@@ -102,12 +102,14 @@ def test_cancel_before_run_skips_processing_and_emit(tmp_path, qapp):
     assert results == []
 
 
-def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path, qapp):
-    """Cancelling between pairs discards the accumulated partial results.
+def test_partial_results_survive_a_mid_batch_cancel(tmp_path, qapp):
+    """Cancelling between pairs still hands the GUI what the run managed (D20).
 
-    Pin the contract: the result_ready emit is guarded by check_cancelled(),
-    so a batch cancelled after the first pair must NOT hand a truncated list to
-    the GUI — the run goes silent and the queue/summary state is left untouched.
+    The emit used to be guarded by check_cancelled(), so a cancelled batch went
+    silent and the notes it had already written to Anki went unreported. The
+    tab's run receipt needs them: "Cancelled — 1 of 3 episodes completed" is
+    only possible if the partial list arrives. The tab guards its own
+    completion painting on its cancel flag, so this cannot read as success.
     """
     proc = MagicMock()
     proc.config = SimpleNamespace(subtitle_offset=0.0)
@@ -131,8 +133,8 @@ def test_partial_results_discarded_when_cancelled_mid_batch(tmp_path, qapp):
 
     # Only pair 1 ran (loop-top check stops pair 2) ...
     assert processed == [p1.video]
-    # ... and the partial result list is never emitted.
-    assert results == []
+    # ... and its result is reported, exactly once.
+    assert results == [[SimpleNamespace(cards_created=3)]]
 
 
 def test_per_pair_error_reported_and_batch_continues(tmp_path, qapp):

@@ -1,9 +1,12 @@
-"""Tests for BatchProcessingTab manual-pair completion summary dialog (Issue #51).
+"""BatchProcessingTab manual-pair completion summary (Issue #51, D20).
 
-When episodes fail validation, process_episode returns a ProcessingResult with
-errors populated (success == False) rather than raising. The completion dialog
-must distinguish between full-success and partial/total-failure runs instead of
-presenting every finish as a success.
+``process_episode`` returns a ProcessingResult with errors populated rather than
+raising, so the summary must distinguish a full success from a partial one
+instead of presenting every finish as a success (Issue #51).
+
+The summary itself is no longer a modal box. It is the screen's inline run
+receipt, sealed when the worker thread ends — the old dialog interrupted after
+every run and fired even when the user had just cancelled (D20).
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.models.processing import ProcessingResult
 
@@ -30,46 +34,53 @@ def tab(qapp, qtbot, test_config):
     widget.deleteLater()
 
 
-def test_failed_results_show_warning_with_failure_count(tab):
-    """Mixed results: warning dialog naming the failure count (Issue #51).
+@pytest.fixture
+def clock(monkeypatch):
+    """Freeze the receipt's clock so the summary's duration is exact."""
+    state = {"t": 500.0}
+    monkeypatch.setattr(MiningTabBase, "_receipt_now", staticmethod(lambda: (state["t"], state["t"])))
+    return state
 
-    One failed episode (errors populated) and one successful episode should
-    trigger QMessageBox.warning (not information), and the message must include
-    the failure count and the correct total-cards figure.
-    """
+
+def _finish(tab, results: list[ProcessingResult], *, pairs: int) -> str:
+    with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
+        tab._start_processing_with_pairs([object()] * pairs)
+    tab._on_processing_finished(results=results)
+    tab._on_run_thread_finished()
+    return tab._receipt_widget.summary_text
+
+
+def test_failed_results_are_named_in_the_receipt(tab, clock):
+    """Mixed results: the receipt states how many of the episodes completed."""
     failed = ProcessingResult(
         total_words_found=0,
         new_words_found=0,
         cards_created=0,
         errors=["Error: deck missing"],
     )
-    succeeded = ProcessingResult(
-        total_words_found=10,
-        new_words_found=5,
-        cards_created=2,
-    )
+    succeeded = ProcessingResult(total_words_found=10, new_words_found=5, cards_created=2)
 
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as mock_msgbox:
-        tab._on_processing_finished(results=[failed, succeeded])
+    summary = _finish(tab, [failed, succeeded], pairs=2)
 
-    mock_msgbox.warning.assert_called_once()
-    mock_msgbox.information.assert_not_called()
-
-    _parent, _title, message = mock_msgbox.warning.call_args.args
-    assert "1 episode(s) failed" in message
-    assert "Total cards created: 2" in message
+    assert summary == "Finished with errors — 1 of 2 episodes completed; 2 notes added in 00m 00s"
 
 
-def test_all_success_shows_information_dialog(tab):
-    """Regression: all-success run must keep showing the information dialog."""
+def test_all_success_reads_as_a_complete_run(tab, clock):
     r1 = ProcessingResult(total_words_found=8, new_words_found=4, cards_created=2)
     r2 = ProcessingResult(total_words_found=12, new_words_found=6, cards_created=3)
 
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as mock_msgbox:
-        tab._on_processing_finished(results=[r1, r2])
+    summary = _finish(tab, [r1, r2], pairs=2)
 
-    mock_msgbox.information.assert_called_once()
-    mock_msgbox.warning.assert_not_called()
+    assert summary == "Mining complete — 2 episodes, 5 notes added in 00m 00s"
 
-    _parent, _title, message = mock_msgbox.information.call_args.args
-    assert "Total cards created: 5" in message
+
+def test_no_dialog_is_opened_on_either_path(tab, clock):
+    failed = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=["boom"])
+    succeeded = ProcessingResult(total_words_found=8, new_words_found=4, cards_created=2)
+
+    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
+        _finish(tab, [failed, succeeded], pairs=2)
+        _finish(tab, [succeeded], pairs=1)
+
+    message_box.warning.assert_not_called()
+    message_box.information.assert_not_called()

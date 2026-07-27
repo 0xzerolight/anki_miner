@@ -155,6 +155,9 @@ class BatchProcessingTab(MiningTabBase):
 
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
+        # The durable end state of this same card (D20). The noun is set per
+        # run: the quick path mines episodes, the queue path whole series.
+        self._install_receipt(layout, self.overall_progress_widget)
 
         # Retry Failed button (hidden by default)
         self.retry_button = ModernButton(self.tr("Retry Failed"), variant="secondary")
@@ -348,6 +351,7 @@ class BatchProcessingTab(MiningTabBase):
         # Clear log and reset the bar from the previous run's end state.
         self.log_widget.clear_log()
         self._begin_run(queue_mode=False)
+        self._begin_receipt(len(pairs), item_noun=self.tr("episodes"))
 
         # Hide action buttons, show cancel
         self._is_processing = True
@@ -393,6 +397,9 @@ class BatchProcessingTab(MiningTabBase):
         self.worker_thread.result_ready.connect(self._on_processing_finished)
         self.worker_thread.error.connect(self._on_processing_error)
         self.worker_thread.finished.connect(self._restore_buttons)
+        # Sealed on the thread's own end: the terminal summary the worker emits
+        # on every exit path -- including a cancellation -- has arrived by then.
+        self.worker_thread.finished.connect(self._on_run_thread_finished)
         self.worker_thread.start()
 
     def _warn_incomplete_items(self) -> None:
@@ -420,6 +427,9 @@ class BatchProcessingTab(MiningTabBase):
         # back-to-back-mining freeze: leaked sqlite/Session handles).
         self._teardown_previous_run("batch")
 
+        # Whole series per item on this path, so the receipt counts series.
+        self._begin_receipt(self.batch_queue.pending_count, item_noun=self.tr("series"))
+
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
         self.worker_thread = BatchQueueWorkerThread(
             self.batch_queue,
@@ -444,6 +454,7 @@ class BatchProcessingTab(MiningTabBase):
         # run-level failure (stale-dict gate, AnkiService construction) leaves
         # the buttons stranded in the running state.
         self.worker_thread.finished.connect(self._restore_buttons)
+        self.worker_thread.finished.connect(self._on_run_thread_finished)
 
         self.worker_thread.start()
 
@@ -629,6 +640,7 @@ class BatchProcessingTab(MiningTabBase):
             item_id: Item ID
             cards_created: Number of cards created
         """
+        self._record_receipt_counts(notes_added=cards_created, failed=False)
         self._advance_queue_bar()
         self.presenter.show_success(tr_format(self.tr("Created %1 cards"), cards_created))
 
@@ -645,6 +657,7 @@ class BatchProcessingTab(MiningTabBase):
             item_id: Item ID
             error_message: Error message
         """
+        self._record_receipt_counts(notes_added=0, failed=True)
         self.presenter.show_error(error_message)
         self._advance_queue_bar()
 
@@ -705,14 +718,9 @@ class BatchProcessingTab(MiningTabBase):
         )
         self.retry_button.setVisible(has_retryable)
 
-        # Show summary
-        failed = self.batch_queue.failed_count
-        summary = tr_format(
-            self.tr("Processed %1 series\nTotal cards created: %2"), self.batch_queue.total_items, total_cards
-        )
-        if failed > 0:
-            summary += tr_format(self.tr("\n%1 series failed"), failed)
-        QMessageBox.information(self, self.tr("Queue Processing Complete"), summary)
+        # The run's summary is the inline receipt, sealed when the worker thread
+        # ends. It used to be a modal box here — which fired on the cancel path
+        # too, congratulating the user on a run they had just stopped (D20).
 
     def _retry_failed_items(self) -> None:
         """Retry failed items in the batch queue."""
@@ -785,32 +793,25 @@ class BatchProcessingTab(MiningTabBase):
         """Per-episode stage complete: no-op (terminal handlers own the summary)."""
 
     def _on_processing_finished(self, results: list) -> None:
-        """Handle processing finished signal (for manual pair processing).
+        """Record the manual-pair run's results and paint its terminal bar.
+
+        The worker emits this on every exit path, cancellation included, so the
+        receipt sealed afterwards on ``QThread.finished`` can state what a
+        stopped run managed to do. Failed episodes come back as results with
+        ``errors`` populated (``process_episode`` never raises), so they are
+        classified rather than counted as successes (Issue #51).
 
         Args:
             results: List of processing results
         """
+        for result in results:
+            self._record_receipt_result(result)
         self._restore_buttons()
 
-        # result_ready is suppressed on cancelled runs, so this is the
-        # success-side terminal handler (cancel recovery is in
-        # _restore_buttons); still guard against a late cancel race.
         if not self._cancel_requested:
             self.overall_progress_widget.show_completion(
                 tr_format(self.tr("Complete — %1 cards created"), sum(r.cards_created for r in results))
             )
-
-        # Show summary; failed episodes are returned as results with errors
-        # populated (process_episode never raises), so count them explicitly
-        # instead of presenting every finish as a success (Issue #51).
-        total_cards = sum(r.cards_created for r in results)
-        failed = sum(1 for r in results if not r.success)
-        summary = tr_format(self.tr("Processed %1 episodes\nTotal cards created: %2"), len(results), total_cards)
-        if failed > 0:
-            summary += tr_format(self.tr("\n%1 episode(s) failed"), failed)
-            QMessageBox.warning(self, self.tr("Batch Processing Complete"), summary)
-        else:
-            QMessageBox.information(self, self.tr("Batch Processing Complete"), summary)
 
     def _on_processing_error(self, error_message: str) -> None:
         """Handle processing error signal.
