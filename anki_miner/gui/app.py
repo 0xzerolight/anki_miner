@@ -29,6 +29,8 @@ from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui import restart
+from anki_miner.gui.controllers import recovery_controller
+from anki_miner.gui.controllers.recovery_controller import RecoveryController
 from anki_miner.gui.i18n import install_translators
 from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
 from anki_miner.gui.main_window import MainWindow, open_log_folder
@@ -1079,6 +1081,29 @@ def compose_main_window(
     return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
 
 
+def offer_recovery(window: MainWindow) -> bool:
+    """Ask once whether to pick up what the last session left (D16-C).
+
+    Called after translators are installed and every tab is registered: the
+    question is translated, and "Restore" has to have somewhere to put the rows.
+    Restore refills the queues and leaves the partial downloads on disk for the
+    next transfer to continue — that transfer still has to prove to itself that
+    the artifact is unchanged, and silently starts over if it cannot. Discard
+    removes both, under the runtime-state roots only.
+
+    Returns:
+        True when the user chose Restore.
+    """
+    inventory = recovery_controller.take_inventory()
+    if not inventory:
+        return False
+    if not RecoveryController(window).offer(inventory):
+        recovery_controller.discard_all()
+        return False
+    window.restore_queue_snapshots()
+    return True
+
+
 def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
     """Run installed-artifact assertions over two event-loop ticks."""
 
@@ -1309,6 +1334,15 @@ def main():
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
     window.commit_boot(suppress_optional=installer_smoke)
+
+    # Offer what the last session left behind (D16-C). After translators and
+    # every addTab, so the question is translated and Restore has somewhere to
+    # put the rows; skipped in the installer smoke, where no modal may open.
+    if not installer_smoke:
+        try:
+            offer_recovery(window)
+        except Exception:
+            logger.exception("Could not offer the previous session's downloads and queues")
 
     # Show window first so the user sees the UI immediately. The stats DB open
     # runs off-thread below. The YouTube tab's episode processor is built even

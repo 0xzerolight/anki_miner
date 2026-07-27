@@ -38,7 +38,7 @@ from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.keyboard_shortcuts import (
@@ -676,6 +676,52 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             session_state.save_route(self._current_main_tab_key(), self._current_subtab_keys())
         except Exception:
             logger.exception("Could not save the UI session state")
+        self.save_queue_snapshots()
+
+    def iter_queue_screens(self) -> list[QWidget]:
+        """Every screen that can describe its queue durably (D16-C).
+
+        Discovered by capability rather than by a hand-kept list: a queue can
+        live inside a container tab (Video, Reading), and a list that had to be
+        edited whenever a sub-tab moved would silently stop saving one.
+        """
+        return [widget for widget in self.findChildren(QWidget) if getattr(widget, "QUEUE_STATE_KEY", None)]
+
+    def save_queue_snapshots(self) -> None:
+        """Write every screen's queue so quitting does not discard it (D16-C).
+
+        Called from the top of ``closeEvent``, before anything is joined or
+        hidden — a queue read after teardown has begun is a queue that may
+        already have been emptied. Best-effort per screen: one screen that
+        cannot describe itself must not stop the others being saved, and none of
+        it may stop the window closing.
+        """
+        for screen in self.iter_queue_screens():
+            try:
+                snapshot = screen.queue_snapshot()  # type: ignore[attr-defined]
+            except Exception:
+                logger.exception("Could not read the queue on %s", type(screen).__name__)
+                continue
+            queue_state_store.save(snapshot)
+
+    def restore_queue_snapshots(self) -> int:
+        """Refill every screen from its stored queue; return the rows restored.
+
+        Nothing is started. A row that was mid-run comes back saying it was
+        interrupted, and only an explicit later action of the user's turns it
+        back into work.
+        """
+        restored = 0
+        for screen in self.iter_queue_screens():
+            key = getattr(screen, "QUEUE_STATE_KEY", "")
+            snapshot = queue_state_store.load(key)
+            if snapshot is None:
+                continue
+            try:
+                restored += screen.restore_queue_snapshot(snapshot)  # type: ignore[attr-defined]
+            except Exception:
+                logger.exception("Could not restore the queue on %s", type(screen).__name__)
+        return restored
 
     def reveal_capability(self, target: "CapabilityTarget") -> None:
         """Bring the tab that hosts ``target`` to the front (and its sub-tab).
