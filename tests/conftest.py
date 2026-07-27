@@ -438,6 +438,24 @@ def _no_real_ytdlp_autoupdate(monkeypatch):
     monkeypatch.setattr(MainWindow, "_maybe_start_ytdlp_update", lambda self: None, raising=False)
 
 
+@pytest.fixture(autouse=True)
+def _instant_queue_retry_backoff(monkeypatch):
+    """Collapse the D30-B retry backoff to zero for every test.
+
+    Production waits eight seconds between automatic attempts, counted down one
+    second at a time on the cancel event. A suite that paid that wait would add
+    sixteen seconds per retrying item and would be measuring ``Event.wait``
+    rather than the worker.
+
+    Patched as the module constant that ``__init__`` reads, so a test that wants
+    a real countdown assigns ``worker._retry_delay_s`` after construction and is
+    unaffected by this fixture.
+    """
+    from anki_miner.gui.workers import _queue_worker_base
+
+    monkeypatch.setattr(_queue_worker_base, "RETRY_DELAY_S", 0.0)
+
+
 @pytest.fixture
 def temp_dir(tmp_path):
     """Provide a temporary directory for test files."""

@@ -151,7 +151,8 @@ def test_retry_once_succeeds_emits_finished_with_attempts_two(make_worker, mock_
 # ---------------------------------------------------------------------------
 
 
-def test_retry_twice_fails_emits_error_and_queue_continues(make_worker, mock_processor):
+def test_persistent_fetch_error_exhausts_three_attempts_and_queue_continues(make_worker, mock_processor):
+    """D30-B: three attempts, then Failed — and the rest of the queue still runs."""
     items = [_make_item(video_id="a"), _make_item(video_id="b"), _make_item(video_id="c")]
 
     def _side_effect(**kw):
@@ -167,10 +168,13 @@ def test_retry_twice_fails_emits_error_and_queue_continues(make_worker, mock_pro
 
     assert caps["finished"].calls == [
         (0, "R_A", None, 1),
-        (1, None, "YouTubeFetchError: persistent", 2),
+        (1, None, "YouTubeFetchError: persistent", 3),
         (2, "R_C", None, 1),
     ]
     assert len(caps["queue_finished"].calls) == 1
+    # Two countdowns, one before each of the two extra attempts.
+    assert [c[1] for c in caps["retrying"].calls] == [2, 3]
+    assert all(c[2] == 3 for c in caps["retrying"].calls)
 
 
 def test_no_japanese_subtitles_is_not_retried(make_worker, mock_processor):
@@ -482,8 +486,13 @@ def test_each_attempt_gets_unique_workspace_and_is_cleaned(make_worker, mock_pro
 # ---------------------------------------------------------------------------
 
 
-def test_bot_detection_error_workspace_cleaned(qapp, mock_processor, youtube_config):
-    """BotDetectionError (subclass of YouTubeFetchError) follows the retry+cleanup path."""
+def test_bot_detection_error_is_not_retried_and_workspace_cleaned(qapp, mock_processor, youtube_config):
+    """Bot detection is deterministic: one attempt, and its workspace is cleaned.
+
+    It is a ``YouTubeFetchError`` subclass, so it used to inherit the generic
+    fetch retry. Signing in is not something a second download does by itself,
+    and D30-B's classification excludes it explicitly.
+    """
     from anki_miner.exceptions.youtube import BotDetectionError
 
     item = _make_item("https://www.youtube.com/watch?v=bot", "bot")
@@ -501,12 +510,13 @@ def test_bot_detection_error_workspace_cleaned(qapp, mock_processor, youtube_con
         items=[item],
         curation_callback=None,
     )
+    caps = _connect_all(worker)
     worker.run()
 
-    # Two attempts (retry-once), each its own workspace, both cleaned.
-    assert len(workspaces) == 2
-    for ws in workspaces:
-        assert not ws.exists()
+    assert len(workspaces) == 1
+    assert not workspaces[0].exists()
+    assert caps["finished"].calls[0][3] == 1
+    assert caps["retrying"].calls == []
 
 
 # ---------------------------------------------------------------------------
@@ -525,7 +535,11 @@ def test_forwards_curation_callback(make_worker, mock_processor):
     worker.run()
 
     kwargs = mock_processor.process_youtube_url.call_args.kwargs
-    assert kwargs["curation_callback"] is _curation
+    # Wrapped, not replaced: the attempt-cycle memo makes one curator decision
+    # serve every automatic attempt for this item (D30-B).
+    forwarded = kwargs["curation_callback"]
+    assert forwarded is not _curation
+    assert forwarded(["a"]) == ["a"]
 
 
 def test_none_curation_callback_passed_through(make_worker, mock_processor):
