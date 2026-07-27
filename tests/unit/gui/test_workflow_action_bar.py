@@ -83,6 +83,24 @@ def test_bar_shares_the_scrolled_column_width_cap(qtbot):
     assert bar.maximumWidth() == content.maximumWidth()
 
 
+def test_bar_renders_on_the_same_centre_line_as_the_content(qtbot):
+    """A cap the bar never reaches is not a shared column.
+
+    The bar's own size hint is far narrower than the page, so it only fills the
+    column if it carries the stretch in its host row.
+    """
+    page, scroll, bar, _log = _page(qtbot)
+    page.resize(1400, 700)
+    page.show()
+    qtbot.waitExposed(page)
+
+    content = scroll.widget()
+    assert bar.width() == content.width()
+    bar_centre = bar.mapTo(page, bar.rect().center()).x()
+    content_centre = content.mapTo(page, content.rect().center()).x()
+    assert abs(bar_centre - content_centre) <= 1
+
+
 def test_shell_without_a_log_hides_the_activity_control(qtbot):
     _page_widget, _scroll, bar, _log = _page(qtbot, with_log=False)
 
@@ -128,7 +146,7 @@ def test_idle_bar_shows_no_stage_progress_or_clock(qtbot, registry):
     bar = _bar(qtbot)
     bar.bind_task(registry, "screen.demo")
 
-    assert bar.stage_label.isHidden()
+    assert bar.stage_label.full_text == ""
     assert bar.progress_bar.isHidden()
     assert bar.elapsed_label.isHidden()
 
@@ -181,7 +199,7 @@ def test_another_task_changing_leaves_the_bar_alone(qtbot, registry):
     other = _start(registry, "queue.youtube")
     other.stage(index=1, total=3, name="Downloading", now=0.0)
 
-    assert bar.stage_label.isHidden()
+    assert bar.stage_label.full_text == ""
 
 
 def test_cancelling_says_so_instead_of_advancing(qtbot, registry):

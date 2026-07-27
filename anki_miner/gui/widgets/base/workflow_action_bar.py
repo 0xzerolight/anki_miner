@@ -294,14 +294,15 @@ class WorkflowActionBar(QWidget):
     def _render(self, snapshot: TaskSnapshot | None) -> None:
         """Repaint the stage, bar and clock, or collapse them when idle."""
         if snapshot is None or not snapshot.is_running:
+            # Emptied, not hidden: the stage label is the row's only elastic
+            # item, and removing it from the layout lets the buttons stretch to
+            # fill the page instead of sitting at their own width.
             self.stage_label.setText("")
-            self.stage_label.hide()
             self.progress_bar.hide()
             self.elapsed_label.hide()
             return
 
         self.stage_label.setText(self._stage_text(snapshot))
-        self.stage_label.show()
         self.elapsed_label.setText(format_clock(snapshot.elapsed_s))
         self.elapsed_label.show()
 
@@ -446,11 +447,12 @@ def install_workflow_shell(
 def capped_page_column(child: QWidget, kind: PageWidth) -> QWidget:
     """Wrap ``child`` in a full-width host that centres it on the page column.
 
-    The host spans the window so its background and top rule reach both edges;
-    the child inside it stops at the same cap :func:`configure_scrolled_page`
-    gives the scrolled content, so everything on the page shares one centre
-    line. Public because anything else a page pins below its scroll -- Card
-    Backfill's run status, for one -- has to line up with the same column.
+    The host spans the window; the child inside it stops at the same cap
+    :func:`configure_scrolled_page` gives the scrolled content, so everything on
+    the page shares one centre line and the bar's own rule runs exactly the
+    width of the column it closes. Public because anything else a page pins
+    below its scroll -- Card Backfill's run status, for one -- has to line up
+    with the same column.
 
     Args:
         child: The widget to centre and cap.
@@ -468,8 +470,13 @@ def capped_page_column(child: QWidget, kind: PageWidth) -> QWidget:
     # so a smaller cap would clip the child rather than shrink it -- the same
     # corner `configure_scrolled_page` guards for the scrolled column.
     child.setMaximumWidth(max(page_width_cap(child, kind), child.minimumSizeHint().width()))
+    # The child carries the only stretch, so it takes the width first and stops
+    # at its cap; the two zero-stretch spacers then split whatever is left,
+    # which is what centres it. Give the spacers stretch too and all three
+    # share the row equally -- the bar ends up a third of the window wide while
+    # the column above it is capped at the full measure.
     row.addStretch()
-    row.addWidget(child)
+    row.addWidget(child, 1)
     row.addStretch()
     host.setLayout(row)
     host.setObjectName(f"{child.objectName()}-host" if child.objectName() else "workflow-column-host")
