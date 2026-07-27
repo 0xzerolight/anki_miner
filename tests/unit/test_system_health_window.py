@@ -302,6 +302,21 @@ def test_starting_a_probe_returns_rows_and_badges_to_checking(main_window, qtbot
     assert main_window.status_bar.anki_status_badge.status == "checking"
 
 
+def test_closing_the_app_takes_system_health_with_it(main_window, qtbot, monkeypatch):
+    """Qt counts it as a window: left open, it keeps a dead app alive."""
+    from PyQt6.QtGui import QCloseEvent
+
+    main_window.open_system_health()
+    window = main_window._system_health_window
+    assert window is not None
+    qtbot.addWidget(window)
+    monkeypatch.setattr(main_window.background_tasks, "shutdown", lambda tabs: [])
+
+    main_window.closeEvent(QCloseEvent())
+
+    assert not window.isVisible()
+
+
 def test_closing_the_screen_cancels_nothing(main_window, qtbot, monkeypatch):
     """The window observes a run; it never owns one."""
     monkeypatch.setattr(main_window.background_tasks, "start_validation", lambda service: True)

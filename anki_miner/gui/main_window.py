@@ -1480,6 +1480,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # a migration into a window that is already shutting down.
         self._post_setup_boot_started = True
 
+        # System Health is a top-level window of its own, so Qt counts it when
+        # deciding whether the last window has closed: left open, it keeps the
+        # application alive after the main window is gone, showing readiness
+        # facts for an app that is no longer running.
+        if self._system_health_window is not None:
+            self._system_health_window.close()
+
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
         # which stops debounce scheduling and begins worker teardown; persist
