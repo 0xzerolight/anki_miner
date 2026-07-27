@@ -298,6 +298,11 @@ CLEAR_THEME = {
 MURKY_THEME = {
     "background": "#202020",
     "surface": "#212121",
+    "input-bg": "#232323",
+    "text": "#242424",
+    "text-disabled": "#252525",
+    "input-disabled-bg": "#262626",
+    "disabled": "#272727",
     "text-muted": "#303030",
     "primary": "#808080",
     "text-on-primary": "#999999",
@@ -418,5 +423,32 @@ class TestPreviewDoesNotRepaintColours:
 
         palette = qapp.palette()
         assert palette.color(QPalette.ColorRole.Window).name() == MURKY_THEME["background"]
-        assert palette.color(QPalette.ColorRole.Base).name() == MURKY_THEME["surface"]
+        assert palette.color(QPalette.ColorRole.Base).name() == MURKY_THEME["input-bg"]
+        assert palette.color(QPalette.ColorRole.Button).name() == MURKY_THEME["surface"]
+        assert palette.color(QPalette.ColorRole.Accent).name() == MURKY_THEME["primary"]
+        qapp.setStyleSheet("")
+
+    def test_the_disabled_group_uses_the_theme_s_own_disabled_tokens(self, panel: UISettingsPanel, qapp):
+        """Not a dimmed copy of the enabled colours — the author wrote these."""
+        panel.tree.setCurrentItem(_row(panel, "murky"))
+
+        palette = qapp.palette()
+        disabled = QPalette.ColorGroup.Disabled
+        assert palette.color(disabled, QPalette.ColorRole.Base).name() == MURKY_THEME["input-disabled-bg"]
+        assert palette.color(disabled, QPalette.ColorRole.Button).name() == MURKY_THEME["disabled"]
+        assert palette.color(disabled, QPalette.ColorRole.Text).name() == MURKY_THEME["text-disabled"]
+        qapp.setStyleSheet("")
+
+    def test_inactive_reads_the_same_as_active(self, panel: UISettingsPanel, qapp):
+        """An unfocused window is the same window; Qt's default dimming is not."""
+        panel.tree.setCurrentItem(_row(panel, "murky"))
+
+        palette = qapp.palette()
+        for role in (
+            QPalette.ColorRole.Window,
+            QPalette.ColorRole.WindowText,
+            QPalette.ColorRole.Base,
+            QPalette.ColorRole.Highlight,
+        ):
+            assert palette.color(QPalette.ColorGroup.Inactive, role) == palette.color(QPalette.ColorGroup.Active, role)
         qapp.setStyleSheet("")
