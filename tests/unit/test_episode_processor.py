@@ -8,10 +8,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+import requests
 
 from anki_miner.config import ChainEntry
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
-from anki_miner.models import CardPayload, LineLemmas, MediaData, TokenizedWord
+from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData, TokenizedWord
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     MIN_EPISODE_APPEARANCES,
@@ -4943,3 +4944,183 @@ class TestPhaseTimingLogs:
         for phase in ("parse", "filter", "extract", "lookup", "cards"):
             matching = [t for t in timings if t.startswith(f"[timing] {phase}: ")]
             assert len(matching) == 1, (phase, timings)
+
+
+class TestAnkiWriteProvenance:
+    """D30: every returned result must say what the run can prove about Anki.
+
+    ``_run_pipeline`` is the single funnel — success, early phase return,
+    cancellation and failure all pass through it — so no result can escape
+    carrying the constructor's fail-closed placeholder instead of the run's
+    real answer.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        anki_service.last_created_note_ids = []
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @pytest.fixture
+    def processor(self, test_config, mock_services):
+        return build_processor(config=test_config, **mock_services, presenter=NullPresenter())
+
+    def _wire_full_run(self, mock_services):
+        """Drive all five phases to completion with one mined word."""
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    @staticmethod
+    def _transient() -> AnkiConnectionError:
+        """An AnkiConnectionError chained from a real connection drop."""
+        try:
+            try:
+                raise requests.exceptions.ConnectionError("reset by peer")
+            except requests.exceptions.ConnectionError as cause:
+                raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from cause
+        except AnkiConnectionError as exc:
+            return exc
+
+    def test_success_carries_the_services_confirmation(self, processor, mock_services, tmp_path):
+        self._wire_full_run(mock_services)
+
+        def _create(card_data, progress_callback=None):
+            mock_services["anki_service"].anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+            return [1]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+        assert result.failure_is_transient is False
+        assert result.auto_retry_eligible is False
+
+    def test_early_phase_return_is_stamped_not_left_at_the_default(self, processor, mock_services, tmp_path):
+        """A "no words found" return never touched Anki — say so explicitly."""
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_cancelled_run_is_stamped(self, processor, mock_services, tmp_path):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [_make_word("食べる")]
+        cancel_event = threading.Event()
+        cancel_event.set()
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=cancel_event)
+
+        assert result.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_transient_failure_before_anki_is_auto_retryable(self, processor, mock_services, tmp_path):
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = self._transient()
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is False
+        assert result.failure_is_transient is True
+        assert result.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+        assert result.auto_retry_eligible is True
+
+    def test_transient_failure_mid_write_is_not_auto_retryable(self, processor, mock_services, tmp_path):
+        """The write may have landed — replaying it would duplicate cards."""
+        self._wire_full_run(mock_services)
+        transient = self._transient()
+
+        def _create(card_data, progress_callback=None):
+            mock_services["anki_service"].anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
+            raise transient
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.failure_is_transient is True
+        assert result.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        assert result.auto_retry_eligible is False
+
+    def test_partial_write_failure_keeps_confirmed_state_and_ids(self, processor, mock_services, tmp_path):
+        self._wire_full_run(mock_services)
+
+        def _create(card_data, progress_callback=None):
+            mock_services["anki_service"].anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+            mock_services["anki_service"].last_created_note_ids = [101, 102]
+            raise AnkiConnectionError("deck was not found: Anki Miner")
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.card_ids == [101, 102]
+        assert result.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+        assert result.auto_retry_eligible is False
+
+    def test_ankiconnect_side_error_is_not_transient(self, processor, mock_services, tmp_path):
+        """No chained transport cause — a re-run fails identically."""
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = AnkiConnectionError("deck was not found")
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.failure_is_transient is False
+        assert result.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+        assert result.auto_retry_eligible is False
+
+    def test_unexpected_exception_is_not_transient(self, processor, mock_services, tmp_path):
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("parse crash")
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.failure_is_transient is False
+        assert result.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_non_enum_service_state_falls_back_to_uncertain(self, processor, mock_services, tmp_path):
+        """Fail closed on a stubbed/garbled service rather than promising safety."""
+        self._wire_full_run(mock_services)
+
+        def _create(card_data, progress_callback=None):
+            mock_services["anki_service"].anki_write_state = "no_note_write"
+            return [1]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
+    def test_next_run_resets_state_before_preflight(self, processor, mock_services, tmp_path):
+        """Batch regression: pair one confirms a write, pair two dies in preflight
+        on the SAME shared AnkiService and must still report its own
+        NO_NOTE_WRITE — otherwise pair two inherits pair one's confirmation and
+        a safe retry is suppressed forever."""
+        self._wire_full_run(mock_services)
+
+        def _create(card_data, progress_callback=None):
+            mock_services["anki_service"].anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+            return [1]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create
+        first = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        assert first.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+        mock_services["anki_service"].verify_card_target.side_effect = SetupError("note type is missing a field")
+        with pytest.raises(SetupError):
+            processor.process_episode(tmp_path / "v2.mkv", tmp_path / "s2.ass")
+
+        assert mock_services["anki_service"].anki_write_state is AnkiWriteState.NO_NOTE_WRITE

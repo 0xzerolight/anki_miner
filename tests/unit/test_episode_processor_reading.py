@@ -16,10 +16,11 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from PIL import Image, UnidentifiedImageError
 
-from anki_miner.exceptions import AnkiMinerException, SetupError
-from anki_miner.models import TokenizedWord
+from anki_miner.exceptions import AnkiConnectionError, AnkiMinerException, SetupError
+from anki_miner.models import AnkiWriteState, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format_timestamp
 from anki_miner.presenters import NullPresenter
@@ -1182,3 +1183,92 @@ class TestReadingSentenceTts:
         assert "Sentence audio: 0/2 sentences" in infos  # unique sentences, not 3 words
         warnings = [c.args[0] for c in presenter.show_warning.call_args_list]
         assert any("Sentence-audio TTS connection" in w for w in warnings)
+
+
+class TestReadingAnkiWriteProvenance:
+    """D30 on the reading path: it shares ``_run_pipeline``'s stamping funnel,
+    so the same three answers must reach a reading result."""
+
+    @staticmethod
+    def _transient() -> AnkiConnectionError:
+        try:
+            try:
+                raise requests.exceptions.ConnectionError("reset by peer")
+            except requests.exceptions.ConnectionError as cause:
+                raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from cause
+        except AnkiConnectionError as exc:
+            return exc
+
+    def _run(self, test_config, anki):
+        words = [_word("犬", 0), _word("猫", 1)]
+        counts = collections.Counter({"犬": 1, "猫": 1})
+        sp = MagicMock(name="SubtitleParser")
+        sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+        proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki)
+        return proc, proc.process_reading(_document([_unit(0), _unit(1)]))
+
+    def test_successful_volume_carries_the_confirmation(self, test_config):
+        anki = _make_anki_service()
+
+        def _create(card_data, pc=None):
+            anki.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+            anki.last_created_note_ids = [1, 2]
+            return [1, 2]
+
+        anki.create_cards_batch.side_effect = _create
+
+        _, result = self._run(test_config, anki)
+
+        assert result.cards_created == 2
+        assert result.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+        assert result.auto_retry_eligible is False
+
+    def test_transient_failure_before_anki_is_auto_retryable(self, test_config):
+        anki = _make_anki_service()
+        sp = MagicMock(name="SubtitleParser")
+        sp.parse_text_units.side_effect = self._transient()
+        proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki)
+
+        result = proc.process_reading(_document([_unit(0)]))
+
+        assert result.success is False
+        assert result.failure_is_transient is True
+        assert result.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+        assert result.auto_retry_eligible is True
+
+    def test_transient_failure_mid_write_keeps_partial_ids_and_blocks_retry(self, test_config):
+        anki = _make_anki_service()
+        transient = self._transient()
+
+        def _create(card_data, pc=None):
+            anki.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
+            anki.last_created_note_ids = [7]
+            raise transient
+
+        anki.create_cards_batch.side_effect = _create
+
+        _, result = self._run(test_config, anki)
+
+        assert result.card_ids == [7]
+        assert result.failure_is_transient is True
+        assert result.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+        assert result.auto_retry_eligible is False
+
+    def test_next_volume_resets_state_before_preflight(self, test_config):
+        """Folder runs reuse one AnkiService: volume two must not inherit
+        volume one's confirmed write."""
+        anki = _make_anki_service()
+
+        def _create(card_data, pc=None):
+            anki.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+            return [1, 2]
+
+        anki.create_cards_batch.side_effect = _create
+        proc, first = self._run(test_config, anki)
+        assert first.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+        anki.verify_card_target.side_effect = SetupError("note type is missing a field")
+        with pytest.raises(SetupError):
+            proc.process_reading(_document([_unit(0)]))
+
+        assert anki.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
