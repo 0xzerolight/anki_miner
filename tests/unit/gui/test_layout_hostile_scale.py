@@ -16,23 +16,18 @@ from __future__ import annotations
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from anki_miner.gui.resources.styles.theme import Theme
-
 
 @pytest.fixture
-def hostile_scale(qapp):
+def hostile_scale(font_scale):
     """Build widgets at 150% text size, then restore.
 
-    apply_to_app is load-bearing: set_font_scale alone leaves the QSS-derived
-    padding at 1.0, so the layout minimum never grows and the test silently
-    passes without reproducing anything.
+    Restoration goes through the shared ``font_scale`` fixture (conftest): it
+    puts the application stylesheet back exactly as it was, because merely
+    re-applying the original scale leaves a QSS font-size rule installed that
+    overrides per-widget fonts in later modules.
     """
-    original = Theme.get_font_scale()
-    Theme.set_font_scale(1.5)
-    Theme.apply_to_app(qapp)
+    font_scale(1.5)
     yield
-    Theme.set_font_scale(original)
-    Theme.apply_to_app(qapp)
 
 
 @pytest.fixture
