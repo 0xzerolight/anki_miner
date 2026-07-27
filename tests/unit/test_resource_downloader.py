@@ -116,7 +116,8 @@ class TestDownloadToTemp:
                 progress=lambda d, t, m: progress_calls.append((d, t, m)),
             )
 
-        assert [downloaded for downloaded, _total, _message in progress_calls] == [0, 4]
+        assert [downloaded for downloaded, _total, _message in progress_calls] == [0, 4, 4]
+        assert progress_calls[-1][2] == "Download cancelled"
         assert _part_files(tmp_path) == []
 
     def test_read_timeout_override_only_changes_read_component(self, tmp_path):
@@ -332,3 +333,132 @@ class TestRetry:
         ):
             download_to_temp(URL, dest_dir=tmp_path, progress=lambda cur, total, msg: seen.append(msg))
         assert any("Retrying download (attempt 2/3)" in m for m in seen)
+
+
+class TestProgressGate:
+    """The coalescer that keeps a 600 MB transfer from flooding the GUI thread."""
+
+    def _gate(self, sink, *, interval=1.0):
+        clock = {"t": 0.0}
+        gate = resource_downloader._ProgressGate(
+            sink,
+            min_interval_s=interval,
+            clock=lambda: clock["t"],
+        )
+        return gate, clock
+
+    def test_drops_updates_inside_the_window_and_emits_after_it(self):
+        seen: list[int] = []
+        gate, clock = self._gate(lambda d, _t, _m: seen.append(d))
+
+        gate.emit(0, 100, "start", force=True)
+        clock["t"] = 0.4
+        gate.emit(10, 100, "run")
+        clock["t"] = 0.9
+        gate.emit(20, 100, "run")
+        clock["t"] = 1.1
+        gate.emit(30, 100, "run")
+
+        assert seen == [0, 30]
+
+    def test_forced_landmark_always_emits_and_restarts_the_window(self):
+        seen: list[int] = []
+        gate, clock = self._gate(lambda d, _t, _m: seen.append(d))
+
+        gate.emit(0, 100, "start", force=True)
+        clock["t"] = 0.1
+        gate.emit(10, 100, "landmark", force=True)
+        clock["t"] = 0.2
+        gate.emit(20, 100, "run")
+        clock["t"] = 1.2
+        gate.emit(30, 100, "run")
+
+        assert seen == [0, 10, 30]
+
+    def test_no_callback_is_a_silent_no_op(self):
+        gate, _clock = self._gate(None)
+        gate.emit(1, 2, "x", force=True)  # must not raise
+
+
+class TestProgressCoalescing:
+    """Chunk-level throttling: at most one UI update per window, landmarks always."""
+
+    def test_high_rate_transfer_emits_only_landmarks(self, tmp_path, monkeypatch):
+        # A window far longer than the test can take: every non-landmark emit
+        # is throttled away, so what survives is exactly the landmark set.
+        monkeypatch.setattr(resource_downloader, "PROGRESS_MIN_INTERVAL_S", 3600.0)
+        chunks = [b"x" * 8 for _ in range(50)]
+        calls: list[tuple[int, int, str]] = []
+
+        with patch(
+            "requests.Session.get",
+            return_value=_response(chunks=chunks, headers={"Content-Length": "400"}),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path, progress=lambda d, t, m: calls.append((d, t, m)))
+
+        # Phase start, first byte, final byte — and nothing in between.
+        assert [downloaded for downloaded, _total, _message in calls] == [0, 8, 400]
+        assert {message for _d, _t, message in calls} == {"Downloading"}
+
+    def test_cancellation_is_checked_on_every_raw_chunk_while_throttled(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(resource_downloader, "PROGRESS_MIN_INTERVAL_S", 3600.0)
+        chunks = [b"x" * 8 for _ in range(50)]
+        checks = {"n": 0}
+        calls: list[tuple[int, int, str]] = []
+
+        def cancelled() -> bool:
+            checks["n"] += 1
+            return False
+
+        with patch(
+            "requests.Session.get",
+            return_value=_response(chunks=chunks, headers={"Content-Length": "400"}),
+        ):
+            download_to_temp(
+                URL,
+                dest_dir=tmp_path,
+                cancelled_check=cancelled,
+                progress=lambda d, t, m: calls.append((d, t, m)),
+            )
+
+        # One pre-request check plus one per raw chunk, regardless of throttling.
+        assert checks["n"] == len(chunks) + 1
+        assert len(calls) == 3
+
+    def test_progress_message_never_carries_the_url(self, tmp_path):
+        calls: list[str] = []
+        with patch("requests.Session.get", return_value=_response(content=b"abc")):
+            download_to_temp(URL, dest_dir=tmp_path, progress=lambda _d, _t, m: calls.append(m))
+        assert calls
+        assert all(URL not in message for message in calls)
+
+    def test_failure_emits_a_forced_terminal_update(self, tmp_path):
+        calls: list[tuple[int, int, str]] = []
+        response = _response(content=b"unused")
+        response.iter_content.side_effect = requests.ConnectionError("dropped")
+
+        with (
+            patch("requests.Session.get", return_value=response),
+            patch.object(resource_downloader.time, "sleep"),
+            pytest.raises(SetupError),
+        ):
+            download_to_temp(URL, dest_dir=tmp_path, progress=lambda d, t, m: calls.append((d, t, m)))
+
+        assert calls[-1][2] == "Download failed"
+
+    def test_size_cap_abort_emits_a_forced_terminal_update(self, tmp_path):
+        calls: list[tuple[int, int, str]] = []
+        chunks = [b"x" * 100, b"x" * 100]
+
+        with (
+            patch("requests.Session.get", return_value=_response(chunks=chunks)),
+            pytest.raises(SetupError, match="size cap"),
+        ):
+            download_to_temp(
+                URL,
+                dest_dir=tmp_path,
+                max_bytes=150,
+                progress=lambda d, t, m: calls.append((d, t, m)),
+            )
+
+        assert calls[-1][2] == "Download failed"

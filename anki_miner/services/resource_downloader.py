@@ -39,6 +39,20 @@ _TIMEOUT = (10, 60)
 
 _CHUNK_SIZE = 8192
 
+# Cap on how often progress reaches the caller. A 600 MB transfer at 8 KiB
+# chunks is ~76,800 observations; delivering each one to a GUI slot costs more
+# than the transfer does. Landmarks (phase start, first byte, final byte, retry,
+# cancellation, failure) bypass the cap entirely, and the cancellation check
+# still runs on EVERY raw chunk — throttling display must never throttle the
+# response to Cancel.
+PROGRESS_MIN_INTERVAL_S = 0.2
+
+# Progress messages are deliberately URL-free: they reach user-facing labels,
+# and a primary label reading "Downloading https://…" is what this replaces.
+_DOWNLOADING = "Downloading"
+_CANCELLED = "Download cancelled"
+_FAILED = "Download failed"
+
 # Transient-failure retry policy (Issue #100: the reporter's JMdict download
 # failed once on a flaky network and the wizard left them with no dictionary).
 _MAX_ATTEMPTS = 3
@@ -85,6 +99,41 @@ def _new_session() -> requests.Session:
 CancelledCheck = Callable[[], bool]
 
 
+class _ProgressGate:
+    """Rate-limits a progress callback without ever dropping a landmark.
+
+    Ordinary byte updates are worth showing about five times a second; the
+    thousands in between say nothing a human can read. A landmark (``force``)
+    is a *state change* rather than a number — it always goes through, and it
+    restarts the window so the next ordinary update is not suppressed by an
+    emit the caller did not ask to be throttled against.
+    """
+
+    def __init__(
+        self,
+        progress: DownloadProgressFn | None,
+        *,
+        min_interval_s: float | None = None,
+        clock: Callable[[], float] | None = None,
+    ) -> None:
+        self._progress = progress
+        # Resolved at construction, not import: the module constant is the
+        # documented test seam for "prove the throttle actually throttles".
+        self._min_interval_s = PROGRESS_MIN_INTERVAL_S if min_interval_s is None else min_interval_s
+        self._clock = time.monotonic if clock is None else clock
+        self._last_emit_at: float | None = None
+
+    def emit(self, downloaded: int, total: int, message: str, *, force: bool = False) -> None:
+        """Deliver one observation, unless it falls inside the current window."""
+        if self._progress is None:
+            return
+        now = self._clock()
+        if not force and self._last_emit_at is not None and now - self._last_emit_at < self._min_interval_s:
+            return
+        self._last_emit_at = now
+        self._progress(downloaded, total, message)
+
+
 def download_to_temp(
     url: str,
     *,
@@ -101,8 +150,10 @@ def download_to_temp(
         dest_dir: Directory to stage the temp file in (created if missing).
             Never the final destination — the caller routes the returned path.
         progress: Optional callback ``(downloaded_bytes, total_bytes_or_0,
-            message)`` invoked periodically. ``total`` is 0 when the server
-            sends no Content-Length.
+            message)``. ``total`` is 0 when the server sends no Content-Length.
+            Coalesced to at most one call per :data:`PROGRESS_MIN_INTERVAL_S`,
+            except for the landmarks — phase start, first byte, final byte,
+            retry, cancellation and failure — which always get through.
         cancelled_check: Optional zero-arg callable; when it returns True the
             partial temp file is removed and ``SetupError("Download
             cancelled")`` is raised. Checked before the request and during
@@ -186,6 +237,12 @@ def _download_once(
 ) -> Path:
     """Single download attempt; raises raw transport exceptions for the retry loop."""
     tmp_path: Path | None = None
+    gate = _ProgressGate(progress)
+    # Hoisted so the terminal landmark in the handler can state where the
+    # transfer actually stopped rather than starting again from zero.
+    downloaded = 0
+    total = 0
+    terminal_reported = False
     try:
         with _new_session() as session:
             response = session.get(url, timeout=timeout, stream=True)
@@ -196,12 +253,15 @@ def _download_once(
 
                 with tempfile.NamedTemporaryFile(dir=dest_dir, suffix=".part", delete=False) as tmp_fd:
                     tmp_path = Path(tmp_fd.name)
-                    downloaded = 0
-                    if progress is not None:
-                        progress(0, total, f"Downloading {url}")
+                    gate.emit(0, total, _DOWNLOADING, force=True)  # Phase start.
+                    first_chunk = True
 
                     for chunk in response.iter_content(chunk_size=_CHUNK_SIZE):
+                        # Every raw chunk, never throttled: the display cadence
+                        # must not become the cancellation cadence.
                         if cancelled_check is not None and cancelled_check():
+                            terminal_reported = True
+                            gate.emit(downloaded, total, _CANCELLED, force=True)
                             raise SetupError("Download cancelled")
                         if not chunk:
                             continue
@@ -209,8 +269,10 @@ def _download_once(
                         if downloaded > max_bytes:
                             raise SetupError(f"Download exceeded size cap of {max_bytes} bytes: {url}")
                         tmp_fd.write(chunk)
-                        if progress is not None:
-                            progress(downloaded, total, f"Downloading {url}")
+                        gate.emit(downloaded, total, _DOWNLOADING, force=first_chunk)
+                        first_chunk = False
+
+                    gate.emit(downloaded, total, _DOWNLOADING, force=True)  # Final byte.
 
                     # Belt-and-suspenders: requests/urllib3 already raise on a
                     # truncated Content-Length read, but assert the byte count too so
@@ -222,7 +284,10 @@ def _download_once(
     except BaseException:
         # Clean the staged .part on ANY failure, but re-raise RAW: the retry
         # loop in download_to_temp owns the retry decision and the terminal
-        # SetupError wrapping.
+        # SetupError wrapping. The landmark goes out first so a caller watching
+        # only progress is never left on a mid-transfer number.
+        if not terminal_reported:
+            gate.emit(downloaded, total, _FAILED, force=True)
         cleanup_part(tmp_path)
         raise
 
