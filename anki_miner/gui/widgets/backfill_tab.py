@@ -631,6 +631,10 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             self._refresh_checkbox_gates()
         self._sync_action_prominence()
 
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this screen's own Cancel."""
+        self._cancel()
+
     def _cancel(self) -> None:
         """Cancel the run: one verb, no prompt, and the button says it is waiting."""
         if self.worker_thread is not None and self.worker_thread.isRunning():

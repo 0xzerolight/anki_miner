@@ -351,3 +351,61 @@ class TestOwnership:
         snap = registry.snapshot("t1")
         assert snap is not None
         assert snap.owner == CapabilityTarget("video", "single")
+
+
+class TestCancelRequests:
+    """``request_cancel`` relays. It never touches the run itself."""
+
+    def test_a_request_reaches_whoever_owns_the_run(self, registry, qtbot):
+        registry.start(_spec(), now=0.0)
+
+        with qtbot.waitSignal(registry.cancel_requested, timeout=1000) as blocker:
+            registry.request_cancel("t1")
+
+        assert blocker.args == ["t1"]
+
+    def test_a_request_does_not_mark_the_run_cancelling(self, registry):
+        """Only the screen holding the cancellation event can say the ask landed.
+
+        A registry that set the flag here would paint every surface as
+        cancelling even when nothing was listening.
+        """
+        registry.start(_spec(), now=0.0)
+
+        registry.request_cancel("t1")
+
+        snap = registry.snapshot("t1")
+        assert snap is not None
+        assert snap.cancelling is False
+        assert snap.is_running is True
+
+    def test_an_unknown_run_is_ignored(self, registry, qtbot):
+        with qtbot.assertNotEmitted(registry.cancel_requested):
+            registry.request_cancel("nope")
+
+    def test_a_finished_run_is_ignored(self, registry, qtbot):
+        handle = registry.start(_spec(), now=0.0)
+        handle.finish(TaskOutcome.SUCCEEDED, now=1.0)
+
+        with qtbot.assertNotEmitted(registry.cancel_requested):
+            registry.request_cancel("t1")
+
+    def test_a_run_declared_uncancellable_is_ignored(self, registry, qtbot):
+        registry.start(
+            TaskSpec(
+                task_id="t1",
+                title="Activating",
+                owner=CapabilityTarget("video", "single"),
+                cancellable=False,
+            ),
+            now=0.0,
+        )
+
+        with qtbot.assertNotEmitted(registry.cancel_requested):
+            registry.request_cancel("t1")
+
+    def test_the_registry_still_owns_no_cancellation(self, registry):
+        registry.start(_spec(), now=0.0)
+
+        assert not hasattr(registry, "cancel")
+        assert not hasattr(registry, "_cancel_event")

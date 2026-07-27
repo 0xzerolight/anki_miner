@@ -53,6 +53,11 @@ class TaskPublisherMixin:
         rather than by run, because it belongs to the screen and every later run
         of that screen is still the thing it is for.
 
+        And subscribes to cancel *requests*, which is what lets a surface with
+        no route to this screen's worker -- the mini job monitor -- stop a run.
+        The request arrives here; the stopping still happens on this screen,
+        through the same handler the screen's own Cancel button uses.
+
         Args:
             registry: The window's registry. Worker lifetime stays on the screen.
         """
@@ -60,6 +65,28 @@ class TaskPublisherMixin:
         action_bar = getattr(self, "action_bar", None)
         if action_bar is not None and self.TASK_ID:
             action_bar.bind_task(registry, self.TASK_ID)
+        if self.TASK_ID:
+            registry.cancel_requested.connect(self._on_task_cancel_requested)
+
+    def _on_task_cancel_requested(self, task_id: str) -> None:
+        """Honour a cancel request aimed at this screen, and ignore the rest.
+
+        Guarded on there being a live handle as well as a matching id: a request
+        for a run this screen has already finished must not re-enter a cancel
+        path whose worker is gone.
+        """
+        if task_id != self.TASK_ID or self._task_handle is None:
+            return
+        self._cancel_published_task()
+
+    def _cancel_published_task(self) -> None:
+        """Stop this screen's run. Overridden by every screen that publishes one.
+
+        The default does nothing, because a screen with no worker has nothing to
+        stop. ``tests/unit/gui/test_task_cancel_requests.py`` is the ledger that
+        keeps a publishing screen from silently inheriting it.
+        """
+        return
 
     # ------------------------------------------------------------------
     # Producer API

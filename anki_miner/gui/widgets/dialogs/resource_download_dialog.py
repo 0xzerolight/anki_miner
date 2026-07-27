@@ -493,6 +493,11 @@ class ResourceDownloadSession(QObject):
                 )
             )
             self._registry.snapshot_changed.connect(self._on_registry_tick)
+            # A surface with no route to this worker -- the mini job monitor --
+            # can still ask for the run to stop. The asking arrives here; the
+            # stopping is still done by this session, through the same Cancel
+            # the window's own button uses.
+            self._registry.cancel_requested.connect(self._on_cancel_requested)
 
         if self._adopt_worker is not None:
             self._adopt_worker(worker)
@@ -510,11 +515,22 @@ class ResourceDownloadSession(QObject):
             window.raise_()
             window.activateWindow()
 
+    def _on_cancel_requested(self, task_id: str) -> None:
+        """Honour a registry cancel request aimed at this session."""
+        if task_id == TASK_ID:
+            self.cancel()
+
     def cancel(self) -> None:
         """Request cancellation. One verb: no confirmation prompt (D22)."""
         if self._cancel_requested or self._terminal_handled:
             return
         self._cancel_requested = True
+        # Told to the registry as well as to this window, so a surface watching
+        # the run from elsewhere freezes its numbers and starts the wait clock
+        # at the same instant (D22) rather than going on quoting bytes the run
+        # is about to abandon.
+        if self._handle is not None:
+            self._handle.cancelling()
         worker = self._worker
         if worker is not None:
             with contextlib.suppress(RuntimeError):

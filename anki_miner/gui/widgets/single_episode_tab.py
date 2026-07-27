@@ -689,6 +689,10 @@ class SingleEpisodeTab(MiningTabBase):
         proc = self.worker_thread.curation_processor if self.worker_thread is not None else None
         return media_context, self._lookup_fn_from_processor(proc)
 
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this screen's own Cancel."""
+        self._on_cancel_clicked()
+
     def _on_cancel_clicked(self) -> None:
         """Cancel the run: one verb, no prompt, and no invented progress after it.
 

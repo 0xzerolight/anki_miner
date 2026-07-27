@@ -144,6 +144,14 @@ class TaskRegistry(QObject):
     #: Emitted with the task_id whose snapshot changed.
     snapshot_changed = pyqtSignal(str)
 
+    #: Emitted with the task_id a surface has *asked* to have cancelled. The
+    #: registry does not act on it and does not mark the run cancelling: it owns
+    #: no worker and no cancellation event, so claiming a cancel had begun would
+    #: be a statement about something it cannot see. The screen that started the
+    #: run listens, stops its worker, and reports back through
+    #: :meth:`TaskHandle.cancelling`.
+    cancel_requested = pyqtSignal(str)
+
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._snapshots: dict[str, TaskSnapshot] = {}
@@ -200,6 +208,29 @@ class TaskRegistry(QObject):
     def running(self) -> tuple[TaskSnapshot, ...]:
         """Running tasks, in the order they were started."""
         return tuple(self._snapshots[t] for t in self._order if self._snapshots[t].is_running)
+
+    def request_cancel(self, task_id: str) -> None:
+        """Ask whoever owns ``task_id`` to stop it. A request, never an action.
+
+        This is how a surface that is *not* the owning screen -- the mini job
+        monitor -- reaches a run. It relays and nothing more. Deliberately it
+        does not set ``cancelling``: that flag means "the user asked and the
+        worker has not stopped yet", and only the screen holding the
+        cancellation event can honestly say the ask has landed. A registry that
+        set it here would paint every surface as cancelling even when nothing
+        was listening.
+
+        Silently ignores a run that is unknown, already finished, or declared
+        non-cancellable, so a stale window cannot ask to stop work that is not
+        there or was never the user's to stop.
+
+        Args:
+            task_id: The run to ask about.
+        """
+        snapshot = self._snapshots.get(task_id)
+        if snapshot is None or not snapshot.is_running or not snapshot.cancellable:
+            return
+        self.cancel_requested.emit(task_id)
 
     def tick(self, now: float | None = None) -> None:
         """Advance the elapsed clock and silence age of every running task.
