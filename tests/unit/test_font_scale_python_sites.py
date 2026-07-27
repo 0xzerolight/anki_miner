@@ -99,10 +99,18 @@ class TestSubtitleStripFont:
     Japanese content at the feature size, in a strip two lines tall for the
     whole session, so what is pinned now is the rendered font and the height it
     reserves.
+
+    ``apply_to_app`` after every ``_reset`` is load-bearing here, exactly as it
+    is in :class:`TestCurationRowHeight`. ``apply_japanese_font`` re-polishes the
+    strip, and a stylesheet ``font-size`` beats ``setFont`` -- so a sheet another
+    module left on the shared ``QApplication`` decided this strip's size instead
+    of the scale under test. Rebuilding the sheet at that scale makes the
+    measurement independent of whatever ran before it on this worker.
     """
 
-    def test_the_strip_uses_the_japanese_face_at_the_feature_size(self, qtbot):
+    def test_the_strip_uses_the_japanese_face_at_the_feature_size(self, qtbot, qapp):
         _reset(1.0)
+        Theme.apply_to_app(qapp)
         widget = SubtitlePlayerWidget()
         qtbot.addWidget(widget)
         try:
@@ -112,13 +120,15 @@ class TestSubtitleStripFont:
         finally:
             widget.deleteLater()
 
-    def test_the_reserved_two_lines_grow_with_the_applied_scale(self, qtbot):
+    def test_the_reserved_two_lines_grow_with_the_applied_scale(self, qtbot, qapp):
         _reset(1.0)
+        Theme.apply_to_app(qapp)
         small = SubtitlePlayerWidget()
         qtbot.addWidget(small)
         baseline = small.subtitle_strip.height()
 
         _reset(2.0)
+        Theme.apply_to_app(qapp)
         large = SubtitlePlayerWidget()
         qtbot.addWidget(large)
         try:
