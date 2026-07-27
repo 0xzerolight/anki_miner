@@ -6,6 +6,7 @@ from collections import Counter
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -43,6 +44,12 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
+from anki_miner.gui.widgets.dialogs.system_health_window import (
+    HEALTH_OK,
+    HEALTH_WARN,
+    HealthReport,
+    SystemHealthWindow,
+)
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
@@ -148,6 +155,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
         self._validation_silent = True
+
+        # Readiness facts live here, not on the System Health screen, so a
+        # result arriving while that screen is closed is not lost and a reopened
+        # window is immediately correct (D26). The window itself is built the
+        # first time it is asked for.
+        self._health_report = HealthReport.unknown()
+        self._system_health_window: SystemHealthWindow | None = None
 
         # Connect presenter signals
         self._connect_presenter_signals()
@@ -1144,6 +1158,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         ankiconnect_ok = all(issue.component != "AnkiConnect" for issue in result.issues)
         ffmpeg_ok = all(issue.component != "ffmpeg" for issue in result.issues)
         self.status_bar.set_system_status(ankiconnect_ok, ffmpeg_ok)
+        # The timestamp is taken here, on the GUI thread, when the answer
+        # actually reached the user — not inside the worker, where it would age
+        # by however long the result queued.
+        self._publish_health(self._health_report.with_validation(result, datetime.now()))
 
         # Route the yt-dlp verdict into Settings → YouTube. Validation is the single
         # producer here on purpose: it already ran `yt-dlp --version` off the GUI
@@ -1460,9 +1478,54 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             event.accept()
 
     def _on_system_status_clicked(self) -> None:
-        """Handle system status indicator click."""
-        # Trigger system validation
-        self._run_validation()
+        """Open System Health (D26).
+
+        The status control used to silently re-run validation, which answered a
+        question nobody asked: the two badges beside it already say whether
+        AnkiConnect and ffmpeg are up, and nothing showed what else was checked
+        or what to do about it. It now opens the screen that does.
+        """
+        self.open_system_health()
+
+    def open_system_health(self) -> None:
+        """Show the permanent readiness screen, building it on first use.
+
+        One parented, modeless instance for the window's lifetime. Closing it
+        hides it — it owns no worker, so there is nothing to cancel and nothing
+        to rebuild on the way back in.
+        """
+        window = self._system_health_window
+        if window is None:
+            window = SystemHealthWindow(self)
+            window.recheck_requested.connect(self._run_validation)
+            window.fix_requested.connect(self.reveal_setting)
+            self._system_health_window = window
+            window.show_health(self._health_report)
+        window.show()
+        window.raise_()
+        window.activateWindow()
+
+    def _publish_health(self, report: HealthReport) -> None:
+        """Record the latest readiness facts and repaint the screen if it is up."""
+        self._health_report = report
+        if self._system_health_window is not None:
+            self._system_health_window.show_health(report)
+
+    def reveal_setting(self, stable_id: str) -> None:
+        """Open Settings on the exact control ``stable_id`` addresses (D11).
+
+        The anchor-precise sibling of :meth:`reveal_capability`, and the target
+        of every System Health **Fix** button. Resolving an id to a page, a
+        scroll position, focus and a highlight stays in ``SettingsTab``; an
+        unknown id is ignored there, so a stale deep link cannot crash the UI.
+        """
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        jump = getattr(self.tabs.widget(idx), "jump_to_setting", None)
+        if callable(jump):
+            jump(stable_id)
 
     def _run_validation(self) -> None:
         """Run system validation in background thread."""
@@ -1472,6 +1535,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if not self.background_tasks.start_validation(self.validation_service):
             self.status_bar.set_operation(self.tr("Validation already running"), "info")
             return
+        # Both the badges and every health row go back to "not known yet". A
+        # probe in flight is not a failure, and the previous sweep's answers are
+        # no longer the answers to the question now being asked.
+        self.status_bar.set_system_status_checking()
+        self._publish_health(self._health_report.checking())
         self.status_bar.set_operation(self.tr("Running system validation..."), "info")
 
     def _on_validation_finished(self, result: ValidationResult) -> None:
@@ -1493,6 +1561,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._validation_silent = False
 
         self.status_bar.set_operation(self.tr("System check failed. Try again."), "error")
+        # The sweep failed, so nothing was learnt: every row goes back to
+        # unknown rather than inheriting the failure of the run that carried it.
+        self._publish_health(self._health_report.with_validation_error(error_message))
         if not silent:
             self.show_screen_issue(
                 ScreenIssue(
@@ -1576,6 +1647,20 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         from anki_miner.gui.widgets.update_banner import UpdateBanner
         from anki_miner.services.update_checker import UpdateInfo
+
+        # System Health's Updates row is written on every outcome, including the
+        # "nothing newer" one that returns below — a row that only ever changed
+        # when an update existed would sit at "not checked yet" forever on an
+        # up-to-date install.
+        if isinstance(info, UpdateInfo):
+            state = HEALTH_WARN
+            detail = tr_format(self.tr("Version %1 is available."), info.version)
+        else:
+            state = HEALTH_OK
+            detail = tr_format(self.tr("Running %1. No newer release was reported."), __version__)
+        self._publish_health(
+            self._health_report.with_update_check(state=state, detail=detail, checked_at=datetime.now())
+        )
 
         if not isinstance(info, UpdateInfo):
             return
