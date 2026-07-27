@@ -1,59 +1,48 @@
-"""Widget that renders a single YouTubeQueueItem as a queue-list row.
+"""Renders a single YouTubeQueueItem as one calm queue-list row (D31).
 
-Each row shows: status glyph, title (or URL while probing), duration,
-sub-source line, and a remove [×] button. The remove button is disabled
-while the item is PROCESSING. Callers drive all state changes through
-:meth:`update_from`; the widget itself holds no business state.
+The row states three facts on one line -- title, state word, result count --
+plus the video's duration as a short static aside. Everything that used to
+crowd it (the status glyph, the second line, the per-row remove button, and the
+live progress text during a run) is gone: removal is a selection action on the
+list, and live detail belongs to the one current-job strip above it.
+
+The probe error and the resolved subtitle source stay reachable on hover rather
+than on the row, so a 200-item queue reads as a list instead of a wall.
 """
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
-from PyQt6.QtGui import QFont
-from PyQt6.QtWidgets import (
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-    QWidget,
-)
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
+from anki_miner.gui.widgets.base.queue_row import QueueRowWidget, state_word
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.utils.i18n import tr_format
-
-# ---------------------------------------------------------------------------
-# Status → rendering matrix
-# Each entry: (glyph, title_source, show_duration, remove_enabled)
-# title_source is resolved at render time; this table documents the strategy.
-#
-#   PENDING    ●  item.url                  no   yes
-#   PROBING    …  "(probing...)" — or "{display_title} (probing...)" when
-#                 playlist expansion pre-set item.display_title   no   yes
-#   READY      ●  video_info.title          yes  yes
-#   PROBE_ERROR ⚠  error_message            no   yes
-#   PROCESSING ▶  video_info.title          yes  no
-#   COMPLETED  ✓  video_info.title          yes  yes
-#   ERROR      ✗  video_info.title or url   no   yes
-# ---------------------------------------------------------------------------
-_STATUS_GLYPH: dict[YouTubeItemStatus, str] = {
-    YouTubeItemStatus.PENDING: "●",
-    YouTubeItemStatus.PROBING: "…",
-    YouTubeItemStatus.READY: "●",
-    YouTubeItemStatus.PROBE_ERROR: "⚠",
-    YouTubeItemStatus.PROCESSING: "▶",
-    YouTubeItemStatus.COMPLETED: "✓",
-    YouTubeItemStatus.ERROR: "✗",
-}
 
 # Sub-mode label keys (translated at use site via QCoreApplication.translate)
 _SUB_MODE_LABEL: dict[str, str] = {
     "manual_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Manual JA subs"),
     "auto_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto JA subs"),
 }
+
+# ---------------------------------------------------------------------------
+# Status -> filter bucket. YouTube's probe states have no bucket of their own:
+# a probe is work in flight (Running) and a failed probe is a failed row
+# (Failed), which is also what "Retry selected" acts on.
+# ---------------------------------------------------------------------------
+_BUCKETS: dict[YouTubeItemStatus, str] = {
+    YouTubeItemStatus.PENDING: "running",
+    YouTubeItemStatus.PROBING: "running",
+    YouTubeItemStatus.READY: "ready",
+    YouTubeItemStatus.PROBE_ERROR: "failed",
+    YouTubeItemStatus.PROCESSING: "running",
+    YouTubeItemStatus.COMPLETED: "complete",
+    YouTubeItemStatus.ERROR: "failed",
+}
+
+
+def queue_bucket(item: YouTubeQueueItem) -> str:
+    """Return the filter bucket (``ready``/``running``/``failed``/``complete``)."""
+    return _BUCKETS.get(item.status, "running")
 
 
 def _format_duration(seconds: int) -> str:
@@ -88,20 +77,14 @@ def _format_duration(seconds: int) -> str:
     return f"{m}:{s:02d}"
 
 
-class YouTubeQueueItemWidget(QFrame):
-    """Renders one :class:`~anki_miner.models.youtube_queue.YouTubeQueueItem` as a queue-list row.
+class YouTubeQueueItemWidget(QueueRowWidget):
+    """Renders one :class:`~anki_miner.models.youtube_queue.YouTubeQueueItem`.
 
-    The widget is a pure renderer — all business state lives in the item
-    dataclass passed to :meth:`update_from`. The only signal it emits is
-    :attr:`removed`, which fires when the user clicks the ``[×]`` button.
-
-    Signals:
-        removed: Emitted when the user clicks the remove button.
+    A pure renderer -- all business state lives in the item dataclass passed to
+    :meth:`update_from`.
     """
 
-    removed = pyqtSignal()
-
-    def __init__(self, item: YouTubeQueueItem, parent: QWidget | None = None) -> None:
+    def __init__(self, item: YouTubeQueueItem, parent=None) -> None:
         """Create the widget and render the initial state from *item*.
 
         Args:
@@ -109,7 +92,7 @@ class YouTubeQueueItemWidget(QFrame):
             parent: Optional parent widget.
         """
         super().__init__(parent)
-        self._setup_ui()
+        self.setObjectName("yt-queue-item")
         self.update_from(item)
 
     # ------------------------------------------------------------------
@@ -119,127 +102,54 @@ class YouTubeQueueItemWidget(QFrame):
     def update_from(self, item: YouTubeQueueItem) -> None:
         """Refresh the visual state from *item*.
 
-        Idempotent — safe to call repeatedly with the same item object.
+        Idempotent -- safe to call repeatedly with the same item object.
 
         Args:
             item: Current queue item snapshot.
         """
-        status = item.status
-
-        # --- status glyph ---
-        self.status_label.setText(_STATUS_GLYPH.get(status, "●"))
-
-        # --- title ---
-        self.title_label.setText(self._resolve_title(item))
-
-        # --- duration ---
-        show_duration = status in (
-            YouTubeItemStatus.READY,
-            YouTubeItemStatus.PROCESSING,
-            YouTubeItemStatus.COMPLETED,
+        self.render_row(
+            title=self._resolve_title(item),
+            aside=self._resolve_duration(item),
+            state=self._resolve_state(item),
+            result=self._resolve_result(item),
+            detail=self._resolve_detail(item),
         )
-        if show_duration and item.video_info is not None:
-            self.duration_label.setText(_format_duration(item.video_info.duration_s))
-        else:
-            self.duration_label.setText("")
-
-        # --- sub source / detail line ---
-        self.sub_source_label.setText(self._resolve_sub_source(item))
-
-        # --- remove button ---
-        self.remove_button.setEnabled(status != YouTubeItemStatus.PROCESSING)
 
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
 
     def _resolve_title(self, item: YouTubeQueueItem) -> str:
-        """Return the appropriate title text for the given item state."""
-        status = item.status
-        if status == YouTubeItemStatus.PROBING:
-            if item.display_title:
-                return tr_format(self.tr("%1 (probing...)"), item.display_title)
-            return self.tr("(probing...)")
-        if status == YouTubeItemStatus.PROBE_ERROR:
-            return tr_format(
-                self.tr("Probe failed: %1"),
-                item.error_message or self.tr("unknown error"),
-            )
+        """Return the row's title: the video title once known, else the URL."""
         if item.video_info is not None:
             return item.video_info.title
+        if item.display_title:
+            return item.display_title
         return item.url
 
-    def _resolve_sub_source(self, item: YouTubeQueueItem) -> str:
-        """Return the appropriate second-line text for the given item state."""
-        status = item.status
-        if status == YouTubeItemStatus.COMPLETED:
+    def _resolve_duration(self, item: YouTubeQueueItem) -> str:
+        """Return the duration aside, once a probe has supplied one."""
+        if item.video_info is None:
+            return ""
+        return _format_duration(item.video_info.duration_s)
+
+    def _resolve_state(self, item: YouTubeQueueItem) -> str:
+        """Return the state word. Probing gets its own, since it is not mining."""
+        if item.status in (YouTubeItemStatus.PENDING, YouTubeItemStatus.PROBING):
+            return self.tr("Checking")
+        return state_word(queue_bucket(item))
+
+    def _resolve_result(self, item: YouTubeQueueItem) -> str:
+        """Return the result count, which only a completed run has."""
+        if item.status == YouTubeItemStatus.COMPLETED:
             return tr_format(self.tr("%1 cards"), item.cards_created)
-        if status == YouTubeItemStatus.ERROR:
+        return ""
+
+    def _resolve_detail(self, item: YouTubeQueueItem) -> str:
+        """Return the hover detail: the failure, else the subtitle source."""
+        if item.status in (YouTubeItemStatus.PROBE_ERROR, YouTubeItemStatus.ERROR):
             return item.error_message or ""
         if item.resolved_sub_mode is not None:
             raw = _SUB_MODE_LABEL.get(item.resolved_sub_mode, "")
             return QCoreApplication.translate("YouTubeQueueItemWidget", raw) if raw else ""
         return ""
-
-    def _setup_ui(self) -> None:
-        """Build the widget layout."""
-        self.setObjectName("yt-queue-item")
-
-        outer = QVBoxLayout()
-        outer.setContentsMargins(SPACING.sm, SPACING.xs, SPACING.sm, SPACING.xs)
-        outer.setSpacing(SPACING.xxs)
-
-        # --- top row: glyph | title | duration | [×] ---
-        top_row = QHBoxLayout()
-        top_row.setSpacing(SPACING.xs)
-
-        # Status glyph
-        self.status_label = QLabel()
-        self.status_label.setObjectName("yt-queue-status-glyph")
-        glyph_font = QFont()
-        glyph_font.setPixelSize(FONT_SIZES.body)
-        self.status_label.setFont(glyph_font)
-        self.status_label.setFixedWidth(FONT_SIZES.body + SPACING.xs)
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        top_row.addWidget(self.status_label)
-
-        # Title — elides long titles / multi-line probe errors to one line, full text
-        # on hover (see ElidingLabel). Keeps the row a constant height across states.
-        self.title_label = ElidingLabel()
-        self.title_label.setObjectName("yt-queue-title")
-        title_font = QFont()
-        title_font.setPixelSize(FONT_SIZES.body)
-        self.title_label.setFont(title_font)
-        self.title_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
-        top_row.addWidget(self.title_label)
-
-        # Duration
-        self.duration_label = QLabel()
-        self.duration_label.setObjectName("yt-queue-duration")
-        dur_font = QFont()
-        dur_font.setPixelSize(FONT_SIZES.caption)
-        self.duration_label.setFont(dur_font)
-        self.duration_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-        top_row.addWidget(self.duration_label)
-
-        # Remove button
-        self.remove_button = QPushButton("×")
-        self.remove_button.setObjectName("danger")
-        self.remove_button.setAccessibleName(self.tr("Remove from queue"))
-        self.remove_button.setMaximumWidth(SPACING.xl)
-        self.remove_button.setToolTip(self.tr("Remove from queue"))
-        self.remove_button.clicked.connect(self.removed.emit)
-        top_row.addWidget(self.remove_button)
-
-        outer.addLayout(top_row)
-
-        # --- second row: sub source / detail line ---
-        self.sub_source_label = ElidingLabel()
-        self.sub_source_label.setObjectName("yt-queue-sub-source")
-        caption_font = QFont()
-        caption_font.setPixelSize(FONT_SIZES.caption)
-        self.sub_source_label.setFont(caption_font)
-        self.sub_source_label.setIndent(FONT_SIZES.body + SPACING.xs)  # align under title
-        outer.addWidget(self.sub_source_label)
-
-        self.setLayout(outer)

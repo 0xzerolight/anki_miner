@@ -1,15 +1,20 @@
 """Tests for :class:`AudiobookQueueItemWidget`.
 
-Exercises the status-to-render mapping, the second (detail) line, the
-remove-button enable/disable, idempotency of ``update_from``, and signal
-emission in headless Qt mode. Mirrors ``test_youtube_queue_item_widget.py``.
+Rewritten for D31's calm rows: the glyph, the second line and the per-row
+remove button are gone, so these assert the state word, the result count, the
+hover detail, the selection hook and the font-metric row height instead.
+Mirrors ``test_youtube_queue_item_widget.py``.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from anki_miner.gui.widgets.audiobook_queue_item_widget import AudiobookQueueItemWidget
+from anki_miner.gui.widgets.audiobook_queue_item_widget import (
+    AudiobookQueueItemWidget,
+    queue_bucket,
+)
+from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
 from anki_miner.models.mining_queue import ReadyItemStatus
 
@@ -36,10 +41,10 @@ def _make_item(
 # ---------------------------------------------------------------------------
 
 
-def test_ready_glyph(qtbot) -> None:
+def test_ready_state_word(qtbot) -> None:
     widget = AudiobookQueueItemWidget(_make_item())
     qtbot.addWidget(widget)
-    assert widget.status_label.text() == "●"
+    assert widget.state_label.text() == "Ready"
 
 
 def test_ready_title_is_audio_filename(qtbot) -> None:
@@ -48,16 +53,16 @@ def test_ready_title_is_audio_filename(qtbot) -> None:
     assert widget.title_label.full_text == "novel_volume_1.m4b"
 
 
-def test_ready_detail_is_subtitle_filename(qtbot) -> None:
+def test_ready_subtitle_moves_to_the_hover_detail(qtbot) -> None:
     widget = AudiobookQueueItemWidget(_make_item())
     qtbot.addWidget(widget)
-    assert widget.detail_label.full_text == "novel_volume_1.srt"
+    assert widget.toolTip() == "novel_volume_1.srt"
 
 
-def test_ready_remove_enabled(qtbot) -> None:
+def test_ready_has_no_result_yet(qtbot) -> None:
     widget = AudiobookQueueItemWidget(_make_item())
     qtbot.addWidget(widget)
-    assert widget.remove_button.isEnabled()
+    assert widget.result_label.text() == ""
 
 
 # ---------------------------------------------------------------------------
@@ -65,29 +70,18 @@ def test_ready_remove_enabled(qtbot) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_processing_glyph(qtbot) -> None:
+def test_processing_state_word(qtbot) -> None:
     item = _make_item(status=ReadyItemStatus.PROCESSING)
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
-    assert widget.status_label.text() == "▶"
-
-
-def test_processing_remove_disabled(qtbot) -> None:
-    item = _make_item()
-    widget = AudiobookQueueItemWidget(item)
-    qtbot.addWidget(widget)
-
-    item.status = ReadyItemStatus.PROCESSING
-    widget.update_from(item)
-
-    assert not widget.remove_button.isEnabled()
+    assert widget.state_label.text() == "Running"
 
 
 def test_processing_keeps_subtitle_detail(qtbot) -> None:
     item = _make_item(status=ReadyItemStatus.PROCESSING)
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
-    assert widget.detail_label.full_text == "novel_volume_1.srt"
+    assert widget.toolTip() == "novel_volume_1.srt"
 
 
 # ---------------------------------------------------------------------------
@@ -95,14 +89,14 @@ def test_processing_keeps_subtitle_detail(qtbot) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_completed_glyph(qtbot) -> None:
+def test_completed_state_word(qtbot) -> None:
     item = _make_item(status=ReadyItemStatus.COMPLETED)
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
-    assert widget.status_label.text() == "✓"
+    assert widget.state_label.text() == "Complete"
 
 
-def test_completed_detail_shows_card_count(qtbot) -> None:
+def test_completed_shows_card_count(qtbot) -> None:
     item = _make_item()
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
@@ -111,14 +105,7 @@ def test_completed_detail_shows_card_count(qtbot) -> None:
     item.cards_created = 42
     widget.update_from(item)
 
-    assert widget.detail_label.full_text == "42 cards created"
-
-
-def test_completed_remove_enabled(qtbot) -> None:
-    item = _make_item(status=ReadyItemStatus.COMPLETED)
-    widget = AudiobookQueueItemWidget(item)
-    qtbot.addWidget(widget)
-    assert widget.remove_button.isEnabled()
+    assert widget.result_label.text() == "42 cards"
 
 
 # ---------------------------------------------------------------------------
@@ -126,15 +113,15 @@ def test_completed_remove_enabled(qtbot) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_error_glyph(qtbot) -> None:
+def test_error_state_word(qtbot) -> None:
     item = _make_item(status=ReadyItemStatus.ERROR)
     item.error_message = "boom"
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
-    assert widget.status_label.text() == "✗"
+    assert widget.state_label.text() == "Failed"
 
 
-def test_error_detail_shows_error_message(qtbot) -> None:
+def test_error_message_is_reachable_on_hover(qtbot) -> None:
     item = _make_item()
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
@@ -143,21 +130,14 @@ def test_error_detail_shows_error_message(qtbot) -> None:
     item.error_message = "ffmpeg exploded"
     widget.update_from(item)
 
-    assert "ffmpeg exploded" in widget.detail_label.full_text
+    assert "ffmpeg exploded" in widget.toolTip()
 
 
 def test_error_without_message_shows_empty_detail(qtbot) -> None:
     item = _make_item(status=ReadyItemStatus.ERROR)
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
-    assert widget.detail_label.full_text == ""
-
-
-def test_error_remove_enabled(qtbot) -> None:
-    item = _make_item(status=ReadyItemStatus.ERROR)
-    widget = AudiobookQueueItemWidget(item)
-    qtbot.addWidget(widget)
-    assert widget.remove_button.isEnabled()
+    assert widget.toolTip() == ""
 
 
 # ---------------------------------------------------------------------------
@@ -173,61 +153,49 @@ def test_update_from_idempotent(qtbot) -> None:
     item.status = ReadyItemStatus.COMPLETED
     item.cards_created = 7
     widget.update_from(item)
-    first = (
-        widget.status_label.text(),
-        widget.title_label.full_text,
-        widget.detail_label.full_text,
-        widget.remove_button.isEnabled(),
-    )
+    first = (widget.state_label.text(), widget.title_label.full_text, widget.result_label.text())
     widget.update_from(item)
-    second = (
-        widget.status_label.text(),
-        widget.title_label.full_text,
-        widget.detail_label.full_text,
-        widget.remove_button.isEnabled(),
-    )
-    assert first == second == ("✓", "novel_volume_1.m4b", "7 cards created", True)
+    second = (widget.state_label.text(), widget.title_label.full_text, widget.result_label.text())
+    assert first == second == ("Complete", "novel_volume_1.m4b", "7 cards")
 
 
-def test_processing_then_ready_reenables_remove(qtbot) -> None:
+def test_processing_then_ready_returns_to_the_ready_word(qtbot) -> None:
     item = _make_item()
     widget = AudiobookQueueItemWidget(item)
     qtbot.addWidget(widget)
 
     item.status = ReadyItemStatus.PROCESSING
     widget.update_from(item)
-    assert not widget.remove_button.isEnabled()
+    assert widget.state_label.text() == "Running"
 
     item.status = ReadyItemStatus.READY
     widget.update_from(item)
-    assert widget.remove_button.isEnabled()
-    assert widget.detail_label.full_text == "novel_volume_1.srt"
+    assert widget.state_label.text() == "Ready"
+    assert widget.toolTip() == "novel_volume_1.srt"
 
 
 # ---------------------------------------------------------------------------
-# removed signal
+# Filter buckets, selection, height
 # ---------------------------------------------------------------------------
 
 
-def test_removed_signal_fires_on_click(qtbot) -> None:
+def test_bucket_per_status() -> None:
+    assert queue_bucket(_make_item(status=ReadyItemStatus.READY)) == "ready"
+    assert queue_bucket(_make_item(status=ReadyItemStatus.PROCESSING)) == "running"
+    assert queue_bucket(_make_item(status=ReadyItemStatus.COMPLETED)) == "complete"
+    assert queue_bucket(_make_item(status=ReadyItemStatus.ERROR)) == "failed"
+
+
+def test_row_carries_the_selection_hook(qtbot) -> None:
     widget = AudiobookQueueItemWidget(_make_item())
     qtbot.addWidget(widget)
-    fired: list[None] = []
-    widget.removed.connect(lambda: fired.append(None))
 
-    widget.remove_button.click()
+    widget.set_selected(True)
 
-    assert len(fired) == 1
+    assert widget.property("queueSelected") is True
 
 
-def test_removed_signal_not_fired_when_disabled(qtbot) -> None:
-    item = _make_item(status=ReadyItemStatus.PROCESSING)
-    widget = AudiobookQueueItemWidget(item)
+def test_row_height_is_font_metric(qtbot) -> None:
+    widget = AudiobookQueueItemWidget(_make_item())
     qtbot.addWidget(widget)
-
-    fired: list[None] = []
-    widget.removed.connect(lambda: fired.append(None))
-
-    widget.remove_button.click()  # button is disabled — click is a no-op
-
-    assert len(fired) == 0
+    assert widget.sizeHint().height() == metric_row_height(widget, vertical_padding=widget.ROW_PADDING_Y)

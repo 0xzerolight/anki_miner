@@ -737,9 +737,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # ------------------------------------------------------------------
 
     def _render_new_item(self, item: Any) -> None:
-        """Create a row widget for ``item`` and add it to the list widget."""
+        """Create a row widget for ``item`` and add it to the list widget.
+
+        Rows carry no remove button of their own (D31): removal is a selection
+        action on the list, so nothing here connects a per-row signal.
+        """
         widget = self._make_row_widget(item)
-        widget.removed.connect(lambda it=item: self._on_remove_clicked(it))
 
         list_item = QListWidgetItem()
         list_item.setSizeHint(widget.sizeHint())

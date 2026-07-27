@@ -452,8 +452,8 @@ class TestPerItemSignals:
         assert item_a.status == ReadyItemStatus.PROCESSING
         assert "Mining 1 of 3" in tab.progress_widget.status_label.text()
         assert "vol1.m4b" in tab.progress_widget.status_label.text()
-        # Row's remove button disabled while PROCESSING.
-        assert not tab._row_widgets[item_a].remove_button.isEnabled()
+        # The row states the item is running (D31: one word, no live detail).
+        assert tab._row_widgets[item_a].state_label.text() == "Running"
 
     def test_item_progress_determinate(self, tab, tmp_path):
         _add_pair(tab, tmp_path)
@@ -486,7 +486,7 @@ class TestPerItemSignals:
 
         assert item.status == ReadyItemStatus.COMPLETED
         assert item.cards_created == 5
-        assert "5 cards created" in tab._row_widgets[item].detail_label.full_text
+        assert tab._row_widgets[item].result_label.text() == "5 cards"
         # Presenter is forwarded the result.
         tab._presenter.show_processing_result.assert_called_once_with(result)
 
@@ -499,7 +499,8 @@ class TestPerItemSignals:
 
         assert item.status == ReadyItemStatus.ERROR
         assert item.error_message == "FFmpegError: oops"
-        assert "FFmpegError: oops" in tab._row_widgets[item].detail_label.full_text
+        assert tab._row_widgets[item].state_label.text() == "Failed"
+        assert "FFmpegError: oops" in tab._row_widgets[item].toolTip()
 
     def test_item_finished_failed_result_marks_error(self, tab, tmp_path):
         """A non-raising failed ProcessingResult (error=None) routes to ERROR."""
