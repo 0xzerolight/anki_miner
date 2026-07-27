@@ -169,12 +169,16 @@ class MiniJobMonitor(QWidget):
         """Paint the title, the line, the bar and the Cancel state."""
         if snapshot is None:
             self.title_label.setText(self.tr("Nothing is running"))
+            self.title_label.show()
             self.line_label.setText("")
             self.progress_bar.hide()
             self.cancel_button.setEnabled(False)
             return
 
+        # With several jobs going the picker already names this one, and a
+        # window this small cannot afford to say it twice.
         self.title_label.setText(snapshot.title)
+        self.title_label.setVisible(self.picker.isHidden())
         self.line_label.setText(format_task_line(snapshot))
 
         fraction = snapshot.fraction

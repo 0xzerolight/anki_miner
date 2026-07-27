@@ -390,3 +390,38 @@ class TestItNeedsNoThemeKeys:
     def test_it_declares_no_colour_of_its_own(self, monitor):
         assert monitor.styleSheet() == ""
         assert all(child.styleSheet() == "" for child in monitor.findChildren(QWidget))
+
+
+# ---------------------------------------------------------------------------
+# It opens big enough to answer the question it exists for
+# ---------------------------------------------------------------------------
+
+
+class TestItsDefaultSize:
+    def test_the_line_is_not_elided_at_the_default_size(self, registry, monitor):
+        handle = _start(registry)
+        handle.stage(index=3, total=5, name="Fetching definitions", now=1.0)
+        handle.count(current=7, total=24, detail="18 cards", now=78.0)
+
+        monitor.adjustSize()
+        monitor.show()
+
+        assert "…" not in monitor.line_label.text()
+        assert monitor.line_label.text() == monitor.line_label.full_text
+
+    def test_the_picker_replaces_the_title_rather_than_repeating_it(self, registry, monitor):
+        _start(registry, "a", "Mining Samurai Champloo")
+        assert monitor.title_label.isVisibleTo(monitor) is True
+
+        _start(registry, "b", "Downloading JMdict")
+
+        assert monitor.title_label.isVisibleTo(monitor) is False
+        assert monitor.picker.isHidden() is False
+
+    def test_the_title_comes_back_when_only_one_job_is_left(self, registry, monitor):
+        _start(registry, "a", "Mining Samurai Champloo")
+        second = _start(registry, "b", "Downloading JMdict")
+
+        second.finish(TaskOutcome.SUCCEEDED, now=2.0)
+
+        assert monitor.title_label.isVisibleTo(monitor) is True
