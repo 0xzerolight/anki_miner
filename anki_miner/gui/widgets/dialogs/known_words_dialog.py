@@ -25,6 +25,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.fonts import japanese_cell_font
+from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
     add_min_max_buttons,
     configure_data_view,
@@ -117,6 +118,10 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         layout.addLayout(buttons)
 
         self.setLayout(layout)
+        # The filter field holds Japanese, and Return is how an input method
+        # commits a composition. With Close left as the default button, typing
+        # kana into the filter closed the manager (D49). Esc still closes it.
+        disown_default_buttons(self)
         self.install_issue_banner(layout)
 
     # ------------------------------------------------------------------

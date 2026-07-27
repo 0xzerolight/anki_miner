@@ -27,7 +27,6 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMenu,
-    QPushButton,
     QSplitter,
     QStyle,
     QTableWidget,
@@ -45,7 +44,7 @@ from anki_miner.gui.utils.fonts import (
     japanese_cell_font,
     make_scaled_font,
 )
-from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
+from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     CELL_PADDING,
     CellRole,
@@ -269,17 +268,12 @@ class WordCurationDialog(QDialog):
     def _disown_default_button(self) -> None:
         """Leave this dialog with no default button at all.
 
-        A push button inside a QDialog is auto-default, and Qt clicks whichever
-        one ends up default on a bare Return — from anywhere in the dialog,
-        including the Search field. Return is also how a Japanese input method
-        commits a composition, so leaving a default here means typing kana into
-        Search silently fires a bulk action or commits the whole review.
+        Delegates to the shared D49 primitive, which also re-strips the flags on
+        every show — Qt re-promotes a default button from its own show handlers.
         Confirmation is Ctrl+Return instead (see :meth:`_setup_shortcuts`); every
         button here stays reachable by mouse and by Space.
         """
-        for button in self.findChildren(QPushButton):
-            button.setAutoDefault(False)
-            button.setDefault(False)
+        disown_default_buttons(self)
 
     def _build_left_pane(self) -> QWidget:
         """Build the left pane containing the search bar, bulk-action buttons, and table."""

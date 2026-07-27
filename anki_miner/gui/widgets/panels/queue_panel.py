@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.widgets.base import configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
@@ -112,14 +113,20 @@ class QueuePanel(QFrame):
 
     def _add_series(self) -> None:
         """Add a new series to the queue."""
-        # Prompt for series name
-        name, ok = QInputDialog.getText(
-            self,
-            self.tr("Add Series"),
-            tr_format(self.tr("Enter a name for series #%1:"), len(self.queue_item_widgets) + 1),
-            text=tr_format(self.tr("Series %1"), len(self.queue_item_widgets) + 1),
-        )
-        if not ok or not name.strip():
+        # Instantiated rather than QInputDialog.getText: the static helper leaves
+        # OK as the default button, so Return commits the dialog — and Return is
+        # also how a Japanese input method commits a composition, which makes a
+        # kana series name impossible to type (D49). Ctrl+Enter confirms instead.
+        prompt = QInputDialog(self)
+        prompt.setWindowTitle(self.tr("Add Series"))
+        prompt.setLabelText(tr_format(self.tr("Enter a name for series #%1:"), len(self.queue_item_widgets) + 1))
+        prompt.setTextValue(tr_format(self.tr("Series %1"), len(self.queue_item_widgets) + 1))
+        disown_default_buttons(prompt)
+        primary_action_shortcut(prompt, prompt.accept)
+        if prompt.exec() != QDialog.DialogCode.Accepted:
+            return
+        name = prompt.textValue()
+        if not name.strip():
             return
 
         # Create queue item widget
@@ -209,6 +216,10 @@ class QueuePanel(QFrame):
         layout.addWidget(button_box)
 
         dialog.setLayout(layout)
+        # This dialog owns two path fields and a spin box, so Return must stay
+        # available for text entry rather than confirming the dialog (D49).
+        disown_default_buttons(dialog)
+        primary_action_shortcut(dialog, dialog.accept)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Update widget with new paths

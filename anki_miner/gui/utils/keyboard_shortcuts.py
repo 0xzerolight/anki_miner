@@ -17,9 +17,9 @@ Shortcuts are parented to their owning widget so Qt retains them; an unreference
 
 from collections.abc import Callable
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QPushButton, QWidget
 
 #: Confirmation is Ctrl-modified so a bare Enter stays available to input methods.
 #: "Return" is the main-block key and "Enter" is the keypad's; Qt reports them as
@@ -76,3 +76,48 @@ def primary_action_shortcut(owner: QWidget, slot: Callable[[], None]) -> tuple[Q
         The created shortcuts, one per bound key.
     """
     return tuple(scoped_shortcut(owner, key, slot) for key in _PRIMARY_ACTION_KEYS)
+
+
+def _strip_default_flags(dialog: QObject) -> None:
+    """Clear ``default``/``autoDefault`` on every push button under ``dialog``."""
+    for button in dialog.findChildren(QPushButton):
+        button.setAutoDefault(False)
+        button.setDefault(False)
+
+
+class _DefaultButtonDisowner(QObject):
+    """Re-strips the default flags each time its dialog is shown.
+
+    One pass at construction is not enough. ``QDialogButtonBox`` promotes its
+    first accept-role button to *default* from its own show handler, and
+    ``QDialog`` promotes the first ``autoDefault`` button from
+    ``QDialog::showEvent`` -- both run after the caller's constructor, so a
+    single pre-show pass is silently undone. The dialog's own show event
+    arrives after the button box has done its promotion, which is why filtering
+    there wins.
+    """
+
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
+        if obj is not None and event is not None and event.type() == QEvent.Type.Show:
+            _strip_default_flags(obj)
+        return False
+
+
+def disown_default_buttons(dialog: QWidget) -> None:
+    """Leave ``dialog`` with no default button, now and on every show.
+
+    A push button inside a ``QDialog`` is auto-default, and Qt clicks whichever
+    one ends up default on a bare Return -- from anywhere in the dialog,
+    including a Search or URL field. Return is also how a Japanese input method
+    commits a composition, so leaving a default button means typing kana into a
+    text field silently confirms the dialog (D49).
+
+    Call this on every dialog that contains a text field, and give it
+    :func:`primary_action_shortcut` instead when it has a confirming action.
+    Every button stays reachable by mouse and by Space.
+
+    Args:
+        dialog: The dialog to disown. The show-time filter is parented to it.
+    """
+    _strip_default_flags(dialog)
+    dialog.installEventFilter(_DefaultButtonDisowner(dialog))
