@@ -81,6 +81,14 @@ class TestApplicationEntryPoint:
         assert "unlock(" not in _main_source()
         assert "unlock()" in inspect.getsource(app_module._relaunch_if_requested)
 
+    def test_the_entry_point_starts_no_optional_worker_of_its_own(self) -> None:
+        """Every optional startup job sits behind the one first-run gate.
+
+        A job started from here instead is a job the first-run wizard cannot be
+        made to precede, however carefully ``commit_boot`` is ordered.
+        """
+        assert "PrewarmWorker" not in _main_source()
+
 
 class TestComposition:
     def test_the_session_restores_after_every_tab_and_before_the_first_paint(
@@ -164,6 +172,26 @@ class TestFirstRunPrecedesOptionalWork:
 
         assert events == [], "optional boot work must wait behind first-run setup (D26)"
         assert window._maybe_offer_first_run_setup in scheduled
+        window.deleteLater()
+
+    def test_the_prewarm_waits_behind_first_run_setup(self, recorded_boot) -> None:
+        """The last optional startup job that still raced the wizard.
+
+        The tagger/dictionary prewarm opens every installed dictionary's sqlite
+        index. Scheduled from ``app.main`` it fired inside the modal wizard's
+        nested event loop, so a first run warmed the dictionary chain underneath
+        the very Resources page that replaces it.
+        """
+        build, _events, scheduled = recorded_boot
+
+        window = build(first_run_done=False)
+        window.commit_boot()
+
+        assert window._start_prewarm not in scheduled
+
+        window._start_post_setup_boot_once()
+
+        assert window._start_prewarm in scheduled
         window.deleteLater()
 
     def test_a_normal_run_starts_the_optional_work_straight_away(self, recorded_boot) -> None:

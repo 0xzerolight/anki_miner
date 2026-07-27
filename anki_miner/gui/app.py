@@ -1191,10 +1191,12 @@ def main():
     6. ``commit_boot``: reconcile settings profiles, stamp the version, then
        either offer first-run setup or release the optional startup work behind
        it (D26). Boot used to start the JMdict migration and let the wizard
-       cancel it two lines later.
-    7. ``show()``, then the work that is only worth doing once something is on
-       screen: the stall watchdog, the stats load, and the tagger/dictionary
-       prewarm on the next event-loop turn.
+       cancel it two lines later. Every optional job — validation, the update
+       checks, the migration, the stale-dictionary scan and the prewarm — is
+       started from that one gate, never from here, or the wizard could not be
+       made to precede it.
+    7. ``show()``, then the two things that need a painted window: the stall
+       watchdog and the stats load.
     8. ``app.exec()``. Its result is captured rather than passed straight to
        ``sys.exit`` so a requested restart (D39b) can release the instance lock
        and start the replacement only after the loop has returned and this
@@ -1369,25 +1371,9 @@ def main():
 
     _start_stats_load(window, stats_service, analytics_tab)
 
-    # Pre-warm the shared MeCab tagger (get_shared_tagger) AND the dictionary
-    # chain off the GUI thread, scheduled on the next event-loop tick so it
-    # never blocks the first paint. The first Mine builds these on the GUI
-    # thread today, freezing the UI for seconds; warming them in the background
-    # makes that first real Mine materially faster. The worker warms the SHARED
-    # tagger singleton that mining reuses (it builds its own sqlite connections
-    # for the dict chain and discards those — connections are unsafe across
-    # threads). Best-effort: clicking Mine before it finishes simply takes
-    # today's cold path. The window's background-task controller holds the
-    # reference (so the QThread isn't GC'd mid-run and shutdown can join it)
-    # and clears it once the built-in ``finished`` signal fires.
-    def _start_prewarm() -> None:
-        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
-
-        worker = PrewarmWorker(window.get_config())
-        window.background_tasks.set_prewarm(worker)
-        worker.start()
-
-    QTimer.singleShot(0, _start_prewarm)
+    # The tagger/dictionary prewarm is NOT started here. It is optional startup
+    # work like every other, so it waits behind first-run setup with the rest —
+    # see MainWindow._start_post_setup_boot_once.
 
     # Run event loop. The exit code is captured rather than handed straight to
     # sys.exit so a requested restart (D39b-A) can start the replacement only
