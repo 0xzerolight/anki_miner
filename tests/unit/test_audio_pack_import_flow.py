@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
@@ -642,13 +643,13 @@ class TestReimportPack:
 
 
 class TestSettingsTabAudioPanelWiring:
-    def test_audio_subtab_exists(self, tab):
-        labels = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
-        assert "Audio" in labels, f"Audio tab missing; got: {labels}"
+    def test_audio_destination_exists(self, tab):
+        # Stable key, not the displayed "Word Audio", which translates.
+        assert "audio" in tab._subtab_index, f"audio destination missing; got: {sorted(tab._subtab_index)}"
 
-    def test_audio_tab_after_dictionary(self, tab):
-        labels = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
-        assert labels.index("Audio") > labels.index("Dictionaries"), "Audio sub-tab must come after Dictionaries"
+    def test_audio_comes_after_dictionaries(self, tab):
+        keys = [tab.nav_list.item(row).data(Qt.ItemDataRole.UserRole) for row in range(tab.nav_list.count())]
+        assert keys.index("audio") > keys.index("dictionaries"), "Audio must come after Dictionaries"
 
     def test_load_config_sets_chain_on_audio_panel(self, test_config: AnkiMinerConfig, tmp_path, qtbot):
         chain = (

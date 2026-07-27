@@ -14,6 +14,7 @@ must be set BEFORE the widget is built.
 from __future__ import annotations
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 
@@ -225,24 +226,8 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
 
         return [Profile(id="anime", name=first_name), Profile(id="novels", name="Novels")]
 
-    @pytest.fixture
-    def pinned_app_stylesheet(self, qapp):
-        """Save and restore the app stylesheet around the width measurements.
-
-        ``sizeHint`` on a POLISHED widget is font-driven, the font comes from the
-        app stylesheet, and every test file on an xdist worker shares one
-        ``QApplication``. ``hostile_scale`` makes the sheet deterministic while a
-        test runs (it applies the theme itself) but never puts the previous one
-        back. List this fixture BEFORE ``hostile_scale`` in the signature so it
-        finalises after it and the module stops leaking a sheet to its
-        neighbours.
-        """
-        previous = qapp.styleSheet()
-        yield
-        qapp.setStyleSheet(previous)
-
     def test_two_profiles_keep_the_window_minimum_inside_its_own_contract(
-        self, qtbot, patch_heavy_init, test_config, pinned_app_stylesheet, hostile_scale
+        self, qtbot, patch_heavy_init, test_config, hostile_scale
     ):
         from anki_miner.gui.app import compose_main_window
         from anki_miner.gui.constants import WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
@@ -274,9 +259,7 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         )
         window.deleteLater()
 
-    def test_the_profile_caption_is_not_clipped_in_a_longer_locale(
-        self, qtbot, pinned_app_stylesheet, hostile_scale, longer_translations
-    ):
+    def test_the_profile_caption_is_not_clipped_in_a_longer_locale(self, qtbot, hostile_scale, longer_translations):
         from anki_miner.gui.constants import WINDOW_MIN_WIDTH
         from anki_miner.gui.widgets.header_widget import HeaderWidget
 
@@ -298,7 +281,7 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         assert _clip_report(label) is None, f"clipped: {_clip_report(label)}"
 
     def test_a_200_char_profile_name_elides_instead_of_widening_the_header(
-        self, qtbot, pinned_app_stylesheet, hostile_scale, longer_translations
+        self, qtbot, hostile_scale, longer_translations
     ):
         from anki_miner.gui.constants import WINDOW_MIN_WIDTH
         from anki_miner.gui.widgets.header_widget import HeaderWidget
@@ -338,3 +321,86 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         # Vacuity guard: the long name really was in the combo, and elided.
         assert combo.itemData(0) == "anime"
         assert 0 < len(combo.itemText(0)) < len(long_name)
+
+
+class TestSettingsNavigatorKeepsEveryCategoryReachable:
+    """Ten equally-weighted settings tabs overflowed the strip into scroll arrows
+    at this cell, which put whole categories out of reach -- the defect D10's
+    grouped navigator replaces. The assertions below are the falsifiable form of
+    "reachable": every destination selects, shows its own page, and lands with its
+    row inside the navigator's viewport, at 150% text in a locale whose strings run
+    25 characters longer than English.
+
+    Written against the pseudo-locale rather than a real German catalogue on
+    purpose: it is longer than any shipped translation, so a navigator that
+    survives it survives all twelve. It is also why nothing here asserts unclipped
+    label text -- a 34-character unbreakable token is not a translation, and the
+    property that matters is that the category is still selectable.
+    """
+
+    @staticmethod
+    def _settings_tab(qtbot, monkeypatch, test_config):
+        from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+        from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+        # showEvent fetches deck / note-type names over AnkiConnect; showing the
+        # tab unstubbed opens a real socket and trips the network guard.
+        monkeypatch.setattr(AnkiProbeController, "refresh_name_lists", lambda _self: None)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.resize(1024, 768)
+        tab.show()
+        qtbot.waitExposed(tab)
+        QApplication.processEvents()
+        return tab
+
+    @staticmethod
+    def _join_workers(tab):
+        tab.shutdown()
+        for worker in tab.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+    def test_every_destination_is_reachable(self, qtbot, monkeypatch, test_config, hostile_scale, longer_translations):
+        from anki_miner.gui.capabilities import SETTINGS_SUBTABS
+
+        tab = self._settings_tab(qtbot, monkeypatch, test_config)
+        nav = tab.nav_list
+
+        for key in sorted(SETTINGS_SUBTABS):
+            tab.open_subtab(key)
+            QApplication.processEvents()
+            item = nav.currentItem()
+            assert item is not None and item.data(Qt.ItemDataRole.UserRole) == key
+            assert tab.pages.currentIndex() == tab._subtab_index[key]
+            rect = nav.visualItemRect(item)
+            # Vacuity guard: an unlaid-out row has an empty rect whose centre
+            # trivially sits inside the viewport.
+            assert rect.height() > 0 and rect.width() > 0, f"{key!r} has no laid-out row"
+            # Centre, not the whole rect: a wrapped two-line row can be taller
+            # than the slack at the viewport edge without being out of reach.
+            assert (
+                nav.viewport().rect().contains(rect.center())
+            ), f"{key!r} lands off-screen at {rect} in viewport {nav.viewport().rect()}"
+
+        self._join_workers(tab)
+
+    def test_the_navigator_leaves_most_of_the_width_to_the_panels(
+        self, qtbot, monkeypatch, test_config, hostile_scale, longer_translations
+    ):
+        from anki_miner.gui.constants import WINDOW_MIN_WIDTH
+
+        tab = self._settings_tab(qtbot, monkeypatch, test_config)
+
+        # Measured against the app's own minimum-window contract, not against
+        # ``tab.width()``: under this pseudo-locale the settings panels demand
+        # ~1600px of their own, so a ratio taken from the realised width would
+        # pass for reasons that have nothing to do with the navigator.
+        assert tab.nav_list.width() * 2 <= WINDOW_MIN_WIDTH, (
+            f"the navigator takes {tab.nav_list.width()}px of the {WINDOW_MIN_WIDTH}px "
+            f"minimum window, leaving the settings themselves the smaller half"
+        )
+        # Vacuity guard: a collapsed rail is not a pass.
+        assert tab.nav_list.width() > 0 and tab.nav_list.isVisible()
+
+        self._join_workers(tab)

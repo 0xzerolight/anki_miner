@@ -654,5 +654,5 @@ def test_trigger_reimport_all_dispatches_both_slot_kinds(tab_for_reimport_all, m
 
     stubbed_workers["yomitan_factory"].assert_called_once()
     stubbed_workers["jmdict_factory"].assert_called_once()
-    # Landed on the Dictionaries sub-tab.
-    assert tab.tab_widget.currentIndex() == tab._subtab_index["dictionaries"]
+    # Landed on the Dictionaries page.
+    assert tab.pages.currentIndex() == tab._subtab_index["dictionaries"]

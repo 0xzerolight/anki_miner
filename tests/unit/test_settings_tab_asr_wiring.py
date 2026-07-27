@@ -23,13 +23,17 @@ class TestSettingsTabAsrWiring:
         qtbot.addWidget(tab)
         assert tab.subtitles_panel in tab._save_panels
 
-    def test_no_separate_asr_tab(self, test_config: AnkiMinerConfig, qtbot):
-        """ASR settings are merged into Subtitles — no standalone 'ASR' tab."""
+    def test_no_separate_asr_destination(self, test_config: AnkiMinerConfig, qtbot):
+        """ASR settings are merged into Subtitles — no standalone ASR destination.
+
+        Asserted on the navigator's stable keys, not its displayed names: the
+        page reads "Transcription & Alignment" and translates, ``"subtitles"``
+        does not.
+        """
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
-        labels = [tab.tab_widget.tabText(i) for i in range(tab.tab_widget.count())]
-        assert "ASR" not in labels
-        assert "Subtitles" in labels
+        assert "asr" not in tab._subtab_index
+        assert "subtitles" in tab._subtab_index
 
     def test_download_button_emits_asr_download_requested(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
         """Clicking the model download button re-emits asr_download_requested."""

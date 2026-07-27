@@ -586,6 +586,23 @@ QProgressBar#queue-progress {
 
 /* ============== SETTINGS TAB STYLES ============== */
 
+/* Grouped settings navigator (D10). Group headings are inert rows: Qt paints
+   them through the disabled state, which the colour rules below pick up. */
+QListWidget#settings-nav {
+    border: none;
+    outline: none;
+}
+
+QListWidget#settings-nav::item {
+    padding: ${spacing-xs}px ${spacing-sm}px ${spacing-xs}px ${spacing-md}px;
+    border: none;
+}
+
+/* Headings are the disabled rows, and they outdent under their destinations. */
+QListWidget#settings-nav::item:disabled {
+    padding-left: ${spacing-xs}px;
+}
+
 /* Validation status labels */
 QLabel#validation-status {
     font-size: ${font-size-caption}px;
@@ -1237,6 +1254,23 @@ QLabel#queue-status-badge[status="error"] {
 }
 
 /* --- Settings Tab --- */
+
+QListWidget#settings-nav {
+    background-color: transparent;
+}
+
+QListWidget#settings-nav::item:disabled {
+    color: ${color-text-muted};
+}
+
+QListWidget#settings-nav::item:hover {
+    background-color: ${color-surface-hover};
+}
+
+QListWidget#settings-nav::item:selected {
+    color: ${color-primary};
+    background-color: ${color-surface-hover};
+}
 
 QLabel#validation-status[status="success"] {
     color: ${color-success};
