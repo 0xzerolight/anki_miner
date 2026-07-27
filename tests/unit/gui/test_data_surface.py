@@ -156,9 +156,13 @@ class TestAnalyticsReadsAsData:
         assert tab.sessions_table.columnWidth(3) == wide
 
     def test_row_height_comes_from_the_shared_metric(self, qtbot):
+        """Asserted after a populate: sorting is toggled around every render, and
+        the row height has to survive it."""
         table = _analytics(qtbot, _SESSIONS).sessions_table
 
-        assert table.verticalHeader().defaultSectionSize() == data_row_height(table)
+        header = table.verticalHeader()
+        assert header.sectionResizeMode(0) == QHeaderView.ResizeMode.Fixed
+        assert header.defaultSectionSize() == data_row_height(table)
 
     def test_a_row_copies_as_tab_separated_values(self, qtbot, qapp):
         table = _analytics(qtbot, _SESSIONS).sessions_table
