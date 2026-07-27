@@ -31,13 +31,14 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
+    ScreenIssue,
     configure_card_layout,
     configure_expanding_container,
     configure_scrolled_page,
@@ -204,6 +205,7 @@ class SingleEpisodeTab(MiningTabBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(scroll_area)
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
@@ -343,15 +345,19 @@ class SingleEpisodeTab(MiningTabBase):
         if sibling is not None:
             self.subtitle_selector.set_path(str(sibling))
 
+    def _open_media_settings(self) -> None:
+        """Repair action for a probe failure: the ffmpeg/ffprobe paths live there."""
+        reveal_settings(self, "media")
+
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
         video_path = self.video_selector.path_or_none()
         if video_path is None:
-            QMessageBox.warning(self, self.tr("Missing Video File"), self.tr("Select a video file first."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
             return
         if not self.video_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
             )
             return
 
@@ -400,10 +406,14 @@ class SingleEpisodeTab(MiningTabBase):
         def _on_probe_error(msg: str) -> None:
             self.tracks_button.setEnabled(True)
             logger.error("Failed to probe audio tracks: %s", msg)
-            QMessageBox.warning(
-                self,
-                self.tr("Probe Failed"),
-                self.tr("Failed to detect audio tracks. Check that ffprobe is installed."),
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Audio tracks could not be read."),
+                    details=msg,
+                    action_id="settings.media",
+                    action_text=self.tr("Open Media Settings"),
+                ),
+                action=self._open_media_settings,
             )
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
@@ -418,18 +428,18 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.path_or_none()
 
         if video_path is None or subtitle_path is None:
-            QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose both a video file and a subtitle file.")))
             return
 
         if not self.video_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
             )
             return
 
         if not self.subtitle_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Subtitle file not found: %1"), subtitle_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=subtitle_path)
             )
             return
 
@@ -472,8 +482,8 @@ class SingleEpisodeTab(MiningTabBase):
         def _on_parse_error(msg: str) -> None:
             self.timing_button.setEnabled(True)
             logger.error("Failed to parse subtitles: %s", msg)
-            QMessageBox.critical(
-                self, self.tr("Parse Error"), self.tr("Failed to parse subtitles. Check the file format.")
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("The subtitles could not be read. Check the file format."), details=msg)
             )
 
         run_off_thread(self, _parse, _on_parsed, _on_parse_error)
@@ -488,18 +498,18 @@ class SingleEpisodeTab(MiningTabBase):
         subtitle_path = self.subtitle_selector.path_or_none()
 
         if video_path is None or subtitle_path is None:
-            QMessageBox.warning(self, self.tr("Missing Files"), self.tr("Select both video and subtitle files."))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose both a video file and a subtitle file.")))
             return
 
         if not self.video_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Video file not found: %1"), video_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_path)
             )
             return
 
         if not self.subtitle_selector.is_valid():
-            QMessageBox.warning(
-                self, self.tr("File Not Found"), tr_format(self.tr("Subtitle file not found: %1"), subtitle_path)
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=subtitle_path)
             )
             return
 
