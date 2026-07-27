@@ -429,8 +429,8 @@ class UISettingsPanel(QWidget):
         finally:
             self.tree.blockSignals(False)
 
-        # Covers populate, Revert and load_from_config in one place — both call
-        # back through here.
+        # One call covers populate, Revert and load_from_config: the latter two
+        # both rebuild the tree through here.
         self._refresh_contrast_warning()
 
     def _build_star_cell(self, key: str, is_favorite: bool) -> QWidget:
@@ -603,27 +603,29 @@ class UISettingsPanel(QWidget):
         """Render ``issues`` as one sentence; empty string when there are none."""
         if not issues:
             return ""
+        # (measured template, unmeasurable text) per role. Both must stay
+        # literal tr() arguments — Qt extracts them statically.
+        phrases = {
+            CONTRAST_ROLE_PRIMARY_LABEL: (
+                self.tr("button labels %1:1"),
+                self.tr("button labels could not be measured"),
+            ),
+            CONTRAST_ROLE_MUTED_TEXT: (
+                self.tr("muted text %1:1"),
+                self.tr("muted text could not be measured"),
+            ),
+            CONTRAST_ROLE_SURFACE_EDGE: (
+                self.tr("cards against the page %1:1"),
+                self.tr("cards against the page could not be measured"),
+            ),
+        }
         details: list[str] = []
         for issue in issues:
-            measured = None if issue.ratio is None else f"{issue.ratio:.1f}"
-            if issue.role == CONTRAST_ROLE_PRIMARY_LABEL:
-                details.append(
-                    self.tr("button labels could not be measured")
-                    if measured is None
-                    else tr_format(self.tr("button labels %1:1"), measured)
-                )
-            elif issue.role == CONTRAST_ROLE_MUTED_TEXT:
-                details.append(
-                    self.tr("muted text could not be measured")
-                    if measured is None
-                    else tr_format(self.tr("muted text %1:1"), measured)
-                )
-            elif issue.role == CONTRAST_ROLE_SURFACE_EDGE:
-                details.append(
-                    self.tr("cards against the page could not be measured")
-                    if measured is None
-                    else tr_format(self.tr("cards against the page %1:1"), measured)
-                )
+            phrase = phrases.get(issue.role)
+            if phrase is None:
+                continue
+            measured, unmeasurable = phrase
+            details.append(unmeasurable if issue.ratio is None else tr_format(measured, f"{issue.ratio:.1f}"))
         return tr_format(
             self.tr("Low contrast, shown exactly as the theme author wrote it: %1."),
             ", ".join(details),
