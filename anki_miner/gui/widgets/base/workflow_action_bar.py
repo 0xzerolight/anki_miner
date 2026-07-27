@@ -375,6 +375,15 @@ class WorkflowActionBar(QWidget):
         self.progress_bar.setObjectName(ACTION_BAR_PROGRESS_OBJECT_NAME)
         self.progress_bar.setTextVisible(False)
         self.progress_bar.setFixedHeight(_PROGRESS_HEIGHT)
+        # The rule's strip belongs to the bar whether or not a run is drawing in
+        # it. Letting the hidden bar give its height back would move the whole
+        # pinned page the moment anyone pressed the primary action, and move it
+        # again when the run ended -- a bar that is pinned so the run button
+        # stays put (D6-B) cannot be the thing that shifts it. Hidden it still
+        # does not paint; it just keeps its four pixels.
+        progress_policy = self.progress_bar.sizePolicy()
+        progress_policy.setRetainSizeWhenHidden(True)
+        self.progress_bar.setSizePolicy(progress_policy)
         outer.addWidget(self.progress_bar)
 
         row = QHBoxLayout()
@@ -383,6 +392,15 @@ class WorkflowActionBar(QWidget):
 
         self.stage_label = ElidingLabel()
         self.stage_label.setObjectName("workflow-stage")
+        # A label costs itself out from the glyphs it is holding, so an empty
+        # stage label asks for a pixel less than the same label naming a stage --
+        # and having once been asked for the taller box it never asks for the
+        # shorter one again. Reserving the filled line up front keeps the bar's
+        # height a property of its actions rather than of whether a run has ever
+        # started on this screen.
+        self.stage_label.setText("X")
+        self.stage_label.setMinimumHeight(self.stage_label.sizeHint().height())
+        self.stage_label.setText("")
         row.addWidget(self.stage_label, 1)
 
         self.elapsed_label = QLabel("")

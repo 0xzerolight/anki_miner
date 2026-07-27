@@ -16,7 +16,7 @@ import pytest
 from PyQt6.QtWidgets import QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSpec
+from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry, TaskSpec
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.base import PageWidth, WorkflowActionBar, install_workflow_shell
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -316,3 +316,50 @@ def test_the_activity_control_counts_towards_the_bar_height_immediately(qtbot):
 
     assert not bar.activity_button.isHidden()
     assert bar.sizeHint().height() >= bar.activity_button.sizeHint().height() + 2 * SPACING.xs
+
+
+def test_the_bar_keeps_one_height_from_idle_through_a_run_and_back(qtbot, registry):
+    """Starting and finishing a run must not move the page above the bar.
+
+    The progress rule and the clock only exist while something is running, and
+    showing them used to make the bar taller -- the whole pinned page shifted
+    under the pointer the moment a run began, which is the opposite of what
+    pinning it was for (D6-B). The rule's strip is reserved from construction
+    instead.
+    """
+    page, _scroll, bar, _log = _page(qtbot)
+    bar.set_actions(QPushButton("Start mining"), (QPushButton("Cancel"),))
+    page.resize(900, 700)
+    page.show()
+    qtbot.waitExposed(page)
+    idle = bar.height()
+
+    bar.bind_task(registry, "screen.demo")
+    handle = _start(registry)
+    handle.stage(index=1, total=5, name="Extracting media", now=0.0)
+    qtbot.wait(1)
+    running = bar.height()
+
+    handle.finish(TaskOutcome.SUCCEEDED, now=1.0)
+    qtbot.wait(1)
+
+    assert running == idle
+    assert bar.height() == idle
+
+
+def test_a_stage_name_never_makes_the_bar_taller(qtbot):
+    """A label measures its glyphs; an empty one is a pixel short of a filled one.
+
+    Left alone the bar gained that pixel the first time a run named its stage
+    and never gave it back.
+    """
+    bar = _bar(qtbot)
+    bar.resize(400, bar.sizeHint().height())
+    bar.show()
+    qtbot.waitExposed(bar)
+    idle = bar.sizeHint().height()
+
+    bar.stage_label.setText("Extracting media (1 of 5)")
+    qtbot.wait(1)
+
+    assert bar.sizeHint().height() == idle
