@@ -191,7 +191,6 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         row.setSpacing(SPACING.xs)
 
         self.line_list = QListWidget()
-        self.line_list.setObjectName("subtitle-line-list")
         self.line_list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.line_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.line_list.setTextElideMode(Qt.TextElideMode.ElideRight)

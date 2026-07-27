@@ -57,6 +57,7 @@ from anki_miner.utils.file_pairing import find_sibling_subtitle
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
+    from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
     from anki_miner.orchestration import EpisodeProcessor
     from anki_miner.utils.audio_track_detector import AudioStream
 
@@ -514,12 +515,11 @@ class SingleEpisodeTab(MiningTabBase):
 
         run_off_thread(self, _parse, _on_parsed, _on_parse_error)
 
-    def _subtitles_container(self):
+    def _subtitles_container(self) -> SubtitlesTab | None:
         """The Subtitles tab that owns Retime, or None if this tab is unhosted.
 
-        Duck-typed on purpose: a stripped shell (tests, a future embedding) has
-        no Subtitles tab, and a hand-off that cannot land is a quiet no-op rather
-        than a crash.
+        A stripped shell (tests, a future embedding) has no Subtitles tab, and a
+        hand-off that cannot land is a quiet no-op rather than a crash.
         """
         from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 
