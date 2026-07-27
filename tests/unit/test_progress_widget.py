@@ -203,3 +203,46 @@ def test_show_completion_pins_100_and_freezes_stats(widget):
 def test_stats_line_has_no_rate_display(widget):
     widget.set_percent(50, "working")
     assert "/sec" not in widget.stats_label.text()
+
+
+class TestClockTypeface:
+    """The running clock used to ask for 'Consolas' at a constant 12px.
+
+    Consolas exists on Windows and nowhere else, and the constant meant the
+    clock alone ignored the text-size setting while the label beside it grew
+    (decision D44-B).
+    """
+
+    def test_the_clock_uses_the_platform_fixed_font(self, widget):
+        from anki_miner.gui.utils.fonts import resolved_families
+
+        assert widget.stats_label.font().family() == resolved_families().monospace
+
+    def test_the_clock_never_asks_for_a_windows_only_family(self, widget):
+        assert widget.stats_label.font().family() != "Consolas"
+
+    def test_the_clock_follows_the_text_size_setting(self, qtbot, text_scale):
+        from anki_miner.gui.widgets.progress_widget import ProgressWidget
+
+        baseline = ProgressWidget()
+        qtbot.addWidget(baseline)
+        small = baseline.stats_label.font().pixelSize()
+
+        text_scale(2.0)
+        scaled = ProgressWidget()
+        qtbot.addWidget(scaled)
+        assert scaled.stats_label.font().pixelSize() == 2 * small
+
+
+@pytest.fixture
+def text_scale():
+    """Yield ``apply(scale)``, restoring the global text scale afterwards.
+
+    Only the scale is changed, never the application stylesheet: these widgets
+    are never shown, so their Python font is the one that answers.
+    """
+    from anki_miner.gui.resources.styles.theme import Theme
+
+    original = Theme.get_font_scale()
+    yield Theme.set_font_scale
+    Theme.set_font_scale(original)

@@ -879,6 +879,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.nav_list.setCurrentItem(item)
             self.nav_list.scrollToItem(item)
 
+    def current_subtab_key(self) -> str | None:
+        """The stable key of the destination on show, or ``None``.
+
+        The inverse of :meth:`open_subtab`, used to persist where the user was
+        (D7). Read off the selected navigator row's ``UserRole`` data, never its
+        displayed text, which moves with the UI language.
+        """
+        item = self.nav_list.currentItem()
+        key = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        return key if isinstance(key, str) and key else None
+
     def setting_anchor_hosts(self) -> tuple[SettingAnchorHost, ...]:
         """Every panel that registers setting anchors, in navigator order."""
         return (

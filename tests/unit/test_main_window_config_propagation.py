@@ -58,22 +58,22 @@ def test_update_config_from_settings_emits_committed_config(main_window):
     assert received[0].config_version == new_config.config_version + 1
 
 
-def test_cycle_theme_propagates_to_config_refreshed(main_window, monkeypatch):
-    """Ctrl+T theme cycle must propagate via config_refreshed.
+def test_theme_change_propagates_to_config_refreshed(main_window):
+    """A theme change must propagate via config_refreshed.
 
-    Pins the real bug: SettingsTab.config goes stale after a theme cycle, so
+    Pins the real bug: SettingsTab.config goes stale after a theme change, so
     the next Save writes the old theme back.
-    """
-    from anki_miner.gui.resources.styles import theme as theme_module
 
-    # Force the cycle to produce a deterministic, different theme.
-    monkeypatch.setattr(theme_module.Theme, "cycle_theme", staticmethod(lambda: "dark"))
+    Driven through the header's ``theme_changed`` handler, which is the only
+    path left since D48-B retired the Ctrl+T cycle -- the favourites combo in
+    the header does the same job in view.
+    """
     main_window.config = replace(main_window.config, theme="light")
 
     received: list[AnkiMinerConfig] = []
     main_window.config_refreshed.connect(received.append)
 
-    main_window._cycle_theme()
+    main_window._on_theme_changed("dark")
 
     assert len(received) == 1
     assert received[0].theme == "dark"

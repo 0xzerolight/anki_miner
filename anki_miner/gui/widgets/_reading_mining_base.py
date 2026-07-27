@@ -102,6 +102,10 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
     """
 
     _shutdown_log_name = "Reading"
+    #: Name this screen's run carries in the task registry. Each sub-tab sets it
+    #: with ``QT_TRANSLATE_NOOP("ReadingTab", ...)``, keeping the four literals
+    #: in the one tr-context this family shares.
+    TASK_TITLE: str = ""
     # Enable the promoted stranded-PROCESSING recovery sweep for reading too.
     _status_ready = ReadyItemStatus.READY
     _status_processing = ReadyItemStatus.PROCESSING
@@ -130,6 +134,9 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
             unavailable=QCoreApplication.translate("ReadingTab", "Mining unavailable — services not initialized."),
             run_starting=QCoreApplication.translate("ReadingTab", "%1 run starting — %2 items."),
             mine_label=QCoreApplication.translate("ReadingTab", "Mine"),
+            retrying=QCoreApplication.translate("ReadingTab", "Attempt %1 of %2 · retrying in %3s"),
+            # Extracted at the subclass's QT_TRANSLATE_NOOP, looked up here.
+            task_title=QCoreApplication.translate("ReadingTab", self.TASK_TITLE) if self.TASK_TITLE else "",
         )
 
     # ------------------------------------------------------------------
@@ -230,6 +237,9 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         """
         widget.freeze()
         widget.set_status(QCoreApplication.translate("ReadingTab", "Cancelling…"))
+        # Told to the registry from the same place, so the pinned bar's clock
+        # keeps running and the wait can name what it is waiting on (D22).
+        self._publish_task_cancelling()
 
     def _apply_terminal_bar_state(self, widget) -> None:
         """Set the run's terminal bar state: cancel -> failed -> success.

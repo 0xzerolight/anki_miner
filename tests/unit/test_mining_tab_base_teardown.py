@@ -19,7 +19,7 @@ from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 class _Bare(MiningTabBase):
     config = None
 
-    def _mark_known(self, forms):
+    def _commit_known_words(self, forms):
         return 0
 
     def _restore_buttons(self) -> None:
@@ -167,7 +167,7 @@ class TestTeardownPreviousRunPoisonsGate:
 
         order: list[str] = []
         dialog = MagicMock()
-        dialog.reject.side_effect = lambda: order.append("dialog_reject")
+        dialog.force_reject.side_effect = lambda: order.append("dialog_reject")
         tab._active_curation_dialog = dialog
 
         worker = MagicMock(name="w")

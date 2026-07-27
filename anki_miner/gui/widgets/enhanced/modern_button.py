@@ -86,13 +86,24 @@ class ModernButton(QPushButton):
     (``primary`` and whatever Qt made the default).
     """
 
-    def __init__(self, text: str = "", variant: ButtonVariant = "primary", parent=None):
+    def __init__(
+        self,
+        text: str = "",
+        variant: ButtonVariant = "primary",
+        parent=None,
+        *,
+        square: bool = False,
+    ):
         """Initialize the modern button.
 
         Args:
             text: Button text
             variant: Button role — see the class docstring
             parent: Optional parent widget
+            square: Pin the width to the metric height, for glyph-only controls
+                such as the chain-editor reorder arrows and its trash. A glyph
+                button that stretches to a text button's width is how the four
+                chain editors ended up with two full-width arrows (D13).
         """
         super().__init__(text, parent)
 
@@ -111,7 +122,13 @@ class ModernButton(QPushButton):
         # replaces: 36 was slack at 100% text and under the glyphs at 150%, so it
         # made every button taller than its content on the machine the number was
         # chosen on, and shorter than its content on everybody else's.
-        apply_button_size(self)
+        # A square control is pinned to its own height, and the global button
+        # padding is measured for a word: left unchanged it would leave the
+        # glyph a negative content box and clip it to a sliver. The property
+        # lets ``common.qss`` hand this one shape a symmetric inset instead.
+        if square:
+            self.setProperty("square", True)
+        apply_button_size(self, square=square)
 
         # Set accessibility properties
         self.setAccessibleName(text if text else self.tr("Button"))

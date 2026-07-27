@@ -522,17 +522,24 @@ class TestValidationService:
     class TestValidateSetup:
         """Tests for validate_setup — mocking at real boundaries (requests.post, subprocess.run)."""
 
-        def test_all_pass(self, test_config):
+        def test_all_pass(self, test_config, tmp_path):
             """All checks pass when external services respond correctly."""
             from dataclasses import replace
 
             from anki_miner.config import ChainEntry
 
-            # Disable optional feature flags so missing optional resource files
-            # don't add warnings; the test focuses on the core Anki/ffmpeg path.
+            # A usable offline dictionary is part of a clean bill of health now
+            # (D26), so stage one rather than emptying the chain — an empty chain
+            # is itself a warning.
+            dicts_root = tmp_path / "dicts"
+            TestOptionalResourceWarnings._stage_dict(dicts_root, "test-dict")
             test_config = replace(
                 test_config,
-                dictionary_chain=(ChainEntry(kind="jisho", dict_id=None, enabled=True),),
+                dicts_root=dicts_root,
+                dictionary_chain=(
+                    ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),
+                    ChainEntry(kind="jisho", dict_id=None, enabled=True),
+                ),
             )
             service = ValidationService(test_config)
 
@@ -904,6 +911,34 @@ class TestOptionalResourceWarnings:
             lambda self: (True, "ok"),
         )
 
+    @staticmethod
+    def _stage_dict(dicts_root, dict_id, *, entries=1234, schema_version=None):
+        """Write a dictionary slot the registry scan can read without SQLite.
+
+        The meta sidecar is authoritative while it is newer than
+        ``index.sqlite``, so a placeholder byte plus a sidecar is a complete,
+        fast stand-in for a real index.
+        """
+        import json
+
+        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+
+        target = dicts_root / dict_id
+        target.mkdir(parents=True)
+        (target / "index.sqlite").write_bytes(b"placeholder")
+        (target / "meta.json").write_text(
+            json.dumps(
+                {
+                    "source_name": dict_id,
+                    "format": "yomitan",
+                    "schema_version": str(SCHEMA_VERSION if schema_version is None else schema_version),
+                    "entry_count": str(entries),
+                }
+            ),
+            encoding="utf-8",
+        )
+        return target
+
     def test_warns_when_indexed_dict_enabled_but_missing(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
@@ -923,24 +958,29 @@ class TestOptionalResourceWarnings:
 
         self._patch_external_checks(monkeypatch)
 
-        # Point dicts_root at tmp_path/dicts and stage the dict folder so the
-        # validator finds the index.sqlite.
         dicts_root = tmp_path / "dicts"
-        dict_id = "test-dict"
-        target = dicts_root / dict_id
-        target.mkdir(parents=True)
-        (target / "index.sqlite").write_bytes(b"placeholder")
+        self._stage_dict(dicts_root, "test-dict")
 
         chain = (
-            ChainEntry(kind="indexed", dict_id=dict_id, enabled=True),
+            ChainEntry(kind="indexed", dict_id="test-dict", enabled=True),
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
         config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
         result = ValidationService(config).validate_setup()
 
         assert not self._has_warning(result, "Offline Dictionary")
+        # The success text is kept so a readiness screen can name the dictionary
+        # without re-scanning; it is discarded everywhere else.
+        assert "test-dict" in result.tool_versions["offline-dictionary"]
 
-    def test_no_warning_when_indexed_chain_entries_all_disabled(self, test_config, monkeypatch):
+    def test_warns_when_indexed_chain_entries_all_disabled(self, test_config, monkeypatch, tmp_path):
+        """A disabled-only chain is *not* readiness (D26).
+
+        This used to assert the opposite. Every enabled indexed slot being
+        switched off is exactly the state that mines cards with no definition,
+        and calling it healthy is what let first-run setup finish in a state
+        guaranteed to fail the first mine.
+        """
         from dataclasses import replace
 
         from anki_miner.config import ChainEntry
@@ -950,30 +990,60 @@ class TestOptionalResourceWarnings:
             ChainEntry(kind="indexed", dict_id="jmdict-english", enabled=False),
             ChainEntry(kind="jisho", dict_id=None, enabled=True),
         )
-        config = replace(test_config, dictionary_chain=chain)
+        config = replace(test_config, dictionary_chain=chain, dicts_root=tmp_path / "dicts")
         result = ValidationService(config).validate_setup()
 
-        assert not self._has_warning(result, "Offline Dictionary")
+        assert self._has_warning(result, "Offline Dictionary")
 
-    def test_no_warning_when_features_disabled(self, test_config, monkeypatch):
+    def test_warns_when_no_offline_dictionary_is_configured(self, test_config, monkeypatch, tmp_path):
         from dataclasses import replace
 
         from anki_miner.config import ChainEntry
 
         self._patch_external_checks(monkeypatch)
-        # Disable every indexed entry so the chain validation skips itself.
         chain = (ChainEntry(kind="jisho", dict_id=None, enabled=True),)
-        config = replace(
-            test_config,
-            dictionary_chain=chain,
-        )
+        config = replace(test_config, dictionary_chain=chain, dicts_root=tmp_path / "dicts")
         result = ValidationService(config).validate_setup()
 
-        assert not self._has_warning(result, "Offline Dictionary")
+        assert self._has_warning(result, "Offline Dictionary")
         # Pitch/frequency "resource missing" warnings were removed with their
         # flags; assert they never surface.
         assert not self._has_warning(result, "Pitch Accent")
         assert not self._has_warning(result, "Frequency Data")
+
+    def test_check_offline_dictionary_reports_each_failure_shape(self, test_config, tmp_path):
+        """Four unusable states, four different repairs, four distinct messages."""
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        dicts_root = tmp_path / "dicts"
+        self._stage_dict(dicts_root, "stale-dict", schema_version=1)
+        self._stage_dict(dicts_root, "empty-dict", entries=0)
+        self._stage_dict(dicts_root, "good-dict")
+
+        def _check(dict_id, enabled=True):
+            chain = (ChainEntry(kind="indexed", dict_id=dict_id, enabled=enabled),)
+            config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
+            return ValidationService(config).check_offline_dictionary()
+
+        assert _check("good-dict")[0] is True
+
+        ok, message = _check("good-dict", enabled=False)
+        assert ok is False
+        assert "No offline dictionary is enabled" in message
+
+        ok, message = _check("absent-dict")
+        assert ok is False
+        assert "not found on disk" in message
+
+        ok, message = _check("stale-dict")
+        assert ok is False
+        assert "reimporting" in message
+
+        ok, message = _check("empty-dict")
+        assert ok is False
+        assert "no entries" in message
 
 
 class TestCheckAlass:

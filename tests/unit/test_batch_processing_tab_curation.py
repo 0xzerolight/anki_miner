@@ -124,7 +124,7 @@ def test_cancel_rejects_active_curation_dialog(tab):
     tab._active_curation_dialog = dialog
     tab.worker_thread = MagicMock()
     tab._on_cancel_clicked()
-    dialog.reject.assert_called_once()
+    dialog.force_reject.assert_called_once()
 
 
 def test_build_curation_context_routes_through_shared_helpers(tab, facade_processor, tmp_path):

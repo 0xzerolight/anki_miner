@@ -24,11 +24,11 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QT_TRANSLATE_NOOP
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
-    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QScrollArea,
@@ -37,9 +37,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
+from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format, apply_japanese_font
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -72,6 +74,13 @@ class ReadingTextTab(_ReadingMiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "queue.reading.text"
+    TASK_OWNER = CapabilityTarget("reading", "text")
+    #: Name this run carries away from this screen.
+    TASK_TITLE = QT_TRANSLATE_NOOP("ReadingTab", "Text mining")
 
     def __init__(
         self,
@@ -130,11 +139,18 @@ class ReadingTextTab(_ReadingMiningTabBase):
         layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.mine_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
 
     def _progress_header(self, text: str) -> QLabel:
@@ -164,25 +180,25 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.text_edit = QPlainTextEdit()
         self.text_edit.setPlaceholderText(self.tr("Paste text here…"))
         self.text_edit.setMinimumHeight(140)
+        # What the user pastes here is the Japanese they came to mine, not
+        # interface chrome: the Japanese face, a reading size, and the looser
+        # leading (decision D45-B).
+        apply_japanese_font(self.text_edit, role=JAPANESE_BODY)
+        apply_japanese_block_format(self.text_edit.document())
+        self.text_edit.textChanged.connect(self._keep_japanese_leading)
         self.text_edit.textChanged.connect(self._recompute_buttons)
         card_layout.addWidget(self.text_edit)
 
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.sm)
-
+        # Mine and Cancel live in the pinned bar (D6), so a long paste cannot
+        # push the run button off the screen.
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the pasted text into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
-        button_row.addWidget(self.mine_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel the active run."))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()
-        button_row.addWidget(self.cancel_button)
-
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -299,6 +315,21 @@ class ReadingTextTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
     # Button recomputation
     # ------------------------------------------------------------------
+
+    def _keep_japanese_leading(self) -> None:
+        """Restore the Japanese leading after a wholesale text replacement.
+
+        Typing and pasting inherit the block format from the block being split,
+        so nothing is needed there. ``setPlainText`` replaces every block and
+        drops it. The guard makes the common case a single comparison, and stops
+        the re-merge from re-entering through its own ``textChanged``.
+        """
+        document = self.text_edit.document()
+        if document is None:
+            return
+        if document.firstBlock().blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent:
+            return
+        apply_japanese_block_format(document)
 
     def _recompute_buttons(self) -> None:
         """Refresh button state from the worker handle and the text edit.

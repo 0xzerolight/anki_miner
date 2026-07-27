@@ -167,6 +167,28 @@ class TestDeepLinkContract:
         assert tab.pages.currentIndex() == before
 
 
+class TestCurrentSubtabKey:
+    """The inverse of ``open_subtab``, used to resume the last session (D7)."""
+
+    @pytest.mark.parametrize("key", sorted(_KEY_TO_PANEL))
+    def test_round_trips_with_open_subtab(self, tab, key: str) -> None:
+        tab.open_subtab(key)
+        assert tab.current_subtab_key() == key
+
+    def test_reports_a_key_not_a_label(self, tab) -> None:
+        tab.open_subtab("filtering")
+        assert tab.current_subtab_key() == "filtering"
+        assert tab.current_subtab_key() != tab.nav_list.currentItem().text()
+
+    def test_a_group_heading_row_is_never_reported(self, tab) -> None:
+        """Headings carry no key; selecting one must not yield a bogus route."""
+        heading_row = next(
+            row for row in range(tab.nav_list.count()) if tab.nav_list.item(row).data(Qt.ItemDataRole.UserRole) is None
+        )
+        tab.nav_list.setCurrentRow(heading_row)
+        assert tab.current_subtab_key() is None
+
+
 class TestThemePreviewBaseline:
     """Leaving Appearance & Language reverts an un-chosen theme preview."""
 

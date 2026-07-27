@@ -38,12 +38,13 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
-from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
@@ -78,6 +79,14 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "tools.retime"
+    TASK_OWNER = CapabilityTarget("subtitles", "retime")
+
+    #: Where this tool last wrote — remembered separately from its inputs (D7).
+    OUTPUT_HISTORY_KEY = "tools.retime.output"
 
     def __init__(
         self,
@@ -116,6 +125,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
+            task_title=self.tr("Subtitle retiming"),
         )
 
         self._setup_ui()
@@ -155,16 +165,15 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         layout.addWidget(self._create_input_section())
         layout.addWidget(self._create_output_section())
-        layout.addWidget(self._create_actions_section())
+        self._create_action_buttons()
         layout.addWidget(self._create_progress_section())
         layout.addStretch()
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(main_layout, scroll_area, container, self.PAGE_WIDTH)
         self.setLayout(main_layout)
         self.install_issue_banner(main_layout)
 
@@ -219,6 +228,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             label=self.tr("Video File:"),
             file_mode=True,
             file_filter=VIDEO_FILE_FILTER,
+            history_key="tools.retime.inputs",
         )
         layout.addWidget(self.video_file_selector)
 
@@ -226,6 +236,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             label=self.tr("Subtitle File:"),
             file_mode=True,
             file_filter=SUBTITLE_FILE_FILTER,
+            history_key="tools.retime.inputs",
         )
         layout.addWidget(self.subtitle_file_selector)
 
@@ -253,6 +264,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.video_folder_selector = FileSelector(
             label=self.tr("Video Folder:"),
             file_mode=False,
+            history_key="tools.retime.inputs",
         )
         self.video_folder_selector.hide()
         layout.addWidget(self.video_folder_selector)
@@ -260,6 +272,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.subtitle_folder_selector = FileSelector(
             label=self.tr("Subtitle Folder:"),
             file_mode=False,
+            history_key="tools.retime.inputs",
         )
         self.subtitle_folder_selector.hide()
         layout.addWidget(self.subtitle_folder_selector)
@@ -348,33 +361,20 @@ class SubtitleRetimeTab(_ToolTabBase):
         group.setLayout(layout)
         return group
 
-    def _create_actions_section(self) -> QFrame:
-        group = QFrame()
-        group.setObjectName("card")
-        layout = QVBoxLayout()
-        configure_card_layout(layout)
+    def _create_action_buttons(self) -> None:
+        """Build the two run controls. They live in the pinned bar (D6).
 
-        layout.addWidget(SectionHeader(self.tr("Actions")))
-
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(SPACING.xs)
-
+        No Actions card any more: a card whose entire content moved to the bar
+        would be a heading over nothing.
+        """
         self.retime_button = ModernButton(self.tr("Retime Subtitles"), variant="primary")
         self.retime_button.clicked.connect(self._on_retime)
         # Base slots (queue-finished re-enable) act on the tool's primary button.
         self._primary_button = self.retime_button
-        btn_row.addWidget(self.retime_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.clicked.connect(self._on_cancel)
         self.cancel_button.hide()
-        btn_row.addWidget(self.cancel_button)
-
-        btn_row.addStretch()
-        layout.addLayout(btn_row)
-
-        group.setLayout(layout)
-        return group
 
     # ------------------------------------------------------------------
     # Engine / availability state
@@ -531,6 +531,7 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _on_retime(self) -> None:
         """Validate then start the SubtitleRetimeWorker."""
+        self._begin_attempt()
         if not self._alass_available():
             # Should not happen (button disabled), but guard anyway.
             return
@@ -565,7 +566,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             return
 
         # Build and start worker
-        self._cancelled = False
+        self._begin_tool_run(len(pairs))
         self._total_pairs = len(pairs)
 
         # Single-file mode honors the per-file track pick; folder mode auto-detects.

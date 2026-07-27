@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from PyQt6.QtWidgets import QDialogButtonBox, QLabel, QMessageBox
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.widgets.panels import audio_pack_settings_panel as asp_mod
@@ -209,7 +209,7 @@ def test_missing_folder_badge_shown(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.dir_missing is True
+    assert row.warning_text != ""
     labels = row.findChildren(QLabel)
     texts = [lbl.text() for lbl in labels]
     assert any("folder missing" in t for t in texts), texts
@@ -225,7 +225,7 @@ def test_present_folder_no_missing_badge(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.dir_missing is False
+    assert row.warning_text == ""
     labels = row.findChildren(QLabel)
     texts = [lbl.text() for lbl in labels]
     assert not any("folder missing" in t for t in texts)
@@ -753,14 +753,17 @@ def test_checkbox_reflected_in_get_chain(qapp, qtbot, tmp_path):
 
 
 def test_add_button_emits_add_pack_requested(qapp, qtbot, tmp_path):
+    """The one Add control offers both paths from a menu, not two primaries."""
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     fired: list[None] = []
     panel.add_pack_requested.connect(lambda: fired.append(None))
 
-    panel._add_btn.click()
+    panel._add_pack_action.trigger()
 
     assert fired == [None]
+    assert panel._add_btn.menu() is panel._add_menu
+    assert [action.text() for action in panel._add_menu.actions()] == ["Audio Pack…", "Online Source…"]
 
 
 # ---------------------------------------------------------------------------
@@ -1369,3 +1372,46 @@ class TestReadingTtsControls:
         assert not panel._reading_tts_hint.isVisibleTo(panel)
         panel.set_reading_tts(False, False, False)
         assert not panel._reading_tts_hint.isVisibleTo(panel)
+
+
+class TestAddSourceDialogImeSafety:
+    """D49 — the URL template is a text field, so Return must not confirm."""
+
+    def _dialog(self, qtbot):
+        dlg = asp_mod._AddSourceDialog()
+        qtbot.addWidget(dlg)
+        dlg.show()
+        return dlg
+
+    def test_no_default_button_after_show(self, qapp, qtbot):
+        from PyQt6.QtWidgets import QPushButton
+
+        dlg = self._dialog(qtbot)
+        buttons = dlg.findChildren(QPushButton)
+        assert buttons
+        assert not any(b.isDefault() or b.autoDefault() for b in buttons)
+
+    def test_return_in_url_field_does_not_accept(self, qapp, qtbot):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtTest import QTest
+
+        dlg = self._dialog(qtbot)
+        dlg._url_edit.setText("http://localhost:5050/?term={term}")
+        dlg._url_edit.setFocus()
+        QTest.keyClick(dlg._url_edit, Qt.Key.Key_Return)
+        assert dlg.isVisible()
+        assert dlg.result() != int(QDialog.DialogCode.Accepted)
+
+    def test_ctrl_return_accepts_a_valid_entry(self, qapp, qtbot):
+        dlg = self._dialog(qtbot)
+        dlg._url_edit.setText("http://localhost:5050/?term={term}")
+        dlg._accept_if_valid()
+        assert dlg.result() == int(QDialog.DialogCode.Accepted)
+
+    def test_ctrl_return_cannot_bypass_the_ok_gate(self, qapp, qtbot):
+        dlg = self._dialog(qtbot)
+        dlg._url_edit.setText("   ")  # OK is disabled for an empty URL
+        assert not dlg._buttons.button(QDialogButtonBox.StandardButton.Ok).isEnabled()
+        dlg._accept_if_valid()
+        assert dlg.isVisible()
+        assert dlg.result() != int(QDialog.DialogCode.Accepted)

@@ -58,7 +58,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtWidgets import QListWidget, QListWidgetItem
 
-from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskSpec
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.run_off_thread import join_or_retain, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
@@ -72,8 +71,6 @@ if TYPE_CHECKING:
     from PyQt6.QtWidgets import QCheckBox, QLabel, QWidget
 
     from anki_miner.config import AnkiMinerConfig
-    from anki_miner.gui.capabilities import CapabilityTarget
-    from anki_miner.gui.controllers.task_registry import TaskHandle, TaskRegistry
     from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
     from anki_miner.gui.widgets.log_widget import LogWidget
     from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -108,6 +105,9 @@ class _QueueRunStrings:
     # Name the run carries in the task registry and the current-job strip.
     # Only the list-queue tabs publish runs, so it defaults to empty.
     task_title: str = ""
+    # "Attempt %1 of %2 · retrying in %3s" — the D30-B backoff, said out loud.
+    # Empty on a tab that has nowhere to say it; the retry still happens.
+    retrying: str = ""
 
 
 @dataclass(frozen=True)
@@ -206,6 +206,10 @@ class _QueueMiningTabBase(MiningTabBase):
         # of COMPLETED rows don't shift the mapping.
         self._run_items: list[Any] = []
 
+        # Last (idx, attempt) whose retry countdown was announced, so the log
+        # gets one line per attempt rather than one per countdown second.
+        self._retry_announced: tuple[int, int] | None = None
+
         # Worker→GUI word-curation bridge (provided by MiningTabBase).
         self._init_curation_bridge()
 
@@ -225,6 +229,10 @@ class _QueueMiningTabBase(MiningTabBase):
         Progress reset and button state are intentionally NOT touched here: they
         are per-tab UI concerns owned by the caller.
         """
+        # Before the refusals below, not after: a run turned away for an empty
+        # or unavailable queue says so in the log, and that is one of the
+        # warnings the Activity drawer exists to put back on screen (D6).
+        self._begin_attempt()
         if self.worker_thread is not None:
             return False
         if not items:
@@ -234,6 +242,9 @@ class _QueueMiningTabBase(MiningTabBase):
         # bar state — NEVER from _run_items, which is cleared before cleanup runs.
         self._cancel_requested = False
         self._run_failed = False
+        # Per run, so a re-run whose first item retries to the same attempt as
+        # the last run's final countdown still gets its line.
+        self._retry_announced = None
         self._reset_run_state(len(items))
 
         # Processor may be None because (a) Settings → Remove dictionary released
@@ -261,6 +272,12 @@ class _QueueMiningTabBase(MiningTabBase):
         worker = self._make_worker(items, curation_cb, processor_factory)
         worker.item_started.connect(self._on_item_started)
         worker.item_progress.connect(self._on_item_progress)
+        # The wait between automatic attempts and the pause at an item boundary
+        # are both things the run is doing, so both are reported like any other
+        # phase rather than looking like a stall (D30-B, D29-A).
+        worker.item_retrying.connect(self._on_item_retrying)
+        worker.run_paused.connect(self._on_run_paused)
+        worker.run_resumed.connect(self._on_run_resumed)
         worker.item_finished.connect(self._on_item_finished)
         worker.queue_finished.connect(self._on_queue_finished)
         # Fatal pre-loop failures (schema-stale dict gate, processor build) end
@@ -280,8 +297,28 @@ class _QueueMiningTabBase(MiningTabBase):
         self._begin_receipt(len(items))
 
         self.log_widget.append_info(tr_format(self._run_strings.run_starting, self._run_strings.mine_label, len(items)))
+        # Published before the thread starts, so the first queued item slot
+        # already has a handle to report its position through.
+        self._begin_task(items)
         worker.start()
         return True
+
+    def _begin_task(self, items: list[Any]) -> None:
+        """Publish the run that just started. Silent without a bound registry."""
+        self._publish_task_start(self._run_strings.task_title, total=len(items))
+
+    def _finish_task(self) -> None:
+        """Close the published run with the outcome the terminal bar reports.
+
+        Idempotent: a screen whose terminal handling fires twice publishes one
+        finish, because the handle is dropped before it is used.
+        """
+        self._publish_task_finish(
+            self._task_outcome(
+                cancelled=bool(getattr(self, "_cancel_requested", False)),
+                failed=bool(getattr(self, "_run_failed", False) or getattr(self, "_run_failed_count", 0)),
+            )
+        )
 
     def _item_at(self, idx: int) -> Any | None:
         """Map a worker-emitted ``idx`` back to a queue item.
@@ -298,6 +335,43 @@ class _QueueMiningTabBase(MiningTabBase):
         """Run-level fatal: flag for the terminal bar state and log it."""
         self._run_failed = True
         self.log_widget.append_error(message)
+
+    def _retry_line(self, attempt: int, maximum: int, remaining_s: int) -> str:
+        """Render the countdown, or empty when this tab supplies no template."""
+        template = self._run_strings.retrying
+        if not template:
+            return ""
+        return tr_format(template, attempt, maximum, remaining_s)
+
+    def _on_item_retrying(self, idx: int, attempt: int, maximum: int, remaining_s: int) -> None:
+        """Report the backoff before an automatic attempt (D30-B).
+
+        Logged once per attempt rather than once per countdown second: the log
+        is a record, and a ticking clock belongs on a live surface. Subclasses
+        with such a surface override and call up.
+        """
+        line = self._retry_line(attempt, maximum, remaining_s)
+        if line and self._retry_announcement_due(idx, attempt):
+            self.log_widget.append_warning(line)
+
+    def _retry_announcement_due(self, idx: int, attempt: int) -> bool:
+        """True the first time this item's countdown to ``attempt`` is seen.
+
+        Countdowns are strictly sequential -- one item, one attempt, one second
+        at a time -- so remembering only the last pair is enough to keep the log
+        to one line per attempt.
+        """
+        key = (idx, attempt)
+        if getattr(self, "_retry_announced", None) == key:
+            return False
+        self._retry_announced = key
+        return True
+
+    def _on_run_paused(self) -> None:
+        """The run reached an item boundary and stopped there. Default no-op."""
+
+    def _on_run_resumed(self) -> None:
+        """The run left the boundary it was paused at. Default no-op."""
 
     def _recover_stranded_items(self) -> None:
         """Demote any item still PROCESSING at run end to READY (Bug-Y1, PROMOTED).
@@ -347,6 +421,9 @@ class _QueueMiningTabBase(MiningTabBase):
         self.worker_thread = None
         self._run_items = []
         self._after_run_cleanup()
+        # After the cleanup hook, which is where each tab settles the flags the
+        # outcome is derived from.
+        self._finish_task()
         if self._config_dirty:
             if self._processor is not None:
                 self._processor.close()
@@ -544,11 +621,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     _status_completed: Any = None
     _status_error: Any = None
 
-    #: Stable task id this tab publishes its runs under, and where the run
-    #: lives so a status-bar entry can navigate to it. Subclass sets both.
-    TASK_ID: str = ""
-    TASK_OWNER: CapabilityTarget | None = None
-
     # ------------------------------------------------------------------
     # Queue interaction wiring
     # ------------------------------------------------------------------
@@ -563,8 +635,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         """
         self._queue_filter = "all"
         self._queue_search = ""
-        self._task_registry: TaskRegistry | None = None
-        self._task_handle: TaskHandle | None = None
         # Set while this tab is itself moving rows, so the resync slot does not
         # fight the move it is watching.
         self._suppress_row_sync = False
@@ -587,6 +657,9 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.queue_controls.run_selected.connect(self._on_run_selected)
         self.queue_controls.retry_selected.connect(self._on_retry_selected)
         self.queue_controls.remove_selected.connect(self._on_remove_selected)
+        self.queue_controls.pause_requested.connect(self._on_pause_requested)
+        self.queue_controls.resume_requested.connect(self._on_resume_requested)
+        self.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
 
         # Scoped to the list itself: Delete and the Alt arrows must not fire
         # from the URL box or the file pickers on the same screen.
@@ -610,17 +683,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             context=widget_only,
         )
 
-    def bind_task_registry(self, registry: TaskRegistry) -> None:
-        """Publish this tab's runs to the application-wide task registry.
-
-        Optional wiring: a tab constructed without it mines exactly as before,
-        with the current-job strip staying collapsed.
-
-        Args:
-            registry: The window's registry. Worker lifetime stays here.
-        """
-        self._task_registry = registry
-
     # ------------------------------------------------------------------
     # Run lifecycle
     # ------------------------------------------------------------------
@@ -640,7 +702,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             items if items is not None else [i for i in self._queue.all_items() if i.status == self._status_ready]
         )
         if self._launch_run(runnable):
-            self._begin_task(runnable)
             self.progress_widget.reset()
             self._recompute_buttons()
 
@@ -666,9 +727,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
         self._cancel_active_curation_dialog()
-        handle = getattr(self, "_task_handle", None)
-        if handle is not None:
-            handle.cancelling()
+        self._publish_task_cancelling()
         worker = self.worker_thread
         if worker is None:
             return
@@ -679,53 +738,87 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self.progress_widget.set_status(self._queue_list_strings.cancelling)
 
     # ------------------------------------------------------------------
+    # Boundary controls (D29-A)
+    # ------------------------------------------------------------------
+
+    def _on_pause_requested(self) -> None:
+        """Ask the run to stop at the next item boundary."""
+        worker = self.worker_thread
+        if worker is None:
+            return
+        worker.request_pause_after_current()
+        self.queue_controls.pause_button.setEnabled(False)
+
+    def _on_resume_requested(self) -> None:
+        """Let a paused run carry on."""
+        worker = self.worker_thread
+        if worker is None:
+            return
+        worker.resume()
+
+    def _on_finish_current_requested(self) -> None:
+        """Let the item being mined finish, then end the run.
+
+        Distinct from Cancel, which abandons the item in flight. Neither asks
+        for confirmation: D22 keeps one prompt-free verb for stopping, and this
+        is the quieter option beside it rather than a dialog on top of it.
+        """
+        worker = self.worker_thread
+        if worker is None:
+            return
+        worker.request_stop_after_current()
+        self.queue_controls.finish_button.setEnabled(False)
+        self.queue_controls.pause_button.setEnabled(False)
+
+    def _on_run_paused(self) -> None:
+        """Report where the run stopped, and offer to continue from there."""
+        self.queue_controls.set_paused(
+            True,
+            done=getattr(self, "_items_done", 0),
+            total=getattr(self, "_items_total", 0),
+        )
+
+    def _on_run_resumed(self) -> None:
+        """Return the badge and the button to their running state."""
+        self.queue_controls.set_paused(False)
+
+    def _on_item_retrying(self, idx: int, attempt: int, maximum: int, remaining_s: int) -> None:
+        """Tick the backoff on the live surfaces, and log it once per attempt.
+
+        The rows stay calm (D31), so the countdown goes where every other piece
+        of live detail goes: the status line and the task snapshot the
+        current-job strip renders.
+        """
+        super()._on_item_retrying(idx, attempt, maximum, remaining_s)
+        line = self._retry_line(attempt, maximum, remaining_s)
+        if not line:
+            return
+        self.progress_widget.set_status(self._compose_item_status(line))
+        self._publish_task_position(self._join(getattr(self, "_current_item_name", ""), line))
+
+    # ------------------------------------------------------------------
     # Per-item signal slots
     # ------------------------------------------------------------------
 
     def _begin_task(self, items: list[Any]) -> None:
-        """Publish the run that just started, and point the strip at it.
+        """Publish the run, then point the queue-local strip at that exact run.
 
-        The strip is bound to this exact run token, so a later run of the same
-        queue -- or any other task in the app -- cannot rename its line.
+        The strip is bound to this run's token, so a later run of the same queue
+        -- or any other task in the app -- cannot rename its line.
         """
-        registry = getattr(self, "_task_registry", None)
-        if registry is None or not self.TASK_ID or self.TASK_OWNER is None:
-            return
-        handle = registry.start(
-            TaskSpec(
-                task_id=self.TASK_ID,
-                title=self._run_strings.task_title,
-                owner=self.TASK_OWNER,
-            )
-        )
-        self._task_handle = handle
-        handle.count(current=0, total=len(items), detail="")
-        self.current_job_strip.bind(registry, handle.task_id, handle.run_token)
+        super()._begin_task(items)
+        handle = self._task_handle
+        registry = self._task_registry
+        if handle is not None and registry is not None:
+            self.current_job_strip.bind(registry, handle.task_id, handle.run_token)
 
     def _publish_task_position(self, detail: str) -> None:
         """Report which item the run is on. Silent when nothing is bound."""
-        handle = getattr(self, "_task_handle", None)
-        if handle is None:
-            return
-        handle.count(
+        self._publish_task_count(
             current=getattr(self, "_items_done", 0),
             total=getattr(self, "_items_total", 0) or len(self._run_items),
             detail=detail,
         )
-
-    def _finish_task(self) -> None:
-        """Close the published run with the outcome the terminal bar reports."""
-        handle = getattr(self, "_task_handle", None)
-        if handle is None:
-            return
-        if getattr(self, "_cancel_requested", False):
-            outcome = TaskOutcome.CANCELLED
-        elif getattr(self, "_run_failed", False) or getattr(self, "_run_failed_count", 0):
-            outcome = TaskOutcome.FAILED
-        else:
-            outcome = TaskOutcome.SUCCEEDED
-        handle.finish(outcome)
-        self._task_handle = None
 
     def _on_item_started(self, idx: int) -> None:
         """Mark the item as PROCESSING and update progress text."""
@@ -838,7 +931,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         — never ``_run_items``, which is already cleared when this runs. Terminal
         precedence: cancel → failed → success.
         """
-        self._finish_task()
         self.stop_button.setText(self._queue_list_strings.stop_all)
         self.stop_button.setEnabled(True)
         if getattr(self, "_cancel_requested", False):
@@ -868,26 +960,36 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # Remove + clear
     # ------------------------------------------------------------------
 
+    def _queue_locked(self) -> bool:
+        """Whether a run currently owns the queue and forbids mutating it (D29-A)."""
+        return self.worker_thread is not None
+
     def _on_remove_clicked(self, item: Any) -> None:
         """Remove a single item from the queue (and its row from the list)."""
+        if self._queue_locked():
+            return
         if item.status == self._status_processing:
-            # The row widget disables its [×] button in this state, but
-            # belt-and-braces guard against an out-of-band trigger.
+            # Reachable only out of band now that the queue locks, but the
+            # PROCESSING row is the one thing removal must never touch.
             return
         self._drop_item(item)
         self._recompute_buttons()
 
     def _on_clear_clicked(self) -> None:
-        """Remove every non-PROCESSING item from the queue."""
+        """Remove every item from the queue. A locked queue refuses entirely.
+
+        Clear used to trim the tail mid-run, which meant the run's item total,
+        the rows on screen and the receipt could all describe different sets of
+        work. D29-A resolves that by freezing the list instead.
+        """
+        if self._queue_locked():
+            return
         self._on_clear_extra()
         # Collect targets first so we don't mutate during iteration.
         targets = [i for i in self._queue.all_items() if i.status != self._status_processing]
         for item in targets:
             self._drop_item(item)
-        # Reset the progress widget only when idle. Mid-run clears must not wipe
-        # the live "Mining N of M…" display for the still-PROCESSING item.
-        if self.worker_thread is None:
-            self.progress_widget.reset()
+        self.progress_widget.reset()
         self._recompute_buttons()
 
     def _drop_item(self, item: Any) -> None:
@@ -939,7 +1041,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._refresh_selection_actions()
 
     def _refresh_selection_actions(self) -> None:
-        """Enable each selection verb only where it has something to act on."""
+        """Enable each selection verb only where it has something to act on.
+
+        Every verb is off during a run: the worker mines a snapshot frozen at
+        launch, so mutating the list underneath it changes what the counters and
+        the receipt describe without changing what actually gets mined (D29-A).
+        """
         selected = self._selected_items()
         run_active = self.worker_thread is not None
         runnable = any(i.status == self._status_ready for i in selected)
@@ -947,8 +1054,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         removable = any(i.status != self._status_processing for i in selected)
         self.queue_controls.set_actions_enabled(
             run=runnable and not run_active,
-            retry=retryable,
-            remove=removable,
+            retry=retryable and not run_active,
+            remove=removable and not run_active,
         )
 
     # ------------------------------------------------------------------
@@ -1054,7 +1161,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _reorder_locked(self) -> bool:
         """Reorder is refused while a run is consuming its frozen snapshot."""
-        return self.worker_thread is not None
+        return self._queue_locked()
 
     def _view_order(self) -> list[Any]:
         """Queue items in the order the list widget currently shows them."""
@@ -1129,21 +1236,21 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     def _recompute_buttons(self) -> None:
         """Refresh every button's enabled/visible state from the queue + worker.
 
-        Run active → Add/Mine disabled, Stop visible, Clear allowed, reorder
-        locked. Otherwise Add enabled (unless a subclass :meth:`_add_locked`);
-        Mine enabled iff a READY item exists; Clear iff the queue is non-empty;
-        Stop hidden.
+        Run active → the whole queue is frozen (D29-A): Add, Mine, Clear and
+        every selection verb grey out, reorder is refused, the lock badge and
+        the two boundary controls appear, and Stop is shown. Otherwise Add is
+        enabled (unless a subclass :meth:`_add_locked`); Mine iff a READY item
+        exists; Clear iff the queue is non-empty; Stop hidden.
         """
         items = self._queue.all_items()
         has_items = bool(items)
         has_ready = any(i.status == self._status_ready for i in items)
-        run_active = self.worker_thread is not None
+        run_active = self._queue_locked()
 
         self.add_button.setEnabled(not run_active and not self._add_locked())
         self.mine_button.setEnabled(has_ready and not run_active)
-        # Clear still works during a run for non-PROCESSING items — it's how the
-        # user trims the tail mid-run.
-        self.clear_button.setEnabled(has_items)
+        self.clear_button.setEnabled(has_items and not run_active)
+        self.queue_controls.set_running(run_active)
 
         if run_active:
             self.stop_button.show()

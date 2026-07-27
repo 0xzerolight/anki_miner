@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence, QShortcut
+from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import (
     SUBTITLE_FILE_FILTER,
     SUBTITLE_OFFSET_MAX,
@@ -31,6 +32,7 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
@@ -41,7 +43,6 @@ from anki_miner.gui.widgets.base import (
     ScreenIssue,
     configure_card_layout,
     configure_expanding_container,
-    configure_scrolled_page,
     field_label_width,
     make_label_fit_text,
 )
@@ -76,6 +77,11 @@ class SingleEpisodeTab(MiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the pinned
+    #: bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "run.single"
+    TASK_OWNER = CapabilityTarget("video", "single")
 
     # Test-only seam: emitted synchronously (same-thread DIRECT connection) with
     # the freshly built worker JUST BEFORE ``.start()`` so a test driver can
@@ -151,6 +157,9 @@ class SingleEpisodeTab(MiningTabBase):
         # Actions section
         from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 
+        # Timing and Tracks stay here beside the fields they act on. Process
+        # Episode and Cancel are moved into the pinned bar below (D6), so the
+        # one action this screen exists for cannot scroll off it.
         actions_header = SectionHeader(self.tr("Actions"))
         layout.addWidget(actions_header)
 
@@ -173,10 +182,8 @@ class SingleEpisodeTab(MiningTabBase):
         self.timing_button.clicked.connect(self._on_timing_clicked)
         self.tracks_button.clicked.connect(self._on_tracks_clicked)
 
-        button_layout.addWidget(self.process_button)
         button_layout.addWidget(self.timing_button)
         button_layout.addWidget(self.tracks_button)
-        button_layout.addWidget(self.cancel_button)
         button_layout.addStretch()
         layout.addLayout(button_layout)
 
@@ -201,12 +208,21 @@ class SingleEpisodeTab(MiningTabBase):
         self.presenter.error_signal.connect(self.log_widget.append_error)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
-        # Main layout just holds the scroll area
+        # Scroll, Activity drawer, pinned bar (D6). The log moves out of the
+        # scrolled column into the drawer, so it costs nothing until it is
+        # opened.
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.process_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
         self.install_issue_banner(main_layout)
 
@@ -214,14 +230,16 @@ class SingleEpisodeTab(MiningTabBase):
         self._setup_shortcuts()
 
     def _setup_shortcuts(self) -> None:
-        """Set up tab-specific keyboard shortcuts."""
-        # Ctrl+O: Browse video file
-        browse_shortcut = QShortcut(QKeySequence("Ctrl+O"), self)
-        browse_shortcut.activated.connect(self.video_selector.browse)
+        """Set up tab-specific keyboard shortcuts.
 
-        # Ctrl+Return: Process episode
-        process_shortcut = QShortcut(QKeySequence("Ctrl+Return"), self)
-        process_shortcut.activated.connect(self._on_process_clicked)
+        Ctrl+O only. Ctrl+Enter is installed by ``_install_action_bar``, which
+        routes it through the pinned primary button; the copy that used to live
+        here called ``_on_process_clicked`` directly, so it ignored whether the
+        button was enabled and could start a second run over a first.
+        """
+        # Ctrl+O: browse for the video. Scoped, because Batch owns Ctrl+O too
+        # and both pages live in one window -- unscoped, the hidden one could win.
+        scoped_shortcut(self, QKeySequence("Ctrl+O"), self.video_selector.browse)
 
         # Set accessibility properties
         self._setup_accessibility()
@@ -231,10 +249,17 @@ class SingleEpisodeTab(MiningTabBase):
         self.setAccessibleName(self.tr("Episode Mining Tab"))
         self.setAccessibleDescription(self.tr("Process a single video episode to create vocabulary flashcards"))
 
-        # Set proper tab order: video selector -> subtitle selector -> offset -> process
+        # Tab order through the page's own inputs: video -> subtitle -> offset.
+        #
+        # It deliberately stops there. Process Episode used to be chained on the
+        # end, and that was right while the button sat in the form; D6 moved it
+        # into the pinned action bar at the foot of the screen, so the old line
+        # pulled focus from the offset field straight down to the bar and back
+        # up again for Test Timing and Tracks. The bar is laid out in reading
+        # order and comes last in the page, so leaving it alone is what puts the
+        # primary action where the eye already expects it -- last.
         self.setTabOrder(self.video_selector, self.subtitle_selector)
         self.setTabOrder(self.subtitle_selector, self.offset_spinbox)
-        self.setTabOrder(self.offset_spinbox, self.process_button)
 
     def _create_file_selection_group(self) -> QFrame:
         """Create file selection group with enhanced file selectors.
@@ -290,13 +315,21 @@ class SingleEpisodeTab(MiningTabBase):
 
         # Video file selector
         self.video_selector = FileSelector(
-            label=self.tr("Video File:"), file_mode=True, file_filter=VIDEO_FILE_FILTER, label_width=label_w
+            label=self.tr("Video File:"),
+            file_mode=True,
+            file_filter=VIDEO_FILE_FILTER,
+            label_width=label_w,
+            history_key="video.single.inputs",
         )
         layout.addWidget(self.video_selector)
 
         # Subtitle file selector
         self.subtitle_selector = FileSelector(
-            label=self.tr("Subtitle File:"), file_mode=True, file_filter=SUBTITLE_FILE_FILTER, label_width=label_w
+            label=self.tr("Subtitle File:"),
+            file_mode=True,
+            file_filter=SUBTITLE_FILE_FILTER,
+            label_width=label_w,
+            history_key="video.single.inputs",
         )
         layout.addWidget(self.subtitle_selector)
 
@@ -496,6 +529,8 @@ class SingleEpisodeTab(MiningTabBase):
         if self._is_processing:
             return
 
+        self._begin_attempt()
+
         # Validate inputs using FileSelector validation
         video_path = self.video_selector.path_or_none()
         subtitle_path = self.subtitle_selector.path_or_none()
@@ -566,6 +601,8 @@ class SingleEpisodeTab(MiningTabBase):
             logger.debug("processor built for %s (worker thread)", video_file)
             return proc
 
+        self._publish_task_start(self.tr("Single episode"))
+
         # Create and start worker thread
         curation_cb = self._curation_bridge
         self.worker_thread = EpisodeWorkerThread(
@@ -623,6 +660,7 @@ class SingleEpisodeTab(MiningTabBase):
         request has been made and is being waited on.
         """
         self._cancel_requested = True
+        self._publish_task_cancelling()
         self._cancel_active_curation_dialog()
         if self.worker_thread is not None:
             self.worker_thread.cancel()

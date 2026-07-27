@@ -19,22 +19,17 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtCore import QPoint, pyqtSignal
 from PyQt6.QtWidgets import (
-    QCheckBox,
-    QHBoxLayout,
-    QLabel,
-    QListWidget,
     QMenu,
     QMessageBox,
-    QPushButton,
-    QVBoxLayout,
-    QWidget,
 )
 
 from anki_miner.config import PitchSourceEntry
 from anki_miner.gui.widgets.base import ScreenIssue
+from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
+    ChainListLabels,
     ChainSettingsPanelBase,
     _ChainPanelStrings,
     _RegistryView,
@@ -57,58 +52,6 @@ _FORMAT_LABELS: dict[str, str] = {
 }
 
 
-class _PitchRow(QWidget):
-    """One row in the chain list: checkbox + name + format badge + count + missing badge."""
-
-    toggled = pyqtSignal()
-
-    def __init__(
-        self,
-        entry: PitchSourceEntry,
-        display_name: str,
-        format_label: str,
-        count: int,
-        *,
-        missing: bool = False,
-    ):
-        super().__init__()
-        self.entry = entry
-        self.missing = missing
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(4, 2, 4, 2)
-
-        self.checkbox = QCheckBox()
-        # Text-less toggle: without an accessible name a screen reader announces
-        # only "check box", and the source it belongs to is conveyed purely by
-        # the sibling QLabel. 11 such toggles were unnamed across the 4 chain panels.
-        self.checkbox.setAccessibleName(tr_format(self.tr("Enable %1"), display_name))
-        self.checkbox.setToolTip(tr_format(self.tr("Enable or disable %1"), display_name))
-        self.checkbox.setChecked(entry.enabled)
-        self.checkbox.stateChanged.connect(lambda _s: self.toggled.emit())
-        layout.addWidget(self.checkbox)
-
-        name_label = QLabel(display_name)
-        layout.addWidget(name_label, 1)
-
-        if format_label:
-            badge = QLabel(format_label)
-            badge.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(badge)
-
-        if count:
-            count_label = QLabel(tr_format(self.tr("%1 entries"), f"{count:,}"))
-            count_label.setStyleSheet("color: gray; font-size: 10px;")
-            layout.addWidget(count_label)
-
-        if missing:
-            missing_label = QLabel(self.tr("⚠ missing — re-import"))
-            missing_label.setStyleSheet("color: #d97706; font-size: 10px;")
-            layout.addWidget(missing_label)
-
-    def get_enabled(self) -> bool:
-        return self.checkbox.isChecked()
-
-
 class PitchSettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of first-hit-wins pitch accent sources."""
 
@@ -117,7 +60,6 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
 
     ANCHOR_NAMESPACE = "pitch"
 
-    _ROW_CLASS = _PitchRow
     _SCAN_ERROR_LABEL = "Pitch registry scan failed"
     _REMOVE_ERROR_NOUN = "pitch source folder"
 
@@ -185,54 +127,31 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Pitch Accent Sources"))
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        chain_blurb = QLabel(
-            self.tr(
-                "Sources are checked top to bottom — the first source with a pitch "
-                "entry for a word wins. Lower sources only fill words the higher "
-                "ones miss."
+        container = self._build_chain_container(
+            ChainListLabels(
+                explanation=self.tr(
+                    "Sources are checked top to bottom — the first source with a pitch "
+                    "entry for a word wins. Lower sources only fill words the higher "
+                    "ones miss."
+                ),
+                add=self.tr("Add pitch source…"),
+                remove=self.tr("Remove pitch source"),
+                remove_tooltip=self.tr("Remove the selected pitch accent source"),
+                move_up=self.tr("Move up"),
+                move_up_tooltip=self.tr("Move up (wins lookups first)"),
+                move_down=self.tr("Move down"),
+                move_down_tooltip=self.tr("Move down"),
             )
         )
-        layout.addWidget(chain_blurb)
-
-        self._list = QListWidget()
-        self._list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
-        self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
-        layout.addWidget(self._list)
-
-        buttons = QHBoxLayout()
-        self._add_btn = QPushButton(self.tr("+ Add Source…"))
         self._add_btn.clicked.connect(self.add_source_requested.emit)
-        buttons.addWidget(self._add_btn)
-
-        self._up_btn = QPushButton("↑")
-        self._up_btn.setAccessibleName(self.tr("Move up"))
-        self._up_btn.setToolTip(self.tr("Move up (wins lookups first)"))
-        self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
-        buttons.addWidget(self._up_btn)
-
-        self._down_btn = QPushButton("↓")
-        self._down_btn.setAccessibleName(self.tr("Move down"))
-        self._down_btn.setToolTip(self.tr("Move down"))
-        self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
-        buttons.addWidget(self._down_btn)
-
-        self._remove_btn = QPushButton(self.tr("Remove"))
-        self._remove_btn.clicked.connect(lambda: self.remove(self._list.currentRow()))
-        buttons.addWidget(self._remove_btn)
-
-        layout.addLayout(buttons)
+        self._list.customContextMenuRequested.connect(self._on_row_context_menu)
         # One stable anchor for the whole chain; row widgets are transient (D13).
         self.add_field(
             "",
             container,
             anchor="chain",
             anchor_focus=self._list,
-            anchor_text=lambda: (chain_blurb.text(), self._add_btn.text()),
+            anchor_text=lambda: (self._explanation_label.text(), self._add_btn.text()),
         )
         self.add_stretch()
 
@@ -250,14 +169,6 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
             self._view = None
         self._rebuild_list()
 
-    def get_chain(self) -> tuple[PitchSourceEntry, ...]:
-        out: list[PitchSourceEntry] = []
-        for i, entry in enumerate(self._chain):
-            row = self._row_widget(i)
-            enabled = row.get_enabled() if row is not None else entry.enabled
-            out.append(PitchSourceEntry(source_id=entry.source_id, enabled=enabled))
-        return tuple(out)
-
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)
 
@@ -265,22 +176,35 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
     # Chain-panel hooks
     # ------------------------------------------------------------------
 
+    def _entry_with_enabled(self, entry: PitchSourceEntry, enabled: bool) -> PitchSourceEntry:
+        return PitchSourceEntry(source_id=entry.source_id, enabled=enabled)
+
     def _build_view(self) -> _RegistryView:
         registry = PitchSourceRegistry(self._pitch_root)
         registry.load()
         return _RegistryView(registry.get)
 
-    def _make_row(self, entry: PitchSourceEntry, view: _RegistryView | None) -> QWidget:
+    def _row_spec(self, entry: PitchSourceEntry, view: _RegistryView | None) -> ChainRowSpec:
         meta = view.get(entry.source_id) if (view is not None and entry.source_id) else None
         # A chain entry whose source folder is gone (or schema-mismatched so
         # build_sources would drop it) is "missing" — prompt re-import.
         missing = view is not None and (meta is None or not meta.schema_ok)
         display = meta.source_name if meta else (entry.source_id or "(missing)")
-        fmt = _FORMAT_LABELS.get(meta.format, meta.format) if meta else ""
-        count = meta.entry_count if meta else 0
-        row = _PitchRow(entry, display, fmt, count, missing=missing)
-        row.toggled.connect(self._on_row_toggled)
-        return row
+        metadata: tuple[str, ...] = ()
+        if meta is not None:
+            metadata = (
+                _FORMAT_LABELS.get(meta.format, meta.format),
+                tr_format(self.tr("%1 entries"), f"{meta.entry_count:,}"),
+            )
+        return ChainRowSpec(
+            entry=entry,
+            title=display,
+            metadata=metadata,
+            enabled_text=self.tr("Enabled"),
+            enabled_accessible_text=tr_format(self.tr("Enable %1"), display),
+            enabled_tooltip=tr_format(self.tr("Enable or disable %1"), display),
+            warning=self.tr("⚠ missing — re-import") if missing else "",
+        )
 
     def _entry_display_name(self, entry: PitchSourceEntry) -> str:
         source_id = entry.source_id

@@ -24,6 +24,8 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.fonts import japanese_cell_font
+from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
     add_min_max_buttons,
     configure_data_view,
@@ -116,6 +118,10 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         layout.addLayout(buttons)
 
         self.setLayout(layout)
+        # The filter field holds Japanese, and Return is how an input method
+        # commits a composition. With Close left as the default button, typing
+        # kana into the filter closed the manager (D49). Esc still closes it.
+        disown_default_buttons(self)
         self.install_issue_banner(layout)
 
     # ------------------------------------------------------------------
@@ -127,6 +133,14 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         user_words = sorted(self._db.get_words_by_source("user"))
         self.word_list.clear()
         self.word_list.addItems(user_words)
+        # Every entry is a Japanese word: the Japanese face, and only the face —
+        # a cell font carrying no size leaves the shared row height alone
+        # (decision D45-B).
+        cell_font = japanese_cell_font()
+        for row in range(self.word_list.count()):
+            item = self.word_list.item(row)
+            if item is not None:
+                item.setFont(cell_font)
         self._on_search_changed(self.search_input.text())
 
         cached = max(0, self._db.word_count() - len(user_words))

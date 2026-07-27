@@ -36,6 +36,7 @@ from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.fonts import initialize_application_fonts
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
@@ -905,7 +906,8 @@ def compose_main_window(
     # The two list queues publish their runs to the window's task registry, so
     # each one's current-job strip has a snapshot to render and the status bar
     # can name a queue run the user has navigated away from. Worker lifetime is
-    # unaffected: it stays with the tab.
+    # unaffected: it stays with the tab. Every other screen that runs work is
+    # bound in one place further down, once its tab exists.
     video_tab.youtube_tab.bind_task_registry(window.task_registry)
     audiobook_tab.bind_task_registry(window.task_registry)
 
@@ -1012,9 +1014,37 @@ def compose_main_window(
     # so condenser_* land in gui_config.json and survive restart.
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
 
+    # --- task-registry publication (W5) -----------------------------------
+    # Until now only the two list queues published, so only they had the
+    # ticking wait clock and the "Finishing <phase>" explanation behind Cancel,
+    # and only their pinned bars showed a stage. Every remaining screen that
+    # runs work is bound here, in one place, once its tab exists. Binding is
+    # inert on a screen that declares no TASK_ID, and it never touches worker
+    # ownership -- that stays on the screen that started the run.
+    for screen in (
+        video_tab.single_tab,
+        video_tab.batch_tab,
+        reading_tab.manga_tab,
+        reading_tab.novels_tab,
+        reading_tab.subtitles_tab,
+        reading_tab.text_tab,
+        subtitles_tab.generate_tab,
+        subtitles_tab.retime_tab,
+        subtitles_tab.condense_tab,
+        subtitles_tab.backfill_tab,
+    ):
+        screen.bind_task_registry(window.task_registry)
+    # --- end task-registry publication ------------------------------------
+
     # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
+
+    # Reopen where the last session ended (D7). Also AFTER every addTab: the
+    # saved route is addressed by stable key, so the tab it names has to be
+    # registered before it can be resolved. Still before show(), so the window
+    # is never painted at one size and then jumped to another.
+    window.restore_session_state()
 
     return ComposedApp(window=window, stats_service=stats_service, analytics_tab=analytics_tab)
 
@@ -1191,6 +1221,12 @@ def main():
     # slot during tab construction are caught too (a bad path in a startup slot
     # would otherwise abort the whole process — the trailing-space batch bug).
     _install_excepthook(app, fail_fast=installer_smoke)
+
+    # Resolve the platform's interface, fixed-width and Japanese faces before the
+    # first widget exists (decision D44-B), so every widget is built and measured
+    # against the font it will actually be drawn with. Fail-soft by design: a
+    # missing bundled fallback logs and leaves Qt's own choice in place.
+    initialize_application_fonts(app)
 
     # Set application icon
     icon_path = get_resource_dir() / "icons" / "anki_miner.svg"

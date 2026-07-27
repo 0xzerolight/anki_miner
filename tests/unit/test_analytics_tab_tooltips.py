@@ -103,3 +103,36 @@ def test_difficulty_series_tooltip_contains_full_name(tab: AnalyticsTab) -> None
     series_item = table.item(0, 1)
     assert series_item is not None
     assert series_item.toolTip() == LONG_SERIES
+
+
+def test_series_and_episode_use_the_japanese_face(tab: AnalyticsTab) -> None:
+    """Series and episode names are usually Japanese (decision D45-B).
+
+    The face matters because this app also ships Simplified and Traditional
+    Chinese interfaces, which prefer different shapes for the same characters.
+    The cell font carries no size, so the row height stays where the shared
+    density rule put it.
+    """
+    from anki_miner.gui.utils.fonts import resolved_families
+
+    japanese = resolved_families().japanese
+    for column in (1, 2):  # series, episode
+        item = tab.sessions_table.item(0, column)
+        assert item is not None
+        assert item.font().family() == japanese
+        assert item.font().pixelSize() == -1
+
+    series = tab.difficulty_table.item(0, 1)
+    assert series is not None
+    assert series.font().family() == japanese
+    assert series.font().pixelSize() == -1
+
+
+def test_count_columns_are_left_on_the_interface_font(tab: AnalyticsTab) -> None:
+    """Only the name columns move; counts and dates are chrome."""
+    from anki_miner.gui.utils.fonts import resolved_families
+
+    for column in (0, 3, 4, 5):  # date, then the three counts
+        item = tab.sessions_table.item(0, column)
+        assert item is not None
+        assert item.font().family() != resolved_families().japanese

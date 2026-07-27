@@ -26,12 +26,19 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QBoxLayout, QDialog, QWidget
+from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QDialog, QScrollArea, QWidget
 
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.widgets.base import ScreenIssueHost
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssueHost,
+    TaskPublisherMixin,
+    WorkflowActionBar,
+    install_workflow_shell,
+)
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
@@ -60,7 +67,7 @@ _WORKER_JOIN_TIMEOUT_MS = 5000
 _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 
 
-class MiningTabBase(ScreenIssueHost, QWidget):
+class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the
@@ -85,7 +92,7 @@ class MiningTabBase(ScreenIssueHost, QWidget):
 
     # Active frozen config. Every mining-tab subclass assigns this in its
     # __init__ (public attribute unified across the whole family, ARC-018);
-    # declared here so base methods (e.g. _mark_known) can read it without a
+    # declared here so base methods (e.g. _commit_known_words) can read it without a
     # per-call type: ignore. Bare annotation only — no runtime class attribute.
     config: AnkiMinerConfig
 
@@ -145,6 +152,7 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         if total > 0:
             widget.set_percent(int((index - 1) / total * 100))
         self._stage_line.on_stage(index, total, name)
+        self._publish_task_stage(index, total, name)
 
     def _on_progress_start(self, total: int, description: str) -> None:
         """Default start slot: name the sub-operation; leave the bar alone.
@@ -266,10 +274,12 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         worker = getattr(self, "worker_thread", None)
         if sender is not None and worker is not None and sender is not worker:
             return
-        self._finish_receipt(
-            cancelled=bool(getattr(self, "_cancel_requested", False)),
-            fatal=bool(getattr(self, "_run_failed", False)),
-        )
+        cancelled = bool(getattr(self, "_cancel_requested", False))
+        fatal = bool(getattr(self, "_run_failed", False))
+        self._finish_receipt(cancelled=cancelled, fatal=fatal)
+        # The published run closes on the same thread-end signal, so the status
+        # bar and the pinned bar stop describing a run that has ended.
+        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=fatal))
 
     def _finish_receipt(self, *, cancelled: bool = False, fatal: bool = False) -> None:
         """Seal the run and show its receipt. Idempotent; safe on every path.
@@ -318,6 +328,63 @@ class MiningTabBase(ScreenIssueHost, QWidget):
     def _receipt_now() -> tuple[float, float]:
         """Return ``(monotonic, wall)`` now. Patched by tests to fix the clock."""
         return monotonic(), time()
+
+    # ------------------------------------------------------------------
+    # Pinned action bar (D6)
+    # ------------------------------------------------------------------
+
+    #: This screen's pinned action bar, or ``None`` on a screen that never
+    #: installs one. Deliberately opt-in rather than built in ``__init__``:
+    #: Deck Builder also subclasses this base and, under D3, is not part of the
+    #: D6 work. Every hook below is a no-op without a bar.
+    action_bar: WorkflowActionBar | None = None
+
+    def _install_action_bar(
+        self,
+        layout: QBoxLayout,
+        scroll: QScrollArea,
+        content: QWidget,
+        kind: PageWidth,
+        *,
+        primary: QAbstractButton | None,
+        secondary: tuple[QAbstractButton, ...] = (),
+        log: QWidget | None = None,
+    ) -> WorkflowActionBar:
+        """Frame this screen's page around a pinned bar and record it.
+
+        ``primary`` and ``secondary`` are the screen's *existing* button
+        objects. They are reparented into the bar, never rebuilt, so their
+        connections, tooltips and shortcuts are untouched — a second Mine button
+        with its own idea of when it is enabled is exactly the bug this avoids.
+
+        Args:
+            layout: The tab's top-level layout.
+            scroll: The page's scroll area, not yet given its widget.
+            content: The column of cards, fully populated.
+            kind: The page's declared ``PAGE_WIDTH``.
+            primary: The screen's task action.
+            secondary: Quieter actions shown before it (Cancel).
+            log: The screen's ``LogWidget``, moved into the Activity drawer.
+        """
+        bar = install_workflow_shell(layout, scroll, content, kind, log=log)
+        bar.set_actions(primary, secondary)
+        self.action_bar = bar
+        # Ctrl+Enter runs whatever the bar is currently showing as primary
+        # (D48-B). Bound here rather than on each screen because the bar already
+        # knows which button that is, and scoped to this page so the screen
+        # behind it cannot answer.
+        primary_action_shortcut(self, bar.trigger_primary)
+        return bar
+
+    def _begin_attempt(self) -> None:
+        """Re-arm the Activity drawer's one-shot auto-open. No-op without a bar.
+
+        Called at the top of a primary action, before validation: an attempt
+        refused for a missing file logs its warning without a worker ever
+        starting, and that warning is precisely what the drawer is for.
+        """
+        if self.action_bar is not None:
+            self.action_bar.begin_attempt()
 
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding
@@ -466,13 +533,18 @@ class MiningTabBase(ScreenIssueHost, QWidget):
     # Known/ignore list (Issue #42)
     # ------------------------------------------------------------------
 
-    def _mark_known(self, forms: set[str]) -> int:
-        """Persist curator-selected forms to the local known/ignore list.
+    def _commit_known_words(self, forms: set[str]) -> int:
+        """Persist the curator's STAGED known forms (D34-B).
 
-        Passed as ``mark_known_callback`` to ``WordCurationDialog``. Delegates to
-        :func:`add_user_known_words`, which writes immediately (source='user') so
-        the words persist even if the dialog is cancelled — same Issue #42 rule
-        the settings tab's rebuild action uses.
+        Passed as ``commit_known_callback`` to ``WordCurationDialog`` and called
+        only from its Confirm path — never when the user clicks Add to Known
+        Words, which merely marks rows "Known · pending". Cancel, Esc, the
+        window X, this tab's Cancel button, teardown and shutdown all discard
+        the stage, so abandoning a review leaves nothing behind. This reverses
+        the immediate write documented against Issue #42.
+
+        Runs ON A WORKER THREAD (the dialog dispatches it through
+        ``run_off_thread``), so it must not touch Qt widgets.
         """
         from anki_miner.services.known_word_db import add_user_known_words
 
@@ -742,7 +814,7 @@ class MiningTabBase(ScreenIssueHost, QWidget):
             dialog = WordCurationDialog(
                 words,
                 self,
-                mark_known_callback=self._mark_known,
+                commit_known_callback=self._commit_known_words,
                 media_context=media_context,
                 lookup_fn=lookup_fn,
             )
@@ -913,9 +985,13 @@ class MiningTabBase(ScreenIssueHost, QWidget):
         ``RuntimeError`` is suppressed for the window whose C++ object has
         already gone: its ``destroyed`` fallback has released the gate anyway,
         and a raise here would abort the caller's cancel/teardown sequence.
+
+        ``force_reject`` rather than ``reject``: the curator refuses a normal
+        reject while a staged Known Words write is in flight, and a teardown
+        that respected that refusal would leave the worker parked forever.
         """
         self._curation_cancelled = True
         dialog = self._active_curation_dialog
         if dialog is not None:
             with contextlib.suppress(RuntimeError):
-                dialog.reject()
+                dialog.force_reject()

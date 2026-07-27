@@ -31,7 +31,7 @@ import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -45,11 +45,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, configure_scrolled_page
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -69,6 +71,9 @@ _SUBTITLE_EXTS = (".srt", ".ass", ".ssa", ".vtt")
 _SUBTITLE_FILTER_GLOB = "*.srt *.ass *.ssa *.vtt"
 _MANGA_EXTS = (".mokuro", ".cbz", ".zip")
 _NOVEL_EXTS = (".epub", ".txt")
+
+# Stable session key for the folder this tab's Add dialog reopens in (D7).
+_HISTORY_KEY = "reading.subtitles.inputs"
 
 # Item-data role stamping each list row with its ephemeral ``ReadingQueueItem``
 # at Mine time, so a mid-run Remove/Clear can route the removed row to the
@@ -93,6 +98,13 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "queue.reading.subtitles"
+    TASK_OWNER = CapabilityTarget("reading", "subtitles")
+    #: Name this run carries away from this screen.
+    TASK_TITLE = QT_TRANSLATE_NOOP("ReadingTab", "Subtitle mining")
 
     def __init__(
         self,
@@ -167,11 +179,18 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.mine_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
 
     def _progress_header(self, text: str) -> QLabel:
@@ -223,22 +242,16 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         list_button_row.addStretch()
         card_layout.addLayout(list_button_row)
 
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.sm)
-
+        # Mine and Cancel live in the pinned bar (D6); the list actions above
+        # stay with the list they act on.
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the listed subtitle files into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
-        button_row.addWidget(self.mine_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel the active run."))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()
-        button_row.addWidget(self.cancel_button)
-
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -265,14 +278,24 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         self._recompute_buttons()
 
     def _on_add_files_clicked(self) -> None:
-        """Multi-select subtitle files into the list."""
+        """Multi-select subtitle files into the list.
+
+        Reopens in the folder these files last came from (D7). The first
+        accepted file anchors the whole selection: a multi-select is one visit
+        to one folder, so the rest say nothing new.
+        """
         files, _ = file_dialogs.get_open_file_names(
             self,
             self.tr("Add Subtitle Files"),
-            "",
+            resolve_start_dir(
+                None,
+                file_mode=True,
+                remembered_dir=session_state.remembered_directory(_HISTORY_KEY),
+            ),
             f"{self.tr('Subtitles')} ({_SUBTITLE_FILTER_GLOB})",
         )
         if files:
+            session_state.remember_accepted_path(_HISTORY_KEY, files[0], file_mode=True)
             self._add_paths([Path(f) for f in files])
 
     def _on_remove_selected_clicked(self) -> None:

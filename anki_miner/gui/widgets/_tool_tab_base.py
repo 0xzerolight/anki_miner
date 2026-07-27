@@ -32,11 +32,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
-from PyQt6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QLabel, QScrollArea, QVBoxLayout, QWidget
 
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
-from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, configure_card_layout
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssue,
+    ScreenIssueHost,
+    TaskPublisherMixin,
+    WorkflowActionBar,
+    configure_card_layout,
+    install_workflow_shell,
+)
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -72,9 +82,12 @@ class _ToolTabStrings:
     complete_template: str
     select_output_folder: str
     output_default: str
+    #: What this tool's run is called on a surface that is not this screen
+    #: (the status bar, the pinned action bar). Empty publishes nothing.
+    task_title: str = ""
 
 
-class _ToolTabBase(ScreenIssueHost, QWidget):
+class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Behaviour shared by the file-processing tool tabs. See module docstring."""
 
     # --- Attributes the subclass provides (declared for the type checker) ---
@@ -90,6 +103,11 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
     log_widget: LogWidget
     _availability_worker: SingleCallWorker | None = None
     _availability_generation: int = 0
+
+    #: Stable session key for this tool's remembered OUTPUT folder (D7), e.g.
+    #: ``"tools.condense.output"``. Left empty by a subclass that does not want
+    #: its output folder remembered; the chooser then behaves as it always did.
+    OUTPUT_HISTORY_KEY: str = ""
 
     def _run_availability_scan(
         self,
@@ -141,6 +159,45 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         group.setLayout(layout)
         return group
 
+    # ------------------------------------------------------------------
+    # Pinned action bar (D6)
+    # ------------------------------------------------------------------
+
+    #: This tool's pinned action bar, or ``None`` before it is installed.
+    action_bar: WorkflowActionBar | None = None
+
+    def _install_action_bar(
+        self,
+        layout: QVBoxLayout,
+        scroll: QScrollArea,
+        content: QWidget,
+        kind: PageWidth,
+    ) -> WorkflowActionBar:
+        """Frame this tool's page around a pinned bar carrying its own buttons.
+
+        The tools all name the same two controls — ``_primary_button`` and
+        ``cancel_button`` — so the bar is wired here rather than three times.
+        The button objects are the subclass's own, keeping each verb's label in
+        its own translation context.
+
+        Args:
+            layout: The tab's top-level layout.
+            scroll: The page's scroll area, not yet given its widget.
+            content: The column of cards, fully populated.
+            kind: The page's declared ``PAGE_WIDTH``.
+        """
+        bar = install_workflow_shell(layout, scroll, content, kind, log=self.log_widget)
+        bar.set_actions(self._primary_button, (self.cancel_button,))
+        self.action_bar = bar
+        # Ctrl+Enter runs the tool, scoped to this page (D48-B).
+        primary_action_shortcut(self, bar.trigger_primary)
+        return bar
+
+    def _begin_attempt(self) -> None:
+        """Re-arm the Activity drawer's one-shot auto-open. No-op without a bar."""
+        if self.action_bar is not None:
+            self.action_bar.begin_attempt()
+
     def _on_log_problem(self, level: str, message: str) -> None:
         """Raise a logged ERROR to the screen banner.
 
@@ -157,12 +214,24 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
     # ------------------------------------------------------------------
 
     def _on_choose_output(self) -> None:
+        """Pick a custom output folder, reopening where this tool last wrote.
+
+        Output has its own history key: where a tool's results go is rarely
+        where its inputs live, so sharing one anchor would send the user back to
+        the source library every time.
+        """
+        current = self._custom_output_dir
         folder = file_dialogs.get_existing_directory(
             self,
             self._strings.select_output_folder,
-            str(Path.home()),
+            resolve_start_dir(
+                str(current) if current is not None else None,
+                file_mode=False,
+                remembered_dir=session_state.remembered_directory(self.OUTPUT_HISTORY_KEY),
+            ),
         )
         if folder:
+            session_state.remember_accepted_path(self.OUTPUT_HISTORY_KEY, folder, file_mode=False)
             self._custom_output_dir = Path(folder)
             self.output_location_label.setText(folder)
             self.clear_output_button.show()
@@ -173,6 +242,23 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         self.clear_output_button.hide()
 
     # ------------------------------------------------------------------
+    # Run lifecycle
+    # ------------------------------------------------------------------
+
+    def _begin_tool_run(self, total: int) -> None:
+        """Open a run: clear the cancel flag and publish it to the registry.
+
+        Publishing is what gives this screen a live wait-clock and the pinned
+        bar's stage/progress; without it Cancel froze the bar and then went
+        silent (D22, D17).
+
+        Args:
+            total: Real number of files or pairs this run will process.
+        """
+        self._cancelled = False
+        self._publish_task_start(self._strings.task_title, total=total)
+
+    # ------------------------------------------------------------------
     # Worker signal slots
     # ------------------------------------------------------------------
 
@@ -181,6 +267,7 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         # reports is shown in the message instead of being folded into the bar,
         # where it made a long file look like a stalled run.
         self.progress_widget.set_composed(idx, 0, self._item_total(), message)
+        self._publish_task_count(current=idx, total=self._item_total(), detail=message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
         # Whole-file advance in the same percent unit system as set_composed
@@ -188,6 +275,7 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         total = self._item_total()
         if total:
             self.progress_widget.set_percent(int((idx + 1) / total * 100))
+        self._publish_task_count(current=idx + 1, total=total or None, detail="")
         if error_str:
             self.log_widget.append_error(str(error_str))
         else:
@@ -207,6 +295,13 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
         )
 
     def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
+        cancelled = self._cancelled or outcome is TerminalOutcome.CANCELLED
+        self._publish_task_finish(
+            self._task_outcome(
+                cancelled=cancelled,
+                failed=outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED),
+            )
+        )
         self._primary_button.setEnabled(True)
         self.cancel_button.hide()
         # Reset for the next run's cancel button.
@@ -239,6 +334,9 @@ class _ToolTabBase(ScreenIssueHost, QWidget):
     def _on_cancel(self) -> None:
         """Cancel the run: one verb, no prompt, no invented progress after it."""
         self._cancelled = True
+        # Told to the registry first, so every surface watching this run freezes
+        # its numbers and starts the wait clock at the same instant (D22).
+        self._publish_task_cancelling()
         if self.worker_thread is not None:
             self.worker_thread.cancel()
         self.cancel_button.setText(self._strings.cancelling)

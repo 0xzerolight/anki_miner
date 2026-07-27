@@ -325,3 +325,57 @@ class TestFormatLabels:
             label = dlg._format_display_name(key)
             assert label, f"missing display label for format key {key!r}"
             assert label != key, f"raw key leaked for {key!r}"
+
+
+class TestJapaneseTypeface:
+    """Every entry here is a Japanese word (decision D45-B).
+
+    The Japanese *face* matters because this app also ships Simplified and
+    Traditional Chinese interfaces, and those prefer different shapes for the
+    same characters. Only the face: a cell font with no size leaves the shared
+    row height where the density rule put it.
+    """
+
+    def test_entries_use_the_japanese_face(self, qtbot, tmp_path):
+        from anki_miner.gui.utils.fonts import resolved_families
+
+        db = _db_with_user_words(tmp_path)
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+        assert dlg.word_list.count()
+        for row in range(dlg.word_list.count()):
+            assert dlg.word_list.item(row).font().family() == resolved_families().japanese
+
+    def test_entries_pin_no_size_into_the_row(self, qtbot, tmp_path):
+        db = _db_with_user_words(tmp_path)
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+        for row in range(dlg.word_list.count()):
+            assert dlg.word_list.item(row).font().pixelSize() == -1
+
+
+class TestImeSafety:
+    """D49 — the filter field holds Japanese, so Return must stay text entry."""
+
+    def test_no_default_button_after_show(self, qtbot, tmp_path):
+        from PyQt6.QtWidgets import QPushButton
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        dlg.show()  # Qt promotes a default button from its own show handler
+        buttons = dlg.findChildren(QPushButton)
+        assert buttons
+        assert not any(b.isDefault() or b.autoDefault() for b in buttons)
+
+    def test_return_in_filter_does_not_close_the_manager(self, qtbot, tmp_path):
+        from PyQt6.QtCore import Qt
+        from PyQt6.QtTest import QTest
+
+        dlg = KnownWordsManagerDialog(_db_with_user_words(tmp_path))
+        qtbot.addWidget(dlg)
+        dlg.show()
+        dlg.search_input.setFocus()
+        QTest.keyClick(dlg.search_input, Qt.Key.Key_Return)
+        assert dlg.isVisible()
+        QTest.keyClick(dlg.search_input, Qt.Key.Key_Enter)  # keypad
+        assert dlg.isVisible()

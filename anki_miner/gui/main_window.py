@@ -6,10 +6,11 @@ from collections import Counter
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QApplication,
@@ -37,12 +38,23 @@ from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.keyboard_shortcuts import (
+    HELP_SEQUENCE,
+    SETTINGS_SEQUENCE,
+    TAB_SEQUENCE_TEMPLATE,
+)
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
+from anki_miner.gui.widgets.dialogs.system_health_window import (
+    HEALTH_OK,
+    HEALTH_WARN,
+    HealthReport,
+    SystemHealthWindow,
+)
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
 from anki_miner.models import ProcessingResult, ValidationResult
@@ -102,7 +114,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._first_run_setup_handled = False
         self._shortcut_work_in_flight = False
         self._boot_committed = False
+        # Optional startup work runs once per launch, behind first-run setup.
+        # Set at close so a wizard exiting during shutdown starts nothing.
+        self._post_setup_boot_started = False
         self._stale_dict_prompt_handled = False
+        # Set the first time closeEvent persists geometry + route. A deferred
+        # close runs closeEvent again after the window has been hidden, and the
+        # hidden window's geometry is not what the user left behind.
+        self._session_state_saved = False
 
         # Load configuration
         self.config = config if config is not None else GUIConfigManager.load_config()
@@ -144,6 +163,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
         self._validation_silent = True
+
+        # Readiness facts live here, not on the System Health screen, so a
+        # result arriving while that screen is closed is not lost and a reopened
+        # window is immediately correct (D26). The window itself is built the
+        # first time it is asked for.
+        self._health_report = HealthReport.unknown()
+        self._system_health_window: SystemHealthWindow | None = None
 
         # Connect presenter signals
         self._connect_presenter_signals()
@@ -209,17 +235,42 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if suppress_optional:
             return
 
+        if not self.config.first_run_shortcut_done:
+            QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
+
+        # First-run setup goes FIRST, and everything optional waits behind it.
+        # Boot used to start the JMdict migration and then have the wizard
+        # cancel it two lines later, so the very first launch spent its startup
+        # doing work it immediately threw away — and the wizard's own Resources
+        # download writes into the same dictionary slot the migration targets.
+        if not self.config.first_run_setup_done:
+            QTimer.singleShot(0, self._maybe_offer_first_run_setup)
+        else:
+            self._start_post_setup_boot_once()
+
+    def _start_post_setup_boot_once(self) -> None:
+        """Start every optional startup job, at most once per launch.
+
+        The single choke point every first-run exit path funnels through —
+        Finish, Skip, Escape, the window close, an exception, and the mutation
+        guard refusing. Guarded rather than ordered, because those paths cannot
+        all be made to happen exactly once each: the offer can be refused and
+        re-offered, and a refusal must not consume the one-time work either.
+
+        Deliberately not a state machine. It starts the same four jobs
+        ``commit_boot`` always started, in the same order; the only new thing is
+        that it can be called from more than one place and still run once.
+        """
+        if self._post_setup_boot_started:
+            return
+        self._post_setup_boot_started = True
+
         self._validation_silent = True
         self._run_optional_boot_step("startup validation", self._run_validation)
         if self.config.check_for_updates:
             self._run_optional_boot_step("update check", self._check_for_updates)
         self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
         self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
-
-        if not self.config.first_run_shortcut_done:
-            QTimer.singleShot(0, self._maybe_create_shortcut_on_first_run)
-        if not self.config.first_run_setup_done:
-            QTimer.singleShot(0, self._maybe_offer_first_run_setup)
         QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
 
     @staticmethod
@@ -323,6 +374,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         find_feature_action = tools_menu.addAction(self.tr("Find a Feature..."))
         assert find_feature_action is not None
+        # F1 is help everywhere, and "which screen does this?" is the help
+        # question this application can actually answer (D48-B).
+        find_feature_action.setShortcut(QKeySequence(HELP_SEQUENCE))
         find_feature_action.triggered.connect(self._run_capability_browser_tool)
 
         setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
@@ -337,9 +391,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
 
+        # No shortcut: About is a credits card, not help. F1 belongs to Find a
+        # Feature (D48-B).
         about_action = help_menu.addAction(self.tr("About Anki Miner"))
         assert about_action is not None
-        about_action.setShortcut(QKeySequence("F1"))
         about_action.triggered.connect(self._show_about)
 
         help_menu.addSeparator()
@@ -416,17 +471,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         tab count and are created by :meth:`setup_tab_shortcuts`, which app.py
         calls once all tabs have been registered via :func:`register_mining_tab`.
         """
-        # Theme toggle (Ctrl+T)
-        theme_shortcut = QShortcut(QKeySequence("Ctrl+T"), self)
-        theme_shortcut.activated.connect(self._cycle_theme)
-
-        # Settings shortcut (Ctrl+,)
-        settings_shortcut = QShortcut(QKeySequence("Ctrl+,"), self)
+        # Settings (Ctrl+,). The only global binding left, and the only one that
+        # never meant something else first. Ctrl+T (new tab) and Ctrl+Shift+V
+        # (paste as plain text) were dropped under D48-B: both collide with a
+        # binding every desktop already owns, and both had a visible control
+        # doing the same job -- the header's favourites combo, and Settings'
+        # validation button, which still owns the validation run.
+        settings_shortcut = QShortcut(QKeySequence(SETTINGS_SEQUENCE), self)
         settings_shortcut.activated.connect(self._open_settings)
-
-        # System validation (Ctrl+Shift+V)
-        validation_shortcut = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
-        validation_shortcut.activated.connect(self._run_validation)
 
     def setup_tab_shortcuts(self) -> None:
         """Create one Ctrl+N shortcut per registered tab, driven by the live tab count.
@@ -437,7 +489,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         the later tabs unreachable.
         """
         for i in range(1, self.tabs.count() + 1):
-            shortcut = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
+            shortcut = QShortcut(QKeySequence(TAB_SEQUENCE_TEMPLATE.format(number=i)), self)
             shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
 
     def _switch_to_tab(self, index: int) -> None:
@@ -448,20 +500,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         if 0 <= index < self.tabs.count():
             self.tabs.setCurrentIndex(index)
-
-    def _cycle_theme(self) -> None:
-        """Cycle through favorited themes (Ctrl+T)."""
-        new_mode = Theme.cycle_theme()
-
-        # Update combo box to reflect the new theme
-        self.header.update_theme_selector()
-
-        # Apply theme + persist
-        app = QApplication.instance()
-        if isinstance(app, QApplication):
-            Theme.apply_to_app(app, new_mode)
-        if new_mode != self.config.theme:
-            self.update_config(replace(self.config, theme=new_mode))
 
     def _settings_tab_index(self) -> int:
         """Locate the Settings tab by capability (self-healing against tab reorder)."""
@@ -535,6 +573,109 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if type(self.tabs.widget(i)).__name__ == class_name:
                 return i
         return -1
+
+    def _current_main_tab_key(self) -> str | None:
+        """The stable key of the main tab on show, by class name; ``None`` if unmapped."""
+        current = self.tabs.currentWidget()
+        if current is None:
+            return None
+        class_name = type(current).__name__
+        for key, registered in self._MAIN_TAB_CLASSES.items():
+            if registered == class_name:
+                return key
+        return None
+
+    def _current_subtab_keys(self) -> dict[str, str]:
+        """Every container's current sub-tab, not only the visible one.
+
+        Saving just the front container would erase where Reading was left the
+        moment the user switched to Tools before quitting.
+        """
+        keys: dict[str, str] = {}
+        for key in self._MAIN_TAB_CLASSES:
+            index = self._main_tab_index(key)
+            if index < 0:
+                continue
+            current = getattr(self.tabs.widget(index), "current_subtab_key", None)
+            if not callable(current):
+                continue
+            subtab = current()
+            if subtab:
+                keys[key] = subtab
+        return keys
+
+    def restore_session_state(self) -> None:
+        """Reopen at the geometry and route the last session ended on (D7).
+
+        Called by ``app.compose_main_window`` once every tab is registered —
+        the route is addressed by stable key, so the containers have to exist —
+        and before ``show()``, so the window is never painted at one size and
+        then moved.
+
+        ``restoreGeometry`` is the authority on a stored blob: it restores the
+        maximised/full-screen state along with the normal geometry and already
+        relocates a window saved on a monitor that no longer exists back onto an
+        available screen. Nothing calls ``setGeometry`` after it succeeds — that
+        would un-maximise the window it just restored. The centred default is
+        only for an absent or unusable blob.
+
+        Scroll positions are not restored, here or anywhere: nothing writes them,
+        so every restored page opens at the top.
+        """
+        blob = session_state.load_geometry()
+        if blob is None or not self.restoreGeometry(blob):
+            self._apply_default_geometry()
+
+        main_tab, subtabs = session_state.load_route()
+        # Sub-tabs first: switching the main tab afterwards lands on a container
+        # that is already showing the right inner page.
+        for container_key, subtab_key in subtabs.items():
+            index = self._main_tab_index(container_key)
+            if index < 0:
+                continue
+            open_subtab = getattr(self.tabs.widget(index), "open_subtab", None)
+            if callable(open_subtab):
+                open_subtab(subtab_key)
+        if main_tab:
+            index = self._main_tab_index(main_tab)
+            if index >= 0:
+                self.tabs.setCurrentIndex(index)
+
+    def _apply_default_geometry(self) -> None:
+        """1280x800 centred on the primary screen — the no-saved-state default.
+
+        Clamped to the screen's available area so the default cannot start
+        partly off a small display; ``setMinimumSize`` still floors it.
+        """
+        screen = QApplication.primaryScreen()
+        if screen is None:
+            self.resize(WINDOW_DEFAULT_WIDTH, WINDOW_DEFAULT_HEIGHT)
+            return
+        available = screen.availableGeometry()
+        rect = QRect(
+            0,
+            0,
+            min(WINDOW_DEFAULT_WIDTH, available.width()),
+            min(WINDOW_DEFAULT_HEIGHT, available.height()),
+        )
+        rect.moveCenter(available.center())
+        self.setGeometry(rect)
+
+    def _save_session_state(self) -> None:
+        """Persist geometry + route exactly once, at the top of closeEvent.
+
+        Best-effort by construction: ``session_state`` swallows and logs its own
+        failures, and this is wrapped anyway so nothing about a convenience can
+        stop the window from closing.
+        """
+        if self._session_state_saved:
+            return
+        self._session_state_saved = True
+        try:
+            session_state.save_geometry(self.saveGeometry())
+            session_state.save_route(self._current_main_tab_key(), self._current_subtab_keys())
+        except Exception:
+            logger.exception("Could not save the UI session state")
 
     def reveal_capability(self, target: "CapabilityTarget") -> None:
         """Bring the tab that hosts ``target`` to the front (and its sub-tab).
@@ -788,7 +929,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         *,
         first_run_offer: bool,
     ) -> None:
-        """Merge live one-way flags, then persist one wizard outcome."""
+        """Merge live one-way flags, persist one wizard outcome, then act on it."""
+        from anki_miner.gui.capabilities import CapabilityTarget
+
         live_config = self.config
         setup_done = (
             live_config.first_run_setup_done or outcome.consumes_first_run_offer
@@ -801,6 +944,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             first_run_setup_done=setup_done,
         )
         self.update_config(merged)
+        # Strictly after the commit: the screen the user lands on rebuilds from
+        # the config, and taking them there first would show them the setup they
+        # just replaced.
+        if outcome.open_video_mining:
+            self.reveal_capability(CapabilityTarget("video", "single"))
 
     def _restyle_mined_cards(self) -> None:
         """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
@@ -878,6 +1026,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         file presence, since the wizard's Resources step covers those. The
         wizard's returned partial config is always persisted. Dismissal leaves
         the offer unconsumed; failures are logged and re-offered next launch.
+
+        Optional startup work is deferred behind this and released on *every*
+        exit — including a mutation refusal and an exception — so an interrupted
+        first run leaves the app in a normal booted state rather than one with
+        no validation, no update check and no migration until the next launch.
         """
         from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard
 
@@ -888,20 +1041,23 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             return
         self._first_run_setup_handled = True
 
-        with self._dictionary_mutation_guard("first-run-setup-wizard") as ready:
-            if not ready:
-                self._first_run_setup_handled = False
-                return
-            # Boot started the legacy JMdict XML migration just before
-            # scheduling this offer; stop it before the wizard captures config.
-            self.background_tasks.cancel_jmdict_migration()
-
-            try:
-                outcome = run_setup_wizard(self, self.config)
-            except Exception:
-                logger.exception("Setup wizard failed")
-                return
-            self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
+        try:
+            with self._dictionary_mutation_guard("first-run-setup-wizard") as ready:
+                if not ready:
+                    self._first_run_setup_handled = False
+                    return
+                # No cancel_jmdict_migration here any more: boot no longer starts
+                # the migration before this offer, which is the point of the
+                # deferral. The re-runnable Tools entry still cancels, because
+                # there a migration really can be in flight.
+                try:
+                    outcome = run_setup_wizard(self, self.config)
+                except Exception:
+                    logger.exception("Setup wizard failed")
+                    return
+                self._commit_setup_wizard_outcome(outcome, first_run_offer=True)
+        finally:
+            self._start_post_setup_boot_once()
 
     def _maybe_prompt_stale_dictionaries(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
@@ -1037,6 +1193,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         ankiconnect_ok = all(issue.component != "AnkiConnect" for issue in result.issues)
         ffmpeg_ok = all(issue.component != "ffmpeg" for issue in result.issues)
         self.status_bar.set_system_status(ankiconnect_ok, ffmpeg_ok)
+        # The timestamp is taken here, on the GUI thread, when the answer
+        # actually reached the user — not inside the worker, where it would age
+        # by however long the result queued.
+        self._publish_health(self._health_report.with_validation(result, datetime.now()))
 
         # Route the yt-dlp verdict into Settings → YouTube. Validation is the single
         # producer here on purpose: it already ran `yt-dlp --version` off the GUI
@@ -1299,6 +1459,26 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         Args:
             event: Close event
         """
+        # Where the user was, captured BEFORE anything can move or hide the
+        # window: background_tasks.shutdown below may hand off to the deferred
+        # close path, which hides the window and polls — and a hidden window's
+        # geometry is not what the user left behind. One-shot, so a second close
+        # attempt during that poll cannot overwrite the good value (D7).
+        self._save_session_state()
+
+        # Claim the one-time optional-boot slot before anything is joined. A
+        # first-run wizard can still be open when the app is asked to quit, and
+        # its exit path would otherwise start a validation, an update check and
+        # a migration into a window that is already shutting down.
+        self._post_setup_boot_started = True
+
+        # System Health is a top-level window of its own, so Qt counts it when
+        # deciding whether the last window has closed: left open, it keeps the
+        # application alive after the main window is gone, showing readiness
+        # facts for an app that is no longer running.
+        if self._system_health_window is not None:
+            self._system_health_window.close()
+
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
         # which stops debounce scheduling and begins worker teardown; persist
@@ -1346,9 +1526,54 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             event.accept()
 
     def _on_system_status_clicked(self) -> None:
-        """Handle system status indicator click."""
-        # Trigger system validation
-        self._run_validation()
+        """Open System Health (D26).
+
+        The status control used to silently re-run validation, which answered a
+        question nobody asked: the two badges beside it already say whether
+        AnkiConnect and ffmpeg are up, and nothing showed what else was checked
+        or what to do about it. It now opens the screen that does.
+        """
+        self.open_system_health()
+
+    def open_system_health(self) -> None:
+        """Show the permanent readiness screen, building it on first use.
+
+        One parented, modeless instance for the window's lifetime. Closing it
+        hides it — it owns no worker, so there is nothing to cancel and nothing
+        to rebuild on the way back in.
+        """
+        window = self._system_health_window
+        if window is None:
+            window = SystemHealthWindow(self)
+            window.recheck_requested.connect(self._run_validation)
+            window.fix_requested.connect(self.reveal_setting)
+            self._system_health_window = window
+            window.show_health(self._health_report)
+        window.show()
+        window.raise_()
+        window.activateWindow()
+
+    def _publish_health(self, report: HealthReport) -> None:
+        """Record the latest readiness facts and repaint the screen if it is up."""
+        self._health_report = report
+        if self._system_health_window is not None:
+            self._system_health_window.show_health(report)
+
+    def reveal_setting(self, stable_id: str) -> None:
+        """Open Settings on the exact control ``stable_id`` addresses (D11).
+
+        The anchor-precise sibling of :meth:`reveal_capability`, and the target
+        of every System Health **Fix** button. Resolving an id to a page, a
+        scroll position, focus and a highlight stays in ``SettingsTab``; an
+        unknown id is ignored there, so a stale deep link cannot crash the UI.
+        """
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        jump = getattr(self.tabs.widget(idx), "jump_to_setting", None)
+        if callable(jump):
+            jump(stable_id)
 
     def _run_validation(self) -> None:
         """Run system validation in background thread."""
@@ -1358,6 +1583,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if not self.background_tasks.start_validation(self.validation_service):
             self.status_bar.set_operation(self.tr("Validation already running"), "info")
             return
+        # Both the badges and every health row go back to "not known yet". A
+        # probe in flight is not a failure, and the previous sweep's answers are
+        # no longer the answers to the question now being asked.
+        self.status_bar.set_system_status_checking()
+        self._publish_health(self._health_report.checking())
         self.status_bar.set_operation(self.tr("Running system validation..."), "info")
 
     def _on_validation_finished(self, result: ValidationResult) -> None:
@@ -1379,6 +1609,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self._validation_silent = False
 
         self.status_bar.set_operation(self.tr("System check failed. Try again."), "error")
+        # The sweep failed, so nothing was learnt: every row goes back to
+        # unknown rather than inheriting the failure of the run that carried it.
+        self._publish_health(self._health_report.with_validation_error(error_message))
         if not silent:
             self.show_screen_issue(
                 ScreenIssue(
@@ -1462,6 +1695,20 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         from anki_miner.gui.widgets.update_banner import UpdateBanner
         from anki_miner.services.update_checker import UpdateInfo
+
+        # System Health's Updates row is written on every outcome, including the
+        # "nothing newer" one that returns below — a row that only ever changed
+        # when an update existed would sit at "not checked yet" forever on an
+        # up-to-date install.
+        if isinstance(info, UpdateInfo):
+            state = HEALTH_WARN
+            detail = tr_format(self.tr("Version %1 is available."), info.version)
+        else:
+            state = HEALTH_OK
+            detail = tr_format(self.tr("Running %1. No newer release was reported."), __version__)
+        self._publish_health(
+            self._health_report.with_update_check(state=state, detail=detail, checked_at=datetime.now())
+        )
 
         if not isinstance(info, UpdateInfo):
             return

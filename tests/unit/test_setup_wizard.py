@@ -40,6 +40,66 @@ class _StubbornWorker(CancellableWorker):
         return super().wait(msecs)
 
 
+class _FakeValidation:
+    """A ValidationService stand-in with no network and a call log.
+
+    The wizard's live re-checks are the feature under test (D26), so every page
+    that re-checks needs a seam that answers instantly and records *which*
+    questions were actually asked — the dependent checks being skipped is as
+    much of the contract as their answers.
+    """
+
+    def __init__(self, **answers: bool) -> None:
+        self.answers = {
+            "ankiconnect": True,
+            "deck": True,
+            "note_type": True,
+            "fields": True,
+            "dictionary": True,
+            **answers,
+        }
+        self.calls: list[str] = []
+        self.raises: Exception | None = None
+
+    def _answer(self, name: str) -> tuple[bool, str]:
+        self.calls.append(name)
+        if self.raises is not None:
+            raise self.raises
+        ok = self.answers[name]
+        return ok, f"{name} ok" if ok else f"{name} is not ready"
+
+    def check_ankiconnect(self):
+        return self._answer("ankiconnect")
+
+    def check_deck_exists(self):
+        return self._answer("deck")
+
+    def check_note_type_exists(self):
+        return self._answer("note_type")
+
+    def check_field_names(self):
+        return self._answer("fields")
+
+    def check_offline_dictionary(self):
+        return self._answer("dictionary")
+
+
+def _wizard_with_validation(qtbot, monkeypatch, config, fake):
+    """A wizard whose every live check goes to ``fake`` instead of Anki."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    monkeypatch.setattr(SetupWizard, "validation_service", lambda self: fake)
+    wiz = SetupWizard(config)
+    qtbot.addWidget(wiz)
+    return wiz
+
+
+def _run_page_check(qtbot, page, label, placeholder_prefix="Checking"):
+    """Enter ``page`` and wait for its off-thread check to land in ``label``."""
+    page.initializePage()
+    qtbot.waitUntil(lambda: not label.text().startswith(placeholder_prefix), timeout=5000)
+
+
 @pytest.fixture
 def wiz_config(test_config):
     """A config with a fresh-install-ish AnkiConnect URL for the wizard."""
@@ -1152,23 +1212,149 @@ def test_resources_page_clears_stale_status_when_download_does_not_start(qtbot, 
 
 
 # ---------------------------------------------------------------------------
+# ResourcesPage: the dictionary is required (D26)
+# ---------------------------------------------------------------------------
+
+
+def test_resources_page_blocks_next_without_a_usable_dictionary(qtbot, wiz_config, monkeypatch):
+    """Setup used to be completable in a state guaranteed to fail the first mine."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert page.isComplete() is False
+    assert "not ready" in page.dictionary_label.text()
+
+
+def test_resources_page_completes_once_a_dictionary_can_answer(qtbot, wiz_config, monkeypatch):
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert page.isComplete() is True
+    assert "dictionary ok" in page.dictionary_label.text()
+
+
+def test_resources_page_reprobes_after_a_download_rather_than_believing_the_summary(qtbot, wiz_config, monkeypatch):
+    """ "The dictionary imported" is not the same claim as "the chain can use it"."""
+    from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    fake = _FakeValidation(dictionary=False)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    assert page.isComplete() is False
+
+    fake.answers["dictionary"] = True
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+    page._on_download_finished(ResourceDownloadOutcome(config=wiz_config, summary=summary, activated=True))
+    qtbot.waitUntil(page.isComplete, timeout=5000)
+
+    assert fake.calls.count("dictionary") == 2
+
+
+def test_resources_probe_joins_the_wizards_close_barrier(qtbot, wiz_config, monkeypatch):
+    """A probe started here must not outlive the wizard that started it."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    registered: list[object] = []
+    monkeypatch.setattr(wiz, "register_worker", registered.append)
+
+    wiz.resources_page.initializePage()
+
+    assert registered == [wiz.resources_page._live_check]
+
+
+def test_resources_page_drops_a_superseded_probes_answer(qtbot, wiz_config, monkeypatch):
+    """Worker identity is the generation counter — an older probe's answer is dropped."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+    _run_page_check(qtbot, page, page.dictionary_label)
+    stale = page._live_check
+
+    # A newer probe has taken over, so the old worker is no longer the sender
+    # this page is waiting on.
+    page._live_check = None
+    monkeypatch.setattr(page, "sender", lambda: stale)
+    page.dictionary_label.setText("newer answer")
+    page._on_dictionary_probe_result((False, "stale answer"))
+
+    assert page.dictionary_label.text() == "newer answer"
+
+
+# ---------------------------------------------------------------------------
 # DonePage
 # ---------------------------------------------------------------------------
 
 
-def test_done_page_summary_reflects_working_config(qtbot, wiz_config):
-    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+def test_done_page_rechecks_everything_instead_of_trusting_the_earlier_pages(qtbot, wiz_config, monkeypatch):
+    """The old summary read a flag set minutes and one Anki restart ago."""
 
     cfg = replace(wiz_config, anki_deck_name="Mining", anki_note_type="Lapis")
-    wiz = SetupWizard(cfg)
-    qtbot.addWidget(wiz)
-    # Pretend AnkiConnect was reachable.
+    wiz = _wizard_with_validation(qtbot, monkeypatch, cfg, _FakeValidation())
+    # The stale source of truth the page used to believe.
     wiz.ankiconnect_page._reachable = True
     page = wiz.done_page
-    page.initializePage()
+
+    _run_page_check(qtbot, page, page.summary_label)
+
     text = page.summary_label.text()
     assert "Mining" in text
     assert "Lapis" in text
+    assert "<b>No</b>" not in text
+    assert page.isComplete() is True
+
+
+def test_done_page_keeps_finish_disabled_when_anki_went_away(qtbot, wiz_config, monkeypatch):
+
+    fake = _FakeValidation(ankiconnect=False)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    wiz.ankiconnect_page._reachable = True
+    page = wiz.done_page
+
+    _run_page_check(qtbot, page, page.summary_label)
+
+    assert page.isComplete() is False
+    # Nothing downstream was even asked: a deck query against a closed Anki
+    # spends its ten-second timeout to learn nothing.
+    assert fake.calls == ["dictionary", "ankiconnect"]
+
+
+def test_done_page_keeps_finish_disabled_without_a_usable_dictionary(qtbot, wiz_config, monkeypatch):
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(dictionary=False))
+    page = wiz.done_page
+
+    _run_page_check(qtbot, page, page.summary_label)
+
+    assert page.isComplete() is False
+
+
+def test_done_page_never_gates_finish_on_an_optional_tool(qtbot, wiz_config, monkeypatch):
+    """yt-dlp, alass and ffprobe mine no cards, so they block no Finish."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard.pages import _FINAL_CHECKS  # noqa: PLC0415
+
+    assert set(_FINAL_CHECKS) == {"ankiconnect", "deck", "note_type", "fields", "dictionary"}
+
+
+def test_done_page_reports_a_failed_sweep_rather_than_claiming_readiness(qtbot, wiz_config, monkeypatch):
+
+    fake = _FakeValidation()
+    fake.raises = RuntimeError("Anki exploded")
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.done_page
+
+    _run_page_check(qtbot, page, page.summary_label)
+
+    assert "Anki exploded" in page.summary_label.text()
+    assert page.isComplete() is False
 
 
 def test_done_page_is_final(qtbot, wiz_config):
@@ -1180,8 +1366,89 @@ def test_done_page_is_final(qtbot, wiz_config):
 
 
 # ---------------------------------------------------------------------------
+# IME safety (D49)
+# ---------------------------------------------------------------------------
+
+
+def test_no_wizard_button_claims_return(qtbot, wiz_config, monkeypatch):
+    """Every page here can hold Japanese, so nothing may fire on bare Enter."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    wiz.show()
+    qtbot.waitExposed(wiz)
+
+    for button_id in SetupWizard._NAVIGATION_BUTTONS:
+        button = wiz.button(button_id)
+        assert button is not None
+        assert button.isDefault() is False, button_id
+        assert button.autoDefault() is False, button_id
+
+
+def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, monkeypatch):
+    """The kana-commit collision: Enter used to mean Next."""
+    from PyQt6.QtCore import Qt  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    page_id = wiz.currentId()
+    field = wiz.ankiconnect_page.url_input
+    field.setFocus()
+
+    qtbot.keyClick(field, Qt.Key.Key_Return)
+
+    assert wiz.currentId() == page_id
+
+
+def test_ctrl_return_resolves_to_the_live_navigation_button(qtbot, wiz_config, monkeypatch):
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    next_button = wiz.button(QWizard.WizardButton.NextButton)
+    assert next_button is not None
+    next_button.setEnabled(True)
+
+    # Finish is not on this page, so Next is what Ctrl+Return presses.
+    assert wiz._primary_action_button() is next_button
+
+
+def test_ctrl_return_cannot_move_a_page_whose_checks_have_not_passed(qtbot, wiz_config, monkeypatch):
+    """Keyboard confirmation is exactly as blocked as the mouse is."""
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    wiz.show()
+    qtbot.waitExposed(wiz)
+    page_id = wiz.currentId()
+    for button_id in (QWizard.WizardButton.NextButton, QWizard.WizardButton.FinishButton):
+        button = wiz.button(button_id)
+        assert button is not None
+        button.setEnabled(False)
+
+    assert wiz._primary_action_button() is None
+
+    wiz._activate_primary_action()
+
+    assert wiz.currentId() == page_id
+
+
+# ---------------------------------------------------------------------------
 # run_setup_wizard return contract
 # ---------------------------------------------------------------------------
+
+
+def test_finish_button_offers_a_real_first_action(qtbot, wiz_config):
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+
+    assert wiz.buttonText(QWizard.WizardButton.FinishButton) == "Open Video Mining"
 
 
 @pytest.mark.parametrize(
@@ -1220,6 +1487,9 @@ def test_run_setup_wizard_outcome_matrix(qtbot, wiz_config, monkeypatch, action,
     assert isinstance(outcome, SetupWizardOutcome)
     assert outcome.config.anki_deck_name == "Touched"
     assert outcome.consumes_first_run_offer is expected_consumes
+    # Only an accepted Finish asks to be taken anywhere: Skip, Escape and the
+    # window close all mean "not now", including for the first action.
+    assert outcome.open_video_mining is (action == "accept")
 
 
 @pytest.mark.parametrize("action", ["skip", "x", "escape"])

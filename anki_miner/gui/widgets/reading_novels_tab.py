@@ -29,6 +29,7 @@ import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from PyQt6.QtCore import QT_TRANSLATE_NOOP
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -41,13 +42,13 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
     configure_card_layout,
-    configure_scrolled_page,
     field_label_width,
 )
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
@@ -93,6 +94,13 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
     PAGE_WIDTH = PageWidth.FORM
+
+    #: Published so this screen's Cancel gets a live wait clock and the
+    #: pinned bar gets a stage and a progress bar (D17, D22).
+    TASK_ID = "queue.reading.novels"
+    TASK_OWNER = CapabilityTarget("reading", "novels")
+    #: Name this run carries away from this screen.
+    TASK_TITLE = QT_TRANSLATE_NOOP("ReadingTab", "Novel mining")
 
     def __init__(
         self,
@@ -142,7 +150,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
 
         layout.addWidget(self._create_novel_card())
         layout.addWidget(self._create_folder_card())
-        layout.addLayout(self._create_cancel_row())
+        self._create_cancel_button()
 
         # Issue #65: opt-in per-item word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
@@ -161,11 +169,18 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
-        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(scroll_area)
+        self._install_action_bar(
+            main_layout,
+            scroll_area,
+            container,
+            self.PAGE_WIDTH,
+            primary=self.mine_button,
+            secondary=(self.cancel_button,),
+            log=self.log_widget,
+        )
         self.setLayout(main_layout)
 
     def _progress_header(self, text: str) -> QLabel:
@@ -192,20 +207,16 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             file_mode=True,
             file_filter=f"{self.tr('Books')} ({_BOOK_FILTER_GLOB})",
             label_width=field_label_width(self.tr("Book File:")),
+            history_key="reading.novels.inputs",
         )
         self.book_selector.setToolTip(self.tr("Select an .epub or .txt book to mine."))
         card_layout.addWidget(self.book_selector)
 
-        button_row = QHBoxLayout()
-        button_row.setSpacing(SPACING.sm)
-
+        # Mine is this screen's one run action, so it lives in the pinned bar
+        # rather than in the card (D6). Mine Folder stays with its folder card.
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
         self.mine_button.setToolTip(self.tr("Mine the selected book into Anki cards."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
-        button_row.addWidget(self.mine_button)
-
-        button_row.addStretch()
-        card_layout.addLayout(button_row)
 
         card.setLayout(card_layout)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -225,6 +236,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             file_mode=False,
             file_filter="",
             label_width=field_label_width(self.tr("Folder:")),
+            history_key="reading.novels.inputs",
         )
         self.folder_selector.setToolTip(self.tr("A folder of .epub or .txt books; each book is mined separately."))
         card_layout.addWidget(self.folder_selector)
@@ -244,19 +256,17 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         return card
 
-    def _create_cancel_row(self) -> QHBoxLayout:
-        """Shared Cancel row below both cards — one cancel serves either run kind."""
-        row = QHBoxLayout()
-        row.setSpacing(SPACING.sm)
+    def _create_cancel_button(self) -> None:
+        """Build the one Cancel that serves either run kind.
 
+        It no longer needs a row of its own: it lives in the pinned bar (D6),
+        which is where a control that must stay reachable during a long run
+        belongs.
+        """
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel the active run."))
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
         self.cancel_button.hide()
-        row.addWidget(self.cancel_button)
-
-        row.addStretch()
-        return row
 
     # ------------------------------------------------------------------
     # Drag-and-drop (tab-level: novels fill the selector; manga earns a hint)

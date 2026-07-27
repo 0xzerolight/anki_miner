@@ -185,7 +185,9 @@ a = Analysis(
     pathex=[project_root],
     binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries + ytdlp_binaries,
     datas=[
-        # GUI resources (stylesheets and icons)
+        # GUI resources (stylesheets, icons, translations, and the bundled
+        # Japanese fallback font under resources/fonts — the whole tree is
+        # copied, so a new resource kind needs no change here).
         (
             os.path.join(project_root, "anki_miner", "gui", "resources"),
             os.path.join("anki_miner", "gui", "resources"),

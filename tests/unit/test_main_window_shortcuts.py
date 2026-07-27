@@ -2,16 +2,21 @@
 
 After the OVH-021 refactor the per-tab Ctrl+N shortcuts are created by
 ``setup_tab_shortcuts()``, which app.py calls after all tabs are registered.
-``_setup_shortcuts`` (runs in ``__init__`` before any tabs exist) only wires
-Ctrl+T / Ctrl+, / Ctrl+Shift+V.  The tests here cover both the count-driven
-shortcut set and the guarantee of exactly-one-per-tab with no gaps.
+``_setup_shortcuts`` (runs in ``__init__`` before any tabs exist) wires only
+Ctrl+, -- D48-B dropped Ctrl+T and Ctrl+Shift+V because both collide with a
+binding every other desktop application already owns, and both had a visible
+control doing the same job. The tests here cover the count-driven shortcut set,
+the guarantee of exactly-one-per-tab with no gaps, and the rule that the About
+card is generated from the same constants the window installs from.
 """
 
 from __future__ import annotations
 
 import pytest
-from PyQt6.QtGui import QKeySequence, QShortcut
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 from PyQt6.QtWidgets import QWidget
+
+from anki_miner.gui.utils.keyboard_shortcuts import PRIMARY_ACTION_DISPLAY
 
 
 @pytest.fixture
@@ -86,12 +91,40 @@ def test_setup_tab_shortcuts_no_duplicates(main_window, qtbot):
     assert len(keys_list) == len(set(keys_list)), f"Duplicate tab shortcuts: {keys_list}"
 
 
-def test_ctrl_t_ctrl_comma_ctrl_shift_v_still_wired(main_window):
-    """Non-tab shortcuts (Ctrl+T, Ctrl+,, Ctrl+Shift+V) are created in __init__."""
+def test_settings_shortcut_still_wired(main_window):
+    """Ctrl+, survives: it is the one global binding that collides with nothing."""
     keys = _shortcut_keys(main_window)
-    assert "Ctrl+T" in keys, "Ctrl+T (theme cycle) missing from __init__ shortcuts"
     assert "Ctrl+," in keys, "Ctrl+, (settings) missing from __init__ shortcuts"
-    assert "Ctrl+Shift+V" in keys, "Ctrl+Shift+V (validation) missing from __init__ shortcuts"
+
+
+@pytest.mark.parametrize(
+    ("sequence", "standard_meaning"),
+    [
+        ("Ctrl+T", "new tab"),
+        ("Ctrl+Shift+V", "paste as plain text"),
+    ],
+)
+def test_shortcuts_colliding_with_standard_bindings_are_gone(main_window, sequence, standard_meaning):
+    """D48-B fixes the conflicts.
+
+    Both had a visible control doing the same job -- the header's favourites
+    combo and Settings' validation button -- so the binding was the only thing
+    that had to go.
+    """
+    keys = _shortcut_keys(main_window)
+    assert sequence not in keys, f"{sequence} still bound; it is {standard_meaning} everywhere else"
+
+
+def test_f1_opens_the_feature_browser_not_about(main_window):
+    """F1 is Help on every desktop, and About is not help (D48-B)."""
+    actions = {action.text(): action for action in main_window.findChildren(QAction)}
+    find_feature = next((a for text, a in actions.items() if "Find a Feature" in text), None)
+    about = next((a for text, a in actions.items() if "About" in text), None)
+
+    assert find_feature is not None, "Find a Feature action missing"
+    assert about is not None, "About action missing"
+    assert find_feature.shortcut().toString(QKeySequence.SequenceFormat.PortableText) == "F1"
+    assert about.shortcut().isEmpty(), "About must not hold a shortcut of its own"
 
 
 def test_tab_switch_shortcut_activates_correct_tab(main_window, qtbot):
@@ -106,7 +139,47 @@ def test_tab_switch_shortcut_activates_correct_tab(main_window, qtbot):
 
 def test_about_dialog_lists_seven_tab_shortcuts():
     """The About card advertises Ctrl+1..7, matching the seven wired tab shortcuts."""
-    from anki_miner.gui.widgets.dialogs.about_dialog import ABOUT_SHORTCUTS
+    from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
 
-    labels = dict(ABOUT_SHORTCUTS)
+    labels = dict(SHORTCUT_HELP)
     assert labels.get("Ctrl+1..7") == "Switch tabs"
+
+
+def test_about_reads_its_rows_from_the_shortcut_constants():
+    """About prints the same table the window installs from -- no second copy.
+
+    The two used to be independent literals, which is how About kept
+    advertising F1 for itself after F1 had become Help.
+    """
+    from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
+    from anki_miner.gui.widgets.dialogs import about_dialog
+
+    assert about_dialog.ABOUT_SHORTCUTS is SHORTCUT_HELP
+
+
+def test_advertised_global_bindings_are_the_installed_ones(main_window):
+    """Every non-parametric row About prints is really bound on the window."""
+    from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
+
+    installed = _shortcut_keys(main_window)
+    menu_keys = {
+        action.shortcut().toString(QKeySequence.SequenceFormat.PortableText)
+        for action in main_window.findChildren(QAction)
+        if not action.shortcut().isEmpty()
+    }
+    reachable = installed | menu_keys
+    # Ctrl+1..7 is a range and Ctrl+Enter is per-screen, so neither is a literal
+    # window binding; every other advertised row must be.
+    for keys, _description in SHORTCUT_HELP:
+        if ".." in keys or keys == PRIMARY_ACTION_DISPLAY:
+            continue
+        assert keys in reachable, f"About advertises {keys} but nothing binds it"
+
+
+def test_about_does_not_advertise_a_removed_binding():
+    """The removed collisions must vanish from the card too, not just the window."""
+    from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
+
+    advertised = {keys for keys, _ in SHORTCUT_HELP}
+    assert "Ctrl+T" not in advertised
+    assert "Ctrl+Shift+V" not in advertised

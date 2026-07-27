@@ -1,10 +1,15 @@
 """Queue worker that fetches + mines multiple YouTube videos sequentially.
 
 Drives a list of :class:`YouTubeQueueItem` through fetch + mine one at a
-time. Each item gets retry-once semantics on :class:`YouTubeFetchError`
-(but not on other exceptions). Each attempt allocates its own workspace
-under ``config.media_temp_folder / "youtube" / run-<hex>`` and removes it
-in a ``finally`` block; the next attempt starts from a clean directory.
+time. Retry policy is the shared bounded one on
+:class:`~anki_miner.gui.workers._queue_worker_base.SequentialQueueWorker`
+(D30-B): up to three attempts with a visible countdown, for a *generic*
+:class:`YouTubeFetchError` only — the deterministic subclasses (bot detection,
+cookie lock, too long, missing yt-dlp, no Japanese subtitles) are excluded
+because a second attempt pays for a second full download and fails identically.
+Each attempt allocates its own workspace under
+``config.media_temp_folder / "youtube" / run-<hex>`` and removes it in a
+``finally`` block; the next attempt starts from a clean directory.
 
 This worker is the SOLE OWNER of each workspace directory: the fetcher and
 orchestrator only write into it, they never create or delete it. Because
@@ -61,11 +66,11 @@ from pathlib import Path
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions.youtube import NoJapaneseSubtitlesError, YouTubeFetchError
+from anki_miner.exceptions.youtube import YouTubeFetchError
 from anki_miner.gui.workers._queue_progress import (
     QueueMiningProgressAdapter as _QueueMiningProgressAdapter,
 )
-from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
+from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
@@ -120,59 +125,44 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         return stale_dict_reimport_error(self._config)
 
     def _run_item(self, idx: int, item: YouTubeQueueItem) -> bool:
-        """Fetch + mine one item with retry-once per fetch error.
+        """Fetch + mine one item under the shared bounded-retry cycle.
 
         Returns ``True`` on mid-fetch cancellation to make the base ``run()``
         return early (suppressing ``queue_finished``); ``False`` otherwise.
         """
         self.item_started.emit(idx)
-        attempts = 0
-        last_error: str | None = None
-        result: object = None
-        for attempt in (0, 1):
-            attempts = attempt + 1
-            # Allocate inside the try: an mkdir OSError (ENOSPC, perms)
-            # must be a per-item error caught below, not propagate out of
-            # run() and strand the whole queue with the item stuck in
-            # PROCESSING (no item_finished / queue_finished). The finally
-            # skips cleanup when allocation never produced a directory.
-            workspace: Path | None = None
-            try:
-                workspace = self._allocate_workspace()
-                result = self._mine_one(idx, item, workspace)
-                last_error = None
-                break
-            except NoJapaneseSubtitlesError as exc:
-                # MUST precede the YouTubeFetchError clause below (except clauses
-                # match in order, and this is a subclass of it). yt-dlp writes
-                # subtitles before the video, so by the time this fires the whole
-                # video has already downloaded for nothing. The outcome is
-                # deterministic, so retrying just pays for a second full download and
-                # fails identically.
-                if self.is_cancelled:
-                    return True
-                last_error = f"{type(exc).__name__}: {exc}"
-                break
-            except YouTubeFetchError as exc:
-                if self.is_cancelled:
-                    # Mid-fetch cancellation: don't retry, don't emit
-                    # item_finished, and skip queue_finished entirely.
-                    return True
-                last_error = f"{type(exc).__name__}: {exc}"
-                if attempt == 0:
-                    continue  # retry once
-            except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
-                logger.exception("YouTubeQueueWorker item failed")
-                last_error = f"{type(exc).__name__}: {exc}"
-                break
-            finally:
-                if workspace is not None:
-                    shutil.rmtree(workspace, ignore_errors=True)
-        if last_error is None:
-            self.item_finished.emit(idx, result, None, attempts)
+        outcome, attempts = self._attempt_cycle(idx, lambda: self._attempt_once(idx, item))
+        if outcome.abort_queue:
+            return True
+        if outcome.error is None:
+            self.item_finished.emit(idx, outcome.result, None, attempts)
         else:
-            self.item_finished.emit(idx, None, last_error, attempts)
+            self.item_finished.emit(idx, None, outcome.error, attempts)
         return False
+
+    def _attempt_once(self, idx: int, item: YouTubeQueueItem) -> AttemptOutcome:
+        """Run one fetch + mine attempt against its own fresh workspace."""
+        # Allocate inside the try: an mkdir OSError (ENOSPC, perms) must be a
+        # per-item error, not propagate out of run() and strand the whole queue
+        # with the item stuck in PROCESSING (no item_finished / queue_finished).
+        # The finally skips cleanup when allocation never produced a directory.
+        workspace: Path | None = None
+        try:
+            workspace = self._allocate_workspace()
+            return self._classify_return(self._mine_one(idx, item, workspace))
+        except YouTubeFetchError as exc:
+            if self.is_cancelled:
+                # Mid-fetch cancellation: the fetcher's psutil kill path raises
+                # this when the cancel event fires mid-download, and retrying
+                # would only kill the freshly-spawned subprocess again.
+                return AttemptOutcome(abort_queue=True)
+            return self._classify_exception(exc)
+        except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
+            logger.exception("YouTubeQueueWorker item failed")
+            return self._classify_exception(exc)
+        finally:
+            if workspace is not None:
+                shutil.rmtree(workspace, ignore_errors=True)
 
     def _mark_item_claimed(self, item: YouTubeQueueItem) -> None:
         item.status = YouTubeItemStatus.PROCESSING
@@ -221,7 +211,7 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
             cancel_event=self._cancel_event,
             progress_callback=mining_cb,
             fetch_progress_cb=lambda label, frac: self._emit_fetch_progress(idx, label, frac),
-            curation_callback=self._curation_callback,
+            curation_callback=self._active_curation_callback,
             on_fetched=self._capture_curation_media,
             source_label=item.video_info.title,
             # The probe already certified whether this video has NATIVE Japanese

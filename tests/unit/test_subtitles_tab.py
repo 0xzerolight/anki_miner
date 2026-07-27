@@ -135,6 +135,26 @@ def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# current_subtab_key — the inverse, used to resume the last session (D7)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("key", ["generate", "retime", "condense", "backfill"])
+def test_current_subtab_key_round_trips_with_open_subtab(qtbot, tmp_path, key):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    tab.open_subtab(key)
+
+    assert tab.current_subtab_key() == key
+
+
+def test_current_subtab_key_reports_the_default_subtab(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    assert tab.current_subtab_key() == "generate"
+
+
+# ---------------------------------------------------------------------------
 # update_config propagation
 # ---------------------------------------------------------------------------
 

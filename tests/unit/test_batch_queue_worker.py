@@ -56,8 +56,7 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
         subtitle_offset=3.0,
     )
     queue = MagicMock()
-    queue.pending_count = 1
-    queue.get_next_pending.side_effect = [item, None]
+    queue.get_all_items.return_value = [item]
 
     config = AnkiMinerConfig()
     worker = BatchQueueWorkerThread(queue, config, MagicMock(), None, curation_callback=cb)
@@ -590,7 +589,9 @@ def test_cancel_before_run_exits_at_loop_top():
     """Pre-cancelled worker exits at the loop top: queue_started(total) and
     queue_finished(0) still fire, but no item is ever picked."""
     queue = MagicMock()
-    queue.pending_count = 3
+    queue.get_all_items.return_value = [
+        QueueItem(video_folder=Path("v"), subtitle_folder=Path("s"), display_name=f"S{i}", id=f"i{i}") for i in range(3)
+    ]
 
     worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock())
     results = _wire_capture_only(worker)
@@ -601,7 +602,6 @@ def test_cancel_before_run_exits_at_loop_top():
     worker.run()
 
     assert started_totals == [3]
-    queue.get_next_pending.assert_not_called()
     assert results["started"] == []
     assert results["completed"] == []
     assert results["failed"] == []
@@ -622,8 +622,7 @@ def test_setup_error_emits_item_failed(tmp_path):
         id="i1",
     )
     queue = MagicMock()
-    queue.pending_count = 1
-    queue.get_next_pending.side_effect = [item, None]
+    queue.get_all_items.return_value = [item]
 
     config = AnkiMinerConfig()
     worker = BatchQueueWorkerThread(queue, config, MagicMock(), None)
@@ -917,7 +916,7 @@ def test_stale_dict_aborts_queue_once(qapp):
     """A stale enabled dict slot surfaces the error exactly once (no per-item
     failure rows, no items picked) and still emits queue_finished."""
     queue = MagicMock()
-    queue.pending_count = 3
+    queue.get_all_items.return_value = []
     config = AnkiMinerConfig()
     worker = BatchQueueWorkerThread(queue, config, MagicMock(), None)
 
@@ -937,17 +936,15 @@ def test_stale_dict_aborts_queue_once(qapp):
 
     assert len(errors) == 1
     assert "Reimport All" in errors[0]
-    # Abort-once: no item picked, no per-item rows.
-    queue.get_next_pending.assert_not_called()
+    # Abort-once: no per-item rows at all.
     assert item_started == [] and item_completed == [] and item_failed == []
     assert finished == [0]  # queue_finished(total_cards=0)
 
 
 def test_missing_offline_dictionary_aborts_queue_once(qapp):
     queue = MagicMock()
-    queue.pending_count = 3
     queue.total_cards_created = 0
-    queue.get_next_pending.return_value = None
+    queue.get_all_items.return_value = []
     worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None)
     bundle = _bundle_mock()
     preflight_order: list[str] = []
@@ -992,7 +989,6 @@ def test_missing_offline_dictionary_aborts_queue_once(qapp):
     assert started == []
     assert failed == []
     assert finished == [0]
-    queue.get_next_pending.assert_not_called()
     bundle.definition_service.has_usable_offline_provider.assert_called_once_with()
     bundle.close.assert_called_once_with()
 
@@ -1000,7 +996,7 @@ def test_missing_offline_dictionary_aborts_queue_once(qapp):
 # ---------------------------------------------------------------------------
 # G1: a setup failure OUTSIDE the per-item try must not abort the run() thread.
 # Code before the item loop (stale-dict gate, AnkiService construction,
-# get_next_pending) runs OUTSIDE the per-item ``try/except``; run() itself was
+# the run snapshot) runs OUTSIDE the per-item ``try/except``; run() itself was
 # ``try/finally`` with NO ``except``. An exception there (e.g. AnkiService
 # raising ValueError on missing anki_fields) propagated straight out of the
 # reimplemented QThread.run() → PyQt6 FATAL abort. run() must instead catch it,
@@ -1011,7 +1007,7 @@ def test_missing_offline_dictionary_aborts_queue_once(qapp):
 def test_setup_failure_emits_error_and_queue_finished(qapp):
     """AnkiService construction raising is caught: error + queue_finished, no propagation."""
     queue = MagicMock()
-    queue.pending_count = 2
+    queue.get_all_items.return_value = []
     worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None)
 
     errors: list[str] = []
@@ -1028,8 +1024,6 @@ def test_setup_failure_emits_error_and_queue_finished(qapp):
     assert len(errors) == 1
     assert "Missing required field mappings" in errors[0]
     assert finished == [0]  # queue_finished(total_cards=0) even on setup failure
-    # The item loop was never entered — the failure was before get_next_pending.
-    queue.get_next_pending.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -1244,3 +1238,98 @@ def test_shared_load_messages_surfaced_once_per_run(tmp_path):
     warning_calls = [c.args[0] for c in worker.presenter.show_warning.call_args_list]
     assert info_calls.count("Frequency data loaded: 1 source(s), 3 entries") == 1
     assert warning_calls.count("some warning") == 1
+
+
+# ---------------------------------------------------------------------------
+# The run is frozen, and it pauses only between series (D29-A)
+# ---------------------------------------------------------------------------
+
+
+def test_run_uses_the_supplied_order_and_ignores_later_queue_edits(tmp_path):
+    """The snapshot is the run. Editing the panel mid-run changes nothing.
+
+    Batch already ran from a snapshot while the visible cards stayed editable,
+    so removing a row did not stop it creating that series' cards. Now the list
+    is locked instead, and the worker is handed exactly what it will mine.
+    """
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+
+    queue = BatchQueue()
+    first = queue.add_item(tmp_path / "v1", tmp_path / "s1", "B")
+    second = queue.add_item(tmp_path / "v2", tmp_path / "s2", "A")
+
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None, items=[second, first])
+    results = _wire_capture_only(worker)
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        # A row added after the snapshot must not join the run.
+        queue.add_item(tmp_path / "v3", tmp_path / "s3", "C")
+        worker.run()
+
+    assert results["started"] == [second.id, first.id]
+
+
+def test_pause_lands_between_series_not_inside_one(tmp_path):
+    """Requested during series one, consumed before series two is picked."""
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    proc = MagicMock()
+
+    queue = BatchQueue()
+    first = queue.add_item(tmp_path / "v1", tmp_path / "s1", "One")
+    second = queue.add_item(tmp_path / "v2", tmp_path / "s2", "Two")
+
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None, items=[first, second])
+    results = _wire_capture_only(worker)
+    paused: list[int] = []
+    # The pause parks the run; ending it from here is what lets the test finish
+    # without a second thread, and proves the gate is reachable from outside.
+    worker.run_paused.connect(lambda: (paused.append(1), worker.request_stop_after_current()))
+
+    def _process(*_args, **_kwargs):
+        # Asked for mid-episode; it must not take effect until the boundary.
+        worker.request_pause_after_current()
+        return _ok_result(cards=1)
+
+    proc.process_episode.side_effect = _process
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    # Series one ran to a real terminal result; series two never started.
+    assert paused == [1]
+    assert results["started"] == [first.id]
+    assert results["completed"] == [(first.id, 1)]
+    assert second.status is QueueItemStatus.PENDING
+    assert len(results["finished"]) == 1
+
+
+def test_cancel_releases_a_worker_waiting_at_a_series_boundary():
+    """A closed gate must never outlive a Cancel — that is a shutdown deadlock."""
+    worker = BatchQueueWorkerThread(BatchQueue(), AnkiMinerConfig(), MagicMock(), None)
+    worker.request_pause_after_current()
+    worker._pause_requested.clear()
+    worker._resume_gate.clear()
+
+    worker.cancel()
+
+    assert worker._resume_gate.is_set()

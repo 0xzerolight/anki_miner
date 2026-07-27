@@ -272,13 +272,16 @@ class KnownWordDB:
 
 
 def add_user_known_words(db_path: Path, forms: set[str]) -> int:
-    """Persist curator-selected forms to the local known/ignore list (Issue #42).
+    """Persist curator-confirmed forms to the local known/ignore list.
 
     Encapsulates the user "mark known" rule shared by every mining tab's
-    curation callback: build the DB ad hoc from the config path, write
-    immediately with ``source='user'`` (so the words persist even if the dialog
-    is later cancelled), and store the ``mined_form`` spelling as passed — never
+    curation callback: build the DB ad hoc from the config path, write with
+    ``source='user'``, and store the ``mined_form`` spelling as passed — never
     the lemma. Same pattern the settings tab uses for the rebuild action.
+
+    The curator stages its marks and calls this only from a successful Confirm
+    (D34-B), so cancelling a review writes nothing. Callers must not treat this
+    as "persisted the moment the user clicked"; it is the commit step.
 
     Args:
         db_path: Path to the known-words SQLite database

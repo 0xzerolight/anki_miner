@@ -3,7 +3,10 @@
  * Shared styles that apply across all themes
  *
  * Variables from _variables.py are substituted at load time:
- * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large
+ * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large,
+ *   japanese-body, japanese-feature
+ * - ${font-family-*}: interface, mono, japanese — resolved from the platform's own
+ *   font database by gui/utils/fonts.py (decision D44-B). Never a hard-coded stack.
  * - ${spacing-*}: xxs, xs, sm, md, lg, xl
  * - ${border-radius-*}: small, default, large
  */
@@ -11,7 +14,7 @@
 /* ============== BASE WIDGET STYLES ============== */
 
 QWidget {
-    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: ${font-family-interface};
     font-size: ${font-size-body}px;
     font-weight: 400;
 }
@@ -44,6 +47,16 @@ QLabel#caption {
     border-radius: ${border-radius-small}px;
 }
 
+/* Chain priority rows (D13): title on line one, the row's own facts below it. */
+QLabel#chain-row-title {
+    font-weight: 500;
+}
+
+QLabel#chain-row-meta,
+QLabel#chain-row-warning {
+    font-size: ${font-size-caption}px;
+}
+
 QLabel#small {
     font-size: ${font-size-small}px;
     padding: 2px 0;
@@ -55,9 +68,24 @@ QLabel#field-label {
     border-radius: ${border-radius-small}px;
 }
 
-/* Japanese text support */
-*[japanese="true"] {
-    font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', sans-serif;
+/* ---- Japanese content (D45-B) -------------------------------------------
+   Japanese is content, not chrome: an explicitly Japanese face so kanji take
+   Japanese rather than Chinese glyph forms, at a reading size above the
+   surrounding interface text. The attribute selector outranks the QWidget type
+   rule above, which is the only way a widget escapes the interface font — a
+   stylesheet beats setFont() for family and size.
+
+   Set the property through gui/utils/fonts.apply_japanese_font(); nothing else
+   writes it. Leading is NOT here: Qt ignores line-height, so it is applied as a
+   QTextBlockFormat from Python. */
+*[japanese="body"] {
+    font-family: ${font-family-japanese};
+    font-size: ${font-size-japanese-body}px;
+}
+
+*[japanese="feature"] {
+    font-family: ${font-family-japanese};
+    font-size: ${font-size-japanese-feature}px;
 }
 
 /* ============== BUTTON BASE STYLES ============== */
@@ -95,6 +123,13 @@ QPushButton#critical {
 }
 
 /* Icon buttons */
+/* Glyph-only controls pinned to their own height (the chain editor's reorder
+   arrows and its trash). The global inset above is measured for a word, so on a
+   square box it leaves the glyph a negative content width and clips it away. */
+QPushButton[square="true"] {
+    padding: ${spacing-xxs}px;
+}
+
 QPushButton#iconButton {
     min-width: ${spacing-xl}px;
     min-height: ${spacing-xl}px;
@@ -123,9 +158,10 @@ QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
     border: 1px solid;
 }
 
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
-    border-width: 2px;
-}
+/* No `border-width` change on focus. Thickening the border re-runs the QSS box
+   model, so the field's size hint grew by 2px the moment it was tabbed into and
+   every row under it shifted down. The ring is the border *colour*, set in the
+   focus block at the end of this file — colour never moves anything. */
 
 /* Disabled inputs get their real background and text colour from the themed
    :disabled rule further down — `opacity` is inert here.
@@ -178,16 +214,31 @@ QTabBar::tab:selected {
 
 /* ============== TEXT EDIT / LOG STYLES ============== */
 
-QTextEdit {
+/* QPlainTextEdit rides along: Reading -> Text pastes into one, and without a
+   declared border Qt draws its own native frame, which no theme colour and no
+   focus rule can reach — so that screen's main input had no focus ring. */
+QTextEdit,
+QPlainTextEdit {
     border-radius: ${border-radius-default}px;
     border: 1px solid;
     padding: ${spacing-sm}px;
-    font-family: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
     font-size: ${font-size-body-sm}px;
 }
 
+/* The activity log is machine output: fixed pitch so timestamps and levels line
+   up down the column. The family comes from the platform (D44-B) — 'Consolas'
+   and 'JetBrains Mono' exist on one desktop each. */
 QTextEdit#log-widget {
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: ${font-family-mono};
+}
+
+/* The subtitle strip under the player. Frameless, and exactly two lines tall for
+   the whole session (set from Python metrics) so the video never jumps when a
+   cue arrives, wraps onto a second line, or ends. No font-size here: the
+   Japanese content rule above owns it. */
+QTextEdit#subtitle-strip {
+    border: none;
+    padding: ${spacing-xxs}px ${spacing-sm}px;
 }
 
 /* ============== PROGRESS BAR STYLES ============== */
@@ -417,7 +468,37 @@ QFrame#divider {
     border: none;
 }
 
+/* The word curator's detail strip: the focused row restated calmly, one
+   surface below the table. The expression carries the weight because it is the
+   line the eye goes to first; its reading and sentence stay at normal weight
+   below it. Sizes come from the Japanese content rules above. */
+QFrame#curator-detail {
+    border: 1px solid;
+    border-radius: ${border-radius-default}px;
+}
+
+QLabel#curator-detail-expression {
+    font-weight: 600;
+}
+
 /* ============== CUSTOM WIDGET HELPERS ============== */
+
+/* Pinned workflow action bar (D6). It sits outside the page scroll, so the rule
+   above it is what tells the eye the page ended -- not a card border, because
+   the bar is not a card and must not read as more content. */
+QWidget#workflow-action-bar {
+    border-top: 1px solid;
+}
+
+/* Thin enough to be a rule under the page rather than a gauge; the counts and
+   the clock are text beside it. `max-height` as well as `height`, or Qt lets
+   the bar grow back to its style's own minimum in several themes. */
+QProgressBar#workflow-progress {
+    height: ${spacing-xxs}px;
+    max-height: ${spacing-xxs}px;
+    border: none;
+    border-radius: 0;
+}
 
 /* Log widget header */
 QWidget#log-header {
@@ -426,11 +507,12 @@ QWidget#log-header {
     padding: ${spacing-xs}px ${spacing-sm}px;
 }
 
-/* Progress stats */
+/* Progress stats — the running clock. Fixed pitch from the platform so the
+   digits do not shuffle sideways once a second (D44-B). */
 QLabel#progress-stats {
     font-size: ${font-size-body-sm}px;
     padding: 2px 0;
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: ${font-family-mono};
 }
 
 /* Status badge */
@@ -656,7 +738,7 @@ QLabel#output-location-value {
 
 /* Read-only command display (copyable shell command in setup guidance) */
 QLineEdit#command-text {
-    font-family: monospace;
+    font-family: ${font-family-mono};
 }
 
 /* ============== THEME COLOR RULES ============== */
@@ -930,7 +1012,8 @@ AnimatedTabBar::tab:selected {
 
 /* --- Text Edit / Log --- */
 
-QTextEdit {
+QTextEdit,
+QPlainTextEdit {
     background-color: ${color-surface};
     color: ${color-text};
     border-color: ${color-border};
@@ -1040,6 +1123,14 @@ QToolTip {
     background-color: ${color-tooltip-bg};
     color: ${color-tooltip-text};
     border-color: ${color-tooltip-border};
+}
+
+/* The subtitle strip reads like a tooltip over the video and borrows its keys,
+   so it follows all 29 themes. It used to hardcode rgba(0,0,0,180) on white,
+   which ignored every one of them. */
+QTextEdit#subtitle-strip {
+    background-color: ${color-tooltip-bg};
+    color: ${color-tooltip-text};
 }
 
 /* --- Menus --- */
@@ -1156,6 +1247,16 @@ QMessageBox {
 
 /* --- Custom Widgets --- */
 
+/* Pinned action bar: the page's own surface, separated by one divider line. */
+QWidget#workflow-action-bar {
+    background-color: ${color-surface};
+    border-color: ${color-divider};
+}
+
+QProgressBar#workflow-progress {
+    background-color: transparent;
+}
+
 /* Log header */
 QWidget#log-header {
     background-color: ${color-surface-alt};
@@ -1226,6 +1327,11 @@ QFrame#card {
 
 QFrame#divider {
     background-color: ${color-divider};
+}
+
+QFrame#curator-detail {
+    background-color: ${color-surface};
+    border-color: ${color-border};
 }
 
 /* Progress stats */
@@ -1458,8 +1564,71 @@ QLabel#output-location-value {
     color: ${color-text-muted};
 }
 
+/* Chain priority rows (D13). Each row states its own facts on its own second
+   line, so the metadata carries the muted role and only real breakage spends
+   the warning colour. Replaces the inline `gray` / `#d97706` stylesheets the
+   four chain panels each wrote by hand, which no theme could reach. */
+QLabel#chain-row-meta {
+    color: ${color-text-muted};
+}
+
+QLabel#chain-row-warning {
+    color: ${color-warning};
+}
+
 /* --- Sakura-specific: Decorative elements --- */
 
 QLabel#decorative {
     color: ${color-decorative};
 }
+
+/* ============== KEYBOARD FOCUS RING (D48-B, D41) ==============
+   BEGIN focus ring — self-contained; nothing outside this block belongs to it.
+
+   Under D41 the accent is scarce and reserved for four things, and keyboard
+   focus is one of them, so the ring is an accent ring in all 29 themes. Buttons
+   and text inputs get theirs from the role rules above; what is left here is
+   every control that had none.
+
+   Two rules held throughout:
+
+   * **Colour only, or `outline`.** Both leave the control's box exactly as
+     `widgets/base/sizing.py` measured it. A border that appears or thickens on
+     focus does not — it re-runs the box model and the form reflows under the
+     cursor.
+   * **`outline` only where Qt honours it.** Qt paints a stylesheet outline on
+     QPushButton and on item views and silently ignores it on QLineEdit,
+     QComboBox and friends, so it is used only where it actually draws.
+
+   Last in the file on purpose: these selectors tie with the role rules above,
+   and load order is what makes focus the final word on the ring. */
+
+/* Checkable controls. The indicator already reserves a 2px border, so this is a
+   recolour of a box that is drawn either way. `::indicator:focus` — subcontrol
+   then state — is the spelling Qt honours; `:focus::indicator` parses and does
+   nothing. */
+QCheckBox::indicator:focus,
+QRadioButton::indicator:focus {
+    border-color: ${color-border-focus};
+}
+
+/* Text areas and item views all reserve `border: 1px solid` in the structural
+   rules above, so the ring is that border restated in the accent. */
+QTextEdit:focus,
+QPlainTextEdit:focus,
+QTableWidget:focus,
+QListWidget:focus,
+QTreeWidget:focus {
+    border-color: ${color-border-focus};
+}
+
+/* The settings navigator is the one item view drawn without a frame, so it has
+   no border to recolour. Qt honours `outline` on item views, which draws the
+   ring without giving the list a box it was deliberately built without — and
+   the `outline: none` further up stays, because it suppresses the dotted
+   per-item rect, which is a different thing from the view's focus ring. */
+QListWidget#settings-nav:focus {
+    outline: 2px solid ${color-border-focus};
+}
+
+/* END focus ring */

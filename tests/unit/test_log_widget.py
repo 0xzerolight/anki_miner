@@ -373,3 +373,43 @@ class TestProblemSignal:
         log.append_info("parsed subtitles")
         log.append_success("created 12 cards")
         assert seen == []
+
+
+class TestLogTypeface:
+    """The console used to ask for 'Consolas' at a constant 13px.
+
+    Consolas exists on Windows and nowhere else, and the constant meant the log
+    alone ignored the text-size setting (decision D44-B).
+    """
+
+    def test_the_console_uses_the_platform_fixed_font(self, log):
+        from anki_miner.gui.utils.fonts import resolved_families
+
+        assert log.text_edit.font().family() == resolved_families().monospace
+
+    def test_the_console_never_asks_for_a_windows_only_family(self, log):
+        assert log.text_edit.font().family() != "Consolas"
+
+    def test_the_console_follows_the_text_size_setting(self, qtbot, text_scale):
+        small = LogWidget()
+        qtbot.addWidget(small)
+        baseline = small.text_edit.font().pixelSize()
+
+        text_scale(2.0)
+        large = LogWidget()
+        qtbot.addWidget(large)
+        assert large.text_edit.font().pixelSize() == 2 * baseline
+
+
+@pytest.fixture
+def text_scale():
+    """Yield ``apply(scale)``, restoring the global text scale afterwards.
+
+    Only the scale is changed, never the application stylesheet: these widgets
+    are never shown, so their Python font is the one that answers.
+    """
+    from anki_miner.gui.resources.styles.theme import Theme
+
+    original = Theme.get_font_scale()
+    yield Theme.set_font_scale
+    Theme.set_font_scale(original)

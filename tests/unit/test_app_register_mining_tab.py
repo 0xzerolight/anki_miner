@@ -225,8 +225,12 @@ class TestSetupTabShortcutsAfterRegistration:
         assert not keys, f"Tab shortcuts appeared in __init__: {keys}"
 
     def test_non_tab_shortcuts_survive(self, window_with_7_tabs):
-        """Ctrl+T, Ctrl+,, Ctrl+Shift+V remain after setup_tab_shortcuts()."""
+        """Ctrl+, remains after setup_tab_shortcuts(), and adds no collisions.
+
+        D48-B retired Ctrl+T and Ctrl+Shift+V; registering the tabs must not
+        quietly bring either back.
+        """
         keys = _all_shortcut_keys(window_with_7_tabs)
-        assert "Ctrl+T" in keys
         assert "Ctrl+," in keys
-        assert "Ctrl+Shift+V" in keys
+        assert "Ctrl+T" not in keys
+        assert "Ctrl+Shift+V" not in keys

@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.utils.fonts import japanese_cell_font
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
     SortableTableWidgetItem,
@@ -69,6 +70,18 @@ def _count(value: int) -> SortableTableWidgetItem:
     the sort value has to be the integer -- "1,200" sorts before "900" as text.
     """
     return make_table_item(f"{value:,}", CellRole.NUMBER, sort_value=value)
+
+
+def _japanese(item: SortableTableWidgetItem) -> SortableTableWidgetItem:
+    """Give a name cell the Japanese face, and nothing else.
+
+    Series and episode names are usually Japanese, and this app also ships
+    Simplified and Traditional Chinese interfaces, which prefer different shapes
+    for the same characters (decision D45-B). The cell font carries no size, so
+    it resolves against the view's own and the row height does not move.
+    """
+    item.setFont(japanese_cell_font())
+    return item
 
 
 def _apply_height_floor(table: QTableWidget) -> None:
@@ -411,8 +424,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
                         session.mined_at.strftime("%Y-%m-%d %H:%M"),
                         sort_value=session.mined_at.timestamp(),
                     ),
-                    make_table_item(session.series_name),
-                    make_table_item(session.episode_name),
+                    _japanese(make_table_item(session.series_name)),
+                    _japanese(make_table_item(session.episode_name)),
                     _count(session.total_words),
                     _count(session.unknown_words),
                     _count(session.cards_created),
@@ -437,7 +450,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             for row_idx, entry in enumerate(difficulties):
                 items = [
                     _count(row_idx + 1),
-                    make_table_item(entry.series_name),
+                    _japanese(make_table_item(entry.series_name)),
                     _count(entry.total_words),
                     _count(entry.unknown_words),
                     # Sorted on the share itself; "9.0%" would rank above "15.0%".

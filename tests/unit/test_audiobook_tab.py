@@ -281,8 +281,11 @@ class TestRunStartup:
         assert not tab.add_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
-        # Clear still works mid-run (trims non-PROCESSING rows).
-        assert tab.clear_button.isEnabled()
+        # D29-A: the whole queue freezes, Clear included.
+        assert not tab.clear_button.isEnabled()
+        assert not tab.queue_controls.lock_label.isHidden()
+        assert not tab.queue_controls.pause_button.isHidden()
+        assert not tab.queue_controls.finish_button.isHidden()
 
     def test_run_callback_follows_checkbox(self, tab, tmp_path):
         queue_cls = tab._queue_worker_cls
@@ -691,7 +694,12 @@ class TestRemoveAndClear:
 
         assert tab._queue.all_items() == [item]
 
-    def test_remove_during_run_skips_item_in_worker(self, tab, tmp_path):
+    def test_remove_during_run_is_a_locked_no_op(self, tab, tmp_path):
+        """D29-A: the run mines a frozen snapshot, so the list stops changing.
+
+        Removing a row used to leave it in the run regardless -- it just stopped
+        being visible, which is the worst of both answers.
+        """
         _add_pair(tab, tmp_path, "vol1")
         item2 = _add_pair(tab, tmp_path, "vol2")
         tab._on_mine_clicked()
@@ -700,17 +708,18 @@ class TestRemoveAndClear:
 
         tab._on_remove_clicked(item2)
 
-        worker.try_skip_item.assert_called_once_with(item2)
-        assert item2 not in tab._queue.all_items()
+        worker.try_skip_item.assert_not_called()
+        assert item2 in tab._queue.all_items()
 
     def test_remove_refused_by_worker_claim_preserves_row(self, tab, tmp_path):
+        """The claim race is still guarded, for a removal that reaches _drop_item."""
         _add_pair(tab, tmp_path, "vol1")
         item2 = _add_pair(tab, tmp_path, "vol2")
         tab._on_mine_clicked()
         worker = tab.worker_thread
         worker.try_skip_item.return_value = False
 
-        tab._on_remove_clicked(item2)
+        tab._drop_item(item2)
 
         assert item2 in tab._queue.all_items()
         assert tab.list_widget.count() == 2
@@ -725,7 +734,8 @@ class TestRemoveAndClear:
         assert tab.list_widget.count() == 0
         assert not tab.clear_button.isEnabled()
 
-    def test_clear_during_run_preserves_processing(self, tab, tmp_path):
+    def test_clear_during_run_is_a_locked_no_op(self, tab, tmp_path):
+        """D29-A: Clear no longer trims the tail of a run that is under way."""
         item1 = _add_pair(tab, tmp_path, "vol1")
         item2 = _add_pair(tab, tmp_path, "vol2")
         item3 = _add_pair(tab, tmp_path, "vol3")
@@ -735,10 +745,9 @@ class TestRemoveAndClear:
 
         tab._on_clear_clicked()
 
-        assert tab._queue.all_items() == [item1]
-        assert tab.list_widget.count() == 1
-        skipped = [c.args[0] for c in worker.try_skip_item.call_args_list]
-        assert skipped == [item2, item3]
+        assert tab._queue.all_items() == [item1, item2, item3]
+        assert tab.list_widget.count() == 3
+        worker.try_skip_item.assert_not_called()
 
     def test_clear_resets_progress_widget_when_idle(self, tab, tmp_path):
         _add_pair(tab, tmp_path)
