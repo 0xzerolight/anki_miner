@@ -20,15 +20,18 @@ import threading
 from collections import deque
 from collections.abc import Callable
 from dataclasses import replace
+from time import monotonic, time
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QBoxLayout, QWidget
 
+from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
+from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
 
@@ -148,6 +151,149 @@ class MiningTabBase(QWidget):
         base, or should override this method.
         """
         self.log_widget.append_error(tr_format(self.tr("Failed: %1 — %2"), item, error))  # type: ignore[attr-defined]
+
+    # ------------------------------------------------------------------
+    # Inline run receipts (D20, D23)
+    # ------------------------------------------------------------------
+
+    #: Receipt state, declared on the class so every mining tab inherits the
+    #: no-receipt default. A screen that never calls :meth:`_install_receipt`
+    #: (Deck Builder, under D3) keeps them and every hook below is a no-op.
+    _receipt_widget: InlineReceipt | None = None
+    _receipt_accumulator: RunReceiptAccumulator | None = None
+    _receipt_noun: str = ""
+
+    def _install_receipt(self, layout: QBoxLayout, anchor: QWidget, *, item_noun: str = "") -> InlineReceipt:
+        """Put a receipt directly under ``anchor`` in ``layout`` and return it.
+
+        ``anchor`` is the screen's progress widget: the receipt is the state that
+        progress card ends in, so it belongs in the same place rather than in a
+        dialog arriving over whatever the user was doing. Inserted by layout
+        position rather than by rebuilding the card, so W2 can later move the
+        pair into its pinned action host without touching this model.
+
+        The layout is passed in rather than looked up through
+        ``anchor.parentWidget()``: every mining tab builds its whole page before
+        calling ``setLayout``, so at this point the anchor has no parent widget
+        to ask.
+
+        Args:
+            layout: The box layout the anchor was added to.
+            anchor: The widget the receipt appears beneath.
+            item_noun: This screen's plural noun for one run item ("episodes",
+                "videos", "books"). Used only above one item.
+        """
+        receipt = InlineReceipt()
+        index = layout.indexOf(anchor)
+        layout.insertWidget(index + 1 if index >= 0 else layout.count(), receipt)
+        receipt.details_requested.connect(self._open_run_details)
+        self._receipt_widget = receipt
+        self._receipt_noun = item_noun
+        return receipt
+
+    def _begin_receipt(self, items_total: int, *, item_noun: str | None = None) -> None:
+        """Start accumulating a run, clearing the previous run's receipt.
+
+        Args:
+            items_total: Items handed to the worker, frozen at launch.
+            item_noun: Overrides the installed noun for this run (Batch mines
+                episodes on one path and whole series on the other).
+        """
+        if self._receipt_widget is None:
+            return
+        if item_noun is not None:
+            self._receipt_noun = item_noun
+        monotonic_start, wall_start = self._receipt_now()
+        self._receipt_accumulator = RunReceiptAccumulator(
+            items_total,
+            monotonic_start=monotonic_start,
+            wall_start=wall_start,
+        )
+        self._receipt_widget.clear()
+
+    def _record_receipt_result(self, result: object | None, error: object = None) -> None:
+        """Record one item from the ``(result, error)`` pair its worker emitted."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_result(result, error)
+
+    def _record_receipt_counts(self, *, notes_added: int, failed: bool) -> None:
+        """Record one item that reported counts but no result object."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_counts(notes_added=notes_added, failed=failed)
+
+    def _mark_receipt_failed(self) -> None:
+        """Note a run-level fatal (a preflight refusal, a worker exception)."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.mark_failed()
+
+    def _on_run_thread_finished(self) -> None:
+        """Seal the receipt when the run's own worker thread actually ends.
+
+        Connected to ``QThread.finished`` by the tabs whose terminal signals do
+        not converge anywhere else. ``finished`` is emitted after ``run()``
+        returns, so every result and error the run emitted has already been
+        delivered by the time this arrives.
+
+        A worker leaked by a timed-out teardown finishes *under* a later run, so
+        a sender that is not the current worker is ignored rather than allowed
+        to seal the run the user is watching.
+        """
+        sender = self.sender()
+        worker = getattr(self, "worker_thread", None)
+        if sender is not None and worker is not None and sender is not worker:
+            return
+        self._finish_receipt(
+            cancelled=bool(getattr(self, "_cancel_requested", False)),
+            fatal=bool(getattr(self, "_run_failed", False)),
+        )
+
+    def _finish_receipt(self, *, cancelled: bool = False, fatal: bool = False) -> None:
+        """Seal the run and show its receipt. Idempotent; safe on every path.
+
+        Args:
+            cancelled: The user asked to stop. Outranks every other outcome.
+            fatal: A run-level failure (preflight refusal, worker exception).
+        """
+        accumulator = self._receipt_accumulator
+        widget = self._receipt_widget
+        if accumulator is None or widget is None:
+            return
+        if cancelled:
+            accumulator.mark_cancel_requested()
+        if fatal:
+            accumulator.mark_failed()
+        monotonic_now, wall_now = self._receipt_now()
+        receipt = accumulator.finish(monotonic_now=monotonic_now, wall_now=wall_now)
+        # Cleared first: a second terminal signal for the same run must not
+        # produce a second receipt with a longer clock.
+        self._receipt_accumulator = None
+        widget.show_receipt(receipt, item_noun=self._receipt_noun)
+
+    def _open_run_details(self) -> None:
+        """Open the finished run's details, because the user clicked for them.
+
+        Routed through the screen's presenter — the same channel every other
+        result already travels — so the receipt itself owns no dialog, no
+        ``AnkiService`` and no undo policy.
+        """
+        widget = self._receipt_widget
+        receipt = widget.receipt if widget is not None else None
+        aggregate = receipt.aggregate_result() if receipt is not None else None
+        if aggregate is None:
+            return
+        # Two spellings across the family: the queue bases keep the presenter
+        # private, Single/Batch expose it. Resolved late so a presenter attached
+        # after construction still receives the request.
+        presenter = getattr(self, "_presenter", None) or getattr(self, "presenter", None)
+        show = getattr(presenter, "show_run_details", None)
+        if callable(show):
+            with contextlib.suppress(Exception):
+                show(aggregate)
+
+    @staticmethod
+    def _receipt_now() -> tuple[float, float]:
+        """Return ``(monotonic, wall)`` now. Patched by tests to fix the clock."""
+        return monotonic(), time()
 
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding

@@ -153,6 +153,8 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         layout.addWidget(self._progress_header(self.tr("Progress")))
         self.progress_widget = ProgressWidget()
         layout.addWidget(self.progress_widget)
+        # The durable end state of this same card (D20).
+        self._install_receipt(layout, self.progress_widget, item_noun=self.tr("books"))
 
         # LogWidget (carries its own header + Copy/Clear actions).
         self.log_widget = LogWidget()

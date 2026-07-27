@@ -202,7 +202,14 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
             return None
 
     def _record_item_outcome(self, result: object, error: object) -> MiningOutcome:
-        """Classify and accumulate one worker item outcome."""
+        """Classify and accumulate one worker item outcome.
+
+        All four reading tabs forward their results from their own
+        ``_on_item_finished`` -- they share no list-queue base -- but every one
+        of them routes the outcome through here, so this is where the run
+        receipt is fed for reading (D20).
+        """
+        self._record_receipt_result(result, error)
         outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
         if outcome is MiningOutcome.SUCCESS:
             self._run_cards_total += int(getattr(result, "cards_created", 0) or 0)
@@ -218,13 +225,17 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
 
         Reads only the per-run flags/accumulators seeded in :meth:`_launch_run`
         — never ``_run_items``, which is already cleared when the cleanup hook
-        calls this.
+        calls this. Also seals the run receipt, so the four reading tabs get
+        their durable summary from the one hook all four already call.
         """
+        cancelled = bool(getattr(self, "_cancel_requested", False) or self._run_cancelled_count)
+        fatal = bool(getattr(self, "_run_failed", False))
+        self._finish_receipt(cancelled=cancelled, fatal=fatal)
         outcome = classify_terminal_outcome(
             self._run_succeeded,
             self._run_failed_count,
-            cancelled=getattr(self, "_cancel_requested", False) or bool(self._run_cancelled_count),
-            fatal=getattr(self, "_run_failed", False),
+            cancelled=cancelled,
+            fatal=fatal,
         )
         if outcome is TerminalOutcome.CANCELLED:
             widget.reset()

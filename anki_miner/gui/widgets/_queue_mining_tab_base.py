@@ -270,6 +270,12 @@ class _QueueMiningTabBase(MiningTabBase):
         self._worker_config_generation = self._config_generation
         self.worker_thread = worker
 
+        # One receipt per run, cleared here and shown by the terminal path
+        # (D20). Every queue tab -- the two list queues and all four reading
+        # tabs -- launches through here, so the run is accumulated from one
+        # place even though each tab's terminal handling differs.
+        self._begin_receipt(len(items))
+
         self.log_widget.append_info(tr_format(self._run_strings.run_starting, self._run_strings.mine_label, len(items)))
         worker.start()
         return True
@@ -753,6 +759,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         cards = int(getattr(result, "cards_created", 0) or 0)
         outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
         label = self._item_finished_label(item)
+        self._record_receipt_result(result, error)
         if outcome is MiningOutcome.SUCCESS:
             item.status = self._status_completed
             item.cards_created = cards
@@ -824,6 +831,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             else:
                 summary = tr_format(self._queue_list_strings.complete_succeeded, succeeded)
             self.progress_widget.show_completion(summary)
+        # The durable half of the same terminal state: the bar's line is gone
+        # the moment the next run starts, the receipt is not (D20).
+        self._finish_receipt(
+            cancelled=bool(getattr(self, "_cancel_requested", False)),
+            fatal=bool(getattr(self, "_run_failed", False)),
+        )
         self._recompute_buttons()
 
     # ------------------------------------------------------------------
