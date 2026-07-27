@@ -1,4 +1,4 @@
-"""Reusable video player widget with subtitle overlay (embedded libmpv backend).
+"""Reusable video player widget with a subtitle strip (embedded libmpv backend).
 
 Replaced QMediaPlayer/QtMultimedia in the mpv migration: the Qt FFmpeg backend
 carried a whole bug family (Windows D3D-sink teardown freeze, no software AV1
@@ -31,9 +31,24 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QSlider,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
-from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.fonts import (
+    JAPANESE_FEATURE,
+    apply_japanese_block_format,
+    apply_japanese_font,
+    japanese_line_spacing,
+)
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.bundled_binary import frozen_state
@@ -42,8 +57,9 @@ from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available, termin
 
 logger = logging.getLogger(__name__)
 
-# Base subtitle-overlay font size (px) at scale 1.0.
-_BASE_OVERLAY_FONT_PX = 18
+# Vertical padding inside the subtitle strip, added on top of the two reserved
+# lines. Matches the padding the stylesheet gives the strip.
+_STRIP_PADDING_Y = SPACING.xxs
 
 # mpv end-file reason code for "stopped due to playback error" (render.h /
 # client.h: MPV_END_FILE_REASON_ERROR). Kept as a literal so this module never
@@ -52,9 +68,9 @@ _END_FILE_REASON_ERROR = 4
 
 
 class SubtitlePlayerWidget(QWidget):
-    """Reusable video player with subtitle overlay.
+    """Reusable video player with a fixed two-line subtitle strip.
 
-    Owns MpvVideoWidget, overlay QLabel, position QSlider, time label,
+    Owns MpvVideoWidget, the subtitle strip, position QSlider, time label,
     play/pause button, and the mpv.MPV handle. No player exists until
     set_source is called.
     """
@@ -143,20 +159,33 @@ class SubtitlePlayerWidget(QWidget):
         self._backend_notice_label.setVisible(False)
         layout.addWidget(self._backend_notice_label)
 
-        # Subtitle overlay label
-        self.subtitle_label = QLabel()
-        self.subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.subtitle_label.setWordWrap(True)
-        # Overlay font is set at construction, reflecting the scale at that time.
-        # The player widget is created per session/playback, so this is fine —
-        # no live re-scaling plumbing (YAGNI).
-        overlay_font_px = max(1, round(_BASE_OVERLAY_FONT_PX * Theme.get_font_scale()))
-        self.subtitle_label.setStyleSheet(
-            "QLabel { background-color: rgba(0,0,0,180); color: white; "
-            f"font-size: {overlay_font_px}px; padding: 6px 12px; border-radius: 4px; }}"
-        )
-        self.subtitle_label.setVisible(False)
-        layout.addWidget(self.subtitle_label)
+        # Subtitle strip — two lines, always allocated (decision D45-B).
+        #
+        # It used to be shown and hidden per cue, so the video jumped every time
+        # a line appeared, and jumped again when a long line wrapped onto a
+        # second one. The strip now reserves two lines of Japanese content for
+        # the whole session and clears its text between cues instead of
+        # disappearing, so nothing below it ever moves.
+        #
+        # It is a document rather than a label because Japanese content gets
+        # looser leading and Qt stylesheets ignore `line-height`. It takes no
+        # focus and no text interaction, so Space still reaches the player's
+        # play/pause shortcut when the pointer is over the strip.
+        self.subtitle_strip = QTextEdit()
+        self.subtitle_strip.setObjectName("subtitle-strip")
+        self.subtitle_strip.setReadOnly(True)
+        self.subtitle_strip.setFrameShape(QFrame.Shape.NoFrame)
+        self.subtitle_strip.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.subtitle_strip.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.subtitle_strip.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.subtitle_strip.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.subtitle_strip.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.subtitle_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        apply_japanese_font(self.subtitle_strip, role=JAPANESE_FEATURE)
+        strip_height = 2 * japanese_line_spacing(JAPANESE_FEATURE) + 2 * _STRIP_PADDING_Y
+        self.subtitle_strip.setFixedHeight(strip_height)
+        self._set_cue_text("")
+        layout.addWidget(self.subtitle_strip)
 
         # Position slider and time display
         position_layout = QHBoxLayout()
@@ -215,7 +244,7 @@ class SubtitlePlayerWidget(QWidget):
         self._file_loaded = False
         self._pending_seek_ms = None
         self._at_eof = False
-        self.subtitle_label.setVisible(False)
+        self._set_cue_text("")
 
         if not self._mpv_available:
             # libmpv could not load: degrade to a notice; the rest of the dialog
@@ -503,9 +532,8 @@ class SubtitlePlayerWidget(QWidget):
         self._at_eof = bool(value)
 
     def _on_playback_error(self, message: str) -> None:
-        """Surface a playback error in the subtitle label (old-backend parity)."""
-        self.subtitle_label.setText(tr_format(self.tr("Video error: %1"), message))
-        self.subtitle_label.setVisible(True)
+        """Surface a playback error in the subtitle strip (old-backend parity)."""
+        self._set_cue_text(tr_format(self.tr("Video error: %1"), message))
 
     def _on_render_failed(self, reason: str) -> None:
         """mpv loaded but rendering is impossible on this display (broken GL).
@@ -572,11 +600,28 @@ class SubtitlePlayerWidget(QWidget):
             adjusted_start = start + self._offset
             adjusted_end = end + self._offset
             if adjusted_start <= current_seconds <= adjusted_end:
-                self.subtitle_label.setText(text)
-                self.subtitle_label.setVisible(True)
+                self._set_cue_text(text)
                 return
 
-        self.subtitle_label.setVisible(False)
+        # Cleared, never hidden: hiding the strip would move the video.
+        self._set_cue_text("")
+
+    def _set_cue_text(self, text: str) -> None:
+        """Put one cue in the strip, plain text, with the Japanese leading.
+
+        ``_update_subtitle`` runs on every position tick, so an unchanged cue
+        returns immediately: rebuilding the document several times a second for
+        the same line would be pure churn.
+
+        ``setPlainText`` replaces every block, so the block format has to be
+        reapplied after each *real* change or the leading survives only the
+        first cue.
+        """
+        if self.subtitle_strip.toPlainText() == text:
+            return
+        self.subtitle_strip.setPlainText(text)
+        apply_japanese_block_format(self.subtitle_strip.document())
+        self.subtitle_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     @staticmethod
     def _format_time(ms: int) -> str:

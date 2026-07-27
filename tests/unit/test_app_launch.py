@@ -563,3 +563,37 @@ def test_gui_entrypoints_and_dependency_use_launch() -> None:
     assert '"anki_miner", "gui", "launch.py"' in spec_text
     assert '"anki_miner", "gui", "app.py"' not in spec_text
     assert "from anki_miner.gui.launch import main" in main_text
+
+
+def test_fonts_are_resolved_after_the_application_and_before_the_first_widget() -> None:
+    """Decision D44-B: every widget is measured against the font it is drawn with.
+
+    Resolving late would leave the widgets built before the call sized from a
+    different face, which is exactly the per-OS metric drift the decision
+    removes. Read from the source of ``main`` rather than by driving it: the
+    real launch acquires locks, builds the whole window and starts workers.
+    """
+    import inspect
+
+    from anki_miner.gui import app as app_module
+
+    source = inspect.getsource(app_module.main)
+    application = source.index("QApplication(sys.argv)")
+    fonts = source.index("initialize_application_fonts(app)")
+    first_widget = source.index("compose_main_window(")
+    assert application < fonts < first_widget
+
+
+def test_a_font_failure_cannot_abort_launch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The bundled Japanese fallback is a nicety; startup is not."""
+    from anki_miner.gui.utils import fonts
+
+    def _boom(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("no font database")
+
+    monkeypatch.setattr(fonts.QFontDatabase, "systemFont", _boom)
+    fonts.reset_font_cache()
+    try:
+        fonts.initialize_application_fonts(object())  # type: ignore[arg-type]  # must not raise
+    finally:
+        fonts.reset_font_cache()

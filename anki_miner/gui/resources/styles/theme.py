@@ -662,6 +662,7 @@ class Theme:
 
         Supports:
         - ${spacing-*}, ${font-size-*}, ${border-radius-*} from _variables.py
+        - ${font-family-*} resolved from the platform by ``gui.utils.fonts``
         - ${color-*} from the active theme JSON
 
         Args:
@@ -676,6 +677,11 @@ class Theme:
             mode = cls._current_mode
 
         variables = get_variable_dict(cls._font_scale)
+        # Imported lazily: ``fonts`` imports this module for the font scale, so
+        # a module-level import here would be a cycle.
+        from anki_miner.gui.utils.fonts import font_family_variables
+
+        variables.update(font_family_variables())
         theme_data = instance._themes.get(mode)
         if theme_data:
             variables.update(get_color_variables(theme_data))

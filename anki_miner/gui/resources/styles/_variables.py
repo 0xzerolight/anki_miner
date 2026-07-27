@@ -52,6 +52,23 @@ class FontSizes:
     small: int = 11  # Status bar, badges
     stat_value: int = 32  # Large stat card numbers
     icon_large: int = 48  # Large dialog icons
+    # Japanese is content, not chrome (D45-B): a reading size above the
+    # surrounding interface text, and one feature size for the single line the
+    # eye goes to first -- the curator's focused expression, a subtitle cue.
+    japanese_body: int = 16  # Readings, sentences, mined text
+    japanese_feature: int = 20  # Focused expression, subtitle cue
+
+
+@dataclass(frozen=True)
+class Typography:
+    """Typographic metrics that are ratios rather than pixel sizes.
+
+    Deliberately NOT exposed in the QSS variable dict: Qt stylesheets ignore
+    ``line-height``, so leading is applied from Python through
+    ``QTextBlockFormat`` (see ``gui/utils/fonts.apply_japanese_block_format``).
+    """
+
+    japanese_leading_percent: int = 125
 
 
 @dataclass(frozen=True)
@@ -88,6 +105,7 @@ SPACING = Spacing()
 FONT_SIZES = FontSizes()
 BORDER_RADIUS = BorderRadius()
 MOTION = Motion()
+TYPOGRAPHY = Typography()
 
 
 def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
@@ -123,6 +141,8 @@ def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
         "small",
         "stat-value",
         "icon-large",
+        "japanese-body",
+        "japanese-feature",
     ]
     font_attrs = [
         "h1",
@@ -134,6 +154,8 @@ def get_variable_dict(font_scale: float = 1.0) -> dict[str, str]:
         "small",
         "stat_value",
         "icon_large",
+        "japanese_body",
+        "japanese_feature",
     ]
     for field, attr in zip(font_fields, font_attrs, strict=True):
         value = getattr(FONT_SIZES, attr)

@@ -38,7 +38,13 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.fonts import make_scaled_font
+from anki_miner.gui.utils.fonts import (
+    JAPANESE_BODY,
+    JAPANESE_FEATURE,
+    apply_japanese_font,
+    japanese_cell_font,
+    make_scaled_font,
+)
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     CELL_PADDING,
@@ -402,9 +408,15 @@ class WordCurationDialog(QDialog):
         truncated cell. Plain text throughout (decision D45-B): no furigana, and
         no chance of a sentence's own characters being interpreted as markup.
 
-        Object names are the contract W3 styles against; the sentence strip
-        reserves exactly two lines so the panel's height never moves as the
-        cursor travels.
+        The three lines stack: the expression large, its kana reading *beneath*
+        it, then the sentence. Beneath, not above — the reading above the kanji
+        is ruby, which is decision D45-C and was declined. All three are
+        Japanese content rather than interface chrome, so they take the Japanese
+        face at content sizes; the word table above keeps its own density.
+
+        Object names are the contract the stylesheet styles against; the
+        sentence strip reserves exactly two lines so the panel's height never
+        moves as the cursor travels.
         """
         self.detail_panel = QFrame()
         self.detail_panel.setObjectName("curator-detail")
@@ -412,24 +424,25 @@ class WordCurationDialog(QDialog):
         vbox.setContentsMargins(SPACING.sm, SPACING.xs, SPACING.sm, SPACING.xs)
         vbox.setSpacing(SPACING.xxs)
 
-        top = QHBoxLayout()
-        top.setSpacing(SPACING.sm)
-
         self.detail_expression = QLabel()
         self.detail_expression.setObjectName("curator-detail-expression")
-        self.detail_expression.setFont(self._make_font(15, QFont.Weight.Bold))
-        top.addWidget(self.detail_expression)
+        # Size here, weight in the stylesheet: a QSS `font-weight` on QWidget
+        # overrides setFont, so a Python-set bold never actually rendered.
+        apply_japanese_font(self.detail_expression, role=JAPANESE_FEATURE)
+        vbox.addWidget(self.detail_expression)
 
         self.detail_reading = QLabel()
         self.detail_reading.setObjectName("curator-detail-reading")
-        top.addWidget(self.detail_reading)
-        top.addStretch()
-        vbox.addLayout(top)
+        apply_japanese_font(self.detail_reading, role=JAPANESE_BODY)
+        vbox.addWidget(self.detail_reading)
 
         self.detail_sentence = QLabel()
         self.detail_sentence.setObjectName("curator-detail-sentence")
         self.detail_sentence.setWordWrap(True)
         self.detail_sentence.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        apply_japanese_font(self.detail_sentence, role=JAPANESE_BODY)
+        # Reserved before the font is polished, which is why the Japanese font
+        # is set from Python as well as named in the stylesheet.
         two_lines = 2 * metric_row_height(self.detail_sentence, vertical_padding=0)
         self.detail_sentence.setMinimumHeight(two_lines)
         self.detail_sentence.setMaximumHeight(two_lines)
@@ -637,13 +650,13 @@ class WordCurationDialog(QDialog):
             # Word (mined) — what becomes the Anki Expression
             # (source-orthography dictionary form for verbs/adjectives,
             # surface for nouns)
-            self.table.setItem(row, 1, self._make_readonly_item(word.mined_form))
+            self.table.setItem(row, 1, self._make_readonly_item(word.mined_form, japanese=True))
 
             # Form in subtitle — the raw surface as it appeared
-            self.table.setItem(row, 2, self._make_readonly_item(word.surface))
+            self.table.setItem(row, 2, self._make_readonly_item(word.surface, japanese=True))
 
             # Reading
-            self.table.setItem(row, 3, self._make_readonly_item(word.reading))
+            self.table.setItem(row, 3, self._make_readonly_item(word.reading, japanese=True))
 
             # Sentence, truncated for the cell but copied and hovered in full.
             # A trailing "(N)" flags words with N alternative example sentences.
@@ -655,6 +668,7 @@ class WordCurationDialog(QDialog):
                     self._sentence_display(word.sentence, n_candidates),
                     tooltip=self._sentence_tooltip(word.sentence, n_candidates),
                     copy_text=word.sentence,
+                    japanese=True,
                 ),
             )
 
@@ -696,10 +710,21 @@ class WordCurationDialog(QDialog):
         sort_value: float | str | None = None,
         tooltip: str | None = None,
         copy_text: str | None = None,
+        japanese: bool = False,
     ) -> QTableWidgetItem:
-        """Build a non-editable cell on the shared data-surface contract."""
+        """Build a non-editable cell on the shared data-surface contract.
+
+        ``japanese`` gives the cell the Japanese face and nothing else: an item
+        font carrying no size resolves against the view's own, so kanji take
+        Japanese rather than Chinese glyph shapes while the row stays exactly as
+        tall as the shared data-surface rule made it. Larger Japanese content
+        sizes belong in the detail panel below, never in the rows — the density
+        is what makes this table scannable.
+        """
         item = make_table_item(text, role, sort_value=sort_value, copy_text=copy_text, tooltip=tooltip)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        if japanese:
+            item.setFont(japanese_cell_font())
         return item
 
     @staticmethod
@@ -994,6 +1019,7 @@ class WordCurationDialog(QDialog):
             for i, cand in enumerate(candidates):
                 list_item = QListWidgetItem(cand.sentence)
                 list_item.setToolTip(cand.sentence)
+                list_item.setFont(japanese_cell_font())
                 self.sentence_list.addItem(list_item)
                 if self._same_pick(cand, chosen):
                     selected_row = i

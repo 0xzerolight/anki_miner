@@ -3,7 +3,10 @@
  * Shared styles that apply across all themes
  *
  * Variables from _variables.py are substituted at load time:
- * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large
+ * - ${font-size-*}: h1, h2, h3, body, body-sm, caption, small, stat-value, icon-large,
+ *   japanese-body, japanese-feature
+ * - ${font-family-*}: interface, mono, japanese — resolved from the platform's own
+ *   font database by gui/utils/fonts.py (decision D44-B). Never a hard-coded stack.
  * - ${spacing-*}: xxs, xs, sm, md, lg, xl
  * - ${border-radius-*}: small, default, large
  */
@@ -11,7 +14,7 @@
 /* ============== BASE WIDGET STYLES ============== */
 
 QWidget {
-    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: ${font-family-interface};
     font-size: ${font-size-body}px;
     font-weight: 400;
 }
@@ -65,9 +68,24 @@ QLabel#field-label {
     border-radius: ${border-radius-small}px;
 }
 
-/* Japanese text support */
-*[japanese="true"] {
-    font-family: 'Noto Sans JP', 'Yu Gothic', 'Meiryo', sans-serif;
+/* ---- Japanese content (D45-B) -------------------------------------------
+   Japanese is content, not chrome: an explicitly Japanese face so kanji take
+   Japanese rather than Chinese glyph forms, at a reading size above the
+   surrounding interface text. The attribute selector outranks the QWidget type
+   rule above, which is the only way a widget escapes the interface font — a
+   stylesheet beats setFont() for family and size.
+
+   Set the property through gui/utils/fonts.apply_japanese_font(); nothing else
+   writes it. Leading is NOT here: Qt ignores line-height, so it is applied as a
+   QTextBlockFormat from Python. */
+*[japanese="body"] {
+    font-family: ${font-family-japanese};
+    font-size: ${font-size-japanese-body}px;
+}
+
+*[japanese="feature"] {
+    font-family: ${font-family-japanese};
+    font-size: ${font-size-japanese-feature}px;
 }
 
 /* ============== BUTTON BASE STYLES ============== */
@@ -199,12 +217,23 @@ QTextEdit {
     border-radius: ${border-radius-default}px;
     border: 1px solid;
     padding: ${spacing-sm}px;
-    font-family: 'JetBrains Mono', 'Consolas', 'SF Mono', monospace;
     font-size: ${font-size-body-sm}px;
 }
 
+/* The activity log is machine output: fixed pitch so timestamps and levels line
+   up down the column. The family comes from the platform (D44-B) — 'Consolas'
+   and 'JetBrains Mono' exist on one desktop each. */
 QTextEdit#log-widget {
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: ${font-family-mono};
+}
+
+/* The subtitle strip under the player. Frameless, and exactly two lines tall for
+   the whole session (set from Python metrics) so the video never jumps when a
+   cue arrives, wraps onto a second line, or ends. No font-size here: the
+   Japanese content rule above owns it. */
+QTextEdit#subtitle-strip {
+    border: none;
+    padding: ${spacing-xxs}px ${spacing-sm}px;
 }
 
 /* ============== PROGRESS BAR STYLES ============== */
@@ -434,6 +463,19 @@ QFrame#divider {
     border: none;
 }
 
+/* The word curator's detail strip: the focused row restated calmly, one
+   surface below the table. The expression carries the weight because it is the
+   line the eye goes to first; its reading and sentence stay at normal weight
+   below it. Sizes come from the Japanese content rules above. */
+QFrame#curator-detail {
+    border: 1px solid;
+    border-radius: ${border-radius-default}px;
+}
+
+QLabel#curator-detail-expression {
+    font-weight: 600;
+}
+
 /* ============== CUSTOM WIDGET HELPERS ============== */
 
 /* Pinned workflow action bar (D6). It sits outside the page scroll, so the rule
@@ -460,11 +502,12 @@ QWidget#log-header {
     padding: ${spacing-xs}px ${spacing-sm}px;
 }
 
-/* Progress stats */
+/* Progress stats — the running clock. Fixed pitch from the platform so the
+   digits do not shuffle sideways once a second (D44-B). */
 QLabel#progress-stats {
     font-size: ${font-size-body-sm}px;
     padding: 2px 0;
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: ${font-family-mono};
 }
 
 /* Status badge */
@@ -690,7 +733,7 @@ QLabel#output-location-value {
 
 /* Read-only command display (copyable shell command in setup guidance) */
 QLineEdit#command-text {
-    font-family: monospace;
+    font-family: ${font-family-mono};
 }
 
 /* ============== THEME COLOR RULES ============== */
@@ -1076,6 +1119,14 @@ QToolTip {
     border-color: ${color-tooltip-border};
 }
 
+/* The subtitle strip reads like a tooltip over the video and borrows its keys,
+   so it follows all 29 themes. It used to hardcode rgba(0,0,0,180) on white,
+   which ignored every one of them. */
+QTextEdit#subtitle-strip {
+    background-color: ${color-tooltip-bg};
+    color: ${color-tooltip-text};
+}
+
 /* --- Menus --- */
 
 QMenu {
@@ -1270,6 +1321,11 @@ QFrame#card {
 
 QFrame#divider {
     background-color: ${color-divider};
+}
+
+QFrame#curator-detail {
+    background-color: ${color-surface};
+    border-color: ${color-border};
 }
 
 /* Progress stats */

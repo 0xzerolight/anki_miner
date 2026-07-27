@@ -36,6 +36,7 @@ from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.fonts import initialize_application_fonts
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
@@ -1197,6 +1198,12 @@ def main():
     # slot during tab construction are caught too (a bad path in a startup slot
     # would otherwise abort the whole process — the trailing-space batch bug).
     _install_excepthook(app, fail_fast=installer_smoke)
+
+    # Resolve the platform's interface, fixed-width and Japanese faces before the
+    # first widget exists (decision D44-B), so every widget is built and measured
+    # against the font it will actually be drawn with. Fail-soft by design: a
+    # missing bundled fallback logs and leaves Qt's own choice in place.
+    initialize_application_fonts(app)
 
     # Set application icon
     icon_path = get_resource_dir() / "icons" / "anki_miner.svg"

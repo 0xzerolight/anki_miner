@@ -43,6 +43,7 @@ from anki_miner.gui.constants import LOG_MAX_LINES, LOG_ROTATION_THRESHOLD, MIN_
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
+from anki_miner.gui.utils.fonts import make_scaled_monospace_font
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.utils.i18n import tr_format
 
@@ -135,11 +136,11 @@ class LogWidget(QWidget):
         self.text_edit.setReadOnly(True)
         self.text_edit.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
 
-        # Set monospace font for better readability
-        font = QFont("Consolas")
-        font.setStyleHint(QFont.StyleHint.Monospace)
-        font.setPixelSize(FONT_SIZES.body_sm)
-        self.text_edit.setFont(font)
+        # Machine output: the platform's own fixed-width face, at the text size
+        # the user chose. It used to ask for 'Consolas' at a constant 13px —
+        # a Windows-only family that no other desktop has, at a size that
+        # ignored the text-size setting entirely (decision D44-B).
+        self.text_edit.setFont(make_scaled_monospace_font(FONT_SIZES.body_sm))
 
         scrollbar = self.text_edit.verticalScrollBar()
         if scrollbar is not None:

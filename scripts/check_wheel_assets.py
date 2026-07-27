@@ -26,6 +26,20 @@ RESOURCE_DIRS = [
 SPEC_FILE = REPO_ROOT / "anki_miner.spec"
 DIST_DIR = REPO_ROOT / "dist"
 
+# Assets that must exist on disk AND in the wheel, named one by one. The generic
+# disk-vs-wheel comparison below cannot catch these: deleting a file from disk
+# and from the wheel at the same time leaves the two sets equal and the gate
+# green. The bundled Japanese fallback is exactly that kind of asset — nothing
+# in the test suite fails when it disappears, and the symptom (tofu on a bare
+# Linux install) only shows up on a machine with no CJK font at all. Its licence
+# and provenance record are required for the same reason: shipping the font
+# without the OFL beside it would breach the licence.
+REQUIRED_ASSETS = [
+    "anki_miner/gui/resources/fonts/NotoSansJP-Regular.otf",
+    "anki_miner/gui/resources/fonts/OFL.txt",
+    "anki_miner/gui/resources/fonts/PROVENANCE.md",
+]
+
 EXCLUDE_DIRS = {"__pycache__"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
 
@@ -80,12 +94,28 @@ def check_spec_references_resources() -> None:
             )
 
 
+def check_required_assets(on_disk: set[str], in_wheel: set[str], wheel_name: str) -> int:
+    """Assert each named asset is present on disk and in the wheel."""
+    failures = 0
+    for asset in REQUIRED_ASSETS:
+        if asset not in on_disk:
+            print(f"error: required asset missing from the repository: {asset}")
+            failures += 1
+        elif asset not in in_wheel:
+            print(f"error: required asset missing from {wheel_name}: {asset}")
+            failures += 1
+    return failures
+
+
 def main() -> int:
     check_spec_references_resources()
 
     wheel = find_wheel()
     on_disk = fs_assets()
     in_wheel = wheel_assets(wheel)
+
+    if check_required_assets(on_disk, in_wheel, wheel.name):
+        return 1
 
     missing = on_disk - in_wheel
     if missing:
