@@ -425,7 +425,7 @@ class QueuePanel(QFrame):
         """Mirror the view's selection into the rows and the action buttons."""
         selected = {id(w) for w in self.selected_widgets()}
         for widget in self.queue_item_widgets:
-            widget.setProperty("queueSelected", id(widget) in selected)
+            widget.set_selected(id(widget) in selected)
         self._refresh_selection_actions()
 
     def _refresh_selection_actions(self) -> None:

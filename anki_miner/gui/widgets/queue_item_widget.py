@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QCursor, QFont
+from PyQt6.QtGui import QCursor, QFont, QPaintEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -16,10 +16,11 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import PATH_MAX_DISPLAY_LENGTH
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.widgets.base.queue_row import QueueSelectionMixin
 from anki_miner.utils.i18n import tr_format
 
 
-class QueueItemWidget(QFrame):
+class QueueItemWidget(QueueSelectionMixin, QFrame):
     """Enhanced queue item widget with card-based design.
 
     Features:
@@ -348,6 +349,15 @@ class QueueItemWidget(QFrame):
 
         # Try to keep the end of the path (more informative)
         return "..." + path[-(max_length - 3) :]
+
+    def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802 - Qt override
+        """Draw the card, then its selection treatment under the child labels.
+
+        The row sits over its list item via ``setItemWidget``, so the view's own
+        selection paint never reaches the user (D28).
+        """
+        super().paintEvent(event)
+        self.paint_queue_selection()
 
     def mousePressEvent(self, event) -> None:
         """Let the click through so the list can select this row (D28).
