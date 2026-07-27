@@ -4,6 +4,13 @@ from .animated_tab_bar import AnimatedTabBar, install_animated_tab_bar
 from .eliding_label import ElidingLabel
 from .enhanced_dialog import EnhancedDialog
 from .form_panel import FormPanel
+from .screen_issue_banner import (
+    ScreenIssue,
+    ScreenIssueBanner,
+    ScreenIssueHost,
+    clear_reported_issue,
+    report_screen_issue,
+)
 from .setting_anchor import SettingAnchor, SettingAnchorHost, SettingTextProvider
 from .sizing import (
     PAGE_SCROLL_OBJECT_NAME,
@@ -24,6 +31,11 @@ __all__ = [
     "AnimatedTabBar",
     "install_animated_tab_bar",
     "FormPanel",
+    "ScreenIssue",
+    "ScreenIssueBanner",
+    "ScreenIssueHost",
+    "clear_reported_issue",
+    "report_screen_issue",
     "SettingAnchor",
     "SettingAnchorHost",
     "SettingTextProvider",
