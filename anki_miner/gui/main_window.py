@@ -32,6 +32,7 @@ from anki_miner.gui.constants import (
 )
 from anki_miner.gui.controllers import BackgroundTaskController
 from anki_miner.gui.controllers.profile_controller import ProfileController
+from anki_miner.gui.controllers.task_registry import TaskRegistry
 from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
@@ -123,6 +124,13 @@ class MainWindow(QMainWindow):
         # _setup_ui so the header can connect to it; it touches nothing until
         # commit_boot calls bootstrap().
         self.profile_controller = ProfileController(self)
+
+        # The single record of what the app is currently doing. Owned here, not
+        # by any tab, because a run has to stay visible after the user navigates
+        # away from the screen that started it. It stores state only: worker
+        # lifetime stays with BackgroundTaskController and the owning tab.
+        # Constructed BEFORE _setup_ui so the status strip can bind to it.
+        self.task_registry = TaskRegistry(self)
 
         # Config-bound services (validation + the AnkiService shared across undo
         # callbacks). Rebuilt on every config change via update_config — see
@@ -247,6 +255,8 @@ class MainWindow(QMainWindow):
         # Enhanced status bar
         self.status_bar = StatusBarWidget()
         self.status_bar.system_status_clicked.connect(self._on_system_status_clicked)
+        self.status_bar.task_activated.connect(self._on_task_activated)
+        self.status_bar.bind_task_registry(self.task_registry)
         self.setStatusBar(self.status_bar)
 
         # Set up menu bar
@@ -523,6 +533,18 @@ class MainWindow(QMainWindow):
             open_subtab = getattr(container, "open_subtab", None)
             if callable(open_subtab):
                 open_subtab(target.subtab)
+
+    def _on_task_activated(self, task_id: str) -> None:
+        """Take the user to the screen that owns ``task_id``.
+
+        Routed through the task's own ``CapabilityTarget`` and the same stable
+        key lookup the feature browser uses, so a task never has to know a tab
+        index. An unknown id is a silent no-op: the run may have been dropped
+        between the menu opening and the choice.
+        """
+        snapshot = self.task_registry.snapshot(task_id)
+        if snapshot is not None:
+            self.reveal_capability(snapshot.owner)
 
     def _open_settings(self) -> None:
         """Open the Settings tab."""
@@ -1216,6 +1238,11 @@ class MainWindow(QMainWindow):
         watchdog = getattr(self, "_stall_watchdog", None)
         if watchdog is not None:
             watchdog.stop()
+
+        # Stop the one-second task ticker for the same reason, and before the
+        # deferred-close path can return: nothing should be repainting a status
+        # strip while workers are being joined.
+        self.task_registry.shutdown()
 
         laggards = self.background_tasks.shutdown(self.tabs)
         if laggards:

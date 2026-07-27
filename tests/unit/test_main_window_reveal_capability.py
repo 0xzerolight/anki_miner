@@ -3,6 +3,10 @@
 Builds a real MainWindow with heavy startup patched out (same approach as
 test_main_window_settings_nav), then inserts stub tab widgets whose class names
 match the real tabs so the class-name-based lookup resolves them.
+
+Also covers the status bar's task strip routing here, because the whole point of
+a task carrying a ``CapabilityTarget`` is that choosing it lands on the screen
+that owns the run — through the same stable-key lookup, never a tab index.
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ import pytest
 from PyQt6.QtWidgets import QWidget
 
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.controllers.task_registry import TaskSpec
 
 
 # Stub tab classes named exactly like the real ones, so _main_tab_index matches.
@@ -57,6 +62,7 @@ def window(qtbot, patch_heavy_init, test_config):
     win.tabs.addTab(win._tabs["analytics"], "Analytics")
     win.tabs.addTab(win._tabs["settings"], "Settings")
     yield win
+    win.task_registry.shutdown()  # stop the one-second ticker before teardown
     win.deleteLater()
 
 
@@ -106,3 +112,33 @@ def test_missing_tab_is_a_silent_noop(window):
 
 def test_main_tab_index_unknown_key(window):
     assert window._main_tab_index("nonsense") == -1
+
+
+def test_the_status_strip_renders_the_window_registry(window):
+    window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+
+    assert "Downloading JMdict" in window.status_bar.task_button.text()
+
+
+def test_choosing_a_task_reveals_the_screen_that_owns_it(window):
+    window.task_registry.start(
+        TaskSpec("dl", "Downloading JMdict", CapabilityTarget("reading", "novels")),
+        now=0.0,
+    )
+
+    window.status_bar.task_activated.emit("dl")
+
+    assert window.tabs.currentWidget() is window._tabs["reading"]
+    window._tabs["reading"].open_subtab.assert_called_once_with("novels")
+
+
+def test_choosing_an_unknown_task_is_a_silent_noop(window):
+    window.tabs.setCurrentIndex(0)
+    before = window.tabs.currentWidget()
+
+    window.status_bar.task_activated.emit("never-registered")
+
+    assert window.tabs.currentWidget() is before
