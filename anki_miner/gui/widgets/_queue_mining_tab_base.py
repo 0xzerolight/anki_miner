@@ -242,6 +242,9 @@ class _QueueMiningTabBase(MiningTabBase):
         # bar state — NEVER from _run_items, which is cleared before cleanup runs.
         self._cancel_requested = False
         self._run_failed = False
+        # Per run, so a re-run whose first item retries to the same attempt as
+        # the last run's final countdown still gets its line.
+        self._retry_announced = None
         self._reset_run_state(len(items))
 
         # Processor may be None because (a) Settings → Remove dictionary released

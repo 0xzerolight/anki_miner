@@ -252,3 +252,23 @@ def test_reading_tabs_report_the_retry_too(qtbot, test_config):
         tab._on_item_retrying(0, 2, 3, 8)
         assert "Attempt 2 of 3 · retrying in 8s" in tab.log_widget.text_edit.toPlainText()
         tab.deleteLater()
+
+
+def test_a_second_run_still_announces_its_first_retry(youtube_tab):
+    """The one-line-per-attempt memo is per run, not for the life of the tab."""
+    tab = youtube_tab
+    _add_youtube(tab, "a")
+
+    tab._on_mine_clicked()
+    tab._on_item_started(0)
+    tab._on_item_retrying(0, 2, 3, 8)
+    tab.worker_thread = None
+    tab._after_run_cleanup()
+    tab.log_widget.clear_log()
+
+    tab._queue.all_items()[0].status = YouTubeItemStatus.READY
+    tab._on_mine_clicked()
+    tab._on_item_started(0)
+    tab._on_item_retrying(0, 2, 3, 8)
+
+    assert "Attempt 2 of 3" in tab.log_widget.text_edit.toPlainText()
