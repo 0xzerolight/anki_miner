@@ -504,6 +504,46 @@ class TestStagedKnownWordsGate:
             tab.shutdown()
             worker.wait(5000)
 
+    def test_gate_stays_closed_while_the_write_is_in_flight(self, qapp, qtbot, make_tokenized_words):
+        """The worker must stay parked for the whole duration of the write.
+
+        Releasing it when Confirm is pressed rather than when the write lands
+        would let the pipeline start creating cards while the Known Words rows
+        are still unsaved — the exact overlap this staging exists to prevent.
+        """
+        started = threading.Event()
+        release = threading.Event()
+
+        def commit(forms):
+            started.set()
+            release.wait(5)
+            return len(forms)
+
+        tab = self._tab(qtbot, commit)
+        worker, dialog = self._park(tab, qtbot, make_tokenized_words(2))
+        try:
+            dialog.table.setCurrentCell(0, 0)
+            dialog._on_add_to_known()
+            dialog.accept()
+
+            assert started.wait(5), "the write never started"
+            assert not tab._curation_event.is_set(), "the gate opened before the write finished"
+            assert not worker.isFinished()
+            # Both decisions are refused mid-write, so the user cannot resolve
+            # the review into a state neither kept nor discarded.
+            assert not dialog.confirm_button.isEnabled()
+            assert not dialog.cancel_button.isEnabled()
+            dialog.reject()  # refused
+            assert not tab._curation_event.is_set()
+
+            release.set()
+            assert _drain_until(worker.isFinished, 5000)
+            assert worker.result is not None
+        finally:
+            release.set()
+            tab.shutdown()
+            worker.wait(5000)
+
     def test_successful_write_releases_exactly_the_selected_words(self, qapp, qtbot, make_tokenized_words):
         calls: list[set] = []
         tab = self._tab(qtbot, lambda forms: calls.append(set(forms)) or len(forms))
