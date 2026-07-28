@@ -77,37 +77,90 @@ jobs:
             exit 1
           fi
 
-      - name: Open an issue when the CDN host drifts
+      # Reports THAT the canary failed and pastes the evidence; it does not claim to
+      # know why. The previous version fired on bare `if: failure()` with a body
+      # asserting CDN drift, so a pytest INTERNALERROR filed a confident, wrong
+      # allowlist bug report (issue #104).
+      #
+      # `if: failure()` stays at step level on purpose — it also covers a failed
+      # checkout or pip install, which a pytest-outcome-only gate would drop on the
+      # floor. The schedule check lives INSIDE the script instead: a YAML-level
+      # `github.event_name == 'schedule'` gate would make this script unreachable
+      # from a workflow_dispatch, i.e. unrunnable before it matters, which is the
+      # same "never executed until the real failure" defect that produced #104. As
+      # written, a dispatch exercises the log read, the body template and the dedup
+      # query, and performs no writes.
+      - name: Report the canary failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            const title = 'yt-dlp release CDN host drifted off the allowlist';
+            const fs = require('fs');
+            const dryRun = context.eventName !== 'schedule';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            let tail = '(no canary.log — the run failed before pytest started)';
+            try {
+              tail = fs.readFileSync('canary.log', 'utf8').trimEnd().split('\n').slice(-40).join('\n');
+            } catch (error) {
+              core.info(`could not read canary.log: ${error.message}`);
+            }
+
+            const title = 'yt-dlp CDN canary failed';
+            const body = [
+              `The yt-dlp CDN canary failed: ${runUrl}`,
+              '',
+              'Read the log tail below before changing anything — this issue does not',
+              'know the cause, and the two cases need opposite fixes:',
+              '',
+              '- **`drifted off the allowlist` assertion** → a release download now lands on',
+              '  a host outside `_GITHUB_URL_ALLOWLIST`, so every in-app yt-dlp install and',
+              '  update is refused for every user. Add the exact new host to the allowlist in',
+              '  BOTH `anki_miner/services/ytdlp_updater.py` and',
+              '  `anki_miner/services/update_checker.py`. Do **not** widen it to a',
+              '  `*.githubusercontent.com` suffix match — `raw.` and `gist.` serve arbitrary',
+              '  user-authored bytes, and the `SHA2-256SUMS` fetch is guarded by this',
+              '  allowlist alone, so the hash cannot backstop a widened set.',
+              '- **anything else** (INTERNALERROR, install failure, skipped legs) → the canary',
+              '  itself is broken and the CDN is probably fine. Fix the canary; do not touch',
+              '  the allowlist on this evidence.',
+              '',
+              '<details><summary>canary.log (last 40 lines)</summary>',
+              '',
+              '```',
+              tail,
+              '```',
+              '',
+              '</details>',
+            ].join('\n');
+
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
               state: 'open',
               labels: 'ytdlp-cdn',
             });
-            if (existing.data.length > 0) {
-              core.info(`Issue #${existing.data[0].number} already open; not filing a duplicate.`);
+
+            if (dryRun) {
+              core.info(`DRY RUN (event: ${context.eventName}) — would post:\n${body}`);
               return;
             }
-            const body = [
-              'The weekly canary failed. A real yt-dlp release-asset download now',
-              'redirects to a host that is **not** in `_GITHUB_URL_ALLOWLIST`, which means',
-              'every in-app yt-dlp install and update is currently refused for every user.',
-              '',
-              '**Fix:** add the exact new host to `_GITHUB_URL_ALLOWLIST` in BOTH',
-              '`anki_miner/services/ytdlp_updater.py` and',
-              '`anki_miner/services/update_checker.py`.',
-              '',
-              'Do **not** widen it to a `*.githubusercontent.com` suffix match — `raw.` and',
-              '`gist.` serve arbitrary user-authored bytes, and the `SHA2-256SUMS` fetch is',
-              'guarded by this allowlist alone, so the hash cannot backstop a widened set.',
-              '',
-              `Run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
-            ].join('\n');
+
+            // Comment rather than return: a stale open issue used to make this step
+            // swallow every later report, so one wrong issue could mask a real drift
+            // indefinitely.
+            if (existing.data.length > 0) {
+              const number = existing.data[0].number;
+              core.info(`Issue #${number} already open; commenting instead of filing a duplicate.`);
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                body,
+              });
+              return;
+            }
+
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
