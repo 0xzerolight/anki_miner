@@ -95,12 +95,13 @@ jobs:
       # query, and performs no writes.
       - name: Report the canary failure
         if: failure()
-        # Byte-identical to what @v7 resolved to, so this pin changes no behaviour
-        # alongside the script rewrite. Deliberately not v9: that commit is
-        # "feat!: add getOctokit to script context, upgrade @actions/github v9,
-        # @octokit/core v7" — two breaking majors landing in the one step this change
-        # rewrites. Let dependabot carry the major as its own reviewable PR.
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        # v9 is a `feat!` carrying two breaking majors (@actions/github v9,
+        # @octokit/core v7), so it was checked against this script rather than taken
+        # on faith: v9 still injects `require` (src/main.ts), so `require('fs')` below
+        # keeps working, and none of the names declared in the script collide with v9's
+        # injected parameters — `getOctokit` became one of them, which is what breaks a
+        # script doing `const getOctokit`.
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const fs = require('fs');
