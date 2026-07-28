@@ -50,6 +50,7 @@ The interface release. An end-to-end UI/UX overhaul touching every screen — wh
 
 ### Fixed
 - **The yt-dlp installer never worked.** GitHub moved release-asset serving to a different host, and the post-redirect allowlist still named the retired one, so the in-app updater refused every download on every platform since it shipped. Bundled builds also carried no yt-dlp binary at all.
+- **The yt-dlp shipped inside the macOS builds could not run.** The vendored binary is itself a PyInstaller bundle, and collecting it through the app's own PyInstaller build rewrote its Mach-O image and dropped the payload appended after it — so on macOS the bundled copy failed to start and only users with their own yt-dlp on PATH could mine YouTube. It is now copied into the bundle after the build instead, byte for byte.
 - **YouTube videos with Japanese auto-captions were reported as having none.** Native-language detection now reads `automatic_captions["ja-orig"]`, which is the actual native-language signal; the previous check read a field derived from the selected audio format, which can name a dub. A missing subtitle also no longer causes the video to download twice.
 - **The settings navigator clipped its own destination names** on any desktop whose default sans face is Latin-only: the rail's width came from a font metric that halves on such faces, and rows never wrapped to it.
 - **The Backfill preview table showed under one row of data** (#102), and the Analytics tables did the same.
