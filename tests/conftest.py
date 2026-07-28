@@ -320,6 +320,44 @@ def _guard_real_home():
 
 
 @pytest.fixture(autouse=True)
+def _no_app_appearance_leak():
+    """Put the shared QApplication's stylesheet and palette back after each test.
+
+    ``Theme.apply_to_app`` installs a ~38 KB stylesheet *and* a palette on the
+    QApplication, and Qt has no "unset" for either — whatever a test leaves
+    behind repaints every widget every later test builds. Composing a
+    MainWindow applies a theme, so the set of tests that can leak one is far
+    larger than the set that names ``apply_to_app``, and which of them shares an
+    xdist worker with a colour assertion is timing-dependent. The symptom is an
+    unrelated test failing on CI and passing locally: ``test_status_badge_motion``
+    read #252525 and #343434 where its own widget-scoped ``background: #ff0000``
+    should have been.
+
+    Restoring to each test's *own* entry state is what makes this airtight: the
+    session starts clean, so if no test can leave a change behind, none can
+    inherit one either.
+
+    Guarded on QApplication already existing so non-GUI tests pay no forced
+    PyQt import.
+    """
+    _widgets = sys.modules.get("PyQt6.QtWidgets")
+    app = _widgets.QApplication.instance() if _widgets is not None else None
+    if app is None or not hasattr(app, "styleSheet"):
+        yield
+        return
+
+    from PyQt6.QtGui import QPalette
+
+    stylesheet = app.styleSheet()
+    palette = QPalette(app.palette())
+    yield
+    if app.styleSheet() != stylesheet:
+        app.setStyleSheet(stylesheet)
+    if app.palette() != palette:
+        app.setPalette(palette)
+
+
+@pytest.fixture(autouse=True)
 def _instant_motion(request):
     """Animations apply their end value immediately, unless a test wants time.
 
