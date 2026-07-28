@@ -136,15 +136,19 @@ class TestItStaysAStylesheetWidget:
     def test_the_dynamic_property_still_drives_qss(self, badge):
         badge.setStyleSheet('QLabel[status="error"] { background: #ff0000; }')
         badge.set_status("error")
-        # Wide enough that the centred label cannot reach the sample point.
-        # At 80x20 the text advanced 71-76px depending on the installed font, so
+        # Wide enough that the label cannot reach the sample point. At 80x20 the
+        # text advanced 71-76px depending on the installed font, so
         # "AnkiConnect" covered the whole widget and the pixel read a black
-        # glyph blended over the red (#990000 on a bare runner, darker still on
-        # a DejaVu-only one) -- a font-metric dependency in an assertion about
-        # the background rule.
+        # glyph blended over the red (#990000 with no desktop fontconfig,
+        # #580000 with DejaVu only, #ff0000 here) -- a font-metric dependency in
+        # an assertion about the background rule.
+        #
+        # The label is left-aligned, so the room has to be taken on the right:
+        # the text ends by x~110 under the widest face measured, and the fill is
+        # flat from x=200 to the rounded cap at the far edge.
         badge.resize(400, 40)
 
-        fill = badge.grab().toImage().pixelColor(20, 20)
+        fill = badge.grab().toImage().pixelColor(300, 20)
 
         assert fill.red() == 255
 
