@@ -2,6 +2,7 @@
 import os
 import platform
 import re
+import sys
 
 import unidic_lite
 
@@ -67,9 +68,20 @@ if os.path.isdir(vendor_alass):
 # Must be a standalone build, never the bare "yt-dlp" zipapp asset: that one shebangs
 # the system python3 (which a packaged app does not ship) and carries no curl_cffi, so
 # --list-impersonate-targets would come back empty.
+#
+# NOT collected on macOS. yt-dlp_macos is itself a PyInstaller onefile: its
+# payload is a PKG archive appended after the Mach-O image. Anything that
+# rewrites the Mach-O -- which is exactly what PyInstaller does to every entry
+# in `binaries` on macOS (arch thinning, install_name_tool, ad-hoc re-signing)
+# -- drops that trailing payload, and the result runs only far enough to say
+#     [PYI-12119:ERROR] Could not load PyInstaller's embedded PKG archive
+# The macOS legs therefore copy the binary into _internal/bin AFTER the build,
+# byte for byte; see the "Vendor yt-dlp into the bundle (macOS)" step in
+# release.yml. Caught by the Intel bundle smoke, which is why the release
+# dry-run runs `all` and not just linux-windows.
 ytdlp_binaries = []
 vendor_ytdlp = os.path.join(project_root, "vendor", "yt-dlp")
-if os.path.isdir(vendor_ytdlp):
+if os.path.isdir(vendor_ytdlp) and sys.platform != "darwin":
     for _fn in sorted(os.listdir(vendor_ytdlp)):
         _full = os.path.join(vendor_ytdlp, _fn)
         if os.path.isfile(_full):

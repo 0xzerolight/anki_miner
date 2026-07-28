@@ -934,6 +934,28 @@ jobs:
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 
+      # macOS only, and it must run AFTER the build. yt-dlp_macos is a
+      # PyInstaller onefile whose payload is a PKG archive appended past the end
+      # of the Mach-O image, so every Mach-O rewrite PyInstaller performs on a
+      # collected binary (arch thinning, install_name_tool, ad-hoc re-signing)
+      # truncates it -- the binary then starts and dies with
+      #   [PYI-12119:ERROR] Could not load PyInstaller's embedded PKG archive
+      # anki_miner.spec skips it on darwin for that reason; this copies it in
+      # byte for byte instead. Fails closed: the bundle smoke's youtube leg
+      # execs this exact path, and the Intel leg is what caught the regression.
+      - name: Vendor yt-dlp into the bundle (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          src="vendor/yt-dlp/yt-dlp"
+          dest="dist/AnkiMiner/_internal/bin"
+          test -f "$src" || { echo "::error::$src missing — the vendor step did not run"; exit 1; }
+          mkdir -p "$dest"
+          cp "$src" "$dest/yt-dlp"
+          chmod +x "$dest/yt-dlp"
+          cmp "$src" "$dest/yt-dlp" || { echo "::error::vendored yt-dlp differs from its source"; exit 1; }
+          "$dest/yt-dlp" --version
+
       # Fetch a tiny ggml acoustic model so the whispercpp smoke can do a REAL
       # construct+decode (the only assertion that catches DEFECT 1's SIGABRT and
       # DEFECT 2's missing CPU backend). Vulkan jobs only (Linux + Windows);
