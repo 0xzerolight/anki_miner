@@ -136,9 +136,17 @@ class TestItStaysAStylesheetWidget:
     def test_the_dynamic_property_still_drives_qss(self, badge):
         badge.setStyleSheet('QLabel[status="error"] { background: #ff0000; }')
         badge.set_status("error")
-        badge.resize(80, 20)
+        # Wide enough that the centred label cannot reach the sample point.
+        # At 80x20 the text advanced 71-76px depending on the installed font, so
+        # "AnkiConnect" covered the whole widget and the pixel read a black
+        # glyph blended over the red (#990000 on a bare runner, darker still on
+        # a DejaVu-only one) -- a font-metric dependency in an assertion about
+        # the background rule.
+        badge.resize(400, 40)
 
-        assert badge.grab().toImage().pixelColor(40, 10).red() == 255
+        fill = badge.grab().toImage().pixelColor(20, 20)
+
+        assert fill.red() == 255
 
     def test_the_object_name_is_unchanged(self, badge):
         assert badge.objectName() == "status-badge"
