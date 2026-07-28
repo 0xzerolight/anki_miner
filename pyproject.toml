@@ -99,6 +99,10 @@ dev = [
     "ruff>=0.9.0",
     "types-requests>=2.31.0",
     "pre-commit>=4.0.0",
+    # Workflow-parsing tests (test_support_docs, test_workflow_qt_deps) import it
+    # directly. It only ever arrived transitively via pre-commit, so a pre-commit
+    # release that drops it would turn those CI gates into a bare ImportError.
+    "pyyaml>=6.0",
 ]
 # Build-time only: pyside6-lrelease compiles .ts → .qm translation catalogs
 # (scripts/i18n.py compile). NOT needed by tests or CI's drift check (which
