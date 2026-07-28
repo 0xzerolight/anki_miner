@@ -10,12 +10,14 @@ import pytest
 from PyQt6.QtCore import QTranslator
 from PyQt6.QtWidgets import QPushButton, QToolButton
 
+from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry, PitchSourceEntry
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
+from anki_miner.gui.widgets.panels.pitch_settings_panel import PitchSettingsPanel
 from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
@@ -105,23 +107,27 @@ def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tm
     dictionary = DictionarySettingsPanel(tmp_path / "dicts")
     frequency = FrequencySettingsPanel(tmp_path / "freqs")
     audio = AudioPackSettingsPanel(tmp_path / "audio")
+    pitch = PitchSettingsPanel(tmp_path / "pitch")
     ui = UISettingsPanel(tmp_path / "themes")
-    for widget in (banner, dictionary, frequency, audio, ui):
+    for widget in (banner, dictionary, frequency, audio, pitch, ui):
         qtbot.addWidget(widget)
 
     dismiss = banner.findChild(QPushButton, "dismissBtn")
     star_wrapper = ui._build_star_cell("test-theme", False)
     star = star_wrapper.findChild(QToolButton, "starToggle")
-    buttons = [
-        dismiss,
-        dictionary._up_btn,
-        dictionary._down_btn,
-        frequency._up_btn,
-        frequency._down_btn,
-        audio._up_btn,
-        audio._down_btn,
-        star,
-    ]
+
+    # The move arrows are per row now, so a chain has to exist before there is
+    # anything to name. Pitch is in the sweep too -- it is the fourth panel on
+    # the same base and was the one this test used to miss.
+    dictionary.set_chain((ChainEntry(kind="indexed", dict_id="a", enabled=True),))
+    frequency.set_chain((FreqEntry(source_id="a", enabled=True),), registry_meta={})
+    audio.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),), registry_meta={})
+    pitch.set_chain((PitchSourceEntry(source_id="a", enabled=True),), registry_meta={})
+
+    buttons = [dismiss, star, *(p._remove_btn for p in (dictionary, frequency, audio, pitch))]
+    for panel in (dictionary, frequency, audio, pitch):
+        for row in panel._rows():
+            buttons.extend((row.up_button, row.down_button))
 
     assert all(button is not None for button in buttons)
     _assert_translated(*(button.accessibleName() for button in buttons if button is not None))

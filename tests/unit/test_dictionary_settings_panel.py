@@ -82,14 +82,15 @@ def test_reorder_controls_disabled_during_scan_placeholder(qapp, qtbot, tmp_path
     qtbot.addWidget(panel)
 
     panel._show_loading_placeholder()
-    assert not panel._up_btn.isEnabled()
-    assert not panel._down_btn.isEnabled()
+    # No rows exist during the placeholder, so there are no move controls to
+    # switch off; what has to be gated is everything that survives it.
+    assert panel._rows() == []
     assert not panel._remove_btn.isEnabled()
+    assert not panel._list.dragEnabled()
 
     panel._rebuild_list()
-    assert panel._up_btn.isEnabled()
-    assert panel._down_btn.isEnabled()
     assert panel._remove_btn.isEnabled()
+    assert panel._list.dragEnabled()
 
 
 def test_frequency_and_pitch_widgets_removed(qapp, qtbot, tmp_path):

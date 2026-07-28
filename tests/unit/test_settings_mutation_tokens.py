@@ -49,16 +49,21 @@ def test_import_token_survives_refresh_rebuild(tab, qtbot, flow_name, panel_name
     qtbot.waitUntil(lambda: not panel._scan_in_flight, timeout=3000)
 
     assert not panel._list.isEnabled()
-    assert not panel._up_btn.isEnabled()
-    assert not panel._down_btn.isEnabled()
     assert not panel._remove_btn.isEnabled()
+    assert not panel._list.dragEnabled()
+    # The move controls live on the rows, so the gate has to reach every one of
+    # them -- moving them off the toolbar must not move them out of the gate.
+    assert all(not row.up_button.isEnabled() and not row.down_button.isEnabled() for row in panel._rows())
 
     flow._set_import_buttons_enabled(True)
 
     assert panel._list.isEnabled()
-    assert panel._up_btn.isEnabled()
-    assert panel._down_btn.isEnabled()
     assert panel._remove_btn.isEnabled()
+    assert panel._list.dragEnabled()
+    rows = panel._rows()
+    # Boundary-aware once released: interior rows offer both directions.
+    assert all(row.up_button.isEnabled() for row in rows[1:])
+    assert all(row.down_button.isEnabled() for row in rows[:-1])
 
 
 def test_named_tokens_are_ref_counted_and_release_is_idempotent(tab):

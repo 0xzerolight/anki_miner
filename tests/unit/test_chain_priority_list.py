@@ -152,6 +152,52 @@ class TestReorder:
 
         assert _ids(dragged.get_chain()) == _ids(clicked.get_chain()) == ["b", "c", "a"]
 
+    def test_a_rows_arrow_moves_that_row_not_the_selected_one(self, kind, qtbot, tmp_path):
+        """The reason the buttons moved onto the rows.
+
+        A toolbar arrow acted on ``currentRow()``, so reordering meant click the
+        row, then travel to the far corner, then click up. On the row itself the
+        button has to mean *this* row -- including when the selection is
+        somewhere else entirely, which is what a first click would leave behind.
+        """
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+        widget._list.setCurrentRow(0)
+
+        widget._row_widget(2).up_button.click()
+
+        assert _ids(widget.get_chain()) == ["a", "c", "b"]
+
+    def test_the_arrows_stop_at_the_ends_of_the_list(self, kind, qtbot, tmp_path):
+        """A button that cannot do anything should not invite a press."""
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+
+        rows = widget._rows()
+
+        assert not rows[0].up_button.isEnabled()
+        assert rows[0].down_button.isEnabled()
+        assert rows[1].up_button.isEnabled()
+        assert rows[1].down_button.isEnabled()
+        assert rows[-1].up_button.isEnabled()
+        assert not rows[-1].down_button.isEnabled()
+
+    def test_a_mutation_switches_every_rows_arrows_off(self, kind, qtbot, tmp_path):
+        """Moving the controls onto the rows must not escape the mutation gate."""
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+
+        widget._set_reorder_controls_enabled(False)
+
+        assert all(not row.up_button.isEnabled() and not row.down_button.isEnabled() for row in widget._rows())
+        assert widget._list.dragEnabled() is False
+
+    def test_the_arrows_still_work_after_a_rebuild(self, kind, qtbot, tmp_path):
+        """A rebuild destroys every row widget, connections included."""
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+
+        widget._rebuild_list()
+        widget._row_widget(0).down_button.click()
+
+        assert _ids(widget.get_chain()) == ["b", "a", "c"]
+
     def test_a_disabled_row_keeps_its_own_flag_across_a_drag(self, kind, qtbot, tmp_path):
         """The defect this whole component is guarded against.
 
@@ -305,6 +351,18 @@ class TestLoadingWritesNothing:
 # ------------------------------------------------------------------- the chrome
 
 
+def _glyph_controls(panel):
+    """Every glyph-only control the panel shows: the move pairs and the trash.
+
+    The move arrows sit on the rows rather than in the toolbar, so "the glyph
+    controls" is per-row plus the one panel-level remove.
+    """
+    controls = [panel._remove_btn]
+    for row in panel._rows():
+        controls.extend((row.up_button, row.down_button))
+    return controls
+
+
 class TestOneClearAddAndOneRedTrash:
     def test_each_panel_offers_exactly_one_add_control(self, panel):
         """Accent is scarce (D41): one task action, so one accent button."""
@@ -340,14 +398,20 @@ class TestOneClearAddAndOneRedTrash:
         # One character, so no presentation selector is being relied on either.
         assert [ord(ch) for ch in glyph] == [0x2715]
 
-    def test_the_three_glyph_controls_are_square(self, panel):
-        for button in (panel._up_btn, panel._down_btn, panel._remove_btn):
+    def test_the_glyph_controls_are_square(self, panel):
+        for button in _glyph_controls(panel):
             assert button.maximumWidth() == button.minimumWidth() == button.minimumHeight()
 
     def test_every_glyph_control_says_what_it_is(self, panel):
-        for button in (panel._up_btn, panel._down_btn, panel._remove_btn):
+        for button in _glyph_controls(panel):
             assert button.accessibleName()
             assert button.toolTip()
+
+    def test_the_move_controls_are_not_accent_spenders(self, panel):
+        """D41: the accent is Add. A reorder arrow is an ordinary control."""
+        for row in panel._rows():
+            assert row.up_button.objectName() == "secondary"
+            assert row.down_button.objectName() == "secondary"
 
     def test_the_add_control_names_what_it_adds(self, panel):
         assert panel._add_btn.text() not in {"", "Add"}

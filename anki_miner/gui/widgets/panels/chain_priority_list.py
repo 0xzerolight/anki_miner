@@ -9,11 +9,14 @@ one cramped right-aligned string carrying whatever metadata the row had.
 This module is the replacement, and there is only one of it:
 
 * :class:`ChainPriorityList` is the list itself. Reordering is what a list of
-  priorities is *for*, so it is done by dragging a row, and the arrow buttons
-  the panels keep are the keyboard/fallback path onto the same code.
+  priorities is *for*, so it is done by dragging a row, and the per-row arrow
+  buttons are the keyboard/fallback path onto the same code.
 * :class:`ChainSourceRow` is one row: the source's name on its own line, its own
-  facts (format, entry count, staleness) on the line below, and an enable toggle
-  that says what it toggles instead of being an unlabelled 30x22 checkbox.
+  facts (format, entry count, staleness) on the line below, an enable toggle
+  that says what it toggles instead of being an unlabelled 30x22 checkbox, and
+  the two move arrows. The arrows are on the row and not in a toolbar under the
+  list because reordering row three should not mean travelling to the bottom
+  corner of the panel and back.
 * :class:`ChainRowSpec` is what a panel hands in. Everything in it is already
   translated: the panels own their own ``tr`` contexts and this module makes no
   ``tr()`` call, so extraction contexts never churn when a row changes shape.
@@ -33,7 +36,6 @@ from PyQt6.QtCore import QModelIndex, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
-    QLabel,
     QListWidget,
     QSizePolicy,
     QVBoxLayout,
@@ -48,6 +50,29 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 #: Separator between the facts on a row's metadata line. A middle dot rather
 #: than a comma: these are independent facts, not a list of one kind of thing.
 METADATA_SEPARATOR = " · "
+
+#: Glyphs on the two move controls. Plain BMP arrows, so no colour emoji font
+#: can claim them -- see ``ChainSettingsPanelBase._REMOVE_GLYPH`` for the bin
+#: that did.
+MOVE_UP_GLYPH = "↑"
+MOVE_DOWN_GLYPH = "↓"
+
+
+@dataclass(frozen=True)
+class ChainRowActions:
+    """The move controls' translated strings, which are the same on every row.
+
+    Separate from :class:`ChainRowSpec` on purpose: a spec is what *this entry*
+    is, and these four strings are what the *panel* calls the action. Folding
+    them into the spec would copy panel-wide action copy into all four
+    ``_row_spec()`` producers. The panel builds one of these from its
+    ``ChainListLabels`` and hands the same instance to every row.
+    """
+
+    move_up: str
+    move_down: str
+    move_up_tooltip: str = ""
+    move_down_tooltip: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,15 +112,28 @@ class ChainSourceRow(QWidget):
     Emits :attr:`toggled` when the user changes the enable state. Construction
     sets the initial state *before* connecting, so rebuilding a list never looks
     like a user edit.
+
+    The move buttons sit on the row rather than in a toolbar under the list, and
+    emit :attr:`move_up_requested` / :attr:`move_down_requested` carrying *this
+    row*. The panel resolves the index from the widget, never from
+    ``currentRow()``: a button on row 3 must move row 3 whatever is selected.
     """
 
     toggled = pyqtSignal()
+    move_up_requested = pyqtSignal(object)
+    move_down_requested = pyqtSignal(object)
 
-    def __init__(self, spec: ChainRowSpec, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        spec: ChainRowSpec,
+        actions: ChainRowActions,
+        parent: QWidget | None = None,
+    ) -> None:
         """Build the row.
 
         Args:
             spec: The already-translated content of this row.
+            actions: The panel's already-translated move-control strings.
             parent: Optional parent widget.
         """
         super().__init__(parent)
@@ -122,13 +160,22 @@ class ChainSourceRow(QWidget):
         detail.setContentsMargins(0, 0, 0, 0)
         detail.setSpacing(SPACING.xs)
 
-        self.metadata_label = QLabel(METADATA_SEPARATOR.join(spec.metadata))
+        # Metadata and warning elide like the title does. They used to be plain
+        # labels, which was survivable while the row's right edge held only a
+        # checkbox; with the move buttons there too, an untruncated
+        # "yomitan · 523,745 entries" plus a staleness sentence pushes the row's
+        # minimum past a 1024px window at large text scales, and a QListWidget
+        # answers that with a horizontal scrollbar rather than a shorter line.
+        self.metadata_label = ElidingLabel(METADATA_SEPARATOR.join(spec.metadata))
         self.metadata_label.setObjectName("chain-row-meta")
         if spec.metadata_tooltip:
-            self.metadata_label.setToolTip(spec.metadata_tooltip)
+            # Not setToolTip: this tooltip explains the metadata rather than
+            # repeating it, and elision rewrites the plain tooltip on every
+            # re-render.
+            self.metadata_label.set_tooltip_override(spec.metadata_tooltip)
         detail.addWidget(self.metadata_label)
 
-        self.warning_label = QLabel(spec.warning)
+        self.warning_label = ElidingLabel(spec.warning)
         self.warning_label.setObjectName("chain-row-warning")
         detail.addWidget(self.warning_label)
         detail.addStretch()
@@ -151,6 +198,41 @@ class ChainSourceRow(QWidget):
         if spec.repair_text:
             self.repair_button = ModernButton(spec.repair_text, variant="ghost")
             row.addWidget(self.repair_button)
+
+        self.up_button = self._move_button(
+            MOVE_UP_GLYPH, actions.move_up, actions.move_up_tooltip, self.move_up_requested
+        )
+        row.addWidget(self.up_button)
+        self.down_button = self._move_button(
+            MOVE_DOWN_GLYPH, actions.move_down, actions.move_down_tooltip, self.move_down_requested
+        )
+        row.addWidget(self.down_button)
+
+    def _move_button(self, glyph: str, name: str, tooltip: str, signal) -> ModernButton:
+        """One glyph-only move control, named for anyone who cannot see it."""
+        # ModernButton(square=True), not apply_button_size: the constructor also
+        # sets the `square` Qt property that `QPushButton[square="true"]` needs
+        # to give a glyph-only box a symmetric inset. Without it the global
+        # button padding, which is measured for a word, leaves the arrow a
+        # negative content box and clips it to a sliver.
+        # `secondary` explicitly: ModernButton defaults to `primary`, and D41
+        # spends the accent on exactly one task action per screen -- which on
+        # these panels is Add, not a reorder arrow.
+        button = ModernButton(glyph, variant="secondary", square=True)
+        button.setAccessibleName(name)
+        button.setToolTip(tooltip or name)
+        button.clicked.connect(lambda: signal.emit(self))
+        return button
+
+    def set_move_enabled(self, *, up: bool, down: bool) -> None:
+        """Switch the two move controls independently.
+
+        Called with ``up=False`` on the first row and ``down=False`` on the
+        last, so a button is only offered when it would do something, and with
+        both false while a mutation owns the panel.
+        """
+        self.up_button.setEnabled(up)
+        self.down_button.setEnabled(down)
 
     def get_enabled(self) -> bool:
         """Whether this row's source is currently switched on."""
