@@ -60,6 +60,7 @@ LEDGER: dict[str, str] = {
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.restore_unlisted": "confirm",
     "gui/main_window.py::MainWindow._restyle_mined_cards": "confirm",
     "gui/main_window.py::MainWindow._on_stale_dicts_scanned": "choice",
+    "gui/widgets/analytics_tab.py::AnalyticsTab._on_reset_clicked": "confirm",
     "gui/widgets/backfill_tab.py::CardBackfillTab._start_apply": "confirm",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_import_parsed": "confirm",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_reset": "confirm",

@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QProgressBar,
     QScrollArea,
     QTableWidget,
@@ -129,6 +130,13 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # Guard against overlapping off-thread refreshes stacking up (a fast
         # tab switch fires showEvent repeatedly). Cleared in on_done/on_error.
         self._refresh_in_flight: bool = False
+        # Reset and refresh are strictly serialised against each other: a refresh
+        # that read the tables before the delete landed would otherwise render its
+        # pre-delete snapshot *after* the reset finished, leaving the tab showing
+        # numbers that no longer exist. A refresh disarms the reset button while it
+        # runs, and this flag makes refresh_data a no-op while a reset runs, so the
+        # two can never overlap in either direction.
+        self._reset_in_flight: bool = False
         self._setup_ui()
         self._setup_accessibility()
 
@@ -152,8 +160,17 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # Section 4: Milestones
         layout.addWidget(self._create_milestones_section())
 
-        # Refresh button
+        # Reset (far left, away from Refresh) and Refresh buttons
         button_layout = QHBoxLayout()
+        self.reset_button = ModernButton(self.tr("Reset Statistics…"), variant="critical")
+        self.reset_button.setToolTip(
+            self.tr("Delete every recorded mining session and difficulty score. This cannot be undone.")
+        )
+        # Armed only once a refresh proves there is something to delete, so an
+        # empty database never raises a confirmation with nothing behind it.
+        self.reset_button.setEnabled(False)
+        self.reset_button.clicked.connect(self._on_reset_clicked)
+        button_layout.addWidget(self.reset_button)
         button_layout.addStretch()
         self.refresh_button = ModernButton(self.tr("Refresh"), variant="secondary")
         self.refresh_button.clicked.connect(lambda: self.refresh_data(force=True))
@@ -330,6 +347,11 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         if not self.stats_service.is_available():
             return
 
+        # A reset owns the tables until it finishes, and ends by forcing its own
+        # refresh. Reading here would only race the delete.
+        if self._reset_in_flight:
+            return
+
         if (
             not force
             and self._last_refresh is not None
@@ -343,6 +365,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         if self._refresh_in_flight:
             return
         self._refresh_in_flight = True
+        # No reset over a half-rendered table; _apply_bundle re-arms it.
+        self.reset_button.setEnabled(False)
 
         service = self.stats_service
 
@@ -393,8 +417,58 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             action=lambda: self.refresh_data(force=True),
         )
 
+    def _on_reset_clicked(self) -> None:
+        """Confirm, then wipe both stats tables off the GUI thread.
+
+        The emptied tab is the receipt -- no success modal, the same way
+        ``KnownWordsManagerDialog._on_reset`` just redraws its list.
+        """
+        confirm = QMessageBox.question(
+            self,
+            self.tr("Reset Statistics"),
+            self.tr(
+                "Delete every recorded mining session and series difficulty score? "
+                "This cannot be undone. Your Anki cards, known words, and settings "
+                "are not affected."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+
+        self._reset_in_flight = True
+        self.reset_button.setEnabled(False)
+        self.refresh_button.setEnabled(False)
+        service = self.stats_service
+        run_off_thread(self, service.reset, self._on_reset_done, self._on_reset_error)
+
+    def _on_reset_done(self, _removed: object) -> None:
+        """GUI thread: re-read the now-empty tables so the tab shows the result."""
+        self._reset_in_flight = False
+        self.refresh_button.setEnabled(True)
+        self.clear_screen_issue()
+        # force=True: the TTL would otherwise swallow the one refresh that matters.
+        self.refresh_data(force=True)
+
+    def _on_reset_error(self, msg: str) -> None:
+        """GUI thread: re-arm both buttons and say so on screen (D24)."""
+        self._reset_in_flight = False
+        self.refresh_button.setEnabled(True)
+        self.reset_button.setEnabled(True)
+        logging.getLogger(__name__).error("Failed to reset analytics data: %s", msg)
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("Statistics could not be reset."),
+                details=msg,
+            )
+        )
+
     def _apply_bundle(self, bundle: _AnalyticsBundle) -> None:
         """Render every section from a pre-fetched bundle (GUI thread)."""
+        # Nothing recorded means nothing to reset: leave the button disabled
+        # rather than raise a confirmation over an empty database.
+        self.reset_button.setEnabled(bundle.stats.total_sessions > 0 or bool(bundle.difficulties))
         self._update_dashboard(bundle.stats)
         self._update_recent_sessions(bundle.sessions)
         self._update_difficulty_ranking(bundle.difficulties)

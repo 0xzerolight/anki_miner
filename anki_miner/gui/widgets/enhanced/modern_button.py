@@ -68,8 +68,9 @@ class ModernButton(QPushButton):
     - ``secondary``: the ordinary quiet control. Neutral text on a bordered box.
     - ``ghost``: quiet to the point of losing its border.
     - ``danger``: red *outline*, for reversible removals.
-    - ``critical``: solid red. Reserved for the two irreversible actions in the
-      app — deleting a settings profile and resetting the user Known Words list.
+    - ``critical``: solid red. Reserved for the three irreversible actions in the
+      app — deleting a settings profile, resetting the user Known Words list, and
+      resetting the Analytics statistics.
 
     Only ``primary`` stays eligible to become a dialog's automatic default, so
     Enter lands on the task action rather than on whichever quiet button

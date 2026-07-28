@@ -326,8 +326,9 @@ class TestDialogDefaultHierarchy:
 class TestCallSiteRoles:
     """The classification itself, read out of the source."""
 
-    def test_exactly_two_call_sites_are_critical(self):
+    def test_exactly_three_call_sites_are_critical(self):
         assert _roles_by_module()["critical"] == {
+            ("analytics_tab.py", "Reset Statistics…"),
             ("known_words_dialog.py", "Reset User List"),
             ("profile_manager_dialog.py", "Delete"),
         }

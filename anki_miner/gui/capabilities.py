@@ -239,6 +239,16 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("analytics"),
         keywords=("analytics", "stats", "statistics", "history", "progress", "count", "graph"),
     ),
+    Capability(
+        id="reset-stats",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Reset mining statistics"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Clear every recorded session and difficulty score to start counting again."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("analytics"),
+        keywords=("reset stats", "clear statistics", "wipe analytics", "erase history", "start over", "delete stats"),
+    ),
     # --- Filtering ---------------------------------------------------------
     Capability(
         id="i-plus-one",
