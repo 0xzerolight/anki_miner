@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractButton,
@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.widgets.base.setting_anchor import SettingAnchorHost, SettingTextProvider
-from anki_miner.gui.widgets.base.sizing import configure_card_layout, make_label_fit_text
+from anki_miner.gui.widgets.base.sizing import configure_card_layout, form_row_cap, make_label_fit_text
 
 
 class FormPanel(SettingAnchorHost, QFrame):
@@ -83,6 +83,10 @@ class FormPanel(SettingAnchorHost, QFrame):
         # Heading of the section fields are currently landing in, read lazily by
         # the anchor text providers so search matches the section name too.
         self._active_section_label: QLabel | None = None
+        # Every labelled row this panel owns, across all its form layouts, so
+        # the field cap can be recomputed as one column when the text scale
+        # changes. Sections open new form layouts but share the label column.
+        self._form_rows: list[tuple[QLabel | None, QWidget]] = []
 
         self._main_layout.addLayout(self._form_layout)
 
@@ -99,7 +103,44 @@ class FormPanel(SettingAnchorHost, QFrame):
         layout.setSpacing(SPACING.xxs)
         layout.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        # Qt's default form alignment is platform-dependent, and the capped rows
+        # below are narrower than the card, so an unset alignment would let some
+        # styles centre the form inside a page-wide card.
+        layout.setFormAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         return layout
+
+    def _apply_field_cap(self) -> None:
+        """Stop the fields growing with the card (D5).
+
+        The page is one column wide for every screen, which is much wider than a
+        labelled row can spend -- ``ExpandingFieldsGrow`` would otherwise hand a
+        text box the whole of it. Every field is capped to the same width so the
+        column of inputs keeps a straight right edge: the cap is the row measure
+        minus the widest label, because ``QFormLayout`` aligns every field at
+        the widest label's x.
+
+        Runs on show and again on a font change, not once at construction: the
+        UI text scale is applied live from Settings, and a width frozen at build
+        time is stale the moment the user moves that slider.
+        """
+        if not self._form_rows:
+            return
+        widest = max((label.sizeHint().width() for label, _ in self._form_rows if label is not None), default=0)
+        for label, field in self._form_rows:
+            spacing = self._form_layout.horizontalSpacing() if label is not None else 0
+            cap = form_row_cap(field) - (widest + max(spacing, 0) if label is not None else 0)
+            # Never below what the field itself needs: Qt applies a maximum
+            # after a minimum, so a smaller cap clips rather than shrinks.
+            field.setMaximumWidth(max(cap, field.minimumSizeHint().width()))
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().showEvent(event)
+        self._apply_field_cap()
+
+    def changeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().changeEvent(event)
+        if event is not None and event.type() == QEvent.Type.FontChange:
+            self._apply_field_cap()
 
     def _create_field_label(self, text: str) -> QLabel | None:
         """Create a label for a form field with proper sizing.
@@ -158,6 +199,7 @@ class FormPanel(SettingAnchorHost, QFrame):
         else:
             field_label.setBuddy(widget)
             self._active_form_layout.addRow(field_label, widget)
+        self._form_rows.append((field_label, widget))
 
         self._register_setting_anchor(
             widget,

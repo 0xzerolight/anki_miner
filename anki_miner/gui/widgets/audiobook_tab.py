@@ -109,7 +109,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
     """
 
     #: Tables and queue rows genuinely use the extra width.
-    PAGE_WIDTH = PageWidth.DATA
+    PAGE_WIDTH = PageWidth.PAGE
 
     _shutdown_log_name = "Audiobook"
     _status_ready = ReadyItemStatus.READY

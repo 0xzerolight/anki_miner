@@ -68,7 +68,7 @@ class BatchProcessingTab(MiningTabBase):
     """
 
     #: Tables and queue rows genuinely use the extra width.
-    PAGE_WIDTH = PageWidth.DATA
+    PAGE_WIDTH = PageWidth.PAGE
 
     #: Published so this screen's Cancel gets a live wait clock and the pinned
     #: bar gets a stage and a progress bar (D17, D22). One id for both paths --

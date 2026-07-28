@@ -98,7 +98,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
     """Scan → preview table → Apply, over the configured note type."""
 
     #: Tables and queue rows genuinely use the extra width.
-    PAGE_WIDTH = PageWidth.DATA
+    PAGE_WIDTH = PageWidth.PAGE
 
     #: Published so this screen's Cancel gets a live wait clock and the pinned
     #: bar gets progress and a clock (D17, D22). Scan and Apply are two runs of

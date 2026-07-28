@@ -13,7 +13,7 @@ produced.
 
 from enum import Enum
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtWidgets import (
     QFrame,
     QLabel,
@@ -179,14 +179,20 @@ class PageWidth(Enum):
     """How much horizontal measure a screen's content can usefully spend.
 
     Values are counts of characters, not pixels -- see :func:`page_width_cap`.
-    A monitor wider than this buys gutters, because a wider "Video file" box
-    carries no more information than a narrow one.
+    A monitor wider than this buys gutters.
+
+    There is deliberately one member. This started as two -- a narrow FORM
+    class and a wide DATA class -- which meant the content column jumped by
+    550px as the user moved between sibling tabs, and Deck Builder, capped by
+    neither, ran the full window as a third width. Reading that as three
+    unrelated screens is exactly what the split produced.
+
+    Keeping form inputs readable is a separate job, done a level down by
+    :func:`form_row_cap`, not by narrowing the page they sit on.
     """
 
-    #: A label beside its control: two measures side by side.
-    FORM = 2 * _READABLE_MEASURE_CH
-    #: Queues, tables and analytics, whose columns really do use the room.
-    DATA = 3 * _READABLE_MEASURE_CH
+    #: One column for every screen: three readable measures.
+    PAGE = 3 * _READABLE_MEASURE_CH
 
 
 def page_width_cap(widget: QWidget, kind: PageWidth) -> int:
@@ -206,6 +212,83 @@ def page_width_cap(widget: QWidget, kind: PageWidth) -> int:
     """
     widget.ensurePolished()
     return kind.value * widget.fontMetrics().horizontalAdvance("0")
+
+
+def form_row_cap(widget: QWidget) -> int:
+    """Return the width one labelled row may spend, measured through ``widget``.
+
+    A page is one column wide for every screen (:class:`PageWidth`), but a form
+    row is a label beside its control, and a control given the whole column is
+    just a longer empty box -- a 1500px "Video file" field holds no more of a
+    path than a 900px one does. So the row stops here and leaves the rest of
+    the column as whitespace.
+
+    Two readable measures, which is what the narrow page class used to be, so
+    rows come out the width they already were before the column widened.
+
+    Callers must add the row with an explicit ``AlignLeft``: Qt centres a
+    layout item whose widget is narrower than its cell unless an alignment flag
+    says otherwise (``QWidgetItem::setGeometry`` falls through to the centring
+    branch when the horizontal alignment resolves to 0), and a centred form
+    column stops lining up with the full-width cards above and below it.
+
+    Args:
+        widget: The widget whose rendered font decides the measure.
+
+    Returns:
+        The maximum row width in pixels.
+    """
+    widget.ensurePolished()
+    return 2 * _READABLE_MEASURE_CH * widget.fontMetrics().horizontalAdvance("0")
+
+
+class _RowCapKeeper(QObject):
+    """Re-applies a row-field cap whenever the field's font changes.
+
+    The UI text scale is applied live from Settings without rebuilding the
+    tabs, so a cap computed once at construction is stale the moment the user
+    moves that slider -- and a stale cap on a *grown* font clips the field
+    instead of merely narrowing it. Panels that own their rows
+    (:class:`~anki_miner.gui.widgets.base.form_panel.FormPanel`,
+    :class:`~anki_miner.gui.widgets.enhanced.file_selector.FileSelector`)
+    recompute in their own ``changeEvent``; this is the same rule for a row
+    some screen built by hand, with no subclass to hang it on.
+    """
+
+    def __init__(self, field: QWidget, label_width: int, spacing: int) -> None:
+        super().__init__(field)
+        self._field = field
+        self._label_width = label_width
+        self._spacing = spacing
+        field.installEventFilter(self)
+
+    def apply(self) -> None:
+        cap = form_row_cap(self._field) - self._label_width - self._spacing
+        self._field.setMaximumWidth(max(cap, self._field.minimumSizeHint().width()))
+
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
+        # Show, not construction: reading ``minimumSizeHint`` activates the
+        # layout, and doing that on a widget that has never been shown clears
+        # the hidden flag Qt put on its children.
+        if event is not None and event.type() in (QEvent.Type.Show, QEvent.Type.FontChange):
+            self.apply()
+        return False
+
+
+def cap_row_field(field: QWidget, label_width: int, spacing: int = 0) -> None:
+    """Cap a hand-built labelled row's field to the shared row measure (D5).
+
+    For rows a screen assembles itself out of a ``QLabel`` and a control,
+    rather than through ``FormPanel`` or ``FileSelector``. Add a trailing
+    stretch to the row as well: the cap decides how wide the field is, the
+    stretch decides that the slack goes to its right rather than around it.
+
+    Args:
+        field: The control beside the label.
+        label_width: Width of the row's label column.
+        spacing: The row layout's gap between label and field.
+    """
+    _RowCapKeeper(field, label_width, spacing)
 
 
 def configure_scrolled_page(scroll: QScrollArea, content: QWidget, kind: PageWidth) -> None:

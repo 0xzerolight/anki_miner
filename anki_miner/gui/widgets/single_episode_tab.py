@@ -41,6 +41,7 @@ from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssue,
+    cap_row_field,
     configure_card_layout,
     configure_expanding_container,
     field_label_width,
@@ -77,7 +78,7 @@ class SingleEpisodeTab(MiningTabBase):
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
-    PAGE_WIDTH = PageWidth.FORM
+    PAGE_WIDTH = PageWidth.PAGE
 
     #: Published so this screen's Cancel gets a live wait clock and the pinned
     #: bar gets a stage and a progress bar (D17, D22).
@@ -310,6 +311,11 @@ class SingleEpisodeTab(MiningTabBase):
         self.recent_combo.addItem(self.tr("Select recent file pair..."))
         self.recent_combo.currentIndexChanged.connect(self._on_recent_selected)
         recent_layout.addWidget(self.recent_combo, 1)
+        # Hand-built row, so it needs the row cap the FileSelectors below get
+        # from their own constructor; without it this one control would stretch
+        # to the full page column while the file rows under it stopped short.
+        cap_row_field(self.recent_combo, label_w, recent_layout.spacing())
+        recent_layout.addStretch()
         layout.addLayout(recent_layout)
 
         self._refresh_recent_combo()

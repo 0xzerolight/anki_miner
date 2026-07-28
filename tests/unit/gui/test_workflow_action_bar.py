@@ -45,7 +45,7 @@ def _page(qtbot, *, with_log: bool = True):
     log = LogWidget() if with_log else None
     if log is not None:
         content.layout().addWidget(log)
-    bar = install_workflow_shell(layout, scroll, content, PageWidth.FORM, log=log)
+    bar = install_workflow_shell(layout, scroll, content, PageWidth.PAGE, log=log)
     page.setLayout(layout)
     qtbot.addWidget(page)
     return page, scroll, bar, log

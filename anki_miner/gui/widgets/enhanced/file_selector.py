@@ -3,7 +3,7 @@
 from collections.abc import Callable, Iterable
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QFont
 from PyQt6.QtWidgets import (
     QHBoxLayout,
@@ -19,7 +19,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.qt_helpers import urls_from_event
-from anki_miner.gui.widgets.base import ElidingLabel, make_label_fit_text
+from anki_miner.gui.widgets.base import ElidingLabel, form_row_cap, make_label_fit_text
 from anki_miner.utils.i18n import tr_format
 
 #: A drop validator answers "may this path land here, and if not, why not".
@@ -220,6 +220,32 @@ class FileSelector(QWidget):
 
         # Initial status
         self._update_status()
+
+    def _apply_row_cap(self) -> None:
+        """Stop the whole row growing with the page it sits on (D5).
+
+        This widget *is* the labelled row -- label, input and Browse in one
+        box -- so the cap belongs on the widget, not on ``self.input``. Capping
+        the input alone would just hand the surplus to the label and the button
+        and leave the row page-wide anyway.
+
+        Applied on show rather than in ``_setup_ui``: reading
+        ``minimumSizeHint`` activates the layout, and activating it on a widget
+        that has never been shown clears the hidden flag Qt put on the children,
+        which would make a blank picker display its "No file selected" helper
+        row. Recomputed on a font change, because the UI text scale is applied
+        live and a cap frozen at build time clips a grown field.
+        """
+        self.setMaximumWidth(max(form_row_cap(self), self.minimumSizeHint().width()))
+
+    def showEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().showEvent(event)
+        self._apply_row_cap()
+
+    def changeEvent(self, event) -> None:  # noqa: N802 - Qt override
+        super().changeEvent(event)
+        if event is not None and event.type() == QEvent.Type.FontChange:
+            self._apply_row_cap()
 
     def _on_text_changed(self, text: str) -> None:
         """Handle input text change.
