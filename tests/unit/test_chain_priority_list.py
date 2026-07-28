@@ -28,6 +28,7 @@ from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.chain_priority_list import ChainPriorityList, ChainSourceRow
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import ChainSettingsPanelBase
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.widgets.panels.pitch_settings_panel import PitchSettingsPanel
@@ -318,6 +319,26 @@ class TestOneClearAddAndOneRedTrash:
     def test_removal_is_an_outline_not_a_fill(self, panel):
         """D41: solid red is reserved for the two irreversible actions."""
         assert panel._remove_btn.objectName() == "danger"
+
+    def test_the_remove_glyph_is_flat_ui_text_not_an_emoji(self):
+        """U+1F5D1 WASTEBASKET rendered as Noto's colour bin, not as UI text.
+
+        The glyph carried U+FE0E to ask for text presentation, and Linux font
+        matching ignores it: fontconfig hands the astral code point to the
+        colour emoji font regardless, so the flat monochrome UI grew one 3D
+        teal bin. There is no monochrome wastebasket to switch to -- any trash
+        code point pulls the same font somewhere -- so the control says what it
+        does with the same multiplication X the update banner already dismisses
+        with, in the same family as the two arrows beside it.
+
+        Pinned as an exact value on purpose. "Not astral" would not hold the
+        line: U+2705 and U+2764 are inside the BMP and still default to emoji.
+        """
+        glyph = ChainSettingsPanelBase._REMOVE_GLYPH
+
+        assert glyph == "✕"
+        # One character, so no presentation selector is being relied on either.
+        assert [ord(ch) for ch in glyph] == [0x2715]
 
     def test_the_three_glyph_controls_are_square(self, panel):
         for button in (panel._up_btn, panel._down_btn, panel._remove_btn):

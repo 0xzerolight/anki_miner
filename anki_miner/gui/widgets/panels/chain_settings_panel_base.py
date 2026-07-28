@@ -156,11 +156,19 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     _SCAN_ERROR_LABEL: ClassVar[str] = "Registry scan failed"
     _REMOVE_ERROR_NOUN: ClassVar[str] = "folder"
 
-    #: Glyphs on the three square controls. Text-presentation selectors keep the
-    #: bin monochrome next to two monochrome arrows on platforms that offer both.
+    #: Glyphs on the three square controls, all plain UI text.
+    #:
+    #: Remove was U+1F5D1 WASTEBASKET followed by U+FE0E, which asks for text
+    #: presentation. Linux font matching ignores that request -- fontconfig
+    #: hands the astral code point to the colour emoji font anyway -- so the
+    #: control shipped as a 3D teal bin in an otherwise flat monochrome UI. No
+    #: monochrome trash can exists to swap in; every trash code point pulls the
+    #: emoji font on some platform. U+2715 is the same multiplication X the
+    #: update banner already dismisses with, and the same kind of glyph as the
+    #: two arrows beside it. Do not reach for a bin again.
     _UP_GLYPH: ClassVar[str] = "↑"
     _DOWN_GLYPH: ClassVar[str] = "↓"
-    _REMOVE_GLYPH: ClassVar[str] = "\U0001f5d1︎"
+    _REMOVE_GLYPH: ClassVar[str] = "✕"
 
     # --- Instance attributes the base builds in _build_chain_container ---
     _list: ChainPriorityList

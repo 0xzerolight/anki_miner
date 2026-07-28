@@ -274,7 +274,7 @@ class TestSquareGlyphControls:
         button.show()
         return button
 
-    @pytest.mark.parametrize(("glyph", "variant"), [("↑", "secondary"), ("↓", "secondary"), ("🗑︎", "danger")])
+    @pytest.mark.parametrize(("glyph", "variant"), [("↑", "secondary"), ("↓", "secondary"), ("✕", "danger")])
     def test_the_glyph_is_not_clipped_away(self, qtbot, glyph, variant):
         button = self._polished(qtbot, ModernButton(glyph, variant=variant, square=True))
 
