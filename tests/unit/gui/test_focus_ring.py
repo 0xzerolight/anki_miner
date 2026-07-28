@@ -147,6 +147,20 @@ def _make_tree() -> QTreeWidget:
     return tree
 
 
+def _make_settings_nav() -> QListWidget:
+    """The Settings navigator, which is styled by object name, not by class.
+
+    Not covered by the plain ``QListWidget`` case: ``#settings-nav`` has rules
+    of its own, and the gap is how a per-item accent box shipped as this list's
+    "focus ring" while the generic case stayed green.
+    """
+    widget = QListWidget()
+    widget.setObjectName("settings-nav")
+    widget.addItems(["Cards & Anki", "Dictionaries", "Frequency"])
+    widget.setCurrentRow(1)
+    return widget
+
+
 #: Every interactive control class the application puts in a tab chain.
 CONTROLS = {
     "QPushButton": lambda: QPushButton("Mine"),
@@ -159,6 +173,7 @@ CONTROLS = {
     "QTextEdit": lambda: QTextEdit("log"),
     "QPlainTextEdit": lambda: QPlainTextEdit("pasted text"),
     "QListWidget": _make_list,
+    "QListWidget#settings-nav": _make_settings_nav,
     "QTableWidget": lambda: QTableWidget(2, 2),
     "QTreeWidget": _make_tree,
 }
@@ -234,6 +249,46 @@ def test_focus_paints_an_accent_ring_on_every_control(control, mode, qapp):
         f"{focused} accent pixels focused vs {unfocused} unfocused "
         f"(accent {accent.name()})"
     )
+
+
+@pytest.mark.parametrize("mode", [LIGHT_THEME, DARK_THEME])
+def test_the_settings_navigator_never_boxes_a_destination(mode, qapp):
+    """The ring belongs to the list. Nothing draws a box around a row's text.
+
+    ``QListWidget#settings-nav:focus { outline: 2px solid … }`` read as "ring
+    the viewport"; Qt renders a stylesheet outline on an item view as the
+    *current item's* focus rect, so the accent came out as a box hugging
+    "Frequency" the moment the user clicked it. The selected row keeps a marker,
+    but it is a bar on the left edge, not a box.
+    """
+    accent = QColor(Theme.get_colors(mode)["border-focus"])
+    host = QWidget()
+    host.resize(240, 120)
+    layout = QVBoxLayout(host)
+    nav = _make_settings_nav()
+    layout.addWidget(nav)
+    host.setStyleSheet(Theme.get_stylesheet(mode))
+    host.show()
+    QApplication.processEvents()
+    nav.setFocus()
+    QApplication.processEvents()
+
+    image = _render(nav)
+    selected = nav.visualItemRect(nav.item(1))
+    host.hide()
+    host.deleteLater()
+
+    # The row's own top and bottom scanlines, right of the left bar. This is
+    # padding: the label never reaches it, so the only thing that can paint the
+    # accent across it is a box drawn around the text. Counting accent pixels in
+    # the whole row would instead count the label, which is *meant* to be accent
+    # coloured -- ``::item:selected { color: ${color-primary} }``.
+    boxed = 0
+    for y in (selected.top() + 1, selected.bottom() - 1):
+        line = image.copy(6, y, nav.width() - 12, 1)
+        boxed += _accent_pixels(line, accent)
+
+    assert boxed == 0, "the selected destination is boxed in the accent again"
 
 
 # ---------------------------------------------------------------------------

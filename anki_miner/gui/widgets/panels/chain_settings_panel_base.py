@@ -54,6 +54,7 @@ from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant, ModernButton
 from anki_miner.gui.widgets.panels.chain_priority_list import (
     ChainPriorityList,
+    ChainRowActions,
     ChainRowSpec,
     ChainSourceRow,
 )
@@ -156,19 +157,25 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     _SCAN_ERROR_LABEL: ClassVar[str] = "Registry scan failed"
     _REMOVE_ERROR_NOUN: ClassVar[str] = "folder"
 
-    #: Glyphs on the three square controls. Text-presentation selectors keep the
-    #: bin monochrome next to two monochrome arrows on platforms that offer both.
-    _UP_GLYPH: ClassVar[str] = "↑"
-    _DOWN_GLYPH: ClassVar[str] = "↓"
-    _REMOVE_GLYPH: ClassVar[str] = "\U0001f5d1︎"
+    #: Glyph on the remove control. The move arrows live on the rows, so their
+    #: glyphs live with them in ``chain_priority_list``.
+    #:
+    #: Remove was U+1F5D1 WASTEBASKET followed by U+FE0E, which asks for text
+    #: presentation. Linux font matching ignores that request -- fontconfig
+    #: hands the astral code point to the colour emoji font anyway -- so the
+    #: control shipped as a 3D teal bin in an otherwise flat monochrome UI. No
+    #: monochrome trash can exists to swap in; every trash code point pulls the
+    #: emoji font on some platform. U+2715 is the same multiplication X the
+    #: update banner already dismisses with, and the same kind of glyph as the
+    #: two arrows beside it. Do not reach for a bin again.
+    _REMOVE_GLYPH: ClassVar[str] = "✕"
 
     # --- Instance attributes the base builds in _build_chain_container ---
     _list: ChainPriorityList
     _explanation_label: QLabel
     _add_btn: ModernButton
-    _up_btn: ModernButton
-    _down_btn: ModernButton
     _remove_btn: ModernButton
+    _row_actions: ChainRowActions
     _strings: _ChainPanelStrings
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
@@ -243,6 +250,15 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self._explanation_label.setWordWrap(True)
         layout.addWidget(self._explanation_label)
 
+        # The move controls live on the rows, so their copy is panel-wide state
+        # the rows are handed rather than something each row spec repeats.
+        self._row_actions = ChainRowActions(
+            move_up=labels.move_up,
+            move_down=labels.move_down,
+            move_up_tooltip=labels.move_up_tooltip,
+            move_down_tooltip=labels.move_down_tooltip,
+        )
+
         self._list = ChainPriorityList()
         self._list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._list.order_changed.connect(self._sync_chain_from_visual_order)
@@ -256,24 +272,6 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         for action in extra_actions:
             toolbar.addWidget(action)
         toolbar.addStretch()
-
-        self._up_btn = self._make_square_button(
-            self._UP_GLYPH,
-            "secondary",
-            labels.move_up,
-            labels.move_up_tooltip,
-        )
-        self._up_btn.clicked.connect(lambda: self.move_up(self._list.currentRow()))
-        toolbar.addWidget(self._up_btn)
-
-        self._down_btn = self._make_square_button(
-            self._DOWN_GLYPH,
-            "secondary",
-            labels.move_down,
-            labels.move_down_tooltip,
-        )
-        self._down_btn.clicked.connect(lambda: self.move_down(self._list.currentRow()))
-        toolbar.addWidget(self._down_btn)
 
         self._remove_btn = self._make_square_button(
             self._REMOVE_GLYPH,
@@ -439,12 +437,52 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             self._rebuilding = False
 
     def _set_reorder_controls_enabled(self, enabled: bool) -> None:
-        """Toggle every way to reorder or remove a row, drag included."""
-        self._up_btn.setEnabled(enabled)
-        self._down_btn.setEnabled(enabled)
+        """Toggle every way to reorder or remove a row, drag included.
+
+        The move controls live on the rows now, so this walks them. When they
+        are on, they are still boundary-aware: the first row cannot move up and
+        the last cannot move down, so a button is only offered when pressing it
+        would do something.
+        """
+        rows = self._rows()
+        last = len(rows) - 1
+        for index, row in enumerate(rows):
+            row.set_move_enabled(up=enabled and index > 0, down=enabled and index < last)
         self._remove_btn.setEnabled(enabled)
         # Dragging is a reorder like any other, so it answers to the same gate.
         self._list.setDragEnabled(enabled)
+
+    def _rows(self) -> list[ChainSourceRow]:
+        """Every rendered row, in visual order. Empty during a placeholder."""
+        found = []
+        for index in range(self._list.count()):
+            row = self._row_widget(index)
+            if row is not None:
+                found.append(row)
+        return found
+
+    def _on_row_move_up(self, row: ChainSourceRow) -> None:
+        """Move the row whose button was pressed, not the selected one."""
+        index = self._index_of_row(row)
+        if index is not None:
+            self.move_up(index)
+
+    def _on_row_move_down(self, row: ChainSourceRow) -> None:
+        index = self._index_of_row(row)
+        if index is not None:
+            self.move_down(index)
+
+    def _index_of_row(self, row: ChainSourceRow) -> int | None:
+        """Where ``row`` currently sits, by widget identity.
+
+        Deliberately not ``currentRow()``: pressing row 3's arrow must move row
+        3 whether or not row 3 is the selection. Identity also survives a drag,
+        which is why the rows carry their own entry.
+        """
+        for index in range(self._list.count()):
+            if self._row_widget(index) is row:
+                return index
+        return None
 
     # ------------------------------------------------------------------
     # Mutation ownership
@@ -869,8 +907,10 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             # Settings tab is opened.
             view = self._view  # may be None before first show / scan
             for entry in self._chain:
-                row = ChainSourceRow(self._row_spec(entry, view))
+                row = ChainSourceRow(self._row_spec(entry, view), self._row_actions)
                 row.toggled.connect(self._on_row_toggled)
+                row.move_up_requested.connect(self._on_row_move_up)
+                row.move_down_requested.connect(self._on_row_move_down)
                 self._connect_row_repair(row)
                 item = QListWidgetItem()
                 item.setSizeHint(row.sizeHint())

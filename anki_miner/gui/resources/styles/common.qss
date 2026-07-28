@@ -695,15 +695,24 @@ QProgressBar#queue-progress {
 /* ============== SETTINGS TAB STYLES ============== */
 
 /* Grouped settings navigator (D10). Group headings are inert rows: Qt paints
-   them through the disabled state, which the colour rules below pick up. */
+   them through the disabled state, which the colour rules below pick up.
+
+   The 1px border is reserved transparent rather than absent: it is the keyboard
+   focus ring, recoloured in the focus block at the end of this file. Declared
+   here so focus recolours a box that is drawn either way and the rail cannot
+   shift 1px under the cursor. */
 QListWidget#settings-nav {
-    border: none;
+    border: 1px solid transparent;
     outline: none;
 }
 
+/* The left border is the selected-destination marker, reserved transparent on
+   every row for the same reason. Both headings and destinations reserve it, so
+   the deliberate heading outdent below is unchanged. */
 QListWidget#settings-nav::item {
     padding: ${spacing-xs}px ${spacing-sm}px ${spacing-xs}px ${spacing-md}px;
     border: none;
+    border-left: 2px solid transparent;
 }
 
 /* Headings are the disabled rows, and they outdent under their destinations. */
@@ -1560,9 +1569,13 @@ QListWidget#settings-nav::item:hover {
     background-color: ${color-surface-hover};
 }
 
+/* The bar on the left edge says which destination is open. It rides the border
+   the structural rule already reserved, so selecting a row recolours a box
+   rather than adding one and nothing shifts. */
 QListWidget#settings-nav::item:selected {
     color: ${color-primary};
     background-color: ${color-surface-hover};
+    border-left-color: ${color-border-focus};
 }
 
 QLabel#validation-status[status="success"] {
@@ -1643,13 +1656,18 @@ QTreeWidget:focus {
     border-color: ${color-border-focus};
 }
 
-/* The settings navigator is the one item view drawn without a frame, so it has
-   no border to recolour. Qt honours `outline` on item views, which draws the
-   ring without giving the list a box it was deliberately built without — and
-   the `outline: none` further up stays, because it suppresses the dotted
-   per-item rect, which is a different thing from the view's focus ring. */
+/* The settings navigator was the one item view drawn without a frame, and this
+   rule used to spell its ring `outline: 2px solid`, on the understanding that
+   Qt would draw that around the viewport. It does not. Qt renders a stylesheet
+   `outline` on an item view as the *current item's* focus rect, so what shipped
+   was a 2px accent box hugging the text of whichever destination was open —
+   drawn on a mouse click, because clicking is what gives the list focus.
+
+   The ring is now the 1px border the structural rule reserves, restated in the
+   accent like every other item view above. The `outline: none` further up stays
+   and does the job its own comment claims: suppressing the per-item rect. */
 QListWidget#settings-nav:focus {
-    outline: 2px solid ${color-border-focus};
+    border-color: ${color-border-focus};
 }
 
 /* END focus ring */

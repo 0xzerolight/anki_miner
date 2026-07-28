@@ -23,7 +23,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.gui.widgets.base import field_label_width
+from anki_miner.gui.widgets.base import PageWidth, cap_row_field, configure_scrolled_page, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
@@ -43,6 +43,8 @@ class DeckBuilderTab(MiningTabBase):
     2. The preview numbers are shown.  The user then clicks **Build Deck** — the
        worker's confirm gate is opened and Phase 2 (actual mining) begins.
     """
+
+    PAGE_WIDTH = PageWidth.PAGE
 
     def __init__(
         self,
@@ -87,9 +89,6 @@ class DeckBuilderTab(MiningTabBase):
         )
 
         scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         container = QWidget()
         layout = QVBoxLayout()
@@ -102,7 +101,10 @@ class DeckBuilderTab(MiningTabBase):
         layout.addWidget(self._create_results_section())
 
         container.setLayout(layout)
-        scroll_area.setWidget(container)
+        # The shared page shell, not a hand-rolled scroll area: this screen used
+        # to set its own frame and policy and no cap at all, so it ran the full
+        # window while every other page stopped at a column.
+        configure_scrolled_page(scroll_area, container, self.PAGE_WIDTH)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -165,6 +167,10 @@ class DeckBuilderTab(MiningTabBase):
         self.deck_name_edit = QLineEdit()
         self.deck_name_edit.setPlaceholderText(self.tr("Enter deck name…"))
         deck_row.addWidget(self.deck_name_edit, 1)
+        # Hand-built row: same cap the FileSelectors above get themselves, or
+        # this one field runs the whole page column while they stop short.
+        cap_row_field(self.deck_name_edit, self._label_w, deck_row.spacing())
+        deck_row.addStretch()
         layout.addLayout(deck_row)
 
         # Mode row

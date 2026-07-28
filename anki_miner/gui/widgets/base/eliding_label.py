@@ -47,6 +47,7 @@ class ElidingLabel(QLabel):
         super().__init__(parent)
         self._full_text = ""
         self._elide_mode = mode
+        self._tooltip_override = ""
         # Expand horizontally but never demand the full untruncated width — otherwise a
         # long line forces a horizontal scrollbar on the parent list instead of eliding.
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -65,6 +66,23 @@ class ElidingLabel(QLabel):
         # the whole thing on hover. Cleared when the full text already fits.
         self._render()
 
+    def set_tooltip_override(self, tooltip: str) -> None:
+        """Say something on hover other than the text itself.
+
+        Elision owns the tooltip -- it is how the hidden tail stays reachable --
+        so a caller that sets one with ``setToolTip`` has it silently replaced
+        on the next re-render. Some labels carry a tooltip that *explains* the
+        text rather than repeating it (a chain row's metadata says what
+        "word-based" means), and that has to survive. An override wins outright;
+        the elided tail is appended to it when there is one, so neither piece of
+        information is lost.
+
+        Args:
+            tooltip: The explanation to show. Empty restores the default.
+        """
+        self._tooltip_override = tooltip
+        self._render()
+
     def _display_text(self) -> str:
         """The single-line form of the full text (whitespace runs collapsed)."""
         return _WHITESPACE_RUN.sub(" ", self._full_text).strip()
@@ -75,8 +93,11 @@ class ElidingLabel(QLabel):
         metrics = QFontMetrics(self.font())
         elided = metrics.elidedText(display, self._elide_mode, available)
         super().setText(elided)
-        # Show the tooltip only when something was actually hidden.
-        if elided != display or display != self._full_text:
+        # Show the full text only when something was actually hidden.
+        hidden = elided != display or display != self._full_text
+        if self._tooltip_override:
+            self.setToolTip(f"{self._tooltip_override}\n\n{self._full_text}" if hidden else self._tooltip_override)
+        elif hidden:
             self.setToolTip(self._full_text)
         else:
             self.setToolTip("")

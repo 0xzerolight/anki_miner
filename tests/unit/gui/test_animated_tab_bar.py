@@ -67,6 +67,9 @@ class TestInstallation:
     def test_the_underline_starts_under_the_selected_tab(self, tabs):
         assert tabs.tabBar().property("underlineRect") == _underline_of(tabs.tabBar(), 0)
 
+    def test_the_native_base_is_off(self, tabs):
+        assert tabs.tabBar().drawBase() is False
+
 
 class TestSliding:
     def test_the_page_has_already_switched_before_the_underline_moves(self, tabs, monkeypatch):
@@ -162,6 +165,30 @@ class TestSnapping:
 
 
 class TestPainting:
+    def test_the_native_base_line_is_never_painted(self, tabs, qapp):
+        """The base is chrome no stylesheet reaches, so it has to be turned off.
+
+        Qt paints ``PE_FrameTabBarBase`` from the platform style, and the sheet
+        only ever addresses ``QTabBar::tab`` and ``QTabWidget::pane`` -- neither
+        of which is the base. Under Fusion on a dark theme it came out
+        near-black, drawn along the bar and broken under the selected tab, which
+        is the "thin black lines around the tabs" this test exists to keep out.
+
+        Toggling it back on is the control: if Qt ever stops painting a base at
+        all, the first assertion fails and says so, rather than leaving a test
+        that passes because there was nothing to suppress.
+        """
+        qapp.setStyleSheet(Theme.get_stylesheet("dark"))
+        bar = tabs.tabBar()
+        suppressed = bar.grab().toImage()
+
+        bar.setDrawBase(True)
+        painted = bar.grab().toImage()
+        bar.setDrawBase(False)
+
+        assert painted != suppressed, "no base was painted, so suppressing it proves nothing"
+        assert bar.grab().toImage() == suppressed
+
     def test_the_underline_is_drawn_in_the_accent_colour(self, tabs, qapp):
         qapp.setStyleSheet(f"AnimatedTabBar {{ qproperty-accentColour: {_ACCENT}; }}")
         bar = tabs.tabBar()

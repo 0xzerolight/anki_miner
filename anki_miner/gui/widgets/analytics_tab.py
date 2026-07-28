@@ -117,7 +117,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     """Tab displaying mining analytics, difficulty rankings, and milestones."""
 
     #: Tables and queue rows genuinely use the extra width.
-    PAGE_WIDTH = PageWidth.DATA
+    PAGE_WIDTH = PageWidth.PAGE
 
     # showEvent fires on every tab switch. Skip the refresh if data is fresh
     # within this window so rapid tab clicking stays snappy.

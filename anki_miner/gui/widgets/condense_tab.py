@@ -114,7 +114,7 @@ class CondenseTab(_ToolTabBase):
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
-    PAGE_WIDTH = PageWidth.FORM
+    PAGE_WIDTH = PageWidth.PAGE
 
     #: Published so this screen's Cancel gets a live wait clock and the
     #: pinned bar gets a stage and a progress bar (D17, D22).

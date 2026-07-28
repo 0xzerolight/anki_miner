@@ -53,6 +53,7 @@ from anki_miner.gui.widgets.base import (
     ScreenIssueHost,
     SettingAnchor,
     SettingAnchorHost,
+    capped_page_column,
     configure_scrolled_page,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -137,7 +138,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
-    PAGE_WIDTH = PageWidth.FORM
+    PAGE_WIDTH = PageWidth.PAGE
 
     ANCHOR_NAMESPACE = "app"
 
@@ -441,7 +442,18 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         layout.addLayout(button_layout)
 
-        self.setLayout(layout)
+        # Cap the whole screen, not the panels inside it. Settings is the one
+        # page with a side rail, so capping each panel at the page measure would
+        # have made the tab rail-plus-a-column wide -- wider than every other
+        # screen, which is the width jump this change exists to remove. The
+        # per-panel caps below stay, they just stop binding: the viewport left
+        # over after the rail is already narrower than they are.
+        body_widget = QWidget()
+        body_widget.setLayout(layout)
+        outer = QVBoxLayout()
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(capped_page_column(body_widget, self.PAGE_WIDTH))
+        self.setLayout(outer)
 
     def _build_navigator(self) -> None:
         """Fill the navigator with five headings over ten destinations (D10).
