@@ -143,6 +143,14 @@ def install_animated_tab_bar(tabs: QTabWidget) -> AnimatedTabBar:
     the navigation it decorates.
     """
     bar = AnimatedTabBar(tabs)
+    # The tab-bar base is the one piece of tab chrome the stylesheet cannot
+    # reach: Qt paints it through the platform style's ``PE_FrameTabBarBase``,
+    # and ``common.qss`` only ever addresses ``QTabBar::tab`` and
+    # ``QTabWidget::pane``. So it fell through to Fusion, which drew it in a
+    # palette-derived near-black -- a hairline along the bar, broken under the
+    # selected tab, on every tab bar in the app at once. Nothing wants it: the
+    # underline below *is* the boundary between navigation and page.
+    bar.setDrawBase(False)
     tabs.setTabBar(bar)
     tabs.currentChanged.connect(bar.slide_underline)
     return bar
