@@ -62,6 +62,20 @@ jobs:
           pytest -m "youtube and network" \
             tests/integration/test_ytdlp_release_cdn_canary.py \
             -p no:randomly -n0 -q 2>&1 | tee canary.log
+          # A skipped leg means the CDN was never actually checked, and pytest still
+          # exits 0 — a green canary that verified nothing. The API leg alone cannot
+          # catch drift (api.github.com does not redirect, so its assertion is a
+          # tautology), so treat any skip as degraded rather than tolerable.
+          #
+          # `if`-form, not `grep ... && { ...; }`: this is the last statement in the
+          # step, so an && list that misses returns grep's 1 and would red every
+          # healthy run. set -e is not the mechanism — it exempts the left side of an
+          # && list. Do not "fix" this with `|| true` or by moving the grep; both
+          # silently disarm the check.
+          if grep -q "skipped" canary.log; then
+            echo "canary degraded: a leg skipped, so the CDN was not actually checked"
+            exit 1
+          fi
 
       - name: Open an issue when the CDN host drifts
         if: failure()
