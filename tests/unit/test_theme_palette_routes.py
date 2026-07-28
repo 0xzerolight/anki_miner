@@ -114,16 +114,30 @@ class TestEveryShippedTheme:
                     )
 
 
+@pytest.fixture
+def app_appearance_restored(qapp):
+    """Put the shared QApplication's stylesheet and palette back afterwards.
+
+    Restore, don't re-theme. This file used to end its apply_to_app test by
+    applying "light", which leaves a 38 KB themed stylesheet and its palette
+    installed process-wide rather than clearing them -- so every widget a later
+    test built was repainted by it. That is what made test_status_badge_motion
+    read a themed surface where its own widget-scoped ``background: #ff0000``
+    should have been, on whichever CI worker happened to get both files.
+    """
+    stylesheet = qapp.styleSheet()
+    palette = QPalette(qapp.palette())
+    yield
+    qapp.setStyleSheet(stylesheet)
+    qapp.setPalette(palette)
+
+
 class TestApplyToApp:
-    def test_apply_installs_the_built_palette(self, shipped_keys, qapp) -> None:
-        try:
-            Theme.apply_to_app(qapp, "dark")
-            expected = Theme.build_palette("dark")
-            for role in EXPECTED_SHARED:
-                assert qapp.palette().color(role) == expected.color(role)
-        finally:
-            qapp.setStyleSheet("")
-            Theme.apply_to_app(qapp, "light")
+    def test_apply_installs_the_built_palette(self, shipped_keys, qapp, app_appearance_restored) -> None:
+        Theme.apply_to_app(qapp, "dark")
+        expected = Theme.build_palette("dark")
+        for role in EXPECTED_SHARED:
+            assert qapp.palette().color(role) == expected.color(role)
 
     def test_a_theme_missing_an_optional_token_keeps_qt_s_value(self, qapp, monkeypatch) -> None:
         """User themes in ~/.anki_miner/themes must keep loading (D43-A note).

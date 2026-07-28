@@ -7,6 +7,7 @@ import time
 
 import pytest
 from PyQt6.QtCore import QObject
+from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.utils.stall_watchdog import (
@@ -23,6 +24,29 @@ def _reset_global_count():
     reset_global_stall_count()
     yield
     reset_global_stall_count()
+
+
+@pytest.fixture(autouse=True)
+def _restore_app_appearance():
+    """Put the shared QApplication's stylesheet and palette back.
+
+    ``test_apply_to_app_runs_within_pause`` calls ``Theme.apply_to_app`` on the
+    real application, which installs a 38 KB themed stylesheet *and* a palette
+    process-wide. Left behind, it repaints every widget a later test builds --
+    ``test_status_badge_motion`` read a dark theme's surface where its own
+    widget-scoped ``background: #ff0000`` should have been. Whether that lands
+    depends on which files xdist happens to put on one worker, so it surfaces
+    as an unrelated test failing on CI and passing locally.
+    """
+    app = QApplication.instance()
+    if not isinstance(app, QApplication):
+        yield
+        return
+    stylesheet = app.styleSheet()
+    palette = QPalette(app.palette())
+    yield
+    app.setStyleSheet(stylesheet)
+    app.setPalette(palette)
 
 
 def _pump(qtbot, duration_ms: int) -> None:
