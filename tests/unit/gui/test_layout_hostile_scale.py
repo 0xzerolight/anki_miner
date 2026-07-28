@@ -32,6 +32,28 @@ def hostile_scale(font_scale):
 
 
 @pytest.fixture
+def narrow_latin_interface_font():
+    """Resolve the interface family to DejaVu Sans, as a bare CI runner does.
+
+    The dev box has ~450 font families and fontconfig binds ``Sans Serif`` to
+    Noto Sans CJK JP; a GitHub runner ships fonts-dejavu-core and binds it to
+    DejaVu Sans. That is not cosmetic -- ``averageCharWidth()`` reports 21 on the
+    CJK face and 11 on DejaVu at the same pixel size, so a widget sized through
+    that metric came out half as wide on CI as it did locally.
+
+    Forcing the family is what makes the layout assertions in this file
+    falsifiable on a workstation instead of only on the runner.
+    """
+    from anki_miner.gui.resources.styles.theme import Theme
+    from anki_miner.gui.utils import fonts
+
+    fonts._families = fonts.ResolvedFamilies("DejaVu Sans", "DejaVu Sans Mono", "DejaVu Sans")
+    Theme._compiled_qss.clear()
+    yield
+    fonts.reset_font_cache()
+
+
+@pytest.fixture
 def longer_translations():
     """Install a translator that lengthens every string.
 
@@ -471,6 +493,45 @@ class TestSettingsNavigatorKeepsEveryCategoryReachable:
             assert (
                 nav.viewport().rect().contains(rect.center())
             ), f"{key!r} lands off-screen at {rect} in viewport {nav.viewport().rect()}"
+
+        self._join_workers(tab)
+
+    def test_no_destination_row_is_wider_than_the_rail_that_holds_it(
+        self,
+        qtbot,
+        monkeypatch,
+        test_config,
+        narrow_latin_interface_font,
+        hostile_scale,
+        longer_translations,
+        # fixture order is load-bearing: the font has to be resolved before
+        # hostile_scale compiles and installs the stylesheet that carries it.
+    ):
+        """The rail may clamp its width; it may not clip a row to do it.
+
+        The navigator forces its horizontal scrollbar off, so a row wider than
+        the viewport is not scrolled to -- it is cut. Rows used to be laid out
+        at the delegate's unconstrained hint (up to 473px inside a 322px
+        viewport) because ``setWordWrap(True)`` does not by itself bound an
+        item's size hint; the destination name simply ran off the rail.
+
+        Pinned against DejaVu Sans specifically: the rail's own width came from
+        ``averageCharWidth()``, which halves on a Latin face, so the same build
+        clipped roughly twice as hard on CI as on a CJK-equipped desktop.
+        """
+        tab = self._settings_tab(qtbot, monkeypatch, test_config)
+        nav = tab.nav_list
+        available = nav.viewport().width()
+
+        too_wide = {
+            nav.item(row).text(): nav.visualItemRect(nav.item(row)).width()
+            for row in range(nav.count())
+            if nav.item(row) is not None and nav.visualItemRect(nav.item(row)).width() > available
+        }
+
+        # Vacuity guard: an unlaid-out rail has no rows to measure.
+        assert available > 0 and nav.count() > 0
+        assert not too_wide, f"rows wider than the {available}px viewport: {too_wide}"
 
         self._join_workers(tab)
 

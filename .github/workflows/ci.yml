@@ -40,6 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
+      # One red interpreter must not cancel the other two: the default
+      # fail-fast reported "failure / cancelled / cancelled", which reads as a
+      # version-specific break even when all three fail identically.
+      fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
@@ -59,6 +63,11 @@ jobs:
       - run: pytest -m "not youtube and not e2e and not asr and not golden"
         env:
           QT_QPA_PLATFORM: offscreen
+          # Declared, not inherited. Qt derives QLocale() from LANG, and its C
+          # locale sets OmitGroupSeparator -- so a number the app renders as
+          # "184,200" on a developer's en_US box comes out "184200" here. Pin it
+          # so the runner image cannot change that under us.
+          LANG: C.UTF-8
 
   wheel-assets:
     runs-on: ubuntu-latest

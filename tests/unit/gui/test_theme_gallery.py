@@ -36,6 +36,7 @@ from __future__ import annotations
 import copy
 
 import pytest
+from PyQt6.QtCore import QPoint, QRect
 from PyQt6.QtWidgets import QListWidget, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles.theme import Theme
@@ -48,6 +49,27 @@ ENDPOINT_THEMES = ("light", "catppuccin-mocha")
 
 def _shipped_keys() -> list[str]:
     return sorted(Theme.get_available_themes())
+
+
+def _flat_fill_point(rect: QRect) -> QPoint:
+    """A point inside ``rect`` that is fill, never a glyph, under any font.
+
+    Sampling ``rect.center()`` reads the middle of the widget's *centred label*,
+    so whether the pixel is the fill or an antialiased letter stem depends on the
+    advance width of that text -- which changes with the installed font. That is
+    a real failure: on a runner with only DejaVu Sans, ``Run`` measures 31px
+    instead of Noto's 27px and the primary button's centre lands on the ``u``,
+    reading a subpixel-blended ``#7b68f1`` instead of the theme's ``#6366f1``.
+
+    Inset from the left edge instead: text is centred, and the fill runs to the
+    border (which carries the same colour on the surfaces asserted here), so this
+    point is flat for every face and every border radius.
+    """
+    return QPoint(rect.left() + _FILL_INSET_PX, rect.center().y())
+
+
+#: Past the 1px border and any radius, well short of centred text.
+_FILL_INSET_PX = 8
 
 
 @pytest.fixture
@@ -125,19 +147,19 @@ class TestRenderedEndpoints:
         page = themed_gallery(theme_key)
         button = page.layout().itemAt(0).widget()
 
-        centre = page.grab().toImage().pixelColor(button.geometry().center())
+        fill = page.grab().toImage().pixelColor(_flat_fill_point(button.geometry()))
 
-        assert centre.name().lower() == Theme.get_colors(theme_key)["primary"].lower()
+        assert fill.name().lower() == Theme.get_colors(theme_key)["primary"].lower()
 
     @pytest.mark.parametrize("theme_key", ENDPOINT_THEMES)
     def test_a_selected_row_uses_the_theme_s_selection_colour(self, themed_gallery, theme_key):
         page = themed_gallery(theme_key)
         rows = page.layout().itemAt(2).widget()
-        point = rows.mapTo(page, rows.visualItemRect(rows.item(0)).center())
+        point = rows.mapTo(page, _flat_fill_point(rows.visualItemRect(rows.item(0))))
 
-        centre = page.grab().toImage().pixelColor(point)
+        fill = page.grab().toImage().pixelColor(point)
 
-        assert centre.name().lower() == Theme.get_colors(theme_key)["table-selected-bg"].lower()
+        assert fill.name().lower() == Theme.get_colors(theme_key)["table-selected-bg"].lower()
 
     def test_two_themes_do_not_render_the_same_pixels(self, themed_gallery):
         """The endpoints above would all pass on a stylesheet that ignored the theme."""

@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QAbstractScrollArea,
@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QScrollArea,
     QSizePolicy,
     QStackedWidget,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -88,11 +89,18 @@ from anki_miner.utils.i18n import tr_format
 # keystroke, short enough that settings apply near-immediately.
 _AUTOSAVE_DEBOUNCE_MS = 1000
 
-# Width budget for the settings navigator, in characters of its own rendered
-# font. Read through font metrics rather than written as a pixel constant so the
-# rail tracks the UI text scale; a destination whose translated name outruns the
-# budget wraps onto a second line instead of pushing the settings off-screen.
-_NAV_WIDTH_CHARS = 16
+# Width ceiling for the settings navigator, in multiples of its own rendered
+# line height. Read through font metrics rather than written as a pixel constant
+# so the rail tracks the UI text scale.
+#
+# Line height, NOT `averageCharWidth()`: that metric is an advance average taken
+# over the face's own glyph repertoire, so it collapses on a Latin face and
+# doubles on a CJK one — 11px on DejaVu Sans against 21px on Noto Sans CJK JP at
+# the same pixel size. The rail was therefore 336px on a desktop that resolves
+# `Sans Serif` to Noto and 176px on one that resolves it to DejaVu, for the same
+# text at the same scale. `height()` tracks the point size and stays within a
+# quarter of itself across those two faces.
+_NAV_WIDTH_LINES = 11
 
 
 @runtime_checkable
@@ -476,7 +484,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.nav_list.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Expanding)
         self.nav_list.setFrameShape(QFrame.Shape.NoFrame)
         self.nav_list.ensurePolished()
-        self.nav_list.setMaximumWidth(self.nav_list.fontMetrics().averageCharWidth() * _NAV_WIDTH_CHARS)
+        # Width is set by _fit_navigator() once the destinations exist: it is
+        # measured from their rendered labels, which cannot be done here.
         self.ignore_setting_widget(
             self.nav_list,
             "navigation between settings pages, not a setting itself",
@@ -540,6 +549,69 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.nav_list.currentItemChanged.connect(self._on_nav_item_changed)
         if first_destination_row is not None:
             self.nav_list.setCurrentRow(first_destination_row)
+        self._fit_navigator()
+
+    def _fit_navigator(self) -> None:
+        """Size the rail to its destinations and wrap whatever does not fit.
+
+        Two halves, and both are load-bearing:
+
+        *Width* is the widest destination as the view itself would lay it out
+        (``sizeHintForColumn``, which asks the delegate and so already carries
+        the QSS item padding), capped at the line-height budget above. Sizing
+        from the labels means an English build gets a rail no wider than it
+        needs, instead of a fixed character budget that is arbitrary in both
+        directions.
+
+        *Wrapping* is what ``setWordWrap(True)`` alone does not buy. A
+        ``QListView`` lays rows out at the delegate's unconstrained hint, so a
+        translated name simply made its row wider than the rail — and with the
+        horizontal scrollbar off (it is: the rail is navigation, not a
+        scroller), the overflow was clipped rather than reachable. Giving each
+        item an explicit hint bounded to the content width is what makes the
+        delegate wrap onto a second line instead.
+
+        The vertical scrollbar's extent is reserved unconditionally: whether it
+        appears depends on the wrapped heights this method is still computing,
+        and a row that is a few px narrower than the viewport costs nothing
+        while a row wider than it is the defect.
+        """
+        nav = self.nav_list
+        # Drop any hint a previous pass installed first. An item size hint
+        # overrides the delegate's, so measuring without clearing would measure
+        # the last result rather than the labels at the current font.
+        for row in range(nav.count()):
+            stale = nav.item(row)
+            if stale is not None:
+                stale.setSizeHint(QSize())
+
+        metrics = nav.fontMetrics()
+        frame = 2 * nav.frameWidth()
+        style = nav.style()
+        scrollbar = style.pixelMetric(QStyle.PixelMetric.PM_ScrollBarExtent, None, nav) if style else 0
+
+        budget = metrics.height() * _NAV_WIDTH_LINES
+        width = min(nav.sizeHintForColumn(0) + frame + scrollbar, budget)
+        nav.setMaximumWidth(width)
+
+        content = max(1, width - frame - scrollbar)
+        for row in range(nav.count()):
+            item = nav.item(row)
+            if item is None:
+                continue
+            # Per item, not once: headings and destinations carry different
+            # horizontal padding (the heading outdent in common.qss).
+            hint = nav.sizeHintForIndex(nav.indexFromItem(item))
+            padding = QSize(
+                max(0, hint.width() - metrics.horizontalAdvance(item.text())),
+                max(0, hint.height() - metrics.height()),
+            )
+            wrapped = metrics.boundingRect(
+                QRect(0, 0, max(1, content - padding.width()), 0),
+                Qt.TextFlag.TextWordWrap,
+                item.text(),
+            )
+            item.setSizeHint(QSize(content, wrapped.height() + padding.height()))
 
     def _nav_item(self, key: str) -> QListWidgetItem | None:
         """The navigator row carrying ``key``, or ``None`` if there is none."""
@@ -816,6 +888,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         open a real AnkiConnect socket and trip the network guard.
         """
         super().showEvent(a0)
+        # Again here, not only at construction: the rail is measured from its
+        # own font metrics, and a widget built before it is polished can be
+        # carrying the application default rather than the themed face.
+        self._fit_navigator()
         if not self._names_requested:
             self._names_requested = True
             self._anki_probe.refresh_name_lists()

@@ -7,14 +7,64 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
-- **Multiple pitch accent sources.** Pitch accent now works like frequency: a new **Settings → Pitch Accent** tab manages an ordered chain of pitch dictionaries (Yomitan zip or `reading,kanji,pattern` CSV/TSV) — add, reorder, enable/disable, re-import, and remove sources, each stored as its own index under `~/.anki_miner/pitch/<source_id>/`. Unlike the additive frequency chain, pitch lookups are **first-hit-wins**: sources are checked top to bottom and the first one with an entry for a word wins, so lower sources purely extend word coverage. The setup wizard's Kanjium download now lands as a chain source, and an existing `pitch_accent.csv` is folded into the chain automatically on first launch (the file itself is left in place, so downgrading keeps working).
 
 ### Changed
-- The single "Pitch Accent File" picker under Settings → Dictionaries was replaced by the new Pitch Accent tab; Yomitan pitch zips now import as chain sources instead of overwriting one `pitch_accent.csv` on Save.
 
 ### Fixed
 
 ### Removed
+
+## [2.9.0] - 2026-07-28
+
+The interface release. An end-to-end UI/UX overhaul touching every screen — what a run tells you while it works, what it leaves behind when it finishes, where failures appear, and what survives a crash — alongside multi-source pitch accent, named settings profiles, and yt-dlp finally shipping inside the bundle. No change to how words are parsed, filtered, or written to Anki: existing cards and configs are untouched.
+
+### Added
+- **Multiple pitch accent sources.** Pitch accent now works like frequency: a new **Settings → Pitch Accent** tab manages an ordered chain of pitch dictionaries (Yomitan zip or `reading,kanji,pattern` CSV/TSV) — add, reorder, enable/disable, re-import, and remove sources, each stored as its own index under `~/.anki_miner/pitch/<source_id>/`. Unlike the additive frequency chain, pitch lookups are **first-hit-wins**: sources are checked top to bottom and the first one with an entry for a word wins, so lower sources purely extend word coverage. The setup wizard's Kanjium download now lands as a chain source, and an existing `pitch_accent.csv` is folded into the chain automatically on first launch (the file itself is left in place, so downgrading keeps working).
+- **Named settings profiles.** A selector in the window header switches between saved configurations, and a manager dialog creates, renames, duplicates, and deletes them. Each profile is a sidecar file beside `gui_config.json` — there is no index to corrupt, so a profile directory that cannot be read reports itself as unreadable rather than silently as empty. Useful for keeping separate setups per show, per deck, or per source language.
+- **A pinned action bar and Activity drawer on every workflow screen.** The run action no longer scrolls out of reach: all twelve workflow screens carry a bar pinned to the bottom of the page, at one height whether the screen is idle or mid-run, plus a drawer holding the activity log for that screen. `Ctrl+Enter` starts the run from anywhere on the screen it belongs to, and the file tools and Backfill get the same treatment.
+- **Runs end in an inline receipt instead of a dialog.** Single, Batch, the queue screens, and the reading screens now finish by writing a durable receipt into the page — what was mined, what was skipped and why, how many cards were created — rather than opening a message box per finished item. Cancelled runs log a receipt for the work they did complete instead of claiming "Complete".
+- **A settings navigator and settings search.** Settings groups its pages into a side rail (Cards, Resources, Mining, Integrations, App), and a search box finds an individual setting by name and jumps straight to the page holding it. Every settable control is anchored for search; navigation-only widgets are excluded.
+- **System Health.** A new Settings destination reporting the state of every external dependency the app needs — Anki, ffmpeg, yt-dlp, dictionaries, models — where "unknown" is a real state rather than a silent pass, and each row's Fix link addresses the actual control that repairs it.
+- **The session resumes where you left it.** The window reopens at the size, position, and screen you closed it at, and on the tab you were last using. File pickers reopen in the folder you last accepted rather than the one you started in. Stored machine-locally, so it never travels with a config export.
+- **Durable queues and a Restore/Discard prompt after a crash.** Queue contents are persisted as bounded, versioned, atomically-written snapshots, and partial downloads are kept and resumed when it is provably safe to do so. A session that ended abnormally is met with one Restore/Discard choice for everything it left behind, rather than silently losing the queue or silently re-running it.
+- **A read-only mini job monitor.** A compact monitor showing what is running now, reachable from anywhere, which stays on the job you picked across a close and reopen.
+- **The word curator is a non-modal window, and Known Words is staged.** Curation no longer blocks the rest of the app while it is open, and words added to the known list are staged until Confirm commits them, so a mistake is undoable before it reaches the database.
+- **A subtitle sync workbench.** The timing viewer becomes a live sync surface with the automatic aligner wired in, so a desynced subtitle can be retimed and checked in one place.
+- **Bounded automatic retry for queue items.** A queue item that fails a transient step is retried a bounded number of times and respects cancellation, instead of failing the whole run or retrying forever.
+- **Reset Statistics.** A button on the Analytics tab wipes recorded statistics.
+- **A filterable activity log console.** The log becomes a console with level filters and state chips instead of a scrolling text box.
+- **Drop targets that say what they will do.** Every screen that accepts a file drop now names what it will do with it before you release, and eight screens that accepted no drops at all now do.
+
+### Changed
+- **Every screen has one content width.** Page widths varied by hundreds of pixels between tabs; all sixteen now share a single content column, with a narrower cap for form rows so a text field is not a full screen wide.
+- **The accent colour is spent only on priority, state, and focus.** Buttons were reclassified onto explicit roles, so a screen has one primary action rather than several competing ones, and the accent means something when it appears. Lists, tables, and trees share one selection and hover treatment.
+- **Failures report on the screen they happened on.** No recoverable failure opens a modal any more. Mining, tool-tab, Settings, Anki-probe, analytics, themes-folder, and chain-panel failures surface in a persistent banner on their own screen, with a ledger for anything genuinely modal. The three worker-backed dialogs host their own errors rather than stacking a second dialog on top.
+- **Progress and Cancel are honest.** Progress reports the pipeline stage it is actually in and counts finished items instead of weighting a guess; it announces "Complete" once rather than once per stage, and the fill animates forward instead of teleporting. Cancel is one verb that becomes a disabled "Cancelling…" while the worker stops, with no confirmation prompt and no second dialog.
+- **Typography comes from the platform, and Japanese is treated as content.** The interface and fixed-width faces are taken from the system rather than a hard-coded stack, and Japanese text is styled as content rather than as interface chrome.
+- **Themes route the whole application palette.** A theme's tokens now drive the Qt palette as well as the stylesheet, so widgets the stylesheet had already polished follow the theme too. A theme whose colours fall below a contrast threshold is flagged with a warning rather than silently corrected.
+- **The recommended-resource download runs in the background.** It no longer holds a modal open for the duration; download phases are stated as phases rather than parsed out of progress text, and Retry setup stays reachable.
+- **yt-dlp ships with the app.** Release bundles now vendor the per-OS standalone yt-dlp binary (pinned and SHA-verified) instead of a Python module the app never imported. A yt-dlp on your PATH still wins, since it is usually newer than a build-time pin.
+- **UI text size is restart-to-apply.** Changing it now states that it takes effect on the next launch instead of half-applying to widgets already built.
+- **Every mining dialog is IME-safe**, and keyboard focus draws a visible accent ring with a pinned tab order.
+- **Batch and queue screens are manipulable lists.** The YouTube, Audio, series, and Batch queues share one contract for reorder, removal, and selection; a run freezes the queue and publishes its task to every screen.
+
+### Fixed
+- **The yt-dlp installer never worked.** GitHub moved release-asset serving to a different host, and the post-redirect allowlist still named the retired one, so the in-app updater refused every download on every platform since it shipped. Bundled builds also carried no yt-dlp binary at all.
+- **YouTube videos with Japanese auto-captions were reported as having none.** Native-language detection now reads `automatic_captions["ja-orig"]`, which is the actual native-language signal; the previous check read a field derived from the selected audio format, which can name a dub. A missing subtitle also no longer causes the video to download twice.
+- **The settings navigator clipped its own destination names** on any desktop whose default sans face is Latin-only: the rail's width came from a font metric that halves on such faces, and rows never wrapped to it.
+- **The Backfill preview table showed under one row of data** (#102), and the Analytics tables did the same.
+- **A thin dark hairline under every tab bar**, drawn by Qt's native tab-bar base beneath the stylesheet.
+- **Clicking a Settings destination drew a box around its name.**
+- **Square glyph buttons clipped their glyph.**
+- **Word audio was skipped for words whose reading is not kana**, in the JPod101 and Google TTS fetchers and for local audio packs; unique dictionary readings are now recovered for tokens the tokenizer left without one.
+- **The deck and note type Refresh buttons were invisible**, a missing deck was reported as a warning rather than an error, and the setup wizard no longer promises that decks are created automatically — it verifies the deck exists.
+- **Several settings-profile papercuts**: a profile pointer surviving an unexpected error after save, bootstrap adopting an unrelated profile id, the header naming a profile that could not be selected, and Settings panels not repainting on a switch.
+- **A wheel scroll over the theme combo fired repeated full repolishes**, and field-label columns were sized from the English string rather than the translated one.
+
+### Removed
+- The single "Pitch Accent File" picker under Settings → Dictionaries, replaced by the Pitch Accent tab; Yomitan pitch zips now import as chain sources instead of overwriting one `pitch_accent.csv` on Save.
+- The four separate chain editors under Settings, replaced by one priority-list component shared by dictionaries, audio, frequency, and pitch.
+- The per-item results dialog and the two Batch modals the run receipt replaces.
 
 ## [2.8.4] - 2026-07-24
 
