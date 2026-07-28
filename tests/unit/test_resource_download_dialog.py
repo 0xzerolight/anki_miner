@@ -518,7 +518,13 @@ def test_install_and_index_phases_replace_the_transfer_line(parent, monkeypatch,
     assert worker.progress_done.wait(2.0)
     qtbot.waitUntil(lambda: "index" in session.window.detail_label.text(), timeout=3000)
 
-    assert session.window.detail_label.text() == "Building index · 184,200 entries"
+    # The live dialog formats through QLocale() -- the *system* locale -- so the
+    # separator is the runner's, not en-US's (Qt's C locale sets
+    # OmitGroupSeparator). Number formatting is pinned locale-explicitly by
+    # test_indexing_detail_states_the_real_entry_count; what this test owns is
+    # that the index phase replaces the transfer line at all.
+    entries = QLocale().toString(184_200)
+    assert session.window.detail_label.text() == f"Building index · {entries} entries"
     _drain(qtbot, worker)
 
 
