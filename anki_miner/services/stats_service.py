@@ -283,6 +283,34 @@ class StatsService:
 
         return milestones
 
+    # === Maintenance ===
+
+    def reset(self) -> int:
+        """Delete every recorded session and difficulty row. Returns rows removed.
+
+        Milestones are derived from these two tables, so they reset with them.
+
+        The count is taken *before* the deletes rather than from ``rowcount``:
+        SQLite's truncate optimisation applies to a bare ``DELETE FROM t``, and
+        the change count it reports is not the row count. Same reason
+        :meth:`KnownWordDB.clear` counts first.
+
+        Two things are deliberately left out. ``VACUUM`` cannot run here --
+        :meth:`_connect` yields inside ``with conn:``, an open transaction, and
+        SQLite refuses to vacuum in one; stats.db is far too small to be worth a
+        second connection for it. ``sqlite_sequence`` is left alone because row
+        IDs are never shown to the user.
+        """
+        if not self._ensure_loaded():
+            return 0
+        with self._connect() as conn:
+            removed = conn.execute("SELECT COUNT(*) FROM mining_sessions").fetchone()[0]
+            removed += conn.execute("SELECT COUNT(*) FROM series_difficulty").fetchone()[0]
+            conn.execute("DELETE FROM mining_sessions")
+            conn.execute("DELETE FROM series_difficulty")
+        logger.info(f"Reset stats database, removed {removed} row(s)")
+        return int(removed)
+
     @staticmethod
     def _row_to_session(row: sqlite3.Row) -> MiningSession:
         return MiningSession(

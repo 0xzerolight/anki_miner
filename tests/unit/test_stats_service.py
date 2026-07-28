@@ -352,6 +352,97 @@ class TestMilestones:
         assert service.get_milestones() == []
 
 
+class TestReset:
+    """Tests for wiping recorded statistics (Analytics -> Reset Statistics)."""
+
+    @pytest.fixture
+    def service(self, tmp_path):
+        svc = StatsService(tmp_path / "stats.db")
+        svc.load()
+        return svc
+
+    @staticmethod
+    def _populate(service, sessions: int = 3) -> None:
+        for i in range(sessions):
+            service.record_session(
+                MiningSession(
+                    series_name=f"Show {i}",
+                    episode_name=f"ep_{i:02d}",
+                    total_words=100,
+                    unknown_words=10,
+                    cards_created=5,
+                    elapsed_time=1.0,
+                )
+            )
+            service.record_difficulty(f"Show {i}", f"ep_{i:02d}", 100, 10, 80)
+
+    def test_returns_total_rows_removed(self, service):
+        self._populate(service, sessions=3)
+        assert service.reset() == 6  # 3 sessions + 3 difficulty rows
+
+    def test_empties_both_tables(self, service):
+        self._populate(service)
+        service.reset()
+        assert service.get_recent_sessions() == []
+        assert service.get_series_difficulty() == []
+
+    def test_overall_stats_return_to_defaults(self, service):
+        from anki_miner.models.stats import OverallStats
+
+        self._populate(service)
+        service.reset()
+        assert service.get_overall_stats() == OverallStats()
+
+    def test_milestones_report_nothing_achieved(self, service):
+        self._populate(service)
+        service.reset()
+        milestones = service.get_milestones()
+        assert milestones  # still one per category
+        assert all(not m.achieved for m in milestones)
+
+    def test_reset_on_unloaded_service_initializes_and_returns_zero(self, tmp_path):
+        db_path = tmp_path / "stats.db"
+        service = StatsService(db_path)
+        assert service.reset() == 0
+        assert service.is_available() is True
+        assert db_path.exists()
+
+    def test_returns_zero_when_initialization_fails(self, tmp_path):
+        """A failed lazy load must not raise out of a GUI worker callable."""
+        from unittest.mock import patch
+
+        service = StatsService(tmp_path / "stats.db")
+        with patch.object(service, "load", return_value=False):
+            assert service.reset() == 0
+
+    def test_recording_still_works_after_reset(self, service):
+        """DELETE, not DROP -- the tables survive so the next run records normally."""
+        self._populate(service)
+        service.reset()
+
+        service.record_session(
+            MiningSession(
+                series_name="After",
+                episode_name="ep_01",
+                total_words=100,
+                unknown_words=10,
+                cards_created=7,
+                elapsed_time=1.0,
+            )
+        )
+        service.record_difficulty("After", "ep_01", 100, 10, 80)
+
+        sessions = service.get_recent_sessions()
+        assert len(sessions) == 1
+        assert sessions[0].cards_created == 7
+        assert len(service.get_series_difficulty()) == 1
+
+    def test_reset_is_idempotent(self, service):
+        self._populate(service)
+        service.reset()
+        assert service.reset() == 0
+
+
 class TestBusyTimeout:
     """PRAGMA busy_timeout is issued on every connection (OVH-023/038)."""
 
