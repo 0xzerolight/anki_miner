@@ -20,14 +20,21 @@ scripts/release_preflight.sh --skip-package  # fast ~2min path: build + smokes o
 ```
 
 It mirrors the Linux release job (isolated `.[asr]` venv + pinned PyInstaller,
-SHA-verified ffmpeg/alass vendor fetch, PyInstaller build, then the four bundle
-smokes via `scripts/bundle_smoke.sh` — the same script CI runs) and must print
+SHA-verified ffmpeg/alass vendor fetch, PyInstaller build, then the bundle smokes
+via `scripts/bundle_smoke.sh` — the same script CI runs) and must print
 `PREFLIGHT ALL GREEN` before you tag. It cannot reproduce the Windows (Inno Setup,
-from-source bootloader) or macOS arch-native ffmpeg steps; those stay CI-only. Three
-of the four smokes are pure-Python import checks, so import/collection failures
-surface on Linux identically to Windows/macOS; the fourth (whisper.cpp/pywhispercpp
-Vulkan loadability) is a native `ctypes` cold-load that runs only on Linux and
-Windows (skipped on macOS, which stays on the CT2/Metal path).
+from-source bootloader) or macOS arch-native ffmpeg steps; those stay CI-only.
+
+The smokes it runs are pure-Python import checks, so import/collection failures
+surface on Linux identically to Windows/macOS. It deliberately **skips the
+whisper.cpp/pywhispercpp Vulkan loadability leg**: that leg asserts a
+Vulkan-enabled `pywhispercpp` loads out of the bundle, and `pywhispercpp` is in
+the `[asr-vulkan]` extra, not `[asr]` — the release job installs `[asr]` and then
+replaces it with a wheel built from source against the Vulkan SDK. The preflight
+installs `[asr]` alone, so the leg could only ever report a missing backend.
+**`scripts/release_dryrun.sh` is what proves it**, and it fails closed if that leg
+reports SKIP on either the Linux or the Windows job — so a green preflight is not
+a substitute for a green dry-run.
 
 For a full-matrix rehearsal without cutting a release, run the dry-run gate:
 
@@ -72,7 +79,7 @@ and fix until green before tagging.
    - macOS (arm64): PyInstaller bundle.
    - macOS (Intel, `macos-15-intel`): PyInstaller bundle, without the `[asr]` extra (see the Intel-macOS note below).
 
-   Each Linux/Windows/macOS build runs `scripts/bundle_smoke.sh` — four bundle smokes (youtube extractor registry, offline ASR native-lib resolution, ffmpeg encoder set, and a whisper.cpp/pywhispercpp Vulkan import-loadability gate — a Linux+Windows-only native loadability check, skipped on macOS), the same script the preflight runs. Artifacts upload to the GitHub Release for the tag.
+   Each Linux/Windows/macOS build runs `scripts/bundle_smoke.sh` — the bundle smokes (youtube extractor registry, offline ASR native-lib resolution, libmpv presence and dlopen, ffmpeg encoder set, and a whisper.cpp/pywhispercpp Vulkan import-loadability gate — a Linux+Windows-only native loadability check, skipped on macOS and in the local preflight), the same script the preflight runs. Artifacts upload to the GitHub Release for the tag.
 
    Windows installer CI also runs three legs: leg 1 clean-installs with no optional tasks, leg 2 clean-installs with default tasks, and leg 3 overlays the new installer onto the newest eligible older release before probing a blocked downgrade. Leg 3 may emit `no-releases` only when the release listing is empty, or `no-eligible-version` when no published stable older `vX.Y.Z` release has the exact matching Windows installer asset (including asset-name drift); these skips are legitimate for forks or an initial release, while the `0xzerolight/anki_miner` dry-run requires a pass.
 

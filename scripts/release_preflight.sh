@@ -150,8 +150,16 @@ rm -rf build dist/AnkiMiner
 echo
 
 # --- 5. smokes (shared with CI) ----------------------------------------------
+# The whispercpp-vulkan leg is skipped here and ONLY here. It asserts that a
+# Vulkan-enabled pywhispercpp loads out of the bundle, and pywhispercpp lives in
+# the [asr-vulkan] extra, not [asr] — the Linux release job installs [asr] and
+# then replaces pywhispercpp with a wheel it builds from source against the
+# Vulkan SDK (release.yml "Build pywhispercpp Vulkan wheel"). This script
+# installs [asr] alone by design, so the leg can only ever report a missing
+# backend. scripts/release_dryrun.sh is what proves it, and it fails closed if
+# the leg reports SKIP on either the Linux or the Windows job.
 echo "=== bundle smokes ==="
-if bash scripts/bundle_smoke.sh dist/AnkiMiner; then
+if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 bash scripts/bundle_smoke.sh dist/AnkiMiner; then
   echo "smokes: PASS"
 else
   echo "smokes: FAIL"
