@@ -85,21 +85,25 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](CONTRI
 
 - **Video** - minera un solo par de video/subtítulo, una carpeta por lotes o URLs de YouTube.
 - **Deck Builder** - minera una serie completa en un solo mazo clasificado por frecuencia.
-- **Audio** - minera audiolibros, podcasts, radio, canciones (pares de audio + subtítulo/transcripción).
-- **Reading** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), o archivos de subtítulos independientes.
+- **Audiobooks** - minera audiolibros, podcasts, radio, canciones (pares de audio + subtítulo/transcripción).
+- **Reading** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto japonés pegado.
 - **Analytics** - historial de minería, rankings de dificultad, hitos, deshacer.
-- **Tools** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (alass), condensa medios a audio solo de diálogos y rellena campos en tarjetas existentes.
+- **Utilities** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (alass), condensa medios a audio solo de diálogos y rellena campos en tarjetas existentes.
 - **Settings** - todo lo configurable.
 
 ## Otras Características
 
+- Word Curator - revisa cada palabra candidata antes de crear las tarjetas, con su escena, su página de manga y su entrada de diccionario al lado.
 - Filtrado extenso: i+1, límites de frecuencia, lista negra, regex, conjuntos de palabras y más.
 - Importación de diccionario Yomitan offline - definiciones, acento tonal (pitch accent), frecuencia - encadenados por prioridad.
 - Múltiples listas de frecuencia encadenadas por prioridad.
 - Audio de palabras en las tarjetas desde packs de audio locales, JapanesePod101 o Google TTS.
+- Audio de frases en las tarjetas de Reading desde Google Translate TTS o Naver Papago (desactivado por defecto).
 - Estilizado de glosario por diccionario, al estilo Yomitan.
-- Vista previa de temporización de subtítulos con desplazamiento (offset) ajustable.
+- Vista previa de video integrada con libmpv - reproduce la escena de cada palabra mientras curas, o ajusta la temporización de los subtítulos con reproducción en vivo.
 - Capturas de pantalla animadas (ver ejemplos de tarjetas arriba).
+- Perfiles de configuración - guarda configuraciones con nombre y cambia entre ellas desde la cabecera.
+- Restyle Mined Cards - vuelve a aplicar tu estilo de tarjeta actual a las tarjetas que ya creaste (menú Tools).
 
 <details>
 <summary><strong>Temas integrados (29)</strong></summary>
@@ -124,7 +128,7 @@ Licencias de temas: [LICENSE-THEMES.md](LICENSE-THEMES.md).
 <summary><strong>Cómo Funciona</strong></summary>
 
 1. **Lee los subtítulos** y divide el japonés en palabras individuales.
-2. **Filtra** para obtener palabras de contenido que aún no conozcas.
+2. **Filtra** para obtener palabras de contenido que aún no conozcas, con la opción de revisar la lista tú mismo en el Word Curator.
 3. **Toma una captura de pantalla y un clip de audio** del video para cada línea.
 4. **Busca definiciones** en tus diccionarios offline configurados, con la opción de recurrir a Jisho online si está habilitado (más lento, limitado por tasa de peticiones).
 5. **Envía las tarjetas finalizadas a Anki.**
@@ -138,10 +142,10 @@ Licencias de temas: [LICENSE-THEMES.md](LICENSE-THEMES.md).
 | Diccionario | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
 | Diccionario | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
 | Diccionario | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generado en el sitio | Add Dictionary… |
-| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Dictionary -> Pitch Accent File |
-| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Dictionary -> Pitch Accent File |
-| Frecuencia | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Filtering -> Frequency List File |
-| Frecuencia | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Filtering -> Frequency List File |
+| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Pitch Accent -> Add pitch source… |
+| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Pitch Accent -> Add pitch source… |
+| Frecuencia | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… |
+| Frecuencia | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… |
 
 
 <details>
@@ -156,11 +160,11 @@ Utiliza conjuntos de palabras de nombres incluidos derivados de [JMnedict](https
 | Problema                    | Solución                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
 | "Cannot connect to Anki" | Inicia Anki y asegúrate de que AnkiConnect esté instalado.                                  |
-| "Deck not found"         | Selecciona un mazo existente en Settings -> Anki. Los mazos no se crean automáticamente; créalo en Anki primero si necesitas uno nuevo. |
-| "Note type not found"    | Configura los nombres de los campos de tu tipo de nota en Settings -> Anki.                       |
+| "Deck not found"         | Selecciona un mazo existente en Settings -> Cards & Anki. Los mazos no se crean automáticamente; créalo en Anki primero si necesitas uno nuevo. |
+| "Note type not found"    | Configura los nombres de los campos de tu tipo de nota en Settings -> Cards & Anki.               |
 | "ffmpeg not found"       | Instala ffmpeg y añádelo al PATH.                                               |
 | No se encuentran definiciones | Añade un diccionario de Yomitan en Settings -> Add Dictionary… (recomendado), o activa el respaldo de Jisho (más lento, limitado por tasa de peticiones). |
-| El instalador de Windows no abre / advertencia de SmartScreen | Mira las [Notas para la primera ejecución](#first-run-notes-unsigned-builds): selecciona **Más información** -> **Ejecutar de todas formas**; restaura los falsos positivos de Defender desde el **Historial de protección**. |
+| El instalador de Windows no abre / advertencia de SmartScreen | Mira las [Notas para la primera ejecución](#notas-para-la-primera-ejecución-versiones-no-firmadas): selecciona **Más información** -> **Ejecutar de todas formas**; restaura los falsos positivos de Defender desde el **Historial de protección**. |
 | Instalación limpia sin definiciones | Ejecuta Tools -> Setup Wizard o Tools -> Download Recommended Resources. Para importación manual, mantén el archivo ZIP de Yomitan intacto (no lo descomprimas). |
 | Add Dictionary se congela o falla | Anota la última etapa visible y adjunta los logs (ver "¿Dónde están los logs?" abajo). Incluye el nombre, fuente y tamaño del ZIP del diccionario en el reporte. |
 | ¿Dónde están los logs?      | Usa Help -> Open Log Folder, o abre `%USERPROFILE%\.anki_miner\anki_miner.log` en Windows o `~/.anki_miner/anki_miner.log` en macOS/Linux. Los logs rotados usan los sufijos `.1` al `.5`. |

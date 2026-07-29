@@ -85,21 +85,25 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
 - **Deck Builder** - mine a whole series into one frequency-ranked deck.
-- **Audio** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
-- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), or standalone subtitle files.
+- **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
+- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
 - **Analytics** - mining history, difficulty rankings, milestones, undo.
-- **Tools** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, and backfill fields on existing cards.
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features
 
+- Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
 - Extensive filtering: i+1, frequency limits, blacklist, regex, wordsets, and more.
 - Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
 - Multiple frequency lists chained by priority.
 - Word audio on cards from local audio packs, JapanesePod101, or Google TTS.
+- Sentence audio on Reading cards from Google Translate TTS or Naver Papago (off by default).
 - Per-dictionary glossary styling, Yomitan-style.
-- Subtitle timing preview with adjustable offset.
+- Embedded libmpv video preview - play a word's scene while curating, or nudge subtitle timing with live playback.
 - Animated screenshots (see example cards above).
+- Settings profiles - save named configurations and switch between them from the header.
+- Restyle Mined Cards - re-apply your current card styling to cards you already made (Tools menu).
 
 <details>
 <summary><strong>Built-in themes (29)</strong></summary>
@@ -124,7 +128,7 @@ Want another theme added? Suggest in a GitHub Issue.
 <summary><strong>How It Works</strong></summary>
 
 1. **Read the subtitles** and split Japanese into individual words.
-2. **Filter** to content words you don't already know.
+2. **Filter** to content words you don't already know - optionally reviewing the list yourself in the Word Curator.
 3. **Grab a screenshot and audio clip** from the video for each line.
 4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online if enabled (slower, rate-limited).
 5. **Send the finished cards to Anki.**
@@ -138,10 +142,10 @@ Want another theme added? Suggest in a GitHub Issue.
 | Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
 | Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
 | Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Add Dictionary… |
-| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Dictionary -> Pitch Accent File |
-| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Dictionary -> Pitch Accent File |
-| Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Filtering -> Frequency List File |
-| Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Filtering -> Frequency List File |
+| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Pitch Accent -> Add pitch source… |
+| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Pitch Accent -> Add pitch source… |
+| Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… |
+| Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… |
 
 
 <details>
@@ -156,8 +160,8 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | Issue                    | Solution                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
 | "Cannot connect to Anki" | Start Anki and ensure AnkiConnect is installed.                                  |
-| "Deck not found"         | Pick an existing deck in Settings -> Anki. Decks are not created for you; make it in Anki first if you need a new one. |
-| "Note type not found"    | Configure your note type's field names in Settings -> Anki.                       |
+| "Deck not found"         | Pick an existing deck in Settings -> Cards & Anki. Decks are not created for you; make it in Anki first if you need a new one. |
+| "Note type not found"    | Configure your note type's field names in Settings -> Cards & Anki.               |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
 | No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
 | Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
