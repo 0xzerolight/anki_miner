@@ -1,16 +1,16 @@
 # Testing
 
-Anki Miner has 7,948 test functions across 370 test files; parameterization expands these to 8,873 collected tests. This page documents how the suite is organized and how to run it.
+Anki Miner has ~10,200 test functions across 492 test files. This page documents how the suite is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # 349 files, external services mocked
-│   └── gui/               # a handful of widget tests; most live in unit/ root
-├── integration/           # 8 files, real adapters where possible
-└── e2e/                   # on-demand live harness (see E2E harness below)
+├── unit/                  # 468 files, external services mocked
+│   └── gui/               # 40 files; most widget tests live in unit/ root
+├── integration/           # 10 files, real adapters where possible
+└── e2e/                   # 14 files, on-demand live harness (see E2E harness below)
 ```
 
 Most widget tests (panels, tabs, dialogs) live directly under `tests/unit/` (e.g. `test_anki_settings_panel.py`, `test_deck_builder_tab.py`), not in `tests/unit/gui/`. Any test importing a PyQt6 widget needs `QT_QPA_PLATFORM=offscreen` in headless environments — see [Headless Qt](#headless-qt).
@@ -61,6 +61,7 @@ HTML coverage lands in `htmlcov/`.
 | `real_probe` | Exercises the real `AnkiService._probe_duplicates` (no autouse stub). |
 | `network` | Genuinely needs real network; suppresses the socket tripwire (`tests/_network_tripwire.py`). |
 | `golden` | Android-port engine parity contract; excluded from the default gate and run on demand or in `android-engine-goldens.yml`. |
+| `motion` | Needs real animation timing; opts out of the autouse instant-motion fixture. |
 
 Register new markers in `[tool.pytest.ini_options].markers` in `pyproject.toml`.
 
@@ -78,7 +79,7 @@ CI sets this automatically. Locally, the project exposes `tests/conftest.py` con
 
 External boundaries are mocked in unit tests:
 
-- **AnkiConnect** — patched at `anki_miner.services.anki_service.requests.post` or the higher-level `AnkiService` interface.
+- **AnkiConnect** — patched at `anki_miner.services._ankiconnect.requests.post`, the actual HTTP call site (see that module's docstring — don't reroute the target).
 - **ffmpeg** — `subprocess.run` patched to return canned probe / extraction output.
 - **Jisho** — `requests.get` patched; payloads stored as JSON fixtures where possible.
 - **yt-dlp** — patched at the subprocess boundary; the `YouTubeFetcherService` is the unit under test.
