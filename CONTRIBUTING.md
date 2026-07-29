@@ -7,6 +7,7 @@ Thanks for helping out. Anki Miner is a solo-maintained Japanese mining tool, an
 - Bugs and feature requests: open an [Issue](https://github.com/0xzerolight/anki_miner/issues) using the appropriate template.
 - General questions and chat: use [Discussions](https://github.com/0xzerolight/anki_miner/discussions) or [Discord](https://discord.com/invite/aDtQyZzUVP).
 - Security vulnerabilities: see [SECURITY.md](SECURITY.md). Do not open a public issue.
+- Code of Conduct: see [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 
 ## Development setup
@@ -56,6 +57,8 @@ mypy anki_miner
 pytest
 ```
 
+`scripts/health.sh` runs the full local gate in one command (the above plus vulture and shellcheck).
+
 ## Tests
 
 See [TESTING.md](TESTING.md) for the full strategy. Quick reference:
@@ -65,6 +68,15 @@ See [TESTING.md](TESTING.md) for the full strategy. Quick reference:
 - Headless Qt: `QT_QPA_PLATFORM=offscreen` matches CI behavior.
 
 New code should add tests where reasonable; refactors should not regress existing coverage by a meaningful amount.
+
+## Translations
+
+If your change adds or edits a user-facing UI string, refresh the translation catalogs before committing:
+
+```bash
+python scripts/i18n.py extract
+python scripts/i18n.py compile
+```
 
 ## Changelog
 
