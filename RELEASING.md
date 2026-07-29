@@ -7,6 +7,7 @@ Maintainer-facing release SOP. Contributors should not need to run any of these 
 - Push access to `0xzerolight/anki_miner`.
 - PyPI trusted publisher already configured for the project; releases publish via `publish.yml` on tag push.
 - No outstanding regressions in `## [Unreleased]` of `CHANGELOG.md`.
+- `gh` authenticated with scopes `actions:write` + `actions:read` + `contents:read` (classic `repo`), needed for the dry-run gate below.
 
 ## Preflight (run BEFORE tagging)
 
@@ -36,7 +37,9 @@ installs `[asr]` alone, so the leg could only ever report a missing backend.
 reports SKIP on either the Linux or the Windows job — so a green preflight is not
 a substitute for a green dry-run.
 
-For a full-matrix rehearsal without cutting a release, run the dry-run gate:
+For a full-matrix rehearsal without cutting a release, run the dry-run gate. Requires
+`gh` authenticated with scopes `actions:write` + `actions:read` + `contents:read`
+(classic `repo`):
 
 ```bash
 scripts/release_dryrun.sh                 # default: linux-windows
@@ -71,6 +74,14 @@ and fix until green before tagging.
    git tag vX.Y.Z
    git push origin vX.Y.Z
    ```
+
+   > **Both `release.yml` and `publish.yml` gate on green CI for the exact tagged
+   > commit** (`release.yml:82-133`, `publish.yml:19-61`) before doing anything else.
+   > `ci.yml` triggers only on push/PR to `main`, never on tags, so each gate polls
+   > the GitHub API for a `ci.yml` run on that SHA: up to 300s grace for the run to
+   > appear, then up to 1800s (30 min) for it to finish. Tag a commit that already
+   > has a green CI run on `main` (step 3 above pushes one) — tagging one that
+   > never ran CI stalls for up to 30 minutes and then fails, requiring a re-tag.
 
 5. **Release workflow runs.** On the tag, `.github/workflows/release.yml` builds per-OS artifacts:
 
