@@ -21,13 +21,27 @@ dropped).
 
 Yomitan builds the pronunciation DOM then runs ``CssStyleApplier`` over it,
 inlining every matching rule from ``ext/data/pronunciation-style.json`` so the
-serialized markup renders identically inside an Anki field, which has no access
-to the note-type stylesheet. This module emits that already-inlined markup
+serialized markup carries its own geometry into an Anki field, which has no
+access to *Yomitan's* stylesheet. This module emits that already-inlined markup
 directly: the geometry is the mechanical port, and the per-element ``style="..."``
 attributes are the hand-resolved ``pronunciation-style.json`` selectors (the
 element structure is fixed, so the matching is resolved once by hand rather than
 by a runtime CSS engine). Colors stay ``currentColor`` so the graph tracks the
 card's text color in light and dark themes.
+
+The field is NOT insulated from the *note type's* stylesheet, and one deliberate
+divergence from Yomitan's inlined output follows from that (Android issue #5).
+Yomitan declares ``border-color: currentColor`` on every ``pronunciation-mora-line``
+including low mora, where it is inert because only the ``[data-pitch=high]``
+selector supplies ``display``/``border-top-*``. Inlined into a field it stays
+inert on its own — but the Senren note type hides low mora by declaring
+``border-color: transparent`` on an otherwise fully-drawn line, so an inline
+``currentColor`` un-hides it and the overline covers the whole word. So
+:data:`_MORA_LINE_STYLE` is empty here: withdrawing from the contested property
+is the only thing a note-type stylesheet cannot out-rank, and it matches how
+desktop issue #93 was settled for the glossary envelope. Note this closes one
+leak, not the class — ``background``, ``box-shadow``, ``outline``,
+pseudo-elements and an ancestor ``text-decoration`` all still reach these spans.
 
 ``getDownstepPositions`` is reused from
 :mod:`anki_miner.services.pitch_accent_service` (already ported there for pitch
@@ -234,8 +248,10 @@ _MORA_STYLE = "display:inline-block;position:relative;"
 _MORA_HIGH_NEXT_LOW_STYLE = "display:inline-block;position:relative;padding-right:0.1em;margin-right:0.1em;"
 _CHARACTER_STYLE = "display:inline;"
 _CHARACTER_GROUP_STYLE = "display:inline-block;position:relative;"
-# Low mora: the line span exists but stays invisible (no display:block).
-_MORA_LINE_STYLE = "border-color:currentColor;"
+# Low mora: the line span exists but declares nothing. Yomitan inlines
+# ``border-color: currentColor`` here; we deliberately do not — see the module
+# docstring (Android issue #5 / Senren).
+_MORA_LINE_STYLE = ""
 # High mora: a solid overline across the mora.
 _MORA_LINE_HIGH_STYLE = (
     "border-color:currentColor;display:block;user-select:none;pointer-events:none;"

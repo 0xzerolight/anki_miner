@@ -11,6 +11,8 @@ visual reference, not a string-equality target).
 
 from __future__ import annotations
 
+import re
+
 from anki_miner.services.pitch_accent.render import (
     get_kana_diacritic_info,
     get_kana_morae,
@@ -189,14 +191,14 @@ class TestGetKanaDiacriticInfo:
 
 
 # Hand-authored serialized snapshot: はし [heiban], morae は/し. Mora 0 is low
-# (bare mora-line), mora 1 is high with a high successor (a plain overline, no
-# downstep tick).
+# (declaration-free mora-line), mora 1 is high with a high successor (a plain
+# overline, no downstep tick).
 _HASHI_HEIBAN_TEXT = (
     '<span class="pronunciation-text" style="display:inline;">'
     '<span class="pronunciation-mora" style="display:inline-block;position:relative;" '
     'data-position="0" data-pitch="low" data-pitch-next="high">'
     '<span class="pronunciation-character" style="display:inline;">は</span>'
-    '<span class="pronunciation-mora-line" style="border-color:currentColor;"></span>'
+    '<span class="pronunciation-mora-line" style=""></span>'
     "</span>"
     '<span class="pronunciation-mora" style="display:inline-block;position:relative;" '
     'data-position="1" data-pitch="high" data-pitch-next="high">'
@@ -226,6 +228,64 @@ class TestRenderPitchText:
         html = render_pitch_text(["は", "し"], 0)
         assert "currentColor" in html
         assert "#" not in html  # heiban with no indicators has no hex color
+
+
+class TestLowMoraLineDeclaresNothing:
+    """A low mora's line span must carry an empty ``style`` (Android issue #5).
+
+    The span is invisible on its own only because nothing gives it a box.
+    Yomitan inlines ``border-color: currentColor`` on it, which is inert under
+    Yomitan's own sheet but not under a note type's: Senren draws every
+    ``.pronunciation-mora-line`` fully and hides low mora by declaring
+    ``border-color: transparent``, so any inline color we ship out-ranks that
+    and the overline covers the whole word. Withdrawing from the property is
+    the only thing a host stylesheet cannot out-rank — the same resolution
+    Issue #93 reached for the glossary envelope's inline axis.
+
+    Declaring nothing is the invariant; ``display:none`` or a
+    ``border-top-style:none`` counter-declaration would also hide the line, but
+    both re-enter the specificity fight and both make the span match Senren's
+    ``span[style*=...]`` substring selectors.
+    """
+
+    _MORA = re.compile(
+        r'<span class="pronunciation-mora"[^>]*?data-pitch="(?P<pitch>low|high)"'
+        r'.*?<span class="pronunciation-mora-line" style="(?P<line>[^"]*)"',
+        re.DOTALL,
+    )
+
+    def _lines_by_pitch(self, html):
+        pairs = [(m.group("pitch"), m.group("line")) for m in self._MORA.finditer(html)]
+        assert pairs, "no mora spans matched — the markup shape changed"
+        return pairs
+
+    def test_every_low_mora_line_is_declaration_free(self):
+        # Every accent shape: heiban, atamadaka, nakadaka, odaka, and an
+        # explicit [HL]+ contour. Between them these cover low mora before the
+        # rise, after the downstep, and word-final.
+        for morae, position in (
+            (["は", "し"], 0),
+            (["は", "し"], 1),
+            (["あ", "ず", "か", "る"], 3),
+            (["と", "しょ", "し", "つ"], 2),
+            (["さ", "ん", "こ", "う", "しょ"], 5),
+            (["は", "し"], "LH"),
+        ):
+            for pitch, line in self._lines_by_pitch(render_pitch_text(morae, position)):
+                if pitch == "low":
+                    assert line == "", f"low mora line declared {line!r} for {morae}/{position}"
+                else:
+                    assert "border-top-style:solid;" in line
+
+    def test_low_mora_line_matches_no_inline_style_substring_selector(self):
+        # Senren selects our spans by inline-style substring, e.g.
+        # span[style*="border-top-width"] and span[style*="border-color"].
+        # A declaration-free span matches neither.
+        html = render_pitch_text(["あ", "ず", "か", "る"], 3)
+        for pitch, line in self._lines_by_pitch(html):
+            if pitch == "low":
+                assert "border-color" not in line
+                assert "border-top-width" not in line
 
     def test_devoice_adds_dotted_red_indicator(self):
         html = render_pitch_text(["し", "た"], 0, devoice=(1,))
