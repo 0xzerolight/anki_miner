@@ -38,6 +38,9 @@ logger = logging.getLogger(__name__)
 FILENAME = "ui_state.ini"
 
 _GEOMETRY_KEY = "window/geometry"
+_CURATOR_GEOMETRY_KEY = "curator/geometry"
+_CURATOR_SPLIT_KEY = "curator/split_main"
+_CURATOR_SIDE_GROUP = "curator/split_side"
 _MAIN_TAB_KEY = "navigation/main_tab"
 _SUBTAB_GROUP = "navigation/subtab"
 _DIRECTORY_GROUP = "directories"
@@ -77,27 +80,36 @@ def _commit(settings: QSettings) -> None:
 # ---------------------------------------------------------------------------
 
 
-def load_geometry() -> QByteArray | None:
-    """Return the stored ``saveGeometry()`` blob, or ``None`` if there is none.
+def _as_blob(raw: object) -> QByteArray | None:
+    """Return ``raw`` as a byte blob, or ``None`` if it is not one.
 
-    A value that is not a byte blob (a hand-edited or truncated INI) is reported
-    as absent. A blob that is the right *type* but not decodable is returned
-    as-is: ``QMainWindow.restoreGeometry`` is the authority on validity and
-    answers ``False``, which is the caller's cue to fall back.
+    A value of the wrong type (a hand-edited or truncated INI) is reported as
+    absent. A blob that is the right *type* but not decodable is returned
+    as-is: Qt's ``restoreGeometry`` / ``restoreState`` are the authority on
+    validity and answer ``False``, which is the caller's cue to fall back.
     """
-    settings = _open()
-    if settings is None:
-        return None
-    try:
-        raw = settings.value(_GEOMETRY_KEY)
-    except Exception:
-        logger.debug("Unreadable window geometry in the UI session state", exc_info=True)
-        return None
     if isinstance(raw, QByteArray):
         return raw
     if isinstance(raw, bytes | bytearray):
         return QByteArray(bytes(raw))
     return None
+
+
+def _read_blob(settings: QSettings, key: str, what: str) -> QByteArray | None:
+    """Read one blob-valued key, reporting an unreadable one as absent."""
+    try:
+        return _as_blob(settings.value(key))
+    except Exception:
+        logger.debug("Unreadable %s in the UI session state", what, exc_info=True)
+        return None
+
+
+def load_geometry() -> QByteArray | None:
+    """Return the stored ``saveGeometry()`` blob, or ``None`` if there is none."""
+    settings = _open()
+    if settings is None:
+        return None
+    return _read_blob(settings, _GEOMETRY_KEY, "window geometry")
 
 
 def save_geometry(blob: QByteArray) -> None:
@@ -110,6 +122,70 @@ def save_geometry(blob: QByteArray) -> None:
         _commit(settings)
     except Exception:
         logger.warning("Could not save the window geometry", exc_info=True)
+
+
+# ---------------------------------------------------------------------------
+# Word curator layout
+# ---------------------------------------------------------------------------
+
+
+def load_curator_layout(side_key: str) -> tuple[QByteArray | None, QByteArray | None, QByteArray | None]:
+    """Return ``(geometry, main_split, side_split)`` for the word curator.
+
+    The curator is rebuilt for every item in a mining queue, so without this a
+    user who widens the video column re-widens it once per word. Any part that
+    is missing or unreadable comes back as ``None``, which the caller reads as
+    "compute the default".
+
+    Args:
+        side_key: The side column's pane composition (see
+            :func:`save_curator_layout`). A blob saved under a different
+            composition is not returned.
+    """
+    settings = _open()
+    if settings is None:
+        return (None, None, None)
+    return (
+        _read_blob(settings, _CURATOR_GEOMETRY_KEY, "curator geometry"),
+        _read_blob(settings, _CURATOR_SPLIT_KEY, "curator split"),
+        _read_blob(settings, f"{_CURATOR_SIDE_GROUP}/{side_key}", "curator side split"),
+    )
+
+
+def save_curator_layout(
+    geometry: QByteArray,
+    main_split: QByteArray | None,
+    side_split: QByteArray | None,
+    *,
+    side_key: str,
+) -> None:
+    """Store the curator's window geometry and splitter positions.
+
+    Args:
+        geometry: A ``saveGeometry()`` blob.
+        main_split: A ``QSplitter.saveState()`` blob for the table/side split,
+            or ``None`` on a table-only curator.
+        side_split: A ``saveState()`` blob for the side column, or ``None``
+            when that column holds a single pane.
+        side_key: The side column's pane composition, e.g.
+            ``"player+sentences+dict"``. Load-bearing rather than cosmetic:
+            ``QSplitter.restoreState`` does not reject a blob listing more
+            panes than the splitter has -- it applies the prefix -- so a video
+            curator's three sizes would silently mis-size a manga curator's
+            two. Keying by composition means each shape restores only its own.
+    """
+    settings = _open(for_write=True)
+    if settings is None:
+        return
+    try:
+        settings.setValue(_CURATOR_GEOMETRY_KEY, geometry)
+        if main_split is not None:
+            settings.setValue(_CURATOR_SPLIT_KEY, main_split)
+        if side_split is not None:
+            settings.setValue(f"{_CURATOR_SIDE_GROUP}/{side_key}", side_split)
+        _commit(settings)
+    except Exception:
+        logger.warning("Could not save the word curator layout", exc_info=True)
 
 
 # ---------------------------------------------------------------------------
