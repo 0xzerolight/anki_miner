@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
-from PyQt6.QtCore import QPoint, Qt, QTimer
+from PyQt6.QtCore import QByteArray, QPoint, Qt, QTimer
 from PyQt6.QtGui import (
     QCloseEvent,
     QColor,
@@ -47,6 +47,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.fonts import (
     JAPANESE_BODY,
     JAPANESE_FEATURE,
@@ -204,7 +205,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._search_debounce_timer.setInterval(150)
         self._search_debounce_timer.timeout.connect(self._apply_search)
 
+        # Layout state (D: remembered between queue items). The side key names
+        # the pane composition, so a manga curator never restores a video
+        # curator's sizes; a table-only dialog composes none and saves none.
         self._split_ratios_applied = False
+        self._main_split_restored = False
+        self._side_split_restored = False
+        self._layout_state_saved = False
+        self._side_key = ""
+        self._side_stretch: list[int] = []
         self._setup_ui()
         self._populate_table()
         self._refresh_summary()
@@ -216,6 +225,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.finished.connect(self._stop_player)
         add_min_max_buttons(self)
         self._configure_as_owned_window()
+        # Last, because both calls above go through setWindowFlag, which resets
+        # a window's geometry on some platforms.
+        self._restore_layout_state()
 
     def _configure_as_owned_window(self) -> None:
         """Present the curator as a non-modal window owned by its tab (D33).
@@ -532,9 +544,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         every later drag alone.
         """
         super().showEvent(a0)
-        if not self._split_ratios_applied:
-            self._split_ratios_applied = True
+        if self._split_ratios_applied:
+            return
+        self._split_ratios_applied = True
+        if not self._main_split_restored:
             self._apply_main_split_ratio()
+        if not self._side_split_restored:
             self._apply_side_split_ratio()
 
     def _apply_main_split_ratio(self) -> None:
@@ -551,6 +566,100 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         usable = self._main_splitter.width()
         self._main_splitter.setSizes([usable * left // (left + right), usable * right // (left + right)])
 
+    # ------------------------------------------------------------------
+    # Remembered window and split positions
+    # ------------------------------------------------------------------
+
+    def _restore_layout_state(self) -> None:
+        """Re-apply the window size and split positions from the last review.
+
+        The curator is rebuilt for every item in a mining queue, so without
+        this a user who widens the video column widens it again per word.
+
+        Order matters: geometry first, because the split blobs are pixel sizes
+        and Qt clamps them to the window they land in.
+        """
+        geometry, main_split, side_split = session_state.load_curator_layout(self._side_key)
+        if geometry is not None and self.restoreGeometry(geometry) and not self._is_on_a_live_screen():
+            # restoreGeometry relocates a window whose screen is GONE, but not
+            # one whose screen merely shrank, so a rect saved on a larger
+            # monitor can land entirely off the current one.
+            self._apply_default_geometry()
+        self._main_split_restored = self._restore_split(getattr(self, "_main_splitter", None), main_split)
+        self._side_split_restored = self._restore_split(getattr(self, "_side_splitter", None), side_split)
+
+    def _is_on_a_live_screen(self) -> bool:
+        """True when the window's centre sits on a screen that exists."""
+        return QApplication.screenAt(self.frameGeometry().center()) is not None
+
+    def _apply_default_geometry(self) -> None:
+        """Resize to the default, clamped to the screen. Position is Qt's."""
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        self.resize(min(self.width(), available.width()), min(self.height(), available.height()))
+
+    def _restore_split(self, splitter: QSplitter | None, blob: QByteArray | None) -> bool:
+        """Restore ``splitter`` from ``blob``; answer whether it took.
+
+        ``restoreState`` carries ``childrenCollapsible`` and the stretch
+        factors along with the sizes, so a blob written before those were set
+        would quietly undo them -- they are re-applied afterwards, always.
+
+        A restored size below a pane's own minimum is rejected wholesale rather
+        than clamped: the point of the blob is a layout the user chose, and a
+        half-honoured one is not that.
+        """
+        if splitter is None or blob is None:
+            return False
+        if not splitter.restoreState(blob) or len(splitter.sizes()) != splitter.count():
+            self._reassert_split_policy(splitter)
+            return False
+        for index, size in enumerate(splitter.sizes()):
+            pane = splitter.widget(index)
+            floor = pane.minimumSizeHint() if pane is not None else None
+            if floor is None:
+                continue
+            if size < (floor.height() if splitter.orientation() == Qt.Orientation.Vertical else floor.width()):
+                self._reassert_split_policy(splitter)
+                return False
+        self._reassert_split_policy(splitter)
+        return True
+
+    def _reassert_split_policy(self, splitter: QSplitter) -> None:
+        """Re-apply what ``restoreState`` is allowed to have overwritten."""
+        splitter.setChildrenCollapsible(False)
+        if splitter is getattr(self, "_main_splitter", None):
+            splitter.setStretchFactor(0, _MAIN_SPLIT_STRETCH[0])
+            splitter.setStretchFactor(1, _MAIN_SPLIT_STRETCH[1])
+        elif splitter is getattr(self, "_side_splitter", None):
+            for index, stretch in enumerate(self._side_stretch):
+                splitter.setStretchFactor(index, stretch)
+
+    def done(self, a0: int) -> None:  # noqa: D102 - Qt override, documented below
+        # Every exit funnels through QDialog::done -- accept, reject, Esc, the
+        # window X and force_reject -- and it runs while the window is still
+        # visible, so the geometry read here is the one the user is looking at.
+        # `finished` would be too late (it fires after hide) and its connection
+        # order is frozen by the teardown contract in __init__.
+        #
+        # Suppressed rather than trusted: a mining queue item is waiting on
+        # this dialog closing, and remembering a splitter position is not worth
+        # holding it open for.
+        if not self._layout_state_saved:
+            self._layout_state_saved = True
+            main = getattr(self, "_main_splitter", None)
+            side = getattr(self, "_side_splitter", None)
+            with contextlib.suppress(Exception):
+                session_state.save_curator_layout(
+                    self.saveGeometry(),
+                    main.saveState() if main is not None else None,
+                    side.saveState() if side is not None else None,
+                    side_key=self._side_key,
+                )
+        super().done(a0)
+
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
 
@@ -566,32 +675,36 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         because the composition varies: manga is image + dictionary, and
         positional factors would hand the dictionary the sentence picker's.
         """
-        panes: list[tuple[QWidget, int, int]] = []  # (widget, stretch, minimum height)
+        # (name, widget, stretch, minimum height). The names compose the key a
+        # saved side-column position is stored under -- see save_curator_layout.
+        panes: list[tuple[str, QWidget, int, int]] = []
         row = metric_row_height(self)
 
         if self._show_player:
             self.player_widget = self._create_player_widget()
             # Stretch 3: the frame is the reason this column exists, and its
             # own 16:9 floor keeps it honest when the window is short.
-            panes.append((self.player_widget, 3, 0))
+            panes.append(("player", self.player_widget, 3, 0))
 
         if self._show_image:
             # Mutually exclusive with the player in practice (manga has no
             # video), but the panes-list pattern composes either way.
             self.page_image_view = PageImageView()
-            panes.append((self.page_image_view, 3, 0))
+            panes.append(("image", self.page_image_view, 3, 0))
 
         if self._has_candidates:
             # Stretch 0: a picker that shows its candidates is done. Extra
             # height belongs to the frame and the definition, so this asks only
             # for its label and three rows.
-            panes.append((self._build_sentence_pane(), 0, 4 * row))
+            panes.append(("sentences", self._build_sentence_pane(), 0, 4 * row))
 
         if self._show_dict:
             self.definition_view = QTextBrowser()
             self.definition_view.setReadOnly(True)
             self.definition_view.setOpenExternalLinks(False)
-            panes.append((self.definition_view, 2, 4 * row))
+            panes.append(("dict", self.definition_view, 2, 4 * row))
+
+        self._side_key = "+".join(name for name, _, _, _ in panes)
 
         container = QWidget()
         vbox = QVBoxLayout(container)
@@ -599,12 +712,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         vbox.setSpacing(0)
 
         if len(panes) == 1:
-            vbox.addWidget(panes[0][0])
+            vbox.addWidget(panes[0][1])
             return container
 
         self._side_splitter = QSplitter(Qt.Orientation.Vertical)
-        self._side_stretch = [stretch for _, stretch, _ in panes]
-        for index, (widget, stretch, minimum) in enumerate(panes):
+        self._side_stretch = [stretch for _, _, stretch, _ in panes]
+        for index, (_, widget, stretch, minimum) in enumerate(panes):
             if minimum:
                 widget.setMinimumHeight(minimum)
             self._side_splitter.addWidget(widget)

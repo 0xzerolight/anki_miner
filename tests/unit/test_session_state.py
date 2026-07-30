@@ -54,6 +54,53 @@ def test_non_blob_geometry_reads_none(state_home: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Word curator layout
+# ---------------------------------------------------------------------------
+
+
+def test_curator_layout_round_trips(state_home: Path) -> None:
+    session_state.save_curator_layout(
+        QByteArray(b"geo"), QByteArray(b"main"), QByteArray(b"side"), side_key="player+dict"
+    )
+    assert session_state.load_curator_layout("player+dict") == (
+        QByteArray(b"geo"),
+        QByteArray(b"main"),
+        QByteArray(b"side"),
+    )
+
+
+def test_curator_layout_absent_reads_none(state_home: Path) -> None:
+    assert session_state.load_curator_layout("player+dict") == (None, None, None)
+
+
+def test_a_side_split_only_restores_onto_the_same_pane_composition(state_home: Path) -> None:
+    """QSplitter.restoreState applies a longer blob's prefix rather than
+    rejecting it, so a video curator's three sizes would silently mis-size a
+    manga curator's two. Keying by composition is what prevents that.
+    """
+    session_state.save_curator_layout(
+        QByteArray(b"geo"), QByteArray(b"main"), QByteArray(b"side"), side_key="player+sentences+dict"
+    )
+    geometry, main_split, side_split = session_state.load_curator_layout("image+dict")
+    assert side_split is None
+    assert geometry == QByteArray(b"geo")
+    assert main_split == QByteArray(b"main")
+
+
+def test_curator_layout_saves_geometry_alone_when_there_are_no_splits(state_home: Path) -> None:
+    """A table-only curator has no splitter to save."""
+    session_state.save_curator_layout(QByteArray(b"geo"), None, None, side_key="")
+    assert session_state.load_curator_layout("") == (QByteArray(b"geo"), None, None)
+
+
+def test_non_blob_curator_state_reads_none(state_home: Path) -> None:
+    (state_home / "ui_state.ini").write_text("[curator]\ngeometry=not-a-blob\nsplit_main=also-not\n", encoding="utf-8")
+    geometry, main_split, _ = session_state.load_curator_layout("player+dict")
+    assert geometry is None
+    assert main_split is None
+
+
+# ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
 
@@ -76,11 +123,14 @@ def test_saving_route_replaces_stale_subtabs(state_home: Path) -> None:
     assert session_state.load_route() == ("video", {"video": "single"})
 
 
-def test_ini_holds_only_geometry_route_and_folders(state_home: Path) -> None:
+def test_ini_holds_only_geometry_route_folders_and_curator(state_home: Path) -> None:
     """No scroll offset, no form draft, no field text ever reaches the file."""
     session_state.save_geometry(QByteArray(b"blob"))
     session_state.save_route("video", {"video": "single"})
     session_state.remember_accepted_path("video.single.inputs", str(state_home / "ep.mkv"), file_mode=True)
+    session_state.save_curator_layout(
+        QByteArray(b"geo"), QByteArray(b"main"), QByteArray(b"side"), side_key="player+dict"
+    )
 
     settings = QSettings(str(state_home / "ui_state.ini"), QSettings.Format.IniFormat)
     assert set(settings.allKeys()) == {
@@ -88,6 +138,9 @@ def test_ini_holds_only_geometry_route_and_folders(state_home: Path) -> None:
         "navigation/main_tab",
         "navigation/subtab/video",
         "directories/video.single.inputs",
+        "curator/geometry",
+        "curator/split_main",
+        "curator/split_side/player+dict",
     }
 
 
