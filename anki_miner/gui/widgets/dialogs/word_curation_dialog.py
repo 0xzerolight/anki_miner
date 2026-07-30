@@ -17,7 +17,16 @@ if TYPE_CHECKING:
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
 from PyQt6.QtCore import QPoint, Qt, QTimer
-from PyQt6.QtGui import QCloseEvent, QColor, QFont, QImage, QKeySequence, QPixmap, QShortcut
+from PyQt6.QtGui import (
+    QCloseEvent,
+    QColor,
+    QFont,
+    QImage,
+    QKeySequence,
+    QPixmap,
+    QShortcut,
+    QShowEvent,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
@@ -71,6 +80,10 @@ logger = logging.getLogger(__name__)
 # share a page, so 4 pages of backtrack covers real navigation.
 _PAGE_CACHE_CAP = 4
 _PAGE_CACHE_MAX_BYTES = 64 * 1024 * 1024
+
+#: Table column : side column, as stretch factors. Also the ratio the split
+#: opens at, so the first frame and every resize after it agree.
+_MAIN_SPLIT_STRETCH = (3, 2)
 
 
 @dataclass(frozen=True)
@@ -191,6 +204,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._search_debounce_timer.setInterval(150)
         self._search_debounce_timer.timeout.connect(self._apply_search)
 
+        self._split_ratios_applied = False
         self._setup_ui()
         self._populate_table()
         self._refresh_summary()
@@ -270,15 +284,18 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         if self._show_player or self._show_image or self._show_dict or self._has_candidates:
             # Horizontal splitter: left = word table, right = player/page + sentences + dict
-            h_splitter = QSplitter(Qt.Orientation.Horizontal)
-            h_splitter.addWidget(left_pane)
-
-            right_pane = self._build_right_pane()
-            h_splitter.addWidget(right_pane)
-
-            # Give the left pane slightly more space initially
-            h_splitter.setSizes([700, 800])
-            layout.addWidget(h_splitter, 1)
+            self._main_splitter = QSplitter(Qt.Orientation.Horizontal)
+            self._main_splitter.addWidget(left_pane)
+            self._main_splitter.addWidget(self._build_right_pane())
+            # The ratio is a decision, not a leftover: the table reads wide and
+            # the side column has to hold a legible video frame and a
+            # dictionary entry. Stretch factors are what survive a resize --
+            # the previous setSizes([700, 800]) said nothing about growth, and
+            # said it about a 1500px window the dialog no longer opens at.
+            self._main_splitter.setStretchFactor(0, _MAIN_SPLIT_STRETCH[0])
+            self._main_splitter.setStretchFactor(1, _MAIN_SPLIT_STRETCH[1])
+            self._main_splitter.setChildrenCollapsible(False)
+            layout.addWidget(self._main_splitter, 1)
         else:
             layout.addWidget(left_pane, 1)
 
@@ -506,43 +523,119 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.key_hint_label.setWordWrap(True)
         return self.key_hint_label
 
+    def showEvent(self, a0: QShowEvent | None) -> None:  # noqa: N802 - Qt override
+        """Set the opening split ratios once, against real geometry.
+
+        Not from ``_setup_ui``: a splitter that has never been laid out reports
+        zero width, so a ratio computed there divides nothing. First show is
+        the earliest moment the numbers mean anything, and doing it once leaves
+        every later drag alone.
+        """
+        super().showEvent(a0)
+        if not self._split_ratios_applied:
+            self._split_ratios_applied = True
+            self._apply_main_split_ratio()
+            self._apply_side_split_ratio()
+
+    def _apply_main_split_ratio(self) -> None:
+        """Open the split at the same ratio the stretch factors defend.
+
+        Sized from the splitter's own width rather than from a pair of
+        constants: ``setSizes([700, 800])`` described a window this dialog does
+        not open at, and its numbers survived nothing. Anything the layout
+        cannot honour (a pane's minimum) is clamped by Qt, which is intended.
+        """
+        if not hasattr(self, "_main_splitter"):
+            return
+        left, right = _MAIN_SPLIT_STRETCH
+        usable = self._main_splitter.width()
+        self._main_splitter.setSizes([usable * left // (left + right), usable * right // (left + right)])
+
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
 
         Stacks (top→bottom) the player, the sentence picker, and the definition
-        browser — only the enabled ones. Returns a vertical ``QSplitter`` when
-        two or more are enabled, otherwise the single enabled widget. Called
-        only when at least one sub-pane is enabled.
+        browser — only the enabled ones, so the list is anywhere from one to
+        three panes long. Always returns a container, never a bare sub-pane:
+        the panes are shared widgets (``SubtitlePlayerWidget`` is also the
+        subtitle viewer's, ``PageImageView`` carries its own minimum), and a
+        wrapper is what lets this screen size its own column without reaching
+        into them.
+
+        Stretch and minimum height ride the tuple rather than the position,
+        because the composition varies: manga is image + dictionary, and
+        positional factors would hand the dictionary the sentence picker's.
         """
-        panes: list[tuple[QWidget, int]] = []  # (widget, initial splitter size)
+        panes: list[tuple[QWidget, int, int]] = []  # (widget, stretch, minimum height)
+        row = metric_row_height(self)
 
         if self._show_player:
             self.player_widget = self._create_player_widget()
-            panes.append((self.player_widget, 480))
+            # Stretch 3: the frame is the reason this column exists, and its
+            # own 16:9 floor keeps it honest when the window is short.
+            panes.append((self.player_widget, 3, 0))
 
         if self._show_image:
             # Mutually exclusive with the player in practice (manga has no
             # video), but the panes-list pattern composes either way.
             self.page_image_view = PageImageView()
-            panes.append((self.page_image_view, 480))
+            panes.append((self.page_image_view, 3, 0))
 
         if self._has_candidates:
-            panes.append((self._build_sentence_pane(), 240))
+            # Stretch 0: a picker that shows its candidates is done. Extra
+            # height belongs to the frame and the definition, so this asks only
+            # for its label and three rows.
+            panes.append((self._build_sentence_pane(), 0, 4 * row))
 
         if self._show_dict:
             self.definition_view = QTextBrowser()
             self.definition_view.setReadOnly(True)
             self.definition_view.setOpenExternalLinks(False)
-            panes.append((self.definition_view, 280))
+            panes.append((self.definition_view, 2, 4 * row))
+
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(0)
 
         if len(panes) == 1:
-            return panes[0][0]
+            vbox.addWidget(panes[0][0])
+            return container
 
-        v_splitter = QSplitter(Qt.Orientation.Vertical)
-        for widget, _ in panes:
-            v_splitter.addWidget(widget)
-        v_splitter.setSizes([size for _, size in panes])
-        return v_splitter
+        self._side_splitter = QSplitter(Qt.Orientation.Vertical)
+        self._side_stretch = [stretch for _, stretch, _ in panes]
+        for index, (widget, stretch, minimum) in enumerate(panes):
+            if minimum:
+                widget.setMinimumHeight(minimum)
+            self._side_splitter.addWidget(widget)
+            self._side_splitter.setStretchFactor(index, stretch)
+        self._side_splitter.setChildrenCollapsible(False)
+        vbox.addWidget(self._side_splitter)
+        return container
+
+    def _apply_side_split_ratio(self) -> None:
+        """Open the side column at the ratio its stretch factors defend.
+
+        Stretch factors govern a *resize*; the first frame comes from each
+        pane's own sizeHint, and a ``QListWidget`` asks for more than the video
+        frame it sits under. So the opening sizes are stated: a stretch-0 pane
+        keeps its minimum and the rest share what is left by weight.
+        """
+        if not hasattr(self, "_side_splitter"):
+            return
+        fixed = {
+            index: self._side_splitter.widget(index).minimumHeight()  # type: ignore[union-attr]
+            for index, stretch in enumerate(self._side_stretch)
+            if stretch == 0
+        }
+        weights = sum(self._side_stretch)
+        spare = max(self._side_splitter.height() - sum(fixed.values()), 0)
+        self._side_splitter.setSizes(
+            [
+                fixed.get(index, spare * stretch // weights if weights else 0)
+                for index, stretch in enumerate(self._side_stretch)
+            ]
+        )
 
     def _build_sentence_pane(self) -> QWidget:
         """Build the "Sentences" picker pane (label + candidate list).

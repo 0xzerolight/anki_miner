@@ -82,6 +82,28 @@ class TestKeyHintsDoNotFloorThePane:
         assert dialog.key_hint_label.minimumSizeHint().width() < 200
 
 
+class TestTheSplitIsAPolicy:
+    @pytest.mark.parametrize("width", [1000, 1280, 1500, 1913])
+    def test_the_side_column_keeps_a_real_share_at_every_width(self, dialog, width):
+        """The defect in one assertion: the side column used to hold ~13%."""
+        dialog.resize(width, 800)
+        dialog.show()
+        left, right = _main_splitter(dialog).sizes()
+        assert 0.3 < right / (left + right) < 0.5
+
+    def test_neither_column_can_be_dragged_away_entirely(self, dialog):
+        assert _main_splitter(dialog).childrenCollapsible() is False
+
+    def test_the_side_column_is_a_container_not_a_bare_pane(self, dialog):
+        """A minimum set on the pane itself would follow it into the subtitle
+        viewer, which shares ``SubtitlePlayerWidget``.
+        """
+        side = _main_splitter(dialog).widget(1)
+        assert side is not None
+        assert side is not dialog.definition_view
+        assert side.isAncestorOf(dialog.definition_view)
+
+
 class TestTheDialogFitsOnARealScreen:
     def test_it_can_be_narrower_than_a_1024_screen(self, dialog):
         """Was 1506px wide -- unfittable in the 1536 logical px of a 1080p
