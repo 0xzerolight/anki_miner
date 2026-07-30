@@ -312,6 +312,38 @@ class TestKeyHints:
         for key in ("S", "Ctrl+A", "Ctrl+D", "Ctrl+Enter"):
             assert key in text
 
+    def test_the_bulk_keys_are_described_in_the_buttons_vocabulary(self, dialog):
+        """Ctrl+A/Ctrl+D ARE the bulk buttons, so they must be named the same way.
+
+        The hint used to read a bare "Ctrl+A include", which sounds like the
+        focused row and goes outright false the moment Search narrows the list.
+        """
+        text = dialog.key_hint_label.text()
+        assert "Ctrl+A include visible" in text
+        assert "Ctrl+D exclude visible" in text
+        assert "visible" in dialog.select_all_button.text()
+        assert "visible" in dialog.deselect_all_button.text()
+
+
+class TestBulkShortcutsExist:
+    """The hint line is not the only thing that should notice these disappearing."""
+
+    @pytest.mark.parametrize(
+        ("sequence", "expected"),
+        [("Ctrl+A", Qt.CheckState.Checked), ("Ctrl+D", Qt.CheckState.Unchecked)],
+    )
+    def test_the_bulk_shortcut_is_bound_and_acts_on_every_visible_row(self, dialog, sequence, expected):
+        from PyQt6.QtGui import QKeySequence, QShortcut
+
+        matches = [sc for sc in dialog.findChildren(QShortcut) if sc.key() == QKeySequence(sequence)]
+        assert matches, f"no {sequence} shortcut"
+        # Scoped to the table so it cannot steal select-all from the Search box.
+        assert all(sc.context() == Qt.ShortcutContext.WidgetWithChildrenShortcut for sc in matches)
+
+        matches[0].activated.emit()
+        for row in range(dialog.table.rowCount()):
+            assert dialog.table.item(row, 0).checkState() == expected
+
 
 class TestConfirmShortcut:
     """Only Return was window-scoped (it fired from the Search box); it becomes

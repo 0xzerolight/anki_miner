@@ -30,7 +30,6 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import (
     QApplication,
     QDialog,
-    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -48,13 +47,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
-from anki_miner.gui.utils.fonts import (
-    JAPANESE_BODY,
-    JAPANESE_FEATURE,
-    apply_japanese_font,
-    japanese_cell_font,
-    make_scaled_font,
-)
+from anki_miner.gui.utils.fonts import japanese_cell_font, make_scaled_font
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
@@ -113,8 +106,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     exclude in bulk, and confirm. It is a primary interactive surface, not a
     confirmation step: the app automates the mining mechanics, and a user
     frequently picks the words by hand, so every bulk verb names and counts its
-    own target, a counter states position/included/shown, and a detail strip
-    restates the focused row.
+    own target and a counter states position/included/shown.
 
     When ``media_context`` is supplied and its video file exists, an embedded
     ``SubtitlePlayerWidget`` is shown in the right pane so the user can preview
@@ -295,7 +287,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # maximising never widened the media column. Keep this row out here.
         layout.addLayout(self._build_toolbar_row())
 
-        # Build the left pane (table + detail strip + key hints)
+        # Build the left pane (table + key hints)
         left_pane = self._build_left_pane()
 
         if self._show_player or self._show_image or self._show_dict or self._has_candidates:
@@ -396,7 +388,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         return controls_layout
 
     def _build_left_pane(self) -> QWidget:
-        """Build the left pane: the word table, the detail strip and the key hints."""
+        """Build the left pane: the word table and the key hints beneath it."""
         container = QWidget()
         vbox = QVBoxLayout(container)
         vbox.setContentsMargins(0, 0, 0, 0)
@@ -440,8 +432,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.itemChanged.connect(self._on_item_changed)
 
         # Row-focus wiring — independent of checkbox state. Always connected: the
-        # detail panel and the target/position summary exist even on a plain
-        # table-only dialog, and _on_row_focus_changed is what keeps both truthful.
+        # target/position summary exists even on a plain table-only dialog, and
+        # _on_row_focus_changed is what keeps it truthful.
         #
         # BOTH signals are needed, and neither implies the other:
         #   * currentCellChanged is the cursor. It fires even when the selection
@@ -462,73 +454,32 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._on_table_context_menu)
 
+        # Nothing between the table and the hint line. A detail strip used to sit
+        # here restating the focused row's mined form, reading and sentence
+        # (decision D45-B); all three are already columns 1, 3 and 4, so it cost
+        # ~90px of the one pane the screen is actually for. The untruncated
+        # sentence it alone showed stays reachable on the cell's own tooltip,
+        # right-click → Copy sentence, and the Sentences pane.
         vbox.addWidget(self.table, 1)
-        vbox.addWidget(self._build_detail_panel())
         vbox.addWidget(self._build_key_hints())
         return container
 
-    def _build_detail_panel(self) -> QFrame:
-        """Build the always-visible detail strip for the focused row.
-
-        Restates the focused word's card front, its kana reading and the full
-        sentence, so a keyboard user reading down the table never has to hover a
-        truncated cell. Plain text throughout (decision D45-B): no furigana, and
-        no chance of a sentence's own characters being interpreted as markup.
-
-        The three lines stack: the expression large, its kana reading *beneath*
-        it, then the sentence. Beneath, not above — the reading above the kanji
-        is ruby, which is decision D45-C and was declined. All three are
-        Japanese content rather than interface chrome, so they take the Japanese
-        face at content sizes; the word table above keeps its own density.
-
-        Object names are the contract the stylesheet styles against; the
-        sentence strip reserves exactly two lines so the panel's height never
-        moves as the cursor travels.
-        """
-        self.detail_panel = QFrame()
-        self.detail_panel.setObjectName("curator-detail")
-        vbox = QVBoxLayout(self.detail_panel)
-        vbox.setContentsMargins(SPACING.sm, SPACING.xs, SPACING.sm, SPACING.xs)
-        vbox.setSpacing(SPACING.xxs)
-
-        self.detail_expression = QLabel()
-        self.detail_expression.setObjectName("curator-detail-expression")
-        # Size here, weight in the stylesheet: a QSS `font-weight` on QWidget
-        # overrides setFont, so a Python-set bold never actually rendered.
-        apply_japanese_font(self.detail_expression, role=JAPANESE_FEATURE)
-        vbox.addWidget(self.detail_expression)
-
-        self.detail_reading = QLabel()
-        self.detail_reading.setObjectName("curator-detail-reading")
-        apply_japanese_font(self.detail_reading, role=JAPANESE_BODY)
-        vbox.addWidget(self.detail_reading)
-
-        self.detail_sentence = QLabel()
-        self.detail_sentence.setObjectName("curator-detail-sentence")
-        self.detail_sentence.setWordWrap(True)
-        self.detail_sentence.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        apply_japanese_font(self.detail_sentence, role=JAPANESE_BODY)
-        # Reserved before the font is polished, which is why the Japanese font
-        # is set from Python as well as named in the stylesheet.
-        two_lines = 2 * metric_row_height(self.detail_sentence, vertical_padding=0)
-        self.detail_sentence.setMinimumHeight(two_lines)
-        self.detail_sentence.setMaximumHeight(two_lines)
-        vbox.addWidget(self.detail_sentence)
-
-        for label in (self.detail_expression, self.detail_reading, self.detail_sentence):
-            label.setTextFormat(Qt.TextFormat.PlainText)
-            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-
-        return self.detail_panel
-
     def _build_key_hints(self) -> QLabel:
         """One quiet line naming the keys this screen answers to."""
+        # "visible" is the word the bulk buttons use, because Ctrl+A/Ctrl+D ARE
+        # those buttons: _select_all/_deselect_all act on every visible row, not
+        # on the focused one. A bare "include/exclude" read as a per-row verb and
+        # went outright false once Search narrowed the list. Keep the two in step.
+        #
+        # One unsplit literal per variant even past the line limit: pylupdate6
+        # extracts the tr() argument as written, so a concatenation reaches the
+        # catalogs in pieces. E501 is off project-wide and black leaves strings be.
         if self._show_player:
             text = self.tr(
-                "S include/exclude · Space play/pause · Ctrl+A include · Ctrl+D exclude · Ctrl+Enter confirm"
+                "S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
             )
         else:
-            text = self.tr("S include/exclude · Ctrl+A include · Ctrl+D exclude · Ctrl+Enter confirm")
+            text = self.tr("S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm")
         self.key_hint_label = QLabel(text)
         self.key_hint_label.setObjectName("curator-key-hints")
         self.key_hint_label.setFont(self._make_font(11))
@@ -980,9 +931,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ``japanese`` gives the cell the Japanese face and nothing else: an item
         font carrying no size resolves against the view's own, so kanji take
         Japanese rather than Chinese glyph shapes while the row stays exactly as
-        tall as the shared data-surface rule made it. Larger Japanese content
-        sizes belong in the detail panel below, never in the rows — the density
-        is what makes this table scannable.
+        tall as the shared data-surface rule made it. No cell may pin a size —
+        the density is what makes this table scannable.
         """
         item = make_table_item(text, role, sort_value=sort_value, copy_text=copy_text, tooltip=tooltip)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
@@ -1057,10 +1007,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _on_row_focus_changed(self) -> None:
         """Handle a cursor or highlight change — refresh the summary, debounce the panes.
 
-        The detail panel and the target/position summary are pure string work, so
-        they update immediately: on the app's most keyboard-driven screen they must
-        answer the arrow key, not the debounce timer. Only the expensive panes
-        (player seek, page decode, dictionary lookup) go through the timer.
+        The target/position summary is pure string work, so it updates immediately:
+        on the app's most keyboard-driven screen it must answer the arrow key, not
+        the debounce timer. Only the expensive panes (player seek, page decode,
+        dictionary lookup) go through the timer.
 
         MUST NOT read or write checkbox state; checkbox changes are handled by
         _on_item_changed (itemChanged signal) and kept independent.
@@ -1069,10 +1019,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         word, original_index = self._focused_word()
         if word is None or original_index is None:
-            self._render_detail(None)
+            # Nothing focused: leave the timer alone rather than debouncing a
+            # seek/lookup for a row that isn't there.
             return
-
-        self._render_detail(self._chosen.get(original_index, word))
 
         self._pending_word = word
         self._pending_index = original_index
@@ -1095,17 +1044,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if original_index is None or not (0 <= original_index < len(self._words)):
             return None, None
         return self._words[original_index], original_index
-
-    def _render_detail(self, word: TokenizedWord | None) -> None:
-        """Fill (or clear) the detail strip. ``word`` is the user's chosen variant."""
-        expression = word.mined_form if word is not None else ""
-        reading = word.reading if word is not None else ""
-        sentence = word.sentence if word is not None else ""
-        self.detail_expression.setText(expression)
-        self.detail_reading.setText(reading)
-        self.detail_sentence.setText(sentence)
-        # The strip is two lines tall by design; the tooltip carries the rest.
-        self.detail_sentence.setToolTip(sentence)
 
     def _on_focus_timer_fired(self) -> None:
         """Debounced handler: refresh sentence picker, seek player, look up definition."""
@@ -1308,9 +1246,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             return
         chosen = self._candidate_list_words[list_row]
         self._chosen[idx] = chosen
-
-        # The detail strip restates what will be mined, so it follows the pick.
-        self._render_detail(chosen)
 
         # Refresh the table's Sentence cell for this word (its visual row may
         # differ from idx because the table is sortable).
