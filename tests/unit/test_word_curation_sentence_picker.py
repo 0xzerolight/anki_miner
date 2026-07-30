@@ -136,18 +136,18 @@ class TestPickerSelection:
         plain = next(w for w in selected if w.lemma == "走る")
         assert plain.sentence == "公園を走る"
 
-    def test_detail_panel_follows_the_picked_sentence(self, qtbot, mixed_words):
-        """The panel restates what will be mined, so it must show the PICK."""
+    def test_focusing_alone_does_not_record_a_pick(self, qtbot, mixed_words):
+        """The default sentence flows through until the user actually picks."""
         dlg = WordCurationDialog(mixed_words)
         qtbot.addWidget(dlg)
         _select_and_fire(dlg, 0)
-        assert dlg.detail_sentence.text() == "朝ごはんを食べる"
 
-        dlg.sentence_list.setCurrentRow(1)
+        assert 0 not in dlg._chosen
+        chosen = next(w for w in dlg.get_selected_words() if w.lemma == "食べる")
+        assert chosen.sentence == "朝ごはんを食べる"
 
-        assert dlg.detail_sentence.text() == "パンを食べる"
-
-    def test_detail_panel_keeps_the_pick_when_the_row_is_refocused(self, qtbot, mixed_words):
+    def test_the_pick_survives_focusing_away_and_back(self, qtbot, mixed_words):
+        """Refocusing must not re-resolve the row to its default sentence."""
         dlg = WordCurationDialog(mixed_words)
         qtbot.addWidget(dlg)
         _select_and_fire(dlg, 0)
@@ -156,7 +156,9 @@ class TestPickerSelection:
         _select_and_fire(dlg, 1)
         _select_and_fire(dlg, 0)
 
-        assert dlg.detail_sentence.text() == "早く食べなさい"
+        assert dlg._chosen[0].sentence == "早く食べなさい"
+        chosen = next(w for w in dlg.get_selected_words() if w.lemma == "食べる")
+        assert chosen.sentence == "早く食べなさい"
 
     def test_untouched_word_returns_original(self, qtbot, mixed_words):
         dlg = WordCurationDialog(mixed_words)
