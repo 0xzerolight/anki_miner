@@ -905,18 +905,21 @@ QPushButton#critical:disabled {
 
 /* Focus is the last word on the border, so it outlives every role above.
    `border-focus` equals `primary` in 26 of the 29 shipped themes, so on a
-   filled button the ring is drawn in the colour that sits ON the fill. */
-QPushButton:focus,
-QPushButton#secondary:focus,
-QPushButton#ghost:focus,
-QPushButton#danger:focus {
+   filled button the ring is drawn in the colour that sits ON the fill.
+
+   `[keyboardFocus="true"]` is what keeps a click from ringing the button it
+   pressed — see the focus block at the end of this file. */
+QPushButton:focus[keyboardFocus="true"],
+QPushButton#secondary:focus[keyboardFocus="true"],
+QPushButton#ghost:focus[keyboardFocus="true"],
+QPushButton#danger:focus[keyboardFocus="true"] {
     border-color: ${color-border-focus};
 }
 
-QPushButton#primary:focus,
-QPushButton#critical:focus,
-QPushButton:default:focus,
-QPushButton:checked:focus {
+QPushButton#primary:focus[keyboardFocus="true"],
+QPushButton#critical:focus[keyboardFocus="true"],
+QPushButton:default:focus[keyboardFocus="true"],
+QPushButton:checked:focus[keyboardFocus="true"] {
     border-color: ${color-text-on-primary};
 }
 
@@ -1606,7 +1609,7 @@ QLabel#decorative {
    and text inputs get theirs from the role rules above; what is left here is
    every control that had none.
 
-   Two rules held throughout:
+   Three rules held throughout:
 
    * **Colour only, or `outline`.** Both leave the control's box exactly as
      `widgets/base/sizing.py` measured it. A border that appears or thickens on
@@ -1615,6 +1618,17 @@ QLabel#decorative {
    * **`outline` only where Qt honours it.** Qt paints a stylesheet outline on
      QPushButton and on item views and silently ignores it on QLineEdit,
      QComboBox and friends, so it is used only where it actually draws.
+   * **Keyboard focus only, on panes and buttons.** `:focus` alone was the bug
+     this block once shipped: Qt's `:focus` is true however focus arrived, so
+     clicking a curator pane painted a 600-pixel accent box around it. The ring
+     that a keyboard needs is noise when a mouse put it there.
+     `gui/utils/focus_ring.py` marks the focused widget `keyboardFocus` when the
+     `QFocusEvent` reason is a keystroke, and these rules ask for both states —
+     Qt's own `:focus-visible`, which Qt does not have. Keeping `:focus` in the
+     selector is deliberate: a mark that outlived its focus then draws nothing.
+
+     Text inputs and checkable indicators are exempt, on purpose. An accent
+     border on a field says where typing goes, and that is worth a click.
 
    Last in the file on purpose: these selectors tie with the role rules above,
    and load order is what makes focus the final word on the ring. */
@@ -1629,12 +1643,14 @@ QRadioButton::indicator:focus {
 }
 
 /* Text areas and item views all reserve `border: 1px solid` in the structural
-   rules above, so the ring is that border restated in the accent. */
-QTextEdit:focus,
-QPlainTextEdit:focus,
-QTableWidget:focus,
-QListWidget:focus,
-QTreeWidget:focus {
+   rules above, so the ring is that border restated in the accent. These are the
+   panes a mouse click used to box: the curator's word list and sentence list,
+   every log and preview. */
+QTextEdit:focus[keyboardFocus="true"],
+QPlainTextEdit:focus[keyboardFocus="true"],
+QTableWidget:focus[keyboardFocus="true"],
+QListWidget:focus[keyboardFocus="true"],
+QTreeWidget:focus[keyboardFocus="true"] {
     border-color: ${color-border-focus};
 }
 
@@ -1646,9 +1662,12 @@ QTreeWidget:focus {
    drawn on a mouse click, because clicking is what gives the list focus.
 
    The ring is now the 1px border the structural rule reserves, restated in the
-   accent like every other item view above. The `outline: none` further up stays
-   and does the job its own comment claims: suppressing the per-item rect. */
-QListWidget#settings-nav:focus {
+   accent like every other item view above, and drawn only for a keyboard. That
+   click still boxed the navigator itself until the ring went keyboard-only; the
+   left bar on the selected row is what says which destination is open. The
+   `outline: none` further up stays and does the job its own comment claims:
+   suppressing the per-item rect. */
+QListWidget#settings-nav:focus[keyboardFocus="true"] {
     border-color: ${color-border-focus};
 }
 

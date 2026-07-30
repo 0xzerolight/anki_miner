@@ -39,6 +39,7 @@ from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
@@ -1341,6 +1342,12 @@ def main():
     # against the font it will actually be drawn with. Fail-soft by design: a
     # missing bundled fallback logs and leaves Qt's own choice in place.
     initialize_application_fonts(app)
+
+    # The accent focus ring is for keyboard users, and Qt's `:focus` fires on a
+    # mouse click too, so clicking a pane boxed it. Installed on the application,
+    # before the first widget: every dialog built later is covered without
+    # knowing this exists.
+    install_keyboard_focus_ring(app)
 
     # Set application icon
     icon_path = get_resource_dir() / "icons" / "anki_miner.svg"

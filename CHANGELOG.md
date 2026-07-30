@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Clicking something no longer boxes it in the accent colour.** The keyboard focus ring is for keyboard users, but Qt draws a `:focus` rule however focus arrived, so a mouse click on a word curator pane, a settings category, or a button ringed it too. The ring is now keyboard-only: Tab, Shift-Tab and shortcuts still show where you are, and clicking shows nothing. Text fields keep their focus border, which is how a field says where typing goes.
 
 ### Removed
 
