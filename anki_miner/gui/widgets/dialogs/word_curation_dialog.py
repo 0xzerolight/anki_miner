@@ -64,6 +64,7 @@ from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.models import TokenizedWord
+from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_html
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -667,6 +668,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.definition_view = QTextBrowser()
             self.definition_view.setReadOnly(True)
             self.definition_view.setOpenExternalLinks(False)
+            # Glossary markup is authored for a browser; Qt's rich-text engine
+            # implements a small CSS subset, so the card's stylesheet is inert here
+            # and the pane rendered raw. See services/dictionary/preview_html.py for
+            # what Qt does and does not support. Must precede every setHtml().
+            document = self.definition_view.document()
+            if document is not None:
+                document.setDefaultStyleSheet(PREVIEW_CSS)
             panes.append(("dict", self.definition_view, 2, 4 * row))
 
         self._side_key = "+".join(name for name, _, _, _ in panes)
@@ -1190,13 +1198,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.definition_view.setHtml(f'<p style="color:gray">No offline dictionary entry for <b>{escaped}</b></p>')
             return
 
-        parts: list[str] = []
-        for name, entry_html in entries:
-            escaped_name = html.escape(name)
-            parts.append(f'<p style="font-weight:bold">{escaped_name}</p>')
-            parts.append(entry_html)
-
-        self.definition_view.setHtml("".join(parts))
+        self.definition_view.setHtml(to_preview_html(entries))
 
     def _populate_candidate_list(self, word: TokenizedWord, idx: int) -> None:
         """Fill the sentence picker for the focused word and select its current pick.
