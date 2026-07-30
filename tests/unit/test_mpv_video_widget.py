@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+from PyQt6.QtWidgets import QVBoxLayout, QWidget
+
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.utils.mpv_loader import MpvUnavailableError
 
@@ -131,6 +133,42 @@ class TestPaintAndFree:
         widget._mpv_frame_update.connect(lambda: received.append(True))
         widget._on_mpv_update()
         assert received == [True]
+
+
+class TestSizeFloor:
+    """The widget declared no size, so a splitter could squeeze it to nothing.
+
+    That is how the word curator ended up rendering video into a sliver. The
+    floor lives here rather than on the player so that hiding the view -- which
+    both audio-only paths do -- takes the reservation with it.
+    """
+
+    def test_the_frame_reserves_a_16_9_box(self, qtbot):
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        assert (widget.minimumWidth(), widget.minimumHeight()) == (320, 180)
+
+    def test_the_floor_does_not_track_the_ui_font_scale(self, qtbot):
+        """Video pixels are not text -- the one place a literal is correct."""
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        font = widget.font()
+        font.setPointSizeF(font.pointSizeF() * 2)
+        widget.setFont(font)
+        assert widget.minimumHeight() == 180
+
+    def test_a_hidden_frame_stops_reserving_anything(self, qtbot):
+        """Both audio-only paths hide the view, and the "audio still plays"
+        notice must not be framed by an empty black box.
+        """
+        host = QWidget()
+        qtbot.addWidget(host)
+        layout = QVBoxLayout(host)
+        widget = MpvVideoWidget()
+        layout.addWidget(widget)
+        with_video = host.minimumSizeHint().height()
+        widget.setVisible(False)
+        assert host.minimumSizeHint().height() < with_video
 
 
 class TestRenderReady:

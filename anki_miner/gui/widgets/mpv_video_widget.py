@@ -67,6 +67,22 @@ class MpvVideoWidget(QOpenGLWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        # The widget declared no size at all, so a splitter could squeeze the
+        # frame to nothing and the word curator did exactly that. A 16:9 box is
+        # the smallest thing that still reads as video.
+        #
+        # It belongs HERE rather than on SubtitlePlayerWidget: a hidden child
+        # contributes nothing to its parent's minimum, so both audio-only paths
+        # (libmpv absent, and render-context failure) drop the reservation on
+        # their own instead of framing the "audio still plays" notice with an
+        # empty black rectangle.
+        #
+        # A pixel constant is right here and wrong almost everywhere else in
+        # this codebase (see widgets/base/sizing.py): video pixels are not
+        # text, so this floor must NOT track the UI font scale. And no
+        # setHeightForWidth -- QSplitter ignores it, so it would promise an
+        # aspect ratio nothing enforces.
+        self.setMinimumSize(320, 180)
         self._player: Any = None
         self._render_ctx: Any = None
         self._gl_ready = False
