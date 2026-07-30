@@ -55,6 +55,7 @@ from anki_miner.gui.utils.qt_helpers import (
 )
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
+from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
@@ -225,6 +226,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _setup_ui(self) -> None:
         self.setWindowTitle(self.tr("Word Curation"))
+        # The real width floor is the toolbar row's own minimum (~1010px in
+        # English), which the layout enforces on its own. It is stated here as
+        # the intent, not as the mechanism. What matters is that the row now
+        # spans the dialog: a longer locale widens the window instead of
+        # starving the media column, which is what it did while the row lived
+        # inside the left splitter pane.
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
         if self._show_player or self._show_image or self._show_dict or self._has_candidates:
@@ -236,12 +243,29 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.lg, SPACING.lg, SPACING.lg, SPACING.lg)
 
-        # Header (outside the splitter — always visible)
-        header = QLabel(self.tr("Select words for card creation"))
+        # Header row (outside the splitter — always visible). The title elides
+        # because it is chrome; the counter does not, because it is the only
+        # statement of position/included/shown on the screen (D32).
+        header = ElidingLabel(self.tr("Select words for card creation"))
         header.setFont(self._make_font(16, QFont.Weight.Bold))
-        layout.addWidget(header)
+        self.word_count_label = QLabel()
+        self.word_count_label.setFont(self._make_font(12, QFont.Weight.Medium))
+        header_row = QHBoxLayout()
+        header_row.setSpacing(SPACING.sm)
+        header_row.addWidget(header, 1)
+        header_row.addWidget(self.word_count_label)
+        layout.addLayout(header_row)
 
-        # Build the left pane (controls + table)
+        # The filter/bulk toolbar spans the whole dialog rather than living in
+        # the left splitter pane. Its row cannot shrink -- a 200px search field,
+        # four full-text verbs and the counter measured a 1254px floor -- and a
+        # QSplitter honours a child's minimumSizeHint absolutely, so inside the
+        # pane it pinned the media column at its own ~200px minimum at every
+        # window size. The floor is font-sized, not screen-sized, which is why
+        # maximising never widened the media column. Keep this row out here.
+        layout.addLayout(self._build_toolbar_row())
+
+        # Build the left pane (table + detail strip + key hints)
         left_pane = self._build_left_pane()
 
         if self._show_player or self._show_image or self._show_dict or self._has_candidates:
@@ -290,14 +314,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """
         disown_default_buttons(self)
 
-    def _build_left_pane(self) -> QWidget:
-        """Build the left pane containing the search bar, bulk-action buttons, and table."""
-        container = QWidget()
-        vbox = QVBoxLayout(container)
-        vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.setSpacing(SPACING.sm)
-
-        # Controls row
+    def _build_toolbar_row(self) -> QHBoxLayout:
+        """Build the search field and the bulk verbs, full dialog width."""
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(SPACING.sm)
 
@@ -342,12 +360,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         controls_layout.addWidget(self.add_known_button)
 
         controls_layout.addStretch()
+        return controls_layout
 
-        self.word_count_label = QLabel()
-        self.word_count_label.setFont(self._make_font(12, QFont.Weight.Medium))
-        controls_layout.addWidget(self.word_count_label)
-
-        vbox.addLayout(controls_layout)
+    def _build_left_pane(self) -> QWidget:
+        """Build the left pane: the word table, the detail strip and the key hints."""
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(SPACING.sm)
 
         # Table
         self.table = QTableWidget()
@@ -409,7 +429,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._on_table_context_menu)
 
-        vbox.addWidget(self.table)
+        vbox.addWidget(self.table, 1)
         vbox.addWidget(self._build_detail_panel())
         vbox.addWidget(self._build_key_hints())
         return container
@@ -479,6 +499,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.key_hint_label = QLabel(text)
         self.key_hint_label.setObjectName("curator-key-hints")
         self.key_hint_label.setFont(self._make_font(11))
+        # Wraps because an unwrapped QLabel demands its full text width as a
+        # MINIMUM -- 581px measured for the player variant, and more in a longer
+        # locale. Inside a splitter pane that is a hard floor on the pane, which
+        # is the same defect that kept the media column at 200px.
+        self.key_hint_label.setWordWrap(True)
         return self.key_hint_label
 
     def _build_right_pane(self) -> QWidget:
