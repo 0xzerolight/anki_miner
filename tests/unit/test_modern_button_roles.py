@@ -25,11 +25,13 @@ import re
 from pathlib import Path
 
 import pytest
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QDialog, QPushButton, QVBoxLayout
 
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring, remove_keyboard_focus_ring
 from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 
 THEME = "dark"
@@ -105,11 +107,28 @@ def _focus(qapp, button: QPushButton) -> None:
     Under the offscreen platform the host window is not activated by ``show()``,
     so ``setFocus()`` alone leaves ``hasFocus()`` false and the ``:focus`` rule
     never engages.
+
+    ``TabFocusReason`` and the installed filter are both load-bearing: the ring
+    is keyboard-only, so a bare ``setFocus()`` (``OtherFocusReason``) is
+    correctly not a ring at all. See ``gui/utils/focus_ring.py``.
+
+    The three ``processEvents`` calls are one each, in this order, on purpose.
+    Activation hands focus to the dialog's first focusable child by itself, and
+    ``setFocus`` on a widget that already holds focus sends no ``QFocusEvent`` at
+    all -- so a single drain at the end would leave the button focused for the
+    wrong reason and unmarked.
     """
-    button.window().activateWindow()
-    button.setFocus()
-    qapp.processEvents()
-    assert button.hasFocus()
+    install_keyboard_focus_ring(qapp)
+    try:
+        button.window().activateWindow()
+        qapp.processEvents()
+        button.clearFocus()
+        qapp.processEvents()
+        button.setFocus(Qt.FocusReason.TabFocusReason)
+        qapp.processEvents()
+        assert button.hasFocus()
+    finally:
+        remove_keyboard_focus_ring(qapp)
 
 
 @pytest.fixture

@@ -5,7 +5,8 @@ nothing back, so tabbing through the application moved an invisible cursor.
 Under D41 the accent is scarce and reserved for exactly four things, and
 keyboard focus is one of them -- so the ring is an accent ring.
 
-Two properties are defended here, and the second is the one that is easy to lose:
+Three properties are defended here, and the last two are the ones that are easy
+to lose:
 
 * **It is visible.** Asserted by rendering each control focused and unfocused
   with the real compiled stylesheet and comparing pixels, rather than by
@@ -16,6 +17,13 @@ Two properties are defended here, and the second is the one that is easy to lose
   font-metric floor. A ring drawn by growing a border grows the control with
   it: ``QLineEdit:focus { border-width: 2px }`` moved the field's size hint by
   two pixels, so the form reflowed under the cursor as you tabbed into it.
+* **It belongs to the keyboard.** Qt's ``:focus`` is true however focus arrived,
+  so the ring a keyboard user needs was also drawn on every mouse click -- a
+  600-pixel accent box around whichever curator pane or settings category you
+  clicked. ``gui/utils/focus_ring.py`` supplies the ``:focus-visible`` Qt does
+  not have, and the selectors ask for both states. Panes and buttons are
+  keyboard-only; text inputs and checkable indicators deliberately still ring on
+  a click, because an accent border on a field is how it says where typing goes.
 """
 
 from __future__ import annotations
@@ -23,8 +31,11 @@ from __future__ import annotations
 import re
 
 import pytest
-from PyQt6.QtGui import QColor, QImage, QPainter
+from PyQt6.QtCore import QEvent, QPoint, Qt
+from PyQt6.QtGui import QColor, QFocusEvent, QImage, QPainter
+from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import (
+    QAbstractScrollArea,
     QApplication,
     QCheckBox,
     QComboBox,
@@ -43,14 +54,46 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.focus_ring import (
+    KEYBOARD_FOCUS_PROPERTY,
+    install_keyboard_focus_ring,
+    remove_keyboard_focus_ring,
+)
 
 _COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+
+#: How the application itself puts focus somewhere when a key was pressed. The
+#: pixel tests below focus this way on purpose: ``setFocus()`` with no argument
+#: is ``OtherFocusReason``, which is correctly *not* a ring.
+TAB = Qt.FocusReason.TabFocusReason
+
+#: How focus is parked somewhere harmless. A decoy focused by Tab wears the ring
+#: itself, and its accent pixels land in the same render as the control under
+#: test -- the mistake that once made the ``QPushButton`` case unfalsifiable.
+PARK = Qt.FocusReason.MouseFocusReason
 
 #: One light and one dark shipped theme. The ring must read as the accent in
 #: both, which is the pair a single hard-coded colour would fail.
 LIGHT_THEME = "light"
 DARK_THEME = "dark"
+
+
+@pytest.fixture(autouse=True)
+def _keyboard_focus_ring(qapp):
+    """Every test in this file runs under the production focus filter.
+
+    Installed rather than faked: the property these selectors key on is only
+    ever set by that filter, so a test that set it by hand would pass with the
+    filter deleted.
+
+    Removed again on teardown. ``qapp`` is shared for the whole pytest worker,
+    and an application-level event filter left installed goes on marking widgets
+    in every file that runs after this one.
+    """
+    install_keyboard_focus_ring(qapp)
+    yield
+    remove_keyboard_focus_ring(qapp)
 
 
 def _rules(qss: str) -> list[tuple[str, str]]:
@@ -179,6 +222,21 @@ CONTROLS = {
 }
 
 
+def _give_keyboard_focus(widget: QWidget) -> None:
+    """Focus ``widget`` the way Tab does, and make sure focus actually moves.
+
+    ``setFocus`` on a widget that already holds focus is a no-op: Qt sends no
+    ``QFocusEvent``, so nothing tells the filter which kind of focus this is.
+    Showing a window hands focus to its first focusable child with
+    ``ActiveWindowFocusReason``, which is exactly that case, so a bare
+    ``setFocus(TAB)`` on a freshly shown control silently marks nothing.
+    """
+    widget.clearFocus()
+    QApplication.processEvents()
+    widget.setFocus(TAB)
+    QApplication.processEvents()
+
+
 def _render(widget: QWidget) -> QImage:
     image = QImage(widget.size(), QImage.Format.Format_ARGB32)
     image.fill(0xFFFFFFFF)
@@ -227,7 +285,7 @@ def _focused_and_unfocused(factory, mode: str) -> tuple[int, int, QColor]:
         host.show()
         QApplication.processEvents()
         if want_focus:
-            target.setFocus()
+            _give_keyboard_focus(target)
         else:
             target.clearFocus()
         QApplication.processEvents()
@@ -270,8 +328,7 @@ def test_the_settings_navigator_never_boxes_a_destination(mode, qapp):
     host.setStyleSheet(Theme.get_stylesheet(mode))
     host.show()
     QApplication.processEvents()
-    nav.setFocus()
-    QApplication.processEvents()
+    _give_keyboard_focus(nav)
 
     image = _render(nav)
     selected = nav.visualItemRect(nav.item(1))
@@ -289,6 +346,162 @@ def test_the_settings_navigator_never_boxes_a_destination(mode, qapp):
         boxed += _accent_pixels(line, accent)
 
     assert boxed == 0, "the selected destination is boxed in the accent again"
+
+
+# ---------------------------------------------------------------------------
+# ...only for the keyboard
+# ---------------------------------------------------------------------------
+
+
+#: The panes and buttons a mouse click used to box. Each entry is the control
+#: and where inside it to click; item views take the click on their viewport.
+KEYBOARD_ONLY = {
+    "QPushButton": (lambda: QPushButton("Mine"), False),
+    "QTextEdit": (lambda: QTextEdit("log"), True),
+    "QPlainTextEdit": (lambda: QPlainTextEdit("pasted text"), True),
+    "QListWidget": (_make_list, True),
+    "QListWidget#settings-nav": (_make_settings_nav, True),
+    "QTableWidget": (lambda: QTableWidget(2, 2), True),
+    "QTreeWidget": (_make_tree, True),
+}
+
+#: The controls that keep the plain ``:focus`` ring. A field's accent border is
+#: how it says where typing goes, so it is worth a click.
+STILL_RINGS_ON_A_CLICK = {
+    "QLineEdit": lambda: QLineEdit("sentence"),
+    "QComboBox": QComboBox,
+    "QSpinBox": QSpinBox,
+    "QDoubleSpinBox": QDoubleSpinBox,
+    "QCheckBox": lambda: QCheckBox("Include known words"),
+    "QRadioButton": lambda: QRadioButton("Whole folder"),
+}
+
+
+def _frame_accent_pixels(target: QWidget, accent: QColor) -> int:
+    """Accent pixels on the control's own top and bottom edges -- its ring.
+
+    Not the whole widget: in the light theme ``table-selected-text`` (#4F46E5)
+    is inside the tolerance of the accent (#6366F1), and Qt repaints a selected
+    row through the inactive palette when the view loses focus. Counting the
+    whole widget therefore measures the selected row's antialiasing, which
+    moves by a handful of pixels on every focus change and drowns the ring.
+    The outermost scanlines are the border and nothing else: an item view's
+    viewport starts inside it, so no item content can reach them.
+    """
+    image = _render(target)
+    return sum(_accent_pixels(image.copy(0, y, target.width(), 1), accent) for y in (0, target.height() - 1))
+
+
+def _click(target: QWidget, on_viewport: bool) -> None:
+    surface: QWidget | None = target
+    if on_viewport:
+        assert isinstance(target, QAbstractScrollArea)
+        surface = target.viewport()
+    assert surface is not None
+    QTest.mouseClick(surface, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, QPoint(8, 8))
+    QApplication.processEvents()
+
+
+@pytest.mark.parametrize("control", sorted(KEYBOARD_ONLY))
+@pytest.mark.parametrize("mode", [LIGHT_THEME, DARK_THEME])
+def test_a_mouse_click_never_paints_a_ring(control, mode, qapp):
+    """The bug: clicking a curator pane boxed it in the accent.
+
+    Three renders of one widget, differing only in how focus got there, each
+    measured on the control's own frame -- see :func:`_frame_accent_pixels` for
+    why the whole widget is the wrong thing to count.
+    """
+    factory, on_viewport = KEYBOARD_ONLY[control]
+    accent = QColor(Theme.get_colors(mode)["border-focus"])
+
+    host = QWidget()
+    host.resize(240, 120)
+    layout = QVBoxLayout(host)
+    decoy = QPushButton("elsewhere")
+    target = factory()
+    layout.addWidget(decoy)
+    layout.addWidget(target)
+    host.setStyleSheet(Theme.get_stylesheet(mode))
+    host.show()
+    QApplication.processEvents()
+
+    _click(target, on_viewport)
+    assert target.hasFocus(), f"{control} did not take focus from the click"
+    clicked = _frame_accent_pixels(target, accent)
+
+    decoy.setFocus(PARK)
+    QApplication.processEvents()
+    unfocused = _frame_accent_pixels(target, accent)
+
+    _give_keyboard_focus(target)
+    tabbed = _frame_accent_pixels(target, accent)
+
+    host.hide()
+    host.deleteLater()
+
+    assert clicked == unfocused, (
+        f"{control} paints a ring on a mouse click under {mode}: "
+        f"{clicked} accent pixels clicked vs {unfocused} unfocused"
+    )
+    assert (
+        tabbed > unfocused
+    ), f"{control} lost its keyboard ring under {mode}: {tabbed} accent pixels tabbed vs {unfocused} unfocused"
+
+
+@pytest.mark.parametrize("control", sorted(STILL_RINGS_ON_A_CLICK))
+def test_text_inputs_and_indicators_still_ring_on_a_click(control, qapp):
+    """Scope, pinned. A later sweep must not quietly take these too."""
+    accent = QColor(Theme.get_colors(DARK_THEME)["border-focus"])
+
+    host = QWidget()
+    host.resize(240, 120)
+    layout = QVBoxLayout(host)
+    decoy = QPushButton("elsewhere")
+    target = STILL_RINGS_ON_A_CLICK[control]()
+    layout.addWidget(decoy)
+    layout.addWidget(target)
+    host.setStyleSheet(Theme.get_stylesheet(DARK_THEME))
+    host.show()
+    QApplication.processEvents()
+
+    decoy.setFocus(PARK)
+    QApplication.processEvents()
+    unfocused = _accent_pixels(_render(host), accent)
+
+    _click(target, on_viewport=False)
+    clicked = _accent_pixels(_render(host), accent)
+
+    host.hide()
+    host.deleteLater()
+
+    assert clicked > unfocused, f"{control} lost the ring a click is supposed to give it"
+
+
+def test_losing_the_window_keeps_the_keyboard_mark(qapp):
+    """Alt-tab away and back must not cost a keyboard user their ring.
+
+    ``FocusOut`` fires with ``ActiveWindowFocusReason`` when the window
+    deactivates. Clearing the mark there would hand focus back on return with
+    the ring gone until the next Tab.
+    """
+    host = QWidget()
+    layout = QVBoxLayout(host)
+    target = _make_list()
+    layout.addWidget(target)
+    host.show()
+    QApplication.processEvents()
+
+    _give_keyboard_focus(target)
+    assert target.property(KEYBOARD_FOCUS_PROPERTY) is True
+
+    QApplication.sendEvent(target, QFocusEvent(QEvent.Type.FocusOut, Qt.FocusReason.ActiveWindowFocusReason))
+    QApplication.processEvents()
+
+    marked = target.property(KEYBOARD_FOCUS_PROPERTY)
+    host.hide()
+    host.deleteLater()
+
+    assert marked is True, "deactivating the window stripped the keyboard focus mark"
 
 
 # ---------------------------------------------------------------------------
@@ -314,12 +527,12 @@ def test_focus_does_not_change_a_controls_measured_height(control, qapp):
     host.show()
     QApplication.processEvents()
 
-    decoy.setFocus()
+    decoy.setFocus(TAB)
     QApplication.processEvents()
     target.ensurePolished()
     before = (target.sizeHint().height(), target.minimumSizeHint().height(), target.height())
 
-    target.setFocus()
+    target.setFocus(TAB)
     QApplication.processEvents()
     target.ensurePolished()
     after = (target.sizeHint().height(), target.minimumSizeHint().height(), target.height())
