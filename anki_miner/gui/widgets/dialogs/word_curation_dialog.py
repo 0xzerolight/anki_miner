@@ -261,9 +261,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.setMinimumWidth(900)
         self.setMinimumHeight(600)
         if self._show_player or self._show_image or self._show_dict or self._has_candidates:
-            self.resize(1500, 760)
+            # Taller than it used to be, and for a stated reason: a side column
+            # holding a 16:9 frame, a picker and a dictionary entry wants about
+            # 720px before anything has to scroll. Clamped, so the gain is only
+            # taken where the screen has it.
+            self._resize_within_screen(1500, 860)
         else:
-            self.resize(1100, 700)
+            self._resize_within_screen(1100, 700)
 
         layout = QVBoxLayout()
         layout.setSpacing(SPACING.sm)
@@ -593,12 +597,22 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         return QApplication.screenAt(self.frameGeometry().center()) is not None
 
     def _apply_default_geometry(self) -> None:
-        """Resize to the default, clamped to the screen. Position is Qt's."""
+        """Shrink to fit the current screen. Position is left to Qt."""
+        self._resize_within_screen(self.width(), self.height())
+
+    def _resize_within_screen(self, width: int, height: int) -> None:
+        """Resize, but never to more than the screen can show.
+
+        The curator opened at a flat 1500x760 whatever it was opening on, so a
+        1366x768 laptop got a window taller than its own desktop with the
+        Confirm button under the taskbar.
+        """
         screen = self.screen() or QApplication.primaryScreen()
-        if screen is None:
-            return
-        available = screen.availableGeometry()
-        self.resize(min(self.width(), available.width()), min(self.height(), available.height()))
+        if screen is not None:
+            available = screen.availableGeometry()
+            width = min(width, available.width())
+            height = min(height, available.height())
+        self.resize(width, height)
 
     def _restore_split(self, splitter: QSplitter | None, blob: QByteArray | None) -> bool:
         """Restore ``splitter`` from ``blob``; answer whether it took.

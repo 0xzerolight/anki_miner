@@ -105,6 +105,19 @@ class TestTheSplitIsAPolicy:
 
 
 class TestTheDialogFitsOnARealScreen:
+    def test_it_never_opens_larger_than_the_screen(self, dialog, qapp):
+        """Was a flat resize(1500, 760): on a 1366x768 laptop that put the
+        Confirm button under the taskbar.
+
+        A window still cannot go below its own layout minimum, so the width
+        assertion allows for a screen narrower than that -- there is nothing
+        honest to do in that case, and Qt would refuse anyway.
+        """
+        available = (dialog.screen() or qapp.primaryScreen()).availableGeometry()
+        floor = max(dialog.minimumWidth(), dialog.minimumSizeHint().width())
+        assert dialog.width() <= max(available.width(), floor)
+        assert dialog.height() <= available.height()
+
     def test_it_can_be_narrower_than_a_1024_screen(self, dialog):
         """Was 1506px wide -- unfittable in the 1536 logical px of a 1080p
         screen at 125% scaling, which is the configuration that produced the
