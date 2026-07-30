@@ -523,12 +523,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _build_key_hints(self) -> QLabel:
         """One quiet line naming the keys this screen answers to."""
+        # "visible" is the word the bulk buttons use, because Ctrl+A/Ctrl+D ARE
+        # those buttons: _select_all/_deselect_all act on every visible row, not
+        # on the focused one. A bare "include/exclude" read as a per-row verb and
+        # went outright false once Search narrowed the list. Keep the two in step.
+        #
+        # One unsplit literal per variant even past the line limit: pylupdate6
+        # extracts the tr() argument as written, so a concatenation reaches the
+        # catalogs in pieces. E501 is off project-wide and black leaves strings be.
         if self._show_player:
             text = self.tr(
-                "S include/exclude · Space play/pause · Ctrl+A include · Ctrl+D exclude · Ctrl+Enter confirm"
+                "S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
             )
         else:
-            text = self.tr("S include/exclude · Ctrl+A include · Ctrl+D exclude · Ctrl+Enter confirm")
+            text = self.tr("S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm")
         self.key_hint_label = QLabel(text)
         self.key_hint_label.setObjectName("curator-key-hints")
         self.key_hint_label.setFont(self._make_font(11))
