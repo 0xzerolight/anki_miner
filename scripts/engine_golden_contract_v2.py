@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import html
+import importlib.util
 import json
 import os
 import re
@@ -524,9 +525,42 @@ def _derive_frequency(root: Path, value: Mapping[str, Any]) -> tuple[list[dict[s
     return output, service, providers
 
 
+def _load_pitch_service(root: Path, csv_path: Path) -> Any:
+    """Load a synthetic pitch CSV the way the checked-out engine loads pitch data.
+
+    Two engine generations are in scope for this exporter, because it derives a
+    pinned revision rather than HEAD: the single-file ``PitchAccentService``, and
+    the first-hit-wins chain of per-source indexes which replaced it. Dispatch on
+    what the engine actually provides so one exporter derives the same contract
+    from either. Both generations parse the identical CSV with the same row
+    parser, so the derived cases stay comparable across the boundary.
+    """
+
+    if importlib.util.find_spec("anki_miner.services.pitch_accent.multi_pitch_service") is None:
+        from anki_miner.services.pitch_accent_service import PitchAccentService
+
+        legacy = PitchAccentService(csv_path)
+        if not legacy.load():
+            raise v1.GoldenExportError("could not load synthetic pitch fixture")
+        return legacy
+
+    from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
+    from anki_miner.services.pitch_accent.provider import IndexedPitchProvider
+    from anki_miner.services.pitch_accent.source_importer import import_pitch_source
+
+    source_id = "golden-pitch"
+    dest_root = root / "sources"
+    imported = import_pitch_source(csv_path, dest_root, source_id=source_id, source_name="Golden Pitch")
+    provider = IndexedPitchProvider(source_id, dest_root / source_id / "index.sqlite", imported.source_name)
+    # No teardown: IndexedPitchProvider.load reads the index fully into memory
+    # and closes its connection, and the aggregator's close() is a no-op.
+    if not provider.load():
+        raise v1.GoldenExportError("could not load synthetic pitch fixture")
+    return MultiPitchAccentService([provider])
+
+
 def _derive_pitch(root: Path, value: Mapping[str, Any]) -> tuple[list[dict[str, Any]], Any]:
     from anki_miner.services.pitch_accent.render import render_pitch_graph_field, render_pitch_text_field
-    from anki_miner.services.pitch_accent_service import PitchAccentService
 
     root.mkdir(parents=True, exist_ok=True)
     csv_path = root / "pitch.csv"
@@ -538,9 +572,7 @@ def _derive_pitch(root: Path, value: Mapping[str, Any]) -> tuple[list[dict[str, 
             raise v1.GoldenExportError("pitch rows must contain five strings")
         lines.append(",".join(row))
     csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    service = PitchAccentService(csv_path)
-    if not service.load():
-        raise v1.GoldenExportError("could not load synthetic pitch fixture")
+    service = _load_pitch_service(root, csv_path)
     output: list[dict[str, Any]] = []
     for raw_query in _list(value.get("queries"), location="pitch.queries"):
         query = _mapping(raw_query, location="pitch query")
