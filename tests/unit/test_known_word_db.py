@@ -577,3 +577,116 @@ class TestRemoveWordsSourceFilter:
         db.add_words({"食べる"}, source="mined")
         assert db.remove_words(set(), source="mined") == 0
         assert db.word_count() == 1
+
+
+class TestUnicodeNormalization:
+    """Canonically equivalent lemmas must share one row (NFC)."""
+
+    #: が written as か + U+3099 (combining voiced sound mark).
+    NFD = "がくせい"
+    NFC = "がくせい"
+
+    @pytest.fixture
+    def db(self, tmp_path):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        return db
+
+    def test_add_stores_the_composed_form(self, db):
+        """An NFD import is stored NFC so tokenizer output matches it."""
+        db.add_words({self.NFD})
+        assert db.get_known_words() == {self.NFC}
+
+    def test_canonical_duplicates_collapse_to_one_row(self, db):
+        """The same word in both forms is one lemma, not two."""
+        db.add_words({self.NFD, self.NFC})
+        assert db.word_count() == 1
+
+    def test_remove_accepts_either_form(self, db):
+        """Removal normalizes too, so the decomposed spelling still matches."""
+        db.add_words({self.NFC})
+        assert db.remove_words({self.NFD}) == 1
+        assert db.get_known_words() == set()
+
+    def test_receipt_reports_the_stored_form(self, db):
+        """The undo receipt must name the lemma that was actually written."""
+        assert db.add_words_with_receipt({self.NFD}, source="mined") == {self.NFC}
+
+    def test_sync_does_not_re_add_a_decomposed_twin(self, db):
+        """An NFD spelling from Anki is not a new word when the NFC row exists."""
+        db.add_words({self.NFC}, source="anki")
+        added, total = db.sync_with_anki({self.NFD})
+        assert added == 0
+        assert total == 1
+
+
+class TestNfcMigration:
+    """Rows written before normalization are rewritten once."""
+
+    NFD = "がくせい"
+    NFC = "がくせい"
+
+    def _legacy_db(self, tmp_path, rows):
+        """Create a pre-migration database holding raw, unnormalized rows."""
+        db_path = tmp_path / "known_words.db"
+        with sqlite3.connect(db_path) as conn:
+            conn.execute(
+                "CREATE TABLE known_words ("
+                "lemma TEXT PRIMARY KEY, "
+                "source TEXT DEFAULT 'anki', "
+                "added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+            )
+            conn.executemany(
+                "INSERT INTO known_words (lemma, source, added_at) VALUES (?, ?, ?)",
+                rows,
+            )
+            conn.commit()
+        return db_path
+
+    def test_rewrites_decomposed_rows(self, tmp_path):
+        """A legacy NFD row becomes reachable by its NFC spelling."""
+        db_path = self._legacy_db(tmp_path, [(self.NFD, "user", "2026-01-01")])
+        db = KnownWordDB(db_path)
+        db.initialize()
+        assert db.get_known_words() == {self.NFC}
+        assert db.get_words_by_source("user") == {self.NFC}
+
+    def test_merges_collisions_keeping_user_source(self, tmp_path):
+        """Two spellings of one word merge, and a curated mark is never lost."""
+        db_path = self._legacy_db(
+            tmp_path,
+            [(self.NFD, "user", "2026-01-02"), (self.NFC, "anki", "2026-01-01")],
+        )
+        db = KnownWordDB(db_path)
+        db.initialize()
+        assert db.word_count() == 1
+        assert db.get_words_by_source("user") == {self.NFC}
+
+    def test_merge_keeps_the_earliest_added_at(self, tmp_path):
+        """The surviving row keeps the date the word was first known."""
+        db_path = self._legacy_db(
+            tmp_path,
+            [(self.NFD, "anki", "2026-05-05"), (self.NFC, "anki", "2026-01-01")],
+        )
+        db = KnownWordDB(db_path)
+        db.initialize()
+        with sqlite3.connect(db_path) as conn:
+            assert conn.execute("SELECT added_at FROM known_words").fetchone()[0] == "2026-01-01"
+
+    def test_runs_once(self, tmp_path):
+        """A migrated database is not rescanned on the next initialize."""
+        db_path = self._legacy_db(tmp_path, [(self.NFD, "anki", "2026-01-01")])
+        db = KnownWordDB(db_path)
+        db.initialize()
+        with sqlite3.connect(db_path) as conn:
+            assert int(conn.execute("PRAGMA user_version").fetchone()[0]) == 1
+        db.initialize()
+        assert db.get_known_words() == {self.NFC}
+
+    def test_already_normalized_database_is_untouched(self, tmp_path):
+        """Nothing is rewritten when every row is already canonical."""
+        db_path = self._legacy_db(tmp_path, [(self.NFC, "user", "2026-01-01")])
+        KnownWordDB(db_path).initialize()
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute("SELECT lemma, source, added_at FROM known_words").fetchone()
+        assert row == (self.NFC, "user", "2026-01-01")

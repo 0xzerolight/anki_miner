@@ -3,10 +3,33 @@
 import logging
 import os
 import sqlite3
+import unicodedata
 from contextlib import closing
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+#: Schema revision stored in ``PRAGMA user_version``. Bumped when a migration
+#: must run once per database rather than on every ``initialize()``.
+_SCHEMA_VERSION = 1
+
+
+def normalize_lemma(word: str) -> str:
+    """Return the canonical storage form of a known-word lemma.
+
+    Canonically equivalent Japanese strings must share one lexical identity:
+    ``lemma`` is the PRIMARY KEY and the mining filter is exact set membership,
+    so an NFD row imported from a word list would never match the NFC form the
+    tokenizer produces, and the user would keep getting cards for a word they
+    marked known. NFC is the same normal form the Anki first-field duplicate
+    check already uses (``anki_note_builder``), so both sides agree.
+    """
+    return unicodedata.normalize("NFC", word)
+
+
+def _normalize_all(words: set[str]) -> set[str]:
+    """Normalize a lemma set, collapsing canonical duplicates."""
+    return {normalize_lemma(word) for word in words}
 
 
 class KnownWordDB:
@@ -52,6 +75,50 @@ class KnownWordDB:
                 ")"
             )
             conn.commit()
+            self._migrate_to_nfc(conn)
+
+    def _migrate_to_nfc(self, conn: sqlite3.Connection) -> None:
+        """Rewrite pre-normalization rows to NFC, once per database.
+
+        Rows written before ``normalize_lemma`` existed can hold NFD spellings
+        that no lookup will ever match. Two rows can also normalize onto the
+        same lemma; those merge, keeping ``source='user'`` if any side had it so
+        a curated "mark known" is never downgraded, and the earliest
+        ``added_at``. Gated on ``PRAGMA user_version`` so a large collection is
+        not rescanned on every launch.
+        """
+        if int(conn.execute("PRAGMA user_version").fetchone()[0]) >= _SCHEMA_VERSION:
+            return
+        rows = conn.execute("SELECT lemma, source, added_at FROM known_words").fetchall()
+        merged: dict[str, tuple[str, str]] = {}
+        rewritten = False
+        for lemma, source, added_at in rows:
+            canonical = normalize_lemma(lemma)
+            if canonical != lemma:
+                rewritten = True
+            previous = merged.get(canonical)
+            if previous is None:
+                merged[canonical] = (source, added_at)
+                continue
+            rewritten = True
+            previous_source, previous_added_at = previous
+            merged[canonical] = (
+                "user" if "user" in (previous_source, source) else previous_source,
+                min(previous_added_at, added_at),
+            )
+        try:
+            if rewritten:
+                conn.execute("BEGIN IMMEDIATE")
+                conn.execute("DELETE FROM known_words")
+                conn.executemany(
+                    "INSERT INTO known_words (lemma, source, added_at) VALUES (?, ?, ?)",
+                    [(lemma, source, added_at) for lemma, (source, added_at) in merged.items()],
+                )
+            conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
+            conn.commit()
+        except sqlite3.Error:
+            conn.rollback()
+            raise
 
     def is_available(self) -> bool:
         """Check if the database file exists and is readable.
@@ -99,6 +166,7 @@ class KnownWordDB:
             Number of newly inserted rows (an in-place source upgrade is not
             counted as new).
         """
+        words = _normalize_all(words)
         if not words:
             return 0
 
@@ -136,6 +204,7 @@ class KnownWordDB:
         transaction, so callers never need a racy before/after snapshot.
         Existing rows upgraded to ``source='user'`` are not newly inserted.
         """
+        words = _normalize_all(words)
         if not words:
             return set()
 
@@ -174,7 +243,7 @@ class KnownWordDB:
         """
         if existing is None:
             existing = self.get_known_words()
-        new_words = anki_vocabulary - existing
+        new_words = _normalize_all(anki_vocabulary) - _normalize_all(existing)
         added = self.add_words(new_words, source="anki")
         return (added, len(existing) + added)
 
@@ -197,6 +266,7 @@ class KnownWordDB:
         Returns:
             Number of rows actually removed.
         """
+        words = _normalize_all(words)
         if not words:
             return 0
 
