@@ -7167,8 +7167,8 @@ Vaya a Ajustes → ASR para descargarlo antes de generar subtítulos.</translati
         <translation>No se pudo cargar la imagen de página</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Copiar lema</translation>
+        <source>Copy word</source>
+        <translation>Copiar palabra</translation>
     </message>
     <message>
         <source>Copy sentence</source>

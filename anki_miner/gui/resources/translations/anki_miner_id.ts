@@ -7155,8 +7155,8 @@ Buka Pengaturan → ASR untuk mengunduhnya sebelum membuat subtitel.</translatio
         <translation>Tidak dapat memuat gambar halaman</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Salin lema</translation>
+        <source>Copy word</source>
+        <translation>Salin kata</translation>
     </message>
     <message>
         <source>Copy sentence</source>

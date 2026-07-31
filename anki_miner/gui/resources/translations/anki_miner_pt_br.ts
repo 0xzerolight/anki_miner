@@ -7167,8 +7167,8 @@ Vá em Configurações → ASR para baixá-lo antes de gerar legendas.</translat
         <translation>Não foi possível carregar a imagem da página</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Copiar lema</translation>
+        <source>Copy word</source>
+        <translation>Copiar palavra</translation>
     </message>
     <message>
         <source>Copy sentence</source>

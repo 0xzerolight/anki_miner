@@ -7155,8 +7155,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>無法載入頁面影像</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>複製詞元</translation>
+        <source>Copy word</source>
+        <translation>複製單字</translation>
     </message>
     <message>
         <source>Copy sentence</source>

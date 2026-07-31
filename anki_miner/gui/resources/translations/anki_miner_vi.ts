@@ -7155,8 +7155,8 @@ Vào Cài đặt → ASR để tải xuống trước khi tạo phụ đề.</tr
         <translation>Không thể tải ảnh trang</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Sao chép từ gốc</translation>
+        <source>Copy word</source>
+        <translation>Sao chép từ</translation>
     </message>
     <message>
         <source>Copy sentence</source>

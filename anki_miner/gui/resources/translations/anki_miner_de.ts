@@ -7174,8 +7174,8 @@ Gehen Sie zu Einstellungen → ASR, um es vor dem Erstellen von Untertiteln heru
         <translation>Seitenbild konnte nicht geladen werden</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Grundform kopieren</translation>
+        <source>Copy word</source>
+        <translation>Wort kopieren</translation>
     </message>
     <message>
         <source>Copy sentence</source>
