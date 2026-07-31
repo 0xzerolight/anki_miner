@@ -869,30 +869,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             check_item.setData(Qt.ItemDataRole.UserRole, row)  # Store original index
             self.table.setItem(row, 0, check_item)
 
-            # Word (mined) — what becomes the Anki Expression
-            # (source-orthography dictionary form for verbs/adjectives,
-            # surface for nouns)
-            self.table.setItem(row, 1, self._make_readonly_item(word.mined_form, japanese=True))
-
-            # Form in subtitle — the raw surface as it appeared
-            self.table.setItem(row, 2, self._make_readonly_item(word.surface, japanese=True))
-
-            # Reading
-            self.table.setItem(row, 3, self._make_readonly_item(word.reading, japanese=True))
-
-            # Sentence, truncated for the cell but copied and hovered in full.
-            # A trailing "(N)" flags words with N alternative example sentences.
-            n_candidates = len(word.sentence_candidates)
-            self.table.setItem(
-                row,
-                4,
-                self._make_readonly_item(
-                    self._sentence_display(word.sentence, n_candidates),
-                    tooltip=self._sentence_tooltip(word.sentence, n_candidates),
-                    copy_text=word.sentence,
-                    japanese=True,
-                ),
-            )
+            # Word (mined), Form in subtitle, Reading and Sentence all describe
+            # one occurrence, so they are built from the single spec the
+            # sentence picker also repaints through (_pick_cell_values). Nothing
+            # is picked yet at populate time, so the word is its own variant.
+            for column, text, tooltip, copy_text in self._pick_cell_values(word, word):
+                self.table.setItem(
+                    row,
+                    column,
+                    self._make_readonly_item(text, tooltip=tooltip, copy_text=copy_text, japanese=True),
+                )
 
             # Frequency Rank — sort numerically, not lexically (issue #6).
             # An unranked word carries inf so it stays last ascending.
@@ -947,6 +933,44 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if japanese:
             item.setFont(japanese_cell_font())
         return item
+
+    def _pick_cell_values(self, word: TokenizedWord, chosen: TokenizedWord) -> tuple[tuple[int, str, str, str], ...]:
+        """``(column, text, tooltip, copy_text)`` for every cell the pick decides.
+
+        The single source of the row's display formulas: :meth:`_populate_table`
+        builds cells from it and :meth:`_apply_pick_to_row` repaints cells from
+        it, so the two can't drift.
+
+        ``word`` is the primary occurrence — it owns ``sentence_candidates``, so
+        the "(N)" badge is counted off it. ``chosen`` is the variant the user
+        picked under "Sentences" (``word`` itself until they pick one), and every
+        value the row prints comes off it: ``_swap_word_to_line`` rebuilds
+        ``surface`` per candidate line, and for surface-mined POS (nouns)
+        ``mined_form`` IS the surface, so both move with the pick.
+
+        ``reading`` is not swapped today, so column 3 is a no-op. It stays in the
+        spec anyway because the row's contract is "columns 1-4 are the chosen
+        variant" — leaving one column out is exactly how the row went half stale
+        in the first place (Issue #108 was that leak on ``surface`` alone).
+        """
+        n_candidates = len(word.sentence_candidates)
+        return (
+            # Word (mined) — what becomes the Anki Expression (source-orthography
+            # dictionary form for verbs/adjectives, surface for nouns).
+            (1, chosen.mined_form, chosen.mined_form, chosen.mined_form),
+            # Form in subtitle — the raw surface as it appeared.
+            (2, chosen.surface, chosen.surface, chosen.surface),
+            # Reading.
+            (3, chosen.reading, chosen.reading, chosen.reading),
+            # Sentence, truncated for the cell but copied and hovered in full.
+            # A trailing "(N)" flags words with N alternative example sentences.
+            (
+                4,
+                self._sentence_display(chosen.sentence, n_candidates),
+                self._sentence_tooltip(chosen.sentence, n_candidates),
+                chosen.sentence,
+            ),
+        )
 
     @staticmethod
     def _sentence_display(sentence: str, n_candidates: int) -> str:
