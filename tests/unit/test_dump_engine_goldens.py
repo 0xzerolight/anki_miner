@@ -4,7 +4,6 @@ import importlib.util
 import io
 import json
 import os
-import re
 import subprocess
 import sys
 import tarfile
@@ -14,11 +13,15 @@ from types import SimpleNamespace
 import pytest
 import unidic_lite
 
-# Android-port engine parity contract: derives from a pinned desktop commit for a
-# separate, not-yet-started repo. Deselected from the desktop CI/health gate (see
-# `and not golden` in ci.yml + scripts/health.sh); exercised on-demand locally and
-# by the paths-scoped android-engine-goldens.yml workflow. See models/word.py and
-# the plan in docs/ for rationale.
+# Android-port engine parity contract: derives from a pinned desktop commit for the
+# separate anki-miner-android repo, which reads scripts/dump_engine_goldens.py,
+# scripts/engine_golden_contract_v2.py, scripts/prepare_golden_unidic.py and
+# tests/fixtures/goldens/engine-v2.schema.json by path (see its
+# tools/engine-sync/engine_sync/golden_exporter_overlay.py attestations). Deselected
+# from the desktop CI/health gate (`and not golden` in ci.yml + scripts/health.sh)
+# because every case here clones the pinned revision and runs a real export; there is
+# no hosted derivation workflow, and the committed contract lives in the Android repo.
+# See models/word.py for the mined_form rationale.
 pytestmark = pytest.mark.golden
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -26,9 +29,6 @@ SCRIPT_PATH = REPOSITORY_ROOT / "scripts" / "dump_engine_goldens.py"
 CORPUS_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "tokenizer-v1.json"
 V2_INPUT_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2-input.json"
 V2_SCHEMA_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2.schema.json"
-V2_FIXTURE_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2.json"
-RUNTIME_LOCK_PATH = REPOSITORY_ROOT / "scripts" / "golden-runtime-requirements.pip"
-GOLDEN_WORKFLOW_PATH = REPOSITORY_ROOT / ".github" / "workflows" / "android-engine-goldens.yml"
 PREPARE_UNIDIC_PATH = REPOSITORY_ROOT / "scripts" / "prepare_golden_unidic.py"
 PINNED_ENGINE_REVISION = "ba3b3cfbcc53e57a440c8b9f157209851408c62a"
 
@@ -77,6 +77,22 @@ def clean_engine_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
         check=True,
     )
     return destination
+
+
+@pytest.fixture(scope="session")
+def derived_v2(clean_engine_root: Path, tmp_path_factory: pytest.TempPathFactory) -> dict:
+    """One real v2 export, shared by the contract-shape assertions.
+
+    The reviewed contract is committed in the Android repo (golden/engine-v2.json),
+    verified there by engine_sync.golden_contract_v2.validate_committed_fixture. The
+    desktop side derives it fresh instead of pinning a second copy: provenance embeds
+    the hash of the exporter that produced it, so a committed desktop duplicate turns
+    every exporter edit into a byte-mismatch that only the frozen runtime can resolve.
+    """
+
+    output = tmp_path_factory.mktemp("golden-v2") / "engine-v2.json"
+    subprocess.run(_export_v2_command(clean_engine_root, output), check=True)
+    return json.loads(output.read_text(encoding="utf-8"))
 
 
 def _clone_engine(source: Path, destination: Path) -> Path:
@@ -331,45 +347,6 @@ def test_section_status_freezes_implemented_and_pending_contract():
         exporter._validated_section_status(cases)
 
 
-def test_ci_runtime_lock_covers_every_hashed_distribution():
-    lines = RUNTIME_LOCK_PATH.read_text(encoding="utf-8").splitlines()
-    pins = {line.split()[0].split("==", 1)[0].lower().replace("_", "-") for line in lines if line[:1].isalpha()}
-    expected = {
-        name.lower().replace("_", "-") for name, _imports in exporter.RUNTIME_DISTRIBUTIONS if name != "unidic-lite"
-    }
-    assert pins == expected
-    assert all("==" in line and line.endswith(" \\") for line in lines if line[:1].isalpha())
-    assert len(re.findall(r"^\s+--hash=sha256:[0-9a-f]{64}$", "\n".join(lines), flags=re.MULTILINE)) == len(pins)
-
-    assert "unidic-lite" not in RUNTIME_LOCK_PATH.read_text(encoding="utf-8")
-
-
-def test_golden_workflow_pins_python_patch_version():
-    workflow = GOLDEN_WORKFLOW_PATH.read_text(encoding="utf-8")
-    assert re.findall(r'^\s+python-version: "([0-9.]+)"$', workflow, flags=re.MULTILINE) == ["3.13.7"]
-
-
-def test_golden_workflow_hash_locks_installation_and_process_environment():
-    workflow = GOLDEN_WORKFLOW_PATH.read_text(encoding="utf-8")
-    for option in ("--require-hashes", "--only-binary=:all:"):
-        assert option in workflow
-    assert "python -m pip wheel" not in workflow
-    assert "prepare_golden_unidic.py" in workflow
-    assert f"ANDROID_ENGINE_REVISION: {PINNED_ENGINE_REVISION}" in workflow
-    assert "--schema-version 2" in workflow
-    for setting in (
-        "LANG: C.UTF-8",
-        "LC_ALL: C.UTF-8",
-        'PYTHONDONTWRITEBYTECODE: "1"',
-        'PYTHONHASHSEED: "0"',
-        "PYTHONIOENCODING: utf-8",
-        'PYTHONUTF8: "1"',
-        'SOURCE_DATE_EPOCH: "315532800"',
-        "TZ: UTC",
-    ):
-        assert setting in workflow
-
-
 def test_cli_requires_explicit_unidic_provenance(clean_engine_root):
     result = subprocess.run(
         [sys.executable, str(SCRIPT_PATH), "--engine-root", str(clean_engine_root)],
@@ -613,9 +590,8 @@ def test_unidic_extractor_rejects_traversal_and_links(tmp_path):
         unidic_preparer._extract_dicdir(archive, destination)
 
 
-def test_v2_schema_is_closed_and_is_part_of_provenance():
+def test_v2_schema_is_closed_and_is_part_of_provenance(derived_v2):
     schema = json.loads(V2_SCHEMA_PATH.read_text(encoding="utf-8"))
-    fixture = json.loads(V2_FIXTURE_PATH.read_text(encoding="utf-8"))
 
     references: list[str] = []
     object_schemas = 0
@@ -641,34 +617,25 @@ def test_v2_schema_is_closed_and_is_part_of_provenance():
     assert references
     assert all(reference.startswith("#/$defs/") for reference in references)
     assert all(reference.removeprefix("#/$defs/") in schema["$defs"] for reference in references)
-    assert fixture["provenance"]["data"]["schema_sha256"] == exporter._sha256_file(V2_SCHEMA_PATH)
+    assert derived_v2["provenance"]["data"]["schema_sha256"] == exporter._sha256_file(V2_SCHEMA_PATH)
 
 
-def test_v2_fixture_is_byte_repeatable_and_matches_reviewed_artifact(clean_engine_root, tmp_path):
+def test_v2_export_is_byte_repeatable(clean_engine_root, tmp_path):
     first = tmp_path / "v2-first.json"
     second = tmp_path / "v2-second.json"
     subprocess.run(_export_v2_command(clean_engine_root, first), check=True)
     subprocess.run(_export_v2_command(clean_engine_root, second), check=True)
 
-    # Determinism holds on every interpreter.
+    # Determinism holds on every interpreter. Byte-equality against a *reviewed*
+    # artifact is not asserted here: provenance.runtime embeds ABI-specific
+    # dependency content hashes, so that comparison is only meaningful under the
+    # exact runtime that produced it. The Android repo owns that check against its
+    # own committed contract (engine_sync.golden_contract_v2).
     assert first.read_bytes() == second.read_bytes()
 
-    # provenance.runtime embeds ABI/interpreter-specific dependency content hashes
-    # (compiled wheels differ per Python minor), so the byte-exact reviewed-artifact
-    # match is only meaningful under the pinned golden runtime (CPython 3.13.7 +
-    # golden-runtime-requirements.pip), which the dedicated Android engine goldens
-    # workflow enforces on every push. Skip the comparison when the local runtime
-    # cannot reproduce the reviewed dependency set (e.g. the 3.11/3.12 matrix legs).
-    generated = json.loads(first.read_text(encoding="utf-8"))
-    reviewed = json.loads(V2_FIXTURE_PATH.read_text(encoding="utf-8"))
-    if generated["provenance"]["runtime"] != reviewed["provenance"]["runtime"]:
-        pytest.skip("local runtime does not reproduce the pinned golden dependency set")
 
-    assert first.read_bytes() == V2_FIXTURE_PATH.read_bytes()
-
-
-def test_v2_fixture_covers_every_parity_section_and_transport_identity():
-    result = json.loads(V2_FIXTURE_PATH.read_text(encoding="utf-8"))
+def test_v2_export_covers_every_parity_section_and_transport_identity(derived_v2):
+    result = derived_v2
     sections = (
         "tokenization",
         "morphology",
