@@ -188,6 +188,16 @@ class _GoldenPresenter:
     def show_error(self, message: str) -> None:
         self.events.append({"level": "error", "message": str(message)})
 
+    def show_stage(self, index: int, total: int, name: str) -> None:
+        # The pipeline announces its numbered stages through the presenter now
+        # that the blended stage-weight percentage is gone. Recorded like every
+        # other presenter event, so the contract shows which stage spoke.
+        self.events.append({"level": "stage", "message": f"{index}/{total} {name}"})
+
+    def show_run_details(self, result: object) -> None:
+        # Part of the protocol; only a GUI raises it, never the pipeline.
+        raise AssertionError("golden derivation must not open a run-details surface")
+
 
 class _GoldenAnkiRead:
     def __init__(self, existing: set[str]) -> None:
