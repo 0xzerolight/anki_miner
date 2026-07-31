@@ -1,4 +1,14 @@
-"""Factory for creating service instances used in episode processing."""
+"""Factory for creating service instances used in episode processing.
+
+Optional data sources warn and disable themselves when they cannot load, so a
+missing dictionary or word list degrades the run instead of failing it. That
+rule stops at ``MemoryError``. The wordset union alone is roughly 45 MiB across
+480K entries, and swallowing an allocation failure there would silently drop
+the proper-noun filter the user configured, then keep writing cards from a
+memory-starved interpreter — wrong output rather than a failed run. Every
+optional-service ``except Exception`` here therefore re-raises ``MemoryError``
+first.
+"""
 
 import contextlib
 import logging
@@ -149,6 +159,8 @@ def build_definition_service(
     if any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain):
         try:
             definition_service.ensure_loaded()
+        except MemoryError:
+            raise  # never an optional-source miss; see the module note
         except Exception as e:
             if load_result is None:
                 raise
@@ -220,6 +232,8 @@ def _build_pitch_service(
             )
         )
         return pitch_accent_service
+    except MemoryError:
+        raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning(f"Could not load pitch accent data: {e}")
         load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
@@ -259,6 +273,8 @@ def _build_frequency_service(
             )
         )
         return frequency_service
+    except MemoryError:
+        raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning(f"Could not load frequency data: {e}")
         load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
@@ -570,6 +586,8 @@ def create_services(
         known_word_db = KnownWordDB(config.known_words_db_path)
         if config.use_known_words_db:
             known_word_db.initialize()
+    except MemoryError:
+        raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning(f"Could not initialize known word database: {e}")
         load_result.warnings.append(tr_format(_tr("Couldn't initialize known word database: %1"), e))
@@ -583,6 +601,8 @@ def create_services(
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
             )
             word_list_service.load()
+        except MemoryError:
+            raise  # never an optional-source miss; see the module note
         except Exception as e:
             logger.warning(f"Could not load word lists: {e}")
             load_result.warnings.append(tr_format(_tr("Couldn't load word lists: %1"), e))
@@ -599,6 +619,8 @@ def create_services(
                 )
             else:
                 wordset_service = None
+        except MemoryError:
+            raise  # never an optional-source miss; see the module note
         except Exception as e:
             logger.warning(f"Could not load name wordsets: {e}")
             load_result.warnings.append(tr_format(_tr("Couldn't load name wordsets: %1"), e))
