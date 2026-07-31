@@ -19,6 +19,7 @@ import pytest
 from PyQt6.QtWidgets import QApplication, QMenu
 
 from anki_miner.gui.utils.qt_helpers import COPY_ROLE
+from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
     WordCurationDialog,
@@ -77,6 +78,48 @@ def _variant_word() -> TokenizedWord:
         orth_base="想う",
     )
     word.sentence_candidates = [word, _leaf("想う", "彼女を想う気持ち", 7.0)]
+    return word
+
+
+def _noun_leaf(surface: str, lemma: str, sentence: str, start_time: float) -> TokenizedWord:
+    """A noun candidate variant.
+
+    Nouns are surface-mined, so a variant that lands on a different subtitle line
+    carries a different ``surface`` — and a different ``mined_form`` with it.
+    This is the shape ``WordFilter._swap_word_to_line`` produces (it
+    ``dataclasses.replace``s ``surface``, not ``lemma``/``reading``), and the only
+    shape that makes columns 1 and 2 observable at all: the verb fixture above
+    mines ``orth_base or lemma``, identical across every candidate.
+    """
+    return TokenizedWord(
+        surface=surface,
+        lemma=lemma,
+        reading="コドモ",
+        sentence=sentence,
+        start_time=start_time,
+        end_time=start_time + 2.0,
+        duration=2.0,
+        pos="名詞",
+    )
+
+
+def _noun_with_varying_surface(
+    lemma: str = "子供",
+    variant: str = "子ども",
+    base_time: float = 1.0,
+) -> TokenizedWord:
+    """A noun on two lines whose surface — and mined form — differ per line."""
+    cands = [
+        _noun_leaf(lemma, lemma, f"{lemma}が走る", base_time),
+        _noun_leaf(variant, lemma, f"{variant}と遊ぶ", base_time + 4.0),
+    ]
+    # Guard the premise: if the fold rules ever collapse these two spellings the
+    # column assertions below would pass vacuously, before AND after any fix.
+    assert cands[0].surface != cands[1].surface
+    assert cands[0].mined_form != cands[1].mined_form
+
+    word = _noun_leaf(lemma, lemma, f"{lemma}が走る", base_time)
+    word.sentence_candidates = cands
     return word
 
 
@@ -360,3 +403,222 @@ class TestRowCopyRole:
         assert row is not None
         # Full sentence, not the elided cell text with its "(3)" count suffix.
         assert dlg.table.item(row, 4).data(COPY_ROLE) == "朝ごはんを食べる"
+
+
+def _cell(dlg: WordCurationDialog, idx: int, column: int):
+    """The live cell for word ``idx``'s column, resolved through the sort order."""
+    row = dlg._visual_row_for_index(idx)
+    assert row is not None
+    item = dlg.table.item(row, column)
+    assert item is not None
+    return item
+
+
+class TestPickPropagatesToRow:
+    """Picking a sentence must update everything the row says about that
+    occurrence, not only the Sentence cell (Issue #108)."""
+
+    @pytest.fixture()
+    def noun_words(self):
+        return [_noun_with_varying_surface()]
+
+    @staticmethod
+    def _pick_variant(dlg: WordCurationDialog) -> None:
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(1)
+
+    def test_form_in_subtitle_tracks_the_pick(self, qtbot, noun_words):
+        """The reported bug: col 2 kept the primary occurrence's surface."""
+        dlg = WordCurationDialog(noun_words)
+        qtbot.addWidget(dlg)
+        self._pick_variant(dlg)
+
+        assert _cell(dlg, 0, 2).text() == "子ども"
+
+    def test_mined_form_tracks_the_pick(self, qtbot, noun_words):
+        """Nouns are surface-mined, so the card front moves with the pick too."""
+        dlg = WordCurationDialog(noun_words)
+        qtbot.addWidget(dlg)
+        self._pick_variant(dlg)
+
+        assert _cell(dlg, 0, 1).text() == "子ども"
+
+    def test_copy_payload_tracks_the_pick(self, qtbot, noun_words):
+        """Ctrl+C lifts COPY_ROLE, which was frozen at populate time — the same
+        hole Issue #95 closed on the context menu, still open on the row copy."""
+        from anki_miner.gui.utils.qt_helpers import COPY_ROLE
+
+        dlg = WordCurationDialog(noun_words)
+        qtbot.addWidget(dlg)
+        self._pick_variant(dlg)
+
+        assert _cell(dlg, 0, 2).data(COPY_ROLE) == "子ども"
+        assert _cell(dlg, 0, 4).data(COPY_ROLE) == "子どもと遊ぶ"
+
+    def test_sort_key_tracks_the_pick(self, qtbot, noun_words):
+        """A repainted cell that keeps its old sort key sorts by a value it no
+        longer prints — the contract update_table_item exists to hold."""
+        from anki_miner.gui.utils.qt_helpers import SORT_ROLE
+
+        dlg = WordCurationDialog(noun_words)
+        qtbot.addWidget(dlg)
+        self._pick_variant(dlg)
+
+        assert _cell(dlg, 0, 2).data(SORT_ROLE) == "子ども"
+
+    def test_reading_cell_stays_consistent_with_the_pick(self, qtbot, noun_words):
+        """A no-op today (``reading`` is not swapped per line), asserted anyway so
+        the row's "cols 1-4 are the chosen variant" contract is pinned end to end."""
+        dlg = WordCurationDialog(noun_words)
+        qtbot.addWidget(dlg)
+        self._pick_variant(dlg)
+
+        assert _cell(dlg, 0, 3).text() == dlg._chosen[0].reading
+
+    @staticmethod
+    def _sorted_pair(qtbot):
+        """Two nouns, sorted by the mined-form column, where the pick MOVES a row.
+
+        赤 (U+8D64) sorts after 白 (U+767D), and its variant あ (U+3042) sorts
+        before both — so picking the variant relocates word 0 from the bottom row
+        to the top, which is the only arrangement that exercises the re-sort.
+        """
+        from PyQt6.QtCore import Qt
+
+        words = [
+            _noun_with_varying_surface("赤", "あ", 1.0),
+            _noun_with_varying_surface("白", "し", 20.0),
+        ]
+        dlg = WordCurationDialog(words)
+        qtbot.addWidget(dlg)
+        dlg.table.sortItems(1, Qt.SortOrder.AscendingOrder)
+        return dlg
+
+    def test_a_pick_does_not_clobber_a_neighbouring_row(self, qtbot):
+        """With the table sorted BY a pick column, repainting the row re-sorts it.
+
+        Four cells written against a row index resolved once would then land the
+        last three on whichever word slid into the old position. Both rows must
+        still describe their own word.
+        """
+        dlg = self._sorted_pair(qtbot)
+        before = dlg._visual_row_for_index(0)
+
+        _select_and_fire(dlg, before)
+        assert dlg._candidate_list_index == 0
+        dlg.sentence_list.setCurrentRow(1)  # 赤 -> あ, sorts past 白
+
+        # The premise: the row really did move, so the guard is under test.
+        assert dlg._visual_row_for_index(0) != before
+
+        assert _cell(dlg, 0, 1).text() == "あ"
+        assert _cell(dlg, 0, 2).text() == "あ"
+        assert "あと遊ぶ" in _cell(dlg, 0, 4).text()
+        # The untouched word kept every one of its own values.
+        assert _cell(dlg, 1, 1).text() == "白"
+        assert _cell(dlg, 1, 2).text() == "白"
+        assert "白が走る" in _cell(dlg, 1, 4).text()
+
+    def test_the_row_is_still_addressable_after_a_re_sort(self, qtbot):
+        from PyQt6.QtCore import Qt
+
+        dlg = self._sorted_pair(qtbot)
+        _select_and_fire(dlg, dlg._visual_row_for_index(0))
+        dlg.sentence_list.setCurrentRow(1)
+
+        row = dlg._visual_row_for_index(0)
+        assert row is not None
+        assert dlg.table.item(row, 0).data(Qt.ItemDataRole.UserRole) == 0
+
+
+class TestPickRefreshesDefinitionPane:
+    """The definition beside the word must follow the pick as well: for
+    surface-mined POS the pick moves ``mined_form``, which is the lookup key."""
+
+    @pytest.fixture()
+    def noun_words(self):
+        return [_noun_with_varying_surface()]
+
+    @pytest.fixture()
+    def sync_off_thread(self, monkeypatch):
+        """Run every dispatched lookup inline, on the calling thread."""
+
+        def fake_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
+            on_done(work())
+            return MagicMock()
+
+        monkeypatch.setattr(wcd, "run_off_thread", fake_run_off_thread)
+
+    def test_a_pick_looks_up_the_chosen_mined_form(self, qtbot, noun_words, sync_off_thread):
+        terms: list[str] = []
+
+        def lookup(term: str):
+            terms.append(term)
+            return [(term, f"gloss for {term}")]
+
+        dlg = WordCurationDialog(noun_words, lookup_fn=lookup)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        terms.clear()
+
+        dlg.sentence_list.setCurrentRow(1)
+
+        assert terms == ["子ども"]
+        assert "子ども" in dlg.definition_view.toHtml()
+
+    def test_refocusing_after_a_pick_keeps_the_chosen_entry(self, qtbot, noun_words, sync_off_thread):
+        """The focus path resolved its lookup off the primary, so arrowing away
+        and back re-rendered the first occurrence's definition."""
+        terms: list[str] = []
+
+        def lookup(term: str):
+            terms.append(term)
+            return [(term, f"gloss for {term}")]
+
+        dlg = WordCurationDialog(noun_words, lookup_fn=lookup)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(1)
+        terms.clear()
+
+        _select_and_fire(dlg, 0)
+
+        assert terms[-1:] == ["子ども"] or terms == []  # cached hits skip lookup_fn
+        assert "子ども" in dlg.definition_view.toHtml()
+        assert "子供" not in dlg.definition_view.toHtml()
+
+    def test_a_superseded_pick_never_paints(self, qtbot, noun_words, monkeypatch):
+        """A reply for a pick the user has already moved off must not paint.
+
+        The pick calls the lookup directly rather than through the focus
+        debounce, so the generation stamp is the only thing standing between a
+        slow query and the pane repainting the wrong entry.
+        """
+        pending: list[tuple] = []
+
+        def fake_run_off_thread(parent, work, on_done, on_error=None, **kwargs):
+            pending.append((work, on_done))
+            return MagicMock()
+
+        monkeypatch.setattr(wcd, "run_off_thread", fake_run_off_thread)
+
+        dlg = WordCurationDialog(noun_words, lookup_fn=lambda term: [(term, f"gloss for {term}")])
+        qtbot.addWidget(dlg)
+        # Land the focus lookup first: only one request is ever in flight, so a
+        # pick made while it is outstanding would queue rather than dispatch.
+        _select_and_fire(dlg, 0)
+        work, done = pending.pop()
+        done(work())
+        assert "子供" in dlg.definition_view.toHtml()
+
+        dlg.sentence_list.setCurrentRow(1)  # dispatches the 子ども lookup
+        assert pending, "the pick must dispatch its own lookup"
+        dlg.sentence_list.setCurrentRow(0)  # user moves back; 子供 is cached, paints now
+
+        assert "子供" in dlg.definition_view.toHtml()
+
+        # The 子ども reply lands late, against a stale generation.
+        work, done = pending.pop()
+        done(work())
+        assert "子ども" not in dlg.definition_view.toHtml()
+        assert "子供" in dlg.definition_view.toHtml()
