@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtWidgets import QApplication, QMenu
 
+from anki_miner.gui.utils.qt_helpers import COPY_ROLE
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
     WordCurationDialog,
@@ -54,6 +55,29 @@ def _word_with_candidates() -> TokenizedWord:
 def _plain_word() -> TokenizedWord:
     """A single-occurrence word (no candidates)."""
     return _leaf("走る", "公園を走る", 20.0)
+
+
+def _variant_word() -> TokenizedWord:
+    """A word whose mined form diverges from unidic's lemma (Issue #107).
+
+    想う is a real 動詞 case: the tagger returns lemma 思う (the canonical
+    headword, kanji variant collapsed) with orthBase 想う. mined_form — the card
+    front, and what the "Word (mined)" column prints — is 想う. Two candidates so
+    the sentence picker is live and pick-independence is testable.
+    """
+    word = TokenizedWord(
+        surface="想っ",
+        lemma="思う",
+        reading="オモウ",
+        sentence="君のことを想った",
+        start_time=1.0,
+        end_time=3.0,
+        duration=2.0,
+        pos="動詞",
+        orth_base="想う",
+    )
+    word.sentence_candidates = [word, _leaf("想う", "彼女を想う気持ち", 7.0)]
+    return word
 
 
 def _select_and_fire(dialog: WordCurationDialog, row: int) -> None:
@@ -234,8 +258,21 @@ class TestPlayPauseShortcut:
 
 
 class TestContextMenuCopy:
-    """Right-click "Copy sentence" must copy the sentence the user picked in the
-    Sentences box, not the primary/first one (Issue #95)."""
+    """Right-click copies must agree with what the row shows.
+
+    "Copy sentence" copies the sentence the user picked in the Sentences box,
+    not the primary/first one (Issue #95). "Copy word" copies the mined form —
+    the card front, column 1 — not unidic's variant-collapsing lemma (#107).
+    """
+
+    @staticmethod
+    def _copy_word_via_menu(dlg: WordCurationDialog, idx: int) -> None:
+        """Drive the real context-menu handler and click "Copy word" (1st action)."""
+        row = dlg._visual_row_for_index(idx)
+        assert row is not None
+        rect = dlg.table.visualItemRect(dlg.table.item(row, 0))
+        with patch.object(QMenu, "exec", lambda self, _pos: self.actions()[0]):
+            dlg._on_table_context_menu(rect.center())
 
     @staticmethod
     def _copy_sentence_via_menu(dlg: WordCurationDialog, idx: int) -> None:
@@ -268,16 +305,58 @@ class TestContextMenuCopy:
 
         assert QApplication.clipboard().text() == "朝ごはんを食べる"
 
-    def test_copy_lemma_unaffected_by_pick(self, qtbot, mixed_words):
+    def test_copy_word_uses_mined_form_not_lemma(self, qtbot):
+        """Issue #107: 想う was copied as 思う, unidic's collapsed headword."""
+        word = _variant_word()
+        dlg = WordCurationDialog([word])
+        qtbot.addWidget(dlg)
+        assert word.mined_form == "想う" and word.lemma == "思う"
+
+        self._copy_word_via_menu(dlg, 0)
+
+        assert QApplication.clipboard().text() == "想う"
+
+    def test_copy_word_matches_the_mined_column(self, qtbot):
+        """The copied text is exactly what the row prints in "Word (mined)"."""
+        dlg = WordCurationDialog([_variant_word()])
+        qtbot.addWidget(dlg)
+        row = dlg._visual_row_for_index(0)
+        assert row is not None
+
+        self._copy_word_via_menu(dlg, 0)
+
+        assert QApplication.clipboard().text() == dlg.table.item(row, 1).text()
+
+    def test_copy_word_unaffected_by_pick(self, qtbot):
+        """Picking another sentence changes the scene, never the word copied."""
+        dlg = WordCurationDialog([_variant_word()])
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(1)
+
+        self._copy_word_via_menu(dlg, 0)
+
+        assert QApplication.clipboard().text() == "想う"
+
+
+class TestRowCopyRole:
+    """Ctrl+C row copy serializes COPY_ROLE, so a pick must refresh it too —
+    the Issue #95 defect on the row-copy path."""
+
+    def test_copy_role_follows_the_pick(self, qtbot, mixed_words):
         dlg = WordCurationDialog(mixed_words)
         qtbot.addWidget(dlg)
         _select_and_fire(dlg, 0)
-        dlg.sentence_list.setCurrentRow(2)
+        dlg.sentence_list.setCurrentRow(1)  # user picks the 2nd sentence
 
         row = dlg._visual_row_for_index(0)
         assert row is not None
-        rect = dlg.table.visualItemRect(dlg.table.item(row, 0))
-        with patch.object(QMenu, "exec", lambda self, _pos: self.actions()[0]):
-            dlg._on_table_context_menu(rect.center())
+        assert dlg.table.item(row, 4).data(COPY_ROLE) == "パンを食べる"
 
-        assert QApplication.clipboard().text() == "食べる"
+    def test_copy_role_default_when_no_pick(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        row = dlg._visual_row_for_index(0)
+        assert row is not None
+        # Full sentence, not the elided cell text with its "(3)" count suffix.
+        assert dlg.table.item(row, 4).data(COPY_ROLE) == "朝ごはんを食べる"

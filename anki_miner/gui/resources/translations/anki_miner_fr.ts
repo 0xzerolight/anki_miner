@@ -7167,8 +7167,8 @@ Accédez à Paramètres → ASR pour le télécharger avant de générer des sou
         <translation>Impossible de charger l'image de page</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Copier le lemme</translation>
+        <source>Copy word</source>
+        <translation>Copier le mot</translation>
     </message>
     <message>
         <source>Copy sentence</source>

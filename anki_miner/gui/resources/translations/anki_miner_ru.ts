@@ -7179,8 +7179,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>Не удалось загрузить изображение страницы</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>Скопировать лемму</translation>
+        <source>Copy word</source>
+        <translation>Скопировать слово</translation>
     </message>
     <message>
         <source>Copy sentence</source>

@@ -7035,7 +7035,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copy lemma</source>
+        <source>Copy word</source>
         <translation type="unfinished" />
     </message>
     <message>

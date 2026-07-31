@@ -50,6 +50,7 @@ from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.fonts import japanese_cell_font, make_scaled_font
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
+    COPY_ROLE,
     CellRole,
     add_min_max_buttons,
     configure_data_view,
@@ -1259,6 +1260,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.table.blockSignals(True)
                 item.setText(self._sentence_display(chosen.sentence, n_candidates))
                 item.setToolTip(self._sentence_tooltip(chosen.sentence, n_candidates))
+                # The cell prints an elided sentence; COPY_ROLE carries the full
+                # one for Ctrl+C row copies (make_table_item's copy_text). Stale
+                # here and Ctrl+C yields the original sentence after a pick —
+                # the Issue #95 defect on the row-copy path.
+                item.setData(COPY_ROLE, chosen.sentence)
                 self.table.blockSignals(False)
 
         # Preview the chosen scene. Defer the seek to the next event-loop tick:
@@ -1407,7 +1413,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         word = self._words[original_index]
         menu = QMenu(self)
 
-        copy_lemma_action = menu.addAction(self.tr("Copy lemma"))
+        copy_word_action = menu.addAction(self.tr("Copy word"))
         copy_sentence_action = menu.addAction(self.tr("Copy sentence"))
 
         vp = self.table.viewport()
@@ -1417,8 +1423,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         clipboard = QApplication.clipboard()
         if clipboard is None:
             return
-        if action == copy_lemma_action:
-            clipboard.setText(word.lemma)
+        if action == copy_word_action:
+            # mined_form, not lemma: it is what column 1 shows and what becomes
+            # the card front. unidic's lemma collapses kanji variants (想う→思う,
+            # こと→事), so copying it handed back a different word than the one
+            # being mined (Issue #107).
+            clipboard.setText(word.mined_form)
         elif action == copy_sentence_action:
             # Resolve the user's sentence pick (self._chosen), else the default —
             # same "chosen, else original" pattern as get_selected_words. Without

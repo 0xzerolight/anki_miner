@@ -7155,8 +7155,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>ページ画像を読み込めませんでした</translation>
     </message>
     <message>
-        <source>Copy lemma</source>
-        <translation>見出し語をコピー</translation>
+        <source>Copy word</source>
+        <translation>単語をコピー</translation>
     </message>
     <message>
         <source>Copy sentence</source>
