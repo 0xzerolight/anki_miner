@@ -60,7 +60,7 @@ HTML coverage lands in `htmlcov/`.
 | `real_ytdlp` | Exercises the real `_ytdlp_supports_js_runtimes` probe (no autouse stub). |
 | `real_probe` | Exercises the real `AnkiService._probe_duplicates` (no autouse stub). |
 | `network` | Genuinely needs real network; suppresses the socket tripwire (`tests/_network_tripwire.py`). |
-| `golden` | Android-port engine parity contract; excluded from the default gate and run on demand or in `android-engine-goldens.yml`. |
+| `golden` | Android-port engine parity contract; clones the pinned revision and runs real exports, so it is excluded from the default gate and run on demand. No hosted derivation workflow exists — the reviewed contract is committed and verified in the anki-miner-android repo, which reads `scripts/dump_engine_goldens.py`, `scripts/engine_golden_contract_v2.py`, `scripts/prepare_golden_unidic.py` and `tests/fixtures/goldens/engine-v2.schema.json` from this checkout by path. |
 | `motion` | Needs real animation timing; opts out of the autouse instant-motion fixture. |
 
 Register new markers in `[tool.pytest.ini_options].markers` in `pyproject.toml`.
