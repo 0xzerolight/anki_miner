@@ -367,6 +367,39 @@ def make_table_item(
     return item
 
 
+def update_table_item(
+    item: QTableWidgetItem,
+    text: str,
+    *,
+    sort_value: float | str | None = None,
+    copy_text: str | None = None,
+    tooltip: str | None = None,
+) -> None:
+    """Re-point an existing cell at a new value, on :func:`make_table_item`'s contract.
+
+    A cell whose value changes in place cannot simply be rebuilt: the word
+    curator's column 0 carries the row's checkbox state and its original-word
+    index, and a re-created row would drop both. So mutation has to update the
+    same three things construction sets — display text, sort key, copy value —
+    or the cell prints one value while it sorts and copies another. Alignment,
+    font and flags do not depend on the value and are left alone.
+
+    Defaults mirror :func:`make_table_item` exactly: an omitted tooltip, sort key
+    or copy value falls back to ``text``.
+
+    Args:
+        item: The cell to re-point.
+        text: What the cell now prints. May be elided or truncated.
+        sort_value: The value the column sorts by. Defaults to ``text``.
+        copy_text: The full value a row copy yields. Defaults to ``text``.
+        tooltip: Hover text. Defaults to ``text``.
+    """
+    item.setText(text)
+    item.setToolTip(text if tooltip is None else tooltip)
+    item.setData(SORT_ROLE, text if sort_value is None else sort_value)
+    item.setData(COPY_ROLE, text if copy_text is None else copy_text)
+
+
 def hold_numeric_columns(table: QTableWidget, columns: Sequence[int]) -> None:
     """Fit each numeric column to its widest rendered value, and never shrink it.
 

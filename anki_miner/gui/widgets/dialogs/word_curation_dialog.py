@@ -28,6 +28,7 @@ from PyQt6.QtGui import (
     QShowEvent,
 )
 from PyQt6.QtWidgets import (
+    QAbstractItemView,
     QApplication,
     QDialog,
     QHBoxLayout,
@@ -55,6 +56,7 @@ from anki_miner.gui.utils.qt_helpers import (
     configure_data_view,
     install_copy_rows,
     make_table_item,
+    update_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
@@ -1101,10 +1103,25 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # so the seek can be issued directly — see _on_candidate_chosen.
         self._preview_scene(chosen.start_time)
 
-        # Dictionary pane: look up by mined_form (the card-front spelling, same
-        # primary key Phase 4 uses) with a miss-only lemma retry — unidic's
-        # canonical lemma collapses kanji variants (殺る → 遣る), so a
-        # lemma-keyed pane showed the wrong homograph's entry.
+        # Dictionary pane: the CHOSEN variant, not the primary — for surface-mined
+        # POS (nouns) the pick moves mined_form, so a word-keyed pane showed the
+        # first occurrence's entry after the user picked another (Issue #108).
+        self._refresh_definition(chosen)
+
+    def _refresh_definition(self, word: TokenizedWord) -> None:
+        """Point the definition pane at ``word``'s card front.
+
+        Looks up by ``mined_form`` (the card-front spelling, the same primary key
+        Phase 4 uses) with a miss-only lemma retry — unidic's canonical lemma
+        collapses kanji variants (殺る → 遣る), so a lemma-keyed pane showed the
+        wrong homograph's entry.
+
+        Called from the focus debounce and, directly, from the sentence pick.
+        The pick does not need a debounce of its own: :meth:`_lookup_and_render`
+        already keeps one request in flight with only the newest queued behind
+        it, and paints only the generation that is still current — so holding a
+        key down in the picker cannot pile up or paint a superseded entry.
+        """
         if self._show_dict and hasattr(self, "definition_view"):
             self._lookup_and_render(word.mined_form, word.lemma)
 
@@ -1264,7 +1281,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         return a.sentence == b.sentence and a.start_time == b.start_time
 
     def _on_candidate_chosen(self, list_row: int) -> None:
-        """Apply the user's sentence pick: record it, refresh the cell, seek the scene."""
+        """Apply the user's sentence pick: record it, refresh the row, seek the scene."""
         if self._populating_candidates or list_row < 0:
             return
         idx = self._candidate_list_index
@@ -1273,17 +1290,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         chosen = self._candidate_list_words[list_row]
         self._chosen[idx] = chosen
 
-        # Refresh the table's Sentence cell for this word (its visual row may
-        # differ from idx because the table is sortable).
-        n_candidates = len(self._words[idx].sentence_candidates)
-        row = self._visual_row_for_index(idx)
-        if row is not None:
-            item = self.table.item(row, 4)
-            if item is not None:
-                self.table.blockSignals(True)
-                item.setText(self._sentence_display(chosen.sentence, n_candidates))
-                item.setToolTip(self._sentence_tooltip(chosen.sentence, n_candidates))
-                self.table.blockSignals(False)
+        # Everything that describes the occurrence follows the pick, not just the
+        # sentence: the mined word, the form in the subtitle, what a row copy
+        # yields, and the definition beside it (Issue #108).
+        self._apply_pick_to_row(idx, chosen)
+        self._refresh_definition(chosen)
 
         # Preview the chosen scene. Defer the seek to the next event-loop tick:
         # this handler runs synchronously inside the list's currentRowChanged
@@ -1293,6 +1304,62 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # any active event handler; deferring here makes the two paths identical.
         start_time = chosen.start_time
         QTimer.singleShot(0, lambda: self._preview_scene(start_time))
+
+    def _apply_pick_to_row(self, idx: int, chosen: TokenizedWord) -> None:
+        """Repaint every pick-dependent cell of ``idx``'s row from ``chosen``.
+
+        The row is found by original index, not by position: the table is
+        sortable, so the visual row is not ``idx``.
+
+        Sorting is SUSPENDED for the batch, not merely signal-blocked, and that
+        is load-bearing. Blocking the table's signals does not stop the re-sort —
+        ``ensureSorted`` runs off the *model's* ``dataChanged`` — so if the sort
+        indicator sits on one of these columns, the first of the four writes
+        moves the row and the remaining three land on whatever word slid into the
+        old position. Suspending sorting pins the row for the batch and re-sorts
+        once, on the final values.
+
+        The signal block is released only AFTER sorting is restored: the
+        relocation's ``currentCellChanged`` would otherwise restart the focus
+        debounce, whose handler clears and rebuilds the very ``sentence_list``
+        the user is standing in. The two things the block costs us — scroll
+        visibility and the position counter — are restored explicitly below.
+
+        Note the search filter is deliberately NOT re-run: ``_apply_search``
+        reads these same columns, so re-running it would hide or reveal rows
+        under the user mid-pick. A momentarily stale filter self-corrects on the
+        next keystroke; a row vanishing under the cursor does not.
+        """
+        row = self._visual_row_for_index(idx)
+        if row is None:
+            return
+        word = self._words[idx]
+        sorting = self.table.isSortingEnabled()
+        self.table.blockSignals(True)
+        self.table.setSortingEnabled(False)
+        try:
+            for column, text, tooltip, copy_text in self._pick_cell_values(word, chosen):
+                item = self.table.item(row, column)
+                if item is not None:
+                    update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+        finally:
+            if sorting:
+                self.table.setSortingEnabled(True)
+                # Re-enabling sorting resets the vertical header's resize mode to
+                # Interactive, which drops the shared Fixed row height — same
+                # reason _populate_table re-applies it after its own toggle.
+                self._apply_data_surface()
+            self.table.blockSignals(False)
+
+        # The re-sort may have moved the row. Qt remaps persistent indexes, so
+        # the cursor is still on this word; only the scroll position and the
+        # counter need catching up, their signals having been swallowed above.
+        moved_to = self._visual_row_for_index(idx)
+        if moved_to is not None and moved_to != row:
+            anchor = self.table.item(moved_to, 0)
+            if anchor is not None:
+                self.table.scrollToItem(anchor, QAbstractItemView.ScrollHint.EnsureVisible)
+        self._refresh_summary()
 
     def _preview_scene(self, start_time: float) -> None:
         """Preview the scene for ``start_time``: seek the player / show the page.
