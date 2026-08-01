@@ -948,6 +948,24 @@ QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
     background-color: ${color-input-bg};
 }
 
+/* The header's two selectors are chrome, not a form, and they are the FIRST
+   focusable widgets in the window — so Qt's focus wrap-around parks focus on
+   them whenever something elsewhere hides, disables or destroys the widget that
+   had it. A settings click therefore lit an accent box in the top-right corner.
+   The panels no longer throw focus (see `_keep_focus_in_list` in
+   `panels/chain_settings_panel_base.py`); this rule is what makes the corner
+   quiet whatever else does it next.
+
+   Unconditional, not `[keyboardFocus="true"]`-gated like the ring at the end of
+   this file: the wrap-around arrives through `focusNextChild()`, which focuses
+   with `TabFocusReason`, so the keyboard gate is true on exactly the path this
+   suppresses. Neither combo takes typing, so no border has to say where it goes;
+   both stay StrongFocus and fully keyboard-operable. */
+QComboBox#theme-combo:focus,
+QComboBox#profile-combo:focus {
+    border-color: ${color-border};
+}
+
 QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
     background-color: ${color-input-disabled-bg};
     color: ${color-text-disabled};

@@ -126,3 +126,27 @@ class TestThemeChangedSignal:
         widget.theme_combo.setCurrentIndex(idx)
         assert emitted == ["dark"]
         assert Theme.get_current_mode() == "dark"
+
+
+class TestTheHeaderSelectorsAreStyleable:
+    """``common.qss`` keeps these two quiet by object name (see D48-B).
+
+    The rule is ``QComboBox#theme-combo:focus``; a renamed or unnamed combo
+    makes it select nothing, and the accent box in the top-right corner comes
+    back the next time anything hands focus to the header. The pixel proof lives
+    in ``tests/unit/gui/test_focus_ring.py``; this is the binding between it and
+    the real widgets.
+    """
+
+    def test_the_combos_carry_the_object_names_the_stylesheet_selects_on(self, qtbot):
+        widget = HeaderWidget()
+        qtbot.addWidget(widget)
+
+        assert widget.theme_combo.objectName() == "theme-combo"
+        assert widget.profile_combo.objectName() == "profile-combo"
+
+    def test_the_stylesheet_still_carries_a_rule_for_them(self):
+        qss = Theme.get_stylesheet("light")
+
+        assert "QComboBox#theme-combo:focus" in qss
+        assert "QComboBox#profile-combo:focus" in qss
