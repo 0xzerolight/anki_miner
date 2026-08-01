@@ -46,6 +46,8 @@ class UpdateWorkerThread(CancellableWorker):
                 # take the single config-write code path either way.
                 self.result_ready.emit(info)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
-            logger.exception("UpdateWorkerThread unhandled exception")
-            if not self.check_cancelled():
-                self.error.emit(f"Error checking for updates: {e}")
+            self.report_failure(
+                e,
+                context="UpdateWorkerThread",
+                on_error=lambda msg: self.error.emit(f"Error checking for updates: {msg}"),
+            )

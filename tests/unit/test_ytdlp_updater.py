@@ -12,6 +12,7 @@ import time
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.services import ytdlp_updater
 from anki_miner.services.ytdlp_updater import YtdlpUpdater, YtdlpUpdateResult
 
@@ -495,7 +496,9 @@ class TestDownloadAndInstall:
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
         self._fake_body(monkeypatch, b"x" * (2 * 1024 * 1024))
         updater = YtdlpUpdater(config, cancel=lambda: True)
-        with pytest.raises(RuntimeError):
+        # Typed, not a bare RuntimeError: check_and_update's catch-all used to
+        # log a traceback and report a bogus failure for a plain user cancel.
+        with pytest.raises(OperationCancelled):
             updater._download_and_install(_asset_url(), "2024.03.10")
         assert not (updater.download_dir() / "yt-dlp").exists()
         assert list(updater.download_dir().glob("*.tmp")) == []

@@ -21,14 +21,15 @@ from __future__ import annotations
 
 import logging
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 
+from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 
 logger = logging.getLogger(__name__)
 
 
-class _SingleCallProbeThread(QThread):
+class _SingleCallProbeThread(CancellableWorker):
     """Shared body for single yt-dlp probe threads.
 
     Captures the fetcher at construction time (the YouTube tab may rebuild its
@@ -47,7 +48,7 @@ class _SingleCallProbeThread(QThread):
     """
 
     def __init__(self, fetcher: YouTubeFetcherService, *, timeout_s: float, parent: object = None) -> None:
-        super().__init__(parent)  # type: ignore[arg-type]
+        super().__init__(parent)
         self._fetcher = fetcher
         self._timeout_s = timeout_s
 
@@ -56,8 +57,7 @@ class _SingleCallProbeThread(QThread):
         try:
             result = self._do_call()
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-            logger.exception("YouTubeProbeWorker unhandled exception")
-            self._emit_error(str(exc))
+            self.report_failure(exc, context="YouTubeProbeWorker", on_error=self._emit_error)
         else:
             self._emit_result(result)
 

@@ -291,8 +291,15 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 return
             self.build_finished.emit(total, preview.projected_coverage_pct)
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
-            logger.exception("DeckBuilderWorker unhandled exception")
-            self.error.emit(str(e))
+            # A real failure surfaces even if the cancel flag is already set:
+            # the build loop returns before this on a clean cancel, so reaching
+            # here means something actually broke.
+            self.report_failure(
+                e,
+                context="DeckBuilderWorker",
+                on_error=self.error.emit,
+                cancel_flag_suppresses_error=False,
+            )
         finally:
             # Always close ``base`` on every exit (success / cancel / exception).
             # ``base`` owns its own definition_service (dict sqlite) + audio

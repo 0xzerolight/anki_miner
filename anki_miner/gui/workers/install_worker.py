@@ -108,9 +108,11 @@ class InstallWorker(CancellableWorker):
         try:
             message = self._task(self)
         except Exception as exc:  # noqa: BLE001 — surface every failure to GUI
-            logger.exception("install task failed")
-            if not self.check_cancelled():
-                self.result_ready.emit(False, str(exc))
+            self.report_failure(
+                exc,
+                context="InstallWorker",
+                on_error=lambda msg: self.result_ready.emit(False, msg),
+            )
             return
 
         if not self.check_cancelled():

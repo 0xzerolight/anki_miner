@@ -19,7 +19,6 @@ from typing import Any, Callable
 
 from PyQt6.QtCore import pyqtSignal
 
-from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.audio_packs.importer import import_audio_pack, repair_audio_pack
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
@@ -420,11 +419,18 @@ class ImportWorker(CancellableWorker):
             )
             self.import_finished.emit(resource_id, meta)
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-            # A cancel aborts the importer with an exception too; route it to the
-            # distinct ``cancelled`` signal so callers never confuse it with a
-            # genuine error whose message merely contains the word "cancel".
-            if self.check_cancelled() and isinstance(exc, SetupError) and str(exc) == "Import cancelled":
-                self.cancelled.emit()
-            else:
-                logger.exception("ImportWorker unhandled exception")
-                self.failed.emit(str(exc))
+            # A cancel aborts the importer with an exception too; the guard
+            # routes it to the distinct ``cancelled`` signal. The discriminator
+            # is the OperationCancelled type, not the message text -- this used
+            # to compare against the literal "Import cancelled", so sibling
+            # cancels ("Download cancelled", "alass installation cancelled")
+            # were logged as unhandled exceptions.
+            self.report_failure(
+                exc,
+                context="ImportWorker",
+                on_error=self.failed.emit,
+                on_cancelled=self.cancelled.emit,
+                # ``failed`` drives the import flow's terminal latch: swallowing
+                # a post-promotion failure would leave the UI waiting forever.
+                cancel_flag_suppresses_error=False,
+            )

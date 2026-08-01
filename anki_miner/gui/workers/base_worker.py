@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
+from anki_miner.exceptions import AnkiMinerException, OperationCancelled
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -60,6 +62,66 @@ class CancellableWorker(QThread):
             True if cancellation was requested
         """
         return self._cancel_event.is_set()
+
+    def report_failure(
+        self,
+        exc: BaseException,
+        *,
+        context: str,
+        on_error: Callable[[str], None],
+        on_cancelled: Callable[[], None] | None = None,
+        cancel_flag_suppresses_error: bool = True,
+    ) -> None:
+        """Route a run() failure to the log and the GUI at the right volume.
+
+        The one place worker catch-alls classify their failures, so an expected
+        condition stops producing an ERROR-level traceback. Mirrors
+        ``EpisodeProcessor.process_episode``: a typed ``AnkiMinerException`` is
+        already a user-facing sentence, so it logs one WARNING line and no
+        traceback; only genuinely unexpected exceptions get
+        ``logger.exception``. Anki simply not being running used to write a
+        40-line ``AnkiConnectionError`` traceback per attempt.
+
+        Workers own different terminal signals (``error`` / ``failed`` /
+        ``result_ready(False, msg)`` / an abstract ``_emit_error``), so the emit
+        is injected rather than named here.
+
+        No ``MemoryError`` re-raise branch, deliberately: ``EpisodeProcessor``
+        re-raises it so it reaches *this* guard. Re-raising again would leave it
+        unhandled out of ``QThread.run()``, where PyQt6 aborts the process. It
+        is not an ``AnkiMinerException``, so it lands in the ``logger.exception``
+        arm — the correct terminal handling.
+
+        Args:
+            exc: The caught exception.
+            context: Worker identity for the log line (usually the class name).
+            on_error: Called with ``str(exc)`` when the GUI must be told.
+            on_cancelled: Called instead of ``on_error`` on the cancel path, for
+                workers that declare a distinct ``cancelled`` signal.
+            cancel_flag_suppresses_error: When True (the default), a worker whose
+                cancel flag is set stays quiet about an unrelated exception --
+                the user abandoned the run and does not need a dialog for it.
+                Pass False where the terminal signal drives UI state that would
+                otherwise hang, so a genuine failure still surfaces after a
+                cancel (ImportWorker, DeckBuilderWorker). The log record is
+                written either way.
+        """
+        # Per-instance logger so records keep the subclass's own module name
+        # rather than collapsing onto base_worker.
+        log = logging.getLogger(type(self).__module__)
+        cancelled = self.check_cancelled()
+        # The TYPE is the cancel proof, not the flag and not the message text --
+        # a worker can set its flag and then fail for an unrelated reason.
+        if isinstance(exc, OperationCancelled) or (cancelled and cancel_flag_suppresses_error):
+            log.info("%s cancelled", context)
+            if on_cancelled is not None:
+                on_cancelled()
+            return
+        if isinstance(exc, AnkiMinerException):
+            log.warning("%s: %s", context, exc)
+        else:
+            log.exception("%s unhandled exception", context, exc_info=exc)
+        on_error(str(exc))
 
 
 class ProcessorOwningWorker(CancellableWorker):
@@ -161,6 +223,8 @@ class SingleCallWorker(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
-            logger.exception("SingleCallWorker unhandled exception")
-            if not self.check_cancelled():
-                self.error.emit(f"{self._error_prefix}{e}")
+            self.report_failure(
+                e,
+                context="SingleCallWorker",
+                on_error=lambda msg: self.error.emit(f"{self._error_prefix}{msg}"),
+            )
