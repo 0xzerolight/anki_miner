@@ -83,11 +83,67 @@ class TestCsvImport:
         # anomalous 4-col row: pattern tail rejoined
         assert provider.lookup_entry("箸", "はし").pattern == "0,2"
 
-    def test_kanjium_style_tsv(self, tmp_path: Path) -> None:
+    def test_kanjium_term_reading_tsv_stores_exact_identity(self, tmp_path: Path) -> None:
         tsv = tmp_path / "accents.txt"
-        tsv.write_text("ねこ\t猫\t1\nがっこう\t学校\t0\n", encoding="utf-8")
+        tsv.write_text("食べる\tたべる\t0\n飲む\tのむ\t1\n", encoding="utf-8")
         result = import_pitch_source(tsv, tmp_path / "pitch", source_id="kanjium-pitch")
         assert result.entry_count == 2
+        assert _entries(tmp_path / "pitch" / "kanjium-pitch" / "index.sqlite") == [
+            ("たべる", "食べる", "0", "", ""),
+            ("のむ", "飲む", "1", "", ""),
+        ]
+
+    def test_kanjium_multiple_readings_resolve_exact_requested_pair(self, tmp_path: Path) -> None:
+        tsv = tmp_path / "accents.txt"
+        tsv.write_text("腹の中\tはらのうち\t0\n腹の中\tはらのなか\t4\n", encoding="utf-8")
+        import_pitch_source(tsv, tmp_path / "pitch", source_id="kanjium")
+        provider = IndexedPitchProvider("kanjium", tmp_path / "pitch" / "kanjium" / "index.sqlite", "Kanjium")
+
+        assert provider.load() is True
+        assert provider.lookup("腹の中", "はらのうち") == "0"
+        assert provider.lookup("腹の中", "はらのなか") == "4"
+
+    def test_headerless_reading_term_csv_compatibility(self, tmp_path: Path) -> None:
+        csv_file = tmp_path / "legacy.csv"
+        csv_file.write_text("たべる,食べる,0\nのむ,飲む,1\n", encoding="utf-8")
+        import_pitch_source(csv_file, tmp_path / "pitch", source_id="legacy")
+
+        assert _entries(tmp_path / "pitch" / "legacy" / "index.sqlite") == [
+            ("たべる", "食べる", "0", "", ""),
+            ("のむ", "飲む", "1", "", ""),
+        ]
+
+    def test_explicit_header_controls_term_reading_order(self, tmp_path: Path) -> None:
+        csv_file = tmp_path / "headered.csv"
+        csv_file.write_text("term,reading,pattern\n食べる,たべる,2\n", encoding="utf-8")
+        import_pitch_source(csv_file, tmp_path / "pitch", source_id="headered")
+
+        assert _entries(tmp_path / "pitch" / "headered" / "index.sqlite") == [("たべる", "食べる", "2", "", "")]
+
+    def test_explicit_expression_yomi_header_controls_order(self, tmp_path: Path) -> None:
+        csv_file = tmp_path / "headered.csv"
+        csv_file.write_text("expression,yomi,pattern\nねこ,ねこ,2\n", encoding="utf-8")
+        import_pitch_source(csv_file, tmp_path / "pitch", source_id="headered")
+
+        assert _entries(tmp_path / "pitch" / "headered" / "index.sqlite") == [("ねこ", "ねこ", "2", "", "")]
+
+    def test_ambiguous_headerless_order_is_refused(self, tmp_path: Path) -> None:
+        csv_file = tmp_path / "ambiguous.csv"
+        csv_file.write_text("ねこ,ねこ,1\n", encoding="utf-8")
+
+        with pytest.raises(SetupError, match="Ambiguous pitch column order"):
+            import_pitch_source(csv_file, tmp_path / "pitch", source_id="ambiguous")
+        assert not (tmp_path / "pitch" / "ambiguous").exists()
+
+    def test_annotated_kanjium_patterns_are_normalized(self, tmp_path: Path) -> None:
+        tsv = tmp_path / "accents.txt"
+        tsv.write_text("食べる\tたべる\t2\nぐちゃぐちゃ\t\t(副)1,(形動)0\n", encoding="utf-8")
+        import_pitch_source(tsv, tmp_path / "pitch", source_id="kanjium")
+
+        assert _entries(tmp_path / "pitch" / "kanjium" / "index.sqlite") == [
+            ("たべる", "食べる", "2", "", ""),
+            ("", "ぐちゃぐちゃ", "1,0", "", ""),
+        ]
 
     def test_five_column_nasal_devoice_kept(self, tmp_path: Path) -> None:
         csv_file = tmp_path / "enriched.csv"

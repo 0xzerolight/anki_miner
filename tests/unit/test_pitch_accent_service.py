@@ -10,6 +10,7 @@ from anki_miner.services.pitch_accent_service import (
     classify_pitch,
     count_mora,
     downstep_positions,
+    format_categories,
     iter_pitch_csv_rows,
 )
 
@@ -132,7 +133,7 @@ class TestLoad:
         """Test loading a valid Kanjium-format CSV."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "たべる,食べる,0\n" "のむ,飲む,1\n" "みる,見る,1\n",
+            "たべる,食べる,0\nのむ,飲む,1\nみる,見る,1\n",
             encoding="utf-8",
         )
 
@@ -150,7 +151,7 @@ class TestLoad:
         """Test that rows with fewer than 3 columns are skipped."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "たべる,食べる,0\n" "incomplete\n" "also,incomplete\n" "のむ,飲む,1\n",
+            "たべる,食べる,0\nincomplete\nalso,incomplete\nのむ,飲む,1\n",
             encoding="utf-8",
         )
 
@@ -163,7 +164,7 @@ class TestLoad:
         """Test loading tab-separated pitch accent data."""
         tsv_file = tmp_path / "pitch.txt"
         tsv_file.write_text(
-            "たべる\t食べる\t0\n" "のむ\t飲む\t1\n",
+            "たべる\t食べる\t0\nのむ\t飲む\t1\n",
             encoding="utf-8",
         )
 
@@ -176,7 +177,7 @@ class TestLoad:
         """Test that a header row is automatically skipped."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "reading,kanji,frequency\n" "たべる,食べる,0\n" "のむ,飲む,1\n",
+            "reading,kanji,frequency\nたべる,食べる,0\nのむ,飲む,1\n",
             encoding="utf-8",
         )
 
@@ -189,7 +190,7 @@ class TestLoad:
         """Test that a header row is skipped in TSV files."""
         tsv_file = tmp_path / "pitch.txt"
         tsv_file.write_text(
-            "kana\tkanji\trank\n" "たべる\t食べる\t0\n" "のむ\t飲む\t1\n",
+            "kana\tkanji\trank\nたべる\t食べる\t0\nのむ\t飲む\t1\n",
             encoding="utf-8",
         )
 
@@ -198,21 +199,26 @@ class TestLoad:
         assert service.lookup("食べる") == "0"
         assert service.lookup("kana") is None
 
-    def test_loads_kanjium_column_order(self, tmp_path):
-        """Test loading Kanjium format where columns are kanji, reading, pattern (swapped)."""
+    def test_loads_kanjium_term_reading_column_order(self, tmp_path):
+        """Kanjium accents.txt rows are term,reading,pattern."""
         tsv_file = tmp_path / "accents.txt"
         tsv_file.write_text(
-            "食べる\tたべる\t0\n" "飲む\tのむ\t1\n",
+            "腹の中\tはらのうち\t0\n腹の中\tはらのなか\t4\n",
             encoding="utf-8",
         )
 
         service = _CsvPitchStore(tsv_file)
         service.load()
-        # Both kanji and reading stored as keys, so lookup works either way
-        assert service.lookup("食べる") == "0"
-        assert service.lookup("たべる") == "0"
-        assert service.lookup("飲む") == "1"
-        assert service.lookup("のむ") == "1"
+        assert service.lookup("腹の中", "はらのうち") == "0"
+        assert service.lookup("腹の中", "はらのなか") == "4"
+
+    def test_rejects_ambiguous_headerless_column_order(self, tmp_path):
+        tsv_file = tmp_path / "ambiguous.txt"
+        tsv_file.write_text("ねこ\tねこ\t1\n", encoding="utf-8")
+
+        service = _CsvPitchStore(tsv_file)
+        with pytest.raises(SetupError, match="Ambiguous pitch column order"):
+            service.load()
 
     def test_entry_count_property(self, tmp_path):
         """Test that entry_count reflects number of loaded entries."""
@@ -233,7 +239,7 @@ class TestLoad:
         """Test that the first entry wins when keys are duplicated."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "たべる,食べる,0\n" "たべる,食べる,2\n",
+            "たべる,食べる,0\nたべる,食べる,2\n",
             encoding="utf-8",
         )
 
@@ -269,7 +275,7 @@ class TestLookup:
         """Create a loaded PitchAccentService."""
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "たべる,食べる,0\n" "のむ,飲む,1\n" "はしる,走る,2\n",
+            "たべる,食べる,0\nのむ,飲む,1\nはしる,走る,2\n",
             encoding="utf-8",
         )
         service = _CsvPitchStore(csv_file)
@@ -285,17 +291,65 @@ class TestLookup:
         """Test lookup returns None for an unknown word."""
         assert loaded_service.lookup("存在しない") is None
 
-    def test_falls_back_to_reading_when_kanji_not_found(self, tmp_path):
-        """Test lookup falls back to reading when kanji is not found."""
+    def test_does_not_fall_back_across_headwords_with_same_reading(self, tmp_path):
         csv_file = tmp_path / "pitch.csv"
         csv_file.write_text(
-            "たべる,食べる,0\n",
+            "かいじゅ,槐樹,1\n",
             encoding="utf-8",
         )
         service = _CsvPitchStore(csv_file)
         service.load()
-        # Look up a word that doesn't exist, with a reading that does
-        assert service.lookup("不明", reading="たべる") == "0"
+        assert service.lookup("解呪", reading="かいじゅ") is None
+
+    def test_kana_surface_resolves_via_unambiguous_reading(self, tmp_path):
+        """A kana-spelled card finds its kanji headword's pattern.
+
+        すごい/ひどい/たくさん are mined as kana, but the pitch source keys them
+        under 凄い/酷い/沢山. Refusing every reading-only match cost 47 of one
+        audited deck's 275 pitch fields. Safe here because only one headword has
+        this reading, so there is exactly one pattern to borrow.
+        """
+        csv_file = tmp_path / "accents.txt"
+        csv_file.write_text("凄い\tすごい\t2\n", encoding="utf-8")
+        service = _CsvPitchStore(csv_file)
+        service.load()
+
+        assert service.lookup("すごい", reading="すごい") == "2"
+        assert service.lookup("凄い", reading="すごい") == "2"
+
+    def test_kana_surface_declines_when_reading_is_ambiguous(self, tmp_path):
+        """Homophones with disagreeing patterns are not guessed between.
+
+        かく is 書く/0 and 掻く/1 -- a kana card cannot say which, so the old
+        first-wins answer was a coin flip.
+        """
+        csv_file = tmp_path / "accents.txt"
+        csv_file.write_text("書く\tかく\t0\n掻く\tかく\t1\n", encoding="utf-8")
+        service = _CsvPitchStore(csv_file)
+        service.load()
+
+        assert service.lookup("かく", reading="かく") is None
+        # ...but an exact headword still resolves.
+        assert service.lookup("書く", reading="かく") == "0"
+
+    def test_kanji_surface_never_borrows_even_when_reading_unambiguous(self, tmp_path):
+        """The kana-only half of the tier-3 guard is load-bearing, not decorative."""
+        csv_file = tmp_path / "accents.txt"
+        csv_file.write_text("槐樹\tかいじゅ\t1\n", encoding="utf-8")
+        service = _CsvPitchStore(csv_file)
+        service.load()
+
+        assert service.lookup("解呪", reading="かいじゅ") is None
+        assert service.lookup("かいじゅ", reading="かいじゅ") == "1"
+
+    def test_folds_katakana_in_term_and_reading_keys(self, tmp_path):
+        tsv_file = tmp_path / "accents.txt"
+        tsv_file.write_text("肉ジャガ\tにくジャガ\t0\n", encoding="utf-8")
+        service = _CsvPitchStore(tsv_file)
+        service.load()
+
+        assert service.lookup("肉ジャガ", "にくジャガ") == "0"
+        assert service.lookup("肉じゃが", "にくじゃが") == "0"
 
     def test_returns_none_when_not_loaded(self, tmp_path):
         """Test lookup returns None when data hasn't been loaded."""
@@ -364,7 +418,7 @@ class TestLookupDetailed:
         """Empty reading + an all-kana surface may safely fall back to the surface
         for mora counting (4 mora → position 2 → 中高)."""
         csv_file = tmp_path / "pitch.csv"
-        csv_file.write_text("がっこう,学校,2\n", encoding="utf-8")
+        csv_file.write_text("term,reading,pattern\nがっこう,,2\n", encoding="utf-8")
         service = _CsvPitchStore(csv_file)
         service.load()
 
@@ -393,6 +447,29 @@ class TestLookupDetailed:
         position, cat = service.lookup_detailed("１月", "いちがつ", fmt="romaji")
         assert position == "4,0"
         assert cat == "odaka,heiban"
+
+    @pytest.mark.parametrize(
+        ("pattern", "reading", "pos", "expected"),
+        [
+            ("2,3", "しょうがくせい", None, "nakadaka"),
+            ("1,2", "つく", "動詞", "kifuku"),
+        ],
+    )
+    def test_duplicate_categories_are_removed(self, pattern, reading, pos, expected):
+        assert format_categories(pattern, reading, pos, "romaji") == expected
+
+    def test_annotated_pattern_is_normalized_before_lookup(self, tmp_path):
+        tsv_file = tmp_path / "accents.txt"
+        tsv_file.write_text(
+            "食べる\tたべる\t2\nぐちゃぐちゃ\t\t(副)1,(形動)0\n",
+            encoding="utf-8",
+        )
+        service = _CsvPitchStore(tsv_file)
+        service.load()
+
+        position, category = service.lookup_detailed("ぐちゃぐちゃ", "ぐちゃぐちゃ", fmt="romaji")
+        assert position == "1,0"
+        assert category == "atamadaka,heiban"
 
     def test_romaji_format_basic_categories(self, tmp_path):
         csv_file = tmp_path / "pitch.csv"
@@ -506,9 +583,8 @@ class TestReadingScopedLookup:
         # Multiple candidates + a reading matching none exactly → no guess.
         assert homograph_service.lookup("弾く", "へんな") is None
 
-    def test_no_reading_falls_back_first_wins(self, homograph_service):
-        # With nothing to disambiguate, legacy first-wins behavior applies.
-        assert homograph_service.lookup("弾く") == "0"
+    def test_no_reading_does_not_guess_between_homographs(self, homograph_service):
+        assert homograph_service.lookup("弾く") is None
 
     def test_single_candidate_kana_variant_fallback(self, tmp_path):
         # Only one entry for the surface → pragmatic fallback even if the reading

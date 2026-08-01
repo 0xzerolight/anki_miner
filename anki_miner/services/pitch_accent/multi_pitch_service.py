@@ -4,8 +4,8 @@ The pitch twin of
 :class:`~anki_miner.services.frequency.multi_frequency_service.MultiFrequencyService`,
 with deliberately different combination semantics: frequency layers every
 source's hit additively into a per-card breakdown, while pitch resolves
-FIRST-HIT-WINS — for each provider in chain order, the full three-tier
-``lookup_entry`` runs (exact pair → single-candidate surface → reading-only),
+FIRST-HIT-WINS — for each provider in chain order, term-scoped
+``lookup_entry`` runs (exact pair → single-candidate surface),
 and the first non-``None`` result wins. Later sources only fill words earlier
 sources miss, which is the point of chaining pitch sources: extra word
 coverage, not merged data.
@@ -17,12 +17,10 @@ Accepted shadowing tradeoffs (documented, test-pinned, user-reorderable):
   reading-refused), so a lower source's exact ``(surface, reading)`` match for
   a different reading is never consulted. This is the common shadowing case;
   reordering swaps which source shadows.
-* tier-3: a higher source's reading-only fallback can shadow a lower source's
-  exact pair. Rare — tier 3 only fires after tiers 1-2 miss.
-
-A tier-aware resolution (running tier 1 across ALL sources before any tier-2/3
-fallback) was considered and rejected: it lets a lower source override a higher
-one, contradicting the reorderable "top source wins" chain UI.
+A tier-aware resolution (running exact-pair lookup across ALL sources before
+any unique-surface fallback) was considered and rejected: it lets a lower
+source override a higher one, contradicting the reorderable "top source wins"
+chain UI.
 """
 
 from __future__ import annotations
@@ -64,7 +62,7 @@ class MultiPitchAccentService(PitchMapsStore):
         return any(p.is_available() for p in self._providers)
 
     def lookup_entry(self, word: str, reading: str = "") -> PitchEntry | None:
-        """First non-None full three-tier resolution across the chain."""
+        """First non-None term-scoped resolution across the chain."""
         for provider in self._providers:
             entry = provider.lookup_entry(word, reading)
             if entry is not None:

@@ -4,7 +4,7 @@ One :class:`IndexedPitchProvider` per installed pitch source
 (``<pitch_root>/<source_id>/index.sqlite``). Unlike
 :class:`~anki_miner.services.frequency.providers.indexed_freq_provider.IndexedFreqProvider`,
 this provider does NOT query SQLite at lookup time: ``load()`` does one full
-``SELECT``, rebuilds the same three in-memory maps the legacy CSV service
+``SELECT``, rebuilds the same two in-memory maps the CSV service
 built, and closes the connection immediately — no persistent handle, so
 ``close()``-style teardown is unnecessary (nothing holds the db file open on
 Windows). See :mod:`anki_miner.services.pitch_accent.storage` for why the
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 class IndexedPitchProvider(PitchMapsStore):
     """Pitch lookups for one indexed source, loaded fully into memory.
 
-    Inherits the three-tier reading-scoped ``lookup_entry`` and the derived
+    Inherits the exact-pair / unique-term ``lookup_entry`` and the derived
     lookup API from :class:`PitchMapsStore`; this class only supplies the
     SQLite row source.
     """

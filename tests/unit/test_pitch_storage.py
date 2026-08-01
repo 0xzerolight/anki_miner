@@ -53,6 +53,26 @@ class TestBuildIndex:
 
 
 class TestRoundTrip:
+    def test_provider_rejects_pre_column_fix_schema_version(self, tmp_path: Path) -> None:
+        db = tmp_path / "index.sqlite"
+        storage.build_index(db, _ROWS, dict(_META, schema_version="1"))
+        provider = IndexedPitchProvider("test", db, "Test")
+
+        assert provider.load() is False
+        assert not provider.is_available()
+
+    def test_provider_normalizes_pattern_from_current_index(self, tmp_path: Path) -> None:
+        db = tmp_path / "index.sqlite"
+        storage.build_index(
+            db,
+            [("", "ぐちゃぐちゃ", "(副)1,(形動)0", "", "")],
+            dict(_META, entry_count="1"),
+        )
+        provider = IndexedPitchProvider("test", db, "Test")
+
+        assert provider.load() is True
+        assert provider.lookup("ぐちゃぐちゃ", "ぐちゃぐちゃ") == "1,0"
+
     def test_nasal_devoice_round_trip_as_int_tuples(self, tmp_path: Path) -> None:
         """Store→load round trip: nasal/devoice come back as tuple[int, ...],
         never strings — render_pitch_text_field does int-position membership,

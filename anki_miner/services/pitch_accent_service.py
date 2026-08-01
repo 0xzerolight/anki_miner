@@ -5,10 +5,13 @@ import logging
 import re
 from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
+from itertools import chain, islice
 from pathlib import Path
+from typing import Literal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
+from anki_miner.utils.text_utils import katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +25,13 @@ VERBAL_POS = {"動詞", "形容詞"}
 # Yomitan term-meta-bank v3 schema ("^[HL]+$"). Distinguished from an integer
 # downstep position so lookups accept either encoding.
 _HL_PATTERN_RE = re.compile(r"^[HL]+$")
+_INTEGER_PATTERN_RE = re.compile(r"^[0-9]+$")
+_LEADING_POS_ANNOTATION_RE = re.compile(r"^\([^)]*\)\s*")
+
+_ColumnOrder = Literal["reading-term", "term-reading"]
+_COLUMN_ORDER_SAMPLE_SIZE = 256
+_READING_HEADERS = frozenset({"kana", "reading", "yomi"})
+_TERM_HEADERS = frozenset({"expression", "kanji", "term", "word"})
 
 ROMAJI_CATEGORY = {
     "平板": "heiban",
@@ -37,7 +47,7 @@ class PitchEntry:
     """A single (kanji, reading) pitch-accent record.
 
     Carries the fidelity later stages (e.g. the SVG pitch renderer) need:
-    the raw drop-position ``pattern`` (integer positions like ``"0,2"`` or an
+    the canonical drop-position ``pattern`` (integer positions like ``"0,2"`` or an
     ``[HL]+`` mora string like ``"LHHH"``), plus the nasal and devoiced mora
     positions parsed from the enriched 5-column CSV. ``nasal``/``devoice`` are
     empty for legacy 3-column data that predates the enrichment.
@@ -113,9 +123,32 @@ def _token_to_position(token: str) -> int | None:
         position = downstep_positions(token)[0]
         return position if position >= 0 else None
     try:
-        return int(token)
+        position = int(token)
+        return position if position >= 0 else None
     except ValueError:
         return None
+
+
+def normalize_pitch_pattern(pattern: str) -> str | None:
+    """Return canonical comma-joined pitch positions, or None when unusable.
+
+    Kanjium prefixes some positions with parenthesized part-of-speech labels
+    (for example ``"(副)1,(形動)0"``). Lapis fields accept positions, not those
+    labels. Strip one label per token, retain only nonnegative integer or H/L
+    patterns, and deduplicate positions without changing source order.
+    """
+    positions: list[str] = []
+    seen: set[str] = set()
+    for raw in pattern.split(","):
+        token = _LEADING_POS_ANNOTATION_RE.sub("", raw.strip(), count=1)
+        if _INTEGER_PATTERN_RE.fullmatch(token):
+            token = str(int(token))
+        elif not _HL_PATTERN_RE.fullmatch(token):
+            continue
+        if token not in seen:
+            seen.add(token)
+            positions.append(token)
+    return ",".join(positions) if positions else None
 
 
 def classify_pitch(position: int, mora_count: int, pos: str | None = None) -> str:
@@ -164,17 +197,22 @@ def format_categories(pattern: str, reading: str, pos: str | None, fmt: str) -> 
     Returns:
         Comma-joined categories, or None if no parseable positions.
     """
+    normalized = normalize_pitch_pattern(pattern)
+    if normalized is None:
+        return None
+
     mora = count_mora(reading)
     out: list[str] = []
-    for raw in pattern.split(","):
-        token = raw.strip()
-        if not token:
-            continue
+    seen: set[str] = set()
+    for token in normalized.split(","):
         position = _token_to_position(token)
         if position is None:
             continue
         jp = classify_pitch(position, mora, pos)
-        out.append(ROMAJI_CATEGORY[jp] if fmt == "romaji" else jp)
+        category = ROMAJI_CATEGORY[jp] if fmt == "romaji" else jp
+        if category not in seen:
+            seen.add(category)
+            out.append(category)
     return ",".join(out) if out else None
 
 
@@ -202,13 +240,12 @@ def _parse_int_field(field_value: str) -> tuple[int, ...]:
     return tuple(out)
 
 
-def _parse_pitch_row(row: list[str]) -> _ParsedRow | None:
+def _parse_pitch_row(row: list[str], column_order: _ColumnOrder = "reading-term") -> _ParsedRow | None:
     """Parse one CSV row into a :class:`_ParsedRow`, or None if unusable.
 
-    Column-count driven (the header is optional, so a header sniff can't be
-    trusted for the schema): exactly 5 fields → the enriched
-    ``reading,kanji,pattern,nasal,devoice`` format; exactly 3 → the legacy
-    ``reading,kanji,pattern`` format. Any other count >= 4 is treated as a
+    Column-count driven after file-level column-order detection: exactly 5
+    fields → the enriched format; exactly 3 → the legacy format. The first two
+    fields follow ``column_order``. Any other count >= 4 is treated as a
     hand-edited legacy comma file whose pattern held an intra-field comma
     (``0,2`` splits into 4 raw fields) — the pattern tail is rejoined so it
     round-trips, and nasal/devoice stay empty (never misread the tail into
@@ -218,8 +255,12 @@ def _parse_pitch_row(row: list[str]) -> _ParsedRow | None:
     n = len(row)
     if n < 3:
         return None
-    reading = row[0].strip()
-    kanji = row[1].strip()
+    first = row[0].strip()
+    second = row[1].strip()
+    if column_order == "reading-term":
+        reading, kanji = first, second
+    else:
+        kanji, reading = first, second
     if n == 5:
         pattern = row[2].strip()
         nasal = _parse_int_field(row[3])
@@ -235,7 +276,42 @@ def _parse_pitch_row(row: list[str]) -> _ParsedRow | None:
         pattern = ",".join(row[2:])
         nasal = ()
         devoice = ()
-    return _ParsedRow(reading=reading, kanji=kanji, entry=PitchEntry(pattern, nasal, devoice))
+    normalized_pattern = normalize_pitch_pattern(pattern)
+    if normalized_pattern is None:
+        return None
+    return _ParsedRow(
+        reading=reading,
+        kanji=kanji,
+        entry=PitchEntry(normalized_pattern, nasal, devoice),
+    )
+
+
+def _header_column_order(row: list[str]) -> _ColumnOrder | None:
+    """Resolve first-two-column roles from an explicit header."""
+    first = row[0].strip().lstrip("\ufeff").lower()
+    second = row[1].strip().lower()
+    if first in _READING_HEADERS and second in _TERM_HEADERS:
+        return "reading-term"
+    if first in _TERM_HEADERS and second in _READING_HEADERS:
+        return "term-reading"
+    return None
+
+
+def _infer_column_order(rows: Sequence[list[str]]) -> _ColumnOrder | None:
+    """Infer headerless column roles from kana/non-kana evidence."""
+    evidence: set[_ColumnOrder] = set()
+    for row in rows:
+        first = row[0].strip()
+        second = row[1].strip()
+        if not first or not second:
+            continue
+        first_is_kana = _is_all_kana(first)
+        second_is_kana = _is_all_kana(second)
+        if first_is_kana and not second_is_kana:
+            evidence.add("reading-term")
+        elif second_is_kana and not first_is_kana:
+            evidence.add("term-reading")
+    return next(iter(evidence)) if len(evidence) == 1 else None
 
 
 def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
@@ -261,15 +337,30 @@ def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
             delimiter = detect_delimiter(sample)
 
             reader = csv.reader(f, delimiter=delimiter)
-            first_row = True
-            for row in reader:
-                if len(row) < 3:
-                    continue
-                if first_row:
-                    first_row = False
-                    if is_header_row(row):
-                        continue
-                parsed = _parse_pitch_row(row)
+            valid_rows = (row for row in reader if len(row) >= 3)
+            first_row = next(valid_rows, None)
+            if first_row is None:
+                return
+
+            header_order = _header_column_order(first_row)
+            if header_order is not None:
+                column_order = header_order
+                buffered_rows: list[list[str]] = []
+            elif is_header_row(first_row):
+                raise SetupError(
+                    f"Ambiguous pitch column order in {path.name}: header must identify term and reading columns"
+                )
+            else:
+                buffered_rows = [first_row, *islice(valid_rows, _COLUMN_ORDER_SAMPLE_SIZE - 1)]
+                inferred_order = _infer_column_order(buffered_rows)
+                if inferred_order is None:
+                    raise SetupError(
+                        f"Ambiguous pitch column order in {path.name}: add a term,reading or reading,term header"
+                    )
+                column_order = inferred_order
+
+            for row in chain(buffered_rows, valid_rows):
+                parsed = _parse_pitch_row(row, column_order)
                 if parsed is not None:
                     yield parsed
     except SetupError:
@@ -288,20 +379,37 @@ PitchMaps = tuple[
 def build_pitch_maps(parsed_rows: Iterable[_ParsedRow]) -> PitchMaps:
     """Build the three lookup maps from parsed rows, first occurrence wins.
 
-    Returns ``(by_pair, by_word, by_reading)``:
+    Returns ``(by_pair, by_word, by_unambiguous_reading)``:
     * ``by_pair``: ``(surface, reading) -> PitchEntry`` where surface = kanji,
       or the reading when the term is kana-only,
     * ``by_word``: ``surface -> [PitchEntry, ...]`` (homographs keep every
       reading),
-    * ``by_reading``: ``reading -> PitchEntry`` (first-wins; reading-only
-      fallback + kana lookups).
+    * ``by_unambiguous_reading``: ``reading -> PitchEntry``, present ONLY for
+      readings where every headword agrees on one pattern.
+
+    Surface and reading keys fold katakana to hiragana.
+
+    That third map is deliberately narrow. A blanket reading-only alias is what
+    let 腹の中/はらのなか inherit はらのうち's pattern, so it cannot come back --
+    but deleting it outright cost 47 of this deck's 275 pitch fields, because a
+    kana-spelled card (すごい, ひどい, たくさん) has no kanji key to match its
+    headword (凄い, 酷い, 沢山) with. Keeping only the readings whose headwords
+    all agree means borrowing cannot produce a wrong pattern: there is exactly
+    one pattern to borrow. ``lookup_entry`` additionally restricts the tier to
+    kana-only surfaces -- see the reasoning there.
     """
     by_pair: dict[tuple[str, str], PitchEntry] = {}
     by_word: dict[str, list[PitchEntry]] = {}
-    by_reading: dict[str, PitchEntry] = {}
+    reading_patterns: dict[str, set[str]] = {}
+    reading_first: dict[str, PitchEntry] = {}
     for parsed in parsed_rows:
         reading, kanji, entry = parsed.reading, parsed.kanji, parsed.entry
-        surface = kanji or reading
+        normalized_pattern = normalize_pitch_pattern(entry.pattern)
+        if normalized_pattern is None:
+            continue
+        entry = PitchEntry(normalized_pattern, entry.nasal, entry.devoice)
+        reading = katakana_to_hiragana(reading)
+        surface = katakana_to_hiragana(kanji or reading)
         if not surface:
             continue
         key = (surface, reading)
@@ -309,16 +417,18 @@ def build_pitch_maps(parsed_rows: Iterable[_ParsedRow]) -> PitchMaps:
             continue  # first occurrence wins
         by_pair[key] = entry
         by_word.setdefault(surface, []).append(entry)
-        if reading and reading not in by_reading:
-            by_reading[reading] = entry
-    return by_pair, by_word, by_reading
+        if reading:
+            reading_patterns.setdefault(reading, set()).add(normalized_pattern)
+            reading_first.setdefault(reading, entry)
+    by_unambiguous_reading = {r: reading_first[r] for r, pats in reading_patterns.items() if len(pats) == 1}
+    return by_pair, by_word, by_unambiguous_reading
 
 
 class PitchMapsStore:
     """Shared maps-holder base for pitch lookup stores.
 
-    Owns the three in-memory maps (see :func:`build_pitch_maps`), the concrete
-    three-tier reading-scoped ``lookup_entry`` resolution, and the derived
+    Owns the two in-memory maps (see :func:`build_pitch_maps`), the concrete
+    term-scoped ``lookup_entry`` resolution, and the derived
     lookup API (``lookup`` / ``lookup_detailed`` / ``lookup_batch_detailed``).
     Subclasses differ only in where ``load()`` reads rows from (the indexed
     per-source provider reads SQLite; tests may feed rows directly via
@@ -335,13 +445,14 @@ class PitchMapsStore:
         self._by_pair: dict[tuple[str, str], PitchEntry] | None = None
         # surface -> all entries for that surface (homographs keep every reading)
         self._by_word: dict[str, list[PitchEntry]] = {}
-        # reading -> first-wins entry (reading-only fallback + kana lookups)
-        self._by_reading: dict[str, PitchEntry] = {}
+        # reading -> entry, ONLY for readings whose headwords all agree on one
+        # pattern (see build_pitch_maps); consumed by the kana-surface tier.
+        self._by_unambiguous_reading: dict[str, PitchEntry] = {}
         self._entry_count: int = 0
 
     def _set_maps(self, maps: PitchMaps) -> None:
         """Install built maps (see :func:`build_pitch_maps`); marks the store loaded."""
-        self._by_pair, self._by_word, self._by_reading = maps
+        self._by_pair, self._by_word, self._by_unambiguous_reading = maps
         self._entry_count = len(self._by_pair)
 
     @property
@@ -356,15 +467,26 @@ class PitchMapsStore:
     def lookup_entry(self, word: str, reading: str = "") -> PitchEntry | None:
         """Resolve the full :class:`PitchEntry` for a word, reading-scoped.
 
-        Three-tier resolution (reading-strict, with a pragmatic fallback):
+        Three-tier resolution:
         1. exact ``(word, reading)`` pair,
         2. ``(word, *)`` when the surface has exactly one entry (kana-variant
            mismatch fallback — safe because there's nothing to disambiguate),
-        3. reading-only.
+        3. reading-only, but ONLY when the surface is kana-only AND every
+           headword sharing that reading agrees on one pattern.
 
         When a surface has multiple readings and none matches exactly, no entry
         is guessed (the homograph fix): returning the wrong reading's pattern is
         worse than returning nothing.
+
+        Tier 3 is narrow on purpose, and both halves of the condition carry
+        weight. The pattern-agreement half means there is nothing to guess
+        between. The kana-only half is what separates すごい from 解呪: a kana
+        card is a spelling of whatever word is read that way, so borrowing 凄い's
+        pattern is the same word's pattern; a KANJI surface that missed tiers 1
+        and 2 is asserting an orthography the source does not have for that
+        reading, and 解呪 borrowing 槐樹/かいじゅ would be a different word. Kanji
+        surfaces therefore stay unresolved, which matches Yomitan keeping
+        pronunciation attached to its term headword.
 
         Args:
             word: Word to look up (kanji or kana form).
@@ -376,27 +498,21 @@ class PitchMapsStore:
         if self._by_pair is None:
             return None
 
-        if reading:
-            exact = self._by_pair.get((word, reading))
-            if exact is not None:
-                return exact
+        word = katakana_to_hiragana(word)
+        reading = katakana_to_hiragana(reading)
+        exact = self._by_pair.get((word, reading))
+        if exact is not None:
+            return exact
 
         candidates = self._by_word.get(word)
-        if candidates:
-            if len(candidates) == 1:
-                return candidates[0]
-            if not reading:
-                # Nothing to disambiguate by — legacy first-wins behavior.
-                return candidates[0]
-            # Multiple readings + a reading that matched none exactly: don't guess.
+        if candidates and len(candidates) == 1:
+            return candidates[0]
 
-        if reading:
-            by_reading = self._by_reading.get(reading)
-            if by_reading is not None:
-                return by_reading
-
-        # The word itself may be a reading (kana lookup, or reading fallback).
-        return self._by_reading.get(word)
+        if _is_all_kana(word):
+            return self._by_unambiguous_reading.get(reading or word)
+        # Kanji surface, no pair and no unique-surface match: refuse. 解呪/かいじゅ
+        # must not inherit 槐樹/かいじゅ merely because the readings fold alike.
+        return None
 
     def lookup(self, word: str, reading: str = "") -> str | None:
         """Look up the pitch accent pattern string for a word.
@@ -409,7 +525,7 @@ class PitchMapsStore:
             Pitch accent pattern string, or None if not found.
         """
         entry = self.lookup_entry(word, reading)
-        return entry.pattern if entry is not None else None
+        return normalize_pitch_pattern(entry.pattern) if entry is not None else None
 
     def lookup_detailed(
         self,
