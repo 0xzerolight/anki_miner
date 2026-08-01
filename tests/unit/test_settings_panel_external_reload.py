@@ -286,6 +286,37 @@ class TestUIPanelThemesRoot:
 
         assert opened == [str(moved)]
 
+    def test_reload_on_an_unrelated_field_does_not_clear_the_thumbnail_cache(self, ui_panel, test_config, monkeypatch):
+        """A reload fires on ANY non-external field (this panel's own docstring),
+        e.g. toggling "Use system file dialogs" — that must not discard every
+        cached thumbnail. Only a ``themes_root`` change can redefine what a
+        theme key means.
+        """
+        calls: list[None] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.clear_thumbnail_cache",
+            lambda: calls.append(None),
+        )
+        reloaded = replace(test_config, use_native_file_dialogs=not test_config.use_native_file_dialogs)
+
+        ui_panel.load_from_config(reloaded)
+
+        assert calls == []
+
+    def test_reload_with_a_changed_themes_root_clears_the_thumbnail_cache(
+        self, ui_panel, test_config, tmp_path, monkeypatch
+    ):
+        calls: list[None] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.clear_thumbnail_cache",
+            lambda: calls.append(None),
+        )
+        moved = tmp_path / "other-themes"
+
+        ui_panel.load_from_config(replace(test_config, themes_root=moved))
+
+        assert calls == [None]
+
 
 class TestChainPanelRoots:
     """The three chain panels re-root instead of scanning the old directory."""

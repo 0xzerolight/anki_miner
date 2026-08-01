@@ -778,13 +778,20 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # fan-out. So a config swap already arrives with the incoming root
         # discovered and _populate below renders it; what still cannot happen
         # live is picking up JSON files dropped into the folder mid-session.
+        themes_root_changed = config.themes_root != self._themes_root
         self._themes_root = config.themes_root
         self.open_folder_btn.setToolTip(self._themes_folder_tooltip())
 
-        # A profile switch re-runs Theme.initialize, and a user JSON file can
-        # shadow a shipped theme under the same key -- so a cached pixmap for
-        # that key may no longer be what the key means.
-        clear_thumbnail_cache()
+        # A profile switch re-runs Theme.initialize against a new themes_root,
+        # and a user JSON file there can shadow a shipped theme under the same
+        # key -- so a cached pixmap for that key may no longer be what the key
+        # means. Scoped to an actual root change, not every reload: this method
+        # also fires for wholly unrelated fields (this panel reloads on ANY
+        # non-external field, e.g. "Use system file dialogs" — see this
+        # docstring above), and those must not discard every cached thumbnail
+        # and force a full re-render of every visible card.
+        if themes_root_changed:
+            clear_thumbnail_cache()
 
         # Rebuild the gallery so the Active marker, favorites stars and
         # selection follow the re-seeded Theme. Unconditional: favorites (and,
