@@ -55,6 +55,11 @@ class TestDeadDeclarationsAreGone:
     def test_no_placeholder_pseudo_element(self, qss: str):
         assert "::placeholder" not in qss
 
+    def test_no_themes_panel_tree_rule(self, qss: str):
+        """The theme gallery card grid replaced the tree; the objectName it
+        scoped a padding override to matches nothing now."""
+        assert "themesPanelTree" not in qss
+
 
 class TestDeadDeclarationsReallyWereDead:
     """Proof, not folklore: these produce identical pixels with and without."""

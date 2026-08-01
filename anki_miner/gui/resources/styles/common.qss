@@ -288,14 +288,6 @@ QTreeWidget::item:selected {
     border: none;
 }
 
-/* Themes panel: the star column needs the full row height for its
- * auto-sized icon button. The global 8-px item padding clips the top of
- * the glyph; scope an override to just this table so other tables in the
- * app keep their comfortable cell padding. */
-QTreeWidget#themesPanelTree::item {
-    padding: 0px;
-}
-
 QHeaderView::section {
     padding: ${spacing-xs}px;
     font-weight: 600;
