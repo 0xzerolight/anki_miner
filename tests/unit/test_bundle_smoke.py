@@ -81,3 +81,49 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
     assert not Path(homes[0]).exists()
     assert not (caller_home / "probe-touch").exists()
     assert (caller_home / "sentinel").read_text(encoding="utf-8") == "keep"
+
+
+class TestAvailableImpersonateTargets:
+    """The bundled smoke's curl_cffi gate (anki_miner/gui/app.py).
+
+    Captured from a real ``yt-dlp --list-impersonate-targets`` run against a
+    pip-installed yt-dlp, which has no curl_cffi — the exact shape a vendored
+    zipapp asset would produce, and the shape the gate exists to reject.
+    """
+
+    NO_CURL_CFFI = (
+        "[info] Available impersonate targets\n"
+        "Client    OS   Source\n"
+        "--------------------------------------------\n"
+        "Tor       -    curl_cffi>=0.11 (unavailable)\n"
+        "Edge      -    curl_cffi (unavailable)\n"
+        "Firefox   -    curl_cffi>=0.10 (unavailable)\n"
+        "Safari    -    curl_cffi (unavailable)\n"
+        "Chrome    -    curl_cffi (unavailable)\n"
+    )
+
+    WITH_CURL_CFFI = (
+        "[info] Available impersonate targets\n"
+        "Client    OS   Source\n"
+        "--------------------------------------------\n"
+        "chrome-110 windows-10 curl_cffi\n"
+        "safari-15.5 macos-12 curl_cffi\n"
+        "Tor       -    curl_cffi>=0.11 (unavailable)\n"
+    )
+
+    def test_no_curl_cffi_yields_nothing(self) -> None:
+        """The banner must not survive the filter — "unavailable" is not in "Available"."""
+        from anki_miner.gui.app import available_impersonate_targets
+
+        assert available_impersonate_targets(self.NO_CURL_CFFI) == []
+
+    def test_usable_targets_are_returned(self) -> None:
+        from anki_miner.gui.app import available_impersonate_targets
+
+        rows = available_impersonate_targets(self.WITH_CURL_CFFI)
+        assert [row.split()[0] for row in rows] == ["chrome-110", "safari-15.5"]
+
+    def test_empty_output_yields_nothing(self) -> None:
+        from anki_miner.gui.app import available_impersonate_targets
+
+        assert available_impersonate_targets("") == []
