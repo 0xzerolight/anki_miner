@@ -1255,12 +1255,18 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if not result.issues:
                 logger.info("Startup validation completed: issues=0")
             else:
+                errors = result.get_errors()
+                warnings = result.get_warnings()
                 component_counts = Counter(issue.component for issue in result.issues)
-                logger.warning(
+                # Severity drives the level: a missing optional tool (alass,
+                # yt-dlp) must not read like AnkiConnect being down. This used
+                # to be an unconditional WARNING, so the two were indistinguishable.
+                logger.log(
+                    logging.ERROR if errors else logging.WARNING,
                     "Startup validation completed: issues=%d errors=%d warnings=%d components=%s",
                     len(result.issues),
-                    len(result.get_errors()),
-                    len(result.get_warnings()),
+                    len(errors),
+                    len(warnings),
                     ",".join(f"{name}={count}" for name, count in sorted(component_counts.items())),
                 )
 
