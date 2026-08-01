@@ -7,17 +7,17 @@ from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QToolButton, QTreeWidget, QTreeWidgetItem
 
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.panels.ui_settings_panel import (
-    _FAMILY_STAR_PARTIAL_OPACITY,
-    _STAR_FILLED,
-    _STAR_OUTLINE,
-    UISettingsPanel,
+from anki_miner.gui.widgets.enhanced.theme_gallery import (
+    FAMILY_STAR_PARTIAL_OPACITY,
+    STAR_FILLED,
+    STAR_OUTLINE,
+    ThemeGalleryWidget,
 )
+from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
 
 
 def _theme_dict(name: str, **overrides) -> dict:
@@ -58,72 +58,75 @@ def panel(qapp, qtbot, themes_dir: Path) -> UISettingsPanel:
     return p
 
 
-def _walk(item: QTreeWidgetItem):
-    yield item
-    for i in range(item.childCount()):
-        yield from _walk(item.child(i))
+class TestThemeGalleryHosting:
+    """Task 3 seam: the panel hosts the shared gallery, not a tree."""
+
+    def test_panel_hosts_a_gallery_not_a_tree(self, qtbot, tmp_path) -> None:
+        p = UISettingsPanel(themes_root=tmp_path)
+        qtbot.addWidget(p)
+        assert isinstance(p.gallery, ThemeGalleryWidget)
+        assert not hasattr(p, "tree")
+
+    def test_activating_a_card_applies_the_theme_and_emits_state(self, qtbot, tmp_path) -> None:
+        p = UISettingsPanel(themes_root=tmp_path)
+        qtbot.addWidget(p)
+        with qtbot.waitSignal(p.state_changed) as blocker:
+            p.gallery.card("nord").click()
+        assert Theme.get_current_mode() == "nord"
+        assert blocker.args[0] == "nord"
+
+    def test_revert_restores_the_baseline_theme(self, qtbot, tmp_path) -> None:
+        Theme.set_mode("light")
+        p = UISettingsPanel(themes_root=tmp_path)
+        qtbot.addWidget(p)
+        p.show()
+        qtbot.waitExposed(p)
+        p.gallery.card("nord").click()
+        assert Theme.get_current_mode() == "nord"
+        p.revert_btn.click()
+        assert Theme.get_current_mode() == "light"
+
+    def test_star_click_toggles_the_favorite(self, qtbot, tmp_path) -> None:
+        p = UISettingsPanel(themes_root=tmp_path)
+        qtbot.addWidget(p)
+        assert not Theme.is_favorite("nord")
+        with qtbot.waitSignal(p.favorites_changed):
+            p.gallery.star("nord").click()
+        assert Theme.is_favorite("nord")
+
+    def test_family_star_favorites_the_whole_family(self, qtbot, tmp_path) -> None:
+        p = UISettingsPanel(themes_root=tmp_path)
+        qtbot.addWidget(p)
+        p.gallery.family_star("Catppuccin").click()
+        assert Theme.is_favorite("catppuccin-mocha")
+        assert Theme.is_favorite("catppuccin-latte")
 
 
-def _find_top_level(panel: UISettingsPanel, name: str) -> QTreeWidgetItem:
-    root = panel.tree.invisibleRootItem()
-    for i in range(root.childCount()):
-        if root.child(i).text(panel.COL_NAME) == name:
-            return root.child(i)
-    raise AssertionError(f"Top-level item {name!r} not found")
-
-
-class TestTreeStructure:
-    def test_widget_is_tree(self, panel: UISettingsPanel) -> None:
-        assert isinstance(panel.tree, QTreeWidget)
-
-    def test_columns_in_spec_order(self, panel: UISettingsPanel) -> None:
-        assert panel.tree.columnCount() == 3
-        labels = [panel.tree.headerItem().text(i) for i in range(3)]
-        assert labels == ["Name", "Status", ""]
-
-    def test_column_constants(self, panel: UISettingsPanel) -> None:
-        assert (panel.COL_NAME, panel.COL_STATUS, panel.COL_STAR) == (0, 1, 2)
-
-    def test_standalone_themes_top_level_with_no_children(self, panel: UISettingsPanel) -> None:
-        keys_at_top: list[str] = []
-        root = panel.tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            item = root.child(i)
-            data = item.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
-            if isinstance(data, str):
-                keys_at_top.append(data)
-                assert item.childCount() == 0
-        assert "light" in keys_at_top
-        assert "dark" in keys_at_top
+class TestGalleryStructure:
+    def test_standalone_themes_are_top_level_cards(self, panel: UISettingsPanel) -> None:
+        keys = panel.gallery.card_keys()
+        assert "light" in keys
+        assert "dark" in keys
 
     def test_family_groups_variants(self, panel: UISettingsPanel) -> None:
-        family_item = _find_top_level(panel, "Catppuccin")
-        assert family_item.childCount() == 2
-        variant_keys = {
-            family_item.child(i).data(panel.COL_NAME, Qt.ItemDataRole.UserRole) for i in range(family_item.childCount())
-        }
-        assert variant_keys == {"catppuccin-mocha", "catppuccin-latte"}
+        assert "Catppuccin" in panel.gallery.family_titles()
+        keys = set(panel.gallery.card_keys())
+        assert {"catppuccin-mocha", "catppuccin-latte"} <= keys
 
     def test_family_variant_uses_variant_name(self, panel: UISettingsPanel) -> None:
-        family_item = _find_top_level(panel, "Catppuccin")
-        variant_labels = {family_item.child(i).text(panel.COL_NAME) for i in range(family_item.childCount())}
-        assert variant_labels == {"Mocha", "Latte"}
-
-    def test_active_family_auto_expanded(self, panel: UISettingsPanel) -> None:
-        family_item = _find_top_level(panel, "Catppuccin")
-        assert family_item.isExpanded()
+        mocha = panel.gallery.card("catppuccin-mocha")
+        latte = panel.gallery.card("catppuccin-latte")
+        assert mocha is not None and mocha.name_label.text() == "Mocha"
+        assert latte is not None and latte.name_label.text() == "Latte"
 
 
 class TestActiveMarker:
     def test_active_label_on_active_variant_only(self, panel: UISettingsPanel) -> None:
-        root = panel.tree.invisibleRootItem()
-        active_keys: list[str] = []
-        for i in range(root.childCount()):
-            for d in _walk(root.child(i)):
-                if d.text(panel.COL_STATUS) == "Active":
-                    key = d.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
-                    if isinstance(key, str):
-                        active_keys.append(key)
+        active_keys = [
+            key
+            for key in panel.gallery.card_keys()
+            if (card := panel.gallery.card(key)) is not None and card.active_label.text() == "Active"
+        ]
         assert active_keys == ["catppuccin-mocha"]
 
 
@@ -131,13 +134,7 @@ class TestSelectionEmitsStateChanged:
     def test_selecting_variant_emits_signal(self, panel: UISettingsPanel) -> None:
         captured: list[tuple[str, tuple]] = []
         panel.state_changed.connect(lambda active, favs: captured.append((active, favs)))
-        family = _find_top_level(panel, "Catppuccin")
-        latte = next(
-            family.child(i)
-            for i in range(family.childCount())
-            if family.child(i).data(panel.COL_NAME, Qt.ItemDataRole.UserRole) == "catppuccin-latte"
-        )
-        panel.tree.setCurrentItem(latte)
+        panel.gallery.card("catppuccin-latte").click()
         assert captured, "state_changed was not emitted"
         active, favs = captured[-1]
         assert active == "catppuccin-latte"
@@ -148,66 +145,46 @@ class TestSelectionEmitsStateChanged:
 class TestVariantStarCell:
     """Regression guards for the per-variant star button."""
 
-    def _variant_star_button(self, panel: UISettingsPanel, key: str) -> QToolButton:
-        root = panel.tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            for descendant in _walk(root.child(i)):
-                data = descendant.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
-                if data == key:
-                    widget = panel.tree.itemWidget(descendant, panel.COL_STAR)
-                    btn = widget.findChild(QToolButton)
-                    assert btn is not None
-                    return btn
-        raise AssertionError(f"Variant {key!r} not found")
-
     def test_object_name_is_star_toggle(self, panel: UISettingsPanel) -> None:
         # QSS scope hook — themes target #starToggle for star color.
-        btn = self._variant_star_button(panel, "catppuccin-mocha")
+        btn = panel.gallery.star("catppuccin-mocha")
         assert btn.objectName() == "starToggle"
 
     def test_auto_raise_enabled(self, panel: UISettingsPanel) -> None:
         # Ghost-button appearance: transparent background until hover.
-        btn = self._variant_star_button(panel, "catppuccin-mocha")
+        btn = panel.gallery.star("catppuccin-mocha")
         assert btn.autoRaise() is True
 
     def test_pointing_hand_cursor(self, panel: UISettingsPanel) -> None:
-        btn = self._variant_star_button(panel, "catppuccin-mocha")
+        btn = panel.gallery.star("catppuccin-mocha")
         assert btn.cursor().shape() == Qt.CursorShape.PointingHandCursor
-
-
-def _family_star_button(panel: UISettingsPanel, family_name: str) -> QToolButton:
-    family = _find_top_level(panel, family_name)
-    widget = panel.tree.itemWidget(family, panel.COL_STAR)
-    btn = widget.findChild(QToolButton)
-    assert btn is not None, "family star button missing"
-    return btn
 
 
 class TestFamilyStarTriState:
     def test_outline_when_no_variant_favorited(self, panel: UISettingsPanel) -> None:
         Theme.set_favorites(["light"])
         panel._populate()
-        btn = _family_star_button(panel, "Catppuccin")
-        assert btn.text() == _STAR_OUTLINE
+        btn = panel.gallery.family_star("Catppuccin")
+        assert btn.text() == STAR_OUTLINE
         # No opacity effect applied in the none-favorited path.
         assert btn.graphicsEffect() is None
 
     def test_filled_when_all_variants_favorited(self, panel: UISettingsPanel) -> None:
         Theme.set_favorites(["light", "catppuccin-mocha", "catppuccin-latte"])
         panel._populate()
-        btn = _family_star_button(panel, "Catppuccin")
-        assert btn.text() == _STAR_FILLED
+        btn = panel.gallery.family_star("Catppuccin")
+        assert btn.text() == STAR_FILLED
         assert btn.graphicsEffect() is None  # no dimming when all-favorited
 
     def test_dimmed_when_partial(self, panel: UISettingsPanel) -> None:
         Theme.set_favorites(["catppuccin-mocha"])
         panel._populate()
-        btn = _family_star_button(panel, "Catppuccin")
-        assert btn.text() == _STAR_FILLED
+        btn = panel.gallery.family_star("Catppuccin")
+        assert btn.text() == STAR_FILLED
         effect = btn.graphicsEffect()
         assert effect is not None
         # Opacity matches the configured partial alpha.
-        assert effect.opacity() == _FAMILY_STAR_PARTIAL_OPACITY
+        assert effect.opacity() == FAMILY_STAR_PARTIAL_OPACITY
 
 
 class TestFamilyStarBulkToggle:
@@ -216,7 +193,7 @@ class TestFamilyStarBulkToggle:
         panel._populate()
         captured: list[tuple[str, tuple]] = []
         panel.state_changed.connect(lambda a, f: captured.append((a, f)))
-        btn = _family_star_button(panel, "Catppuccin")
+        btn = panel.gallery.family_star("Catppuccin")
         btn.click()
         favs = set(Theme.get_favorites())
         assert {"catppuccin-mocha", "catppuccin-latte"}.issubset(favs)
@@ -225,7 +202,7 @@ class TestFamilyStarBulkToggle:
     def test_all_clicks_unfavorite_all(self, panel: UISettingsPanel) -> None:
         Theme.set_favorites(["catppuccin-mocha", "catppuccin-latte"])
         panel._populate()
-        btn = _family_star_button(panel, "Catppuccin")
+        btn = panel.gallery.family_star("Catppuccin")
         btn.click()
         favs = set(Theme.get_favorites())
         assert "catppuccin-mocha" not in favs
@@ -238,15 +215,9 @@ class TestFamilyStarBulkToggle:
         panel._populate()
         emitted: list[None] = []
         panel.favorites_changed.connect(lambda: emitted.append(None))
-        btn = _family_star_button(panel, "Catppuccin")
+        btn = panel.gallery.family_star("Catppuccin")
         btn.click()
         assert len(emitted) == 1
-
-
-class TestFamilyRowNotSelectable:
-    def test_family_row_is_not_selectable(self, panel: UISettingsPanel) -> None:
-        family = _find_top_level(panel, "Catppuccin")
-        assert not bool(family.flags() & Qt.ItemFlag.ItemIsSelectable)
 
 
 class TestLanguage:

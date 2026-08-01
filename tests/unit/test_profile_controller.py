@@ -622,8 +622,12 @@ class TestComposedWindowSwitch:
 
     @staticmethod
     def _drawn_favorites(ui_panel) -> set[str]:
-        """The favorite stars the theme tree is CURRENTLY drawing."""
-        return {key for key, button in ui_panel._star_buttons.items() if button.isChecked()}
+        """The favorite stars the theme gallery is CURRENTLY drawing."""
+        return {
+            key
+            for key in ui_panel.gallery.card_keys()
+            if (star := ui_panel.gallery.star(key)) is not None and star.isChecked()
+        }
 
     def test_an_appearance_only_switch_moves_every_surface(self, composed, test_config):
         window, settings_tab, saves = composed
@@ -670,7 +674,7 @@ class TestComposedWindowSwitch:
         assert ui_panel.font_scale_combo.currentData() == 150
         assert self._drawn_favorites(ui_panel) == {"dark", "light"}
         # The stars and the singleton the next star click writes through agree.
-        assert self._drawn_favorites(ui_panel) == set(Theme.get_favorites()) & set(ui_panel._star_buttons)
+        assert self._drawn_favorites(ui_panel) == set(Theme.get_favorites()) & set(ui_panel.gallery.card_keys())
 
         # The header ended on the profile that is live.
         assert window.header.profile_combo.currentData() == "b"

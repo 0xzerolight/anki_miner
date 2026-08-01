@@ -327,12 +327,15 @@ class TestRowsSurviveEveryTextScale:
 
 
 class TestTheOrderedSurfacesAreDataToo:
-    """The lists and trees D42 reached last: profiles, decks, files, themes.
+    """The lists and trees D42 reached last: profiles, decks, files.
 
     Every one of them carries a user-meaningful order -- the order profiles were
-    made in, the order files will be mined in, the theme hierarchy -- so the one
-    rule they must NOT pick up is sorting. What they do pick up is the shared
-    scrolling, the shared row height, and copy-a-row.
+    made in, the order files will be mined in -- so the one rule they must NOT
+    pick up is sorting. What they do pick up is the shared scrolling, the
+    shared row height, and copy-a-row. The theme list used to be one of these
+    (a QTreeWidget); it is now a ``ThemeGalleryWidget`` card grid with no
+    scroll/sort/copy contract of its own, so its D42 coverage lives with the
+    gallery tests instead.
     """
 
     @staticmethod
@@ -369,14 +372,6 @@ class TestTheOrderedSurfacesAreDataToo:
         panel = FilteringSettingsPanel()
         qtbot.addWidget(panel)
         panel.excluded_decks_list.addItem("Core 2k")
-        return panel
-
-    @staticmethod
-    def _theme_tree(qtbot, tmp_path):
-        from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
-
-        panel = UISettingsPanel(themes_root=tmp_path / "themes")
-        qtbot.addWidget(panel)
         return panel
 
     def test_the_profile_list_scrolls_per_pixel_and_never_sorts(self, qtbot, monkeypatch):
@@ -434,31 +429,6 @@ class TestTheOrderedSurfacesAreDataToo:
         view = panel.excluded_decks_list
 
         assert view.maximumHeight() == _EXCLUDED_DECK_ROWS * data_row_height(view)
-
-    def test_the_theme_tree_row_height_comes_from_its_font(self, qtbot, tmp_path, font_scale):
-        font_scale(1.0)
-        baseline = self._theme_tree(qtbot, tmp_path)._row_height_px
-
-        font_scale(1.5)
-        grown = self._theme_tree(qtbot, tmp_path)._row_height_px
-
-        assert grown > baseline
-
-    def test_the_theme_tree_never_sorts(self, qtbot, tmp_path):
-        panel = self._theme_tree(qtbot, tmp_path)
-
-        assert panel.tree.isSortingEnabled() is False
-
-    def test_a_theme_row_copies_its_name_and_state_not_its_star_widget(self, qtbot, qapp, tmp_path):
-        panel = self._theme_tree(qtbot, tmp_path)
-        selected = panel.tree.currentItem()
-        assert selected is not None, "a theme is always active, so a row is always current"
-
-        _trigger_copy(panel.tree)
-
-        copied = qapp.clipboard().text()
-        assert selected.text(panel.COL_NAME) in copied
-        assert "★" not in copied and "☆" not in copied
 
 
 class TestTheQueueRowsCopyWhatTheyShow:
