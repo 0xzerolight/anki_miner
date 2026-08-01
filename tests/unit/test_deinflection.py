@@ -610,9 +610,9 @@ class TestCommonPrefixLen:
 
 
 def _lookup(*attested: str):
-    """Fake offline term_lookup: attests exactly the given headwords."""
+    """Fake rules-aware lookup: accepts exactly the given headwords."""
     attested_set = set(attested)
-    return lambda terms: {t for t in terms if t in attested_set}
+    return lambda candidates: {text for text, _conditions in candidates if text in attested_set}
 
 
 def _common(*common: str):
@@ -630,13 +630,13 @@ class TestResolveDictionaryForm:
     """``resolve_dictionary_form`` — JMdict-anchored modern verb/adjective front.
 
     Drives the REAL deinflection table for candidate generation; the
-    ``term_lookup`` is faked so attestation is deterministic and dict-free.
+    ``term_rules_lookup`` is faked so attestation is deterministic and dict-free.
     """
 
-    def _resolve(self, inflected_surface, orth_base, term_lookup, term_common_lookup=None):
+    def _resolve(self, inflected_surface, orth_base, term_rules_lookup, term_common_lookup=None):
         from anki_miner.services.deinflection import resolve_dictionary_form
 
-        return resolve_dictionary_form(inflected_surface, orth_base, term_lookup, term_common_lookup)
+        return resolve_dictionary_form(inflected_surface, orth_base, term_rules_lookup, term_common_lookup)
 
     # --- Produces the modern じる form (asserts PRODUCED, not merely no-op). ---
 
@@ -656,6 +656,21 @@ class TestResolveDictionaryForm:
 
     def test_shojita_resolves_to_modern_jiru(self):
         assert self._resolve("生じた", "生ずる", _lookup("生じる", "生ずる")) == "生じる"
+
+    def test_rules_incompatible_longer_prefix_candidate_is_discarded(self):
+        seen: list[tuple[str, int]] = []
+
+        def rules_lookup(candidates):
+            # Accept the current bare-string call shape only so this regression
+            # first fails on the bad longest-prefix winner. The fixed resolver
+            # must pass conditions and reject the incompatible adverb entry.
+            if candidates and isinstance(candidates[0], str):
+                return {"決まって", "決まる"} & set(candidates)
+            seen.extend(candidates)
+            return {"決まる"}
+
+        assert self._resolve("決まってん", "決まる", rules_lookup) == "決まる"
+        assert {text for text, _conditions in seen} >= {"決まって", "決まる"}
 
     # --- Existence gate, never entries.score; orth_base need not be attested. ---
 

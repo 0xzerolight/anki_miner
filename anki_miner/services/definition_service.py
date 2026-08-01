@@ -494,6 +494,43 @@ class DefinitionService:
 
         return found
 
+    def offline_deinflection_terms_exist(self, candidates: list[tuple[str, int]]) -> set[str]:
+        """Rules-compatible deinflection headwords across offline providers.
+
+        ``candidates`` preserves each deinflection hypothesis's terminal
+        condition mask. Entry rules come from the same ``attest_quality`` data
+        and use the same flag/match helpers as ``IndexedDictProvider``'s fallback
+        path. This probe is deliberately stricter for non-zero deinflections:
+        ``rules=''`` means a non-inflecting entry and does not wildcard-match.
+        The general definition fallback keeps its legacy ruleless-dictionary
+        compatibility separately. Online/legacy providers are skipped; provider
+        failures degrade to misses and never abort subtitle parsing.
+        """
+        from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
+
+        self.ensure_loaded()
+
+        conditions_by_term: dict[str, set[int]] = {}
+        for term, conditions in dict.fromkeys(candidates):
+            conditions_by_term.setdefault(term, set()).add(conditions)
+
+        found: set[str] = set()
+        terms = list(conditions_by_term)
+        for provider in self._available_offline_providers():
+            quality = self._provider_attest_quality(provider, terms, include_readings=False)
+            for term, conditions_set in conditions_by_term.items():
+                if term in found:
+                    continue
+                term_rules = quality.get(term, {}).get("term_rules", frozenset())
+                if any(
+                    conditions_match(conditions, condition_flags_from_rules(rules))
+                    for rules in term_rules
+                    for conditions in conditions_set
+                ):
+                    found.add(term)
+
+        return found
+
     def offline_term_readings(self, terms: list[str]) -> dict[str, list[str]]:
         """Attested readings per headword across available OFFLINE providers.
 

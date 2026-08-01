@@ -48,11 +48,10 @@ from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any, Callable, Iterable, Mapping, Sequence
 
-# Batch offline existence probe: the subset of the input strings attested as
-# exact dictionary headwords (``DefinitionService.offline_terms_exist`` /
-# ``compound_matcher.TermLookup``). Redeclared here (rather than imported) so
-# this module stays free of the compound-matcher import edge.
-TermLookup = Callable[[list[str]], set[str]]
+# Rules-aware offline attestation probe. Each tuple preserves the terminal
+# deinflection condition mask beside its candidate text; the returned set keeps
+# only terms with at least one dictionary entry whose POS rules accept that mask.
+TermRulesLookup = Callable[[list[tuple[str, int]]], set[str]]
 
 # Batch offline commonness probe (``DefinitionService.offline_term_commonness``):
 # maps each input string to whether a commonness-AWARE offline dict tags it common
@@ -368,7 +367,7 @@ def common_prefix_len(a: str, b: str) -> int:
 def resolve_dictionary_form(
     inflected_surface: str,
     orth_base: str,
-    term_lookup: TermLookup | None,
+    term_rules_lookup: TermRulesLookup | None,
     term_common_lookup: TermCommonLookup | None = None,
 ) -> str:
     """Best modern JMdict-attested dictionary form for a 動詞/形容詞 card front.
@@ -390,9 +389,12 @@ def resolve_dictionary_form(
       deinflection never keeps the surface, and JMdict attests many inflected /
       stem strings (待った "matta!", 通じて, the noun 感じ) that would otherwise
       win the strictly-greater override and ship an inflected/stem card front.
-    * **Gate on EXISTENCE, never ``entries.score``** — score is a uniform-0
-      priority marker on the bundled jmdict-english, so a score gate would no-op
-      the whole fix. ``term_lookup`` returns the attested subset (existence).
+    * **Preserve each result's grammatical conditions through attestation.** A
+      longer-prefix candidate is eligible only when a dictionary entry's stored
+      POS rules accept its deinflection mask. This is the same gate Yomitan uses
+      and prevents an attested adverb such as 決まって from beating the verb
+      決まる. A rule-less row matches only a zero-condition spelling variant,
+      not a non-zero deinflection hypothesis.
     * **Commonness-filter the override pool** (``term_common_lookup``, U11). Bare
       existence lets an archaic/rare LONGER-prefix deinflection outrank the
       orthBase and ship junk: 呼ばれる deinflects to both 呼ぶ AND the classical
@@ -410,17 +412,21 @@ def resolve_dictionary_form(
       own — self-limiting so a verb whose orthBase is already the longest prefix
       (乞う, 彷徨った, 帰れる, 立った) is kept unchanged.
 
-    Safe degrade: ``term_lookup is None`` (no offline dictionary) or an empty
-    input returns ``orth_base`` unchanged — the fix never hard-depends on a dict.
+    Safe degrade: ``term_rules_lookup is None`` (no rules-aware offline
+    dictionary path) or an empty input returns ``orth_base`` unchanged — the fix
+    never hard-depends on a dict.
     """
-    if term_lookup is None or not inflected_surface or not orth_base:
+    if term_rules_lookup is None or not inflected_surface or not orth_base:
         return orth_base
     deinflector = get_japanese_deinflector()
-    candidates = {result.text for result in deinflector.transform(inflected_surface)}
-    candidates.discard(inflected_surface)
+    candidates = {
+        (result.text, result.conditions)
+        for result in deinflector.transform(inflected_surface)
+        if result.text != inflected_surface
+    }
     if not candidates:
         return orth_base
-    attested = term_lookup(sorted(candidates))
+    attested = term_rules_lookup(sorted(candidates))
     if not attested:
         return orth_base
     attested_sorted = sorted(attested)

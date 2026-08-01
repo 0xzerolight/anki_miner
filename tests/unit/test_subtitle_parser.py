@@ -2194,7 +2194,7 @@ def test_real_fugashi_mines_target_words(tmp_path):
     """Real fugashi pipeline must mine the FMA-style targets after the fixes."""
     srt_file = tmp_path / "fma_ep1.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こし、死傷者が出た\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で爆発的な事件を起こし、死傷者が出た\n",
         encoding="utf-8",
     )
 
@@ -2220,7 +2220,7 @@ def test_real_fugashi_mines_prefix_compound(tmp_path):
     """Real fugashi pipeline must mine 不可能 from 不+可能 prefix-merge."""
     srt_file = tmp_path / "prefix.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "不可能な事を諦めた\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n不可能な事を諦めた\n",
         encoding="utf-8",
     )
 
@@ -2237,7 +2237,7 @@ def test_real_fugashi_mines_verb_nominalizer(tmp_path):
     """Real fugashi pipeline must mine 生き方 from 生き(動詞) + 方(接尾辞,名詞的)."""
     srt_file = tmp_path / "verb_nom.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "生き方を考える\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n生き方を考える\n",
         encoding="utf-8",
     )
 
@@ -2259,7 +2259,7 @@ def test_real_fugashi_folds_potential_verb(tmp_path):
     layout (lForm/kanaBase)."""
     srt_file = tmp_path / "potential.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "秩序を保てるはずがない\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n秩序を保てるはずがない\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2280,13 +2280,7 @@ def test_real_fugashi_guard_keeps_source_orthography(tmp_path):
     suffix-pair guard keeps the source spelling."""
     srt_file = tmp_path / "guard.srt"
     srt_file.write_text(
-        "1\n"
-        "00:00:01,000 --> 00:00:05,000\n"
-        "もう帰れるかな\n"
-        "\n"
-        "2\n"
-        "00:00:06,000 --> 00:00:10,000\n"
-        "君に出逢えるなんて\n",
+        "1\n00:00:01,000 --> 00:00:05,000\nもう帰れるかな\n\n2\n00:00:06,000 --> 00:00:10,000\n君に出逢えるなんて\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2304,7 +2298,7 @@ def test_real_fugashi_pronoun_lemma_is_clean(tmp_path):
     lookups (frequency/pitch) hit, and count_lemmas keys the same string."""
     srt_file = tmp_path / "pronoun.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "君を待つ\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n君を待つ\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2329,7 +2323,7 @@ def test_real_fugashi_pronoun_lemma_is_clean(tmp_path):
 def _mine_line(tmp_path, text):
     srt_file = tmp_path / "norm.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" + text + "\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n" + text + "\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2876,6 +2870,57 @@ class TestSubtitleRegexFilter:
         assert entries[0][2] == "歌う こんにちは"
 
 
+class TestKanaStylizedCueFilter:
+    @pytest.mark.parametrize(
+        "cue",
+        [
+            "見テ分カレ！",
+            "コレガ夏油ノ言ッテイタ...",
+            "コレ１本編ムノニ 俺ノ国ノ術師ガ",
+            "ヒットアンドアウェイニ徹シテ...",
+            "ダカラ影武者ノ１人デモ...",
+            "ノルママデ アト12分強",
+            "俺ラハ足止メデショ",
+            "死ンダラ祟ルゾ 夏油！",
+        ],
+    )
+    def test_enabled_drops_cues_with_katakana_and_no_hiragana(self, tmp_path, cue):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            skip_kana_stylized_cues=True,
+        )
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = SubtitleParserService(config)
+
+        assert service._clean_line_text(cue) == ""
+
+    @pytest.mark.parametrize(
+        "cue",
+        [
+            "ツナ",
+            "ツナマヨ",
+            "肉ジャガ",
+            "ヒットアンドアウェイ",
+        ],
+    )
+    def test_default_off_preserves_valid_false_positives(self, tmp_path, cue):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = SubtitleParserService(config)
+
+        assert service._clean_line_text(cue) == cue
+
+    def test_enabled_keeps_cue_containing_hiragana(self, tmp_path):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            skip_kana_stylized_cues=True,
+        )
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = SubtitleParserService(config)
+
+        assert service._clean_line_text("ツナマヨが好き") == "ツナマヨが好き"
+
+
 # ---------------------------------------------------------------------------
 # Surface offsets + bold precomputation (Issue #20)
 # ---------------------------------------------------------------------------
@@ -2890,7 +2935,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_emits_surface_offsets_matching_sentence_slice(self, tmp_path):
         srt_file = tmp_path / "offset.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で爆発的な事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2906,7 +2951,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_offsets_span_compound_merged_token(self, tmp_path):
         srt_file = tmp_path / "compound.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で爆発的な事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2923,7 +2968,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_no_bolded_fields_when_flag_off(self, tmp_path):
         srt_file = tmp_path / "no_bold.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2938,7 +2983,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_bolded_fields_populated_when_flag_on(self, tmp_path):
         srt_file = tmp_path / "bold.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2967,7 +3012,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_with_index_emits_lemma_spans(self, tmp_path):
         srt_file = tmp_path / "index.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -3079,10 +3124,9 @@ class TestSurfaceOffsetsAndBolding:
         assert len(line_index) == 1
         ll = line_index[0]
         for lemma_key, surface, span_start, span_end, span_highlight_end in ll.lemma_spans:
-            assert ll.line_text[span_start:span_end] == surface, (
-                f"lemma_spans drift on {lemma_key!r}: "
-                f"slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
-            )
+            assert (
+                ll.line_text[span_start:span_end] == surface
+            ), f"lemma_spans drift on {lemma_key!r}: slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
             assert span_highlight_end >= span_end
 
     # ------------------------------------------------------------------
@@ -3467,7 +3511,7 @@ class TestCountLemmas:
         """Integration: real MeCab pipeline counts repeated lemmas without dedup."""
         srt_file = tmp_path / "repeat.srt"
         srt_file.write_text(
-            "1\n00:00:01,000 --> 00:00:03,000\n勉強する\n\n" "2\n00:00:04,000 --> 00:00:06,000\n また勉強した\n",
+            "1\n00:00:01,000 --> 00:00:03,000\n勉強する\n\n2\n00:00:04,000 --> 00:00:06,000\n また勉強した\n",
             encoding="utf-8",
         )
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -3536,12 +3580,12 @@ class TestT2TokenizeOnce:
             # bold_end (not surface_end): the fixture's 起こした extends over
             # its auxiliary since the deinflection-span fix.
             expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.bold_end)
-            assert w.sentence_furigana == expected_furi, (
-                f"sentence_furigana mismatch for {w.surface!r}: " f"{w.sentence_furigana!r} != {expected_furi!r}"
-            )
-            assert w.sentence_reading == expected_read, (
-                f"sentence_reading mismatch for {w.surface!r}: " f"{w.sentence_reading!r} != {expected_read!r}"
-            )
+            assert (
+                w.sentence_furigana == expected_furi
+            ), f"sentence_furigana mismatch for {w.surface!r}: {w.sentence_furigana!r} != {expected_furi!r}"
+            assert (
+                w.sentence_reading == expected_read
+            ), f"sentence_reading mismatch for {w.surface!r}: {w.sentence_reading!r} != {expected_read!r}"
             assert w.sentence_furigana_bolded == expected_bold, (
                 f"sentence_furigana_bolded mismatch for {w.surface!r}: "
                 f"{w.sentence_furigana_bolded!r} != {expected_bold!r}"
@@ -3605,9 +3649,9 @@ class TestT2TokenizeOnce:
 
         for line_text in line_texts:
             count = spy.calls.count(line_text)
-            assert count == 1, (
-                f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
-            )
+            assert (
+                count == 1
+            ), f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. All calls: {spy.calls}"
 
     def test_tagger_called_once_per_line_parse_subtitle_file_with_index(self, tmp_path):
         """parse_subtitle_file_with_index: tagger is called exactly once per non-empty line."""
@@ -3628,9 +3672,9 @@ class TestT2TokenizeOnce:
 
         for line_text in line_texts:
             count = spy.calls.count(line_text)
-            assert count == 1, (
-                f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
-            )
+            assert (
+                count == 1
+            ), f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. All calls: {spy.calls}"
 
 
 class TestPerFileLineCache:
@@ -4153,7 +4197,7 @@ def _lookup_for(dictionary: set):
 def _write_srt(tmp_path, name, line):
     srt_file = tmp_path / name
     srt_file.write_text(
-        "1\n" f"00:00:01,000 --> 00:00:05,000\n" f"{line}\n",
+        f"1\n00:00:01,000 --> 00:00:05,000\n{line}\n",
         encoding="utf-8",
     )
     return srt_file
@@ -4857,7 +4901,14 @@ class TestVerbFrontResolver:
     """
 
     def _mine(self, sentence, term_lookup=_resolver_term_lookup):
-        service = SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+        term_rules_lookup = (
+            None if term_lookup is None else lambda candidates: term_lookup([text for text, _conditions in candidates])
+        )
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=term_lookup,
+            term_rules_lookup=term_rules_lookup,
+        )
         unit = ReadingUnit(text=sentence, index=0, location_label="t")
         words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
         return words
@@ -4885,6 +4936,22 @@ class TestVerbFrontResolver:
 
     def test_shojita_produces_shojiru(self):
         assert self._one("生じた").mined_form == "生じる"
+
+    def test_kimatten_resolves_to_rules_compatible_verb(self):
+        def rules_lookup(candidates):
+            return {text for text, _conditions in candidates if text == "決まる"}
+
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=lambda terms: {"決まって", "決まる"} & set(terms),
+            term_rules_lookup=rules_lookup,
+        )
+        unit = ReadingUnit(text="校内に決まってんだろ", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        fronts = [word.mined_form for word in words]
+
+        assert "決まる" in fronts
+        assert "決まって" not in fronts
 
     # --- Reading realignment: the card-front reading follows the modern form. ---
 
@@ -4960,14 +5027,14 @@ class TestVerbFrontResolver:
 # tags table marks the base verbs 'popular' and their archaic/rare longer-prefix
 # deinflections merely present (non-common). Each row is (term, reading, common?).
 _COMMONNESS_ROWS = [
-    ("呼ぶ", "よぶ", True),
-    ("呼ばる", "よばる", False),  # classical passive stem — attested but rare
-    ("立つ", "たつ", True),
-    ("立たす", "たたす", False),  # archaic causative — attested but rare
-    ("行く", "いく", True),
-    ("行ける", "いける", False),  # potential — attested but not the base verb
-    ("感じる", "かんじる", True),
-    ("感ずる", "かんずる", False),  # archaic サ変 sibling — attested but rare
+    ("呼ぶ", "よぶ", True, "v5"),
+    ("呼ばる", "よばる", False, "v5"),  # classical passive stem — attested but rare
+    ("立つ", "たつ", True, "v5"),
+    ("立たす", "たたす", False, "v5"),  # archaic causative — attested but rare
+    ("行く", "いく", True, "v5"),
+    ("行ける", "いける", False, "v1"),  # potential — attested but not the base verb
+    ("感じる", "かんじる", True, "v1"),
+    ("感ずる", "かんずる", False, "vz"),  # archaic サ変 sibling — attested but rare
 ]
 
 
@@ -5002,10 +5069,10 @@ def _build_commonness_service(root):
                 reading=r,
                 content=f"<div>{t}</div>",
                 tags="popular" if common else "n",
-                rules="",
+                rules=rules,
                 sequence=i + 1,
             )
-            for i, (t, r, common) in enumerate(_COMMONNESS_ROWS)
+            for i, (t, r, common, rules) in enumerate(_COMMONNESS_ROWS)
         ],
     )
     write_tags(
@@ -5035,6 +5102,7 @@ class TestVerbFrontCommonnessResolver:
             AnkiMinerConfig(),
             term_lookup=service.offline_terms_exist,
             term_common_lookup=service.offline_term_commonness if term_common else None,
+            term_rules_lookup=service.offline_deinflection_terms_exist,
         )
         unit = ReadingUnit(text=sentence, index=0, location_label="t")
         words, _index, _counts = parser.parse_text_units([unit], want_line_index=False)

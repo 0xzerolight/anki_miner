@@ -17,6 +17,7 @@ from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_fo
 from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
 from anki_miner.services.deinflection import (
     TermCommonLookup,
+    TermRulesLookup,
     _is_pure_hiragana,
     find_highlight_end,
     resolve_dictionary_form,
@@ -73,6 +74,7 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
+    "skip_kana_stylized_cues",
     "strip_subtitle_annotations",
 )
 
@@ -97,6 +99,15 @@ _LINE_CACHE_MAX_FILES: int = 256
 # keeps a whole-corpus Deck Builder run from growing without limit (mirrors the
 # compound matcher's existence cache).
 _FRONT_CACHE_CAP: int = 200_000
+
+_HIRAGANA_CUE_RE = re.compile(r"[ぁ-ゟ]")
+_KATAKANA_CUE_RE = re.compile(r"[゠-ヿ]")
+
+
+def _is_kana_stylized_cue(text: str) -> bool:
+    """Whether a normalized cue has katakana but no hiragana."""
+    return _KATAKANA_CUE_RE.search(text) is not None and _HIRAGANA_CUE_RE.search(text) is None
+
 
 # Term-OR-reading offline existence probe (DefinitionService.has_offline_definitions:
 # lookup_many runs ``WHERE term IN (...) OR reading IN (...)``). Reading-capable on
@@ -268,6 +279,7 @@ class SubtitleParserService:
         reading_lookup: ReadingLookup | None = None,
         kana_attest_lookup: KanaAttestLookup | None = None,
         term_common_lookup: TermCommonLookup | None = None,
+        term_rules_lookup: TermRulesLookup | None = None,
     ):
         """Initialize the subtitle parser.
 
@@ -280,6 +292,11 @@ class SubtitleParserService:
                 archaic/rare longer-prefix candidate (呼ばる from 呼ばれる) can't
                 displace the unidic orthBase. ``None`` (or a chain with no aware
                 dict) keeps the resolver byte-identical to pre-commonness.
+            term_rules_lookup: Optional rules-aware deinflection attestation
+                probe (``DefinitionService.offline_deinflection_terms_exist``).
+                Each candidate keeps its terminal condition mask so dictionary
+                entry POS rules can reject incompatible headwords. ``None``
+                makes resolver overrides fail closed to ``orth_base``.
             kana_attest_lookup: Optional term-OR-reading offline existence probe
                 (``DefinitionService.has_offline_definitions``). When provided,
                 pure-hiragana content words the script gate would drop (きれい,
@@ -317,10 +334,12 @@ class SubtitleParserService:
             allowed_pos=frozenset(config.allowed_pos),
             excluded_subtypes=frozenset(config.excluded_subtypes),
         )
-        # Same injected offline existence probe drives the verb-front resolver
-        # (see _resolve_front / deinflection.resolve_dictionary_form). None ⇒ the
-        # resolver safe-degrades and mining stays byte-identical to pre-resolver.
+        # Exact-headword existence serves compound/front remap gates; the sibling
+        # rules-aware probe serves deinflection overrides. Keeping them distinct
+        # prevents an attested but POS-incompatible headword from winning solely
+        # on spelling (see _resolve_front / resolve_dictionary_form).
         self._term_lookup = term_lookup
+        self._term_rules_lookup = term_rules_lookup
         # Per-instance MEMOIZED existence probe shared by the compound-merge gate
         # (morphology.merge_compound_suffixes) AND the compound matcher: caches
         # existence per surface so a repeated corpus (count_lemmas / Deck Builder
@@ -496,12 +515,19 @@ class SubtitleParserService:
         return self._unique_reading_cache[headword]
 
     def _apply_text_filter(self, text: str) -> str:
-        """Apply the configured regex filter to a subtitle line.
+        """Apply configured whole-cue and regex filters to a subtitle line.
 
-        Runs after ``clean_subtitle_text`` strips tags/HTML so the pattern
-        operates on human-readable text. Whitespace is renormalized because
-        a stripped span can leave double spaces behind.
+        Runs after cleanup and normalization so filters operate on human-readable
+        text. Whitespace is renormalized because regex deletion can leave double
+        spaces behind.
         """
+        # Deliberate Yomitan divergence: interactive lookup has a human-selected
+        # scan point; batch mining does not. For sources with a known katakana-
+        # dialogue convention, fail closed on the whole cue instead of trusting
+        # MeCab's plausible-looking fragments. Opt-in because loanword-only cues
+        # are indistinguishable by script and are sacrificed too.
+        if self.config.skip_kana_stylized_cues and _is_kana_stylized_cue(text):
+            return ""
         if self._filter_pattern is None:
             return text
         filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
@@ -1361,13 +1387,12 @@ class SubtitleParserService:
         Returns ``orth_base`` unchanged for every non-verb/adjective token, for
         ``mining_base`` folds (never un-fold a potential/ra-nuki/ク-form — its
         orth_base is the parent lemma, not the token's own orthBase), when no
-        offline ``term_lookup`` is wired (safe degrade), and whenever the
-        resolver can't improve on orth_base. Otherwise the archaic じる/ずる
-        orthBase (感ずる) is rewritten to the deinflection-attested modern
-        headword (感じる). See deinflection.resolve_dictionary_form for the
-        algorithm; the deinflect + offline existence lookup is memoized per
-        ``(inflected_surface, orth_base, cType)`` so identical tokens never repeat
-        the work.
+        offline lookup path is wired (safe degrade), and whenever the resolver
+        can't improve on orth_base. Otherwise the archaic じる/ずる orthBase
+        (感ずる) is rewritten to the rules-compatible modern headword (感じる).
+        See deinflection.resolve_dictionary_form for the algorithm; the
+        deinflect + offline rules lookup is memoized per ``(inflected_surface,
+        orth_base, cType)`` so identical tokens never repeat the work.
 
         Second seam (U3 attest-or-remap): when the deinflection resolver leaves
         orth_base unchanged AND that orth_base matches no dictionary headword,
@@ -1397,7 +1422,10 @@ class SubtitleParserService:
         cached = self._front_cache.get(key)
         if cached is None:
             cached = resolve_dictionary_form(
-                inflected_surface, orth_base, self._term_lookup, self._memoized_term_common
+                inflected_surface,
+                orth_base,
+                self._term_rules_lookup,
+                self._memoized_term_common,
             )
             # The deinflection resolver only rewrites じる/ずる (and leaves every
             # other form == orth_base). Where it made no change, run the

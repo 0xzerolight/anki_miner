@@ -409,6 +409,7 @@ class TestCompoundMatchingInjection:
         # underlying lookup is the definition service's offline existence probe.
         assert matcher._lookup == parser._memoized_attest
         assert parser._term_lookup == services.definition_service.offline_terms_exist
+        assert parser._term_rules_lookup == services.definition_service.offline_deinflection_terms_exist
 
     def test_not_injected_without_indexed_entry(self, base_config):
         cfg = dataclasses.replace(
