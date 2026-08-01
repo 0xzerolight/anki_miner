@@ -81,11 +81,16 @@ class TestUndoCountsNotes:
 
 
 class TestBackfillSaysWhatItTouches:
-    """Scan reads; Update writes. The labels now say so."""
+    """The screen is named for the tool; the BUTTONS say what they do to Anki.
 
-    def test_the_screen_is_named_for_what_it_does(self, backfill):
+    The screen name went Card Backfill → Backfill → Update Notes and back; what
+    survived every round is that Scan reads and the write says it writes. Those
+    are the assertions worth holding.
+    """
+
+    def test_the_screen_is_named_for_the_tool(self, backfill):
         headings = [w.text() for w in backfill.findChildren(type(backfill.status_label)) if w.text()]
-        assert "Update Existing Notes" in headings
+        assert "Card Backfill" in headings
 
     def test_scan_declares_itself_read_only(self, backfill):
         assert backfill.scan_button.text() == "Scan Anki (read-only)"
@@ -93,14 +98,13 @@ class TestBackfillSaysWhatItTouches:
     def test_apply_names_the_write(self, backfill):
         assert backfill.apply_button.text() == "Update Notes in Anki"
 
-    def test_the_inner_tab_label_is_not_jargon(self, test_config, qtbot):
+    def test_the_inner_tab_label_matches_the_screen(self, test_config, qtbot):
         from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 
         tab = SubtitlesTab(test_config, suppress_optional_startup=True)
         qtbot.addWidget(tab)
         labels = [tab._inner_tabs.tabText(i) for i in range(tab._inner_tabs.count())]
-        assert "Update Notes" in labels
-        assert "Backfill" not in labels
+        assert "Card Backfill" in labels
 
     def test_the_capability_entry_says_notes(self):
         entry = next(c for c in CAPABILITIES if c.id == "card-backfill")

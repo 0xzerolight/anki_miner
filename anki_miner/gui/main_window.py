@@ -91,7 +91,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     - Audiobooks (audio + subtitle pair queue)
     - Reading (container: Manga / Novels sub-tabs)
     - Analytics (mining statistics dashboard)
-    - Utilities (container: Generate / Retime / Condense / Update Notes)
+    - Utilities (container: Generate / Retime / Condense / Card Backfill)
     - Settings (configuration)
 
     Signals:

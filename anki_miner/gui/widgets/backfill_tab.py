@@ -1,4 +1,4 @@
-"""Update Existing Notes tool tab (Utilities → Update Notes).
+"""Card Backfill tool tab (Utilities → Card Backfill).
 
 Bulk-fills pitch/frequency/definition/glossary/reading fields on EXISTING
 miner notes after the user installs new resources. Two-step flow: Scan
@@ -133,7 +133,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
 
-        layout.addWidget(SectionHeader(self.tr("Update Existing Notes")))
+        layout.addWidget(SectionHeader(self.tr("Card Backfill")))
         hint = QLabel(
             self.tr(
                 "Fill missing fields on notes you mined earlier, using the currently "

@@ -206,9 +206,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("subtitles", "backfill"),
-        # "backfill" and "existing cards" stay: the old words are what a
-        # returning user searches for, and a rename that loses them makes the
-        # screen unfindable to exactly the people who already knew it.
+        # The screen has been called Card Backfill, Backfill and Update Notes
+        # across releases; every one of those words stays a keyword. A rename
+        # that drops the previous name makes the screen unfindable to exactly
+        # the people who already knew it.
         keywords=(
             "backfill",
             "update notes",

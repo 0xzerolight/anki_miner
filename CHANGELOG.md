@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **The Utilities tool is called Card Backfill again**, on the tab and in its header. The buttons keep saying what they do to your collection ("Scan Anki (read-only)", "Update Notes in Anki"). Settings search still finds it under every name it has had.
 
 ### Fixed
 - **Picking a different example sentence now updates the whole row.** In the word curator, choosing another sentence under "Sentences" only redrew the Sentence column — "Form in subtitle" kept showing the form from the first occurrence, and so did the mined word, what Ctrl+C copied off the row, right-click → Copy word, and the definition shown beside it. All of them follow the pick now. (#108)
