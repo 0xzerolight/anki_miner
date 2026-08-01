@@ -17,10 +17,34 @@ def test_identical_error_burst_collapses(qtbot, caplog):
     w = _widget(qtbot)
     with caplog.at_level(logging.WARNING, logger=LOGGER):
         for _ in range(100):
-            w._on_mpv_log("error", "libmpv_render", "after creating texture: OpenGL error INVALID_ENUM.")
+            w._on_mpv_log("error", "libmpv_render", "shader link failed")
+
+    records = [r for r in caplog.records if "shader link failed" in r.message]
+    assert len(records) == 1
+
+
+def test_benign_texture_error_is_debug_not_warning(qtbot, caplog):
+    """The stale-glGetError line is measured-benign; it must not read as a warning.
+
+    Fires once per video load on plane 0 only, identically on 8-bit and 10-bit
+    and under an explicit CoreProfile context. Still logged, at DEBUG.
+    """
+    w = _widget(qtbot)
+    with caplog.at_level(logging.DEBUG, logger=LOGGER):
+        w._on_mpv_log("error", "libmpv_render", "after creating texture: OpenGL error INVALID_ENUM.")
 
     records = [r for r in caplog.records if "INVALID_ENUM" in r.message]
-    assert len(records) == 1
+    assert [r.levelno for r in records] == [logging.DEBUG]
+
+
+def test_other_libmpv_render_errors_still_warn(qtbot, caplog):
+    """The suppression is one exact message, not the whole component."""
+    w = _widget(qtbot)
+    with caplog.at_level(logging.DEBUG, logger=LOGGER):
+        w._on_mpv_log("error", "libmpv_render", "after creating texture: OpenGL error OUT_OF_MEMORY.")
+
+    records = [r for r in caplog.records if "OUT_OF_MEMORY" in r.message]
+    assert [r.levelno for r in records] == [logging.WARNING]
 
 
 def test_repeat_count_reported_after_window(qtbot, caplog, monkeypatch):

@@ -38,7 +38,9 @@ logger = logging.getLogger(__name__)
 
 # GL_R16/GL_RG16 are core in desktop GL 3.0+; on GLES they exist only via this
 # extension. 10-bit video (yuv420p10) is uploaded to exactly those formats, so
-# its presence is the direct test of the INVALID_ENUM hypothesis.
+# its presence separates "the driver cannot do 16-bit planes" from everything
+# else. On a desktop-GL context it reads False and means nothing -- there the
+# formats are core.
 _NORM16_EXTENSION = b"GL_EXT_texture_norm16"
 
 # One probe line per process, not per widget construction.
