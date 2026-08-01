@@ -60,7 +60,9 @@ def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
 
     with caplog.at_level(logging.DEBUG):
         assert download_audio_to_cache(direct_session, direct_url, tmp_path, "stem") is None
-        assert fetcher.fetch("word", "reading") is None
+        # Kana reading: anything else is refused by the homograph guard before
+        # a request is made, and this test is about what a failed one logs.
+        assert fetcher.fetch("word", "よみ") is None
 
     assert "https://example.test/audio.mp3" in caplog.text
     assert "https://example.test/list/word" in caplog.text
@@ -213,6 +215,22 @@ class TestCustomAudioFetcherDirect:
         assert f.fetch("食べる", "") is None
         assert f.fetch("", "たべる") is None
         f._session.get.assert_not_called()
+
+    def test_non_kana_reading_skips(self, tmp_path):
+        """An OOV token's reading falls back to its kanji surface.
+
+        A reading-agnostic local-audio-yomichan source answers a kanji
+        ``reading=`` anyway, so 辛い (からい / つらい) would cache one homograph's
+        audio for the other — the same hazard JPod101 and Google TTS refuse.
+        """
+        f = self._fetcher(tmp_path)
+        assert f.fetch("辛い", "辛い") is None
+        f._session.get.assert_not_called()
+
+    def test_kana_reading_still_fetches(self, tmp_path):
+        f = self._fetcher(tmp_path)
+        f._session.get.return_value = _audio_response(_VALID_MP3)
+        assert f.fetch("辛い", "つらい") is not None
 
     def test_success_downloads_and_names_by_prefix(self, tmp_path):
         f = self._fetcher(tmp_path)
