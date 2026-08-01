@@ -478,6 +478,8 @@ class AnkiSettingsPanel(FormPanel):
             anchor_text=lambda: (self.card_type_names_group.title(),),
         )
 
+        self.add_stretch()
+
     def _add_labeled_field_with_button(
         self,
         label_text: str,
