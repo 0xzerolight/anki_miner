@@ -20,8 +20,9 @@ from anki_miner.config import ChainEntry
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+from anki_miner.gui.widgets.enhanced.theme_gallery import STAR_FILLED, STAR_OUTLINE
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
-from anki_miner.gui.widgets.panels.ui_settings_panel import _STAR_FILLED, _STAR_OUTLINE, UISettingsPanel
+from anki_miner.gui.widgets.panels.ui_settings_panel import UISettingsPanel
 from anki_miner.models import TokenizedWord
 from anki_miner.models.stats import OverallStats
 
@@ -140,12 +141,12 @@ def test_themes_star_toggle_does_not_call_populate(themes_panel: UISettingsPanel
 
 def test_themes_star_toggle_updates_button_in_place(themes_panel: UISettingsPanel):
     """Toggling 'dark' flips its star button without rebuilding the row."""
-    button = themes_panel._star_buttons["dark"]
-    assert button.text() == _STAR_OUTLINE
+    button = themes_panel.gallery.star("dark")
+    assert button.text() == STAR_OUTLINE
     themes_panel._toggle_favorite("dark")
     # Same widget instance, mutated.
-    assert themes_panel._star_buttons["dark"] is button
-    assert button.text() == _STAR_FILLED
+    assert themes_panel.gallery.star("dark") is button
+    assert button.text() == STAR_FILLED
 
 
 def test_themes_family_toggle_does_not_call_populate(qtbot, tmp_path: Path):
@@ -168,8 +169,8 @@ def test_themes_family_toggle_does_not_call_populate(qtbot, tmp_path: Path):
             panel._toggle_family_favorites(("catppuccin-mocha", "catppuccin-latte"))
             assert populate_spy.call_count == 0
         # Both variant buttons reflect new state.
-        assert panel._star_buttons["catppuccin-mocha"].text() == _STAR_FILLED
-        assert panel._star_buttons["catppuccin-latte"].text() == _STAR_FILLED
+        assert panel.gallery.star("catppuccin-mocha").text() == STAR_FILLED
+        assert panel.gallery.star("catppuccin-latte").text() == STAR_FILLED
     finally:
         panel.deleteLater()
 

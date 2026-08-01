@@ -192,7 +192,7 @@ def test_ui_panel_controls_are_anchored(tab):
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
 
     assert by_id["ui.language"].focus_widget is tab.ui_panel.language_combo
-    assert by_id["ui.theme"].focus_widget is tab.ui_panel.tree
+    assert by_id["ui.theme"].focus_widget is tab.ui_panel.gallery
 
 
 def test_anchor_search_text_follows_a_relabelled_control(tab):
