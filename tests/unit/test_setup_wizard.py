@@ -1587,6 +1587,39 @@ def test_run_setup_wizard_outcome_matrix(qtbot, wiz_config, monkeypatch, action,
     assert outcome.open_video_mining is (action == "accept")
 
 
+def test_skip_setup_persists_the_picked_theme(qtbot, wiz_config, monkeypatch):
+    """A picked theme survives "Skip Setup" -- pinning a point a reviewer had
+    to trace and prove twice.
+
+    ``SetupWizard.done()`` calls ``_stage_current_edits()`` unconditionally,
+    on reject as well as accept; ``run_setup_wizard`` returns
+    ``wizard.working_config()`` regardless of dialog result; and
+    ``MainWindow._commit_setup_wizard_outcome`` calls ``update_config(merged)``
+    unconditionally on both the Tools path and the first-run path. So a theme
+    picked on the wizard's first page is persisted even when the user hits
+    "Skip Setup" -- symmetric with every sibling page's typed edits, which
+    persist the exact same way (see ``test_close_stages_typed_editor_values``
+    below).
+    """
+    from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import setup_wizard as sw_mod  # noqa: PLC0415
+
+    def fake_exec(self):
+        qtbot.addWidget(self)
+        self.theme_page.gallery.card("nord").click()
+        self.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+        return QDialog.DialogCode.Rejected.value
+
+    monkeypatch.setattr(sw_mod.SetupWizard, "exec", fake_exec)
+
+    outcome = run_setup_wizard(None, wiz_config)
+
+    assert outcome.config.theme == "nord"
+    assert outcome.consumes_first_run_offer is True  # explicit Skip still consumes the offer
+
+
 @pytest.mark.parametrize("action", ["skip", "x", "escape"])
 def test_close_stages_typed_editor_values(qtbot, wiz_config, action, monkeypatch):
     from PyQt6.QtCore import Qt  # noqa: PLC0415
