@@ -191,19 +191,34 @@ def render_pitch_graph_svg(morae: list[str], position: int | str) -> str:
     return header + path1 + path2 + "".join(dots) + triangle + "</svg>"
 
 
+def _wrap_accent_list(runs: list[str]) -> str:
+    """Join per-accent renders the way Yomitan's ``pitch-accent-list`` partial does.
+
+    A single accent stays bare; several accents become a numbered
+    ``<ol><li>…</li></ol>`` list (issue #7 — bare concatenation fused the runs
+    into one unreadable word). The list markup carries no inline styles, exactly
+    like the default ``{pitch-accents}`` / ``{pitch-accent-graphs}`` Anki
+    templates (``default-anki-field-templates.handlebars``, upstream commit
+    ``e2ed450``), so note-type stylesheets keep full control over it.
+    """
+    if len(runs) > 1:
+        return "<ol>" + "".join(f"<li>{run}</li>" for run in runs) + "</ol>"
+    return runs[0] if runs else ""
+
+
 def render_pitch_graph_field(pattern: str, reading: str) -> str:
     """Render the pitch-graph card field for a raw pattern string + kana reading.
 
     ``pattern`` may hold several comma-separated accents (e.g. ``"0,2"``); each
-    parseable token yields one graph and they are concatenated (the graphs are
-    inline-block, so they flow left to right / wrap). Returns ``""`` when the
+    parseable token yields one graph, and several accents are wrapped as a
+    numbered list (see :func:`_wrap_accent_list`). Returns ``""`` when the
     reading has no mora or the pattern has no parseable token, so the caller can
     leave the field untouched.
     """
     morae = get_kana_morae(reading)
     if not morae:
         return ""
-    return "".join(render_pitch_graph_svg(morae, pos) for pos in _iter_positions(pattern))
+    return _wrap_accent_list([render_pitch_graph_svg(morae, pos) for pos in _iter_positions(pattern)])
 
 
 # --- Kana diacritic table (ported from japanese.js DIACRITIC_MAPPING) --------
@@ -375,10 +390,11 @@ def render_pitch_text_field(
     """Render the pitch-overline card field for a raw pattern string + reading.
 
     Mirrors :func:`render_pitch_graph_field`: one overline run per parseable
-    accent token, concatenated. Returns ``""`` when the reading has no mora or the
+    accent token, several accents wrapped as a numbered list (see
+    :func:`_wrap_accent_list`). Returns ``""`` when the reading has no mora or the
     pattern has no parseable token so the caller can leave the field untouched.
     """
     morae = get_kana_morae(reading)
     if not morae:
         return ""
-    return "".join(render_pitch_text(morae, pos, nasal, devoice) for pos in _iter_positions(pattern))
+    return _wrap_accent_list([render_pitch_text(morae, pos, nasal, devoice) for pos in _iter_positions(pattern)])

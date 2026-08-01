@@ -158,9 +158,20 @@ class TestRenderPitchGraphField:
     def test_single_position(self):
         assert render_pitch_graph_field("0", "はし") == _HASHI_HEIBAN_SVG
 
-    def test_multi_position_concatenates_one_graph_per_token(self):
+    def test_multi_position_renders_ol_list(self):
+        # Several accents wrap as Yomitan's pitch-accent-list does (issue #7):
+        # a bare <ol> with one <li> per accent, no inline styles on the list.
         html = render_pitch_graph_field("0,1", "はし")
-        assert html == render_pitch_graph_svg(["は", "し"], 0) + render_pitch_graph_svg(["は", "し"], 1)
+        assert html == (
+            "<ol>"
+            f'<li>{render_pitch_graph_svg(["は", "し"], 0)}</li>'
+            f'<li>{render_pitch_graph_svg(["は", "し"], 1)}</li>'
+            "</ol>"
+        )
+        assert html.count("<svg") == 2
+
+    def test_single_position_has_no_list_wrapper(self):
+        assert "<ol>" not in render_pitch_graph_field("0", "はし")
 
     def test_hl_string_position(self):
         # An [HL]+ pattern is passed through verbatim (not reduced to an int).
@@ -326,9 +337,18 @@ class TestRenderPitchTextField:
     def test_single_position(self):
         assert render_pitch_text_field("0", "はし") == _HASHI_HEIBAN_TEXT
 
-    def test_multi_position_concatenates(self):
+    def test_multi_position_renders_ol_list(self):
+        # Issue #7: bare concatenation fused the runs into はしはし on the card.
         html = render_pitch_text_field("0,1", "はし")
-        assert html == render_pitch_text(["は", "し"], 0) + render_pitch_text(["は", "し"], 1)
+        assert html == (
+            "<ol>"
+            f'<li>{render_pitch_text(["は", "し"], 0)}</li>'
+            f'<li>{render_pitch_text(["は", "し"], 1)}</li>'
+            "</ol>"
+        )
+
+    def test_single_position_has_no_list_wrapper(self):
+        assert "<ol>" not in render_pitch_text_field("0", "はし")
 
     def test_threads_nasal_and_devoice(self):
         html = render_pitch_text_field("0", "がく", nasal=(1,), devoice=())
