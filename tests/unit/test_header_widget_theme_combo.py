@@ -128,6 +128,24 @@ class TestThemeChangedSignal:
         assert Theme.get_current_mode() == "dark"
 
 
+class TestSentinelAdvertisesTheCount:
+    def test_sentinel_names_the_real_theme_count(self, qtbot):
+        widget = HeaderWidget()
+        qtbot.addWidget(widget)
+        text, data = _combo_items(widget)[-1]
+        assert data == ALL_THEMES_SENTINEL
+        assert str(len(Theme.get_available_themes())) in text
+
+    def test_sentinel_still_opens_theme_settings(self, qtbot):
+        widget = HeaderWidget()
+        qtbot.addWidget(widget)
+        index = widget.theme_combo.count() - 1
+        with qtbot.waitSignal(widget.open_theme_settings):
+            widget.theme_combo.setCurrentIndex(index)
+        # Selection snaps back so the sentinel never looks selected.
+        assert widget.theme_combo.currentData() == Theme.get_current_mode()
+
+
 class TestTheHeaderSelectorsAreStyleable:
     """``common.qss`` keeps these two quiet by object name (see D48-B).
 
