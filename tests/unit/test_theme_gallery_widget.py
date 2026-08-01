@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 
 import pytest
@@ -249,6 +250,28 @@ class TestThumbnails:
         # exception capture fails the test; with the guard it is a silent
         # no-op.
         qtbot.wait(20)
+
+    def test_render_failure_is_caught_and_leaves_the_thumbnail_blank(self, qtbot, monkeypatch, caplog):
+        """``render_theme_thumbnail``'s leniency covers an unknown theme KEY
+        (falls back rather than raising), not every failure mode -- a
+        malformed user theme JSON reaching ``_substitute_variables``, say, can
+        still raise. ``_load_thumbnail`` runs from a timer slot, so an
+        uncaught exception here would escape into the Qt event loop rather
+        than any caller; it must be caught, logged, and leave the card blank.
+        """
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+
+        def _boom(_key: str):
+            raise ValueError("malformed theme JSON")
+
+        monkeypatch.setattr("anki_miner.gui.widgets.enhanced.theme_gallery.render_theme_thumbnail", _boom)
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.widgets.enhanced.theme_gallery"):
+            card._load_thumbnail()  # must not raise
+
+        assert card.thumbnail.pixmap() is None or card.thumbnail.pixmap().isNull()
+        assert "nord" in caplog.text
 
 
 class TestKeyboardFocus:

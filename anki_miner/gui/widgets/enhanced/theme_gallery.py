@@ -26,6 +26,7 @@ signals elsewhere in the GUI (see ``AnkiProbeController._alive``).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 
 from PyQt6 import sip
@@ -50,6 +51,8 @@ from anki_miner.gui.utils.qt_helpers import data_row_height
 from anki_miner.utils.i18n import tr_format
 
 from .theme_preview import DEFAULT_THUMBNAIL_SIZE, render_theme_thumbnail
+
+logger = logging.getLogger(__name__)
 
 #: Unicode star glyphs, routed through the font pipeline so hinting stays sharp
 #: at small sizes -- no QPainter maths, no devicePixelRatio handling.
@@ -148,6 +151,18 @@ class ThemeCard(QFrame):
         super().paintEvent(event)
 
     def _load_thumbnail(self) -> None:
+        # render_theme_thumbnail promises leniency for an unknown theme KEY
+        # (falls back rather than raising), not for every failure mode -- a
+        # malformed user theme JSON reaching _substitute_variables, say, can
+        # still raise. This is a timer slot: an uncaught exception here
+        # escapes straight into the Qt event loop, not to any caller. Catch
+        # broadly and leave the card blank rather than propagate.
+        try:
+            pixmap = render_theme_thumbnail(self._key)
+        except Exception:
+            logger.warning("Could not render theme thumbnail for %r", self._key, exc_info=True)
+            return
+
         # The zero-interval timer can outlive its sibling `thumbnail` label --
         # see the module docstring for the teardown race this guards. The
         # pixmap is rendered BEFORE the liveness check (not passed inline to
@@ -156,7 +171,6 @@ class ThemeCard(QFrame):
         # effect -- a deferred-delete for this very card can land during that
         # call. Checking liveness only right before the call, with nothing
         # Qt-side between the check and the use, closes that window.
-        pixmap = render_theme_thumbnail(self._key)
         if sip.isdeleted(self) or sip.isdeleted(self.thumbnail):
             return
         self.thumbnail.setPixmap(pixmap)
