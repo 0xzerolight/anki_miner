@@ -541,3 +541,43 @@ def test_focus_does_not_change_a_controls_measured_height(control, qapp):
     host.deleteLater()
 
     assert before == after, f"{control} changes height on focus: {before} -> {after}"
+
+
+# ---------------------------------------------------------------------------
+# ...and never in the header
+# ---------------------------------------------------------------------------
+
+
+#: The two selectors in the top-right corner of the window. They are chrome, not
+#: a form, and they are the FIRST focusable widgets in the window -- so Qt's
+#: focus wrap-around parks focus on them whenever something elsewhere hides,
+#: disables or destroys the widget that had it, and a settings click lit an
+#: accent box in the corner. Styled by object name; the widgets themselves are
+#: built in ``gui/widgets/header_widget.py``.
+HEADER_COMBOS = ("theme-combo", "profile-combo")
+
+
+def _header_combo(object_name: str) -> QComboBox:
+    combo = QComboBox()
+    combo.setObjectName(object_name)
+    combo.addItems(["Kanagawa Wave", "All themes…"])
+    return combo
+
+
+@pytest.mark.parametrize("object_name", HEADER_COMBOS)
+@pytest.mark.parametrize("mode", [LIGHT_THEME, DARK_THEME])
+def test_the_header_selectors_never_light_up(object_name, mode, qapp):
+    """Suppressed for every focus reason, not just for a mouse.
+
+    Deliberately not spelled ``[keyboardFocus="true"]`` like the panes above:
+    the wrap-around that caused this arrives through ``focusNextChild()``, which
+    focuses with ``TabFocusReason`` -- so the keyboard gate is true on exactly
+    the path being suppressed. Focusing with :data:`TAB` here is what makes that
+    the case under test.
+    """
+    unfocused, focused, accent = _focused_and_unfocused(lambda: _header_combo(object_name), mode)
+
+    assert focused == unfocused, (
+        f"#{object_name} lights up on focus under {mode}: "
+        f"{focused} accent pixels focused vs {unfocused} unfocused (accent {accent.name()})"
+    )

@@ -122,6 +122,9 @@ class HeaderWidget(QWidget):
         profile_layout.addWidget(self.profile_label)
 
         self.profile_combo = QComboBox()
+        # Styled by id in common.qss so this combo keeps its resting border in
+        # every focus state — see the theme combo below for why.
+        self.profile_combo.setObjectName("profile-combo")
         # Same wheel hazard as the theme combo below, with a worse payload: a
         # stray scroll here would swap every setting in the app.
         self.profile_combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
@@ -157,6 +160,13 @@ class HeaderWidget(QWidget):
         theme_layout.addWidget(theme_label)
 
         self.theme_combo = QComboBox()
+        # These two combos are the first focusable widgets in the window, so
+        # Qt's focus wrap-around lands here whenever something elsewhere hides,
+        # disables or destroys the focused widget — which lit an accent border
+        # in the corner for a click that happened in Settings. common.qss keeps
+        # their border at rest in every focus state; the object name is what
+        # that rule selects on.
+        self.theme_combo.setObjectName("theme-combo")
         self.theme_combo.setAccessibleName(self.tr("Theme"))
         # Issue #99's hazard, with an unusually expensive payload: a wheel over
         # this combo changes theme, and each change costs a re-measured 1647 ms
