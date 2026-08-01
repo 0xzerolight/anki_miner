@@ -23,7 +23,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
-from PyQt6.QtCore import Qt, QtMsgType, qInstallMessageHandler
+from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
 from PyQt6.QtGui import QPalette
 from PyQt6.QtWidgets import (
     QApplication,
@@ -332,14 +332,10 @@ def panel(qapp, qtbot, themes_dir: Path) -> UISettingsPanel:
     return p
 
 
-def _row(panel: UISettingsPanel, key: str):
-    root = panel.tree.invisibleRootItem()
-    assert root is not None
-    for i in range(root.childCount()):
-        item = root.child(i)
-        if item.data(panel.COL_NAME, Qt.ItemDataRole.UserRole) == key:
-            return item
-    raise AssertionError(f"no row for {key!r}")
+def _card(panel: UISettingsPanel, key: str):
+    card = panel.gallery.card(key)
+    assert card is not None, f"no card for {key!r}"
+    return card
 
 
 class TestContrastWarningLabel:
@@ -356,30 +352,30 @@ class TestContrastWarningLabel:
         assert "1.0" in p.contrast_warning.text()
 
     def test_updates_when_a_row_is_previewed(self, panel: UISettingsPanel):
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
 
         assert not panel.contrast_warning.isHidden()
         assert "1.0" in panel.contrast_warning.text()
 
     def test_clears_again_when_a_readable_theme_is_previewed(self, panel: UISettingsPanel):
-        panel.tree.setCurrentItem(_row(panel, "murky"))
-        panel.tree.setCurrentItem(_row(panel, "clear"))
+        _card(panel, "murky").click()
+        _card(panel, "clear").click()
 
         assert panel.contrast_warning.text() == ""
         assert panel.contrast_warning.isHidden()
 
     def test_selecting_the_already_active_row_still_refreshes(self, panel: UISettingsPanel):
-        """The early return in ``_on_row_selected`` must not skip the warning."""
+        """The early return in ``_on_theme_activated`` must not skip the warning."""
         Theme.set_mode("murky")
         panel.contrast_warning.setText("")
 
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
 
         assert not panel.contrast_warning.isHidden()
 
     def test_updates_after_revert(self, panel: UISettingsPanel):
         panel.reset_baseline()  # baseline = "clear"
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
         assert not panel.contrast_warning.isHidden()
 
         panel._revert_preview()
@@ -404,22 +400,22 @@ class TestContrastWarningLabel:
     def test_preview_leaves_the_theme_colours_untouched(self, panel: UISettingsPanel, themes_dir: Path):
         on_disk = json.loads((themes_dir / "murky.json").read_text(encoding="utf-8"))["colors"]
 
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
 
         assert Theme.get_colors("murky") == on_disk
 
-    def test_warning_is_wrapped_and_sits_under_the_tree(self, panel: UISettingsPanel):
+    def test_warning_is_wrapped_and_sits_under_the_gallery(self, panel: UISettingsPanel):
         assert panel.contrast_warning.wordWrap() is True
         layout = panel.layout()
-        tree_index = layout.indexOf(panel.tree)
-        assert layout.indexOf(panel.contrast_warning) == tree_index + 1
+        gallery_index = layout.indexOf(panel.gallery)
+        assert layout.indexOf(panel.contrast_warning) == gallery_index + 1
 
 
 class TestPreviewDoesNotRepaintColours:
     """Applying a theme writes the author's colours into the palette verbatim."""
 
     def test_palette_matches_the_authored_values(self, panel: UISettingsPanel, qapp):
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
 
         palette = qapp.palette()
         assert palette.color(QPalette.ColorRole.Window).name() == MURKY_THEME["background"]
@@ -430,7 +426,7 @@ class TestPreviewDoesNotRepaintColours:
 
     def test_the_disabled_group_uses_the_theme_s_own_disabled_tokens(self, panel: UISettingsPanel, qapp):
         """Not a dimmed copy of the enabled colours — the author wrote these."""
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
 
         palette = qapp.palette()
         disabled = QPalette.ColorGroup.Disabled
@@ -441,7 +437,7 @@ class TestPreviewDoesNotRepaintColours:
 
     def test_inactive_reads_the_same_as_active(self, panel: UISettingsPanel, qapp):
         """An unfocused window is the same window; Qt's default dimming is not."""
-        panel.tree.setCurrentItem(_row(panel, "murky"))
+        _card(panel, "murky").click()
 
         palette = qapp.palette()
         for role in (

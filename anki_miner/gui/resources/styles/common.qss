@@ -139,10 +139,12 @@ QPushButton#iconButton {
     border-radius: ${border-radius-default}px;
 }
 
-/* Themes panel: star toggle in the favorites column. Geometry (size + font)
- * is set in Python so it tracks the row-height constant; this rule only
- * carries the chrome that the QSS pipeline owns. Color rules live further
- * down with the other themed button rules. */
+/* Theme gallery: the favorite star on a card and on a family header. Geometry
+ * (box size + glyph font-size) is set in Python, from theme_gallery._star_geometry
+ * (a data_row_height() read off the star's own anchor widget), so it tracks
+ * ui_font_scale instead of a flat pixel constant; this rule only carries the
+ * chrome that the QSS pipeline owns. Color rules live further down with the
+ * other themed button rules. */
 QToolButton#starToggle {
     background: transparent;
     border: none;
@@ -284,14 +286,6 @@ QTableWidget::item:selected,
 QListWidget::item:selected,
 QTreeWidget::item:selected {
     border: none;
-}
-
-/* Themes panel: the star column needs the full row height for its
- * auto-sized icon button. The global 8-px item padding clips the top of
- * the glyph; scope an override to just this table so other tables in the
- * app keep their comfortable cell padding. */
-QTreeWidget#themesPanelTree::item {
-    padding: 0px;
 }
 
 QHeaderView::section {

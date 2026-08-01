@@ -1,6 +1,6 @@
 """Wizard pages for the guided first-run Setup Wizard (Task 3).
 
-Five ``QWizardPage`` subclasses. Each takes the parent :class:`SetupWizard` so
+Six ``QWizardPage`` subclasses. Each takes the parent :class:`SetupWizard` so
 it can read/write the working config and use the wizard's shared
 :class:`AnkiService` / :class:`ValidationService` and worker registry.
 
@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
+    QApplication,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -27,8 +28,9 @@ from PyQt6.QtWidgets import (
     QWizardPage,
 )
 
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.base import StatusBadge
-from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import (
@@ -58,6 +60,20 @@ RESOURCES_BLURB = QT_TRANSLATE_NOOP(
     "Download the recommended frequency list, pitch accent data, and dictionary now?",
 )
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-resources"
+
+#: Eight themes spanning light/dark and warm/cool, shown before the full set.
+#: A shortlist keeps the first page of onboarding a glance rather than a wall;
+#: "See all" is one click away and states the real count.
+WIZARD_SHORTLIST_THEMES = (
+    "dark",
+    "light",
+    "catppuccin-mocha",
+    "nord",
+    "tokyo-night",
+    "everforest-light",
+    "rose-pine-dawn",
+    "gruvbox-dark-medium",
+)
 
 
 def _open_url(url: str) -> None:
@@ -107,6 +123,88 @@ class _LiveCheckPage(QWizardPage):
     def _is_live_check(self) -> bool:
         """True when the emitting worker is still the check being waited on."""
         return self.sender() is self._live_check
+
+
+class ThemePage(QWizardPage):
+    """Step 1: pick a look.
+
+    Deliberately first and deliberately non-blocking. It is the one step with no
+    external dependency -- nothing to detect, nothing that can fail -- so it
+    costs the user nothing, and every page after it wears their own pick.
+
+    Stars are off here: favorites are a curation tool for someone who already
+    has opinions, and asking a new user to manage a top-right selector they have
+    not seen yet is noise. They are one click away in Settings afterwards.
+    """
+
+    def __init__(self, wizard: SetupWizard) -> None:
+        super().__init__(wizard)
+        self._wizard = wizard
+        # ThemeGalleryWidget.refresh() seeds selected_key() from the app-wide
+        # Theme.get_current_mode() so the matching card reads "Active" on
+        # first paint -- that is a display default, not a user decision, and
+        # it need not agree with the working config's own theme (e.g. before
+        # anything has synced the two). Only an actual click may write the
+        # config, so a page nobody touched stays inert.
+        self._touched = False
+
+        self.setTitle(self.tr("Pick a Look"))
+        self.setSubTitle(self.tr("Click a theme to try it. You can change it any time in Settings."))
+
+        layout = QVBoxLayout(self)
+
+        self.gallery = ThemeGalleryWidget(self, show_stars=False)
+        self.gallery.set_shortlist(WIZARD_SHORTLIST_THEMES)
+        self.gallery.theme_activated.connect(self._on_theme_activated)
+        layout.addWidget(self.gallery, 1)
+
+        row = QHBoxLayout()
+        self.see_all_btn = ModernButton(
+            tr_format(self.tr("See all %1 themes…"), len(Theme.get_available_themes())),
+            variant="secondary",
+        )
+        self.see_all_btn.clicked.connect(self._on_see_all_clicked)
+        row.addWidget(self.see_all_btn)
+        row.addStretch(1)
+        layout.addLayout(row)
+
+    def isComplete(self) -> bool:
+        # Always true. There is no wrong answer and no state to gather, so this
+        # step must never be able to hold the wizard up.
+        return True
+
+    def _on_see_all_clicked(self) -> None:
+        """Expand to the full grouped set, in place.
+
+        In place, not a dialog: a modal opened on top of a wizard page is a
+        second navigation stack over the first, and Escape then means two
+        different things depending on what has focus.
+        """
+        self.gallery.show_all_themes()
+        self.see_all_btn.setVisible(False)
+
+    def _on_theme_activated(self, key: str) -> None:
+        """Apply live so the wizard itself reskins -- that IS the preview."""
+        self._touched = True
+        Theme.set_mode(key)
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            Theme.apply_to_app(app, key)
+
+    def _write_theme_to_config(self) -> None:
+        if not self._touched:
+            return
+        key = self.gallery.selected_key()
+        if key and key != self._wizard.working_config().theme:
+            self._wizard.update_working_config(replace(self._wizard.working_config(), theme=key))
+
+    def stage_current_edits(self) -> None:
+        """Stage the current pick without navigating."""
+        self._write_theme_to_config()
+
+    def validatePage(self) -> bool:
+        self._write_theme_to_config()
+        return True
 
 
 class AnkiConnectPage(QWizardPage):

@@ -21,7 +21,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, QLockFile, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import QCoreApplication, QEvent, QLockFile, QObject, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -1158,6 +1158,66 @@ def offer_recovery(window: MainWindow) -> bool:
     return True
 
 
+class _DeferredDeleteWatcher(QObject):
+    """A global event filter that counts ``DeferredDelete`` deliveries.
+
+    Installed on the application itself (not any one widget), so it sees
+    every ``DeferredDelete`` sent to every object in the app during a
+    ``sendPostedEvents`` pass -- Qt delivers app-installed filters every event
+    for every object, ahead of the object's own handler. Never blocks
+    delivery (always returns ``False``).
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.count = 0
+
+    def eventFilter(self, obj: QObject | None, event: QEvent | None) -> bool:  # noqa: N802 - Qt override
+        if event is not None and event.type() == QEvent.Type.DeferredDelete:
+            self.count += 1
+        return False
+
+
+def _drain_deferred_deletes(app: QApplication, *, max_passes: int = 8) -> None:
+    """Flush pending ``DeferredDelete`` events over ``max_passes`` fixed passes.
+
+    Deleting a widget can post fresh ``DeferredDelete`` events for its own
+    children, so a single ``sendPostedEvents`` pass does not always catch the
+    tail -- see the installer-smoke exit path this backs.
+
+    ``max_passes`` is an unfalsifiable guess by construction (there is no Qt
+    API to ask "is the deferred-delete queue empty"), so an early return the
+    moment a pass delivers nothing looks like the obvious tightening -- it was
+    tried here and is WRONG: on the installer-smoke failure path (``fail()``
+    calls ``app.exit()`` on the very first tick, before ``window.close()``
+    ever runs) an early return reliably reintroduces the SIGSEGV this whole
+    drain exists to prevent, reproduced across six consecutive runs. Loop the
+    full fixed count unconditionally, as before; ``_DeferredDeleteWatcher``
+    only makes the cap's outcome observable -- a DEBUG log if deletes were
+    still landing on the very last pass -- it does not shorten the loop.
+
+    ``app.processEvents()`` is likewise load-bearing here, not a redundant
+    belt-and-suspenders call: dropping it (even with the full fixed-pass count
+    kept) reproduces the same SIGSEGV, six-for-six. ``sendPostedEvents(None,
+    DeferredDelete)`` alone is not sufficient on this path.
+    """
+    watcher = _DeferredDeleteWatcher()
+    app.installEventFilter(watcher)
+    try:
+        for _ in range(max_passes):
+            watcher.count = 0
+            app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+            app.processEvents()
+        if watcher.count:
+            logger.debug(
+                "Deferred-delete drain hit its %d-pass cap with %d delete(s) still pending at exit",
+                max_passes,
+                watcher.count,
+            )
+    finally:
+        app.removeEventFilter(watcher)
+
+
 def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
     """Run installed-artifact assertions over two event-loop ticks."""
 
@@ -1454,7 +1514,18 @@ def main():
 
     if installer_smoke:
         _schedule_installer_smoke(app, window)
-        sys.exit(app.exec())
+        smoke_result = app.exec()
+        # The failure branch of _schedule_installer_smoke calls app.exit() on
+        # the very first event-loop tick, before window.close() ever runs --
+        # so none of MainWindow's torn-down widgets get the extra loop
+        # iterations that the success path's finish() gets for free. The
+        # theme gallery alone deleteLater()s dozens of QObjects per rebuild
+        # (settings-tab construction rebuilds it twice more after the
+        # initial, empty one); left pending, PyQt/sip's interpreter-exit
+        # wrapper cleanup walks into one and segfaults (SIGSEGV in
+        # cleanup_qobject, confirmed with gdb). See _drain_deferred_deletes.
+        _drain_deferred_deletes(app)
+        sys.exit(smoke_result)
 
     # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
     # monitor that logs a WARNING with the GUI stack whenever the event loop

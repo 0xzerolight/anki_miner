@@ -1,0 +1,327 @@
+"""The reusable theme gallery: grouping, selection, stars, shortlist mode."""
+
+from __future__ import annotations
+
+import logging
+import re
+
+import pytest
+from PyQt6 import sip
+from PyQt6.QtCore import Qt
+
+from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.widgets.enhanced.theme_gallery import (
+    STAR_FILLED,
+    STAR_OUTLINE,
+    ThemeGalleryWidget,
+)
+
+
+@pytest.fixture(autouse=True)
+def reset_theme_state():
+    Theme.initialize(active="light", favorites=("light", "dark"), user_dir=None, state_listener=None)
+    yield
+
+
+def _gallery(qtbot, **kwargs) -> ThemeGalleryWidget:
+    widget = ThemeGalleryWidget(**kwargs)
+    qtbot.addWidget(widget)
+    return widget
+
+
+class TestPopulation:
+    def test_shows_every_available_theme(self, qtbot):
+        gallery = _gallery(qtbot)
+        assert set(gallery.card_keys()) == set(Theme.get_available_themes())
+
+    def test_grouping_matches_theme_grouping(self, qtbot):
+        gallery = _gallery(qtbot)
+        expected = [e.key for _family, entries in Theme.get_themes_grouped() for e in entries]
+        assert list(gallery.card_keys()) == expected
+
+    def test_family_headers_are_rendered_for_families(self, qtbot):
+        gallery = _gallery(qtbot)
+        families = {f for f, _entries in Theme.get_themes_grouped() if f is not None}
+        assert families.issubset(set(gallery.family_titles()))
+
+
+class TestShortlistMode:
+    def test_shortlist_shows_only_the_given_keys_in_order(self, qtbot):
+        gallery = _gallery(qtbot)
+        gallery.set_shortlist(["dark", "nord", "light"])
+        assert list(gallery.card_keys()) == ["dark", "nord", "light"]
+        assert gallery.is_showing_all() is False
+
+    def test_shortlist_drops_unknown_keys(self, qtbot):
+        gallery = _gallery(qtbot)
+        gallery.set_shortlist(["dark", "no-such-theme", "nord"])
+        assert list(gallery.card_keys()) == ["dark", "nord"]
+
+    def test_show_all_expands_back_to_everything(self, qtbot):
+        gallery = _gallery(qtbot)
+        gallery.set_shortlist(["dark"])
+        gallery.show_all_themes()
+        assert set(gallery.card_keys()) == set(Theme.get_available_themes())
+        assert gallery.is_showing_all() is True
+
+
+class TestSelection:
+    def test_clicking_a_card_emits_theme_activated(self, qtbot):
+        gallery = _gallery(qtbot)
+        with qtbot.waitSignal(gallery.theme_activated) as blocker:
+            gallery.card("nord").click()
+        assert blocker.args == ["nord"]
+
+    def test_selected_key_tracks_the_click(self, qtbot):
+        gallery = _gallery(qtbot)
+        gallery.card("nord").click()
+        assert gallery.selected_key() == "nord"
+
+    def test_set_active_moves_the_marker_without_a_rebuild(self, qtbot):
+        gallery = _gallery(qtbot)
+        before = gallery.card("nord")
+        gallery.set_active("nord")
+        assert gallery.card("nord") is before
+        assert gallery.selected_key() == "nord"
+
+    def test_active_theme_is_preselected_on_build(self, qtbot):
+        Theme.set_mode("sakura")
+        gallery = _gallery(qtbot)
+        assert gallery.selected_key() == "sakura"
+
+    def test_activation_ring_uses_the_newly_applied_theme_s_colour(self, qtbot):
+        """theme_activated must fire BEFORE set_active runs (see _on_card_clicked).
+
+        The gallery itself never applies a theme -- the host does, in its
+        theme_activated slot. This test mirrors that: the slot below calls
+        Theme.set_mode (standing in for the host's real theme-apply) before
+        set_active reads Theme.get_colors() for the ring. If the emit/set_active
+        order in the widget were ever reversed, this would assert against the
+        OLD theme's primary colour and fail.
+        """
+        gallery = _gallery(qtbot)
+        assert Theme.get_current_mode() == "light"
+
+        gallery.theme_activated.connect(Theme.set_mode)
+        gallery.card("nord").click()
+
+        new_primary = Theme.get_colors("nord")["primary"]
+        assert f"border: 2px solid {new_primary}" in gallery.card("nord").styleSheet()
+
+
+class TestStars:
+    def test_star_reflects_favorite_state(self, qtbot):
+        gallery = _gallery(qtbot)
+        assert gallery.star("dark").text() == STAR_FILLED
+        assert gallery.star("nord").text() == STAR_OUTLINE
+
+    def test_clicking_a_star_emits_favorite_toggled(self, qtbot):
+        gallery = _gallery(qtbot)
+        with qtbot.waitSignal(gallery.favorite_toggled) as blocker:
+            gallery.star("nord").click()
+        assert blocker.args == ["nord"]
+
+    def test_refresh_favorite_updates_one_star_in_place(self, qtbot):
+        gallery = _gallery(qtbot)
+        button = gallery.star("nord")
+        Theme.add_favorite("nord")
+        gallery.refresh_favorite("nord")
+        assert gallery.star("nord") is button
+        assert button.text() == STAR_FILLED
+
+    def test_family_star_emits_every_key_in_the_family(self, qtbot):
+        gallery = _gallery(qtbot)
+        with qtbot.waitSignal(gallery.family_favorites_toggled) as blocker:
+            gallery.family_star("Catppuccin").click()
+        assert set(blocker.args[0]) == {
+            "catppuccin-latte",
+            "catppuccin-frappe",
+            "catppuccin-macchiato",
+            "catppuccin-mocha",
+        }
+
+    def test_stars_can_be_switched_off(self, qtbot):
+        gallery = _gallery(qtbot, show_stars=False)
+        assert gallery.star("nord") is None
+        assert gallery.family_star("Catppuccin") is None
+
+
+def _font_px(style_sheet: str) -> int:
+    match = re.search(r"font-size:\s*(\d+)px", style_sheet)
+    assert match is not None, style_sheet
+    return int(match.group(1))
+
+
+class TestStarSizing:
+    """The favorite star's box and glyph must track ``ui_font_scale``.
+
+    The deleted tree panel's ``_apply_tree_metrics`` existed for exactly this;
+    ``theme_gallery._star_geometry`` is its replacement. A flat pixel constant
+    here means the glyph shrinks at 1.0x and clips its own box at 2.0x -- see
+    the module's ``_star_geometry`` docstring.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _restore_app_stylesheet(self, qapp):
+        stylesheet = qapp.styleSheet()
+        yield
+        Theme.set_font_scale(1.0)
+        qapp.setStyleSheet(stylesheet)
+
+    def _star_box_and_font(self, qtbot, qapp, font_scale: float) -> tuple[int, int]:
+        Theme.set_font_scale(font_scale)
+        Theme.apply_to_app(qapp)
+        gallery = _gallery(qtbot)
+        star = gallery.star("dark")
+        assert star is not None
+        return star.width(), _font_px(star.styleSheet())
+
+    def test_star_box_and_font_grow_together_with_scale(self, qtbot, qapp):
+        small_box, small_font = self._star_box_and_font(qtbot, qapp, 1.0)
+        large_box, large_font = self._star_box_and_font(qtbot, qapp, 1.5)
+        assert large_box > small_box
+        assert large_font > small_font
+
+    def test_font_never_exceeds_its_box(self, qtbot, qapp):
+        for scale in (1.0, 1.5, 2.0):
+            box, font_px = self._star_box_and_font(qtbot, qapp, scale)
+            assert font_px < box, (scale, box, font_px)
+
+
+class TestThumbnails:
+    def test_thumbnail_loads_after_first_paint(self, qtbot, qapp):
+        gallery = _gallery(qtbot)
+        gallery.show()
+        qtbot.waitExposed(gallery)
+        # First card in display order, top-left of the scroll viewport -- always
+        # actually painted on show(). "light" (used in the original brief draft)
+        # sorts to discovery position 19 of ~29 and sits below the fold on the
+        # 800x800 offscreen QPA screen, so its paintEvent never fires and the
+        # thumbnail never loads; that made the assertion below flake on the
+        # scroll position rather than test the lazy-load behaviour it names.
+        card = gallery.card(gallery.card_keys()[0])
+        qtbot.waitUntil(lambda: card.thumbnail.pixmap() is not None and not card.thumbnail.pixmap().isNull())
+
+        # Negative half: a below-fold card must NOT have loaded, because it was
+        # never painted. This is the actual point of deferring the render out of
+        # paintEvent (see the module docstring) -- without this assertion the
+        # test only proves the eager case and says nothing about laziness.
+        # "tokyo-night" is the last of 29 cards in discovery order (verified via
+        # Theme.get_themes_grouped()), several rows below the last visible row
+        # on the offscreen QPA's clamped 800x800 screen.
+        offscreen_card = gallery.card(gallery.card_keys()[-1])
+        assert offscreen_card.thumbnail.pixmap() is None or offscreen_card.thumbnail.pixmap().isNull()
+
+    def test_thumbnail_deleted_before_render_timer_fires_does_not_crash(self, qtbot, qapp):
+        """Pin the teardown race the module docstring names.
+
+        A card's paintEvent starts a zero-interval, single-shot timer that
+        loads the thumbnail on the next event-loop turn. If a host (the setup
+        wizard, in production) tears the card's widget tree down in that
+        window, the `thumbnail` QLabel can be destroyed before the timer
+        fires -- even though the timer is a child of the card and dies with
+        it, the timer is NOT what gets destroyed here, its sibling is. Without
+        the `sip.isdeleted` guard in `ThemeCard._load_thumbnail`, the pending
+        timeout calls `self.thumbnail.setPixmap(...)` on a dead C++ object and
+        raises `RuntimeError: wrapped C/C++ object of type QLabel has been
+        deleted` from inside the Qt event loop -- exactly the crash seen in
+        the setup wizard's flaky teardown tests.
+        """
+        gallery = _gallery(qtbot)
+        card = gallery.card(gallery.card_keys()[0])
+        # Mirror exactly what a real paintEvent does (see ThemeCard.paintEvent)
+        # without actually painting -- an explicit show()/waitExposed() here
+        # would let the event loop run and could drain the zero-interval timer
+        # before this test gets a chance to delete the thumbnail out from
+        # under it, making the race this test exists to pin non-deterministic.
+        card._thumbnail_requested = True
+        card._render_timer.start()
+        assert card._render_timer.isActive()
+
+        # Force the thumbnail's underlying C++ object to die right now --
+        # synchronously, not via deleteLater -- while the card and its timer
+        # stay alive. This reproduces the exact shape of the race: the timer
+        # fires into a card whose sibling child is already gone.
+        sip.delete(card.thumbnail)
+        assert sip.isdeleted(card.thumbnail)
+
+        # Let the pending zero-interval timer actually fire. Without the
+        # guard this raises inside the Qt event loop and pytest-qt's own
+        # exception capture fails the test; with the guard it is a silent
+        # no-op.
+        qtbot.wait(20)
+
+    def test_render_failure_is_caught_and_leaves_the_thumbnail_blank(self, qtbot, monkeypatch, caplog):
+        """``render_theme_thumbnail``'s leniency covers an unknown theme KEY
+        (falls back rather than raising), not every failure mode -- a
+        malformed user theme JSON reaching ``_substitute_variables``, say, can
+        still raise. ``_load_thumbnail`` runs from a timer slot, so an
+        uncaught exception here would escape into the Qt event loop rather
+        than any caller; it must be caught, logged, and leave the card blank.
+        """
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+
+        def _boom(_key: str):
+            raise ValueError("malformed theme JSON")
+
+        monkeypatch.setattr("anki_miner.gui.widgets.enhanced.theme_gallery.render_theme_thumbnail", _boom)
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.widgets.enhanced.theme_gallery"):
+            card._load_thumbnail()  # must not raise
+
+        assert card.thumbnail.pixmap() is None or card.thumbnail.pixmap().isNull()
+        assert "nord" in caplog.text
+
+
+class TestKeyboardFocus:
+    """The QTreeWidget this gallery replaced was arrow-key navigable; a bare
+    QFrame defaults to NoFocus and is not.
+
+    These pin the fix: every card is reachable and activatable from the
+    keyboard, and the gallery itself has a working ``setFocus()`` entry point
+    even though it is a plain ``QWidget`` (NoFocus) wrapping the real focus
+    targets.
+    """
+
+    def test_card_accepts_keyboard_focus(self, qtbot):
+        gallery = _gallery(qtbot)
+        assert gallery.card("nord").focusPolicy() == Qt.FocusPolicy.StrongFocus
+
+    def test_space_activates_the_focused_card(self, qtbot):
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+        with qtbot.waitSignal(gallery.theme_activated) as blocker:
+            qtbot.keyClick(card, Qt.Key.Key_Space)
+        assert blocker.args == ["nord"]
+
+    def test_return_activates_the_focused_card(self, qtbot):
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+        with qtbot.waitSignal(gallery.theme_activated) as blocker:
+            qtbot.keyClick(card, Qt.Key.Key_Return)
+        assert blocker.args == ["nord"]
+
+    def test_gallery_focus_proxy_resolves_to_a_live_card(self, qtbot):
+        gallery = _gallery(qtbot)
+        gallery.show()
+        qtbot.waitExposed(gallery)
+        first_key = gallery.card_keys()[0]
+
+        gallery.setFocus()
+
+        qtbot.waitUntil(lambda: gallery.card(first_key).hasFocus())
+
+    def test_focus_proxy_still_resolves_after_refresh(self, qtbot):
+        """refresh() destroys and recreates every card -- the proxy must follow."""
+        gallery = _gallery(qtbot)
+        gallery.show()
+        qtbot.waitExposed(gallery)
+
+        gallery.refresh()
+        first_key = gallery.card_keys()[0]
+        qtbot.waitUntil(lambda: gallery.card(first_key).isVisible())
+
+        gallery.setFocus()
+
+        qtbot.waitUntil(lambda: gallery.card(first_key).hasFocus())

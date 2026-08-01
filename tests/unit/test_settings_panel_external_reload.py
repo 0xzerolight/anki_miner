@@ -27,7 +27,6 @@ from pathlib import Path
 import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QShowEvent
-from PyQt6.QtWidgets import QTreeWidgetItem
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.resources.styles.theme import Theme
@@ -86,29 +85,8 @@ def _record(*signals) -> list[tuple]:
 
 
 def _active_theme_key(panel: UISettingsPanel) -> str | None:
-    """Return the theme key of the tree row ``_populate`` marked current."""
-    item = panel.tree.currentItem()
-    if item is None:
-        return None
-    key = item.data(panel.COL_NAME, Qt.ItemDataRole.UserRole)
-    return key if isinstance(key, str) else None
-
-
-def _item_for_key(panel: UISettingsPanel, key: str) -> QTreeWidgetItem:
-    """Return the (possibly nested) tree row carrying ``key``."""
-
-    def walk(item: QTreeWidgetItem):
-        yield item
-        for i in range(item.childCount()):
-            yield from walk(item.child(i))
-
-    root = panel.tree.invisibleRootItem()
-    assert root is not None
-    for i in range(root.childCount()):
-        for item in walk(root.child(i)):
-            if item.data(panel.COL_NAME, Qt.ItemDataRole.UserRole) == key:
-                return item
-    raise AssertionError(f"no tree row for theme {key!r}")
+    """Return the theme key of the card ``_populate`` marked selected."""
+    return panel.gallery.selected_key()
 
 
 class TestUIPanelLoadFromConfig:
@@ -237,7 +215,7 @@ class TestUIPanelRevertBaseline:
         panel.showEvent(QShowEvent())
         assert panel._preview_baseline == "light"
 
-        panel.tree.setCurrentItem(_item_for_key(panel, swapped_config.theme))
+        panel.gallery.card(swapped_config.theme).click()
         assert Theme.get_current_mode() == "dark"
         assert tab.config.theme == "dark"  # persisted, but no reload
         assert panel._preview_baseline == "light"
@@ -272,7 +250,7 @@ class TestUIPanelRevertBaseline:
         assert panel._preview_baseline == "light"
 
         # Preview "dark": _last_seen_theme becomes "dark", baseline stays light.
-        panel.tree.setCurrentItem(_item_for_key(panel, swapped_config.theme))
+        panel.gallery.card(swapped_config.theme).click()
         assert panel._preview_baseline == "light"
 
         # Switch to a profile whose theme is ALSO "dark".
@@ -307,6 +285,37 @@ class TestUIPanelThemesRoot:
         ui_panel._open_themes_folder()
 
         assert opened == [str(moved)]
+
+    def test_reload_on_an_unrelated_field_does_not_clear_the_thumbnail_cache(self, ui_panel, test_config, monkeypatch):
+        """A reload fires on ANY non-external field (this panel's own docstring),
+        e.g. toggling "Use system file dialogs" — that must not discard every
+        cached thumbnail. Only a ``themes_root`` change can redefine what a
+        theme key means.
+        """
+        calls: list[None] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.clear_thumbnail_cache",
+            lambda: calls.append(None),
+        )
+        reloaded = replace(test_config, use_native_file_dialogs=not test_config.use_native_file_dialogs)
+
+        ui_panel.load_from_config(reloaded)
+
+        assert calls == []
+
+    def test_reload_with_a_changed_themes_root_clears_the_thumbnail_cache(
+        self, ui_panel, test_config, tmp_path, monkeypatch
+    ):
+        calls: list[None] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.panels.ui_settings_panel.clear_thumbnail_cache",
+            lambda: calls.append(None),
+        )
+        moved = tmp_path / "other-themes"
+
+        ui_panel.load_from_config(replace(test_config, themes_root=moved))
+
+        assert calls == [None]
 
 
 class TestChainPanelRoots:

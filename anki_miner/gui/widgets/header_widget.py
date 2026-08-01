@@ -224,8 +224,14 @@ class HeaderWidget(QWidget):
             for key, display in favorites.items():
                 self.theme_combo.addItem(display, key)
 
-            # Sentinel entry that opens Settings → Themes.
-            self.theme_combo.addItem(self.tr("All themes…"), ALL_THEMES_SENTINEL)
+            # Sentinel entry that opens Settings → Themes. The count is the
+            # point: this combo lists favorites only, which ships as two
+            # entries, so without a number the app presents itself as having
+            # two themes rather than the full shipped set.
+            self.theme_combo.addItem(
+                tr_format(self.tr("Browse all %1 themes…"), len(available)),
+                ALL_THEMES_SENTINEL,
+            )
 
             # Select active theme.
             for i in range(self.theme_combo.count()):
@@ -233,14 +239,10 @@ class HeaderWidget(QWidget):
                     self.theme_combo.setCurrentIndex(i)
                     break
 
-            tooltip_names = ", ".join(available.values())
+            # The count now rides on the sentinel item, so the comma-joined dump
+            # of every installed name is redundant here.
             self.theme_combo.setToolTip(
-                tr_format(
-                    self.tr(
-                        "Active theme. Top-right shows favorites; pick 'All themes…' to manage them. " "Installed: %1"
-                    ),
-                    tooltip_names,
-                )
+                self.tr("Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.")
             )
         finally:
             self.theme_combo.blockSignals(False)
