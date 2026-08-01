@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from anki_miner.services.dictionary.providers.indexed_provider import (
     _DISPLAY_LIMIT,
     IndexedDictProvider,
@@ -1025,6 +1027,122 @@ class TestTagChips:
         batch = provider.lookup_many([(w, None) for w in words])
         for w in words:
             assert batch[w] == provider.lookup(w), f"mismatch for {w!r}"
+
+    def test_jmdict_sense_index_tags_are_suppressed(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [
+                DictRow(
+                    term="分る",
+                    reading="わかる",
+                    content='<li class="gloss-item">understand</li>',
+                    tags="1 v5r vi uk",
+                    sequence=1606560,
+                ),
+                DictRow(
+                    term="分る",
+                    reading="わかる",
+                    content='<li class="gloss-item">be known</li>',
+                    tags="2 v5r vi uk",
+                    sequence=1606560,
+                ),
+                DictRow(
+                    term="分る",
+                    reading="わかる",
+                    content='<li class="gloss-item">I know!</li>',
+                    tags="3 int",
+                    sequence=1606560,
+                ),
+                DictRow(
+                    term="分る",
+                    reading="わかる",
+                    content='<li class="gloss-item">other forms</li>',
+                    tags="forms",
+                    sequence=1606560,
+                ),
+            ],
+            [
+                TagMeta(name="1", category="", ord=-10, notes="JMdict Sense #1", score=0.0),
+                TagMeta(name="2", category="", ord=-10, notes="JMdict Sense #2", score=0.0),
+                TagMeta(name="3", category="", ord=-10, notes="JMdict Sense #3", score=0.0),
+                TagMeta(name="int", category="partOfSpeech", ord=-3, notes="interjection", score=0.0),
+                TagMeta(name="v5r", category="partOfSpeech", ord=-3, notes="Godan verb", score=0.0),
+                TagMeta(name="vi", category="partOfSpeech", ord=-3, notes="intransitive verb", score=0.0),
+                TagMeta(name="forms", category="", ord=0, notes="other forms", score=0.0),
+                TagMeta(name="uk", category="", ord=0, notes="usually written in kana", score=0.0),
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("分る")
+
+        assert result is not None
+        assert "JMdict Sense #" not in result
+        for name in ("1", "2", "3"):
+            assert f">{name}</span>" not in result
+        remaining_chips = [
+            '<span class="gloss-tag" data-category="partOfSpeech" title="interjection">int</span>',
+            '<span class="gloss-tag" data-category="partOfSpeech" title="Godan verb">v5r</span>',
+            '<span class="gloss-tag" data-category="partOfSpeech" title="intransitive verb">vi</span>',
+            '<span class="gloss-tag" data-category="" title="other forms">forms</span>',
+            '<span class="gloss-tag" data-category="" title="usually written in kana">uk</span>',
+        ]
+        positions = [result.index(chip) for chip in remaining_chips]
+        assert positions == sorted(positions)
+        assert "<i>(DictName)</i>" in result
+        assert provider.lookup_many([("分る", None)])["分る"] == result
+
+    @pytest.mark.parametrize(
+        ("meta", "why"),
+        [
+            (TagMeta(name="1", category="frequent", ord=-10, notes="JMdict Sense #1", score=0.0), "category"),
+            (TagMeta(name="1", category="", ord=-3, notes="JMdict Sense #1", score=0.0), "ord"),
+            (TagMeta(name="1", category="", ord=-10, notes="JMdict Sense #1", score=7.0), "score"),
+            (TagMeta(name="1", category="", ord=-10, notes="JMdict Sense #2", score=0.0), "notes-mismatch"),
+            (TagMeta(name="１", category="", ord=-10, notes="JMdict Sense #１", score=0.0), "fullwidth-digit"),
+        ],
+    )
+    def test_only_the_complete_jmdict_signature_is_suppressed(self, tmp_path: Path, meta: TagMeta, why: str):
+        """Every clause of the predicate discriminates, not just `notes`.
+
+        The suppression is a deliberate divergence from Yomitan aimed at exactly
+        one dictionary's internal sense indices. Each clause is what keeps a
+        third-party dictionary's numeric tag (a JLPT level, a grade) visible, so
+        each clause needs its own witness — otherwise dropping one silently
+        widens the blast radius to dictionaries this was never meant to touch.
+        """
+        db = tmp_path / f"t-{why}.sqlite"
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags=meta.name, sequence=1)],
+            [meta],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("x")
+
+        assert result is not None
+        assert f">{meta.name}</span>" in result, f"{why}: tag should still render"
+        assert "<i>(DictName)</i>" in result
+
+    def test_numeric_tag_without_jmdict_sense_notes_still_renders(self, tmp_path: Path):
+        db = tmp_path / "t.sqlite"
+        self._seed_with_tags(
+            db,
+            [DictRow(term="x", reading=None, content='<li class="gloss-item">x</li>', tags="1", sequence=1)],
+            [TagMeta(name="1", category="", ord=-10, notes="Level 1", score=0.0)],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        provider.load()
+
+        result = provider.lookup("x")
+
+        assert result is not None
+        assert '<span class="gloss-tag" data-category="" title="Level 1">1</span>' in result
+        assert "<i>(DictName)</i>" in result
 
     def test_chip_attrs_escaped(self, tmp_path: Path):
         db = tmp_path / "t.sqlite"
