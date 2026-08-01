@@ -23,6 +23,13 @@ def test_load_unions_only_enabled_sets():
     assert not svc.is_excluded("渋谷")  # place-names not enabled
 
 
+def test_excluded_terms_returns_exact_batch_hits():
+    svc = WordsetService(enabled_ids=("surnames",), resource_dir=FIXTURES)
+    svc.load()
+
+    assert svc.excluded_terms(["田中", "渋谷", "田中"]) == {"田中"}
+
+
 def test_load_with_no_enabled_sets_is_unavailable():
     svc = WordsetService(enabled_ids=(), resource_dir=FIXTURES)
     svc.load()

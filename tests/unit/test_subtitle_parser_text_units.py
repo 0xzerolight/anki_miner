@@ -150,6 +150,43 @@ class TestParseTextUnits:
 
         assert index is None
 
+    def test_reconstructs_attested_name_spans(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        names = {"夏油", "狗巻"}
+        service = SubtitleParserService(
+            config,
+            term_lookup=lambda terms: set(),
+            name_lookup=lambda terms: names.intersection(terms),
+        )
+        units = [ReadingUnit(text="夏油傑 狗巻君 鉢", index=0, location_label="p.0")]
+
+        words, _index, counts = service.parse_text_units(units, want_line_index=False)
+
+        assert {word.mined_form for word in words} >= {"夏油", "狗巻", "鉢"}
+        assert counts["夏油"] == 1
+        assert counts["狗巻"] == 1
+        assert counts["鉢"] == 1
+        assert not ({"夏", "油", "狗", "巻"} & counts.keys())
+
+    def test_subtitle_and_count_paths_reconstruct_attested_name_spans(self, tmp_path):
+        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        names = {"夏油", "狗巻"}
+        service = SubtitleParserService(
+            config,
+            term_lookup=lambda terms: set(),
+            name_lookup=lambda terms: names.intersection(terms),
+        )
+        srt = _write_srt(tmp_path / "names.srt", ["夏油傑", "狗巻君のことは まだ...", "鉢"])
+
+        words = service.parse_subtitle_file(srt)
+        counts = service.count_lemmas(srt)
+
+        assert {word.mined_form for word in words} >= {"夏油", "狗巻", "鉢"}
+        assert counts["夏油"] == 1
+        assert counts["狗巻"] == 1
+        assert counts["鉢"] == 1
+        assert not ({"夏", "油", "狗", "巻"} & counts.keys())
+
     def test_normalizes_reading_text_before_tokenizing(self, tmp_path):
         """Reading/OCR units get pre-tokenization JP normalization (Bug J4).
 

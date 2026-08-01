@@ -486,9 +486,9 @@ def create_services(
             parser here so Phase-2 mining hits the already-filled per-file
             tokenization cache. The caller owns ensuring the parser's
             parse-relevant config matches ``config`` (offset / bold target /
-            allowed POS / excluded subtypes / subtitle-filter fields); the
-            parser reads only those, so reuse is byte-identical for a matching
-            config.
+            allowed POS / excluded subtypes / excluded wordsets /
+            subtitle-filter fields); the parser reads only those, so reuse is
+            byte-identical for a matching config.
         anki_service: Optional pre-built :class:`AnkiService` to reuse.
             When provided the existing instance (and its populated vocab cache)
             is reused rather than constructing a fresh one. The batch queue
@@ -524,6 +524,27 @@ def create_services(
         dictionary_registry = _load_dict_registry(config, load_result)
         definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
 
+    # Load the exact same union used by the late exclusion filter before parser
+    # construction. Its batch membership seam also supplies raw name boundaries;
+    # keeping one service instance prevents parser/filter resource drift.
+    wordset_service: WordsetService | None = None
+    if config.excluded_wordsets:
+        try:
+            wordset_service = WordsetService(enabled_ids=config.excluded_wordsets)
+            wordset_service.load()
+            if wordset_service.is_available():
+                load_result.info.append(
+                    tr_format(_tr("Name wordsets loaded: %1 set(s) enabled"), len(config.excluded_wordsets))
+                )
+            else:
+                wordset_service = None
+        except MemoryError:
+            raise  # never an optional-source miss; see the module note
+        except Exception as e:
+            logger.warning(f"Could not load name wordsets: {e}")
+            load_result.warnings.append(tr_format(_tr("Couldn't load name wordsets: %1"), e))
+            wordset_service = None
+
     if subtitle_parser is None:
         # Headword-existence probe: injected iff an indexed offline dict is
         # enabled (compound matching, services/compound_matcher.py, is always on)
@@ -552,9 +573,11 @@ def create_services(
         # returns None when no chain member is commonness-aware (degrade).
         term_common_lookup = definition_service.offline_term_commonness if has_indexed_dict else None
         term_rules_lookup = definition_service.offline_deinflection_terms_exist if has_indexed_dict else None
+        name_lookup = wordset_service.excluded_terms if wordset_service is not None else None
         subtitle_parser = SubtitleParserService(
             config,
             term_lookup=term_lookup,
+            name_lookup=name_lookup,
             reading_lookup=reading_lookup,
             kana_attest_lookup=kana_attest_lookup,
             term_common_lookup=term_common_lookup,
@@ -610,24 +633,6 @@ def create_services(
             logger.warning(f"Could not load word lists: {e}")
             load_result.warnings.append(tr_format(_tr("Couldn't load word lists: %1"), e))
             word_list_service = None
-
-    wordset_service = None
-    if config.excluded_wordsets:
-        try:
-            wordset_service = WordsetService(enabled_ids=config.excluded_wordsets)
-            wordset_service.load()
-            if wordset_service.is_available():
-                load_result.info.append(
-                    tr_format(_tr("Name wordsets loaded: %1 set(s) enabled"), len(config.excluded_wordsets))
-                )
-            else:
-                wordset_service = None
-        except MemoryError:
-            raise  # never an optional-source miss; see the module note
-        except Exception as e:
-            logger.warning(f"Could not load name wordsets: {e}")
-            load_result.warnings.append(tr_format(_tr("Couldn't load name wordsets: %1"), e))
-            wordset_service = None
 
     return Services(
         subtitle_parser=subtitle_parser,

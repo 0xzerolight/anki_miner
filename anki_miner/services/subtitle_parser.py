@@ -14,7 +14,12 @@ from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_form
-from anki_miner.services.compound_matcher import CompoundDictionaryMatcher, TermLookup
+from anki_miner.services.compound_matcher import (
+    CompoundDictionaryMatcher,
+    NameLookup,
+    NameSpanMatcher,
+    TermLookup,
+)
 from anki_miner.services.deinflection import (
     TermCommonLookup,
     TermRulesLookup,
@@ -71,6 +76,7 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "bold_target_in_sentence",
     "allowed_pos",
     "excluded_subtypes",
+    "excluded_wordsets",
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
@@ -276,6 +282,7 @@ class SubtitleParserService:
         self,
         config: AnkiMinerConfig,
         term_lookup: TermLookup | None = None,
+        name_lookup: NameLookup | None = None,
         reading_lookup: ReadingLookup | None = None,
         kana_attest_lookup: KanaAttestLookup | None = None,
         term_common_lookup: TermCommonLookup | None = None,
@@ -310,6 +317,12 @@ class SubtitleParserService:
                 words (Yomitan longest-match). ``None`` (no offline dictionary
                 or raw-entry-only callers) keeps parsing byte-identical to
                 the pre-compound-matching behavior.
+            name_lookup: Optional batch exact-membership probe over enabled
+                name wordsets (``WordsetService.excluded_terms``). When
+                provided, multi-token names are reconstructed from raw token
+                surfaces so the later exact wordset filter sees the full name.
+                Kept separate from ``term_lookup`` because name candidates
+                must never deinflect an adjective-misclassified tail.
             reading_lookup: Optional batch attested-readings probe
                 (``DefinitionService.offline_term_readings``). When provided,
                 merged-compound kana is corrected to the dictionary's attested
@@ -365,6 +378,14 @@ class SubtitleParserService:
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if self._attest is not None and COMPOUND_MATCHING:
             self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
+        # Name resources define raw-source boundaries independently of the
+        # ordinary dictionary. This pass runs after dictionary matching so a
+        # dictionary-attested vocabulary span keeps its established boundary;
+        # remaining raw-surface spans can still be reconstructed for the late
+        # exact name-wordset filter.
+        self._name_matcher: NameSpanMatcher | None = None
+        if name_lookup is not None:
+            self._name_matcher = NameSpanMatcher(name_lookup, self._inclusion_rule)
         # Reading-capable offline existence probe for kana recovery
         # (see _recover_kana_content_word). None ⇒ no recovery, safe degrade.
         self._kana_attest_lookup = kana_attest_lookup
@@ -665,6 +686,8 @@ class SubtitleParserService:
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         if self._compound_matcher is not None:
             merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
+        if self._name_matcher is not None:
+            merged_tokens = self._name_matcher.merge_line(text, merged_tokens)
         # Dictionary reading attestation for merged compounds (audit F2): fixes
         # rendaku/junction kana on the synthetics; no-op (and no lookup) when
         # no reading_lookup is wired or the line produced no merges.
