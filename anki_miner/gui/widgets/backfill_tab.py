@@ -1,4 +1,4 @@
-"""Update Existing Notes tool tab (Utilities → Update Notes).
+"""Card Backfill tool tab (Utilities → Card Backfill).
 
 Bulk-fills pitch/frequency/definition/glossary/reading fields on EXISTING
 miner notes after the user installs new resources. Two-step flow: Scan
@@ -133,7 +133,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
 
-        layout.addWidget(SectionHeader(self.tr("Update Existing Notes")))
+        layout.addWidget(SectionHeader(self.tr("Card Backfill")))
         hint = QLabel(
             self.tr(
                 "Fill missing fields on notes you mined earlier, using the currently "
@@ -518,6 +518,9 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             parts.append(
                 self.tr("Nothing to overwrite — the freshly computed values are identical to the existing content.")
             )
+        elif plan.guessed_reading_skips > 0:
+            # Not "nothing found": the values existed, they were withheld.
+            parts.append(self.tr("Nothing to overwrite — the existing pitch was kept, see below."))
         else:
             # Overwrite scan with zero identical skips: the lookups produced no
             # proposals (word not covered / field absent), so claiming the
@@ -528,6 +531,14 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
                 self.tr("{count} field value(s) already up to date (identical to the computed value).").format(
                     count=plan.identical_skips
                 )
+            )
+        if plan.guessed_reading_skips > 0:
+            parts.append(
+                self.tr(
+                    "{count} pitch field(s) kept — the reading could only be guessed from the word alone, "
+                    "so overwriting could have applied the wrong homograph's accent. "
+                    "Map an Expression Reading or Furigana field to overwrite them."
+                ).format(count=plan.guessed_reading_skips)
             )
         if plan.sentinel_only_sorts:
             parts.append(

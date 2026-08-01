@@ -480,6 +480,10 @@ class GUIConfigManager:
         return cls._path_field_names() | {
             "first_run_shortcut_done",
             "first_run_setup_done",
+            # Records that THIS machine's pitch_accent.csv was folded into the
+            # chain. Travelling, it would suppress the receiving machine's own
+            # one-time migration and lose its legacy pitch data.
+            "legacy_pitch_migrated",
             "last_known_version",
             "skipped_update_version",
             "dictionary_chain",

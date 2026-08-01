@@ -138,6 +138,9 @@ if [ ! -f "vendor/yt-dlp/${YTDLP_INSTALL_AS}" ]; then
   cp "$YTDLP_DL" "vendor/yt-dlp/${YTDLP_INSTALL_AS}"
   chmod +x "vendor/yt-dlp/${YTDLP_INSTALL_AS}"
   [ -f licenses/yt-dlp/LICENSE ] || curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/LICENSE" -o licenses/yt-dlp/LICENSE || true
+  # Same pair release.yml fetches — the spec bundles the whole directory, so the
+  # local preflight build must not produce a bundle the real matrix would not.
+  [ -f licenses/yt-dlp/THIRD_PARTY_LICENSES.txt ] || curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/THIRD_PARTY_LICENSES.txt" -o licenses/yt-dlp/THIRD_PARTY_LICENSES.txt || true
 fi
 echo "vendor/yt-dlp: $(ls vendor/yt-dlp)"
 echo

@@ -370,16 +370,32 @@ class TestContextMenuCopy:
 
         assert QApplication.clipboard().text() == dlg.table.item(row, 1).text()
 
-    def test_copy_word_unaffected_by_pick(self, qtbot):
-        """Picking another sentence changes the scene, never the word copied."""
-        dlg = WordCurationDialog([_variant_word()])
+    def test_copy_word_follows_the_pick(self, qtbot):
+        """The menu copies the picked variant's mined form, not the primary's.
+
+        Needs a surface-mined POS whose two lines differ: on a 動詞 both
+        candidates resolve through ``orth_base or lemma`` to the same string, so
+        the assertion would hold whichever object the handler read.
+        """
+        dlg = WordCurationDialog([_noun_with_varying_surface()])
         qtbot.addWidget(dlg)
         _select_and_fire(dlg, 0)
         dlg.sentence_list.setCurrentRow(1)
 
         self._copy_word_via_menu(dlg, 0)
 
-        assert QApplication.clipboard().text() == "想う"
+        assert QApplication.clipboard().text() == "子ども"
+
+    def test_copy_word_still_matches_the_mined_column_after_a_pick(self, qtbot):
+        """Clipboard and column 1 stay the same string once a pick has moved both."""
+        dlg = WordCurationDialog([_noun_with_varying_surface()])
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        dlg.sentence_list.setCurrentRow(1)
+
+        self._copy_word_via_menu(dlg, 0)
+
+        assert QApplication.clipboard().text() == _cell(dlg, 0, 1).text()
 
 
 class TestRowCopyRole:

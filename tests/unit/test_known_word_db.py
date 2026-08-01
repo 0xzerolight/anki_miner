@@ -651,6 +651,20 @@ class TestNfcMigration:
         assert db.get_known_words() == {self.NFC}
         assert db.get_words_by_source("user") == {self.NFC}
 
+    def test_reads_normalize_without_the_migration(self, tmp_path):
+        """The user ignore list is read on every run; initialize() is not called.
+
+        service_factory only initializes the DB when use_known_words_db is on,
+        but episode_processor reads source='user' regardless (Issue #42) — so a
+        migration-gated fold alone would leave exactly that population still
+        re-carding words they marked known.
+        """
+        db_path = self._legacy_db(tmp_path, [(self.NFD, "user", "2026-01-01")])
+        db = KnownWordDB(db_path)  # deliberately NOT initialized
+
+        assert db.get_words_by_source("user") == {self.NFC}
+        assert db.get_known_words() == {self.NFC}
+
     def test_merges_collisions_keeping_user_source(self, tmp_path):
         """Two spellings of one word merge, and a curated mark is never lost."""
         db_path = self._legacy_db(

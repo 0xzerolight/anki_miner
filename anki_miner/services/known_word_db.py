@@ -129,21 +129,31 @@ class KnownWordDB:
         return self._db_path.exists() and os.access(self._db_path, os.R_OK)
 
     def get_known_words(self) -> set[str]:
-        """Return all known word lemmas.
+        """Return all known word lemmas, NFC-normalized.
+
+        Normalizing on read as well as on write is what makes the guarantee
+        unconditional. :meth:`_migrate_to_nfc` only runs from
+        :meth:`initialize`, and ``service_factory`` calls that only when
+        ``config.use_known_words_db`` is on — while the user ignore list is read
+        on EVERY run regardless (Issue #42). A pre-fix NFD row in a database
+        that never got initialized would otherwise still miss the NFC probe and
+        re-card a word the user marked known. Idempotent and cheap.
 
         Returns:
             Set of all lemma strings in the database.
         """
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words")
-            return {row[0] for row in cursor.fetchall()}
+            return _normalize_all({row[0] for row in cursor.fetchall()})
 
     def get_words_by_source(self, source: str) -> set[str]:
-        """Return all lemmas stored under a given source label.
+        """Return all lemmas stored under a given source label, NFC-normalized.
 
         Used for the user-curated ignore list (Issue #42): ``source='user'``
         words are applied on every mining run regardless of
-        ``config.use_known_words_db``.
+        ``config.use_known_words_db`` — which is precisely the path the
+        ``initialize()``-gated migration does not cover, hence the read-side
+        fold (see :meth:`get_known_words`).
 
         Args:
             source: Source label to filter on (e.g. 'anki', 'user').
@@ -153,7 +163,7 @@ class KnownWordDB:
         """
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words WHERE source = ?", (source,))
-            return {row[0] for row in cursor.fetchall()}
+            return _normalize_all({row[0] for row in cursor.fetchall()})
 
     def add_words(self, words: set[str], source: str = "anki") -> int:
         """Bulk insert words into the database, ignoring duplicates.

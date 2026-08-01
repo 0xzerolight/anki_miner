@@ -117,6 +117,19 @@ alass_license_datas = []
 if os.path.isdir(alass_license_dir):
     alass_license_datas.append((alass_license_dir, os.path.join("licenses", "alass")))
 
+# Bundle the yt-dlp license texts if present (populated by a sibling CI task, and by
+# release_preflight.sh locally). Conditional so local builds don't hard-fail before
+# the license dir exists. Lands at sys._MEIPASS/licenses/yt-dlp/ in the bundle.
+#
+# This is `datas`, not `binaries`, so unlike ytdlp_binaries above it is NOT skipped on
+# macOS: PyInstaller copies data files verbatim, and only the Mach-O rewriting that
+# corrupts the vendored executable forced the post-build copy there. Every OS that
+# ships the binary therefore ships its license alongside, as ffmpeg/alass/libmpv do.
+ytdlp_license_dir = os.path.join(project_root, "licenses", "yt-dlp")
+ytdlp_license_datas = []
+if os.path.isdir(ytdlp_license_dir):
+    ytdlp_license_datas.append((ytdlp_license_dir, os.path.join("licenses", "yt-dlp")))
+
 # Bundle the libmpv license/source-offer files (committed README/COPYING plus the
 # per-artifact Copyright/SOURCES.txt the CI fetch step drops in). Lands at
 # sys._MEIPASS/licenses/libmpv/ in the bundle.
@@ -221,6 +234,7 @@ a = Analysis(
     ]
     + ffmpeg_license_datas
     + alass_license_datas
+    + ytdlp_license_datas
     + libmpv_license_datas,
     hiddenimports=[
         "unidic_lite",

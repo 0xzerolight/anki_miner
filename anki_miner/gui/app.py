@@ -88,6 +88,40 @@ def _scrub_pyinstaller_env() -> None:
             os.environ.pop(var, None)
 
 
+def available_impersonate_targets(stdout: str) -> list[str]:
+    """Usable target rows from yt-dlp's ``--list-impersonate-targets`` output.
+
+    The output is a ``[info]`` banner, a ``Client  OS  Source`` header, a rule of
+    dashes, then one row per target — every row ending in ``(unavailable)`` when
+    curl_cffi is absent::
+
+        [info] Available impersonate targets
+        Client    OS   Source
+        ------------------------------------
+        Chrome    -    curl_cffi (unavailable)
+
+    Module-level and free of subprocess plumbing so the filter itself is
+    testable. It has to be: the original inline version dropped lines on
+    ``"unavailable" not in line.lower()``, and "unavailable" is not a substring
+    of "Available" — the banner always survived, ``available`` was never empty,
+    and the assertion it feeds could not fail. A zipapp asset would have shipped
+    with a green smoke.
+    """
+    rows: list[str] = []
+    for line in stdout.splitlines():
+        if line.startswith("["):
+            continue  # [info] / [debug] banner
+        fields = line.split()
+        if len(fields) < 3:
+            continue  # blank line or the dashed rule
+        if fields[0] == "Client":
+            continue  # column header
+        if "(unavailable)" in line:
+            continue
+        rows.append(line)
+    return rows
+
+
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
@@ -148,11 +182,11 @@ def _run_bundled_smoke() -> int:
             text=True,
             timeout=120,
         )
-        available = [
-            line
-            for line in (targets_proc.stdout or "").splitlines()
-            if line.strip() and "unavailable" not in line.lower() and "----" not in line and "Client" not in line
-        ]
+        if targets_proc.returncode != 0:
+            raise RuntimeError(
+                f"bundled yt-dlp --list-impersonate-targets exited " f"{targets_proc.returncode}: {targets_proc.stderr}"
+            )
+        available = available_impersonate_targets(targets_proc.stdout or "")
         if not available:
             raise RuntimeError(
                 "bundled yt-dlp reports no available impersonate targets — curl_cffi is "

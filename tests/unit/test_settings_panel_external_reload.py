@@ -251,6 +251,38 @@ class TestUIPanelRevertBaseline:
         assert Theme.get_current_mode() == "light"
         assert _active_theme_key(panel) == "light"
 
+    def test_a_profile_switch_repoints_the_baseline_even_onto_the_previewed_theme(
+        self, tab, test_config, swapped_config
+    ):
+        """The panel-preview guard must not swallow a whole-config adoption.
+
+        ``load_from_config`` skips the re-point when the incoming theme equals
+        the one the panel last made live, so a profile whose theme happens to
+        match what the user is previewing left the baseline on the OUTGOING
+        profile's theme — and Revert then applied and persisted a theme the
+        incoming profile never had. ``reload_from_config`` is external by
+        definition, so it re-points unconditionally.
+        """
+        Theme.set_mode("light")
+        tab.config = replace(test_config, theme="light")
+        tab._load_config()
+        panel = tab.ui_panel
+
+        panel.showEvent(QShowEvent())
+        assert panel._preview_baseline == "light"
+
+        # Preview "dark": _last_seen_theme becomes "dark", baseline stays light.
+        panel.tree.setCurrentItem(_item_for_key(panel, swapped_config.theme))
+        assert panel._preview_baseline == "light"
+
+        # Switch to a profile whose theme is ALSO "dark".
+        Theme.set_mode(swapped_config.theme)
+        tab.reload_from_config(swapped_config)
+
+        assert panel._preview_baseline == "dark"
+        panel._revert_preview()
+        assert Theme.get_current_mode() == "dark"
+
 
 class TestUIPanelThemesRoot:
     """The "Open themes folder" button follows the config; the tree cannot."""

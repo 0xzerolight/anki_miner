@@ -1602,11 +1602,22 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Callers must own the WHOLE config: this discards in-progress panel edits
         by design, which is why it is a separate entry point rather than a flag.
 
+        The theme Revert baseline is re-pointed unconditionally afterwards.
+        ``UISettingsPanel._load_config`` re-points it only when the incoming
+        theme differs from the one the panel last made live — a guard that is
+        right for an ordinary reload but wrong here: if the incoming profile's
+        theme happens to equal the one being previewed, an external swap reads
+        as the panel's own preview and the baseline stays on the OUTGOING
+        profile's theme, so Revert then applies AND persists a theme the
+        incoming profile never had. A whole-config adoption is by definition
+        external, so there is nothing to protect.
+
         Args:
             config: Configuration to render; becomes ``self.config``.
         """
         self.config = config
         self._load_config()
+        self.ui_panel.reset_baseline()
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).

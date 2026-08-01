@@ -1,4 +1,4 @@
-"""Worker threads for the Update Existing Notes tool (Utilities → Update Notes)."""
+"""Worker threads for the Card Backfill tool (Utilities → Card Backfill)."""
 
 import logging
 

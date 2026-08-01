@@ -592,3 +592,26 @@ def test_unknown_key_survives_full_save_round_trip(qtbot):
     result = panel.contribute(AnkiMinerConfig())
 
     assert result.anki_fields["future_unknown_key"] == "SomeField"
+
+
+def test_load_from_config_clears_a_status_from_the_previous_selection(qtbot, test_config):
+    """A settings import or profile switch must not leave a stale green count.
+
+    ``set_deck_name`` inserts a name Anki does not report as a phantom, and
+    ``_on_deck_selection_changed`` stays silent for exactly that case, so the
+    count written by the last refresh would sit above a deck that will fail
+    the run.
+    """
+    from dataclasses import replace
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_available_decks(["Default", "JP::Mining"])
+    panel.set_available_note_types(["Lapis"])
+    panel.set_deck_status(True, "2 decks loaded")
+    panel.set_notetype_status(True, "1 note type loaded")
+
+    panel.load_from_config(replace(test_config, anki_deck_name="JP::Old", anki_note_type="Ghost"))
+
+    assert panel.deck_status.text() == ""
+    assert panel.notetype_status.text() == ""

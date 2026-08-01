@@ -7,11 +7,13 @@ service. The new model layers multiple per-source SQLite indexes under
 This module folds the old single file into a ``legacy-pitch`` source on first
 launch so existing users keep their pitch data without re-importing anything.
 
-The entry point is idempotent — it no-ops once the chain is populated or the
-legacy index already exists — so it is safe to call on every startup. The
+The entry point is idempotent — it no-ops once the chain is populated, once the
+legacy index already exists, or once ``config.legacy_pitch_migrated`` records
+that the fold has happened — so it is safe to call on every startup. The
 original CSV is left in place (graceful downgrade to older app versions this
 release; retire alongside ``pitch_accent_path`` later, mirroring how the
-frequency migrator was retired after soaking).
+frequency migrator was retired after soaking); that is exactly why the marker is
+needed rather than inferring from the file's presence.
 """
 
 from __future__ import annotations
@@ -43,7 +45,21 @@ def migrate_legacy_pitch_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | None:
     if legacy_db.exists():
         # Index already built on a prior launch but the chain reference was
         # lost (e.g. config reset). Back-fill the reference without re-importing.
-        return dataclasses.replace(config, pitch_chain=(PitchSourceEntry(_LEGACY_SOURCE_ID),))
+        # Deliberate removal cannot reach here — the panel rmtrees the slot — so
+        # this branch only ever recovers a reference, never a deleted source.
+        return dataclasses.replace(
+            config,
+            pitch_chain=(PitchSourceEntry(_LEGACY_SOURCE_ID),),
+            legacy_pitch_migrated=True,
+        )
+
+    # The CSV is deliberately kept on disk for downgrade, so its presence cannot
+    # mean "not migrated yet". Without this marker, removing the migrated source
+    # (empty chain + no index) looked exactly like a fresh install and the next
+    # launch re-imported the file — resurrecting a source the removal dialog
+    # said could not be undone, and silently re-activating pitch.
+    if config.legacy_pitch_migrated:
+        return None
 
     # No legacy file to migrate. (Pre-chain builds had no separate on/off flag —
     # file presence WAS the activation switch — so presence alone implies the
@@ -68,4 +84,8 @@ def migrate_legacy_pitch_csv(config: AnkiMinerConfig) -> AnkiMinerConfig | None:
         )
         return None
 
-    return dataclasses.replace(config, pitch_chain=(PitchSourceEntry(_LEGACY_SOURCE_ID),))
+    return dataclasses.replace(
+        config,
+        pitch_chain=(PitchSourceEntry(_LEGACY_SOURCE_ID),),
+        legacy_pitch_migrated=True,
+    )
