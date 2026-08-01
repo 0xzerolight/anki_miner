@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from PyQt6 import sip
 from PyQt6.QtCore import Qt
@@ -141,6 +143,48 @@ class TestStars:
         gallery = _gallery(qtbot, show_stars=False)
         assert gallery.star("nord") is None
         assert gallery.family_star("Catppuccin") is None
+
+
+def _font_px(style_sheet: str) -> int:
+    match = re.search(r"font-size:\s*(\d+)px", style_sheet)
+    assert match is not None, style_sheet
+    return int(match.group(1))
+
+
+class TestStarSizing:
+    """The favorite star's box and glyph must track ``ui_font_scale``.
+
+    The deleted tree panel's ``_apply_tree_metrics`` existed for exactly this;
+    ``theme_gallery._star_geometry`` is its replacement. A flat pixel constant
+    here means the glyph shrinks at 1.0x and clips its own box at 2.0x -- see
+    the module's ``_star_geometry`` docstring.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _restore_app_stylesheet(self, qapp):
+        stylesheet = qapp.styleSheet()
+        yield
+        Theme.set_font_scale(1.0)
+        qapp.setStyleSheet(stylesheet)
+
+    def _star_box_and_font(self, qtbot, qapp, font_scale: float) -> tuple[int, int]:
+        Theme.set_font_scale(font_scale)
+        Theme.apply_to_app(qapp)
+        gallery = _gallery(qtbot)
+        star = gallery.star("dark")
+        assert star is not None
+        return star.width(), _font_px(star.styleSheet())
+
+    def test_star_box_and_font_grow_together_with_scale(self, qtbot, qapp):
+        small_box, small_font = self._star_box_and_font(qtbot, qapp, 1.0)
+        large_box, large_font = self._star_box_and_font(qtbot, qapp, 1.5)
+        assert large_box > small_box
+        assert large_font > small_font
+
+    def test_font_never_exceeds_its_box(self, qtbot, qapp):
+        for scale in (1.0, 1.5, 2.0):
+            box, font_px = self._star_box_and_font(qtbot, qapp, scale)
+            assert font_px < box, (scale, box, font_px)
 
 
 class TestThumbnails:

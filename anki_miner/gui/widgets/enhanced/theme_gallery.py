@@ -46,6 +46,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles._variables import SPACING
 from anki_miner.gui.resources.styles.theme import Theme, ThemeGroupEntry
+from anki_miner.gui.utils.qt_helpers import data_row_height
 from anki_miner.utils.i18n import tr_format
 
 from .theme_preview import DEFAULT_THUMBNAIL_SIZE, render_theme_thumbnail
@@ -62,7 +63,18 @@ FAMILY_STAR_PARTIAL_OPACITY = 0.45
 #: horizontal scrollbar and still shows two full rows above the fold.
 _COLUMNS = 3
 
-_STAR_SIDE_PX = 28
+
+def _star_geometry(widget: QWidget) -> tuple[int, int]:
+    """Return ``(box_side_px, font_px)`` for a star button anchored to ``widget``.
+
+    Same formula the deleted tree-panel ``_apply_tree_metrics`` used, re-derived
+    here from ``widget``'s own (polished, themed) font through the shared
+    ``data_row_height`` rather than a flat constant -- the old flat 28px box
+    clipped the glyph at ``ui_font_scale`` above ~1.4 and shrank it well below
+    the tree-era 21px at 1.0.
+    """
+    row_height = data_row_height(widget)
+    return row_height - 2, int(row_height * 0.6)
 
 
 class ThemeCard(QFrame):
@@ -218,7 +230,9 @@ class ThemeCard(QFrame):
         button.setCheckable(True)
         button.setAutoRaise(True)
         button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        button.setFixedSize(_STAR_SIDE_PX, _STAR_SIDE_PX)
+        side, font_px = _star_geometry(self)
+        button.setFixedSize(side, side)
+        button.setStyleSheet(f"font-size: {font_px}px;")
         button.setToolTip(self.tr("Click to add to / remove from favorites."))
         button.clicked.connect(lambda _checked=False: self.star_clicked.emit(self._key))
         return button
@@ -429,7 +443,9 @@ class ThemeGalleryWidget(QWidget):
             button.setObjectName("starToggle")
             button.setAutoRaise(True)
             button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            button.setFixedSize(_STAR_SIDE_PX, _STAR_SIDE_PX)
+            side, font_px = _star_geometry(header)
+            button.setFixedSize(side, side)
+            button.setStyleSheet(f"font-size: {font_px}px;")
             keys = tuple(e.key for e in entries)
             button.clicked.connect(lambda _checked=False, k=keys: self.family_favorites_toggled.emit(k))
             self._family_stars[family] = button
