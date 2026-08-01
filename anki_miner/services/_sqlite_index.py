@@ -150,11 +150,23 @@ def _supported_schema_version(family: StoreFamily, version: int) -> bool:
     return version == SCHEMA_VERSION
 
 
+# Oldest dictionary index schema this app ever wrote. Ownership proof accepts
+# anything from here up to the current version.
+_OLDEST_OWNED_DICT_SCHEMA = 3
+
+
 def _supported_ownership_schema_version(family: StoreFamily, version: int) -> bool:
     if family == "dictionary":
         from anki_miner.services.dictionary.storage import SCHEMA_VERSION
 
-        return version in (3, SCHEMA_VERSION)
+        # A RANGE, never a version pair. Ownership answers "did we write this
+        # directory", which stays true for every schema we ever wrote; staleness
+        # is a separate question already answered by DictMeta.schema_ok. Pinning
+        # {oldest, current} silently un-owns the immediately-previous version on
+        # every bump — exactly the dictionaries an upgrade needs to repair — so
+        # Reimport All would refuse them as missing-source and the user would
+        # have to re-add every dictionary by hand.
+        return _OLDEST_OWNED_DICT_SCHEMA <= version <= SCHEMA_VERSION
     return _supported_schema_version(family, version)
 
 

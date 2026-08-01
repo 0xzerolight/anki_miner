@@ -330,6 +330,26 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "お誕生日おめでとうございます",
 )
 
+# Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
+# and `resolve_dictionary_form` now validates each deinflection hypothesis's
+# condition mask against them (an attested-but-POS-incompatible headword must not
+# win on spelling alone). A rules-less row therefore attests only zero-condition
+# spelling variants, so omitting these here would silently switch the resolver
+# off and flatline the jiru-zuru recall floor rather than fail loudly.
+# Unlisted headwords keep "" on purpose: nouns and collocations do not inflect.
+_ANCHOR_RULES: dict[str, str] = {
+    # ichidan (jiru-zuru targets + other ichidan guards)
+    **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる"), "v1"),
+    **dict.fromkeys(("報いる", "帰れる", "見る", "いる", "くれる"), "v1"),
+    # godan, keyed by their final mora
+    **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
+    **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),
+    **dict.fromkeys(("サボる", "わかる", "ある"), "v5r"),
+    "おく": "v5k",
+    # i-adjectives
+    **dict.fromkeys(("すごい", "凄い", "かわいい", "可愛い", "あざとい", "しがない", "やばい", "うまい"), "adj-i"),
+}
+
 _ANCHOR_DICT_ID = "anchor-fixture"
 _anchor_service: SubtitleParserService | None = None
 
@@ -348,7 +368,13 @@ def build_anchor_index(dicts_root: Path, dict_id: str = _ANCHOR_DICT_ID) -> Path
     db = folder / "index.sqlite"
     create_index(db)
     rows = [
-        DictRow(term=term, reading=None, content=f'<li class="gloss-item">{term}</li>', sequence=i)
+        DictRow(
+            term=term,
+            reading=None,
+            content=f'<li class="gloss-item">{term}</li>',
+            sequence=i,
+            rules=_ANCHOR_RULES.get(term, ""),
+        )
         for i, term in enumerate(_ANCHOR_HEADWORDS, start=1)
     ]
     bulk_insert(db, rows)
@@ -391,6 +417,7 @@ def _get_anchor_service() -> SubtitleParserService:
         _anchor_service = SubtitleParserService(
             config,
             term_lookup=definition_service.offline_terms_exist,
+            term_rules_lookup=definition_service.offline_deinflection_terms_exist,
             kana_attest_lookup=definition_service.has_offline_definitions,
         )
     return _anchor_service

@@ -308,6 +308,33 @@ def test_foreign_plausible_meta_does_not_prove_ownership(tmp_path: Path) -> None
     assert not prove_owned_slot(tmp_path, "foreign", "dictionary")
 
 
+@pytest.mark.parametrize("version", range(3, dictionary_storage.SCHEMA_VERSION + 1))
+def test_every_schema_version_we_ever_wrote_proves_ownership(tmp_path: Path, version: int) -> None:
+    """Ownership must span the whole written range, not {oldest, current}.
+
+    Ownership answers "did we write this directory"; staleness is a separate
+    question (``DictMeta.schema_ok``). A version-pair check silently un-owns the
+    immediately-previous schema on every bump — precisely the dictionaries an
+    upgrade must repair — so Reimport All would report a user's entire installed
+    set as missing-source and make them re-add each one by hand.
+    """
+    slot = tmp_path / f"v{version}"
+    db_path = slot / "index.sqlite"
+    slot.mkdir(parents=True)
+    dictionary_storage.create_index(db_path)
+    dictionary_storage.write_meta(
+        db_path,
+        {
+            "schema_version": str(version),
+            "format": "yomitan",
+            "source_name": f"Written at v{version}",
+            "entry_count": "0",
+        },
+    )
+
+    assert prove_owned_slot(tmp_path, f"v{version}", "dictionary")
+
+
 def test_audio_physical_proof_requires_exact_pack_id(tmp_path: Path) -> None:
     db_path = tmp_path / "expected" / "index.sqlite"
     audio_storage.create_index(db_path)

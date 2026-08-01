@@ -1,5 +1,7 @@
 """Tests for word_filter service."""
 
+import re
+
 import pytest
 
 from anki_miner.models import LineLemmas
@@ -938,8 +940,12 @@ class TestWordFilterService:
             assert "<b>食べる</b>" in swapped.sentence_bolded
             assert "<b>" in swapped.sentence_furigana_bolded
             # Okurigana stays outside the bracket, so the bold run is 食[た]べる,
-            # not a contiguous "食べる".
-            assert "<b>食[た]べる</b>" in swapped.sentence_furigana_bolded
+            # not a contiguous "食べる". Anki's ruby delimiter sits INSIDE the
+            # bold: `[^ >]` in its filter regex cannot span `<b>`, so a
+            # delimiter parked before the tag would survive as a visible space.
+            assert "<b> 食[た]べる</b>" in swapped.sentence_furigana_bolded
+            rendered = re.sub(r" ?([^ >]+?)\[(.+?)\]", r"\1", swapped.sentence_furigana_bolded)
+            assert rendered == "今日も<b>食べる</b>"
 
         def test_i_plus_one_swap_bolds_full_inflected_form(self):
             """The swapped-in line's bold span uses lemma_spans' highlight_end,

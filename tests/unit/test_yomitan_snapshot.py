@@ -39,7 +39,10 @@ def test_import_lookup_roundtrip_matches_snapshot(tmp_path: Path) -> None:
     matches the checked-in snapshot byte-for-byte.
 
     Fixture covers every shape the renderer + provider must lock down:
-      - One term-bank entry with two senses (plain string + structured-content).
+      - One term-bank entry whose glossary array holds two members (plain string
+        + structured-content). One ROW is one definition, so the snapshot pins
+        ``data-count="1"`` with both members nested — Yomitan's two-level model,
+        not two numbered senses.
       - One POS tag (``v5r``) in column 3 (``definitionTags``).
       - One additional tag (``common``) in column 8 (``termTags``).
       - One inline structured-content table (thead/tbody, 1 row each).
