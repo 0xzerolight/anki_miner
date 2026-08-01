@@ -90,6 +90,14 @@ class TestFirstHitWins:
         entry = chain.lookup_entry("弾く", "ひく")
         assert entry is not None and entry.pattern == "2"  # top's はじく entry
 
+    def test_cross_headword_reading_match_cannot_shadow_lower_exact_pair(self, tmp_path: Path) -> None:
+        top = _provider(tmp_path, "top", [("かいじゅ", "槐樹", "1", "", "")])
+        bottom = _provider(tmp_path, "bottom", [("かいじゅ", "解呪", "2", "", "")])
+
+        entry = MultiPitchAccentService([top, bottom]).lookup_entry("解呪", "かいじゅ")
+
+        assert entry is not None and entry.pattern == "2"
+
 
 class TestAvailabilityAndCounts:
     def test_is_available_any_provider(self, chain: MultiPitchAccentService) -> None:
@@ -132,10 +140,10 @@ class TestSingleSourceParity:
         cases = [
             ("弾く", "ひく"),
             ("弾く", "はじく"),
-            ("弾く", ""),  # homograph without reading — legacy first-wins
+            ("弾く", ""),  # homograph without reading — refuse to guess
             ("弾く", "みすまっち"),  # multi-reading + no exact → refuse-to-guess tiers
             ("猫", "ねこ"),
-            ("ねこ", ""),  # kana/reading-only lookup
+            ("ねこ", ""),  # no cross-headword reading-only lookup
             ("ありがとう", "ありがとう"),
             ("未知", "みち"),
         ]

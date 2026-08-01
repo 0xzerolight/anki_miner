@@ -12,11 +12,11 @@ Two input shapes are supported, dispatched by suffix:
 * ``.zip`` — a Yomitan pitch dictionary (``term_meta_bank_*.json`` with
   ``mode == "pitch"`` rows). Row extraction is shared with the legacy importer
   (:func:`~anki_miner.services.pitch_accent.yomitan_pitch_importer.extract_pitch_rows`).
-* ``.csv`` / ``.tsv`` / ``.txt`` — a pitch CSV in the
-  ``reading,kanji,pattern[,nasal,devoice]`` format (Kanjium accents.txt
-  included: delimiter auto-detected, header skipped, legacy 3-col and
-  anomalous tail-rejoin rows handled by the shared
-  :func:`~anki_miner.services.pitch_accent_service._parse_pitch_row`).
+* ``.csv`` / ``.tsv`` / ``.txt`` — a pitch CSV in either
+  ``reading,term,pattern[,nasal,devoice]`` or ``term,reading,pattern`` order
+  (Kanjium accents.txt uses the latter). Delimiter and column order are
+  detected once per file; legacy 3-col and anomalous tail-rejoin rows use the
+  shared :func:`~anki_miner.services.pitch_accent_service._parse_pitch_row`).
 
 First occurrence wins per ``(kanji, reading)`` in both paths, matching the
 legacy single-CSV loader's semantics.
@@ -89,7 +89,8 @@ def import_pitch_source(
 
     Args:
         input_path: A Yomitan pitch ``.zip`` or a ``.csv``/``.tsv``/``.txt``
-            pitch file (``reading,kanji,pattern[,nasal,devoice]``).
+            pitch file (``reading,term,pattern[,nasal,devoice]`` or
+            ``term,reading,pattern``).
         dest_root: Folder under which ``<source_id>/`` is created (typically
             ``~/.anki_miner/pitch/``).
         source_id: Explicit on-disk id. When omitted, derived from the Yomitan
@@ -130,7 +131,8 @@ def import_pitch_source(
             overwrite=overwrite,
         )
     raise SetupError(
-        f"Unsupported pitch source '{input_path.name}'. " "Provide a Yomitan .zip or a reading,kanji,pattern CSV/TSV."
+        f"Unsupported pitch source '{input_path.name}'. "
+        "Provide a Yomitan .zip or a reading,term / term,reading pitch CSV/TSV."
     )
 
 
@@ -256,7 +258,7 @@ def _import_csv(
     if not entries_out:
         raise SetupError(
             f"'{csv_path.name}' yielded no usable pitch entries. "
-            "Expected format: reading,kanji,pattern[,nasal,devoice] (CSV or TSV, 3 or 5 columns)."
+            "Expected reading,term or term,reading pitch columns (CSV/TSV, 3 or 5 columns)."
         )
 
     result = _finalize(
