@@ -34,7 +34,7 @@ from anki_miner.gui.utils.qt_helpers import (
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.known_word_db import KnownWordDB, normalize_lemma
 from anki_miner.services.known_words_import import (
     KnownWordsImportError,
     KnownWordsImportResult,
@@ -185,11 +185,18 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         "Already in your list" is measured against the prior ``source='user'``
         set, not ``add_words``' row delta — an anki→user upgrade is row-count
         neutral but genuinely new to the user list.
+
+        The parsed words are folded to the same normal form the write uses:
+        ``add_words`` normalizes internally, and the parser does not, so
+        diffing raw against stored counted an NFD spelling of an already-known
+        word as newly added and double-counted a file carrying both spellings.
+        Display only — the rows written were always correct.
         """
+        words = {normalize_lemma(word) for word in result.words}
         existing_user = self._db.get_words_by_source("user")
-        new_to_list = set(result.words) - existing_user
-        self._db.add_words(set(result.words), source="user")
-        return len(new_to_list), len(result.words) - len(new_to_list)
+        new_to_list = words - existing_user
+        self._db.add_words(words, source="user")
+        return len(new_to_list), len(words) - len(new_to_list)
 
     def _on_import(self) -> None:
 

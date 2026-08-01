@@ -1,5 +1,6 @@
 """Tests for KnownWordsManagerDialog (Issue #42)."""
 
+import unicodedata
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -166,6 +167,37 @@ class TestApplyImport:
         qtbot.addWidget(dlg)
         added, already = dlg.apply_import(_import_result({"寿司", "天ぷら"}))
         assert (added, already) == (1, 1)
+
+    def test_a_decomposed_spelling_is_not_reported_as_new(self, qtbot, tmp_path):
+        """The parser does not fold; add_words does. Count what gets written.
+
+        がくせい written as か + U+3099 is the same lemma as the stored composed
+        form, so importing it adds no row — reporting it as newly added told
+        the user something the database did not do.
+        """
+        nfc = "がくせい"
+        nfd = unicodedata.normalize("NFD", nfc)
+        assert nfd != nfc
+        db = _db_with_user_words(tmp_path, user=(nfc,), anki=())
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+
+        added, already = dlg.apply_import(_import_result({nfd}))
+
+        assert (added, already) == (0, 1)
+        assert db.get_words_by_source("user") == {nfc}
+
+    def test_both_spellings_in_one_file_count_once(self, qtbot, tmp_path):
+        nfc = "がくせい"
+        nfd = unicodedata.normalize("NFD", nfc)
+        db = _db_with_user_words(tmp_path, user=(), anki=())
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+
+        added, already = dlg.apply_import(_import_result({nfd, nfc}))
+
+        assert (added, already) == (1, 0)
+        assert db.word_count() == 1
 
     def test_anki_to_user_upgrade_counts_as_added(self, qtbot, tmp_path):
         # A word cached from Anki was NOT in the user list — importing it is an
