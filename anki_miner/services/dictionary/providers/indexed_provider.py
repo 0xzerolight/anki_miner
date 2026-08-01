@@ -46,6 +46,21 @@ logger = logging.getLogger(__name__)
 _DISPLAY_LIMIT = 5
 
 
+def _is_jmdict_sense_index_tag(meta: TagMeta) -> bool:
+    # Deliberate Yomitan divergence: Yomitan renders these on their owning
+    # definitions. Anki Miner unions same-sequence tags into one detached chip
+    # row, so the indices lose that ownership and duplicate the numbered sense
+    # list directly below.
+    return (
+        meta.name.isascii()
+        and meta.name.isdecimal()
+        and meta.category == ""
+        and meta.ord == -10
+        and meta.score == 0
+        and meta.notes == f"JMdict Sense #{meta.name}"
+    )
+
+
 class IndexedDictProvider:
     """SQLite-backed implementation of the DictionaryProvider Protocol.
 
@@ -439,7 +454,12 @@ class IndexedDictProvider:
             merged = "".join(group)
             item_count = merged.count('<li class="gloss-item"')
 
-            chip_metas = [tag_meta[t] for t in group_tags if t in tag_meta]
+            # Resolve first, then filter for display. Order is load-bearing: a
+            # suppressed tag must stay RESOLVED so it cannot fall through to
+            # `fallback_tags` below and reappear as a word inside the `<i>(...)`
+            # attribution line.
+            resolved_metas = [tag_meta[t] for t in group_tags if t in tag_meta]
+            chip_metas = [m for m in resolved_metas if not _is_jmdict_sense_index_tag(m)]
             chip_metas.sort(key=lambda m: (m.ord, -m.score, m.name))
             chips = "".join(
                 f'<span class="gloss-tag" data-category="{html.escape(m.category, quote=True)}"'
