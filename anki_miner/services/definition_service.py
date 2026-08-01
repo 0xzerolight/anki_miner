@@ -534,6 +534,41 @@ class DefinitionService:
 
         return found
 
+    def offline_term_identities(
+        self,
+        pairs: list[tuple[str, str]],
+    ) -> dict[tuple[str, str], set[tuple[str, int, str]]]:
+        """Exact dictionary identities for offline ``(term, reading)`` pairs.
+
+        Identity is ``(dictionary_id, sequence, normalized_reading)``. Every
+        available indexed provider is queried: short-circuiting a term after its
+        first hit could hide the lower-priority dictionary that attests both
+        orthographic aliases. Providers without the optional exact probe, online
+        providers, and failures contribute nothing.
+        """
+        self.ensure_loaded()
+
+        found: dict[tuple[str, str], set[tuple[str, int, str]]] = {}
+        for provider in self._available_offline_providers():
+            dict_id = getattr(provider, "dict_id", None)
+            exact_sequences_fn = getattr(provider, "exact_term_sequences", None)
+            if not isinstance(dict_id, str) or not callable(exact_sequences_fn):
+                continue
+            try:
+                hits = exact_sequences_fn(pairs)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during exact_term_sequences; skipping: %s",
+                    provider.name,
+                    e,
+                )
+                continue
+            for (term, reading), sequences in hits.items():
+                identities = found.setdefault((term, reading), set())
+                identities.update((dict_id, sequence, reading) for sequence in sequences)
+
+        return found
+
     def _available_offline_providers(self) -> list[DictionaryProvider]:
         """Available, offline providers in chain order (commonness/quality probes)."""
         return [p for p in self._providers if not p.is_online and p.is_available()]

@@ -19,6 +19,7 @@ from anki_miner.services.dictionary.storage import (
     attest_detail,
     bulk_insert,
     create_index,
+    exact_term_sequences,
     lookup,
     lookup_many,
     open_readonly,
@@ -1112,6 +1113,45 @@ class TestTermsExist:
             queries = [f"語{i}" for i in range(1500)]  # 1000 hits + 500 misses, spans 2 chunks
             found = terms_exist(conn, queries)
             assert found == {f"語{i}" for i in range(1000)}
+        finally:
+            conn.close()
+
+
+class TestExactTermSequences:
+    def test_matches_exact_term_and_normalized_reading_only(self, tmp_path: Path):
+        db_path = tmp_path / "identities.sqlite"
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="よそ見", reading="よそみ", content="<div>a</div>", sequence=1544190),
+                DictRow(term="余所見", reading="よそみ", content="<div>b</div>", sequence=1544190),
+                DictRow(term="橋", reading="はし", content="<div>bridge</div>", sequence=1258040),
+                DictRow(term="箸", reading="はし", content="<div>chopsticks</div>", sequence=1496060),
+                DictRow(term="出でる", reading="いでる", content="<div>leave</div>", sequence=2534980),
+                DictRow(term="名無し", reading="ななし", content="<div>nameless</div>", sequence=None),
+            ],
+        )
+        conn = open_readonly(db_path)
+        try:
+            found = exact_term_sequences(
+                conn,
+                [
+                    ("よそ見", "ヨソミ"),
+                    ("余所見", "よそみ"),
+                    ("橋", "はし"),
+                    ("箸", "ハシ"),
+                    ("いでる", "いでる"),
+                    ("名無し", "ななし"),
+                ],
+            )
+
+            assert found == {
+                ("よそ見", "よそみ"): {1544190},
+                ("余所見", "よそみ"): {1544190},
+                ("橋", "はし"): {1258040},
+                ("箸", "はし"): {1496060},
+            }
         finally:
             conn.close()
 

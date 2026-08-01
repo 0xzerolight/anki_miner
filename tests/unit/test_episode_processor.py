@@ -4772,6 +4772,14 @@ class TestWithinRunDuplicateCollapse:
         mock_services["definition_service"].has_offline_definitions.side_effect = lambda lemmas: dict.fromkeys(
             lemmas, True
         )
+        mock_services["definition_service"].offline_term_identities.return_value = {}
+
+    @staticmethod
+    def _word(form: str, reading: str, start_time: float) -> TokenizedWord:
+        word = _make_word(form, surface=form, start_time=start_time, pos="名詞")
+        word.reading = reading
+        word.expression_reading = reading
+        return word
 
     def test_duplicate_mined_forms_collapsed_before_curation(self, test_config, mock_services, tmp_path):
         # Two verbs share lemma 食べる ⇒ identical mined_form (mined_form == lemma
@@ -4804,6 +4812,79 @@ class TestWithinRunDuplicateCollapse:
         proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
 
         assert captured["mined_forms"] == ["食べる", "走る"]
+
+    @pytest.mark.parametrize(
+        ("first_form", "second_form", "reading", "sequence"),
+        [
+            ("よそ見", "余所見", "よそみ", 1544190),
+            ("肉じゃが", "肉ジャガ", "にくじゃが", 1463530),
+        ],
+    )
+    def test_shared_dictionary_identity_collapses_orthographic_alias(
+        self,
+        test_config,
+        mock_services,
+        tmp_path,
+        first_form,
+        second_form,
+        reading,
+        sequence,
+    ):
+        first = self._word(first_form, reading, 1.0)
+        second = self._word(second_form, reading, 9.0)
+        self._prime(mock_services, [first, second])
+        identity = ("jmdict", sequence, reading)
+        mock_services["definition_service"].offline_term_identities.return_value = {
+            (first_form, reading): {identity},
+            (second_form, reading): {identity},
+        }
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["mined_forms"] == [first_form]
+
+    def test_same_reading_different_sequences_are_preserved(self, test_config, mock_services, tmp_path):
+        bridge = self._word("橋", "はし", 1.0)
+        chopsticks = self._word("箸", "はし", 9.0)
+        self._prime(mock_services, [bridge, chopsticks])
+        mock_services["definition_service"].offline_term_identities.return_value = {
+            ("橋", "はし"): {("jmdict", 1258040, "はし")},
+            ("箸", "はし"): {("jmdict", 1496060, "はし")},
+        }
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["mined_forms"] == ["橋", "箸"]
+
+    def test_reading_only_match_without_exact_identity_is_preserved(self, test_config, mock_services, tmp_path):
+        legitimate = self._word("出でる", "いでる", 1.0)
+        reading_only_junk = self._word("いでる", "いでる", 9.0)
+        self._prime(mock_services, [legitimate, reading_only_junk])
+        mock_services["definition_service"].offline_term_identities.return_value = {
+            ("出でる", "いでる"): {("jmdict", 2534980, "いでる")}
+        }
+        captured: dict = {}
+
+        def cb(words):
+            captured["mined_forms"] = [w.mined_form for w in words]
+            return None
+
+        proc = self._build(test_config, mock_services)
+        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
+
+        assert captured["mined_forms"] == ["出でる", "いでる"]
 
     def test_duplicates_preserved_when_allow_duplicate_cards(self, test_config, mock_services, tmp_path):
         # Deck Builder parity: allow_duplicate_cards=True ⇒ Anki creates both, so

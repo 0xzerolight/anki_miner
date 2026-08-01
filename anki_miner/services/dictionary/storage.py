@@ -634,6 +634,50 @@ def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list
     return found
 
 
+def exact_term_sequences(
+    conn: sqlite3.Connection,
+    pairs: list[tuple[str, str | None]],
+) -> dict[tuple[str, str], set[int]]:
+    """Return dictionary sequences for exact ``(term, reading)`` pairs.
+
+    Both columns must match after the normal katakana-to-hiragana reading fold.
+    Reading-only lookup hits deliberately do not count: this probe identifies
+    lexemes, so a query for ``いでる`` must not inherit ``出でる``'s sequence.
+    Rows without a sequence cannot provide stable dictionary identity and are
+    omitted.
+    """
+    normalized_pairs: list[tuple[str, str]] = []
+    for term, reading in pairs:
+        if not term or not reading:
+            continue
+        folded_reading = _fold_reading(reading)
+        if folded_reading:
+            normalized_pairs.append((term, folded_reading))
+    normalized_pairs = list(dict.fromkeys(normalized_pairs))
+    requested = set(normalized_pairs)
+    terms = list(dict.fromkeys(term for term, _ in normalized_pairs))
+    found: dict[tuple[str, str], set[int]] = {}
+
+    for start in range(0, len(terms), _EXIST_CHUNK):
+        chunk = terms[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            "SELECT DISTINCT term, reading, sequence FROM entries "
+            f"WHERE term IN ({placeholders}) AND reading IS NOT NULL "
+            "AND reading != '' AND sequence IS NOT NULL",
+            chunk,
+        ).fetchall()
+        for term, reading, sequence in rows:
+            folded_reading = _fold_reading(reading)
+            if folded_reading is None:
+                continue
+            key = (term, folded_reading)
+            if key in requested:
+                found.setdefault(key, set()).add(sequence)
+
+    return found
+
+
 def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: bool) -> dict[str, list[AttestRow]]:
     """Per-word attesting rows for the commonness/quality probes (U10 infra).
 

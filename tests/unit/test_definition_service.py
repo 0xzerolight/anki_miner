@@ -1172,6 +1172,46 @@ class TestOfflineTermsExist:
         assert p.has_terms.call_args[0][0] == ["走り出す"]
 
 
+class TestOfflineTermIdentities:
+    def test_aggregates_provider_scoped_exact_identities(self, test_config, tmp_path: Path):
+        first_db = tmp_path / "first.sqlite"
+        create_index(first_db)
+        bulk_insert(
+            first_db,
+            [DictRow(term="よそ見", reading="よそみ", content="<div>a</div>", sequence=10)],
+        )
+        write_meta(first_db, {"schema_version": str(SCHEMA_VERSION), "source_name": "First"})
+        first = IndexedDictProvider("first-dict", first_db)
+
+        second_db = tmp_path / "second.sqlite"
+        create_index(second_db)
+        bulk_insert(
+            second_db,
+            [
+                DictRow(term="よそ見", reading="よそみ", content="<div>b</div>", sequence=20),
+                DictRow(term="余所見", reading="よそみ", content="<div>c</div>", sequence=20),
+                DictRow(term="出でる", reading="いでる", content="<div>d</div>", sequence=30),
+            ],
+        )
+        write_meta(second_db, {"schema_version": str(SCHEMA_VERSION), "source_name": "Second"})
+        second = IndexedDictProvider("second-dict", second_db)
+        service = DefinitionService(test_config, providers=[first, second])
+
+        assert service.offline_term_identities(
+            [
+                ("よそ見", "ヨソミ"),
+                ("余所見", "よそみ"),
+                ("いでる", "いでる"),
+            ]
+        ) == {
+            ("よそ見", "よそみ"): {
+                ("first-dict", 10, "よそみ"),
+                ("second-dict", 20, "よそみ"),
+            },
+            ("余所見", "よそみ"): {("second-dict", 20, "よそみ")},
+        }
+
+
 # ---------------------------------------------------------------------------
 # Lookup-miss fallback chain (plan item 5.2): deinflection + orthBase + kana
 # variants, validated against the entry's rules column (Yomitan's POS check).

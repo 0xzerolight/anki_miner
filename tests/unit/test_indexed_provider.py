@@ -1075,6 +1075,37 @@ class TestTermsReadings:
         assert p.terms_readings(["バカ力"]) == {}
 
 
+class TestExactTermSequences:
+    def test_returns_exact_identity_sequences_without_reading_fallback(self, tmp_path: Path):
+        db = tmp_path / "identity.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(term="肉じゃが", reading="にくじゃが", content="<div>a</div>", sequence=1463530),
+                DictRow(term="肉ジャガ", reading="にくじゃが", content="<div>b</div>", sequence=1463530),
+                DictRow(term="出でる", reading="いでる", content="<div>c</div>", sequence=2534980),
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db)
+        assert provider.load()
+
+        assert provider.exact_term_sequences(
+            [
+                ("肉じゃが", "ニクジャガ"),
+                ("肉ジャガ", "にくじゃが"),
+                ("いでる", "いでる"),
+            ]
+        ) == {
+            ("肉じゃが", "にくじゃが"): {1463530},
+            ("肉ジャガ", "にくじゃが"): {1463530},
+        }
+
+    def test_unloaded_provider_returns_empty(self, tmp_path: Path):
+        provider = IndexedDictProvider("test-dict", tmp_path / "missing.sqlite")
+
+        assert provider.exact_term_sequences([("よそ見", "よそみ")]) == {}
+
+
 # ---------------------------------------------------------------------------
 # U10: commonness_aware + attest_quality (foundation, zero behavior change)
 # ---------------------------------------------------------------------------
