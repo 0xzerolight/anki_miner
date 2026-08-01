@@ -1509,17 +1509,21 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         clipboard = QApplication.clipboard()
         if clipboard is None:
             return
+        # BOTH actions read the user's sentence pick, else the default — the same
+        # "chosen, else original" pattern as get_selected_words. Resolving it for
+        # the sentence alone is what left the menu handing back the primary
+        # occurrence's word (Issue #95 on the sentence, then the same leak on the
+        # word): for surface-mined POS (nouns) _swap_word_to_line rebuilds surface
+        # per candidate line, and mined_form IS the surface, so the pick moves
+        # column 1 too — see _pick_cell_values.
+        chosen = self._chosen.get(original_index, word)
         if action == copy_word_action:
             # mined_form, not lemma: it is what column 1 shows and what becomes
             # the card front. unidic's lemma collapses kanji variants (想う→思う,
             # こと→事), so copying it handed back a different word than the one
             # being mined (Issue #107).
-            clipboard.setText(word.mined_form)
+            clipboard.setText(chosen.mined_form)
         elif action == copy_sentence_action:
-            # Resolve the user's sentence pick (self._chosen), else the default —
-            # same "chosen, else original" pattern as get_selected_words. Without
-            # this the menu always copied the primary sentence (Issue #95).
-            chosen = self._chosen.get(original_index, word)
             clipboard.setText(chosen.sentence)
 
     # ------------------------------------------------------------------

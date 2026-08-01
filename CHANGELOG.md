@@ -11,7 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
-- **Picking a different example sentence now updates the whole row.** In the word curator, choosing another sentence under "Sentences" only redrew the Sentence column — "Form in subtitle" kept showing the form from the first occurrence, and so did the mined word, what Ctrl+C copied off the row, and the definition shown beside it. All of them follow the pick now. (#108)
+- **Picking a different example sentence now updates the whole row.** In the word curator, choosing another sentence under "Sentences" only redrew the Sentence column — "Form in subtitle" kept showing the form from the first occurrence, and so did the mined word, what Ctrl+C copied off the row, right-click → Copy word, and the definition shown beside it. All of them follow the pick now. (#108)
+- **The word curator copies the word it shows.** Right-click → Copy word handed back unidic's canonical lemma, which collapses kanji variants (想う → 思う, こと → 事), so what you pasted was a different word from the one on the row and on the card front. It copies the mined form now. (#107)
 - **Clicking something no longer boxes it in the accent colour.** The keyboard focus ring is for keyboard users, but Qt draws a `:focus` rule however focus arrived, so a mouse click on a word curator pane, a settings category, or a button ringed it too. The ring is now keyboard-only: Tab, Shift-Tab and shortcuts still show where you are, and clicking shows nothing. Text fields keep their focus border, which is how a field says where typing goes.
 
 ### Removed
