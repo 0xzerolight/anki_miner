@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QScrollArea,
     QVBoxLayout,
@@ -52,6 +53,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaCon
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+from anki_miner.orchestration.episode_processor import _sanitize_source_label
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
@@ -250,7 +252,7 @@ class SingleEpisodeTab(MiningTabBase):
         self.setAccessibleName(self.tr("Episode Mining Tab"))
         self.setAccessibleDescription(self.tr("Process a single video episode to create vocabulary flashcards"))
 
-        # Tab order through the page's own inputs: video -> subtitle -> offset.
+        # Tab order through the page's own inputs: video -> subtitle -> source -> offset.
         #
         # It deliberately stops there. Process Episode used to be chained on the
         # end, and that was right while the button sat in the form; D6 moved it
@@ -260,7 +262,8 @@ class SingleEpisodeTab(MiningTabBase):
         # order and comes last in the page, so leaving it alone is what puts the
         # primary action where the eye already expects it -- last.
         self.setTabOrder(self.video_selector, self.subtitle_selector)
-        self.setTabOrder(self.subtitle_selector, self.offset_spinbox)
+        self.setTabOrder(self.subtitle_selector, self.card_source_edit)
+        self.setTabOrder(self.card_source_edit, self.offset_spinbox)
 
     def _create_file_selection_group(self) -> QFrame:
         """Create file selection group with enhanced file selectors.
@@ -288,6 +291,7 @@ class SingleEpisodeTab(MiningTabBase):
             self.tr("Recent Files:"),
             self.tr("Video File:"),
             self.tr("Subtitle File:"),
+            self.tr("Card Source:"),
             self.tr("Subtitle Offset:"),
         )
 
@@ -339,6 +343,27 @@ class SingleEpisodeTab(MiningTabBase):
         )
         layout.addWidget(self.subtitle_selector)
 
+        source_layout = QHBoxLayout()
+        source_layout.setSpacing(SPACING.xs)
+        source_label = QLabel(self.tr("Card Source:"))
+        source_label.setObjectName("field-label")
+        source_label.setMinimumWidth(label_w)
+        make_label_fit_text(source_label)
+
+        self.card_source_edit = QLineEdit()
+        self.card_source_edit.setPlaceholderText(self.tr("Video title shown on cards"))
+        self.card_source_edit.setToolTip(
+            self.tr("Source title stored on cards; changing it does not change analytics grouping")
+        )
+        self.card_source_edit.setAccessibleName(self.tr("Card source"))
+        source_label.setBuddy(self.card_source_edit)
+
+        source_layout.addWidget(source_label)
+        source_layout.addWidget(self.card_source_edit)
+        cap_row_field(self.card_source_edit, label_w, source_layout.spacing())
+        source_layout.addStretch()
+        layout.addLayout(source_layout)
+
         # Subtitle offset with helper text
         offset_layout = QHBoxLayout()
         offset_layout.setSpacing(SPACING.xs)
@@ -377,7 +402,10 @@ class SingleEpisodeTab(MiningTabBase):
         self._audio_track_override = None
 
         if not new_path:
+            self.card_source_edit.clear()
             return
+
+        self.card_source_edit.setText(_sanitize_source_label(Path(new_path).stem))
 
         if self.subtitle_selector.get_path().strip():
             # User already has a subtitle chosen — don't overwrite it.
@@ -595,6 +623,9 @@ class SingleEpisodeTab(MiningTabBase):
 
         video_file = Path(video_path)
         subtitle_file = Path(subtitle_path)
+        source_label = self.card_source_edit.text().strip() or _sanitize_source_label(video_file.stem)
+        if not source_label:
+            source_label = video_file.stem.strip()
 
         # Update config with subtitle offset
         offset = self.offset_spinbox.value()
@@ -654,6 +685,9 @@ class SingleEpisodeTab(MiningTabBase):
             progress_callback=self.progress_callback,
             curation_callback=curation_cb,
             audio_track_override=self._audio_track_override,
+            # Card source is presentation only. Keep file-derived series/episode
+            # identities untouched so existing analytics groups do not split.
+            source_label_override=source_label,
             processor_factory=_processor_factory,
         )
 

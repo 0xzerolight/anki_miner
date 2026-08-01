@@ -43,6 +43,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         parent=None,
         *,
         audio_track_override: int | None = None,
+        source_label_override: str | None = None,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
     ):
         """Initialize the episode worker thread.
@@ -57,6 +58,8 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
             parent: Optional parent QObject
             audio_track_override: If set, forces the given audio_index instead of
                 auto-detecting the Japanese track. None means auto-detect.
+            source_label_override: Optional source title stored on created cards.
+                Does not alter the file-derived stats identity.
             processor_factory: Zero-arg callable that returns an EpisodeProcessor.
                 Mutually exclusive with a non-None ``processor``.  When supplied,
                 the processor is constructed on the worker thread inside run().
@@ -70,6 +73,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
         self.audio_track_override = audio_track_override
+        self.source_label_override = source_label_override
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -109,6 +113,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 progress_callback=self.progress_callback,
                 curation_callback=self.curation_callback,
                 audio_track_override=self.audio_track_override,
+                source_label_override=self.source_label_override,
                 cancel_event=self._cancel_event,
             )
 

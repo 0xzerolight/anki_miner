@@ -61,6 +61,30 @@ def test_initial_audio_track_override_is_none(tab):
     assert tab._audio_track_override is None
 
 
+def test_card_source_defaults_to_sanitized_video_stem(tab, tmp_path):
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+    video = downloads / "[Judas] Jujutsu Kaisen 0 [WEBRip][JA]-Group.mkv"
+    video.touch()
+
+    tab.video_selector.set_path(str(video))
+
+    assert tab.card_source_edit.text() == "[Judas] Jujutsu Kaisen 0"
+
+
+def test_card_source_updates_when_video_path_changes(tab, tmp_path):
+    first_video = tmp_path / "First Movie.mkv"
+    second_video = tmp_path / "Second Movie.mkv"
+    first_video.touch()
+    second_video.touch()
+
+    tab.video_selector.set_path(str(first_video))
+    tab.card_source_edit.setText("Custom source")
+    tab.video_selector.set_path(str(second_video))
+
+    assert tab.card_source_edit.text() == "Second Movie"
+
+
 # ---------------------------------------------------------------------------
 # 2. Tracks button exists
 # ---------------------------------------------------------------------------
@@ -274,6 +298,31 @@ def test_start_processing_passes_override_to_worker(tab, tmp_path):
     mock_worker_cls.assert_called_once()
     _, kwargs = mock_worker_cls.call_args
     assert kwargs.get("audio_track_override") == 1
+
+
+def test_start_processing_passes_custom_card_source_to_worker(tab, tmp_path):
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    fake_subs = tmp_path / "ep01.ass"
+    fake_subs.touch()
+
+    tab.video_selector.set_path(str(fake_video))
+    tab.subtitle_selector.set_path(str(fake_subs))
+    tab.card_source_edit.setText("Jujutsu Kaisen 0")
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+
+    with (
+        patch(
+            "anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker
+        ) as mock_worker_cls,
+        patch("anki_miner.gui.widgets.single_episode_tab.create_episode_processor"),
+    ):
+        tab._start_processing()
+
+    mock_worker_cls.assert_called_once()
+    _, kwargs = mock_worker_cls.call_args
+    assert kwargs.get("source_label_override") == "Jujutsu Kaisen 0"
 
 
 # ---------------------------------------------------------------------------

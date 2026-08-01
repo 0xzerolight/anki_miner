@@ -85,6 +85,25 @@ def test_worker_default_attribute_is_none(qapp):
     assert worker.audio_track_override is None
 
 
+def test_worker_stores_source_label_override(qapp):
+    worker = _make_worker(qapp, source_label_override="Jujutsu Kaisen 0")
+    assert worker.source_label_override == "Jujutsu Kaisen 0"
+
+
+def test_worker_default_source_label_override_is_none(qapp):
+    worker = _make_worker(qapp)
+    assert worker.source_label_override is None
+
+
+def test_worker_forwards_source_label_override_to_process_episode(qapp):
+    worker = _make_worker(qapp, source_label_override="Jujutsu Kaisen 0")
+
+    worker.run()
+
+    _, kwargs = worker.processor.process_episode.call_args
+    assert kwargs.get("source_label_override") == "Jujutsu Kaisen 0"
+
+
 def test_curation_processor_exposes_constructor_processor(qapp):
     """Typed curation_processor contract (T-60): returns the run's processor."""
     worker = _make_worker(qapp)
