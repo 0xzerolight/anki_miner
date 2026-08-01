@@ -34,10 +34,7 @@ class TestStructuredContentToHtml:
             ],
         }
         assert structured_content_to_html(node) == (
-            '<ul class="gloss-sc-ul">'
-            '<li class="gloss-sc-li">first</li>'
-            '<li class="gloss-sc-li">second</li>'
-            "</ul>"
+            '<ul class="gloss-sc-ul"><li class="gloss-sc-li">first</li><li class="gloss-sc-li">second</li></ul>'
         )
 
     def test_unknown_tag_falls_back_to_span(self):
@@ -159,7 +156,7 @@ class TestAllowedTagsExpanded:
             ],
         }
         assert structured_content_to_html(node) == (
-            '<details class="gloss-sc-details">' '<summary class="gloss-sc-summary">more</summary>' "body" "</details>"
+            '<details class="gloss-sc-details"><summary class="gloss-sc-summary">more</summary>body</details>'
         )
 
     def test_headings_preserved(self):
@@ -333,16 +330,26 @@ class TestLangAttribute:
 
 
 class TestRenderGlossaryEntry:
-    """The renderer returns only `<li class="gloss-item">` items wrapping a
-    `<div class="gloss-content">`. No `<ul>`/`<ol>`, no `<div class="tag-list">`,
-    no inline `style` on items — all wrapper composition lives in the provider."""
+    """One term-bank row renders as one outer glossary item."""
 
-    def test_plain_string_glossary_wraps_each_in_li(self):
+    def test_plain_string_glossary_nests_members_in_one_outer_item(self):
         html = render_glossary_entry(["to eat", "to consume"])
         assert html == (
-            '<li class="gloss-item"><div class="gloss-content">to eat</div></li>'
-            '<li class="gloss-item"><div class="gloss-content">to consume</div></li>'
+            '<li class="gloss-item"><div class="gloss-content">'
+            '<ul class="gloss-sc-ul" style="list-style-type: circle">'
+            '<li class="gloss-sc-li">to eat</li>'
+            '<li class="gloss-sc-li">to consume</li></ul></div></li>'
         )
+
+    def test_nested_members_match_structured_content_list_style(self):
+        """Synthesized members list looks like a source-authored one on the card.
+
+        The structured-content path emits `style="list-style-type: circle"` from
+        the dictionary's own node; a members list we build ourselves has to match,
+        or one card shows circle bullets for its senses and disc for its forms.
+        """
+        html = render_glossary_entry(["捩れる", "捻れる"], definition_tags=["forms"])
+        assert 'style="list-style-type: circle"' in html
 
     def test_plain_string_html_escaped_inside_li(self):
         html = render_glossary_entry(["<x>"])
@@ -350,12 +357,13 @@ class TestRenderGlossaryEntry:
 
     def test_no_outer_wrapper(self):
         html = render_glossary_entry(["x", "y"])
-        # No <ul>, no <ol>, no tag-list — the renderer emits items only. Plain
-        # strings carry no structured-content div (only the gloss-content wrapper).
+        # No dictionary-level <ul>/<ol> or tag-list. The only list is the nested
+        # member list inside one row-level gloss-item.
         assert not html.startswith("<ul")
         assert not html.startswith("<ol")
         assert "tag-list" not in html
-        assert '<div class="gloss-sc-' not in html
+        assert html.count('<li class="gloss-item"') == 1
+        assert html.count('<li class="gloss-sc-li">') == 2
 
     def test_no_inline_style_on_items(self):
         html = render_glossary_entry(["x"])
@@ -382,22 +390,47 @@ class TestRenderGlossaryEntry:
                 {"tag": "div", "content": "x"},
             ]
         )
-        assert html.count('<li class="gloss-item">') == 2
-        assert ('<li class="gloss-item"><div class="gloss-content">plain text</div></li>') in html
-        assert (
-            '<li class="gloss-item"><div class="gloss-content">' '<div class="gloss-sc-div">x</div></div></li>'
-        ) in html
+        assert html.count('<li class="gloss-item"') == 1
+        assert html.count('<li class="gloss-sc-li">') == 2
+        assert '<li class="gloss-sc-li">plain text</li>' in html
+        assert '<li class="gloss-sc-li"><div class="gloss-sc-div">x</div></li>' in html
+
+    def test_flat_forms_row_marks_outer_item_and_nests_members(self):
+        html = render_glossary_entry(
+            ["捩れる", "捻れる", "拗れる", "捻じれる", "捩じれる"],
+            definition_tags=["forms"],
+        )
+
+        assert html.startswith('<li class="gloss-item" data-sc-content="forms">')
+        assert html.count('<li class="gloss-item"') == 1
+        assert html.count('<li class="gloss-sc-li">') == 5
+
+    def test_forms_table_marks_outer_item_and_preserves_source_marker(self):
+        forms_table = {
+            "type": "structured-content",
+            "content": {
+                "tag": "table",
+                "data": {"content": "formsTable"},
+                "content": {"tag": "tbody", "content": []},
+            },
+        }
+
+        html = render_glossary_entry([forms_table], definition_tags=["forms"])
+
+        assert html.startswith('<li class="gloss-item" data-sc-content="forms">')
+        assert html.count('<li class="gloss-item"') == 1
+        assert '<table class="gloss-sc-table" data-sc-content="formsTable">' in html
 
     def test_plain_string_newlines_become_br(self):
         # Issue #28: plain-text monolingual dicts use \n between sub-senses.
         # Anki collapses literal newlines; <br> is needed for visual line breaks.
         html = render_glossary_entry(["① a\n② b\n③ c"])
-        assert html == ('<li class="gloss-item"><div class="gloss-content">' "① a<br>② b<br>③ c" "</div></li>")
+        assert html == ('<li class="gloss-item"><div class="gloss-content">① a<br>② b<br>③ c</div></li>')
 
     def test_plain_string_crlf_normalized(self):
         # Windows-authored dictionaries may use CRLF or bare CR; render same as LF.
         html = render_glossary_entry(["a\r\nb\rc"])
-        assert html == ('<li class="gloss-item"><div class="gloss-content">' "a<br>b<br>c" "</div></li>")
+        assert html == ('<li class="gloss-item"><div class="gloss-content">a<br>b<br>c</div></li>')
 
 
 class TestSecurityHardening:
@@ -940,7 +973,7 @@ class TestImgPresentation:
         node = {"tag": "img", "path": "svg/accent.svg", "appearance": "monochrome"}
         out = structured_content_to_html(node, dict_id="d1")
         assert (
-            '<span class="gloss-image-background" ' 'style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
+            '<span class="gloss-image-background" style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
         ) in out
 
     def test_background_span_uses_same_src_as_img(self):
@@ -991,7 +1024,7 @@ class TestImgPresentation:
         out = structured_content_to_html(node, dict_id="d1")
         assert 'data-appearance="monochrome"' in out
         assert (
-            '<span class="gloss-image-background" ' 'style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
+            '<span class="gloss-image-background" style="--image: url(&quot;d1__svg_accent.svg&quot;)"></span>'
         ) in out
 
     def test_no_background_span_without_resolvable_src(self):

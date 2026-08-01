@@ -61,8 +61,8 @@ class TestCreateIndex:
             assert "idx_term" in indexes
             assert "idx_reading" in indexes
 
-    def test_schema_version_is_4(self):
-        assert SCHEMA_VERSION == 4
+    def test_schema_version_is_5(self):
+        assert SCHEMA_VERSION == 5
 
     def test_entries_table_has_tags_column(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"

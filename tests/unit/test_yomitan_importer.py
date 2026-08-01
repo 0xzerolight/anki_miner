@@ -658,6 +658,71 @@ class TestImportYomitanZip:
         finally:
             conn.close()
 
+    def test_import_preserves_one_outer_item_for_multi_member_row(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "multi.zip",
+            term_banks=[[["語", "ご", "", "", 0, ["word", "language"], 1, ""]]],
+            tag_banks=[],
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        conn = open_readonly(tmp_path / "dicts" / result.dict_id / "index.sqlite")
+        try:
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("語",)).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert content.count('<li class="gloss-item"') == 1
+        assert content.count('<li class="gloss-sc-li">') == 2
+
+    def test_import_marks_only_exact_forms_definition_tag(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "forms.zip",
+            term_banks=[
+                [
+                    ["語", "ご", "forms", "", 0, ["語", "ことば"], 1, ""],
+                    ["語", "ご", "forms-extra", "", 0, ["not forms"], 1, ""],
+                ]
+            ],
+            tag_banks=[],
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        conn = open_readonly(tmp_path / "dicts" / result.dict_id / "index.sqlite")
+        try:
+            rows = conn.execute("SELECT content FROM entries WHERE term = ? ORDER BY id", ("語",)).fetchall()
+        finally:
+            conn.close()
+
+        exact_forms, longer_tag = (row[0] for row in rows)
+        assert exact_forms.startswith('<li class="gloss-item" data-sc-content="forms">')
+        assert 'data-sc-content="forms"' not in longer_tag
+
+    def test_import_marks_forms_table_outer_item_and_preserves_table_marker(self, tmp_path: Path):
+        forms_table = {
+            "type": "structured-content",
+            "content": {
+                "tag": "table",
+                "data": {"content": "formsTable"},
+                "content": {"tag": "tbody", "content": []},
+            },
+        }
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "forms-table.zip",
+            term_banks=[[["呪言", "じゅごん", "forms", "", 0, [forms_table], 1, ""]]],
+            tag_banks=[],
+        )
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        conn = open_readonly(tmp_path / "dicts" / result.dict_id / "index.sqlite")
+        try:
+            content = conn.execute("SELECT content FROM entries WHERE term = ?", ("呪言",)).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert content.startswith('<li class="gloss-item" data-sc-content="forms">')
+        assert '<table class="gloss-sc-table" data-sc-content="formsTable">' in content
+
     def test_tags_column_populated_from_definition_and_term_tags(self, tmp_path: Path):
         """`DictRow.tags` is the union of term-bank column 3 (definitionTags)
         and column 8 (termTags), space-joined, preserving order.

@@ -681,7 +681,7 @@ def _render_img(
     bg_span = ""
     bg_suppressed = bool(_CSS_URL_UNSAFE_RE.search(img_src))
     if not bg_suppressed:
-        bg_span = '<span class="gloss-image-background" ' f'style="--image: url(&quot;{src_attr}&quot;)"></span>'
+        bg_span = f'<span class="gloss-image-background" style="--image: url(&quot;{src_attr}&quot;)"></span>'
     # data-appearance must be decided with the bg span, not independently: a
     # suppressed mask + data-appearance=monochrome would leave the img at
     # opacity:0 with nothing behind it (invisible). Downgrade to 'auto' instead.
@@ -774,34 +774,30 @@ def _render_attrs(node: dict[str, YomitanNode], tag: str) -> str:
 def render_glossary_entry(
     glossary: list[YomitanNode],
     *,
+    definition_tags: list[str] | None = None,
     dict_id: str | None = None,
     media_collector: set[str] | None = None,
 ) -> str:
-    """Render a Yomitan term-bank glossary array to `<li class="gloss-item">` items.
+    """Render one Yomitan term-bank row as one `<li class="gloss-item">`.
 
-    Pure SC-tree → HTML translator. Each glossary item becomes one
-    `<li class="gloss-item"><div class="gloss-content">…</div></li>`. The wrapper
-    is a block-level `<div>` (not a `<span>`): structured-content items routinely
-    contain block nodes (`div`/`table`/`ul`) and an inline `<span>` parent makes
-    the HTML parser auto-close the span before the block, orphaning the content
-    from `.gloss-content` styling. A short string sense still renders on one line.
-    Plain strings are HTML-escaped and dropped into the inner div as text;
-    structured-content nodes go through `structured_content_to_html`. The
-    caller is responsible for wrapping the result in `<ul>`/`<ol>` or any
-    dictionary-level chrome — this function emits items only.
+    A term-bank row is one Yomitan definition. A row with multiple glossary
+    members nests them under that one definition using the existing structured-
+    content list hooks. The block-level `<div>` wrapper safely contains structured
+    nodes such as `div`, `table`, and `ul`. The caller owns dictionary-level chrome.
 
     Args:
         glossary: The 6th element of a term-bank tuple. Each item is a plain
                   string or a structured-content node.
+        definition_tags: Exact tag tokens from the tuple's `definitionTags`.
         dict_id: Forwarded to the SC renderer; rewrites dict-internal `<img>`
                  paths to Anki-media filenames.
         media_collector: Forwarded to the SC renderer; collects relative
                          asset paths so the importer can extract them.
 
     Returns:
-        Concatenated `<li>` HTML. Empty input → empty string.
+        One outer `<li>` HTML item. Empty input → empty string.
     """
-    parts: list[str] = []
+    members: list[str] = []
     for item in glossary:
         if isinstance(item, str):
             inner = _text_to_html(item)
@@ -815,5 +811,29 @@ def render_glossary_entry(
             inner = _text_to_html(term)
         else:
             inner = structured_content_to_html(item, dict_id=dict_id, media_collector=media_collector)
-        parts.append(f'<li class="gloss-item"><div class="gloss-content">{inner}</div></li>')
-    return "".join(parts)
+        members.append(inner)
+
+    if not members:
+        return ""
+
+    if len(members) == 1:
+        inner = members[0]
+    else:
+        nested = "".join(f'<li class="gloss-sc-li">{member}</li>' for member in members)
+        # `list-style-type: circle` inline, not via glossary.css: it mirrors both
+        # Yomitan's own `.gloss-list` (ext/css/display.css) and the inline style
+        # the structured-content path already carries for the same role, so a
+        # synthesized members list and a source-authored one look identical on one
+        # card. Inline also survives a dictionary that ships its own styles.css
+        # (those stamp `data-has-styles`, which gates every glossary.css rule off).
+        inner = f'<ul class="gloss-sc-ul" style="list-style-type: circle">{nested}</ul>'
+
+    item_attrs = 'class="gloss-item"'
+    if definition_tags is not None and "forms" in definition_tags:
+        # Deliberate Yomitan divergence: Yomitan does not synthesize this marker
+        # from definitionTags. Lapis's documented `no-forms` switch requires the
+        # exact marker on the outer item so both flat and formsTable JMdict rows
+        # hide without leaving an empty numbered definition behind.
+        item_attrs += ' data-sc-content="forms"'
+
+    return f'<li {item_attrs}><div class="gloss-content">{inner}</div></li>'
