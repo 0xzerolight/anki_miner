@@ -138,6 +138,10 @@ class BackfillPlan:
     # byte-identical to the stored one. Lets the summary distinguish "already
     # up to date" from "lookups found nothing" on an empty plan.
     identical_skips: int = 0
+    # Overwrite-mode pitch fields left alone because the only reading available
+    # was a context-free tokenizer guess. Surfaced so an overwrite run that
+    # deliberately protects existing pitch does not read as "nothing found".
+    guessed_reading_skips: int = 0
 
     @property
     def total_field_changes(self) -> int:
@@ -297,6 +301,7 @@ def scan_backfill(
     tagger = get_shared_tagger()
 
     scanned = skipped_no_identity = sentinel_only_sorts = identical_skips = 0
+    guessed_reading_skips = 0
     note_plans: list[NotePlan] = []
 
     for chunk in _chunks(note_ids, _CHUNK):
@@ -321,7 +326,7 @@ def scan_backfill(
         definitions, glossaries = _chunk_definition_lookups(definition_service, contexts, selected)
 
         for idx, ctx in enumerate(contexts):
-            changes, note_identicals = _compute_note_changes(
+            changes, note_identicals, note_guessed = _compute_note_changes(
                 ctx,
                 config,
                 selected,
@@ -333,6 +338,7 @@ def scan_backfill(
                 dict_css_entries=dict_css_entries,
             )
             identical_skips += note_identicals
+            guessed_reading_skips += note_guessed
             sentinel_only_sorts += sum(
                 1 for c in changes if c.field_key == "frequency_sort" and c.new_value == _FREQ_MISS_SENTINEL
             )
@@ -352,6 +358,7 @@ def scan_backfill(
         expression_field=word_field,
         config_version=config.config_version,
         identical_skips=identical_skips,
+        guessed_reading_skips=guessed_reading_skips,
     )
 
 
@@ -462,12 +469,13 @@ def _compute_note_changes(
     definition: str | None,
     glossary: str | None,
     dict_css_entries: list[tuple[str, str, str]],
-) -> tuple[list[FieldChange], int]:
+) -> tuple[list[FieldChange], int, int]:
     """Emit FieldChanges for one note under the fill/overwrite policy.
 
-    Returns ``(changes, identical_skips)`` — the second element counts
-    overwrite-mode fields skipped because the proposal matched the stored
-    value byte-for-byte.
+    Returns ``(changes, identical_skips, guessed_reading_skips)`` — the second
+    element counts overwrite-mode fields skipped because the proposal matched
+    the stored value byte-for-byte, the third those skipped because the pitch
+    render would have come off a guessed reading (see the loop below).
     """
     anki_fields = config.anki_fields
     proposals: dict[str, str] = {}
@@ -507,6 +515,7 @@ def _compute_note_changes(
 
     changes: list[FieldChange] = []
     identical_skips = 0
+    guessed_reading_skips = 0
     for key in sorted(proposals):
         new_value = proposals[key]
         if not new_value:
@@ -518,13 +527,26 @@ def _compute_note_changes(
         if current is None:
             continue  # field absent on this note-type instance
         if options.overwrite:
+            if key in _PITCH_KEYS and ctx.reading_source == "tokenizer" and not _is_empty(current):
+                # Pitch markup lays the accent position over THIS reading's
+                # morae, so the reading decides the output even when the
+                # position lookup is right. A tokenizer reading is a
+                # context-free homograph guess (generate_reading("弾く") is ひく
+                # where mining, with the sentence, read はじく) — which is why
+                # _resolve_context calls it lookup-only, never persisted.
+                # Overwriting a populated pitch field from one persists it, and
+                # would silently replace a correct card with a wrong-homograph
+                # one. Fill mode is unaffected: it only writes empty fields, so
+                # a guess there still beats nothing.
+                guessed_reading_skips += 1
+                continue
             if new_value == current:
                 identical_skips += 1
                 continue
         elif not _is_empty(current):
             continue
         changes.append(FieldChange(key, field_name, _display(current), new_value))
-    return changes, identical_skips
+    return changes, identical_skips, guessed_reading_skips
 
 
 def _pitch_proposals(

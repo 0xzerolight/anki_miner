@@ -552,6 +552,45 @@ class TestScanFillPolicy:
         assert plan.notes == ()
         assert plan.identical_skips == 0
 
+    def test_overwrite_keeps_pitch_when_the_reading_is_only_a_guess(self, backfill_config):
+        """A populated pitch field is never rewritten off a context-free reading.
+
+        The markup lays the accent over THIS reading's morae, so a standalone
+        re-analysis (no sentence) can replace a correct card with the wrong
+        homograph's — which is why _resolve_context calls tokenizer readings
+        lookup-only.
+        """
+        anki = FakeAnkiService({1: _note(1, word="猫", PitchGraph=_SVG_GRAPH, PitchText="stored")})
+        pitch = FakePitchService({("猫", "ねこ"): "0"})
+        plan = scan_backfill(
+            anki, backfill_config, _services(pitch=pitch), _options({"pitch_graph", "pitch_text"}, overwrite=True)
+        )
+        assert plan.notes == ()
+        assert plan.guessed_reading_skips == 2
+        assert plan.identical_skips == 0
+
+    def test_overwrite_writes_pitch_when_a_reading_field_supplies_it(self, backfill_config):
+        """The guard is on the reading's provenance, not on pitch as such."""
+        anki = FakeAnkiService(
+            {1: _note(1, word="猫", ExpressionReading="ねこ", PitchGraph=_SVG_GRAPH, PitchText="stored")}
+        )
+        pitch = FakePitchService({("猫", "ねこ"): "0"})
+        plan = scan_backfill(
+            anki, backfill_config, _services(pitch=pitch), _options({"pitch_graph", "pitch_text"}, overwrite=True)
+        )
+        assert "pitch_graph" in _changes_by_key(plan, 1)
+        assert plan.guessed_reading_skips == 0
+
+    def test_overwrite_still_fills_an_empty_pitch_field_from_a_guess(self, backfill_config):
+        """Nothing is being replaced, so a guess beats leaving the field blank."""
+        anki = FakeAnkiService({1: _note(1, word="猫", PitchGraph="", PitchText="")})
+        pitch = FakePitchService({("猫", "ねこ"): "0"})
+        plan = scan_backfill(
+            anki, backfill_config, _services(pitch=pitch), _options({"pitch_graph", "pitch_text"}, overwrite=True)
+        )
+        assert "pitch_graph" in _changes_by_key(plan, 1)
+        assert plan.guessed_reading_skips == 0
+
     def test_unmapped_selected_key_ignored(self, backfill_config):
         config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "frequency_sort": ""})
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Frequency="")})
