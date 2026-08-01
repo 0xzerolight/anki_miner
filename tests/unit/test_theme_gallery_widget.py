@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from PyQt6 import sip
 
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.enhanced.theme_gallery import (
@@ -164,3 +165,42 @@ class TestThumbnails:
         # on the offscreen QPA's clamped 800x800 screen.
         offscreen_card = gallery.card(gallery.card_keys()[-1])
         assert offscreen_card.thumbnail.pixmap() is None or offscreen_card.thumbnail.pixmap().isNull()
+
+    def test_thumbnail_deleted_before_render_timer_fires_does_not_crash(self, qtbot, qapp):
+        """Pin the teardown race the module docstring names.
+
+        A card's paintEvent starts a zero-interval, single-shot timer that
+        loads the thumbnail on the next event-loop turn. If a host (the setup
+        wizard, in production) tears the card's widget tree down in that
+        window, the `thumbnail` QLabel can be destroyed before the timer
+        fires -- even though the timer is a child of the card and dies with
+        it, the timer is NOT what gets destroyed here, its sibling is. Without
+        the `sip.isdeleted` guard in `ThemeCard._load_thumbnail`, the pending
+        timeout calls `self.thumbnail.setPixmap(...)` on a dead C++ object and
+        raises `RuntimeError: wrapped C/C++ object of type QLabel has been
+        deleted` from inside the Qt event loop -- exactly the crash seen in
+        the setup wizard's flaky teardown tests.
+        """
+        gallery = _gallery(qtbot)
+        card = gallery.card(gallery.card_keys()[0])
+        # Mirror exactly what a real paintEvent does (see ThemeCard.paintEvent)
+        # without actually painting -- an explicit show()/waitExposed() here
+        # would let the event loop run and could drain the zero-interval timer
+        # before this test gets a chance to delete the thumbnail out from
+        # under it, making the race this test exists to pin non-deterministic.
+        card._thumbnail_requested = True
+        card._render_timer.start()
+        assert card._render_timer.isActive()
+
+        # Force the thumbnail's underlying C++ object to die right now --
+        # synchronously, not via deleteLater -- while the card and its timer
+        # stay alive. This reproduces the exact shape of the race: the timer
+        # fires into a card whose sibling child is already gone.
+        sip.delete(card.thumbnail)
+        assert sip.isdeleted(card.thumbnail)
+
+        # Let the pending zero-interval timer actually fire. Without the
+        # guard this raises inside the Qt event loop and pytest-qt's own
+        # exception capture fails the test; with the guard it is a silent
+        # no-op.
+        qtbot.wait(20)

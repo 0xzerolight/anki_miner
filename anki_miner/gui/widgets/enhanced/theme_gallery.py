@@ -8,15 +8,27 @@ Thumbnails load lazily. Qt only paints the cards the scroll viewport actually
 shows, so the first ``paintEvent`` IS the "this card became visible" signal --
 there is no viewport-intersection bookkeeping. The render is deferred out of the
 paint through a zero-interval child timer, because setting a pixmap on a child
-label from inside ``paintEvent`` re-enters layout and repaint. The timer is a
-child of the card, so it dies with it and can never fire into a deleted C++
-object.
+label from inside ``paintEvent`` re-enters layout and repaint.
+
+The timer being parented to the card does NOT mean it can never fire into a
+deleted C++ object -- that was tried and is false, proven by a real crash
+trace. Parenting only guarantees the timer itself is destroyed together with
+the card; it says nothing about ordering against the card's *sibling*
+children. When a host (e.g. the setup wizard) tears down the card's widget
+tree while the zero-interval timer is still pending -- a card painted once,
+then its dialog closed in the same event-loop cadence before the timer got a
+turn -- the ``thumbnail`` label can already be gone by the time the timer
+fires, and ``_load_thumbnail`` raises ``RuntimeError: wrapped C/C++ object of
+type QLabel has been deleted``. ``_load_thumbnail`` guards against exactly
+that with ``sip.isdeleted``, the same idiom used for late worker-completion
+signals elsewhere in the GUI (see ``AnkiProbeController._widget_alive``).
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
+from PyQt6 import sip
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QMouseEvent, QPaintEvent
 from PyQt6.QtWidgets import (
@@ -118,7 +130,18 @@ class ThemeCard(QFrame):
         super().paintEvent(event)
 
     def _load_thumbnail(self) -> None:
-        self.thumbnail.setPixmap(render_theme_thumbnail(self._key))
+        # The zero-interval timer can outlive its sibling `thumbnail` label --
+        # see the module docstring for the teardown race this guards. The
+        # pixmap is rendered BEFORE the liveness check (not passed inline to
+        # setPixmap): render_theme_thumbnail builds, polishes and grabs an
+        # offscreen widget, which pumps Qt's event/paint queues as a side
+        # effect -- a deferred-delete for this very card can land during that
+        # call. Checking liveness only right before the call, with nothing
+        # Qt-side between the check and the use, closes that window.
+        pixmap = render_theme_thumbnail(self._key)
+        if sip.isdeleted(self) or sip.isdeleted(self.thumbnail):
+            return
+        self.thumbnail.setPixmap(pixmap)
 
     # -- interaction ----------------------------------------------------
 
