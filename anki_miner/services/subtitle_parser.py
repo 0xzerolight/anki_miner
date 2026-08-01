@@ -654,9 +654,9 @@ class SubtitleParserService:
     def _build_display_tokens(text: str, raw_tokens: list, merged_tokens: list) -> list:
         """Sentence display stream, shared by BOTH mining entrypoints.
 
-        Order matters: attested-overridden compound spans are carried into the
-        raw stream first (``replace_overridden_spans`` — spans whose merged
-        kana the dictionary corrected, audit F2), then the honorific-kinship
+        Order matters: dictionary-attested compound spans are carried into the
+        raw stream first (``replace_overridden_spans`` — both kept and corrected
+        readings use whole-compound display grouping), then the honorific-kinship
         override (``apply_special_readings``) handles adjacent raw pairs the
         merges didn't consume. Both passes keep the concatenated surface text
         byte-identical, so span/offset math downstream is unaffected. Extracted
@@ -963,7 +963,7 @@ class SubtitleParserService:
         # pass; see _build_display_tokens). Surfaces are unchanged, so
         # span/offset math is unaffected.
         display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
-        sentence_furigana = generate_furigana_from_tokens(display_tokens)
+        sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
         sentence_reading = generate_reading_from_tokens(display_tokens)
 
         line_lemmas_entry: LineLemmas | None = None
@@ -1066,7 +1066,7 @@ class SubtitleParserService:
             # honorific-kinship pass; see _build_display_tokens). Surfaces are
             # unchanged so span math is unaffected.
             display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
-            sentence_furigana = generate_furigana_from_tokens(display_tokens)
+            sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
             sentence_reading = generate_reading_from_tokens(display_tokens)
 
             # Spans come from the shared locator (Issue #20 / T-38 — see

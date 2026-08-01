@@ -439,9 +439,9 @@ def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -
     their contextual reading). Flags land on ``token.feature`` (a
     ``SimpleNamespace`` — ``SyntheticToken`` declares ``__slots__``):
     ``kana_attested`` on cases 1-3 (``_emit_word`` trusts the token kana), and
-    ``kana_overridden`` on cases 2-3 only (the sentence display path merges
-    only spans whose rendering was actually wrong; see
-    ``replace_overridden_spans``). Mutates the synthetic tokens in place —
+    ``kana_overridden`` on cases 2-3 only. The sentence display path carries
+    every ``kana_attested`` synthetic so dictionary-backed compound grouping is
+    consistent; see ``replace_overridden_spans``. Mutates the synthetic tokens in place —
     they are per-line objects created by the merge passes above. Returns
     ``tokens`` unchanged (and issues NO lookup) when ``reading_lookup`` is
     ``None`` or the line produced no synthetics.
@@ -472,24 +472,25 @@ def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -
 
 
 def replace_overridden_spans(text: str, raw_tokens: list, merged_tokens: list) -> list:
-    """Carry attested-overridden compound readings into the sentence stream.
+    """Carry dictionary-attested compound tokens into the sentence stream.
 
     Sentence furigana/reading/bold are generated from the RAW token stream, so
-    a corrected kana on a merged token never reaches them on its own. This pass
+    a merged token's dictionary-backed grouping and kana never reach them on
+    their own. This pass
     aligns each merged token back to its consecutive raw-token run (the merged
     stream is a grouping of the raw stream — walk both, matching surface
-    concatenation) and, ONLY for spans whose reading attestation actually
-    overrode the kana (``feature.kana_overridden``), replaces the run with one
-    ``SyntheticToken`` carrying the attested kana. Kept-as-attested compounds
-    (何人, 副作用) keep today's per-morpheme rendering. The concatenated stream
-    text is byte-identical, so downstream ``str.find`` cursoring and
-    bold-offset math stay valid — with one guard: a replacement is skipped when
-    the merged surface was stitched across source whitespace (MeCab drops it),
-    because the single-token surface would then not be locatable in the line
-    text; the raw run is kept instead (bail-keep). Any alignment mismatch
-    returns ``raw_tokens`` untouched.
+    concatenation) and, for every dictionary-attested synthetic
+    (``feature.kana_attested``), replaces the run with one ``SyntheticToken``
+    carrying the attested kana. This keeps unchanged readings such as 二級
+    grouped like corrected readings such as 一級. The concatenated stream text
+    is byte-identical, so downstream ``str.find`` cursoring and bold-offset math
+    stay valid — with one guard: a replacement is skipped when the merged
+    surface was stitched across source whitespace (MeCab drops it), because the
+    single-token surface would then not be locatable in the line text; the raw
+    run is kept instead (bail-keep). Any alignment mismatch returns
+    ``raw_tokens`` untouched.
     """
-    if not any(isinstance(m, SyntheticToken) and getattr(m.feature, "kana_overridden", False) for m in merged_tokens):
+    if not any(isinstance(m, SyntheticToken) and getattr(m.feature, "kana_attested", False) for m in merged_tokens):
         return raw_tokens
     out: list = []
     ri, rn = 0, len(raw_tokens)
@@ -506,7 +507,7 @@ def replace_overridden_spans(text: str, raw_tokens: list, merged_tokens: list) -
             return raw_tokens
         run = raw_tokens[ri:j]
         ri = j
-        if getattr(m.feature, "kana_overridden", False) and m.surface in text:
+        if getattr(m.feature, "kana_attested", False) and m.surface in text:
             # ``m.surface in text`` = the whitespace-stitch guard: a merge
             # across a source space is not locatable as one token in the line.
             out.append(
