@@ -22,6 +22,9 @@ from anki_miner.services.dictionary.storage import (
     attest_detail as storage_attest_detail,
 )
 from anki_miner.services.dictionary.storage import (
+    exact_term_sequences as storage_exact_term_sequences,
+)
+from anki_miner.services.dictionary.storage import (
     lookup as storage_lookup,
 )
 from anki_miner.services.dictionary.storage import (
@@ -264,6 +267,29 @@ class IndexedDictProvider:
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during terms_readings; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return {}
+
+    def exact_term_sequences(
+        self,
+        pairs: list[tuple[str, str | None]],
+    ) -> dict[tuple[str, str], set[int]]:
+        """Batch exact ``(term, reading)`` identity probe.
+
+        Returns non-NULL dictionary sequences keyed by normalized exact pairs.
+        Unlike lookup, this never accepts a reading-only match. Unavailable or
+        corrupt indexes degrade to an empty map.
+        """
+        if self._conn is None:
+            return {}
+        try:
+            return storage_exact_term_sequences(self._conn, pairs)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during exact_term_sequences; treating as all-miss: %s",
                 self.dict_id,
                 self._db_path,
                 e,

@@ -1008,26 +1008,35 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Within-run duplicate collapse. Two distinct surfaces/lemmas can resolve
-        # to the same mined_form in one episode (e.g. a verb's lemma and another
-        # token's surface coincide). Anki dedups on the Expression first field,
-        # which IS mined_form, so it silently skips the second as a duplicate
-        # (anki_service.last_skipped_duplicates, warned at Phase 5). filter_unknown
-        # already removes mined_forms that exist as cards in Anki; this collapses
-        # the WITHIN-RUN collisions it can't see, so the curator never offers a
-        # word Anki will drop. Keep the first occurrence (stable order).
+        # Within-run duplicate collapse. Exact mined_form collisions mirror
+        # Anki's Expression-first-field dedup. Orthographic aliases need a
+        # dictionary identity instead: exact-term sequence + contextual reading,
+        # scoped by dictionary. Never use the normal term-OR-reading lookup here;
+        # it would falsely give reading-only junk such as いでる the identity of
+        # 出でる. Keep the first source occurrence (stable order).
         #
         # Gated on allow_duplicate_cards: the Deck Builder sets it True (and
         # bypass_optional_filters True) to intentionally re-card duplicates, in
         # which case Anki creates both and showing both is correct — collapsing
         # there would diverge from its raw-lemma preview parity.
         if not self.config.allow_duplicate_cards and unknown_words:
+            identity_pairs: list[tuple[str, str]] = [
+                (
+                    word.mined_form,
+                    katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
+                )
+                for word in unknown_words
+            ]
+            identities_by_pair = self.definition_service.offline_term_identities(identity_pairs)
             seen: set[str] = set()
+            seen_identities: set[tuple[str, int, str]] = set()
             collapsed: list[TokenizedWord] = []
-            for word in unknown_words:
-                if word.mined_form in seen:
+            for word, pair in zip(unknown_words, identity_pairs, strict=True):
+                identities = identities_by_pair.get(pair, set())
+                if word.mined_form in seen or not seen_identities.isdisjoint(identities):
                     continue
                 seen.add(word.mined_form)
+                seen_identities.update(identities)
                 collapsed.append(word)
             removed = len(unknown_words) - len(collapsed)
             unknown_words = collapsed
