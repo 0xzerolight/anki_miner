@@ -126,6 +126,115 @@ class TestSliding:
         qtbot.waitUntil(lambda: bar.property("underlineRect") == _underline_of(bar, 2))
 
 
+class TestSlidingWhenSelectingReflowsTheBar:
+    """Selecting a tab can re-lay out the bar *before* the slide is asked for.
+
+    Qt re-lays out the whole tab bar from inside ``QTabBar::setCurrentIndex``
+    when the selected state changes a tab's size hint -- after ``currentIndex``
+    has moved, but before ``QTabWidget::currentChanged`` is emitted. That
+    relayout arrives as ``tabLayoutChange()``, and taking it as a cue to put the
+    underline under ``currentIndex()`` teleported it to the destination; the
+    slide that ran a moment later then travelled from the destination to the
+    destination and was never seen.
+
+    The application's own sheet trips this with ``font-weight``, which only
+    changes metrics on a font that ships separate Medium and SemiBold faces --
+    so the bug was invisible under the offscreen platform's generic sans and
+    plainly visible on a desktop whose interface font is Inter. These tests
+    drive the same relayout with ``font-size``, which measures differently on
+    every machine.
+
+    Not with padding: a padding delta is the same for every label, so the tab
+    being selected grows by exactly what the tab being deselected loses, the bar
+    keeps its width, and the resize half of the bug never fires.
+    """
+
+    @pytest.fixture
+    def reflowing_tabs(self, tabs, qapp, qtbot):
+        """``tabs``, wearing a sheet that makes the selected tab wider.
+
+        Wider than the ``tabs`` fixture too: at the larger size the tabs no
+        longer fit in 480px, and a bar that has to scroll to reveal the
+        selection moves every tab out from under the assertions.
+        """
+        qapp.setStyleSheet("QTabBar::tab { font-size: 13px; } QTabBar::tab:selected { font-size: 19px; }")
+        tabs.resize(900, 260)
+        bar = tabs.tabBar()
+        qtbot.waitUntil(lambda: bar.tabRect(2).width() > 0 and bar.tabRect(0).x() == 0)
+        bar.snap_underline()
+        return tabs
+
+    def test_the_relayout_is_real(self, reflowing_tabs):
+        """The control: without a width change there is no bug to test for."""
+        bar = reflowing_tabs.tabBar()
+        before = bar.tabRect(0).width()
+
+        reflowing_tabs.setCurrentIndex(2)
+
+        assert bar.tabRect(0).width() != before
+
+    @pytest.mark.motion
+    def test_the_underline_still_has_somewhere_to_travel(self, reflowing_tabs):
+        bar = reflowing_tabs.tabBar()
+
+        reflowing_tabs.setCurrentIndex(2)
+
+        animation = bar.findChildren(QPropertyAnimation)[0]
+        assert animation.startValue() != animation.endValue()
+        assert animation.endValue() == _underline_of(bar, 2)
+
+    @pytest.mark.motion
+    def test_it_leaves_from_the_tab_it_was_under_at_that_tab_s_new_width(self, reflowing_tabs):
+        """It departs from where it was, re-measured for the tab it is leaving.
+
+        Asserted as x-then-width rather than against a whole rect: the bar
+        briefly outgrows itself under this sheet and scrolls a few pixels before
+        the layout catches up, which moves ``tabRect`` but says nothing about
+        where the underline set off from.
+        """
+        bar = reflowing_tabs.tabBar()
+        departed_from = bar.property("underlineRect")
+
+        reflowing_tabs.setCurrentIndex(2)
+
+        start = bar.findChildren(QPropertyAnimation)[0].startValue()
+        assert start.x() == departed_from.x(), "the slide started somewhere the underline had never been"
+        assert start.width() == bar.tabRect(0).width(), "the tab it left shrank; the underline kept the old width"
+
+    @pytest.mark.motion
+    def test_the_relayout_does_not_stop_the_slide_it_triggered(self, reflowing_tabs, qtbot):
+        """The bar's OWN width changes too, and that resize is a second killer.
+
+        A wider selected tab makes the whole bar wider, so ``QTabWidget``
+        re-sizes it and ``resizeEvent`` lands a few milliseconds into the slide.
+        Snapping there left the underline correct but stationary -- the same
+        invisible jump, arriving by a different route than ``tabLayoutChange``.
+        """
+        bar = reflowing_tabs.tabBar()
+
+        reflowing_tabs.setCurrentIndex(2)
+        qtbot.wait(30)
+
+        assert motion.active_animations(bar), "a relayout stopped the slide instead of retargeting it"
+        assert bar.property("underlineRect") != _underline_of(bar, 2)
+
+    def test_it_still_lands_on_the_selected_tab(self, reflowing_tabs, qtbot):
+        bar = reflowing_tabs.tabBar()
+
+        reflowing_tabs.setCurrentIndex(2)
+
+        qtbot.waitUntil(lambda: bar.property("underlineRect") == _underline_of(bar, 2))
+
+    def test_a_resize_mid_slide_still_lands_on_the_selected_tab(self, tabs, qtbot):
+        """Retargeting a slide must not lose it: the window can move any time."""
+        bar = tabs.tabBar()
+
+        tabs.setCurrentIndex(2)
+        tabs.resize(900, 260)
+
+        qtbot.waitUntil(lambda: bar.property("underlineRect") == _underline_of(bar, 2))
+
+
 class TestSnapping:
     def test_a_resize_moves_the_underline_immediately(self, tabs, qtbot):
         bar = tabs.tabBar()
