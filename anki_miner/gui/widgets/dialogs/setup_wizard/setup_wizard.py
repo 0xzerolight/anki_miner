@@ -36,6 +36,7 @@ from .pages import (
     DonePage,
     NoteTypePage,
     ResourcesPage,
+    ThemePage,
 )
 
 __all__ = ["SetupWizard", "SetupWizardOutcome", "run_setup_wizard"]
@@ -111,13 +112,17 @@ class SetupWizard(QWizard):
         # whole change — no extra control, no checkbox to read back.
         self.setButtonText(QWizard.WizardButton.FinishButton, self.tr("Open Video Mining"))
 
-        # Pages in order.
+        # Pages in order. Theme goes first: it is the only step with nothing to
+        # detect and nothing that can fail, so it costs the user nothing and
+        # every page after it wears their own pick.
+        self.theme_page = ThemePage(self)
         self.ankiconnect_page = AnkiConnectPage(self)
         self.deck_page = DeckPage(self)
         self.notetype_page = NoteTypePage(self)
         self.resources_page = ResourcesPage(self)
         self.done_page = DonePage(self)
         for page in (
+            self.theme_page,
             self.ankiconnect_page,
             self.deck_page,
             self.notetype_page,
@@ -303,6 +308,7 @@ class SetupWizard(QWizard):
         super().done(self._pending_done_result)
 
     def _stage_current_edits(self) -> None:
+        self.theme_page.stage_current_edits()
         self.ankiconnect_page.stage_current_edits()
         self.deck_page.stage_current_edits()
         self.notetype_page.stage_current_edits()

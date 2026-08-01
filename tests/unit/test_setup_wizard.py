@@ -14,6 +14,8 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.widgets.dialogs.setup_wizard.pages import WIZARD_SHORTLIST_THEMES
 from anki_miner.gui.workers.base_worker import CancellableWorker
 
 
@@ -122,6 +124,94 @@ def test_package_exports_setup_wizard_and_runner():
 
 
 # ---------------------------------------------------------------------------
+# ThemePage
+# ---------------------------------------------------------------------------
+
+
+class TestThemePage:
+    def test_theme_page_is_first(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        first_id = wiz.pageIds()[0]
+        assert wiz.page(first_id) is wiz.theme_page
+
+    def test_wizard_now_has_six_pages(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        assert len(wiz.pageIds()) == 6
+
+    def test_theme_page_never_blocks_next(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        assert wiz.theme_page.isComplete() is True
+
+    def test_shortlist_is_shown_first(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        assert list(wiz.theme_page.gallery.card_keys()) == list(WIZARD_SHORTLIST_THEMES)
+
+    def test_see_all_expands_in_place(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        wiz.theme_page.see_all_btn.click()
+        assert wiz.theme_page.gallery.is_showing_all() is True
+        assert len(wiz.theme_page.gallery.card_keys()) == len(Theme.get_available_themes())
+
+    def test_see_all_button_hides_once_expanded(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        wiz.theme_page.see_all_btn.click()
+        assert wiz.theme_page.see_all_btn.isVisible() is False
+
+    def test_selecting_a_theme_applies_it_live(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        wiz.theme_page.gallery.card("nord").click()
+        assert Theme.get_current_mode() == "nord"
+
+    def test_validate_page_writes_theme_into_the_working_config(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        wiz.theme_page.gallery.card("nord").click()
+        assert wiz.theme_page.validatePage() is True
+        assert wiz.working_config().theme == "nord"
+
+    def test_stage_current_edits_writes_theme_without_navigation(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        wiz = SetupWizard(AnkiMinerConfig())
+        qtbot.addWidget(wiz)
+        wiz.theme_page.gallery.card("nord").click()
+        wiz.theme_page.stage_current_edits()
+        assert wiz.working_config().theme == "nord"
+
+    def test_untouched_page_leaves_the_config_theme_alone(self, qtbot):
+        from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+        cfg = AnkiMinerConfig(theme="sakura")
+        wiz = SetupWizard(cfg)
+        qtbot.addWidget(wiz)
+        wiz.theme_page.stage_current_edits()
+        assert wiz.working_config().theme == "sakura"
+
+
+# ---------------------------------------------------------------------------
 # SetupWizard container
 # ---------------------------------------------------------------------------
 
@@ -156,12 +246,12 @@ def test_wizard_has_skip_setup_button_wired_to_reject(qtbot, wiz_config):
     assert btn.text() == "Skip Setup"
 
 
-def test_wizard_adds_five_pages(qtbot, wiz_config):
+def test_wizard_adds_six_pages(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
-    assert len(wiz.pageIds()) == 5
+    assert len(wiz.pageIds()) == 6
 
 
 def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):
@@ -371,6 +461,11 @@ def test_complete_changed_cannot_reenable_navigation_while_closing(qtbot, wiz_co
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     wiz.show()
+    # Showing the wizard exposes the theme page's cards, each deferring its
+    # thumbnail paint to a zero-interval QTimer. Drain that queue before the
+    # test starts disabling/destroying the wizard below, or a card's deferred
+    # render can land after teardown has torn its widgets down.
+    qtbot.wait(10)
     worker = _StubbornWorker(release, wiz)
     wiz.register_worker(worker)
     worker.start()
@@ -431,11 +526,17 @@ def test_repeated_escape_while_closing_keeps_first_result_and_cancels_once(qtbot
     from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
 
     release = threading.Event()
-    # First page's initializePage starts a real AnkiConnect probe (tripwire).
+    # AnkiConnectPage's initializePage starts a real AnkiConnect probe once
+    # the wizard reaches it (tripwire); patched out even though it is not the
+    # start page.
     monkeypatch.setattr(pages_mod.AnkiConnectPage, "initializePage", lambda _self: None)
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     wiz.show()
+    # Drain the theme page's deferred card-thumbnail renders before the test
+    # starts closing the wizard (see test_complete_changed_cannot_reenable_
+    # navigation_while_closing for the race this avoids).
+    qtbot.wait(10)
     worker = _StubbornWorker(release, wiz)
     wiz.register_worker(worker)
     worker.start()
@@ -1392,6 +1493,9 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     wiz.show()
     qtbot.waitExposed(wiz)
+    # The theme page is first and never blocks Next; move to the page whose
+    # field is under test so it is actually the visible/focusable one.
+    wiz.next()
     page_id = wiz.currentId()
     field = wiz.ankiconnect_page.url_input
     field.setFocus()
@@ -1518,7 +1622,7 @@ def test_close_stages_typed_editor_values(qtbot, wiz_config, action, monkeypatch
     elif action == "x":
         monkeypatch.setattr(type(wiz.ankiconnect_page), "initializePage", lambda _self: None)
         wiz.show()
-        qtbot.wait(0)
+        qtbot.wait(10)
         wiz.close()
     else:
         qtbot.keyClick(wiz, Qt.Key.Key_Escape)
