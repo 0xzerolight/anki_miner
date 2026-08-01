@@ -516,6 +516,21 @@ class EpisodeProcessor:
                 QCoreApplication.translate("EpisodeProcessor", "No cards created. Every word is already in Anki.")
             )
 
+    def _report_ambiguous_readings(self) -> None:
+        """Emit one per-parse receipt for real-token reading mismatches."""
+        count = getattr(self.subtitle_parser, "ambiguous_reading_count", 0)
+        if type(count) is not int or count <= 0:
+            return
+        self.presenter.show_warning(
+            tr_format(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Ambiguous reading review required for %1 word(s); current readings kept",
+                ),
+                count,
+            )
+        )
+
     def _phase1_parse(
         self,
         ctx: _EpisodeContext,
@@ -543,6 +558,7 @@ class EpisodeProcessor:
             all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
         else:
             all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
+        self._report_ambiguous_readings()
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
         )
@@ -1226,22 +1242,49 @@ class EpisodeProcessor:
                 for i, g in zip(retry_idx, retry_glossaries, strict=True):
                     glossaries[i] = g
 
-        # Pitch accents if available. Deliberately still lemma-keyed (unlike
-        # the mined_form-keyed definition/frequency lookups above): pitch is a
-        # property of (accent word, reading), kanji variants of one lemma share
-        # the reading, and the canonical lemma orthography has the better hit
-        # rate in reading-scoped pitch CSVs. Re-keying buys nothing and risks
-        # misses. The READING, however, prefers ``resolved_reading`` when set:
-        # the じる/ずる verb-front resolver diverges the front (感じる/かんじる)
-        # from the archaic lemma (感ずる/かんずる), so the lemma's own reading
-        # would resolve the wrong accent word — ``resolved_reading`` (かんじる)
-        # realigns it while the lemma stays the correlation key. Empty otherwise.
+        # Pitch follows the same identity ladder as definitions/audio: the card
+        # front and its selected reading first, canonical UniDic lemma only on a
+        # miss. Lemma-first is unsafe when lexical analysis collapses a different
+        # word (呪言/じゅごん → 言祝ぎ/ことほぎ). ``resolved_reading`` remains the
+        # lemma-fallback realignment for modern じる fronts over archaic ずる
+        # lemmas.
         pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
         if self.pitch_accent_service and self.pitch_accent_service.is_available():
+            primary_pitch_keys = [
+                (
+                    w.mined_form,
+                    w.expression_reading or w.resolved_reading or w.lemma_reading or w.reading,
+                    w.pos,
+                )
+                for w in words_with_media
+            ]
             pitch_data = self.pitch_accent_service.lookup_batch_detailed(
-                [(w.lemma, w.resolved_reading or w.lemma_reading or w.reading, w.pos) for w in words_with_media],
+                primary_pitch_keys,
                 fmt=self.config.pitch_category_format,
             )
+            retry_idx = [
+                i
+                for i, ((position, _), word) in enumerate(zip(pitch_data, words_with_media, strict=True))
+                if not position and word.lemma != word.mined_form
+            ]
+            if retry_idx:
+                fallback_pitch_keys = [
+                    (
+                        words_with_media[i].lemma,
+                        words_with_media[i].resolved_reading
+                        or words_with_media[i].lemma_reading
+                        or words_with_media[i].reading,
+                        words_with_media[i].pos,
+                    )
+                    for i in retry_idx
+                ]
+                fallback_pitch_data = self.pitch_accent_service.lookup_batch_detailed(
+                    fallback_pitch_keys,
+                    fmt=self.config.pitch_category_format,
+                )
+                for i, fallback in zip(retry_idx, fallback_pitch_data, strict=True):
+                    if fallback[0]:
+                        pitch_data[i] = fallback
             found_count = sum(1 for pos, _ in pitch_data if pos)
             self.presenter.show_info(
                 tr_format(
@@ -1305,17 +1348,19 @@ class EpisodeProcessor:
                 # Inline pitch graph / overline (6.3): rendered self-contained
                 # SVG/HTML, gated on the field being mapped so the default config
                 # stays byte-identical. Uses the SAME reading the pitch lookup
-                # used (lemma_reading or reading) for the morae, and the entry's
+                # used for the morae, and the entry's
                 # per-mora nasal/devoice positions. One extra dict lookup only for
                 # a pitched word with the field mapped (both off by default).
                 want_graph = bool(self.config.anki_fields.get("pitch_graph"))
                 want_text = bool(self.config.anki_fields.get("pitch_text"))
                 if (want_graph or want_text) and self.pitch_accent_service:
-                    # Same reading the batch lookup used (resolved_reading first —
-                    # かんじる for a じる/ずる override — else lemma_reading, else
-                    # surface) so the graph/overline morae match the pitch entry.
-                    reading = word.resolved_reading or word.lemma_reading or word.reading
-                    entry = self.pitch_accent_service.lookup_entry(word.lemma, reading)
+                    reading = word.expression_reading or word.resolved_reading or word.lemma_reading or word.reading
+                    entry = self.pitch_accent_service.lookup_entry(word.mined_form, reading)
+                    if entry is None and word.lemma != word.mined_form:
+                        fallback_reading = word.resolved_reading or word.lemma_reading or word.reading
+                        entry = self.pitch_accent_service.lookup_entry(word.lemma, fallback_reading)
+                        if entry is not None:
+                            reading = fallback_reading
                     nasal = entry.nasal if entry else ()
                     devoice = entry.devoice if entry else ()
                     if want_graph:
@@ -2035,6 +2080,7 @@ class EpisodeProcessor:
                 all_words, line_index, counts = self.subtitle_parser.parse_text_units(
                     document.units, want_line_index, subtitle_cleanup=document.kind == "subtitle"
                 )
+            self._report_ambiguous_readings()
             self.presenter.show_success(
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
             )

@@ -233,6 +233,21 @@ class TestProcessEpisode:
         assert result.cards_created == 0
         mock_services["anki_service"].get_existing_vocabulary.assert_not_called()
 
+    def test_ambiguous_reading_count_is_reported(self, test_config, mock_services, tmp_path):
+        presenter = MagicMock(spec=NullPresenter())
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+        mock_services["subtitle_parser"].ambiguous_reading_count = 2
+        processor = build_processor(
+            config=test_config,
+            presenter=presenter,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
+        assert any("2" in warning and "ambiguous reading" in warning.lower() for warning in warnings)
+
     def test_early_return_all_words_known(self, processor, mock_services, tmp_path):
         """All words already in Anki → early return."""
         words = [_make_word()]
@@ -1367,12 +1382,80 @@ class TestPitchLemmaReading:
         assert lemma == "食べる"
         assert reading == "タベル", f"Expected surface reading 'タベル' as fallback, got '{reading}'"
 
+    def test_mined_form_and_expression_reading_are_primary_key(self, test_config, mock_services, tmp_path):
+        word = TokenizedWord(
+            surface="呪言",
+            lemma="言祝ぎ",
+            reading="コトホギ",
+            sentence="呪言師",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="名詞",
+            expression_reading="じゅごん",
+            lemma_reading="ことほぎ",
+        )
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.return_value = [("1", "頭高")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["curse speech"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert mock_pitch.lookup_batch_detailed.call_args_list[0].args[0] == [("呪言", "じゅごん", "名詞")]
+
+    def test_lemma_key_is_miss_only_fallback(self, test_config, mock_services, tmp_path):
+        word = TokenizedWord(
+            surface="呪言",
+            lemma="言祝ぎ",
+            reading="コトホギ",
+            sentence="呪言師",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="名詞",
+            expression_reading="じゅごん",
+            lemma_reading="ことほぎ",
+        )
+        mock_pitch = MagicMock()
+        mock_pitch.is_available.return_value = True
+        mock_pitch.lookup_batch_detailed.side_effect = [[(None, None)], [("0", "平板")]]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["curse speech"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            pitch_accent_service=mock_pitch,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert [c.args[0] for c in mock_pitch.lookup_batch_detailed.call_args_list] == [
+            [("呪言", "じゅごん", "名詞")],
+            [("言祝ぎ", "ことほぎ", "名詞")],
+        ]
+
     @staticmethod
     def _overridden_word() -> TokenizedWord:
         # As the parser emits 感じた after the じる/ずる resolver override: front
-        # 感じる, but the lemma stays the archaic 感ずる. Pitch is lemma-keyed, so
-        # keying on the lemma's own reading (かんずる) would resolve the wrong
-        # accent word; resolved_reading (かんじる) realigns it to the front.
+        # 感じる, but the lemma stays the archaic 感ずる. A miss-only lemma retry
+        # must keep resolved_reading (かんじる), not use the lemma's かんずる.
         return TokenizedWord(
             surface="感じ",
             lemma="感ずる",
@@ -1388,13 +1471,13 @@ class TestPitchLemmaReading:
             resolved_reading="かんじる",
         )
 
-    def test_resolved_reading_preferred_in_batch_lookup(self, test_config, mock_services, tmp_path):
-        """Site 1: the batch pitch lookup keys on resolved_reading over lemma_reading."""
+    def test_resolved_reading_preferred_in_lemma_fallback(self, test_config, mock_services, tmp_path):
+        """A miss-only lemma retry keeps resolved_reading over lemma_reading."""
         word = self._overridden_word()
 
         mock_pitch = MagicMock()
         mock_pitch.is_available.return_value = True
-        mock_pitch.lookup_batch_detailed.return_value = [("0", "平板")]
+        mock_pitch.lookup_batch_detailed.side_effect = [[(None, None)], [("0", "平板")]]
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -1411,9 +1494,10 @@ class TestPitchLemmaReading:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        lemma, reading, pos = mock_pitch.lookup_batch_detailed.call_args[0][0][0]
-        assert lemma == "感ずる"  # lemma NOT folded — correlation key
-        assert reading == "かんじる", f"Expected resolved_reading 'かんじる', got '{reading}'"
+        assert [c.args[0] for c in mock_pitch.lookup_batch_detailed.call_args_list] == [
+            [("感じる", "かんじる", "動詞")],
+            [("感ずる", "かんじる", "動詞")],
+        ]
 
     def test_resolved_reading_preferred_in_pitch_entry_lookup(self, test_config, mock_services, tmp_path):
         """Site 2: the pitch-graph/text entry lookup keys on resolved_reading too."""
@@ -1445,7 +1529,7 @@ class TestPitchLemmaReading:
         )
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_pitch.lookup_entry.assert_called_once_with("感ずる", "かんじる")
+        mock_pitch.lookup_entry.assert_called_once_with("感じる", "かんじる")
 
 
 class TestKnownWordDBIntegration:

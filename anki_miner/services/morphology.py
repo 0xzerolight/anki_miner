@@ -22,6 +22,37 @@ from anki_miner.utils.text_utils import hiragana_to_katakana, katakana_to_hiraga
 # term -> readings, best-first, hiragana-folded. See attest_merged_readings.
 ReadingLookup = Callable[[list[str]], dict[str, list[str]]]
 
+
+@dataclass(frozen=True)
+class AttestedReadingResolution:
+    """Result of comparing one derived reading with exact-headword readings."""
+
+    reading: str | None
+    ambiguous: bool = False
+
+
+def resolve_attested_reading(
+    derived_reading: str,
+    attested_readings: list[str],
+) -> AttestedReadingResolution:
+    """Keep an attested reading or replace it only from a unique dictionary row.
+
+    Readings are hiragana-folded and deduplicated before applying the policy.
+    A multi-reading mismatch is deliberately unresolved: bulk mining has no
+    semantic selection step, so choosing by dictionary order or string distance
+    would silently stamp an arbitrary homograph reading onto the card.
+    """
+    derived = katakana_to_hiragana(derived_reading)
+    folded = list(dict.fromkeys(katakana_to_hiragana(reading) for reading in attested_readings))
+    if not folded:
+        return AttestedReadingResolution(None)
+    if derived in folded:
+        return AttestedReadingResolution(derived)
+    if len(folded) == 1:
+        return AttestedReadingResolution(folded[0])
+    return AttestedReadingResolution(None, ambiguous=True)
+
+
 # Batch offline existence probe (DefinitionService.offline_terms_exist): a list
 # of candidate surfaces -> the attested SUBSET. Injected into the compound-merge
 # gate (merge_compound_suffixes) so morphology stays SQLite-free — the same
@@ -205,7 +236,7 @@ def extract_lemma(word_token) -> str:
     # POS-name tail. The tail is a POS decorator when it EQUALS the coarse pos1
     # ("君-代名詞") or ENDS WITH it ("引く-他動詞", "落ちる-自動詞" — unidic tags
     # transitivity with the fine 他動詞/自動詞 while pos1 is the coarse 動詞).
-    # Decorated lemmas miss every lemma-keyed lookup (frequency/pitch/offline-
+    # Decorated lemmas miss every lemma-fallback lookup (frequency/pitch/offline
     # definition existence) AND block mining_base folds keyed on a clean headword
     # (引ける→引く). Japanese name segments (メル-ビル) end with neither an ASCII
     # letter nor pos1 and are kept intact.
@@ -457,14 +488,19 @@ def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -
         if not attested:
             continue
         concat = katakana_to_hiragana(tok.feature.kana or "")
-        folded = [katakana_to_hiragana(r) for r in attested]
-        if concat in folded:
+        resolution = resolve_attested_reading(concat, attested)
+        chosen = resolution.reading
+        if resolution.ambiguous:
+            # Merged-token concatenation is a stronger contextual signal than a
+            # real token's collapsed lexical reading, so preserve this existing
+            # compound-only tie-break. Single real tokens never enter this path.
+            folded = list(dict.fromkeys(katakana_to_hiragana(r) for r in attested))
+            chosen = min(folded, key=lambda r: _edit_distance(r, concat))
+        if chosen is None:
+            continue
+        if chosen == concat:
             tok.feature.kana_attested = True
             continue
-        if len(attested) == 1:
-            chosen = folded[0]
-        else:
-            chosen = min(folded, key=lambda r: (_edit_distance(r, concat), folded.index(r)))
         tok.feature.kana = hiragana_to_katakana(chosen)
         tok.feature.kana_attested = True
         tok.feature.kana_overridden = True

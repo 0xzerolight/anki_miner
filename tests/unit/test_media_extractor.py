@@ -91,6 +91,26 @@ class TestExtractMedia:
         assert result.screenshot_filename is not None
         assert result.audio_filename is not None
 
+    def test_filenames_use_mined_form_not_unidic_lemma(self, service, video_file, make_tokenized_word):
+        word = make_tokenized_word(
+            surface="呪言",
+            lemma="言祝ぎ",
+            reading="コトホギ",
+            expression_reading="じゅごん",
+            pos="名詞",
+        )
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True),
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            result = service.extract_media(video_file, word)
+
+        assert result.screenshot_filename is not None
+        assert result.audio_filename is not None
+        assert result.screenshot_filename.startswith("呪言_")
+        assert result.audio_filename.startswith("呪言_")
+
     def test_screenshot_only_when_audio_fails(self, service, video_file, make_tokenized_word):
         """Should return screenshot path only when audio extraction fails."""
         word = make_tokenized_word()
@@ -162,9 +182,14 @@ class TestExtractMedia:
         assert result.screenshot_filename == "食べる_1500_0.jpg"
         assert result.audio_filename == "食べる_1500_0.mp3"
 
-    def test_handles_unsafe_characters_in_lemma(self, service, video_file, make_tokenized_word):
+    def test_handles_unsafe_characters_in_mined_form(self, service, video_file, make_tokenized_word):
         """Should sanitize filenames by replacing unsafe characters."""
-        word = make_tokenized_word(lemma='te<st>:wo"rd', start_time=2.0, duration=1.0)
+        word = make_tokenized_word(
+            surface='te<st>:wo"rd',
+            lemma='te<st>:wo"rd',
+            start_time=2.0,
+            duration=1.0,
+        )
 
         with (
             patch.object(service, "_extract_screenshot", return_value=True),
@@ -328,7 +353,7 @@ class TestAnimatedScreenshot:
 
     def test_filename_uses_webp_when_format_webp(self, animated_webp_service, video_file, make_tokenized_word):
         """Filename extension should be .webp when animated+webp is configured."""
-        word = make_tokenized_word(lemma="飲む", start_time=2.0, duration=1.5)
+        word = make_tokenized_word(surface="飲む", lemma="飲む", start_time=2.0, duration=1.5)
         with (
             patch.object(animated_webp_service, "_extract_screenshot", return_value=True),
             patch.object(animated_webp_service, "_extract_audio", return_value=True),

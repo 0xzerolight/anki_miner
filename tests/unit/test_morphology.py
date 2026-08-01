@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.services import morphology
 from anki_miner.services.morphology import (
     SyntheticToken,
     TokenInclusionRule,
@@ -541,6 +542,35 @@ class TestResolveReadingOverride:
     )
     def test_unlisted_pairs_return_none(self, spelling, derived):
         assert resolve_reading_override(spelling, derived) is None
+
+
+class TestResolveAttestedReading:
+    """Shared dictionary-attestation policy for compounds and real tokens."""
+
+    def test_already_attested_reading_is_kept(self):
+        resolution = morphology.resolve_attested_reading("しゅじゅう", ["しゅうじゅう", "しゅじゅう"])
+        assert resolution.reading == "しゅじゅう"
+        assert resolution.ambiguous is False
+
+    def test_unique_mismatch_uses_dictionary_reading(self):
+        resolution = morphology.resolve_attested_reading("ばち", ["はち"])
+        assert resolution.reading == "はち"
+        assert resolution.ambiguous is False
+
+    def test_unattested_term_keeps_fallback(self):
+        resolution = morphology.resolve_attested_reading("ことほぎ", [])
+        assert resolution.reading is None
+        assert resolution.ambiguous is False
+
+    def test_multi_reading_mismatch_never_guesses(self):
+        resolution = morphology.resolve_attested_reading("ことほぎ", ["じゅごん", "じゅげん"])
+        assert resolution.reading is None
+        assert resolution.ambiguous is True
+
+    def test_script_duplicates_count_as_one_reading(self):
+        resolution = morphology.resolve_attested_reading("ばち", ["はち", "ハチ"])
+        assert resolution.reading == "はち"
+        assert resolution.ambiguous is False
 
 
 class TestMergeNounSuffixesSpecialReading:

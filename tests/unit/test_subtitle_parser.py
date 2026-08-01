@@ -4731,14 +4731,66 @@ class TestOovReadingRecovery:
         word = self._parse(tmp_path, lambda ts: {})
         assert word.expression_reading == "疆"
 
-    def test_pure_kana_reading_never_overridden(self, tmp_path):
-        # Real tagger: a word unidic CAN read must never consult recovery,
-        # even when the dictionary would offer a different reading.
+    def test_attested_kana_reading_is_kept(self, tmp_path):
+        # Real tagger: contextual UniDic kana remains authoritative when the
+        # exact dictionary headword attests it, even if other readings exist.
         cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         srt = _write_srt(tmp_path, "kana.srt", "ご飯を食べる")
-        words = SubtitleParserService(cfg, reading_lookup=lambda ts: {"食べる": ["でたらめ"]}).parse_subtitle_file(srt)
+        words = SubtitleParserService(
+            cfg,
+            reading_lookup=lambda ts: {"食べる": ["たべる", "でたらめ"]},
+        ).parse_subtitle_file(srt)
         word = next(w for w in words if w.mined_form == "食べる")
         assert word.expression_reading == "たべる"
+
+
+class TestSingleTokenReadingAttestation:
+    """Exact-headword attestation for real UniDic tokens (audit I3)."""
+
+    def test_unique_mismatch_updates_expression_and_sentence_fields(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "hachi.srt", "お鉢を回した")
+        calls: list[list[str]] = []
+
+        def reading_lookup(terms):
+            calls.append(terms)
+            return {"鉢": ["はち"]} if "鉢" in terms else {}
+
+        parser = SubtitleParserService(cfg, reading_lookup=reading_lookup)
+        words = parser.parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "鉢")
+
+        assert word.expression_reading == "はち"
+        assert word.expression_furigana == "鉢[はち]"
+        assert word.lemma_reading == "はち"
+        assert word.sentence_reading == "おはちをまわした"
+        assert "鉢[はち]" in word.sentence_furigana
+        assert parser.ambiguous_reading_count == 0
+        assert len(calls) == 1
+        assert {"鉢", "回す"} <= set(calls[0])
+
+    def test_multi_reading_mismatch_keeps_unidic_and_records_receipt(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "jugon.srt", "呪言師 狗巻棘")
+
+        def term_lookup(terms):
+            return {"呪言"} & set(terms)
+
+        def reading_lookup(terms):
+            return {"呪言": ["じゅごん", "じゅげん"]} if "呪言" in terms else {}
+
+        parser = SubtitleParserService(
+            cfg,
+            term_lookup=term_lookup,
+            reading_lookup=reading_lookup,
+        )
+        words = parser.parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "呪言")
+
+        assert word.lemma == "言祝ぎ"
+        assert word.expression_reading == "ことほぎ"
+        assert word.expression_furigana == "呪言[ことほぎ]"
+        assert parser.ambiguous_reading_count == 1
 
 
 class TestCompoundMatcherReadingAttestation:
