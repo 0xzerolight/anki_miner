@@ -30,7 +30,7 @@ from collections.abc import Sequence
 
 from PyQt6 import sip
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QCursor, QMouseEvent, QPaintEvent
+from PyQt6.QtGui import QCursor, QKeyEvent, QMouseEvent, QPaintEvent
 from PyQt6.QtWidgets import (
     QFrame,
     QGraphicsOpacityEffect,
@@ -82,11 +82,17 @@ class ThemeCard(QFrame):
         super().__init__(parent)
         self._key = key
         self._selected = False
+        self._focused = False
         self._thumbnail_requested = False
 
         self.setObjectName("themeCard")
         self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.setAccessibleName(display_name)
+        # The QTreeWidget this replaced was arrow-key navigable; a QFrame
+        # defaults to NoFocus, which made every theme past the header combo's
+        # favorites unreachable from the keyboard. StrongFocus + keyPressEvent
+        # below restore both Tab and click reachability.
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACING.xxs, SPACING.xxs, SPACING.xxs, SPACING.xxs)
@@ -154,20 +160,47 @@ class ThemeCard(QFrame):
             self.clicked.emit(self._key)
         super().mousePressEvent(event)
 
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # noqa: N802 - Qt override
+        if event is not None and event.key() in (Qt.Key.Key_Space, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.clicked.emit(self._key)
+            return
+        super().keyPressEvent(event)
+
+    def focusInEvent(self, event) -> None:  # noqa: N802 - Qt override
+        self._focused = True
+        self._refresh_style()
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event) -> None:  # noqa: N802 - Qt override
+        self._focused = False
+        self._refresh_style()
+        super().focusOutEvent(event)
+
     # -- state ----------------------------------------------------------
 
     def set_selected(self, selected: bool) -> None:
-        """Draw (or clear) the selection ring.
+        """Mark (or clear) the selection ring; repaint reflects both selection and focus."""
+        self._selected = selected
+        self._refresh_style()
+
+    def _refresh_style(self) -> None:
+        """Draw the selection ring and/or the keyboard-focus ring.
 
         The ring colour comes from the LIVE theme, not the card's own, so the
         highlight stays legible against whatever the app is currently wearing.
         Written as an instance stylesheet scoped by ``#themeCard`` so it reaches
         the frame and nothing inside it -- in particular not the thumbnail label,
-        whose pixmap must never be restyled.
+        whose pixmap must never be restyled. Focus draws a dashed ring so it
+        reads as distinct from the solid selection ring even when both apply.
         """
-        self._selected = selected
-        colour = Theme.get_colors().get("primary", "#6366f1") if selected else "transparent"
-        self.setStyleSheet(f"#themeCard {{ border: 2px solid {colour}; border-radius: 6px; }}")
+        colour = Theme.get_colors().get("primary", "#6366f1")
+        if self._selected:
+            border = f"2px solid {colour}"
+        elif self._focused:
+            border = f"2px dashed {colour}"
+        else:
+            border = "2px solid transparent"
+        self.setStyleSheet(f"#themeCard {{ border: {border}; border-radius: 6px; }}")
 
     def set_active(self, active: bool) -> None:
         self.active_label.setText(self.tr("Active") if active else "")
@@ -300,6 +333,14 @@ class ThemeGalleryWidget(QWidget):
 
         self._content_layout.addStretch(1)
         self.set_active(active)
+        # refresh() destroys and recreates every card, so the proxy has to be
+        # re-pointed every rebuild -- otherwise a later setFocus() on this
+        # widget (e.g. the settings-search jump landing on "theme") forwards
+        # into a deleted card and silently does nothing. ThemeGalleryWidget
+        # itself stays a plain QWidget (NoFocus); the proxy is its only entry
+        # point into the keyboard-focusable cards.
+        first_card = self._cards.get(self._order[0]) if self._order else None
+        self.setFocusProxy(first_card)
 
     # -- construction ---------------------------------------------------
 

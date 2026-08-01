@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from PyQt6 import sip
+from PyQt6.QtCore import Qt
 
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.enhanced.theme_gallery import (
@@ -204,3 +205,56 @@ class TestThumbnails:
         # exception capture fails the test; with the guard it is a silent
         # no-op.
         qtbot.wait(20)
+
+
+class TestKeyboardFocus:
+    """The QTreeWidget this gallery replaced was arrow-key navigable; a bare
+    QFrame defaults to NoFocus and is not.
+
+    These pin the fix: every card is reachable and activatable from the
+    keyboard, and the gallery itself has a working ``setFocus()`` entry point
+    even though it is a plain ``QWidget`` (NoFocus) wrapping the real focus
+    targets.
+    """
+
+    def test_card_accepts_keyboard_focus(self, qtbot):
+        gallery = _gallery(qtbot)
+        assert gallery.card("nord").focusPolicy() == Qt.FocusPolicy.StrongFocus
+
+    def test_space_activates_the_focused_card(self, qtbot):
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+        with qtbot.waitSignal(gallery.theme_activated) as blocker:
+            qtbot.keyClick(card, Qt.Key.Key_Space)
+        assert blocker.args == ["nord"]
+
+    def test_return_activates_the_focused_card(self, qtbot):
+        gallery = _gallery(qtbot)
+        card = gallery.card("nord")
+        with qtbot.waitSignal(gallery.theme_activated) as blocker:
+            qtbot.keyClick(card, Qt.Key.Key_Return)
+        assert blocker.args == ["nord"]
+
+    def test_gallery_focus_proxy_resolves_to_a_live_card(self, qtbot):
+        gallery = _gallery(qtbot)
+        gallery.show()
+        qtbot.waitExposed(gallery)
+        first_key = gallery.card_keys()[0]
+
+        gallery.setFocus()
+
+        qtbot.waitUntil(lambda: gallery.card(first_key).hasFocus())
+
+    def test_focus_proxy_still_resolves_after_refresh(self, qtbot):
+        """refresh() destroys and recreates every card -- the proxy must follow."""
+        gallery = _gallery(qtbot)
+        gallery.show()
+        qtbot.waitExposed(gallery)
+
+        gallery.refresh()
+        first_key = gallery.card_keys()[0]
+        qtbot.waitUntil(lambda: gallery.card(first_key).isVisible())
+
+        gallery.setFocus()
+
+        qtbot.waitUntil(lambda: gallery.card(first_key).hasFocus())
