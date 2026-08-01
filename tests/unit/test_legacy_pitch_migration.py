@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import replace
 from pathlib import Path
 
@@ -37,6 +38,24 @@ class TestGuards:
         refilled = migrate_legacy_pitch_csv(replace(first, pitch_chain=()))
         assert refilled is not None
         assert refilled.pitch_chain == (PitchSourceEntry("legacy-pitch"),)
+
+    def test_removing_the_migrated_source_does_not_re_import_it(self, tmp_path: Path) -> None:
+        """Removal deletes the slot and empties the chain; the CSV stays behind.
+
+        Inferring "already migrated" from a non-empty chain made that state
+        indistinguishable from a fresh install, so the next launch re-imported
+        the file and re-activated pitch — undoing a deletion the dialog said
+        could not be undone.
+        """
+        (tmp_path / "pitch_accent.csv").write_text("ねこ,猫,1\n", encoding="utf-8")
+        migrated = migrate_legacy_pitch_csv(_cfg(tmp_path))
+        assert migrated is not None and migrated.legacy_pitch_migrated is True
+
+        shutil.rmtree(tmp_path / "pitch" / "legacy-pitch")
+        removed = replace(migrated, pitch_chain=())
+
+        assert migrate_legacy_pitch_csv(removed) is None
+        assert not (tmp_path / "pitch" / "legacy-pitch").exists()
 
     def test_corrupt_legacy_file_never_raises(self, tmp_path: Path) -> None:
         # Empty file → importer raises SetupError → migration warns + returns None.

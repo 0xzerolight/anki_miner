@@ -270,6 +270,12 @@ class AnkiMinerConfig:
     # pitch_accent.csv when present.
     pitch_chain: tuple["PitchSourceEntry", ...] = field(default_factory=tuple)
     pitch_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "pitch")
+    # Set once the legacy pitch_accent.csv has been folded into the chain. An
+    # explicit marker because the CSV is deliberately left on disk for
+    # downgrade: inferring "already migrated" from a non-empty pitch_chain made
+    # removing the migrated source re-import it on the next launch, undoing a
+    # deletion the user was told could not be undone.
+    legacy_pitch_migrated: bool = False
     # Output label format for the pitch_category Anki field.
     # "jp": 平板/頭高/中高/尾高/起伏 (legacy)
     # "romaji": heiban/atamadaka/nakadaka/odaka/kifuku (Yomitan/Lapis compatible)
