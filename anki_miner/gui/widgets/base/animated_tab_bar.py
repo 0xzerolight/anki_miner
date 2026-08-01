@@ -34,6 +34,11 @@ class AnimatedTabBar(QTabBar):
         # layout hooks that call back into this object.
         self._underline = QRectF()
         self._accent = QColor()
+        # Which tab the underline is drawn under. Deliberately NOT the same as
+        # currentIndex(): Qt moves currentIndex() first and announces the
+        # selection later, and the gap between those two is where a relayout
+        # lands. See relayout_underline().
+        self._anchor = -1
         super().__init__(parent)
         self._accent = self.palette().color(QPalette.ColorRole.Highlight)
 
@@ -61,10 +66,16 @@ class AnimatedTabBar(QTabBar):
     # ------------------------------------------------------------------
     # Moving the underline
     # ------------------------------------------------------------------
-    def underline_target(self) -> QRectF:
-        """Return where the underline belongs right now, empty if nowhere."""
-        index = self.currentIndex()
-        if index < 0:
+    def underline_target(self, index: int | None = None) -> QRectF:
+        """Return where the underline belongs under ``index``, empty if nowhere.
+
+        Defaults to the selected tab. The argument exists for the one caller
+        that needs a *different* tab: a relayout arriving mid-selection, where
+        the underline still belongs to the tab it has not left yet.
+        """
+        if index is None:
+            index = self.currentIndex()
+        if index < 0 or index >= self.count():
             return QRectF()
         rect = self.tabRect(index)
         if rect.isEmpty():
@@ -84,6 +95,7 @@ class AnimatedTabBar(QTabBar):
             # would be motion inventing a journey that did not happen.
             self.snap_underline()
             return
+        self._anchor = self.currentIndex()
         motion.animate(
             self,
             b"underlineRect",
@@ -96,7 +108,49 @@ class AnimatedTabBar(QTabBar):
         """Put the underline where it belongs with no motion at all."""
         for animation in motion.active_animations(self):
             animation.stop()
+        self._anchor = self.currentIndex()
         self._set_underline_rect(self.underline_target())
+
+    def relayout_underline(self) -> None:
+        """Re-place the underline after the bar's geometry moved under it.
+
+        Selecting a tab is a geometry change here, and that is the whole trap.
+        ``common.qss`` draws the selected label one weight heavier, so the
+        selected tab measures wider -- which changes that tab's size hint AND
+        the width of the bar as a whole. Qt therefore re-lays the bar out from
+        inside ``setCurrentIndex``, and ``QTabWidget`` re-sizes it a moment
+        later. Both arrive here while ``currentIndex()`` has ALREADY moved and
+        ``QTabWidget.currentChanged`` has not been emitted yet, and both used to
+        snap: the first put the underline on the destination before the slide
+        was asked to travel there (so it travelled nowhere), and the second
+        stopped the slide a few milliseconds in (so it stopped dead and the
+        underline was placed at the destination anyway).
+
+        It only bites fonts that ship separate Medium and SemiBold faces -- the
+        offscreen platform's generic sans measures both the same, which is why
+        the suite never saw it -- and only on the tabs whose width actually
+        changes, so on a real desktop it read as the underline animating at
+        random.
+
+        Two rules, in order:
+
+        * The underline belongs to the tab it is drawn under, not to whichever
+          tab is selected this instant. If the selection has moved on ahead,
+          keep the underline on its own tab at that tab's *new* width, and leave
+          the destination to the slide that is about to run.
+        * A geometry change must never kill a slide already in flight. Retarget
+          it -- ``motion.animate`` redirects from the current rendered value --
+          because stopping mid-travel is exactly the jump this class exists to
+          avoid.
+        """
+        anchored = self.underline_target(self._anchor)
+        if self._anchor != self.currentIndex() and not anchored.isEmpty():
+            self._set_underline_rect(anchored)
+            return
+        if motion.active_animations(self) and not self.underline_target().isEmpty():
+            self.slide_underline()
+            return
+        self.snap_underline()
 
     # ------------------------------------------------------------------
     # Qt hooks -- every one of these invalidates the tab geometry
@@ -106,14 +160,18 @@ class AnimatedTabBar(QTabBar):
         self.snap_underline()
 
     def resizeEvent(self, event: QResizeEvent | None) -> None:  # noqa: N802 - Qt override
+        # Not only window resizes: selecting a tab changes the bar's own width
+        # by the difference between the two label weights, so QTabWidget resizes
+        # it on the way through every switch. See relayout_underline().
         super().resizeEvent(event)
-        self.snap_underline()
+        self.relayout_underline()
 
     def tabLayoutChange(self) -> None:  # noqa: N802 - Qt override
-        # Fires when tab widths change -- a retranslated label, an icon, a
-        # different font scale. Not on selection, so this never cuts a slide.
+        # Fires when tab widths change: a retranslated label, an icon, a
+        # different font scale -- AND on selection, which is the part that is
+        # easy to miss and was wrong here for a release.
         super().tabLayoutChange()
-        self.snap_underline()
+        self.relayout_underline()
 
     def tabInserted(self, index: int) -> None:  # noqa: N802 - Qt override
         super().tabInserted(index)
