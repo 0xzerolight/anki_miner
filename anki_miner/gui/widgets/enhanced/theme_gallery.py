@@ -415,5 +415,15 @@ class ThemeGalleryWidget(QWidget):
     # -- interaction ----------------------------------------------------
 
     def _on_card_clicked(self, key: str) -> None:
-        self.set_active(key)
+        # Emit BEFORE marking active. set_active -> set_selected reads
+        # Theme.get_colors()["primary"] for the ring colour; at the moment of
+        # the click the live theme is still the PREVIOUS one, since this widget
+        # never applies a theme itself (the host does, in its
+        # theme_activated slot). Under Qt's default same-thread direct
+        # connection that slot runs to completion inside emit(), so by the
+        # time set_active runs below, Theme reflects the newly-activated
+        # theme and the ring is drawn in the right colour. Swapping this order
+        # back would draw every activation ring in the theme that was active
+        # a moment ago.
         self.theme_activated.emit(key)
+        self.set_active(key)

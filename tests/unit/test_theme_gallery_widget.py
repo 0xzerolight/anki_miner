@@ -84,6 +84,25 @@ class TestSelection:
         gallery = _gallery(qtbot)
         assert gallery.selected_key() == "sakura"
 
+    def test_activation_ring_uses_the_newly_applied_theme_s_colour(self, qtbot):
+        """theme_activated must fire BEFORE set_active runs (see _on_card_clicked).
+
+        The gallery itself never applies a theme -- the host does, in its
+        theme_activated slot. This test mirrors that: the slot below calls
+        Theme.set_mode (standing in for the host's real theme-apply) before
+        set_active reads Theme.get_colors() for the ring. If the emit/set_active
+        order in the widget were ever reversed, this would assert against the
+        OLD theme's primary colour and fail.
+        """
+        gallery = _gallery(qtbot)
+        assert Theme.get_current_mode() == "light"
+
+        gallery.theme_activated.connect(Theme.set_mode)
+        gallery.card("nord").click()
+
+        new_primary = Theme.get_colors("nord")["primary"]
+        assert f"border: 2px solid {new_primary}" in gallery.card("nord").styleSheet()
+
 
 class TestStars:
     def test_star_reflects_favorite_state(self, qtbot):
@@ -135,3 +154,13 @@ class TestThumbnails:
         # scroll position rather than test the lazy-load behaviour it names.
         card = gallery.card(gallery.card_keys()[0])
         qtbot.waitUntil(lambda: card.thumbnail.pixmap() is not None and not card.thumbnail.pixmap().isNull())
+
+        # Negative half: a below-fold card must NOT have loaded, because it was
+        # never painted. This is the actual point of deferring the render out of
+        # paintEvent (see the module docstring) -- without this assertion the
+        # test only proves the eager case and says nothing about laziness.
+        # "tokyo-night" is the last of 29 cards in discovery order (verified via
+        # Theme.get_themes_grouped()), several rows below the last visible row
+        # on the offscreen QPA's clamped 800x800 screen.
+        offscreen_card = gallery.card(gallery.card_keys()[-1])
+        assert offscreen_card.thumbnail.pixmap() is None or offscreen_card.thumbnail.pixmap().isNull()
