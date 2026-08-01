@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
     resolve_managed_slot,
@@ -53,7 +53,7 @@ MAX_INDEX_JSON_BYTES = 8 * 1024 * 1024
 
 def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
     if cancel_check is not None and cancel_check():
-        raise SetupError("Import cancelled")
+        raise OperationCancelled("Import cancelled")
 
 
 @dataclass(frozen=True)

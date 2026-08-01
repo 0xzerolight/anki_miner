@@ -7,8 +7,10 @@ tests drive the internal hooks directly where GL behavior matters.
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import MagicMock, patch
 
+import pytest
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
@@ -195,3 +197,66 @@ class TestRenderReady:
             widget._create_render_context()
         assert ready == []
         assert widget.has_render_context is False
+
+
+class TestGlProbe:
+    """The context libmpv renders into is logged once, and never breaks GL init.
+
+    Diagnostic for the "OpenGL error INVALID_ENUM after creating texture" class
+    of failure: the app sets no QSurfaceFormat, so what mpv gets is whatever the
+    platform handed us, and a bug report without it is unanswerable.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_probe_flag(self, monkeypatch):
+        monkeypatch.setattr(f"{MODULE}._gl_probe_logged", False, raising=True)
+
+    def _fake_ctx(self):
+        ctx = MagicMock()
+        fmt = ctx.format.return_value
+        fmt.majorVersion.return_value = 2
+        fmt.minorVersion.return_value = 0
+        fmt.profile.return_value.name = "NoProfile"
+        fmt.renderableType.return_value.name = "DefaultRenderableType"
+        ctx.isOpenGLES.return_value = False
+        ctx.openGLModuleType.return_value.name = "LibGL"
+        ctx.hasExtension.return_value = True
+        return ctx
+
+    def test_logs_the_granted_format_once(self, caplog):
+        from anki_miner.gui.widgets import mpv_video_widget
+
+        ctx = self._fake_ctx()
+        with caplog.at_level(logging.INFO, logger=MODULE):
+            mpv_video_widget._log_gl_probe(ctx)
+            mpv_video_widget._log_gl_probe(ctx)
+
+        records = [r for r in caplog.records if r.name == MODULE]
+        assert len(records) == 1, "probe must log once per process, not per widget"
+        message = records[0].getMessage()
+        assert "got=2.0" in message
+        assert "profile=NoProfile" in message
+        assert "norm16=True" in message
+
+    def test_a_broken_context_does_not_raise(self, caplog):
+        """Never raise inside GL init — the widget's stated invariant."""
+        from anki_miner.gui.widgets import mpv_video_widget
+
+        ctx = MagicMock()
+        ctx.format.side_effect = RuntimeError("no context")
+        with caplog.at_level(logging.DEBUG, logger=MODULE):
+            mpv_video_widget._log_gl_probe(ctx)
+
+        assert not [r for r in caplog.records if r.name == MODULE and r.levelno >= logging.INFO]
+
+    def test_a_missing_extension_query_still_logs(self, caplog):
+        from anki_miner.gui.widgets import mpv_video_widget
+
+        ctx = self._fake_ctx()
+        ctx.hasExtension.side_effect = RuntimeError("no extension list")
+        with caplog.at_level(logging.INFO, logger=MODULE):
+            mpv_video_widget._log_gl_probe(ctx)
+
+        records = [r for r in caplog.records if r.name == MODULE]
+        assert len(records) == 1
+        assert "norm16=unknown" in records[0].getMessage()

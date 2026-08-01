@@ -579,6 +579,18 @@ class SubtitlePlayerWidget(QWidget):
     # record carrying a repeat count on the next allowed emit.
     _MPV_LOG_DEDUP_WINDOW_S = 10.0
 
+    # mpv's gl_check_error reports whatever glGetError has queued, which on the
+    # first check of a render includes any error left behind by earlier setup.
+    # Measured (Mesa 4.6, Wayland, libmpv 2.5): it fires exactly once per video
+    # load, on plane 0 only -- planes 1 and 2 come back clean -- so it is a
+    # drained leftover, not a failure to create that texture. Reproduced
+    # identically on 8-bit yuv420p and 10-bit yuv420p10, and unchanged when the
+    # widget is given an explicit 3.3 CoreProfile format, which rules out both
+    # the 10-bit GL_R16 and the context-profile explanations. Video renders.
+    # DEBUG, not WARNING: a genuinely broken render surfaces through
+    # render_failed and the "audio still plays" notice, not through this line.
+    _BENIGN_MPV_ERRORS = frozenset({("libmpv_render", "after creating texture: OpenGL error INVALID_ENUM.")})
+
     def _on_mpv_log(self, level: str, component: str, message: str) -> None:
         """Forward mpv warn/error log lines to the app logger, deduplicated.
 
@@ -588,7 +600,7 @@ class SubtitlePlayerWidget(QWidget):
         within ``_MPV_LOG_DEDUP_WINDOW_S`` and summarized on the next emit.
         """
         text = message.strip()
-        if level not in ("fatal", "error"):
+        if level not in ("fatal", "error") or (component, text) in self._BENIGN_MPV_ERRORS:
             logger.debug("mpv [%s] %s: %s", level, component, text)
             return
 

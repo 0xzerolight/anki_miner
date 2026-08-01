@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Callable, Iterable, NamedTuple
 
 import anki_miner.services._sqlite_index as _sqlite_index
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
@@ -286,7 +286,7 @@ def bulk_insert(
 
     ``progress`` receives the cumulative inserted-row count after each
     ``executemany``. ``cancel_check`` is polled before each batch and aborts
-    with ``SetupError("Import cancelled")`` when true.
+    with ``OperationCancelled("Import cancelled")`` when true.
 
     The sqlite3 `with` context manager commits/rolls back but does NOT close
     the connection — we close explicitly so the db file is not held open
@@ -302,7 +302,7 @@ def bulk_insert(
             if not batch:
                 return
             if cancel_check is not None and cancel_check():
-                raise SetupError("Import cancelled")
+                raise OperationCancelled("Import cancelled")
             conn.executemany(
                 "INSERT INTO entries (term, reading, content, tags, rules, score, sequence) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",

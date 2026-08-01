@@ -36,7 +36,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
     resolve_managed_slot,
@@ -351,7 +351,7 @@ def _import_csv(
             word_first = False
             for row in reader:
                 if cancel_check is not None and cancel_check():
-                    raise SetupError("Import cancelled")
+                    raise OperationCancelled("Import cancelled")
                 if len(row) < 2:
                     continue
                 if first_row:
@@ -537,7 +537,7 @@ def _finalize(
         shutil.copy2(input_path, staging / source_copy_name)
 
         if cancel_check is not None and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
 
         try:
             promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)

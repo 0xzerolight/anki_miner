@@ -24,16 +24,76 @@ handle and its lifecycle.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from typing import Any
 
 from PyQt6.QtCore import QByteArray, pyqtSignal
-from PyQt6.QtGui import QOpenGLContext
+from PyQt6.QtGui import QGuiApplication, QOpenGLContext, QSurfaceFormat
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 
 from anki_miner.utils.mpv_loader import MpvUnavailableError, load_mpv
 
 logger = logging.getLogger(__name__)
+
+# GL_R16/GL_RG16 are core in desktop GL 3.0+; on GLES they exist only via this
+# extension. 10-bit video (yuv420p10) is uploaded to exactly those formats, so
+# its presence separates "the driver cannot do 16-bit planes" from everything
+# else. On a desktop-GL context it reads False and means nothing -- there the
+# formats are core.
+_NORM16_EXTENSION = b"GL_EXT_texture_norm16"
+
+# One probe line per process, not per widget construction.
+_gl_probe_logged = False
+
+
+def _log_gl_probe(glctx: QOpenGLContext) -> None:
+    """Log the GL context libmpv will render into, once per process.
+
+    Diagnostic for the "OpenGL error INVALID_ENUM after creating texture" class
+    of failure: libmpv picks its texture internal formats from what the context
+    actually advertises, and this app never calls
+    ``QSurfaceFormat.setDefaultFormat``, so the answer is whatever the platform
+    handed us -- Qt's untouched default *requests* 2.0/NoProfile. 10-bit video
+    needs ``GL_R16``/``GL_RG16``, core in desktop GL 3.0+ and absent from GLES
+    without :data:`_NORM16_EXTENSION`.
+
+    ``glctx.format()`` is the format actually granted, not the one requested,
+    which is the number that decides whether those formats exist. (PyQt6 exposes
+    no ``QOpenGLContext.functions()``, so there is no ``glGetString`` route to
+    the driver strings; the granted format plus the extension check answer the
+    same question.)
+
+    INFO and permanent: a black-video or INVALID_ENUM bug report is
+    unanswerable without it, and it costs one line per launch.
+    """
+    global _gl_probe_logged
+    if _gl_probe_logged:
+        return
+    _gl_probe_logged = True
+    try:
+        fmt = glctx.format()
+        default = QSurfaceFormat.defaultFormat()
+        norm16: object = "unknown"
+        with contextlib.suppress(Exception):
+            norm16 = glctx.hasExtension(QByteArray(_NORM16_EXTENSION))
+        logger.info(
+            "mpv GL context: got=%d.%d profile=%s renderable=%s es=%s module=%s "
+            "norm16=%s default_request=%d.%d/%s platform=%s",
+            fmt.majorVersion(),
+            fmt.minorVersion(),
+            fmt.profile().name,
+            fmt.renderableType().name,
+            glctx.isOpenGLES(),
+            glctx.openGLModuleType().name,
+            norm16,
+            default.majorVersion(),
+            default.minorVersion(),
+            default.profile().name,
+            QGuiApplication.platformName(),
+        )
+    except Exception:  # noqa: BLE001 - a probe must never break GL init
+        logger.debug("GL probe failed", exc_info=True)
 
 
 class MpvVideoWidget(QOpenGLWidget):
@@ -129,6 +189,7 @@ class MpvVideoWidget(QOpenGLWidget):
         self._gl_ready = True
         glctx = self.context()
         if glctx is not None:
+            _log_gl_probe(glctx)
             # Qt destroys the GL context before Python __del__ runs; freeing
             # here (Qt emits with the context current) is the safety net when
             # widget destruction precedes an explicit detach().

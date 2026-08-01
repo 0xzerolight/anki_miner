@@ -25,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_meta_bank_entry,
@@ -86,7 +86,7 @@ class YomitanMetaBanks:
         bank file whose top-level JSON is not an array raises (wholly unreadable).
 
         Fires ``progress(file_idx, total, message)`` after each file and
-        raises ``SetupError("Import cancelled")`` if ``cancel_check`` returns
+        raises ``OperationCancelled("Import cancelled")`` if ``cancel_check`` returns
         True between files (the existing CSV is left untouched by the caller's
         atomic write). A final ``progress(total, total, "Done")`` is emitted
         once all files are consumed.
@@ -94,7 +94,7 @@ class YomitanMetaBanks:
         total = len(self._meta_files)
         for file_idx, meta_file in enumerate(self._meta_files, 1):
             if cancel_check and cancel_check():
-                raise SetupError("Import cancelled")
+                raise OperationCancelled("Import cancelled")
             try:
                 bank = json.loads(meta_file.read_text(encoding="utf-8"))
             except json.JSONDecodeError as e:

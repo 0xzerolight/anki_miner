@@ -45,6 +45,8 @@ class YtdlpUpdateWorker(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
-            logger.exception("YtdlpUpdateWorker unhandled exception")
-            if not self.check_cancelled():
-                self.error.emit(f"yt-dlp update error: {e}")
+            self.report_failure(
+                e,
+                context="YtdlpUpdateWorker",
+                on_error=lambda msg: self.error.emit(f"yt-dlp update error: {msg}"),
+            )

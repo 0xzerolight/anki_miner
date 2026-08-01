@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
     resolve_managed_slot,
@@ -180,7 +180,7 @@ def import_audio_pack(
         if cancel_check and cancel_check():
             # bulk_insert finished after the last cancel_check inside the
             # generator; honour a check here too (mirrors yomitan behaviour).
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
 
         if total_entries == 0:
             raise SetupError(f"No entries found in audio pack: {pack_dir}")
@@ -201,7 +201,7 @@ def import_audio_pack(
         )
 
         if cancel_check and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
 
         # --- promote staging → final atomically ---
         try:
@@ -267,4 +267,4 @@ def _rows_with_cancel(rows, cancel_check: Callable[[], bool] | None):
     for count, row in enumerate(rows, 1):
         yield row
         if count % _CANCEL_BATCH_SIZE == 0 and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")

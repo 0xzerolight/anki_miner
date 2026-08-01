@@ -576,6 +576,59 @@ class TestWorkerExceptionLogging:
 
         assert any(r.exc_info is not None for r in caplog.records)
 
+    def test_episode_worker_anki_offline_logs_no_traceback(self, qapp, caplog):
+        """Anki not running is a user state — one WARNING line, not an ERROR traceback."""
+        from anki_miner.exceptions import AnkiConnectionError
+        from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+
+        processor = MagicMock(name="EpisodeProcessor")
+        processor.process_episode.side_effect = AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?")
+
+        worker = EpisodeWorkerThread(
+            processor=processor,
+            video_file=Path("/fake/video.mkv"),
+            subtitle_file=Path("/fake/subs.ass"),
+            progress_callback=MagicMock(),
+        )
+        seen: list[str] = []
+        worker.error.connect(seen.append)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.gui.workers.episode_worker"):
+            worker.run()
+
+        records = [r for r in caplog.records if r.name == "anki_miner.gui.workers.episode_worker"]
+        assert [r.levelno for r in records] == [logging.WARNING]
+        assert records[0].exc_info is None
+        assert seen == ["Error processing episode: Cannot connect to AnkiConnect. Is Anki running?"]
+
+    def test_import_worker_cancel_logs_no_traceback(self, qapp, caplog):
+        """A user cancel routes to ``cancelled`` at INFO, whatever the cancel message says."""
+        from anki_miner.exceptions import OperationCancelled
+        from anki_miner.gui.workers.import_worker import ImportWorker
+
+        def runner(_progress, _is_cancelled):
+            # Deliberately NOT "Import cancelled": the old string compare only
+            # matched that one literal, so sibling cancels logged as bugs.
+            raise OperationCancelled("Download cancelled")
+
+        worker = ImportWorker(runner, source_path=Path("/fake/dict.zip"))
+        cancels: list[bool] = []
+        failures: list[str] = []
+        worker.cancelled.connect(lambda: cancels.append(True))
+        worker.failed.connect(failures.append)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.gui.workers.import_worker"):
+            worker.run()
+
+        records = [
+            r
+            for r in caplog.records
+            if r.name == "anki_miner.gui.workers.import_worker" and r.levelno >= logging.WARNING
+        ]
+        assert records == []
+        assert cancels == [True]
+        assert failures == []
+
     def test_episode_processor_logs_exception(self, tmp_path, caplog):
         """EpisodeProcessor.process_episode broad except calls logger.exception."""
         from anki_miner.config import AnkiMinerConfig

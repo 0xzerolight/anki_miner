@@ -33,7 +33,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
     resolve_managed_slot,
@@ -239,7 +239,7 @@ def _import_csv(
     entries_out: dict[tuple[str, str], storage.PitchStorageRow] = {}
     for parsed in iter_pitch_csv_rows(csv_path):
         if cancel_check is not None and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
         if not (parsed.kanji or parsed.reading):
             continue
         key = (parsed.kanji, parsed.reading)
@@ -335,7 +335,7 @@ def _finalize(
         shutil.copy2(input_path, staging / source_copy_name)
 
         if cancel_check is not None and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
 
         try:
             promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)

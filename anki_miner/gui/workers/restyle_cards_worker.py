@@ -41,6 +41,8 @@ class RestyleCardsWorker(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
-            logger.exception("RestyleCardsWorker unhandled exception")
-            if not self.check_cancelled():
-                self.error.emit(f"Restyle failed: {e}")
+            self.report_failure(
+                e,
+                context="RestyleCardsWorker",
+                on_error=lambda msg: self.error.emit(f"Restyle failed: {msg}"),
+            )
