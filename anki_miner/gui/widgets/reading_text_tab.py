@@ -176,9 +176,8 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # one item, so the receipt never needs a noun to count.
         self._install_receipt(layout, self.overall_progress_widget)
 
-        # LogWidget (carries its own header + Copy/Clear actions).
+        # LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
 

@@ -608,6 +608,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     _list_items: dict[Any, QListWidgetItem]
     list_widget: QListWidget
     empty_label: QLabel
+    page_filler: QWidget
     add_button: Any
     mine_button: Any
     clear_button: Any
@@ -1277,8 +1278,16 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         # showing it would be describing a filter the user did not choose.
         self._apply_queue_view()
 
-        # Empty-state hint vs list visibility.
+        # Empty-state hint vs list visibility. An empty queue reserved eight
+        # rows of nothing beside a line saying there was nothing, so the list
+        # goes away entirely and the hint stands alone. The filler swaps in for
+        # it: the list is the queue card's only expanding child, so hiding it
+        # also hands the page's surplus height back, and with nowhere to pool
+        # that height would inflate the headings instead. All three move
+        # together or none of them do.
         self.empty_label.setVisible(not has_items)
+        self.list_widget.setVisible(has_items)
+        self.page_filler.setVisible(not has_items)
 
     # ------------------------------------------------------------------
     # Row widget integration

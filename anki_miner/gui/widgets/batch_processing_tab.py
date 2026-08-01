@@ -39,6 +39,7 @@ from anki_miner.gui.widgets.base import (
     configure_card_layout,
     field_label_width,
     make_label_fit_text,
+    page_filler,
 )
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
@@ -156,7 +157,12 @@ class BatchProcessingTab(MiningTabBase):
         self.queue_panel.queue_controls.pause_requested.connect(self._on_pause_requested)
         self.queue_panel.queue_controls.resume_requested.connect(self._on_resume_requested)
         self.queue_panel.queue_controls.finish_current_requested.connect(self._on_finish_current_requested)
-        layout.addWidget(self.queue_panel, 1)  # Give it stretch factor
+        self.queue_panel.empty_changed.connect(self._on_queue_empty_changed)
+        # No stretch factor: the panel's own list makes it expand while there is
+        # something to show. A stretch would keep the panel expanding even after
+        # an empty queue hides that list, and the page could never hand the
+        # height back.
+        layout.addWidget(self.queue_panel)
 
         # Issue #60: opt-in per-episode word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
@@ -187,9 +193,14 @@ class BatchProcessingTab(MiningTabBase):
         self.retry_button.clicked.connect(self._retry_failed_items)
         layout.addWidget(self.retry_button)
 
-        # Log widget
+        # Log widget; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
+
+        # Stands in for the queue list while an empty queue keeps it hidden, so
+        # the page's leftover height still pools below the cards instead of
+        # inflating their headings.
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
         # Connect presenter signals to log widget
         self.presenter.info_signal.connect(self.log_widget.append_info)
@@ -640,6 +651,15 @@ class BatchProcessingTab(MiningTabBase):
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread as _QueueWorker
 
         return worker if isinstance(worker, _QueueWorker) else None
+
+    def _on_queue_empty_changed(self, is_empty: bool) -> None:
+        """Show the filler exactly while the panel has hidden its list.
+
+        The panel's list is what makes the panel take this page's leftover
+        height. With the list gone that height has to land somewhere, and the
+        headings are the wrong somewhere.
+        """
+        self.page_filler.setVisible(is_empty)
 
     def _on_pause_requested(self) -> None:
         """Ask the run to stop at the next series boundary."""

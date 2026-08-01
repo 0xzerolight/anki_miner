@@ -74,9 +74,13 @@ class QueuePanel(QFrame):
 
     Signals:
         process_requested: Emitted when user wants to process queue
+        empty_changed: Emitted with whether the queue is now empty. The panel
+            hides its own list when it is; the page hosting the panel uses this
+            to swap in whatever else takes that height.
     """
 
     process_requested = pyqtSignal()
+    empty_changed = pyqtSignal(bool)
 
     def __init__(self, parent=None, queue: BatchQueue | None = None):
         """Initialize the queue panel.
@@ -640,6 +644,14 @@ class QueuePanel(QFrame):
 
         self.queue_stats_label.setText(text)
         self._refresh_counts()
+
+        # An empty queue reserved six rows of nothing above a line saying the
+        # queue was empty. The list goes away instead and the line stands on its
+        # own. The panel owns the list, so it hides it; the page owns whatever
+        # takes the height that frees up, so it is told rather than reached into.
+        is_empty = series_count == 0
+        self.list_widget.setVisible(not is_empty)
+        self.empty_changed.emit(is_empty)
 
     # === Public API ===
 

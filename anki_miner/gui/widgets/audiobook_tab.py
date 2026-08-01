@@ -65,6 +65,7 @@ from anki_miner.gui.widgets.base import (
     PageWidth,
     configure_card_layout,
     field_label_width,
+    page_filler,
 )
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
@@ -246,7 +247,13 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("audiobook-queue-list")
         self.list_widget.setUniformItemSizes(False)
-        queue_layout.addWidget(self.list_widget, 1)
+        # No stretch factor: the list's own Expanding policy already takes the
+        # card's surplus. A stretch here would keep the CARD expanding even
+        # while the list is hidden on an empty queue -- QBoxLayout reports
+        # itself expansive whenever any item carries stretch, hidden or not --
+        # so the page could never hand that height back. Same call shape as
+        # QueuePanel and the Reading file list.
+        queue_layout.addWidget(self.list_widget)
         self._wire_queue_interaction()
 
         # Empty-state hint (shown when the list is empty).
@@ -303,9 +310,14 @@ class AudiobookTab(_ListQueueMiningTabBase):
         progress_card.setLayout(progress_layout)
         layout.addWidget(progress_card)
 
-        # --- LogWidget (carries its own header + Copy/Clear actions)
+        # --- LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
+
+        # Stands in for the queue list while an empty queue keeps it hidden, so
+        # the page's leftover height still pools below the cards instead of
+        # inflating their headings. Toggled with the list in _recompute_buttons.
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
         container.setLayout(layout)
 

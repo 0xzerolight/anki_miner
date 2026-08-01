@@ -456,6 +456,31 @@ class WorkflowActionBar(QWidget):
         self.elapsed_label.setFont(font)
 
 
+def _column_has_vertical_absorber(column: QBoxLayout) -> bool:
+    """Whether anything in ``column`` can take surplus height.
+
+    ``stretch(i)`` alone is not the answer. ``addStretch()`` records its pull in
+    Qt's private ``magic`` flag and reports a stretch of *zero*, and a card whose
+    own layout expands -- a queue list, a paste box -- is expansive through its
+    item even though the card's own policy is only ``Minimum``. Miss either and
+    the guard below adds a second stretch that competes with the real grower,
+    which drags that list back towards its size hint.
+
+    Args:
+        column: The scrolled page's content column.
+
+    Returns:
+        ``True`` if some item already takes surplus vertical space.
+    """
+    for index in range(column.count()):
+        if column.stretch(index) > 0:
+            return True
+        item = column.itemAt(index)
+        if item is not None and item.expandingDirections() & Qt.Orientation.Vertical:
+            return True
+    return False
+
+
 def install_workflow_shell(
     layout: QBoxLayout,
     scroll: QScrollArea,
@@ -483,7 +508,9 @@ def install_workflow_shell(
         content: The column of cards, fully populated.
         kind: The page's declared ``PAGE_WIDTH``.
         log: The screen's ``LogWidget``, moved out of ``content`` into the
-            drawer. ``None`` hides the Activity control.
+            drawer. ``None`` hides the Activity control. Moving it deletes its
+            layout item, so if that leaves the column with nothing to absorb
+            surplus height, a trailing stretch is appended.
 
     Returns:
         The installed :class:`WorkflowActionBar`.
@@ -504,6 +531,19 @@ def install_workflow_shell(
         splitter.addWidget(drawer)
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
+
+    # The log was the only expanding item in a pure form's column, and moving it
+    # into the drawer just deleted that item. `setWidgetResizable` still stretches
+    # the column to the viewport height, so with nothing left to take the surplus
+    # Qt deals it to every item that merely may grow -- the section headers and
+    # the cards, which centre their content and read as random empty bands that
+    # "fix themselves" the moment Activity is opened and the viewport shrinks. A
+    # trailing stretch gives the surplus somewhere to go. Screens that already
+    # have an absorber -- a queue list, a table, their own addStretch -- are left
+    # alone: a second one would compete with the real grower.
+    column = content.layout()
+    if isinstance(column, QBoxLayout) and not _column_has_vertical_absorber(column):
+        column.addStretch()
 
     layout.addWidget(splitter, 1)
     # Activity is attached before the bar is capped: the cap is never allowed
