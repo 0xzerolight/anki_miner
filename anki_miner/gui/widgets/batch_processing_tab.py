@@ -187,9 +187,8 @@ class BatchProcessingTab(MiningTabBase):
         self.retry_button.clicked.connect(self._retry_failed_items)
         layout.addWidget(self.retry_button)
 
-        # Log widget
+        # Log widget; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
 
         # Connect presenter signals to log widget
         self.presenter.info_signal.connect(self.log_widget.append_info)

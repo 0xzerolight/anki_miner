@@ -303,9 +303,8 @@ class AudiobookTab(_ListQueueMiningTabBase):
         progress_card.setLayout(progress_layout)
         layout.addWidget(progress_card)
 
-        # --- LogWidget (carries its own header + Copy/Clear actions)
+        # --- LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget)
 
         container.setLayout(layout)
 

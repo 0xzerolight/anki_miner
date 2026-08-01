@@ -187,9 +187,8 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         # The durable end state of this same card (D20).
         self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("volumes"))
 
-        # LogWidget (carries its own header + Copy/Clear actions).
+        # LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
-        layout.addWidget(self.log_widget, 1)
 
         container.setLayout(layout)
 
