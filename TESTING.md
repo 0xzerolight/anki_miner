@@ -1,16 +1,17 @@
 # Testing
 
-Anki Miner has ~10,200 test functions across 492 test files. This page documents how the suite is organized and how to run it.
+This page documents how the test suite is organized and how to run it.
 
 ## Layout
 
 ```
 tests/
 ├── conftest.py            # shared fixtures
-├── unit/                  # 468 files, external services mocked
-│   └── gui/               # 40 files; most widget tests live in unit/ root
-├── integration/           # 10 files, real adapters where possible
-└── e2e/                   # 14 files, on-demand live harness (see E2E harness below)
+├── unit/                  # external services mocked; most tests live here
+│   ├── gui/               # a minority of widget tests; most widget tests live in unit/ root
+│   └── reading/           # reading-source tests
+├── integration/           # real adapters where possible
+└── e2e/                   # on-demand live harness (see E2E harness below)
 ```
 
 Most widget tests (panels, tabs, dialogs) live directly under `tests/unit/` (e.g. `test_anki_settings_panel.py`, `test_deck_builder_tab.py`), not in `tests/unit/gui/`. Any test importing a PyQt6 widget needs `QT_QPA_PLATFORM=offscreen` in headless environments — see [Headless Qt](#headless-qt).
