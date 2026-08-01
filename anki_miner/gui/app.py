@@ -21,7 +21,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, QLockFile, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import QCoreApplication, QEvent, QLockFile, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -1454,7 +1454,23 @@ def main():
 
     if installer_smoke:
         _schedule_installer_smoke(app, window)
-        sys.exit(app.exec())
+        smoke_result = app.exec()
+        # The failure branch of _schedule_installer_smoke calls app.exit() on
+        # the very first event-loop tick, before window.close() ever runs --
+        # so none of MainWindow's torn-down widgets get the extra loop
+        # iterations that the success path's finish() gets for free. The
+        # theme gallery alone deleteLater()s dozens of QObjects per rebuild
+        # (settings-tab construction rebuilds it twice more after the
+        # initial, empty one); left pending, PyQt/sip's interpreter-exit
+        # wrapper cleanup walks into one and segfaults (SIGSEGV in
+        # cleanup_qobject, confirmed with gdb). Deleting a widget can post
+        # more DeferredDelete events for its own children, so one flush is
+        # not enough to drain the queue -- loop a bounded number of times
+        # rather than guess a single pass will always catch the tail.
+        for _ in range(8):
+            app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+            app.processEvents()
+        sys.exit(smoke_result)
 
     # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
     # monitor that logs a WARNING with the GUI stack whenever the event loop
