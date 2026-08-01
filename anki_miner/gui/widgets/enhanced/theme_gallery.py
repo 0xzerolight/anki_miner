@@ -21,7 +21,7 @@ turn -- the ``thumbnail`` label can already be gone by the time the timer
 fires, and ``_load_thumbnail`` raises ``RuntimeError: wrapped C/C++ object of
 type QLabel has been deleted``. ``_load_thumbnail`` guards against exactly
 that with ``sip.isdeleted``, the same idiom used for late worker-completion
-signals elsewhere in the GUI (see ``AnkiProbeController._widget_alive``).
+signals elsewhere in the GUI (see ``AnkiProbeController._alive``).
 """
 
 from __future__ import annotations
