@@ -240,6 +240,7 @@ def import_yomitan_zip(
                     rules = str(entry[3]) if len(entry) > 3 and entry[3] else ""
                     content = render_glossary_entry(
                         glossary,
+                        definition_tags=definition_tags,
                         dict_id=dict_id,
                         media_collector=media_paths,
                     )

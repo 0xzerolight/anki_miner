@@ -25,11 +25,11 @@ from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
 
-# v4: no table change — bumped to force a one-time reimport that re-runs the
-# fixed Yomitan tag split (multi-word nbsp tag names were shattered on import).
+# v5: no table change — bumped to force a one-time reimport that preserves each
+# Yomitan term-bank row as one outer glossary item and marks forms rows.
 # Stale (< SCHEMA_VERSION) indexes are dropped and the startup Reimport-All
 # prompt + pre-run gate act on schema_ok; reimport is the migration.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
 # raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is

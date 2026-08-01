@@ -18,6 +18,7 @@ from anki_miner.services.dictionary.storage import (
     write_meta,
     write_tags,
 )
+from anki_miner.services.dictionary.yomitan_renderer import render_glossary_entry
 
 
 def _seed_db(db_path: Path, rows: list[DictRow], schema_version: int = SCHEMA_VERSION):
@@ -494,6 +495,76 @@ class TestDedupBeforeCap:
         assert result.count('<li class="gloss-item">') == _DISPLAY_LIMIT
         assert result.count('<li class="gloss-item">dup</li>') == 1
         assert ">s3</li>" in result
+
+
+class TestTermBankRowBoundaries:
+    def test_three_senses_and_five_forms_count_as_four_rows(self, tmp_path: Path):
+        db = tmp_path / "forms.sqlite"
+        contents = [render_glossary_entry([f"sense {i}"]) for i in range(3)]
+        contents.append(
+            render_glossary_entry(
+                ["捩れる", "捻れる", "拗れる", "捻じれる", "捩じれる"],
+                definition_tags=["forms"],
+            )
+        )
+        _seed_db(
+            db,
+            [DictRow(term="捻れる", reading="ひねれる", content=content, sequence=1) for content in contents],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="JMdict")
+        provider.load()
+
+        result = provider.lookup("捻れる")
+
+        assert result is not None
+        assert '<ul class="gloss-list" data-count="4">' in result
+        assert result.count('<li class="gloss-item"') == 4
+        assert result.count('<li class="gloss-sc-li">') == 5
+
+    def test_one_sense_and_seven_forms_count_as_two_rows(self, tmp_path: Path):
+        db = tmp_path / "counter.sqlite"
+        contents = [
+            render_glossary_entry(["counter for months"]),
+            render_glossary_entry(
+                ["ヶ月（★）", "ヵ月（★）", "カ月", "か月", "ケ月", "箇月", "個月（🅁）"],
+                definition_tags=["forms"],
+            ),
+        ]
+        _seed_db(
+            db,
+            [DictRow(term="か月", reading="かげつ", content=content, sequence=1) for content in contents],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="JMdict")
+        provider.load()
+
+        result = provider.lookup("か月")
+
+        assert result is not None
+        assert '<ul class="gloss-list" data-count="2">' in result
+        assert result.count('<li class="gloss-item"') == 2
+        assert result.count('<li class="gloss-sc-li">') == 7
+
+    def test_nested_forms_members_do_not_consume_row_cap(self, tmp_path: Path):
+        db = tmp_path / "cap.sqlite"
+        contents = [render_glossary_entry([f"form {i}" for i in range(7)], definition_tags=["forms"])]
+        contents.extend(render_glossary_entry([f"sense {i}"]) for i in range(5))
+        _seed_db(
+            db,
+            [
+                DictRow(term="語", reading="ご", content=content, score=10 - i, sequence=1)
+                for i, content in enumerate(contents)
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="JMdict")
+        provider.load()
+
+        result = provider.lookup("語")
+
+        assert result is not None
+        assert '<ul class="gloss-list" data-count="5">' in result
+        assert result.count('<li class="gloss-item"') == _DISPLAY_LIMIT
+        assert "sense 3" in result
+        assert "sense 4" not in result
 
 
 # ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ and carry the structured-content hooks our renderer emits.
 
 import re
 
+from anki_miner.services.dictionary.card_style_block import base_css_variant
 from anki_miner.services.dictionary.card_style_presets import load_glossary_css
 
 
@@ -76,6 +77,12 @@ class TestLoadGlossaryCss:
         assert '[data-sc-content="example-sentence"]' in css
         assert '[data-sc-content|="example-sentence"]' not in css
 
+    def test_tree_shaken_gapfill_keeps_forms_ancestor_table_rules(self):
+        css = base_css_variant(frozenset({"sc-gapfill"}))
+        assert '[data-sc-content="forms"] table' in css
+        assert '[data-sc-content="forms"] th' in css
+        assert '[data-sc-content="forms"] td' in css
+
     def test_carries_hover_tag_chip_rule(self):
         css = _no_comments(load_glossary_css())
         # indexed_provider emits unioned dictionary tags with a tags-table row as
@@ -124,15 +131,15 @@ class TestGlossaryYomitanLeak:
                 selector = selector.strip()
                 if "ol[data-count]" in selector:
                     continue
-                assert selector == ".yomitan-glossary", (
-                    f"selector {selector!r} can match Yomitan-exported HTML " "(missing ol[data-count] guard)"
-                )
+                assert (
+                    selector == ".yomitan-glossary"
+                ), f"selector {selector!r} can match Yomitan-exported HTML (missing ol[data-count] guard)"
                 for decl in declarations.split(";"):
                     decl = decl.strip()
                     if decl:
-                        assert decl.startswith("--"), (
-                            "unguarded .yomitan-glossary rule must only set custom " f"properties, found {decl!r}"
-                        )
+                        assert decl.startswith(
+                            "--"
+                        ), f"unguarded .yomitan-glossary rule must only set custom properties, found {decl!r}"
 
 
 class TestEnvelopeInlineAxisOwnership:
@@ -552,9 +559,9 @@ class TestThemeAgnostic:
     def test_no_color_mix_outside_supports(self):
         css = load_glossary_css()
         assert "color-mix(" in css, "should use color-mix in an @supports block"
-        assert "color-mix(" not in _strip_supports(css), (
-            "color-mix() used outside an @supports guard — older WebViews would " "lose the color entirely"
-        )
+        assert "color-mix(" not in _strip_supports(
+            css
+        ), "color-mix() used outside an @supports guard — older WebViews would lose the color entirely"
 
     def test_muted_text_never_color_mix_derived(self):
         # Issue #87 Bug 2: --am-muted is body-text color applied to nested
@@ -562,9 +569,9 @@ class TestThemeAgnostic:
         # must never be redefined inside the @supports (color-mix) upgrade.
         css = re.sub(r"/\*.*?\*/", "", load_glossary_css(), flags=re.DOTALL)
         for block in re.findall(r"@supports[^{]*\{(?:[^{}]*\{[^{}]*\})*\s*\}", css, flags=re.DOTALL):
-            assert "--am-muted" not in block, (
-                "--am-muted redefined inside @supports — would reintroduce the " "currentColor opacity cascade"
-            )
+            assert (
+                "--am-muted" not in block
+            ), "--am-muted redefined inside @supports — would reintroduce the currentColor opacity cascade"
 
 
 class TestCuratedExclusions:

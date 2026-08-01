@@ -118,6 +118,10 @@ class TestCssWitnesses:
         html = UNSTAMPED + '<span data-sc-class="tag">x</span>'
         assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
 
+    def test_outer_forms_item_witnesses_gapfill(self):
+        html = UNSTAMPED + '<li class="gloss-item" data-sc-content="forms">x</li>'
+        assert css_witnesses([html]) == frozenset({"unstyled-chrome", "sc-gapfill"})
+
     def test_mixed_styled_and_unstyled_card_keeps_gapfill(self):
         # A styled dict + JMdict-fallback card: the stamped envelope must NOT
         # mask the unstamped one (per-envelope detection, not per-card).
