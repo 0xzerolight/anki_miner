@@ -876,7 +876,19 @@ class AnkiSettingsPanel(FormPanel):
         """Populate all widgets from ``config``.
 
         Called by :meth:`SettingsTab._load_config` as part of the panel loop.
+
+        Both status lines are cleared first, because the message they carry
+        belongs to the selection that was on screen before this load, not to
+        the one being loaded. A settings import or profile switch can name a
+        deck this collection does not have — ``set_deck_name`` inserts it as a
+        phantom, and ``_on_deck_selection_changed`` deliberately stays silent
+        for exactly that case (it only clears when the new item has no
+        phantom tooltip) — so a green "5 decks loaded" would sit above a
+        combo showing a deck that will fail the run. The refresh owns writing
+        a message; nothing here invents one.
         """
+        self._clear_status(self.deck_status)
+        self._clear_status(self.notetype_status)
         self.set_deck_name(config.anki_deck_name)
         self.set_note_type(config.anki_note_type)
         self.set_ankiconnect_url(config.ankiconnect_url)
