@@ -256,6 +256,19 @@ def test_phases_in_order_cards_created(test_config):
     assert ordered == ["parse", "defs", "cards"]
 
 
+def test_ambiguous_reading_count_is_reported(test_config):
+    sp = MagicMock(name="SubtitleParser")
+    sp.parse_text_units.return_value = ([], None, collections.Counter())
+    sp.ambiguous_reading_count = 3
+    presenter = MagicMock(spec=NullPresenter())
+    proc = _make_processor(test_config, subtitle_parser=sp, presenter=presenter)
+
+    proc.process_reading(_document([_unit(0)]))
+
+    warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
+    assert any("3" in warning and "ambiguous reading" in warning.lower() for warning in warnings)
+
+
 def test_d4_line_index_fused_for_iplus_one(test_config):
     """2. D4: i+1 on + curation None → line index built, cards created."""
     cfg = replace(test_config, use_i_plus_one_filter=True)

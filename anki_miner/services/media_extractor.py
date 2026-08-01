@@ -210,7 +210,11 @@ class MediaExtractorService:
             MediaData with paths to extracted files
         """
         # Sanitize filename
-        safe_word = safe_filename(word.lemma)
+        # Card-front identity, not UniDic's canonical lemma: the latter can be
+        # a different lexical item (呪言 → 言祝ぎ), making future media files lie
+        # about the expression they belong to. Per-run temp files are ephemeral;
+        # existing Anki media remain referenced by their existing notes.
+        safe_word = safe_filename(word.mined_form)
         timestamp = int(word.start_time * 1000)
         # Unique per extraction so parallel siblings sharing lemma+timestamp
         # (kanji-variant collapse / dedup bypass) never collide on one temp path.

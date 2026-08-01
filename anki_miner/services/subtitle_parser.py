@@ -24,6 +24,7 @@ from anki_miner.services.deinflection import (
 from anki_miner.services.morphology import (
     AttestLookup,
     ReadingLookup,
+    SyntheticToken,
     TokenInclusionRule,
     _edit_distance,
     apply_special_readings,
@@ -35,6 +36,7 @@ from anki_miner.services.morphology import (
     merge_compound_suffixes,
     mining_base,
     replace_overridden_spans,
+    resolve_attested_reading,
     resolve_reading_override,
 )
 from anki_miner.services.tagger import get_shared_tagger
@@ -42,6 +44,7 @@ from anki_miner.utils import (
     clean_subtitle_text,
     generate_furigana,
     generate_reading,
+    hiragana_to_katakana,
     katakana_to_hiragana,
     strip_inline_annotations,
     wrap_target_plain,
@@ -422,6 +425,29 @@ class SubtitleParserService:
         # selection policy (unique-only vs edit-distance tie-break) — sharing
         # the dict would let one helper serve the other's answer.
         self._unique_reading_cache: dict[str, str | None] = {}
+        self._attested_readings_cache: dict[str, list[str]] = {}
+        self._ambiguous_readings: set[str] = set()
+
+    @property
+    def ambiguous_reading_count(self) -> int:
+        """Number of distinct real-token card fronts needing reading review."""
+        return len(self._ambiguous_readings)
+
+    def _prefetch_attested_readings(self, headwords: Sequence[str]) -> None:
+        """Batch-fill exact-headword readings not already cached this parse."""
+        if self._reading_lookup is None:
+            return
+        missing = [headword for headword in dict.fromkeys(headwords) if headword not in self._attested_readings_cache]
+        if not missing:
+            return
+        found = self._reading_lookup(missing)
+        for headword in missing:
+            self._attested_readings_cache[headword] = found.get(headword) or []
+
+    def _attested_readings(self, headword: str) -> list[str]:
+        """Return cached exact-headword readings, probing once on cache miss."""
+        self._prefetch_attested_readings([headword])
+        return self._attested_readings_cache.get(headword, [])
 
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
@@ -449,10 +475,8 @@ class SubtitleParserService:
         callers fall back to the re-tokenize reading. Only ever called for
         compound synthetics, so plain tokens add zero lookups.
         """
-        if self._reading_lookup is None:
-            return None
         if headword not in self._hw_reading_cache:
-            attested = self._reading_lookup([headword]).get(headword) or []
+            attested = self._attested_readings(headword)
             result: str | None = None
             if attested:
                 folded = [katakana_to_hiragana(r) for r in attested]
@@ -487,12 +511,9 @@ class SubtitleParserService:
         Returns hiragana. None when no reading_lookup is wired, the dictionary
         attests nothing, or it attests more than one distinct reading.
         """
-        if self._reading_lookup is None:
-            return None
         if headword not in self._unique_reading_cache:
-            attested = self._reading_lookup([headword]).get(headword) or []
-            folded = {katakana_to_hiragana(r) for r in attested}
-            self._unique_reading_cache[headword] = next(iter(folded)) if len(folded) == 1 else None
+            resolution = resolve_attested_reading("", self._attested_readings(headword))
+            self._unique_reading_cache[headword] = resolution.reading
         return self._unique_reading_cache[headword]
 
     def _apply_text_filter(self, text: str) -> str:
@@ -674,6 +695,80 @@ class SubtitleParserService:
         """
         return find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
 
+    def _resolve_word_identity(
+        self,
+        word_token: Any,
+        text: str,
+        tok_start: int,
+        highlight_end: int,
+    ) -> tuple[str, str, str, bool]:
+        """Return ``(lemma, orth_base, mined_form, front_overridden)``."""
+        lemma = self._extract_lemma(word_token)
+        orth_base = self._mining_base(word_token)
+        resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
+        front_overridden = resolved_front != orth_base
+        mined = select_mined_form(word_token.feature.pos1, resolved_front, lemma, word_token.surface)
+        return lemma, resolved_front, mined, front_overridden
+
+    def _apply_single_token_sentence_attestation(
+        self,
+        text: str,
+        display_tokens: list,
+        included_tokens: list,
+        included_spans: list[tuple[int, int, int]],
+        mined_forms: list[str | None],
+    ) -> list:
+        """Apply safe exact-span reading corrections to the sentence stream.
+
+        A dictionary-form reading cannot be pasted onto an inflected surface
+        (``食べ`` must not become ``たべる`` inside ``食べた``), so sentence
+        propagation is limited to real tokens whose card front equals the exact
+        token surface. Expression fields still apply the unique rule to every
+        real-token mined form.
+        """
+        corrections: dict[tuple[int, int], str] = {}
+        for token, (tok_start, tok_end, _), mined in zip(
+            included_tokens,
+            included_spans,
+            mined_forms,
+            strict=True,
+        ):
+            if mined is None or mined != token.surface:
+                continue
+            derived = katakana_to_hiragana(self._extract_reading(token))
+            derived = resolve_reading_override(mined, derived) or derived
+            resolution = resolve_attested_reading(derived, self._attested_readings(mined))
+            if resolution.ambiguous:
+                self._ambiguous_readings.add(mined)
+            elif resolution.reading is not None and resolution.reading != derived:
+                corrections[(tok_start, tok_end)] = resolution.reading
+        if not corrections:
+            return display_tokens
+
+        out: list = []
+        cursor = 0
+        for token in display_tokens:
+            idx = text.find(token.surface, cursor)
+            if idx == -1:
+                out.append(token)
+                continue
+            tok_end = idx + len(token.surface)
+            cursor = tok_end
+            corrected = corrections.get((idx, tok_end))
+            if corrected is None:
+                out.append(token)
+                continue
+            out.append(
+                SyntheticToken(
+                    surface=token.surface,
+                    pos1=token.feature.pos1,
+                    pos2=token.feature.pos2,
+                    lemma=self._extract_lemma(token),
+                    kana=hiragana_to_katakana(corrected),
+                )
+            )
+        return out
+
     def _emit_word(
         self,
         word_token: Any,
@@ -699,22 +794,16 @@ class SubtitleParserService:
         ``None`` when the token's mined_form was already emitted.
         """
         # Get lemma (dictionary form) for lookups; surface is the raw token.
-        lemma = self._extract_lemma(word_token)
         surface = word_token.surface
 
         # mined_form is the card-front spelling: orthBase (source orthography)
         # for verbs/adjectives, surface otherwise (see select_mined_form).
-        pos = word_token.feature.pos1
-        orth_base = self._mining_base(word_token)
-        # Verb/adjective fronts: rewrite the archaic じる/ずる orthBase (感ずる) to
-        # the modern JMdict headword (感じる) when the deinflected inflected span
-        # attests it. No-op for every other POS, for mining_base folds, and when
-        # no offline dict is wired. resolved_reading (pitch realignment) is set
-        # after ``mined`` below.
-        resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
-        front_overridden = resolved_front != orth_base
-        orth_base = resolved_front
-        mined = select_mined_form(pos, orth_base, lemma, surface)
+        lemma, orth_base, mined, front_overridden = self._resolve_word_identity(
+            word_token,
+            text,
+            tok_start,
+            highlight_end,
+        )
 
         # Dedup on mined_form, NOT lemma: UniDic collapses kanji-variant
         # homographs onto one canonical lemma (賭ける/掛ける → 掛ける), but they
@@ -834,15 +923,26 @@ class SubtitleParserService:
             else:
                 expression_furigana = self._furigana(mined)
 
-        # Reading recovery (single point AFTER the whole branch chain, so every
-        # pure-kana outcome above — attested compounds, curated overrides,
-        # context-disambiguated readings like 方 かた/ほう — is structurally
-        # untouched): a non-kana expression_reading means the tokenizer had no
-        # kana for this token and fell back to the surface (OOV). Try the
-        # dictionary's UNIQUE attested reading; ambiguous or unattested words
-        # keep the surface fallback (and downstream reading-keyed consumers
-        # keep their current miss behavior — never a guessed homograph).
-        if not is_kana_only(expression_reading):
+        # A real token's contextual reading is trusted when the exact card-front
+        # headword attests it. On mismatch, one dictionary reading is
+        # authoritative; several are unresolved and recorded for review. This
+        # deliberately diverges from Yomitan's interactive headword selection:
+        # bulk mining has no user-selected row, so it must not guess among
+        # homographs by score order or edit distance.
+        if not isinstance(word_token, SyntheticToken):
+            resolution = resolve_attested_reading(
+                expression_reading,
+                self._attested_readings(mined),
+            )
+            if resolution.ambiguous:
+                self._ambiguous_readings.add(mined)
+            elif resolution.reading is not None and resolution.reading != expression_reading:
+                expression_reading = resolution.reading
+                expression_furigana = _format_furigana(mined, resolution.reading)
+                reading_overridden = True
+        # Synthetic OOV recovery remains unique-only. Merged compounds have
+        # their own contextual attestation path before expression assembly.
+        elif not is_kana_only(expression_reading):
             recovered = self._attested_unique_reading(mined)
             if recovered is not None:
                 expression_reading = recovered
@@ -858,20 +958,18 @@ class SubtitleParserService:
         # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
         # value in isolation, so reuse the corrected reading rather than recompute.
         lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
-        # Same recovery for the lemma leg (pitch keys on lemma + lemma_reading):
-        # a kanji-variant lemma the tokenizer can't read gets its unique
-        # attested reading, or stays on the surface fallback.
+        # Same recovery for the lemma fallback used by audio and pitch: a
+        # kanji-variant lemma the tokenizer cannot read gets its unique attested
+        # reading, or stays on the surface fallback.
         if lemma != mined and not is_kana_only(lemma_reading):
             recovered_lemma = self._attested_unique_reading(lemma)
             if recovered_lemma is not None:
                 lemma_reading = recovered_lemma
 
-        # Pitch reading realignment: when the resolver diverged the front from
-        # the lemma (感じる card, but archaic lemma 感ずる), pitch must key on the
-        # front's reading (かんじる), not the lemma's own (感ずる→かんずる). Derive
-        # it from the resolved front's kana (== expression_reading on the
-        # overridden verb path). Empty when no override fired ⇒ pitch keeps the
-        # lemma_reading path unchanged.
+        # Pitch fallback realignment: when the resolver diverged the front from
+        # the lemma (感じる card, but archaic lemma 感ずる), a lemma-key retry must
+        # keep the front's reading (かんじる), not switch to 感ずる→かんずる.
+        # Empty when no front override fired.
         resolved_reading = self._reading(mined) if front_overridden else ""
 
         if self.config.bold_target_in_sentence:
@@ -958,11 +1056,38 @@ class SubtitleParserService:
         if collect_index and not line_lemmas:
             return [], None
 
+        # Probe real-token card fronts as one exact-headword batch per line.
+        # Synthetic compounds were already attested in _build_line_state.
+        mined_forms: list[str | None] = []
+        for word_token, (tok_start, _, highlight_end) in zip(
+            included_tokens,
+            included_spans,
+            strict=True,
+        ):
+            if isinstance(word_token, SyntheticToken):
+                mined_forms.append(None)
+                continue
+            _, _, mined, _ = self._resolve_word_identity(
+                word_token,
+                text,
+                tok_start,
+                highlight_end,
+            )
+            mined_forms.append(mined)
+        self._prefetch_attested_readings([mined for mined in mined_forms if mined is not None])
+
         # Compute sentence-level furigana/reading ONCE for this line, from the
         # shared display stream (attested-compound override + honorific-kinship
         # pass; see _build_display_tokens). Surfaces are unchanged, so
         # span/offset math is unaffected.
         display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
+        display_tokens = self._apply_single_token_sentence_attestation(
+            text,
+            display_tokens,
+            included_tokens,
+            included_spans,
+            mined_forms,
+        )
         sentence_furigana = generate_furigana_from_tokens(display_tokens)
         sentence_reading = generate_reading_from_tokens(display_tokens)
 
@@ -1052,46 +1177,13 @@ class SubtitleParserService:
         all_words: list[TokenizedWord] = []
         seen_mined_forms: set[str] = set()  # Track unique words by card-front mined_form.
 
-        for (
-            text,
-            raw_tokens,
-            merged_tokens,
-            start_time,
-            end_time,
-            duration,
-        ) in self._iter_parsed_lines(subtitle_file):
-            # Sentence-level furigana/reading depend only on ``text`` — compute
-            # once per line and share across every word emitted from this line,
-            # via the shared display stream (attested-compound override +
-            # honorific-kinship pass; see _build_display_tokens). Surfaces are
-            # unchanged so span math is unaffected.
-            display_tokens = self._build_display_tokens(text, raw_tokens, merged_tokens)
-            sentence_furigana = generate_furigana_from_tokens(display_tokens)
-            sentence_reading = generate_reading_from_tokens(display_tokens)
-
-            # Spans come from the shared locator (Issue #20 / T-38 — see
-            # _iter_token_spans for the cursor+find and drop-rule rationale).
-            for word_token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
-                if not self._mine_token(word_token, text, tok_start, tok_end, merged_tokens):
-                    continue
-
-                highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
-                word = self._emit_word(
-                    word_token,
-                    tok_start,
-                    tok_end,
-                    highlight_end=highlight_end,
-                    text=text,
-                    display_tokens=display_tokens,
-                    start_time=start_time,
-                    end_time=end_time,
-                    duration=duration,
-                    sentence_furigana=sentence_furigana,
-                    sentence_reading=sentence_reading,
-                    seen_mined_forms=seen_mined_forms,
-                )
-                if word is not None:
-                    all_words.append(word)
+        for line_state in self._iter_parsed_lines(subtitle_file):
+            line_words, _ = self._emit_line_words_and_index(
+                line_state,
+                seen_mined_forms,
+                collect_index=False,
+            )
+            all_words.extend(line_words)
 
         return all_words
 

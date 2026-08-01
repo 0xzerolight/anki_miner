@@ -2194,7 +2194,7 @@ def test_real_fugashi_mines_target_words(tmp_path):
     """Real fugashi pipeline must mine the FMA-style targets after the fixes."""
     srt_file = tmp_path / "fma_ep1.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こし、死傷者が出た\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で爆発的な事件を起こし、死傷者が出た\n",
         encoding="utf-8",
     )
 
@@ -2220,7 +2220,7 @@ def test_real_fugashi_mines_prefix_compound(tmp_path):
     """Real fugashi pipeline must mine 不可能 from 不+可能 prefix-merge."""
     srt_file = tmp_path / "prefix.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "不可能な事を諦めた\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n不可能な事を諦めた\n",
         encoding="utf-8",
     )
 
@@ -2237,7 +2237,7 @@ def test_real_fugashi_mines_verb_nominalizer(tmp_path):
     """Real fugashi pipeline must mine 生き方 from 生き(動詞) + 方(接尾辞,名詞的)."""
     srt_file = tmp_path / "verb_nom.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "生き方を考える\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n生き方を考える\n",
         encoding="utf-8",
     )
 
@@ -2259,7 +2259,7 @@ def test_real_fugashi_folds_potential_verb(tmp_path):
     layout (lForm/kanaBase)."""
     srt_file = tmp_path / "potential.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "秩序を保てるはずがない\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n秩序を保てるはずがない\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2280,13 +2280,7 @@ def test_real_fugashi_guard_keeps_source_orthography(tmp_path):
     suffix-pair guard keeps the source spelling."""
     srt_file = tmp_path / "guard.srt"
     srt_file.write_text(
-        "1\n"
-        "00:00:01,000 --> 00:00:05,000\n"
-        "もう帰れるかな\n"
-        "\n"
-        "2\n"
-        "00:00:06,000 --> 00:00:10,000\n"
-        "君に出逢えるなんて\n",
+        "1\n00:00:01,000 --> 00:00:05,000\nもう帰れるかな\n\n2\n00:00:06,000 --> 00:00:10,000\n君に出逢えるなんて\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2304,7 +2298,7 @@ def test_real_fugashi_pronoun_lemma_is_clean(tmp_path):
     lookups (frequency/pitch) hit, and count_lemmas keys the same string."""
     srt_file = tmp_path / "pronoun.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" "君を待つ\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n君を待つ\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2329,7 +2323,7 @@ def test_real_fugashi_pronoun_lemma_is_clean(tmp_path):
 def _mine_line(tmp_path, text):
     srt_file = tmp_path / "norm.srt"
     srt_file.write_text(
-        "1\n" "00:00:01,000 --> 00:00:05,000\n" + text + "\n",
+        "1\n00:00:01,000 --> 00:00:05,000\n" + text + "\n",
         encoding="utf-8",
     )
     config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -2890,7 +2884,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_emits_surface_offsets_matching_sentence_slice(self, tmp_path):
         srt_file = tmp_path / "offset.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で爆発的な事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2906,7 +2900,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_offsets_span_compound_merged_token(self, tmp_path):
         srt_file = tmp_path / "compound.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で爆発的な事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で爆発的な事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2923,7 +2917,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_no_bolded_fields_when_flag_off(self, tmp_path):
         srt_file = tmp_path / "no_bold.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2938,7 +2932,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_bolded_fields_populated_when_flag_on(self, tmp_path):
         srt_file = tmp_path / "bold.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -2967,7 +2961,7 @@ class TestSurfaceOffsetsAndBolding:
     def test_with_index_emits_lemma_spans(self, tmp_path):
         srt_file = tmp_path / "index.srt"
         srt_file.write_text(
-            "1\n" "00:00:01,000 --> 00:00:05,000\n" "彼は刑務所で事件を起こした\n",
+            "1\n00:00:01,000 --> 00:00:05,000\n彼は刑務所で事件を起こした\n",
             encoding="utf-8",
         )
 
@@ -3079,10 +3073,9 @@ class TestSurfaceOffsetsAndBolding:
         assert len(line_index) == 1
         ll = line_index[0]
         for lemma_key, surface, span_start, span_end, span_highlight_end in ll.lemma_spans:
-            assert ll.line_text[span_start:span_end] == surface, (
-                f"lemma_spans drift on {lemma_key!r}: "
-                f"slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
-            )
+            assert (
+                ll.line_text[span_start:span_end] == surface
+            ), f"lemma_spans drift on {lemma_key!r}: slice={ll.line_text[span_start:span_end]!r}, surface={surface!r}"
             assert span_highlight_end >= span_end
 
     # ------------------------------------------------------------------
@@ -3467,7 +3460,7 @@ class TestCountLemmas:
         """Integration: real MeCab pipeline counts repeated lemmas without dedup."""
         srt_file = tmp_path / "repeat.srt"
         srt_file.write_text(
-            "1\n00:00:01,000 --> 00:00:03,000\n勉強する\n\n" "2\n00:00:04,000 --> 00:00:06,000\n また勉強した\n",
+            "1\n00:00:01,000 --> 00:00:03,000\n勉強する\n\n2\n00:00:04,000 --> 00:00:06,000\n また勉強した\n",
             encoding="utf-8",
         )
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
@@ -3536,12 +3529,12 @@ class TestT2TokenizeOnce:
             # bold_end (not surface_end): the fixture's 起こした extends over
             # its auxiliary since the deinflection-span fix.
             expected_bold = wrap_target_furigana(w.sentence, service.tagger, w.surface_start, w.bold_end)
-            assert w.sentence_furigana == expected_furi, (
-                f"sentence_furigana mismatch for {w.surface!r}: " f"{w.sentence_furigana!r} != {expected_furi!r}"
-            )
-            assert w.sentence_reading == expected_read, (
-                f"sentence_reading mismatch for {w.surface!r}: " f"{w.sentence_reading!r} != {expected_read!r}"
-            )
+            assert (
+                w.sentence_furigana == expected_furi
+            ), f"sentence_furigana mismatch for {w.surface!r}: {w.sentence_furigana!r} != {expected_furi!r}"
+            assert (
+                w.sentence_reading == expected_read
+            ), f"sentence_reading mismatch for {w.surface!r}: {w.sentence_reading!r} != {expected_read!r}"
             assert w.sentence_furigana_bolded == expected_bold, (
                 f"sentence_furigana_bolded mismatch for {w.surface!r}: "
                 f"{w.sentence_furigana_bolded!r} != {expected_bold!r}"
@@ -3605,9 +3598,9 @@ class TestT2TokenizeOnce:
 
         for line_text in line_texts:
             count = spy.calls.count(line_text)
-            assert count == 1, (
-                f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
-            )
+            assert (
+                count == 1
+            ), f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. All calls: {spy.calls}"
 
     def test_tagger_called_once_per_line_parse_subtitle_file_with_index(self, tmp_path):
         """parse_subtitle_file_with_index: tagger is called exactly once per non-empty line."""
@@ -3628,9 +3621,9 @@ class TestT2TokenizeOnce:
 
         for line_text in line_texts:
             count = spy.calls.count(line_text)
-            assert count == 1, (
-                f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. " f"All calls: {spy.calls}"
-            )
+            assert (
+                count == 1
+            ), f"Expected exactly 1 tagger call for line {line_text!r}; got {count}. All calls: {spy.calls}"
 
 
 class TestPerFileLineCache:
@@ -4153,7 +4146,7 @@ def _lookup_for(dictionary: set):
 def _write_srt(tmp_path, name, line):
     srt_file = tmp_path / name
     srt_file.write_text(
-        "1\n" f"00:00:01,000 --> 00:00:05,000\n" f"{line}\n",
+        f"1\n00:00:01,000 --> 00:00:05,000\n{line}\n",
         encoding="utf-8",
     )
     return srt_file
@@ -4626,14 +4619,66 @@ class TestOovReadingRecovery:
         word = self._parse(tmp_path, lambda ts: {})
         assert word.expression_reading == "疆"
 
-    def test_pure_kana_reading_never_overridden(self, tmp_path):
-        # Real tagger: a word unidic CAN read must never consult recovery,
-        # even when the dictionary would offer a different reading.
+    def test_attested_kana_reading_is_kept(self, tmp_path):
+        # Real tagger: contextual UniDic kana remains authoritative when the
+        # exact dictionary headword attests it, even if other readings exist.
         cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         srt = _write_srt(tmp_path, "kana.srt", "ご飯を食べる")
-        words = SubtitleParserService(cfg, reading_lookup=lambda ts: {"食べる": ["でたらめ"]}).parse_subtitle_file(srt)
+        words = SubtitleParserService(
+            cfg,
+            reading_lookup=lambda ts: {"食べる": ["たべる", "でたらめ"]},
+        ).parse_subtitle_file(srt)
         word = next(w for w in words if w.mined_form == "食べる")
         assert word.expression_reading == "たべる"
+
+
+class TestSingleTokenReadingAttestation:
+    """Exact-headword attestation for real UniDic tokens (audit I3)."""
+
+    def test_unique_mismatch_updates_expression_and_sentence_fields(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "hachi.srt", "お鉢を回した")
+        calls: list[list[str]] = []
+
+        def reading_lookup(terms):
+            calls.append(terms)
+            return {"鉢": ["はち"]} if "鉢" in terms else {}
+
+        parser = SubtitleParserService(cfg, reading_lookup=reading_lookup)
+        words = parser.parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "鉢")
+
+        assert word.expression_reading == "はち"
+        assert word.expression_furigana == "鉢[はち]"
+        assert word.lemma_reading == "はち"
+        assert word.sentence_reading == "おはちをまわした"
+        assert "鉢[はち]" in word.sentence_furigana
+        assert parser.ambiguous_reading_count == 0
+        assert len(calls) == 1
+        assert {"鉢", "回す"} <= set(calls[0])
+
+    def test_multi_reading_mismatch_keeps_unidic_and_records_receipt(self, tmp_path):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "jugon.srt", "呪言師 狗巻棘")
+
+        def term_lookup(terms):
+            return {"呪言"} & set(terms)
+
+        def reading_lookup(terms):
+            return {"呪言": ["じゅごん", "じゅげん"]} if "呪言" in terms else {}
+
+        parser = SubtitleParserService(
+            cfg,
+            term_lookup=term_lookup,
+            reading_lookup=reading_lookup,
+        )
+        words = parser.parse_subtitle_file(srt)
+        word = next(w for w in words if w.mined_form == "呪言")
+
+        assert word.lemma == "言祝ぎ"
+        assert word.expression_reading == "ことほぎ"
+        assert word.expression_furigana == "呪言[ことほぎ]"
+        assert parser.ambiguous_reading_count == 1
 
 
 class TestCompoundMatcherReadingAttestation:
