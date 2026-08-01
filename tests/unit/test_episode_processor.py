@@ -16,7 +16,7 @@ from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     MIN_EPISODE_APPEARANCES,
-    _sanitize_source_label,
+    sanitize_source_label,
 )
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
@@ -49,40 +49,40 @@ def _make_media(prefix="word"):
 
 
 class TestSanitizeSourceLabel:
-    """Tests for _sanitize_source_label (Issue #83)."""
+    """Tests for sanitize_source_label (Issue #83)."""
 
     def test_strips_arr_metadata_block_and_release_group(self):
         label = (
             "Season 01 — Gals Can't Be Kind to Otaku!! (2026) - S01E01 - "
             "Can a Gal Be Kind to Otaku [WEBRip-1080p][10bit][AV1][Opus 2.0][JA]-Trix"
         )
-        assert _sanitize_source_label(label) == (
+        assert sanitize_source_label(label) == (
             "Season 01 — Gals Can't Be Kind to Otaku!! (2026) - S01E01 - Can a Gal Be Kind to Otaku"
         )
 
     def test_preserves_mid_title_brackets(self):
         label = "Show [Blu-ray] - S01E01 - Title [JA]"
-        assert _sanitize_source_label(label) == "Show [Blu-ray] - S01E01 - Title"
+        assert sanitize_source_label(label) == "Show [Blu-ray] - S01E01 - Title"
 
     def test_no_brackets_is_noop(self):
         label = "TestSeries — Episode 1"
-        assert _sanitize_source_label(label) == label
+        assert sanitize_source_label(label) == label
 
     def test_trailing_group_without_release_group(self):
-        assert _sanitize_source_label("Some Title [JA]") == "Some Title"
+        assert sanitize_source_label("Some Title [JA]") == "Some Title"
 
     def test_multiple_adjacent_groups(self):
         label = "Title [1080p] [x265] [JA]-Group"
-        assert _sanitize_source_label(label) == "Title"
+        assert sanitize_source_label(label) == "Title"
 
     def test_strips_surrounding_whitespace(self):
-        assert _sanitize_source_label("  Padded Title  ") == "Padded Title"
+        assert sanitize_source_label("  Padded Title  ") == "Padded Title"
 
     def test_empty_string(self):
-        assert _sanitize_source_label("") == ""
+        assert sanitize_source_label("") == ""
 
     def test_all_metadata_collapses_to_empty(self):
-        assert _sanitize_source_label("[WEBRip][JA]-Trix") == ""
+        assert sanitize_source_label("[WEBRip][JA]-Trix") == ""
 
 
 class TestProcessEpisode:

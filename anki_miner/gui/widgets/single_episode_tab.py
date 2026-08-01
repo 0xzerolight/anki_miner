@@ -53,7 +53,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaCon
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
-from anki_miner.orchestration.episode_processor import _sanitize_source_label
+from anki_miner.orchestration.episode_processor import sanitize_source_label
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
@@ -405,7 +405,7 @@ class SingleEpisodeTab(MiningTabBase):
             self.card_source_edit.clear()
             return
 
-        self.card_source_edit.setText(_sanitize_source_label(Path(new_path).stem))
+        self.card_source_edit.setText(sanitize_source_label(Path(new_path).stem))
 
         if self.subtitle_selector.get_path().strip():
             # User already has a subtitle chosen — don't overwrite it.
@@ -623,7 +623,7 @@ class SingleEpisodeTab(MiningTabBase):
 
         video_file = Path(video_path)
         subtitle_file = Path(subtitle_path)
-        source_label = self.card_source_edit.text().strip() or _sanitize_source_label(video_file.stem)
+        source_label = self.card_source_edit.text().strip() or sanitize_source_label(video_file.stem)
         if not source_label:
             source_label = video_file.stem.strip()
 

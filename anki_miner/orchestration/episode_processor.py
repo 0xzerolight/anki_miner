@@ -125,7 +125,7 @@ def require_usable_offline_provider(
         raise SetupError(_OFFLINE_DICTIONARY_REQUIRED_MESSAGE)
 
 
-def _sanitize_source_label(label: str) -> str:
+def sanitize_source_label(label: str) -> str:
     """Remove *arr release metadata (e.g. ``[WEBRip-1080p][JA]-Trix``) from a
     source label, leaving the human-readable title."""
     return _ARR_METADATA_RE.sub("", label).strip()
@@ -1696,7 +1696,7 @@ class EpisodeProcessor:
             subtitle_file_str=str(subtitle_file),
             episode_name=episode_name,
             series_name=series_name,
-            source_label=source_label_override or _sanitize_source_label(f"{series_name} — {episode_name}"),
+            source_label=source_label_override or sanitize_source_label(f"{series_name} — {episode_name}"),
         )
 
         def _body(run_temp_folder: Path) -> ProcessingResult:
@@ -2038,7 +2038,7 @@ class EpisodeProcessor:
         # Manga and subtitle sources carry a meaningful series (mokuro title /
         # parent folder), so prefix it; books use the bare episode title.
         if document.kind in ("manga", "subtitle"):
-            source_label = _sanitize_source_label(f"{document.series} — {document.episode}")
+            source_label = sanitize_source_label(f"{document.series} — {document.episode}")
         else:
             source_label = document.episode
         ctx = _EpisodeContext(

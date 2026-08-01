@@ -897,7 +897,7 @@ def test_source_label_manga_vs_book(test_config):
     _make_processor(test_config, subtitle_parser=sp_m, anki_service=anki_m).process_reading(
         _document([_unit(0, label="p.1")], kind="manga", series="My Show", episode="vol02 [JA]-Grp")
     )
-    # _sanitize_source_label strips the trailing *arr metadata block.
+    # sanitize_source_label strips the trailing *arr metadata block.
     assert _sources(anki_m)[0] == "My Show — vol02 @ p.1"
 
     sp_b = MagicMock()
