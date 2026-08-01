@@ -2,6 +2,8 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import TokenizedWord
+from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.wordset_service import WordsetService
 
@@ -51,3 +53,24 @@ def test_filter_by_wordsets_keys_on_mined_form_not_lemma():
     assert name.mined_form == "田中"
     result = wf.filter_by_wordsets([name], svc)
     assert result == []
+
+
+def test_filter_drops_names_reconstructed_by_same_wordset_service(tmp_path):
+    (tmp_path / "surnames.txt").write_text("夏油\n狗巻\n", encoding="utf-8")
+    svc = WordsetService(enabled_ids=("surnames",), resource_dir=tmp_path)
+    svc.load()
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    parser = SubtitleParserService(
+        config,
+        term_lookup=lambda terms: set(),
+        name_lookup=svc.excluded_terms,
+    )
+    units = [ReadingUnit(text="夏油傑 狗巻君 鉢", index=0, location_label="p.0")]
+
+    words, _index, _counts = parser.parse_text_units(units, want_line_index=False)
+    filtered = WordFilterService(config).filter_by_wordsets(words, svc)
+
+    assert {word.mined_form for word in words} >= {"夏油", "狗巻", "鉢"}
+    assert "夏油" not in {word.mined_form for word in filtered}
+    assert "狗巻" not in {word.mined_form for word in filtered}
+    assert "鉢" in {word.mined_form for word in filtered}

@@ -181,3 +181,7 @@ class WordsetService:
     def is_excluded(self, word: str) -> bool:
         """True if ``word`` is on any enabled wordset."""
         return word in self._blacklist
+
+    def excluded_terms(self, terms: list[str]) -> set[str]:
+        """Return the exact input terms found in any enabled wordset."""
+        return set(self._blacklist.intersection(terms))

@@ -37,6 +37,17 @@ def _matcher(dictionary, rule=None, max_span_tokens=5, spy=None):
     return CompoundDictionaryMatcher(lookup, rule or _rule(), max_span_tokens)
 
 
+def _name_matcher(names, rule=None, max_span_tokens=5, spy=None):
+    from anki_miner.services.compound_matcher import NameSpanMatcher
+
+    def lookup(terms):
+        if spy is not None:
+            spy.append(list(terms))
+        return names & set(terms)
+
+    return NameSpanMatcher(lookup, rule or _rule(), max_span_tokens)
+
+
 # 走り出した → 走り | 出し | た
 def _hashiridashita():
     return [
@@ -91,6 +102,102 @@ class TestNounNounMerge:
         assert merged.feature.lemma == "応急処置"
         assert merged.feature.pos1 == "名詞"  # → mined_form = surface = headword
         assert merged.feature.pos2 == "普通名詞"
+
+
+class TestRawNameSpanMerge:
+    @staticmethod
+    def _getou_tokens():
+        return [
+            _tok("夏", "名詞", "普通名詞", kana="ナツ"),
+            _tok("油", "名詞", "普通名詞", kana="アブラ"),
+            _tok("傑", "接尾辞", "名詞的", kana="ケツ"),
+        ]
+
+    @staticmethod
+    def _inumaki_tokens():
+        return [
+            _tok("狗", "名詞", "普通名詞", lemma="犬", kana="イヌ"),
+            _tok("巻", "名詞", "普通名詞", kana="マキ"),
+            _tok("君", "接尾辞", "名詞的", kana="クン"),
+        ]
+
+    def test_merges_attested_surname_and_leaves_suffix(self):
+        out = _name_matcher({"夏油"}).merge_line("夏油傑", self._getou_tokens())
+
+        assert [token.surface for token in out] == ["夏油", "傑"]
+        assert out[0].feature.lemma == "夏油"
+        assert out[0].feature.pos1 == "名詞"
+        assert out[0].feature.pos2 == "普通名詞"
+
+    def test_merges_attested_surname_before_honorific(self):
+        out = _name_matcher({"狗巻"}).merge_line("狗巻君", self._inumaki_tokens())
+
+        assert [token.surface for token in out] == ["狗巻", "君"]
+        assert out[0].feature.lemma == "狗巻"
+
+    def test_longest_attested_name_wins(self):
+        out = _name_matcher({"夏油", "夏油傑"}).merge_line("夏油傑", self._getou_tokens())
+
+        assert [token.surface for token in out] == ["夏油傑"]
+
+    def test_inflectable_tail_uses_raw_surface_and_emits_noun(self):
+        tokens = [
+            _tok("憂", "名詞", "普通名詞", lemma="憂い", kana="ウレイ"),
+            _tok("太", "形容詞", "一般", lemma="太い", kana="フト", orth_base="太い"),
+        ]
+        spy: list = []
+
+        out = _name_matcher({"憂太"}, spy=spy).merge_line("憂太", tokens)
+
+        assert [token.surface for token in out] == ["憂太"]
+        assert out[0].feature.lemma == "憂太"
+        assert out[0].feature.pos1 == "名詞"
+        looked_up = {candidate for call in spy for candidate in call}
+        assert "憂太" in looked_up
+        assert "憂太い" not in looked_up
+
+    def test_name_miss_leaves_tokens_unchanged(self):
+        tokens = self._getou_tokens()
+
+        assert _name_matcher(set()).merge_line("夏油傑", tokens) == tokens
+
+    def test_honorific_alone_does_not_authorize_merge(self):
+        tokens = self._inumaki_tokens()
+
+        assert _name_matcher(set()).merge_line("狗巻君", tokens) == tokens
+
+    def test_exact_name_can_end_on_non_content_token(self):
+        tokens = [
+            _tok("君", "代名詞", "*", kana="キミ"),
+            _tok("の", "助詞", "格助詞", kana="ノ"),
+        ]
+
+        out = _name_matcher({"君の"}).merge_line("君の", tokens)
+
+        assert [token.surface for token in out] == ["君の"]
+
+    def test_exact_name_can_start_and_end_on_non_content_tokens(self):
+        tokens = [
+            _tok("か", "助詞", "副助詞", kana="カ"),
+            _tok("津", "名詞", "普通名詞", kana="ツ"),
+            _tok("よ", "助詞", "終助詞", kana="ヨ"),
+        ]
+
+        out = _name_matcher({"か津よ"}).merge_line("か津よ", tokens)
+
+        assert [token.surface for token in out] == ["か津よ"]
+
+    def test_whitespace_pair_not_merged_when_same_name_occurs_later(self):
+        tokens = [
+            _tok("夏", "名詞", "普通名詞", kana="ナツ"),
+            _tok("油", "名詞", "普通名詞", kana="アブラ"),
+            _tok("夏", "名詞", "普通名詞", kana="ナツ"),
+            _tok("油", "名詞", "普通名詞", kana="アブラ"),
+        ]
+
+        out = _name_matcher({"夏油"}).merge_line("夏 油 夏油", tokens)
+
+        assert [token.surface for token in out] == ["夏", "油", "夏油"]
 
 
 class TestExpressionAcrossParticle:

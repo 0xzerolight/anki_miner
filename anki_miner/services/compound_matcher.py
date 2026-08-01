@@ -29,11 +29,16 @@ from anki_miner.services.morphology import (
     TokenInclusionRule,
     extract_orth_base,
     extract_reading,
+    iter_token_spans,
 )
 
 # Batch existence probe: returns the subset of the input strings that exist as
 # exact dictionary headwords (DefinitionService.offline_terms_exist).
 TermLookup = Callable[[list[str]], set[str]]
+
+# Same batch shape, kept as a separate type name so parser wiring cannot
+# accidentally substitute dictionary-form attestation for raw name membership.
+NameLookup = Callable[[list[str]], set[str]]
 
 # Span tails that conjugate: their candidate uses orthBase (dictionary form in
 # the token's own orthography — unidic's lemma is kanji-canonical, し→為る,
@@ -137,7 +142,7 @@ class CompoundDictionaryMatcher:
             token = tokens[i]
             replacement = None
             consumed_end = i
-            if self._rule.should_include(token):
+            if self._can_start(token):
                 # Longest span first — Yomitan ranks by source length.
                 for j in range(min(i + self._max_span - 1, n - 1), i, -1):
                     entry = candidates.get((i, j))
@@ -160,6 +165,30 @@ class CompoundDictionaryMatcher:
                 i += 1
         return merged
 
+    def _can_start(self, token) -> bool:
+        """Whether candidate spans may start at ``token``."""
+        return self._rule.should_include(token)
+
+    @staticmethod
+    def _can_end(token) -> bool:
+        """Whether candidate spans may end at ``token``."""
+        pos1 = _pos1(token)
+        return pos1 is not None and pos1 not in _NON_CONTENT_POS1
+
+    @staticmethod
+    def _source_spans(text: str, tokens: list) -> dict[int, tuple[int, int]]:
+        """Map token indexes to their cursor-aligned source spans."""
+        spans: dict[int, tuple[int, int]] = {}
+        next_index = 0
+        for located, start, end in iter_token_spans(text, tokens):
+            while next_index < len(tokens) and tokens[next_index] is not located:
+                next_index += 1
+            if next_index >= len(tokens):
+                break
+            spans[next_index] = (start, end)
+            next_index += 1
+        return spans
+
     def _generate_candidates(self, text: str, tokens: list) -> dict[tuple[int, int], tuple[str, str]]:
         """Map ``(start, end)`` span -> ``(candidate_string, kind)``.
 
@@ -170,33 +199,40 @@ class CompoundDictionaryMatcher:
         """
         n = len(tokens)
         out: dict[tuple[int, int], tuple[str, str]] = {}
+        source_spans = self._source_spans(text, tokens)
         for i in range(n - 1):
-            if not self._rule.should_include(tokens[i]):
+            start_span = source_spans.get(i)
+            if start_span is None or not self._can_start(tokens[i]):
                 continue
             prefix = tokens[i].surface
+            source_end = start_span[1]
             for j in range(i + 1, min(i + self._max_span, n)):
                 tail = tokens[j]
+                tail_span = source_spans.get(j)
+                # MeCab omits whitespace tokens. Candidate components still
+                # must be adjacent in this occurrence; a same-spelled join
+                # elsewhere in the line cannot license a merge here.
+                if tail_span is None or tail_span[0] != source_end:
+                    break
                 joined = prefix + tail.surface
                 if len(joined) > _MAX_SPAN_CHARS:
                     break
-                tail_pos1 = _pos1(tail)
                 # Span-end rule: non-content ends are not candidate endpoints,
                 # but the span may still extend past them (気に|する|な: the
                 # (0..2) span ending on する is reachable through the な).
-                if tail_pos1 is not None and tail_pos1 not in _NON_CONTENT_POS1:
-                    if tail_pos1 in _INFLECTABLE_POS1:
-                        candidate = prefix + extract_orth_base(tail)
-                        kind = "A"
-                    else:
-                        candidate = joined
-                        kind = "B"
-                    # Issue #20 guard: a merged surface that is not findable in
-                    # the raw text (whitespace between components) would be
-                    # silently dropped by the span locator, losing the word.
-                    if joined in text:
-                        out[(i, j)] = (candidate, kind)
+                if self._can_end(tail):
+                    candidate, kind = self._candidate_for_tail(prefix, tail, joined)
+                    out[(i, j)] = (candidate, kind)
                 prefix = joined
+                source_end = tail_span[1]
         return out
+
+    @staticmethod
+    def _candidate_for_tail(prefix: str, tail, joined: str) -> tuple[str, str]:
+        """Return the lookup candidate and synthetic-token kind for one span."""
+        if _pos1(tail) in _INFLECTABLE_POS1:
+            return prefix + extract_orth_base(tail), "A"
+        return joined, "B"
 
     def _resolve(self, candidates: dict[tuple[int, int], tuple[str, str]]) -> None:
         """One batched lookup for all uncached candidate strings."""
@@ -242,6 +278,49 @@ class CompoundDictionaryMatcher:
             surface=surface,
             pos1=pos1,
             pos2=pos2,
+            lemma=headword,
+            kana=kana,
+        )
+
+
+class NameSpanMatcher(CompoundDictionaryMatcher):
+    """Merge exact name-wordset spans without trusting UniDic word forms.
+
+    Reuses the dictionary matcher's bounded candidate generation, batched
+    lookup cache, greedy longest-first selection, and synthetic tokens. Name
+    candidates differ at one load-bearing seam: every token contributes its
+    raw surface. Deinflecting an adjective-misclassified tail would turn
+    ``憂+太`` into ``憂太い`` and miss the actual name ``憂太``.
+
+    A match is emitted as a nominal token so downstream mining uses the exact
+    source spelling. Honorifics provide no special license; they merge only
+    when the complete span itself exists in the injected name lookup.
+    """
+
+    @staticmethod
+    def _candidate_for_tail(prefix: str, tail, joined: str) -> tuple[str, str]:
+        return joined, "B"
+
+    def _can_start(self, token) -> bool:
+        # Exact raw-name attestation, not UniDic POS, licenses this boundary.
+        # The combined-line probe can tag 狗 as 接尾辞 and 巻 as 固有名詞 even
+        # though the same source phrase tags both 普通名詞; trusting either tag
+        # here would recreate the fragment bug at a different POS boundary.
+        surface = getattr(token, "surface", None)
+        return bool(surface and surface.strip())
+
+    @staticmethod
+    def _can_end(token) -> bool:
+        surface = getattr(token, "surface", None)
+        return bool(surface and surface.strip())
+
+    def _build_synthetic(self, span: list, headword: str, kind: str) -> CompoundSyntheticToken:
+        surface = "".join(token.surface for token in span)
+        kana = "".join(extract_reading(token) for token in span)
+        return CompoundSyntheticToken(
+            surface=surface,
+            pos1="名詞",
+            pos2="普通名詞",
             lemma=headword,
             kana=kana,
         )
