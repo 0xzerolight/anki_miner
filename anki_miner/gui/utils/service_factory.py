@@ -486,8 +486,9 @@ def create_services(
             parser here so Phase-2 mining hits the already-filled per-file
             tokenization cache. The caller owns ensuring the parser's
             parse-relevant config matches ``config`` (offset / bold target /
-            allowed POS / excluded subtypes / regex-filter fields); the parser
-            reads only those, so reuse is byte-identical for a matching config.
+            allowed POS / excluded subtypes / subtitle-filter fields); the
+            parser reads only those, so reuse is byte-identical for a matching
+            config.
         anki_service: Optional pre-built :class:`AnkiService` to reuse.
             When provided the existing instance (and its populated vocab cache)
             is reused rather than constructing a fresh one. The batch queue
@@ -550,12 +551,14 @@ def create_services(
         # tags common. Gated the same way as the sibling probes; the probe itself
         # returns None when no chain member is commonness-aware (degrade).
         term_common_lookup = definition_service.offline_term_commonness if has_indexed_dict else None
+        term_rules_lookup = definition_service.offline_deinflection_terms_exist if has_indexed_dict else None
         subtitle_parser = SubtitleParserService(
             config,
             term_lookup=term_lookup,
             reading_lookup=reading_lookup,
             kana_attest_lookup=kana_attest_lookup,
             term_common_lookup=term_common_lookup,
+            term_rules_lookup=term_rules_lookup,
         )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger

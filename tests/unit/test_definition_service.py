@@ -1313,6 +1313,33 @@ class TestLookupFallbackProvider:
         assert p.lookup_fallback("走る", 0) is None
 
 
+class TestOfflineDeinflectionTermsExist:
+    def test_filters_candidates_through_entry_rules(self, test_config, tmp_path: Path):
+        from anki_miner.services.deinflection import get_japanese_deinflector
+
+        provider = _seed_rows(
+            tmp_path,
+            "d",
+            "D",
+            [
+                # Real installed dictionaries store the non-inflecting adverb
+                # with rules=""; a non-zero deinflection hypothesis must not use
+                # the legacy lookup_fallback ruleless-entry wildcard here.
+                DictRow(term="決まって", reading="きまって", content=_gloss("always"), rules=""),
+                DictRow(term="決まる", reading="きまる", content=_gloss("be decided"), rules="v5"),
+            ],
+        )
+        service = DefinitionService(test_config, providers=[provider])
+        wanted = {"決まって", "決まる"}
+        candidates = [
+            (result.text, result.conditions)
+            for result in get_japanese_deinflector().transform("決まってん")
+            if result.text in wanted
+        ]
+
+        assert service.offline_deinflection_terms_exist(candidates) == {"決まる"}
+
+
 class TestGetDefinitionsBatchFallback:
     """Miss-only fallback inside ``get_definitions_batch`` (pipeline path)."""
 

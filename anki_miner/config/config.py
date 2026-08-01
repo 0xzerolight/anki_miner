@@ -336,6 +336,12 @@ class AnkiMinerConfig:
     subtitle_regex_replacement: str = ""
     use_subtitle_regex_filter: bool = False
 
+    # Source-specific escape hatch for subtitles that render whole speakers in
+    # katakana. Drops an entire cue when it contains katakana but no hiragana;
+    # this intentionally also catches valid loanword-only cues, so it is opt-in
+    # and off by default. Reading prose is unaffected.
+    skip_kana_stylized_cues: bool = False
+
     # Structural subtitle-annotation stripping (Task U1, default ON). Kills the
     # largest batch-mining junk class: parenthetical SFX captions
     # (（スマホのバイブ音）), leading speaker/style tags (（旬: 小声で）…), and inline
