@@ -458,6 +458,17 @@ def _reset_theme_state():
         theme_cls._state_listener = None
         theme_cls._compiled_qss = {}
         theme_cls._font_scale = 1.0
+    # theme_gallery's pixmap cache is the structurally identical sibling of
+    # ``_compiled_qss`` above, and just as capable of bleeding across tests on
+    # the same xdist --dist loadfile worker: a test that initializes a fake
+    # theme under a key another test file also uses (e.g. "light") can read
+    # back a stale pixmap rendered under the first test's theme data. Imported
+    # lazily -- a module-level import here would pull PyQt6 into every non-GUI
+    # test's collection, the same reason the Theme reset above is guarded on
+    # the module already being imported rather than importing it directly.
+    preview_mod = sys.modules.get("anki_miner.gui.widgets.enhanced.theme_preview")
+    if preview_mod is not None:
+        preview_mod.clear_thumbnail_cache()
     yield
 
 

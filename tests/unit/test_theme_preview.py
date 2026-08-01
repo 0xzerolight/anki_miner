@@ -9,6 +9,7 @@ from PyQt6.QtGui import QPalette
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.widgets.enhanced.theme_preview import (
     DEFAULT_THUMBNAIL_SIZE,
+    _cache,
     clear_thumbnail_cache,
     render_theme_thumbnail,
 )
@@ -85,3 +86,32 @@ class TestCache:
         a = render_theme_thumbnail("nord", DEFAULT_THUMBNAIL_SIZE)
         b = render_theme_thumbnail("nord", QSize(100, 60))
         assert a is not b
+
+    def test_the_autouse_conftest_theme_reset_also_clears_this_cache(self, qapp):
+        """Pin for the cross-test bleed conftest.py's autouse reset now closes.
+
+        ``tests/conftest.py::_reset_theme_state`` resets ``Theme._compiled_qss``
+        precisely to stop a fake theme registered in one test file leaking into
+        another on the same xdist ``--dist loadfile`` worker (its own docstring
+        names the flake). This module's ``_cache`` is the structurally
+        identical sibling -- keyed by theme name, which a fake theme can also
+        shadow -- and used to survive the same reset untouched.
+
+        This file's own ``_fresh_cache`` autouse fixture already clears the
+        cache around every test here, which would mask a regression in the
+        conftest fixture, so this test drives the conftest fixture directly
+        (its underlying generator function) instead of relying on
+        between-test ordering.
+        """
+        import tests.conftest as conftest_mod
+
+        render_theme_thumbnail("nord")
+        assert _cache  # populated, precondition for the assertion below to mean anything
+
+        gen = conftest_mod._reset_theme_state._fixture_function()
+        next(gen)  # run the fixture's setup half
+
+        assert _cache == {}
+
+        with pytest.raises(StopIteration):
+            next(gen)  # drain the teardown half so nothing is left mid-generator
