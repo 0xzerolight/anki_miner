@@ -18,10 +18,12 @@ Two details are load-bearing:
   returns after one property read. Since the mark is absent by default and a
   click never sets it, clicking around the application does no restyling at all;
   only keyboard focus pays for one.
-* **Losing the window is not losing the ring.** ``FocusOut`` with
-  ``ActiveWindowFocusReason`` or ``PopupFocusReason`` leaves the mark alone.
-  Alt-tabbing away and back, or opening a combo box popup, would otherwise strip
-  a keyboard user's ring and give it back only on the next Tab.
+* **Losing the window is not losing the ring.** ``ActiveWindowFocusReason`` and
+  ``PopupFocusReason`` leave the mark alone on BOTH legs. Alt-tabbing away and
+  back, or opening a combo box popup, would otherwise strip a keyboard user's
+  ring and give it back only on the next Tab — and exempting only the
+  ``FocusOut`` leg does not achieve that, because Qt delivers the return
+  ``FocusIn`` with the same reason and it is not a keyboard reason.
 
 The QSS keeps ``:focus`` alongside the property for a reason: a mark that somehow
 outlived its focus then still draws nothing.
@@ -53,9 +55,14 @@ KEYBOARD_FOCUS_REASONS = frozenset(
     }
 )
 
-#: ``FocusOut`` reasons that mean the widget is still the keyboard's place, it is
-#: just not the active one right now.
-FOCUS_OUT_REASONS_THAT_KEEP_THE_MARK = frozenset(
+#: Reasons that mean focus moved for a reason that says nothing about *how* the
+#: widget got it: the window deactivated, or a popup took over. Honoured on BOTH
+#: legs. Honouring it on ``FocusOut`` alone was the bug: Qt delivers the return
+#: ``FocusIn`` with the same reason, which is not in
+#: :data:`KEYBOARD_FOCUS_REASONS`, so the mark the FocusOut leg had carefully
+#: preserved was cleared one event later. Whatever the mark was before the round
+#: trip is what it must be after.
+REASONS_THAT_KEEP_THE_MARK = frozenset(
     {
         Qt.FocusReason.ActiveWindowFocusReason,
         Qt.FocusReason.PopupFocusReason,
@@ -93,12 +100,13 @@ class KeyboardFocusRingFilter(QObject):
             return False
 
         try:
-            if event_type == QEvent.Type.FocusIn:
-                wanted = event.reason() in KEYBOARD_FOCUS_REASONS
-            else:
-                if event.reason() in FOCUS_OUT_REASONS_THAT_KEEP_THE_MARK:
-                    return False
-                wanted = False
+            # Checked before the leg split: a deactivate/popup round trip must
+            # leave the mark exactly as it found it, marked or not. Returning
+            # here touches no property, so it holds in both directions.
+            if event.reason() in REASONS_THAT_KEEP_THE_MARK:
+                return False
+
+            wanted = event_type == QEvent.Type.FocusIn and event.reason() in KEYBOARD_FOCUS_REASONS
 
             # The early return is what keeps mouse navigation off the restyle
             # path entirely: an unmarked widget clicked into is already correct.
