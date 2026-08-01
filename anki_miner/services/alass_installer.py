@@ -29,7 +29,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
@@ -152,7 +152,7 @@ def install_alass(
         raise SetupError(f"In-app alass install is not supported on this platform ({sys.platform}).")
 
     if cancel_event is not None and cancel_event.is_set():
-        raise SetupError("alass installation cancelled")
+        raise OperationCancelled("alass installation cancelled")
 
     bin_root.mkdir(parents=True, exist_ok=True)
 
@@ -172,7 +172,7 @@ def install_alass(
 
     try:
         if cancel_event is not None and cancel_event.is_set():
-            raise SetupError("alass installation cancelled")
+            raise OperationCancelled("alass installation cancelled")
 
         verify_sha256(part_path, spec.sha256, "alass download")
 

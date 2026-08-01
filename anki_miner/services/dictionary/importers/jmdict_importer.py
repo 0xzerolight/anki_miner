@@ -31,7 +31,7 @@ from html import escape
 from pathlib import Path
 from typing import Callable, Iterator
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
     resolve_managed_slot,
@@ -109,7 +109,7 @@ def import_jmdict_xml(
         def rows() -> Iterator[DictRow]:
             for i, entry in enumerate(entries, 1):
                 if cancel_check and cancel_check():
-                    raise SetupError("Import cancelled")
+                    raise OperationCancelled("Import cancelled")
 
                 ent_seq = entry.findtext("ent_seq")
                 sequence = int(ent_seq) if ent_seq and ent_seq.isdigit() else None
@@ -186,7 +186,7 @@ def import_jmdict_xml(
         row_count = bulk_insert(db_path, rows())
 
         if cancel_check and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
 
         write_meta(
             db_path,
@@ -201,12 +201,12 @@ def import_jmdict_xml(
         )
 
         if cancel_check and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
 
         final.parent.mkdir(parents=True, exist_ok=True)
 
         if cancel_check and cancel_check():
-            raise SetupError("Import cancelled")
+            raise OperationCancelled("Import cancelled")
         promote_staged_dir(staging, final, mover=shutil.move, overwrite=overwrite)
 
         if progress:

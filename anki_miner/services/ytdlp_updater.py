@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig, paths
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.utils import ytdlp_resolver
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.version_compare import is_newer
@@ -355,6 +356,11 @@ class YtdlpUpdater:
                 path=path,
                 message=f"Updated yt-dlp to {latest}.",
             )
+        except OperationCancelled:
+            # The user asked to stop. Not a fault, so no traceback — but the
+            # action stays "failed" because that string is consumed by the GUI.
+            logger.info("yt-dlp update cancelled")
+            return YtdlpUpdateResult(action="failed", message="yt-dlp update cancelled.")
         except Exception as e:  # noqa: BLE001 — never propagate to the caller
             logger.exception("yt-dlp update failed")
             return YtdlpUpdateResult(action="failed", message=f"yt-dlp update failed: {e}")
@@ -393,7 +399,7 @@ class YtdlpUpdater:
                     raise ValueError(f"Refusing yt-dlp redirect to off-allowlist URL: {final_url!r}")
                 while True:
                     if self._cancel is not None and self._cancel():
-                        raise RuntimeError("yt-dlp download cancelled")
+                        raise OperationCancelled("yt-dlp download cancelled")
                     chunk = response.read(_CHUNK_BYTES)
                     if not chunk:
                         break

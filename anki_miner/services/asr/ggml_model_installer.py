@@ -27,7 +27,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.asr import model_manager
@@ -221,7 +221,7 @@ def _install_spec(
         return target
 
     if cancel_event is not None and cancel_event.is_set():
-        raise SetupError(f"ggml model installation cancelled ({spec.filename})")
+        raise OperationCancelled(f"ggml model installation cancelled ({spec.filename})")
 
     ggml_dir = ggml_models_root(asr_models_root)
     ggml_dir.mkdir(parents=True, exist_ok=True)
@@ -247,12 +247,12 @@ def _install_spec(
     )
     try:
         if cancel_event is not None and cancel_event.is_set():
-            raise SetupError(f"ggml model installation cancelled ({spec.filename})")
+            raise OperationCancelled(f"ggml model installation cancelled ({spec.filename})")
 
         verify_sha256(part_path, spec.sha256, "ggml model download")
 
         if cancel_event is not None and cancel_event.is_set():
-            raise SetupError(f"ggml model installation cancelled ({spec.filename})")
+            raise OperationCancelled(f"ggml model installation cancelled ({spec.filename})")
 
         # Promote the verified .part onto its final name atomically.
         os.replace(part_path, target)

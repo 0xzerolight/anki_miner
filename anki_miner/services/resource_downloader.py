@@ -23,7 +23,7 @@ from typing import BinaryIO, cast
 
 import requests
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part
 from anki_miner.services.download_resume import (
@@ -184,7 +184,7 @@ def download_to_temp(
             except for the landmarks — phase start, first byte, final byte,
             retry, cancellation and failure — which always get through.
         cancelled_check: Optional zero-arg callable; when it returns True the
-            partial temp file is removed and ``SetupError("Download
+            partial temp file is removed and ``OperationCancelled("Download
             cancelled")`` is raised. Checked before the request and during
             chunk iteration.
         max_bytes: Hard size cap; the download is aborted with ``SetupError``
@@ -226,7 +226,7 @@ def download_to_temp(
     last_exc: Exception | None = None
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         if cancelled_check is not None and cancelled_check():
-            raise SetupError("Download cancelled")
+            raise OperationCancelled("Download cancelled")
         try:
             return _download_once(
                 url,
@@ -237,11 +237,14 @@ def download_to_temp(
                 timeout=timeout,
                 state=state,
             )
-        except SetupError as exc:
-            # Cancel / size-cap / truncation — never retried. Only cancellation
-            # keeps the partial: the user asked for a pause, and the other two
-            # mean the bytes on disk are not trustworthy.
-            if state is not None and not _is_cancellation(exc):
+        except OperationCancelled:
+            # Never retried, and the partial stays: the user asked for a pause,
+            # so the next launch offers to resume the bytes on disk.
+            raise
+        except SetupError:
+            # Size-cap / truncation — never retried either, but here the bytes
+            # on disk are not trustworthy.
+            if state is not None:
                 state.discard()
             raise
         except (requests.RequestException, OSError) as exc:
@@ -275,14 +278,9 @@ def _sleep_with_cancel(seconds: float, cancelled_check: CancelledCheck | None) -
     waited = 0.0
     while waited < seconds:
         if cancelled_check is not None and cancelled_check():
-            raise SetupError("Download cancelled")
+            raise OperationCancelled("Download cancelled")
         time.sleep(_BACKOFF_POLL_SECONDS)
         waited += _BACKOFF_POLL_SECONDS
-
-
-def _is_cancellation(exc: SetupError) -> bool:
-    """Whether ``exc`` is the cancellation the user asked for, not a fault."""
-    return str(exc) == "Download cancelled"
 
 
 def _open_stream(
@@ -417,7 +415,7 @@ def _download_once(
                                 _checkpoint(state, body, hasher, url, total, downloaded, etag, last_modified)
                             terminal_reported = True
                             gate.emit(downloaded, total, _CANCELLED, force=True)
-                            raise SetupError("Download cancelled")
+                            raise OperationCancelled("Download cancelled")
                         if not chunk:
                             continue
                         downloaded += len(chunk)
