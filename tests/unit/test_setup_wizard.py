@@ -461,11 +461,6 @@ def test_complete_changed_cannot_reenable_navigation_while_closing(qtbot, wiz_co
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     wiz.show()
-    # Showing the wizard exposes the theme page's cards, each deferring its
-    # thumbnail paint to a zero-interval QTimer. Drain that queue before the
-    # test starts disabling/destroying the wizard below, or a card's deferred
-    # render can land after teardown has torn its widgets down.
-    qtbot.wait(10)
     worker = _StubbornWorker(release, wiz)
     wiz.register_worker(worker)
     worker.start()
@@ -533,10 +528,6 @@ def test_repeated_escape_while_closing_keeps_first_result_and_cancels_once(qtbot
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
     wiz.show()
-    # Drain the theme page's deferred card-thumbnail renders before the test
-    # starts closing the wizard (see test_complete_changed_cannot_reenable_
-    # navigation_while_closing for the race this avoids).
-    qtbot.wait(10)
     worker = _StubbornWorker(release, wiz)
     wiz.register_worker(worker)
     worker.start()
@@ -1622,7 +1613,7 @@ def test_close_stages_typed_editor_values(qtbot, wiz_config, action, monkeypatch
     elif action == "x":
         monkeypatch.setattr(type(wiz.ankiconnect_page), "initializePage", lambda _self: None)
         wiz.show()
-        qtbot.wait(10)
+        qtbot.wait(0)
         wiz.close()
     else:
         qtbot.keyClick(wiz, Qt.Key.Key_Escape)
