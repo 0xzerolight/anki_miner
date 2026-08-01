@@ -198,6 +198,32 @@ def adapt_entry(entry_html: str) -> str:
     return adapted.replace('<div class="yomitan-glossary">', f'<div class="yomitan-glossary"{_ADAPTED}>', 1)
 
 
+#: The trailing attribution line ``IndexedDictProvider._render`` emits per sense
+#: group. Its content is ``", ".join(fallback_tags + [dict_label])``, escaped, so
+#: the dictionary name is one comma-separated token — not necessarily the whole
+#: parenthesis. ``[^<]*`` cannot cross a tag, and being greedy it backtracks to the
+#: LAST ``)``, so a name that itself ends in a parenthesis survives intact.
+_ENTRY_ATTRIBUTION_RE = re.compile(r"<i>\(([^<]*)\)</i>")
+
+
+def _entry_names_itself(adapted: str, name: str) -> bool:
+    """Whether ``adapted``'s own attribution line already prints ``name``.
+
+    Membership of the comma-separated token list, not a substring test for
+    ``<i>(Name)</i>``: any tag missing from the dictionary's tag bank is rendered
+    as a fallback tag INSIDE that same parenthesis (``(uk, adj-i, JMdict)``), and
+    a dictionary shipping no ``tag_bank_*.json`` — or one whose tags read fails —
+    turns every tag into a fallback tag, so the substring test missed for the
+    whole dictionary and the pane printed a bold heading above an entry already
+    ending in ``, JMdict)``.
+    """
+    needle = html.escape(name, quote=True)
+    return any(
+        needle in [token.strip() for token in match.group(1).split(",")]
+        for match in _ENTRY_ATTRIBUTION_RE.finditer(adapted)
+    )
+
+
 def to_preview_html(entries: list[tuple[str, str]]) -> str:
     """The pane body for ``DefinitionService.lookup_all_offline`` output.
 
@@ -208,7 +234,7 @@ def to_preview_html(entries: list[tuple[str, str]]) -> str:
     parts: list[str] = []
     for name, entry_html in entries:
         adapted = adapt_entry(entry_html)
-        if f"<i>({html.escape(name, quote=True)})</i>" not in adapted:
+        if not _entry_names_itself(adapted, name):
             parts.append(f'<p style="font-weight:bold">{html.escape(name)}</p>')
         parts.append(adapted)
     return "".join(parts)

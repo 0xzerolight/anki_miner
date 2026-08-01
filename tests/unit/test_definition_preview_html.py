@@ -122,6 +122,28 @@ class TestAttribution:
         body = to_preview_html([("Some Other Dict", JMDICT_ENTRY)])
         assert '<p style="font-weight:bold">Some Other Dict</p>' in body
 
+    def test_fallback_tags_beside_the_name_do_not_re_add_the_heading(self):
+        """A dictionary with no tag bank renders every tag inside that same
+        parenthesis, so the name stops being the whole of it — and a substring
+        test for ``<i>(Name)</i>`` then missed for the entire dictionary."""
+        entry = JMDICT_ENTRY.replace("<i>(JMdict)</i>", "<i>(uk, adj-i, JMdict)</i>")
+
+        assert to_preview_html([("JMdict", entry)]).count("JMdict<") == 0
+
+    def test_a_name_that_ends_in_a_parenthesis_is_still_matched(self):
+        entry = JMDICT_ENTRY.replace("<i>(JMdict)</i>", "<i>(uk, JMdict (English))</i>")
+
+        body = to_preview_html([("JMdict (English)", entry)])
+
+        assert '<p style="font-weight:bold">' not in body
+
+    def test_a_fallback_tag_alone_does_not_suppress_another_provider_heading(self):
+        entry = JMDICT_ENTRY.replace("<i>(JMdict)</i>", "<i>(uk, adj-i, JMdict)</i>")
+
+        body = to_preview_html([("Some Other Dict", entry)])
+
+        assert '<p style="font-weight:bold">Some Other Dict</p>' in body
+
 
 class TestSenseStructure:
     """Qt discards an ``<li>`` holding only block elements, so the sense level
