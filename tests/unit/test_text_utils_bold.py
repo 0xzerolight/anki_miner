@@ -1,5 +1,7 @@
 """Tests for the bold-target helpers in text_utils (Issue #20)."""
 
+import html
+import re
 from unittest.mock import MagicMock, PropertyMock
 
 from anki_miner.utils.text_utils import (
@@ -7,6 +9,14 @@ from anki_miner.utils.text_utils import (
     wrap_target_furigana_from_tokens,
     wrap_target_plain,
 )
+
+_ANKI_FURIGANA_RE = re.compile(r" ?([^ >]+?)\[(.+?)\]")
+
+
+def _anki_visible_text(value: str) -> str:
+    """Return visible text after Anki ruby conversion and bold rendering."""
+    rendered = _ANKI_FURIGANA_RE.sub(r"\1", value)
+    return html.unescape(re.sub(r"</?b>", "", rendered))
 
 
 def _make_mock_token(surface, kana=None, has_feature=True):
@@ -82,8 +92,9 @@ class TestWrapTargetFurigana:
         end = start + len("王国")
         out = wrap_target_furigana(text, tagger, start, end)
         # generate_furigana would emit: "スウェーデンや 王国[おうこく]です。"
-        # bolded variant moves the leading space into the prefix.
-        assert out == "スウェーデンや <b>王国[おうこく]</b>です。"
+        # The syntax delimiter stays inside <b> so Anki can consume it.
+        assert out == "スウェーデンや<b> 王国[おうこく]</b>です。"
+        assert _anki_visible_text(out) == text
 
     def test_target_without_kanji_no_ruby(self):
         text = "りんごです"
@@ -167,7 +178,9 @@ class TestWrapTargetFurigana:
         start = text.index("素直")
         end = start + len("素直")
         out = wrap_target_furigana(text, tagger, start, end)
-        assert out == "なんで <b>素直[すなお]</b>に"
+        assert out == "なんで <b> 素直[すなお]</b>に"
+        assert "なんで <b> " in out
+        assert _anki_visible_text(out) == text
 
     def test_target_after_multiple_internal_spaces(self):
         """Drift would compound across multiple preceding whitespace
@@ -183,11 +196,10 @@ class TestWrapTargetFurigana:
         start = text.index("好き")
         end = start + len("好き")
         out = wrap_target_furigana(text, tagger, start, end)
-        assert out == "なんで 素直[すなお]に <b>好[す]き</b>"
+        assert out == "なんで  素直[すなお]に <b> 好[す]き</b>"
+        assert _anki_visible_text(out) == text
 
-    def test_target_before_internal_space_unchanged(self):
-        """Token preceding the first space was already correct under the
-        naive cursor; guard against the find-based rewrite breaking it."""
+    def test_source_gap_after_target_stays_outside_bold(self):
         text = "素直に 言えない"
         tokens = [
             _make_mock_token("素直", kana="スナオ"),
@@ -199,11 +211,28 @@ class TestWrapTargetFurigana:
         start = text.index("素直")
         end = start + len("素直")
         out = wrap_target_furigana(text, tagger, start, end)
-        assert out == "<b>素直[すなお]</b>に 言[い]えない"
+        assert out == "<b>素直[すなお]</b>に  言[い]えない"
+        assert "</b>に  言" in out
+        assert _anki_visible_text(out) == text
 
-    def test_no_spaces_unchanged_after_rewrite(self):
-        """Regression guard: the no-space happy path that worked before
-        Issue #31 must still produce identical output after the rewrite."""
+    def test_number_gap_does_not_migrate_to_bold_kanji(self):
+        text = "ここまで ５分って"
+        tokens = [
+            _make_mock_token("ここ", kana="ココ"),
+            _make_mock_token("まで", kana="マデ"),
+            _make_mock_token("５", kana=None),
+            _make_mock_token("分っ", kana="ワカッ"),
+            _make_mock_token("て", kana="テ"),
+        ]
+        start = text.index("分")
+
+        out = wrap_target_furigana_from_tokens(text, tokens, start, len(text))
+
+        assert out == "ここまで ５<b> 分[わか]って</b>"
+        assert _anki_visible_text(out) == text
+
+    def test_no_source_spaces_stay_invisible_after_rewrite(self):
+        """Ruby delimiters in a no-space source remain invisible in Anki."""
         text = "スウェーデンや王国です。"
         tokens = [
             _make_mock_token("スウェーデン", kana="スウェーデン"),
@@ -216,7 +245,8 @@ class TestWrapTargetFurigana:
         start = text.index("王国")
         end = start + len("王国")
         out = wrap_target_furigana(text, tagger, start, end)
-        assert out == "スウェーデンや <b>王国[おうこく]</b>です。"
+        assert out == "スウェーデンや<b> 王国[おうこく]</b>です。"
+        assert _anki_visible_text(out) == text
 
 
 class TestWrapTargetFuriganaFromTokensEquivalence:

@@ -804,7 +804,7 @@ class TestAttestMergedReadings:
 
 
 class TestReplaceOverriddenSpans:
-    """replace_overridden_spans: sentence-stream carrier for overridden spans."""
+    """replace_overridden_spans: sentence-stream carrier for attested spans."""
 
     def _setup(self, attested):
         raw = [_noun_token("バカ", "バカ"), _suffix_token("力", "リョク"), _noun_token("だ", "ダ")]
@@ -819,16 +819,42 @@ class TestReplaceOverriddenSpans:
         assert out[0].feature.kana == "バカヂカラ"
         assert "".join(t.surface for t in out) == "".join(t.surface for t in raw)
 
-    def test_kept_attested_span_stays_per_morpheme(self):
-        # Correct-concat compounds keep today's per-morpheme rendering (judge r2).
+    def test_kept_attested_span_becomes_single_token(self):
+        # Dictionary-attested synthetics use the same whole-compound display
+        # grouping whether or not attestation changed their concatenated kana.
         raw, merged = self._setup({"バカ力": ["ばかりょく"]})
         out = replace_overridden_spans("バカ力だ", raw, merged)
-        assert out is raw
+        assert [t.surface for t in out] == ["バカ力", "だ"]
+        assert out[0].feature.kana == "バカリョク"
+
+    @pytest.mark.parametrize(
+        ("head", "head_kana", "attested", "expected_kana"),
+        [
+            ("二", "ニ", "にきゅう", "ニキュウ"),
+            ("一", "イチ", "いっきゅう", "イッキュウ"),
+        ],
+    )
+    def test_attested_and_corrected_levels_share_whole_compound_grouping(
+        self, head, head_kana, attested, expected_kana
+    ):
+        raw = [_noun_token(head, head_kana), _suffix_token("級", "キュウ")]
+        merged = merge_compound_suffixes(list(raw))
+        attest_merged_readings(merged, lambda terms: {f"{head}級": [attested]})
+
+        out = replace_overridden_spans(f"{head}級", raw, merged)
+
+        assert [t.surface for t in out] == [f"{head}級"]
+        assert out[0].feature.kana == expected_kana
 
     def test_whitespace_stitched_span_keeps_raw_run(self):
         # Merge across a source space: the single-token surface is not locatable
         # in the line text — keep the raw per-morpheme tokens (judge r3).
         raw, merged = self._setup({"バカ力": ["ばかぢから"]})
+        out = replace_overridden_spans("バカ 力だ", raw, merged)
+        assert [t.surface for t in out] == ["バカ", "力", "だ"]
+
+    def test_whitespace_stitched_attested_span_keeps_raw_run(self):
+        raw, merged = self._setup({"バカ力": ["ばかりょく"]})
         out = replace_overridden_spans("バカ 力だ", raw, merged)
         assert [t.surface for t in out] == ["バカ", "力", "だ"]
 

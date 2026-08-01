@@ -1,5 +1,6 @@
 """Tests for text_utils module."""
 
+import re
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
@@ -20,6 +21,13 @@ from anki_miner.utils.text_utils import (
     strip_inline_annotations,
     strip_subtitle_markup,
 )
+
+_ANKI_FURIGANA_RE = re.compile(r" ?([^ >]+?)\[(.+?)\]")
+
+
+def _anki_visible_text(value: str) -> str:
+    """Return visible text after Anki consumes bracket-ruby delimiters."""
+    return _ANKI_FURIGANA_RE.sub(r"\1", value)
 
 
 class TestStripSubtitleMarkup:
@@ -317,6 +325,53 @@ class TestGenerateFurigana:
         token = _make_mock_token("王国", kana="オウコク")
         tagger = MagicMock(return_value=[token])
         assert generate_furigana("王国", tagger) == "王国[おうこく]"
+
+
+class TestGenerateFuriganaSourceWhitespace:
+    """Source gaps survive beside Anki's disposable ruby delimiters."""
+
+    def test_phrase_gap_before_plain_token_is_preserved(self):
+        text = "焦らされたら うっかり殺しちゃう"
+        tokens = [
+            _make_mock_token("焦らさ", kana="ジラサ"),
+            _make_mock_token("れ", kana="レ"),
+            _make_mock_token("たら", kana="タラ"),
+            _make_mock_token("うっかり", kana="ウッカリ"),
+            _make_mock_token("殺し", kana="コロシ"),
+            _make_mock_token("ちゃう", kana="チャウ"),
+        ]
+
+        result = generate_furigana(text, MagicMock(return_value=tokens))
+
+        assert result == "焦[じ]らされたら うっかり 殺[ころ]しちゃう"
+        assert _anki_visible_text(result) == text
+
+    def test_phrase_gap_before_number_does_not_migrate_to_kanji(self):
+        text = "ここまで ５分って"
+        tokens = [
+            _make_mock_token("ここ", kana="ココ"),
+            _make_mock_token("まで", kana="マデ"),
+            _make_mock_token("５", kana=None),
+            _make_mock_token("分っ", kana="ワカッ"),
+            _make_mock_token("て", kana="テ"),
+        ]
+
+        result = generate_furigana(text, MagicMock(return_value=tokens))
+
+        assert result == "ここまで ５ 分[わか]って"
+        assert _anki_visible_text(result) == text
+
+    def test_source_gap_before_ruby_has_separate_syntax_space(self):
+        text = "師 狗巻"
+        tokens = [
+            _make_mock_token("師", kana="シ"),
+            _make_mock_token("狗巻", kana="イヌマキ"),
+        ]
+
+        result = generate_furigana(text, MagicMock(return_value=tokens))
+
+        assert result == "師[し]  狗巻[いぬまき]"
+        assert _anki_visible_text(result) == text
 
 
 class TestFormatFurigana:

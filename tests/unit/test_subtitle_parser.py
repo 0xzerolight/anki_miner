@@ -1,5 +1,6 @@
 """Tests for subtitle_parser module."""
 
+import re
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -13,6 +14,14 @@ from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import generate_furigana, generate_reading
 from anki_miner.utils.text_utils import wrap_target_furigana
+
+_ANKI_FURIGANA_RE = re.compile(r" ?([^ >]+?)\[(.+?)\]")
+
+
+def _anki_visible_text(value: str) -> str:
+    """Return visible text after Anki consumes bracket-ruby delimiters."""
+    return _ANKI_FURIGANA_RE.sub(r"\1", value)
+
 
 # --- Helpers for building mock MeCab tokens ---
 
@@ -3096,13 +3105,13 @@ class TestSurfaceOffsetsAndBolding:
             field = word.sentence_furigana_bolded
             m = re.search(r"<b>([^<]+)</b>", field)
             assert m, f"no <b>...</b> in {field!r}"
-            body = m.group(1)
+            body = _anki_visible_text(m.group(1))
             assert body.startswith(
                 surface_head
-            ), f"bold body {body!r} does not start with {surface_head!r} in {field!r}"
+            ), f"rendered bold body {body!r} does not start with {surface_head!r} in {field!r}"
             assert (
                 must_not_contain not in body
-            ), f"bold body {body!r} bled into adjacent morpheme {must_not_contain!r} in {field!r}"
+            ), f"rendered bold body {body!r} bled into adjacent morpheme {must_not_contain!r} in {field!r}"
 
         _assert_furigana_bold(sunao, "素直", "に")
         _assert_furigana_bold(toosu, "通", "。")
@@ -3180,7 +3189,7 @@ class TestSurfaceOffsetsAndBolding:
 
         m = _re.search(r"<b>([^<]+)</b>", word.sentence_furigana_bolded)
         assert m, word.sentence_furigana_bolded
-        assert m.group(1).startswith(word.surface[0])
+        assert _anki_visible_text(m.group(1)).startswith(word.surface[0])
 
     def test_hiragana_benefactive_not_mined_separately(self, tmp_path):
         """くれ (呉れる, 非自立可能) must not be mined from 買ってくれた even with
@@ -3540,12 +3549,10 @@ class TestT2TokenizeOnce:
 
     def _write_multi_line_srt(self, path: Path) -> Path:
         # GUARD: the token-path == raw-re-tokenize byte-identity these fixtures
-        # assert only holds for lines WITHOUT a kana_overridden compound (the
-        # reading-attestation pass deliberately diverges the display stream for
-        # those — see TestCompoundReadingAttestation). 刑務所/爆発的 are
-        # correct-concat compounds (kept, never overridden), so they stay
-        # equivalent; do not add a known-wrong-reading compound (バカ力,
-        # 体じゅう…) to these lines.
+        # This equivalence only holds when no dictionary-attested synthetic is
+        # carried into the display stream. These services have no reading_lookup,
+        # so 刑務所/爆発的 remain raw-token renders; do not wire attestation into
+        # this fixture without changing the reference path too.
         path.write_text(
             "1\n00:00:01,000 --> 00:00:05,000\n"
             "彼は刑務所で爆発的な事件を起こした\n"
@@ -4501,6 +4508,60 @@ class TestDecorationGlyphStripE2E:
             assert w.sentence == "われわれの通常兵器では"
 
 
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestSentenceFuriganaSourceWhitespace:
+    """Real-tagger sentence fields retain normalized subtitle phrase gaps."""
+
+    _READINGS = {
+        "二級": ["にきゅう"],
+        "一級": ["いっきゅう"],
+    }
+
+    @classmethod
+    def _reading_lookup(cls, terms):
+        return {term: cls._READINGS[term] for term in terms if term in cls._READINGS}
+
+    @pytest.mark.parametrize("indexed", [False, True], ids=["subtitle", "indexed"])
+    @pytest.mark.parametrize(
+        "line",
+        [
+            "こんなに焦らされたら うっかり殺しちゃうぞ？",
+            "侵入地点からここまで ５分ってとこか",
+            "現に二級術師が３人 一級術師が１人 返り討ちに遭ってるんです",
+        ],
+    )
+    def test_rendered_sentence_furigana_preserves_source_gaps(self, tmp_path, line, indexed):
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "whitespace.srt", line)
+        service = SubtitleParserService(cfg, reading_lookup=self._reading_lookup)
+
+        if indexed:
+            words, _ = service.parse_subtitle_file_with_index(srt)
+        else:
+            words = service.parse_subtitle_file(srt)
+
+        assert words
+        assert {word.sentence for word in words} == {line}
+        assert {_anki_visible_text(word.sentence_furigana) for word in words} == {line}
+
+    @pytest.mark.parametrize("indexed", [False, True], ids=["subtitle", "indexed"])
+    def test_attested_levels_share_whole_compound_furigana(self, tmp_path, indexed):
+        line = "現に二級術師が３人 一級術師が１人"
+        cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+        srt = _write_srt(tmp_path, "levels.srt", line)
+        service = SubtitleParserService(cfg, reading_lookup=self._reading_lookup)
+
+        if indexed:
+            words, _ = service.parse_subtitle_file_with_index(srt)
+        else:
+            words = service.parse_subtitle_file(srt)
+
+        furigana = words[0].sentence_furigana
+        assert "二級[にきゅう]" in furigana
+        assert "一級[いっきゅう]" in furigana
+        assert _anki_visible_text(furigana) == line
+
+
 class TestCompoundReadingAttestation:
     """Dictionary-attested readings for merged compounds (2026-07 audit F2).
 
@@ -4511,8 +4572,8 @@ class TestCompoundReadingAttestation:
 
     NOTE for fixture authors: byte-identity between the token path and a raw
     re-tokenize (test_output_equivalence_*) only holds for lines WITHOUT a
-    kana_overridden compound — an attested override deliberately diverges the
-    display stream from raw tokenization.
+    kana_attested compound — dictionary-backed whole-compound grouping
+    deliberately diverges the display stream from raw tokenization.
     """
 
     _FAKE = {
@@ -4589,13 +4650,13 @@ class TestCompoundReadingAttestation:
         assert word.expression_reading == "にいちゃん"
         assert "兄[にい]" in word.sentence_furigana
 
-    def test_correct_concat_compounds_keep_per_morpheme_sentence_rendering(self, tmp_path):
-        # 副作用/現実的: concat readings are attested → kept (no override), so
-        # the sentence keeps today's per-morpheme furigana (judge r2 guard).
+    def test_correct_concat_compounds_use_attested_whole_grouping(self, tmp_path):
+        # Correct concatenated readings and corrected readings now share the
+        # same dictionary-attested whole-compound display stream.
         words = self._parse(tmp_path, "副作用が現実的だ", reading_lookup=self._lookup)
         word = words[0]
-        assert "副[ふく] 作用[さよう]" in word.sentence_furigana
-        assert "副作用[ふくさよう]" not in word.sentence_furigana
+        assert "副作用[ふくさよう]" in word.sentence_furigana
+        assert "現実的[げんじつてき]" in word.sentence_furigana
 
     def test_empty_live_lookup_is_byte_identical_to_none(self, tmp_path):
         cfg = AnkiMinerConfig(media_temp_folder=tmp_path / "media")

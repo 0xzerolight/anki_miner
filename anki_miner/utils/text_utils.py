@@ -373,7 +373,50 @@ def _leads_with_bracket(rendered: str) -> bool:
     return space == -1 or bracket < space
 
 
-def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
+def _render_furigana_token(token: Any) -> str:
+    """Render one token without its cross-token Anki delimiter."""
+    surface: str = token.surface
+    if not any(_is_kanji(c) for c in surface):
+        return surface
+    try:
+        kana = token.feature.kana
+    except AttributeError:
+        return surface
+    if not kana:
+        return surface
+    hiragana = katakana_to_hiragana(kana)
+    if hiragana == surface:
+        return surface
+    return _format_furigana(surface, hiragana)
+
+
+def _source_aligned_furigana_parts(
+    tokens: Iterable[Any], text: str | None
+) -> tuple[list[tuple[str, int, int, int, str]], str, int]:
+    """Pair rendered tokens with source gaps omitted by MeCab."""
+    parts: list[tuple[str, int, int, int, str]] = []
+    cursor = 0
+    for token in tokens:
+        surface: str = token.surface
+        gap_start = cursor
+        if text is None:
+            idx = cursor
+            gap = ""
+        else:
+            idx = text.find(surface, cursor)
+            if idx == -1:
+                # Defensive: token surfaces normally reproduce ``text`` exactly.
+                # Preserve the old concatenation fallback without moving backwards.
+                idx = cursor
+            gap = text[cursor:idx]
+        tok_end = idx + len(surface)
+        parts.append((gap, gap_start, idx, tok_end, _render_furigana_token(token)))
+        cursor = tok_end
+    trailing = "" if text is None else text[cursor:]
+    return parts, trailing, cursor
+
+
+def generate_furigana_from_tokens(tokens: Iterable[Any], *, text: str | None = None) -> str:
     """Generate furigana-annotated text from an already-parsed token iterable.
 
     Iterates ``tokens`` and adds bracketed readings to kanji-containing tokens
@@ -383,34 +426,25 @@ def generate_furigana_from_tokens(tokens: Iterable[Any]) -> str:
         tokens: Iterable of duck-typed MeCab tokens.  Each token must expose
             ``.surface`` (str) and optionally ``.feature.kana`` (str or None).
             Compatible with real ``fugashi`` tokens and ``_SyntheticToken``.
+        text: Optional source text. MeCab omits whitespace tokens, so sentence
+            callers must supply this to preserve source gaps verbatim.
 
     Returns:
         Furigana-annotated string, e.g. ``"王国[おうこく]です。"``.
     """
-    result = []
-    for token in tokens:
-        surface = token.surface
-        has_kanji = any(_is_kanji(c) for c in surface)
-        if not has_kanji:
-            result.append(surface)
-            continue
-        try:
-            kana = token.feature.kana
-            if not kana:
-                result.append(surface)
-                continue
-        except AttributeError:
-            result.append(surface)
-            continue
-        hiragana = katakana_to_hiragana(kana)
-        if hiragana == surface:
-            result.append(surface)
-        else:
-            formatted = _format_furigana(surface, hiragana)
-            # Separator space only when the render leads with a bracket group —
-            # a space before a plain-leading render shows literally in Anki.
-            prefix = " " if result and _leads_with_bracket(formatted) else ""
-            result.append(f"{prefix}{formatted}")
+    result: list[str] = []
+    out_has_content = False
+    parts, trailing, _ = _source_aligned_furigana_parts(tokens, text)
+    for gap, _, _, _, formatted in parts:
+        result.append(gap)
+        out_has_content = out_has_content or bool(gap)
+        # Source whitespace and Anki's disposable ruby delimiter are separate.
+        # Yomitan likewise emits unmatched text verbatim, then one leading
+        # delimiter per reading group (anki-note-builder.js:createFuriganaPlain).
+        prefix = " " if out_has_content and _leads_with_bracket(formatted) else ""
+        result.append(f"{prefix}{formatted}")
+        out_has_content = out_has_content or bool(formatted)
+    result.append(trailing)
     return "".join(result)
 
 
@@ -427,7 +461,7 @@ def generate_furigana(text: str, tagger) -> str:
     Returns:
         Furigana-annotated string, e.g. "王国[おうこく]です。"
     """
-    return generate_furigana_from_tokens(tagger(text))
+    return generate_furigana_from_tokens(tagger(text), text=text)
 
 
 def generate_reading_from_tokens(tokens: Iterable[Any]) -> str:
@@ -533,27 +567,32 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
         offsets are invalid, falls back to :func:`generate_furigana_from_tokens`.
     """
     if start < 0 or end <= start or end > len(text):
-        return generate_furigana_from_tokens(tokens)
+        return generate_furigana_from_tokens(tokens, text=text)
 
     pre: list[str] = []
     body: list[str] = []
     post: list[str] = []
-    cursor = 0
     out_has_content = False  # Matches generate_furigana's "prefix = ' ' if result else ''" rule
 
-    for token in tokens:
-        surface = token.surface
-        # Issue #31: locate the token's actual position in ``text`` rather
-        # than concatenating surface lengths, so whitespace between tokens
-        # doesn't desync the bold window.
-        idx = text.find(surface, cursor)
-        if idx == -1:
-            # Defensive: should not happen for unmodified MeCab surfaces.
-            # Keep cursor where it was so we never roll backwards.
-            idx = cursor
-        tok_start = idx
-        tok_end = tok_start + len(surface)
-        cursor = tok_end
+    parts, trailing, trailing_start = _source_aligned_furigana_parts(tokens, text)
+
+    def append_source_gap(gap: str, gap_start: int) -> None:
+        """Keep each source-gap slice in its raw bold-offset region."""
+        gap_len = len(gap)
+        pre_stop = max(0, min(gap_len, start - gap_start))
+        body_stop = max(pre_stop, min(gap_len, end - gap_start))
+        slices = (
+            (pre, gap[:pre_stop]),
+            (body, gap[pre_stop:body_stop]),
+            (post, gap[body_stop:]),
+        )
+        for bucket, source_slice in slices:
+            if source_slice:
+                bucket.append(html.escape(source_slice))
+
+    for gap, gap_start, tok_start, tok_end, formatted in parts:
+        append_source_gap(gap, gap_start)
+        out_has_content = out_has_content or bool(gap)
 
         # Pick the destination buffer for this token.
         if tok_end <= start:
@@ -570,27 +609,16 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
             # treat as containment to keep the output well-formed.
             bucket = body
 
-        # Build the annotated segment using the same rules as generate_furigana,
-        # but with per-token HTML escaping so the surrounding <b> tags are
-        # the only raw HTML in the output. Escaping the whole post-split string
-        # equals the old escape-then-bracket: readings are pure kana (no
-        # &<>") and the surface is escaped either way, so no double/under-escape.
-        has_kanji = any(_is_kanji(c) for c in surface)
-        annotated = html.escape(surface)
-        if has_kanji:
-            try:
-                kana = token.feature.kana
-            except AttributeError:
-                kana = None
-            if kana:
-                hiragana = katakana_to_hiragana(kana)
-                if hiragana != surface:
-                    formatted = _format_furigana(surface, hiragana)
-                    prefix = " " if out_has_content and _leads_with_bracket(formatted) else ""
-                    annotated = f"{prefix}{html.escape(formatted)}"
-        bucket.append(annotated)
-        if annotated:
+        # Syntax delimiter is independent from any source gap. For a leading
+        # bold ruby it must stay inside <b>, adjacent to the base, so Anki's
+        # filter consumes it; the source gap remains outside the tag.
+        prefix = " " if out_has_content and _leads_with_bracket(formatted) else ""
+        bucket.append(prefix)
+        bucket.append(html.escape(formatted))
+        if formatted:
             out_has_content = True
+
+    append_source_gap(trailing, trailing_start)
 
     pre_s = "".join(pre)
     body_s = "".join(body)
@@ -599,13 +627,6 @@ def wrap_target_furigana_from_tokens(text: str, tokens: Iterable[Any], start: in
         # Defensive: no tokens fell in the bold range. Return the
         # unbolded concatenation so we never emit an empty <b></b>.
         return pre_s + post_s
-    # The annotation rule prepends a separator space to kanji tokens
-    # that follow earlier output. If the bold body starts with that
-    # separator, move it outside the <b> tag so the bold envelops only
-    # the morpheme itself, not its preceding whitespace.
-    if body_s.startswith(" "):
-        pre_s += " "
-        body_s = body_s[1:]
     return f"{pre_s}<b>{body_s}</b>{post_s}"
 
 
