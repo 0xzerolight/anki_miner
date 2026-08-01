@@ -32,7 +32,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Generator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, ClassVar
@@ -40,6 +41,7 @@ from typing import Any, ClassVar
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QShowEvent
 from PyQt6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QListWidgetItem,
@@ -417,24 +419,85 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             logger.exception("Could not start registry rescan after remove")
             self._run_after_scan_callbacks()
 
+    def _owns_focus(self, widget: QWidget | None) -> bool:
+        """Is ``widget`` this panel, or something inside it?"""
+        return widget is not None and (widget is self or self.isAncestorOf(widget))
+
+    @contextmanager
+    def _keep_focus_in_list(self) -> Generator[None]:
+        """Hold keyboard focus inside this panel across a clear-and-repopulate.
+
+        Rebuilding destroys every row widget, and the placeholder path disables
+        the reorder controls on top of that. Qt answers either by calling
+        ``focusNextChild()``, which WRAPS the window's tab order — and the first
+        focusable widget in the window is the header's theme selector, so a
+        click on a row's Enabled checkbox ended with focus (and, before the
+        stylesheet fix, an accent border) in the top-right corner of the app.
+
+        Restores whenever the widget that held focus no longer does — it was
+        destroyed or disabled — and leaves an untouched control alone. Where Qt
+        dropped focus in the meantime is not the test: it sometimes parks it on
+        the list itself with ``TabFocusReason``, which is inside the panel but
+        wears the keyboard ring, so "still in the panel" is not good enough.
+
+        The target is the same row index when the rebuild produced one, and the
+        list itself otherwise (after the loading placeholder there are no rows to
+        go back to).
+
+        ``OtherFocusReason`` is load-bearing: it is not in
+        ``focus_ring.KEYBOARD_FOCUS_REASONS``, so putting focus back marks
+        nothing and paints no keyboard ring on a list the user reached with the
+        mouse.
+        """
+        focused = QApplication.focusWidget()
+        had_focus = self._owns_focus(focused)
+        row_index = -1
+        if had_focus and focused is not None:
+            for index in range(self._list.count()):
+                row = self._row_widget(index)
+                if row is not None and (row is focused or row.isAncestorOf(focused)):
+                    row_index = index
+                    break
+        try:
+            yield
+        finally:
+            # Identity, not attribute access: `focused` may be a destroyed C++
+            # object by now, and `is` never touches it.
+            if had_focus and QApplication.focusWidget() is not focused:
+                target: QWidget = self._list
+                restored_row = self._row_widget(row_index) if row_index >= 0 else None
+                if restored_row is not None:
+                    target = restored_row.checkbox
+                # Qt may already have parked focus on the target — with
+                # TabFocusReason, which marks it for the keyboard ring. setFocus
+                # on a widget that already holds focus sends NO QFocusEvent, so
+                # the mark would survive and ring a list the user clicked. Drop
+                # focus first and the filter clears the mark on the way out.
+                if target.hasFocus():
+                    target.clearFocus()
+                target.setFocus(Qt.FocusReason.OtherFocusReason)
+
     def _show_loading_placeholder(self) -> None:
         """Render a single disabled 'Loading…' row while a scan is in flight."""
-        # No real rows exist during the scan, so disable the reorder/remove
-        # controls explicitly (they act on currentRow(), which would otherwise
-        # operate on a transient placeholder); _rebuild_list re-enables them.
-        self._set_reorder_controls_enabled(False)
-        self._rebuilding = True
-        self._list.setUpdatesEnabled(False)
-        try:
-            self._list.clear()
-            placeholder = QListWidgetItem(self._strings.loading)
-            # NoItemFlags also strips ItemIsDragEnabled, so the placeholder
-            # cannot be dragged into a reorder of a chain it is not part of.
-            placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
-            self._list.addItem(placeholder)
-        finally:
-            self._list.setUpdatesEnabled(True)
-            self._rebuilding = False
+        # The guard wraps _set_reorder_controls_enabled too: disabling a focused
+        # button is its own way to throw focus out of the panel.
+        with self._keep_focus_in_list():
+            # No real rows exist during the scan, so disable the reorder/remove
+            # controls explicitly (they act on currentRow(), which would otherwise
+            # operate on a transient placeholder); _rebuild_list re-enables them.
+            self._set_reorder_controls_enabled(False)
+            self._rebuilding = True
+            self._list.setUpdatesEnabled(False)
+            try:
+                self._list.clear()
+                placeholder = QListWidgetItem(self._strings.loading)
+                # NoItemFlags also strips ItemIsDragEnabled, so the placeholder
+                # cannot be dragged into a reorder of a chain it is not part of.
+                placeholder.setFlags(Qt.ItemFlag.NoItemFlags)
+                self._list.addItem(placeholder)
+            finally:
+                self._list.setUpdatesEnabled(True)
+                self._rebuilding = False
 
     def _set_reorder_controls_enabled(self, enabled: bool) -> None:
         """Toggle every way to reorder or remove a row, drag included.
@@ -894,7 +957,14 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     def _rebuild_list(self) -> None:
         # Suspend repaints across clear+populate so the reorder ↑↓ buttons don't
         # flash on each rebuild. clear() destroys the previous row widgets (and
-        # their signal connections), so there is no duplicate-handler risk.
+        # their signal connections), so there is no duplicate-handler risk — but
+        # destroying the focused row is what used to hand focus to the header,
+        # hence the guard.
+        with self._keep_focus_in_list():
+            self._rebuild_list_rows()
+
+    def _rebuild_list_rows(self) -> None:
+        """Clear and repopulate the row list. Call through :meth:`_rebuild_list`."""
         self._rebuilding = True
         self._list.setUpdatesEnabled(False)
         try:
