@@ -13,6 +13,7 @@ from .screen_issue_banner import (
 )
 from .setting_anchor import SettingAnchor, SettingAnchorHost, SettingTextProvider
 from .sizing import (
+    PAGE_FILLER_OBJECT_NAME,
     PAGE_SCROLL_OBJECT_NAME,
     PageWidth,
     apply_button_size,
@@ -25,6 +26,7 @@ from .sizing import (
     make_label_fit_text,
     make_widget_expand_vertically,
     make_widget_shrink_to_fit,
+    page_filler,
     page_width_cap,
 )
 from .status_badge import StatusBadge
@@ -58,11 +60,13 @@ __all__ = [
     "TaskPublisherMixin",
     "ElidingLabel",
     "EnhancedDialog",
+    "PAGE_FILLER_OBJECT_NAME",
     "PAGE_SCROLL_OBJECT_NAME",
     "PageWidth",
     "apply_button_size",
     "configure_card_layout",
     "configure_scrolled_page",
+    "page_filler",
     "page_width_cap",
     "make_label_fit_text",
     "make_widget_expand_vertically",

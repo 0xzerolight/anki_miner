@@ -65,6 +65,7 @@ from anki_miner.gui.widgets.base import (
     PageWidth,
     configure_card_layout,
     field_label_width,
+    page_filler,
 )
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
@@ -311,6 +312,12 @@ class AudiobookTab(_ListQueueMiningTabBase):
 
         # --- LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
         self.log_widget = LogWidget()
+
+        # Stands in for the queue list while an empty queue keeps it hidden, so
+        # the page's leftover height still pools below the cards instead of
+        # inflating their headings. Toggled with the list in _recompute_buttons.
+        self.page_filler = page_filler()
+        layout.addWidget(self.page_filler)
 
         container.setLayout(layout)
 

@@ -44,6 +44,10 @@ _READABLE_MEASURE_CH = 60
 #: on "the scrolled body of a screen".
 PAGE_SCROLL_OBJECT_NAME = "page-scroll"
 
+#: Object name for the invisible block that stands in for a page's grower while
+#: that grower is hidden. See :func:`page_filler`.
+PAGE_FILLER_OBJECT_NAME = "page-filler"
+
 
 def field_label_width(*texts: str) -> int:
     """Compute a shared column width for a group of ``field-label`` labels.
@@ -97,6 +101,28 @@ def make_widget_expand_vertically(widget: QWidget) -> None:
     policy = widget.sizePolicy()
     policy.setVerticalPolicy(QSizePolicy.Policy.Minimum)
     widget.setSizePolicy(policy)
+
+
+def page_filler() -> QWidget:
+    """An invisible block that takes a page column's surplus height.
+
+    For a column whose usual grower can go away at runtime -- a queue list
+    hidden while the queue is empty -- shown in its place so the leftover
+    height still has somewhere to pool. Without one the column falls back to
+    dealing the surplus across its headings and cards, which is the empty-band
+    bug ``install_workflow_shell``'s own guard exists to prevent; that guard
+    runs once at install time and cannot re-fire when a list is hidden later.
+
+    A widget rather than ``addStretch``: a spacer cannot be hidden, and this
+    one has to come and go with the list it stands in for.
+
+    Returns:
+        The filler, ready to append to the page column.
+    """
+    filler = QWidget()
+    filler.setObjectName(PAGE_FILLER_OBJECT_NAME)
+    filler.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+    return filler
 
 
 def make_widget_shrink_to_fit(widget: QWidget) -> None:

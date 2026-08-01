@@ -18,6 +18,7 @@ already satisfies it.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -25,7 +26,14 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QApplication,
+    QBoxLayout,
+    QLabel,
+    QScrollArea,
+    QVBoxLayout,
+    QWidget,
+)
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
@@ -35,6 +43,7 @@ from anki_miner.gui.widgets.base.workflow_action_bar import _column_has_vertical
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.enhanced import SectionHeader
+from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -160,6 +169,97 @@ def test_a_tall_window_never_inflates_a_heading(page, qtbot):
         if h.height() > h.sizeHint().height() + 2
     ]
     assert not inflated, f"{name}: surplus height landed on chrome: {inflated}"
+
+
+#: The queue screens, and how to put one item on each. An empty queue hides its
+#: list, which is the item that normally takes the page's surplus height -- so
+#: these are the screens where the absorber has to change hands at runtime.
+_QUEUE_SCREENS = ("youtube", "audiobook", "batch")
+
+
+def _fill_queue(name: str, widget: QWidget) -> None:
+    """Put one row on ``widget``'s queue, however that screen adds one.
+
+    Through the queue model, not by dropping an item straight on the list:
+    ``_recompute_buttons`` asks the model whether there is anything queued, so
+    a list-only row would be hidden again on the next recompute.
+    """
+    if name == "batch":
+        widget.queue_panel.register_widget(QueueItemWidget(display_name="Series 1"))
+        return
+    if name == "youtube":
+        item = widget._queue.add("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    else:
+        item = widget._queue.add(Path("book.m4b"), Path("book.srt"))
+    widget._render_new_item(item)
+    widget._recompute_buttons()
+
+
+def _visible_headings(widget: QWidget) -> list[QWidget]:
+    return [
+        h
+        for h in (
+            *widget.findChildren(SectionHeader),
+            *(lbl for lbl in widget.findChildren(QLabel) if lbl.objectName() == "heading3"),
+        )
+        if h.isVisible()
+    ]
+
+
+@pytest.mark.parametrize("name", _QUEUE_SCREENS)
+def test_an_empty_queue_collapses_its_list_without_inflating_headings(name, qtbot, test_config):
+    """Empty queue: no reserved rows of nothing, and no gap where they were.
+
+    The list going away is only half of it. The list is what took this page's
+    leftover height, so the filler has to take over in the same breath or the
+    headings inflate exactly the way they did before the shell guard.
+    """
+    widget = _build(name, test_config)
+    qtbot.addWidget(widget)
+    widget.resize(1000, 800)
+    widget.show()
+    qtbot.waitExposed(widget)
+    QApplication.processEvents()
+
+    queue_list = widget.queue_panel.list_widget if name == "batch" else widget.list_widget
+    assert not queue_list.isVisible(), f"{name}: an empty queue still reserves its list"
+    assert widget.page_filler.isVisible(), f"{name}: nothing took the height the list gave up"
+
+    inflated = [
+        (h.height(), h.sizeHint().height()) for h in _visible_headings(widget) if h.height() > h.sizeHint().height() + 2
+    ]
+    assert not inflated, f"{name}: empty queue inflated its headings: {inflated}"
+
+
+@pytest.mark.parametrize("name", _QUEUE_SCREENS)
+def test_the_queue_list_takes_the_height_back_once_it_has_a_row(name, qtbot, test_config):
+    """The other direction: a row arrives, the list grows, the filler stands down.
+
+    Without this the collapse could ship as "hide the list forever" and the
+    empty-state test above would still pass.
+    """
+    widget = _build(name, test_config)
+    qtbot.addWidget(widget)
+    widget.resize(1000, 800)
+    widget.show()
+    qtbot.waitExposed(widget)
+    QApplication.processEvents()
+
+    _fill_queue(name, widget)
+    QApplication.processEvents()
+
+    queue_list = widget.queue_panel.list_widget if name == "batch" else widget.list_widget
+    assert queue_list.isVisible(), f"{name}: the list stayed hidden with a row in it"
+    assert not widget.page_filler.isVisible(), f"{name}: the filler still competes with the list"
+    assert queue_list.height() > queue_list.minimumHeight(), (
+        f"{name}: the list is not taking the page's surplus "
+        f"(h={queue_list.height()}, floor={queue_list.minimumHeight()})"
+    )
+
+    inflated = [
+        (h.height(), h.sizeHint().height()) for h in _visible_headings(widget) if h.height() > h.sizeHint().height() + 2
+    ]
+    assert not inflated, f"{name}: a filled queue inflated its headings: {inflated}"
 
 
 class TestColumnHasVerticalAbsorber:
