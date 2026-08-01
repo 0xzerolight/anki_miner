@@ -143,12 +143,37 @@ class TestStartupValidationLogging:
 
         records = _startup_validation_records(caplog)
         assert len(records) == 1
-        assert records[0].levelno == logging.WARNING
+        # An ERROR-severity issue is present, so the record is ERROR.
+        assert records[0].levelno == logging.ERROR
         assert records[0].getMessage() == (
             "Startup validation completed: issues=3 errors=1 warnings=2 components=AnkiConnect=1,Offline Dictionary=2"
         )
         assert "https://" not in records[0].getMessage()
         assert "/home/secret" not in records[0].getMessage()
+
+    def test_silent_warnings_only_log_at_warning(self, window_with_settings, caplog, monkeypatch):
+        """Optional-tool warnings (alass, yt-dlp) must not read like a hard error."""
+        window, _settings_tab = window_with_settings
+        target = logging.getLogger("anki_miner.gui.main_window")
+        monkeypatch.setattr(target, "propagate", True)
+        window._validation_silent = True
+        result = _result(
+            ankiconnect_ok=True,
+            issues=[
+                ValidationIssue(component="alass", severity="WARNING", message="not installed"),
+                ValidationIssue(component="yt-dlp", severity="WARNING", message="not installed"),
+            ],
+        )
+
+        with caplog.at_level(logging.INFO, logger=target.name):
+            window._on_validation_result(result)
+
+        records = _startup_validation_records(caplog)
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        assert records[0].getMessage() == (
+            "Startup validation completed: issues=2 errors=0 warnings=2 components=alass=1,yt-dlp=1"
+        )
 
     def test_manual_validation_stays_quiet(self, window_with_settings, caplog, monkeypatch):
 

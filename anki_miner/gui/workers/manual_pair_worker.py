@@ -186,6 +186,4 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             self.result_ready.emit(results)
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
-            logger.exception("ManualPairWorkerThread unhandled exception")
-            if not self.check_cancelled():
-                self.error.emit(str(e))
+            self.report_failure(e, context="ManualPairWorkerThread", on_error=self.error.emit)

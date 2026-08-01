@@ -42,7 +42,8 @@ class ValidationWorkerThread(CancellableWorker):
             if not self.check_cancelled():
                 self.result_ready.emit(result)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
-            logger.exception("ValidationWorkerThread unhandled exception")
-            if not self.check_cancelled():
-                error_msg = f"Error during validation: {str(e)}"
-                self.error.emit(error_msg)
+            self.report_failure(
+                e,
+                context="ValidationWorkerThread",
+                on_error=lambda msg: self.error.emit(f"Error during validation: {msg}"),
+            )

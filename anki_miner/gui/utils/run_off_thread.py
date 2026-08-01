@@ -86,7 +86,11 @@ def run_off_thread(
 
     worker.result_ready.connect(on_done)
     if on_error is None:
-        worker.error.connect(lambda msg: logger.warning("off-thread work failed: %s", msg))
+        # SingleCallWorker.report_failure already logged this at the level its
+        # type deserves; a second record here only duplicated it (and paired a
+        # WARNING with a spurious traceback for a typed domain failure). Kept at
+        # DEBUG so "nobody handled this" is still visible.
+        worker.error.connect(lambda msg: logger.debug("off-thread work failed, no handler: %s", msg))
     else:
         worker.error.connect(on_error)
     if on_finished is not None:

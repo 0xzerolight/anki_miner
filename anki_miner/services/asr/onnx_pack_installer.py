@@ -36,7 +36,7 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
@@ -183,7 +183,7 @@ def install_onnx_pack(
         )
 
     if cancel_event is not None and cancel_event.is_set():
-        raise SetupError("onnxruntime installation cancelled")
+        raise OperationCancelled("onnxruntime installation cancelled")
 
     onnx_pack_root.mkdir(parents=True, exist_ok=True)
     # Reclaim orphans from a previous crashed/killed install (a hard kill between
@@ -208,12 +208,12 @@ def install_onnx_pack(
     )
     try:
         if cancel_event is not None and cancel_event.is_set():
-            raise SetupError("onnxruntime installation cancelled")
+            raise OperationCancelled("onnxruntime installation cancelled")
 
         verify_sha256(part_path, spec.sha256, "onnxruntime download")
 
         if cancel_event is not None and cancel_event.is_set():
-            raise SetupError("onnxruntime installation cancelled")
+            raise OperationCancelled("onnxruntime installation cancelled")
 
         _extract_package(part_path, onnx_pack_root)
     finally:

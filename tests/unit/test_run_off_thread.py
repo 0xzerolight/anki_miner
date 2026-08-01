@@ -10,6 +10,7 @@ result is delivered back on the GUI thread via queued signals. pytest-qt's
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 
@@ -105,17 +106,27 @@ def test_run_off_thread_routes_exception_to_on_error_with_prefix(qtbot):
     qtbot.waitUntil(lambda: not parent._off_thread_workers, timeout=3000)
 
 
-def test_run_off_thread_default_on_error_logs_warning(qtbot, caplog):
+def test_run_off_thread_default_on_error_does_not_double_log(qtbot, caplog):
+    """The failure is logged once, by the worker guard -- not again by the sink.
+
+    The default sink used to log its own WARNING on top of
+    ``SingleCallWorker``'s record, so every unhandled off-thread failure
+    appeared twice in the log.
+    """
     parent = _Sink()
 
     def _boom():
         raise ValueError("nope")
 
-    with caplog.at_level("WARNING", logger="anki_miner.gui.utils.run_off_thread"):
+    with caplog.at_level(logging.DEBUG):
         run_off_thread(parent, _boom, lambda _v: None)
         qtbot.waitUntil(lambda: not parent._off_thread_workers, timeout=3000)
 
-    assert any("nope" in rec.getMessage() for rec in caplog.records)
+    worker_records = [r for r in caplog.records if r.name == "anki_miner.gui.workers.base_worker"]
+    sink_records = [r for r in caplog.records if r.name == "anki_miner.gui.utils.run_off_thread"]
+    assert [r.levelno for r in worker_records] == [logging.ERROR]
+    assert "nope" in str(worker_records[0].exc_info[1])
+    assert [r.levelno for r in sink_records] == [logging.DEBUG]
 
 
 def test_run_off_thread_tracks_then_untracks_worker(qtbot):

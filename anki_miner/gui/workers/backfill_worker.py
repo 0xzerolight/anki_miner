@@ -58,9 +58,11 @@ class BackfillScanWorker(CancellableWorker):
             finally:
                 shared_lookup.close()
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
-            logger.exception("BackfillScanWorker unhandled exception")
-            if not self.check_cancelled():
-                self.error.emit(f"Backfill scan failed: {e}")
+            self.report_failure(
+                e,
+                context="BackfillScanWorker",
+                on_error=lambda msg: self.error.emit(f"Backfill scan failed: {msg}"),
+            )
 
 
 class BackfillApplyWorker(CancellableWorker):
@@ -102,8 +104,9 @@ class BackfillApplyWorker(CancellableWorker):
             if self.check_cancelled():
                 self.cancelled.emit()
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
-            if self.check_cancelled():
-                self.cancelled.emit()
-            else:
-                logger.exception("BackfillApplyWorker unhandled exception")
-                self.error.emit(f"Backfill apply failed: {e}")
+            self.report_failure(
+                e,
+                context="BackfillApplyWorker",
+                on_error=lambda msg: self.error.emit(f"Backfill apply failed: {msg}"),
+                on_cancelled=self.cancelled.emit,
+            )
