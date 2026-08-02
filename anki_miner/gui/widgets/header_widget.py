@@ -51,6 +51,25 @@ _PROFILE_COMBO_MAX_CHARS = 20
 # regardless of the combo's own size-adjust policy.
 _PROFILE_NAME_MAX_WIDTH = 150
 
+# Same character budget for the theme combo, and for the same reason: without it
+# the combo sizes to its widest ITEM, which is the "Browse all N themes…"
+# sentinel, making it the widest thing in the header (288px against the profile
+# combo's 232px at ui_font_scale 1.5 on DejaVu Sans). That pushed the header
+# minimum to 1028px -- past the 1024px WINDOW_MIN_WIDTH the window sets on
+# itself -- on any desktop whose default sans face is Latin-only, because DejaVu
+# advances run wider than Noto Sans CJK JP's for the same string.
+#
+# Capping the CLOSED combo costs nothing: the sentinel is never the closed text.
+# Picking it opens Settings and snaps the selection straight back to the active
+# theme, so the closed combo only ever shows a theme name. The drop-down keeps
+# sizing to its widest item (291px against the 260px combo at 1.5x), so the
+# sentinel stays readable where it is actually read.
+#
+# The same 12 as the profile combo, so the two selectors stack to one width.
+# Measured: 12 and 10 land on the same 232px -- the style's own minimum binds
+# first -- so this is the larger budget of the two that cost nothing.
+_THEME_COMBO_MIN_CHARS = 12
+
 
 class HeaderWidget(QWidget):
     """Header widget with app branding, profile and theme selection.
@@ -167,6 +186,10 @@ class HeaderWidget(QWidget):
         # their border at rest in every focus state; the object name is what
         # that rule selects on.
         self.theme_combo.setObjectName("theme-combo")
+        # Size from a fixed character budget rather than from the widest item --
+        # see _THEME_COMBO_MIN_CHARS for why the widest item is the wrong ruler.
+        self.theme_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.theme_combo.setMinimumContentsLength(_THEME_COMBO_MIN_CHARS)
         self.theme_combo.setAccessibleName(self.tr("Theme"))
         # Issue #99's hazard, with an unusually expensive payload: a wheel over
         # this combo changes theme, and each change costs a re-measured 1647 ms
