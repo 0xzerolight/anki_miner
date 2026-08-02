@@ -315,37 +315,44 @@ echo
 # which parses a 600-term flat chain) stayed green. The unit suite cannot see
 # this — it is a property of the VENDORED binary, so it is checked here, against
 # the graph build_aselect_graph actually emits.
+#
+# The graph is generated here in awk rather than imported from
+# build_aselect_graph: this script runs against a BUILT bundle with only the
+# shell's own tooling, and reaching for an interpreter made the smoke depend on
+# whichever python happened to be on PATH. awk mirrors the same pairwise fold —
+# the emitted SHAPE is pinned on the Python side by
+# test_build_aselect_graph_nesting_stays_logarithmic; what this proves is that
+# the VENDORED ffmpeg accepts a graph of that shape at a real episode's size.
 GRAPH_TERMS="${BUNDLE_SMOKE_GRAPH_TERMS:-200}"
 echo "=== smoke: condenser filter graph ($GRAPH_TERMS periods) ==="
 if [ -z "$FF" ]; then
   echo "::warning::Skipping filter-graph smoke — no bundled ffmpeg (already reported above)"
 else
-  PY=""
-  for cand in python3 python; do
-    command -v "$cand" >/dev/null 2>&1 && PY="$cand" && break
-  done
-  if [ -z "$PY" ]; then
-    echo "::error::No python on PATH — cannot build the condenser graph to test"
-    FAILED+=("condenser-filter-graph")
+  GRAPH_FILE="$SMOKE_HOME/condense_graph_smoke.txt"
+  awk -v n="$GRAPH_TERMS" '
+    BEGIN {
+      for (i = 0; i < n; i++)
+        term[i] = sprintf("between(t,%.3f,%.3f)", i * 2, i * 2 + 1)
+      count = n
+      while (count > 1) {                     # pairwise fold, same as the Python
+        m = 0
+        for (i = 0; i < count; i += 2)
+          folded[m++] = (i + 1 < count) ? "(" term[i] "+" term[i + 1] ")" : term[i]
+        for (i = 0; i < m; i++) term[i] = folded[i]
+        count = m
+      }
+      printf "aselect=%c%s%c,asetpts=N/SR/TB", 39, term[0], 39
+    }
+  ' > "$GRAPH_FILE"
+  if "$FF" -hide_banner -nostdin -v error \
+      -f lavfi -i "anullsrc=r=44100:cl=stereo" -t 0.1 \
+      -filter_script:a "$GRAPH_FILE" -f null - 2>&1; then
+    echo "BUNDLED_FFMPEG_GRAPH_PASS: $GRAPH_TERMS periods"
+    echo "PASS condenser-filter-graph"
   else
-    GRAPH_FILE="$SMOKE_HOME/condense_graph_smoke.txt"
-    if ! PYTHONPATH=. "$PY" -c "
-from anki_miner.services.audio_condenser import build_aselect_graph
-periods = [(i * 2000, i * 2000 + 1000) for i in range($GRAPH_TERMS)]
-open('$GRAPH_FILE', 'w', encoding='utf-8').write(build_aselect_graph(periods))
-"; then
-      echo "::error::Could not build the aselect graph via build_aselect_graph"
-      FAILED+=("condenser-filter-graph")
-    elif "$FF" -hide_banner -nostdin -v error \
-        -f lavfi -i "anullsrc=r=44100:cl=stereo" -t 0.1 \
-        -filter_script:a "$GRAPH_FILE" -f null - 2>&1; then
-      echo "BUNDLED_FFMPEG_GRAPH_PASS: $GRAPH_TERMS periods"
-      echo "PASS condenser-filter-graph"
-    else
-      echo "::error::Bundled ffmpeg rejected a $GRAPH_TERMS-period condenser graph"
-      echo "  (expression-parser budget — see build_aselect_graph)"
-      FAILED+=("condenser-filter-graph")
-    fi
+    echo "::error::Bundled ffmpeg rejected a $GRAPH_TERMS-period condenser graph"
+    echo "  (expression-parser budget — see build_aselect_graph)"
+    FAILED+=("condenser-filter-graph")
   fi
 fi
 echo

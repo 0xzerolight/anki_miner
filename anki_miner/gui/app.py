@@ -1223,6 +1223,22 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
 
     def fail(stage: str) -> None:
         logger.critical("Installer smoke failed during %s", stage, exc_info=True)
+        # Close the window here too, exactly as the success path does before
+        # finish(). Without it the whole MainWindow widget tree is still ALIVE at
+        # interpreter exit, and PyQt/sip's exit-time cleanup walks it and
+        # segfaults — the process dies with SIGSEGV (139) instead of the exit 1
+        # the Windows installer smoke asserts, and the CRITICAL log above is the
+        # last thing anyone sees. _drain_deferred_deletes below does not cover
+        # this: the fault is a live window, not a pending delete, so the drain
+        # completes with an empty queue and the crash still happens.
+        #
+        # Latent and allocation-sensitive: it reproduces only once the process
+        # crosses some threshold, so an unrelated module-level addition anywhere
+        # in the import graph can surface it (bisected to a no-op dataclass, 4/4).
+        try:
+            window.close()
+        except Exception:
+            logger.debug("installer smoke: window.close() on the failure path raised", exc_info=True)
         app.exit(1)
 
     def finish() -> None:
