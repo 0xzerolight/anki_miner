@@ -8,6 +8,7 @@ is validated later at E2E).
 
 from __future__ import annotations
 
+import math
 import subprocess
 import threading
 from pathlib import Path
@@ -502,7 +503,45 @@ def test_build_aselect_graph_single_period_float_seconds():
 
 def test_build_aselect_graph_multi_period_ms_to_seconds():
     graph = build_aselect_graph([(500, 1500), (3000, 4200)])
-    assert graph == "aselect='between(t,0.500,1.500)+between(t,3.000,4.200)',asetpts=N/SR/TB"
+    assert graph == "aselect='(between(t,0.500,1.500)+between(t,3.000,4.200))',asetpts=N/SR/TB"
+
+
+def test_build_aselect_graph_rejects_empty_periods():
+    with pytest.raises(ValueError):
+        build_aselect_graph([])
+
+
+def _max_paren_depth(expr: str) -> int:
+    depth = peak = 0
+    for ch in expr:
+        if ch == "(":
+            depth += 1
+            peak = max(peak, depth)
+        elif ch == ")":
+            depth -= 1
+    return peak
+
+
+def test_build_aselect_graph_nesting_stays_logarithmic():
+    """The `+` tree must be BALANCED, not merely parenthesised.
+
+    ffmpeg's expression parser has a fixed budget that a 125-term expression
+    blows in two different ways: a flat ``a+b+c`` chain dies past 100 terms with
+    ENOMEM, and a fully-parenthesised but left- or right-leaning chain dies at
+    100 with EINVAL. Only a balanced tree (depth ~log2 n) clears both, so depth
+    is what this pins — a parens-only assertion would still pass for the leaning
+    ``functools.reduce`` spelling that reintroduces the bug.
+
+    125 periods is the count from the real 25-minute source that reported this.
+    """
+    graph = build_aselect_graph([(i * 2000, i * 2000 + 1000) for i in range(125)])
+    depth = _max_paren_depth(graph)
+    balanced = math.ceil(math.log2(125))  # == 7
+
+    assert graph.count("between(t,") == 125
+    # Both bounds are load-bearing. Lower excludes a flat chain (depth 0);
+    # upper excludes a leaning chain (depth 125).
+    assert balanced <= depth <= balanced + 1
 
 
 # --- condense: command shape -----------------------------------------------
@@ -581,7 +620,7 @@ def test_condense_graph_file_content_between_seconds_and_asetpts(tmp_path):
     ):
         svc.condense(Path("/v/in.mkv"), [(0, 2000), (3000, 5000)], tmp_path / "out.mp3")
 
-    assert captured["graph"] == ("aselect='between(t,0.000,2.000)+between(t,3.000,5.000)',asetpts=N/SR/TB")
+    assert captured["graph"] == ("aselect='(between(t,0.000,2.000)+between(t,3.000,5.000))',asetpts=N/SR/TB")
 
 
 # --- condense: encoder / bitrate / channel mapping -------------------------

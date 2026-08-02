@@ -312,15 +312,37 @@ class _CondenseOutputIncomplete(Exception):
 def build_aselect_graph(periods: list[Period]) -> str:
     """Build the ``aselect``/``asetpts`` filter graph selecting *periods*.
 
-    Emits ``aselect='between(t,a1,b1)+between(t,a2,b2)+...',asetpts=N/SR/TB`` with
-    every bound converted from **integer milliseconds to float seconds** (the
+    Emits ``aselect='((between(t,a1,b1)+between(t,a2,b2))+(...))',asetpts=N/SR/TB``
+    with every bound converted from **integer milliseconds to float seconds** (the
     unit ``between(t,...)`` expects). ``asetpts=N/SR/TB`` restamps the surviving
     samples into one gapless timeline. Periods beyond EOF simply select nothing
-    (harmless). Callers must reject an empty *periods* list before reaching here
-    (an empty graph would select the whole stream).
+    (harmless).
+
+    The ``+`` terms are folded into a BALANCED parenthesised tree, and that shape
+    is load-bearing — ffmpeg's ``av_expr_parse`` has a fixed parser budget
+    (``p.stack_index = 100``, libavutil/eval.c) that a real episode's period
+    count blows in two different ways. Measured against ffmpeg 8 (libavutil 60):
+
+    * flat ``a+b+c`` — parses at 100 terms, ``AVERROR(ENOMEM)`` at 101 and up.
+    * every ``+`` parenthesised but LEFT- or RIGHT-leaning (i.e. the tempting
+      ``functools.reduce(lambda a, b: f"({a}+{b})", terms)`` one-liner) — parses
+      at 99, ``AVERROR(EINVAL)`` at 100 and up.
+    * balanced — parses at 5000 terms, depth growing as log2 n.
+
+    Only balanced clears both limits. A 25-minute episode yields ~125 periods
+    after padding-merge, so the flat form failed on ordinary input for every
+    bundle shipping ffmpeg 8 (ffmpeg 7 parses a 600-term flat chain happily,
+    which is why this survived local runs and CI). Partial grouping is not a
+    safe middle ground: flat runs of 50 joined by a balanced tree still failed
+    at 101 terms. Do not "simplify" this back into a join or a reduce.
     """
-    terms = "+".join(f"between(t,{start / 1000:.3f},{end / 1000:.3f})" for start, end in periods)
-    return f"aselect='{terms}',asetpts=N/SR/TB"
+    if not periods:
+        raise ValueError("build_aselect_graph requires at least one period (an empty graph selects everything)")
+
+    terms = [f"between(t,{start / 1000:.3f},{end / 1000:.3f})" for start, end in periods]
+    while len(terms) > 1:
+        terms = [f"({terms[i]}+{terms[i + 1]})" if i + 1 < len(terms) else terms[i] for i in range(0, len(terms), 2)]
+    return f"aselect='{terms[0]}',asetpts=N/SR/TB"
 
 
 def _encoder_settings(suffix: str) -> tuple[str, bool, bool]:
