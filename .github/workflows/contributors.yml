@@ -57,11 +57,6 @@ jobs:
           # Build a personal commit message when new logins appeared this run.
           # Cap at 3 mentions to keep the subject line short; overflow becomes
           # "and N more". Plain message when only avatar/order changes happened.
-          #
-          # No "[skip ci]" marker: main's ruleset requires 7 status checks, and
-          # skipping CI means they never report, so every push was refused with
-          # "GH013 ... 7 of 7 required status checks are expected". One extra CI
-          # run per new contributor is the cheaper side of that trade.
           if [ -n "$NEW_LOGINS" ]; then
             IFS=',' read -ra logins <<< "$NEW_LOGINS"
             count=${#logins[@]}
@@ -74,9 +69,9 @@ jobs:
             if [ $count -gt 3 ]; then
               mentions+=" and $((count - 3)) more"
             fi
-            msg="chore: welcome ${mentions} to CONTRIBUTORS.md"
+            msg="chore: welcome ${mentions} to CONTRIBUTORS.md [skip ci]"
           else
-            msg='chore: refresh CONTRIBUTORS.md'
+            msg='chore: refresh CONTRIBUTORS.md [skip ci]'
           fi
 
           git config user.name  'github-actions[bot]'
