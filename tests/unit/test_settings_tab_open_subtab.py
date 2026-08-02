@@ -49,12 +49,12 @@ _GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         "Resources",
         (
             ("dictionaries", "Dictionaries"),
-            ("audio", "Word Audio"),
+            ("audio", "Audio"),
             ("frequency", "Frequency"),
             ("pitch", "Pitch Accent"),
         ),
     ),
-    ("Mining", (("filtering", "Mining Rules"),)),
+    ("Mining", (("filtering", "Filtering"),)),
     ("Integrations", (("youtube", "YouTube"), ("subtitles", "Transcription & Alignment"))),
     ("App", (("ui", "Appearance & Language"),)),
 )
@@ -161,9 +161,10 @@ class TestDeepLinkContract:
 
     def test_a_display_label_is_not_a_key(self, tab) -> None:
         # Routing from translated text is the failure this contract prevents.
+        # The label is chosen so it cannot pass on a case difference alone.
         tab.open_subtab("anki")
         before = tab.pages.currentIndex()
-        tab.open_subtab("Mining Rules")
+        tab.open_subtab("Cards & Anki")
         assert tab.pages.currentIndex() == before
 
 
@@ -176,8 +177,10 @@ class TestCurrentSubtabKey:
         assert tab.current_subtab_key() == key
 
     def test_reports_a_key_not_a_label(self, tab) -> None:
-        tab.open_subtab("filtering")
-        assert tab.current_subtab_key() == "filtering"
+        # A page whose label is not its key in any casing, so the assertion
+        # cannot pass on a capitalisation difference alone.
+        tab.open_subtab("media")
+        assert tab.current_subtab_key() == "media"
         assert tab.current_subtab_key() != tab.nav_list.currentItem().text()
 
     def test_a_group_heading_row_is_never_reported(self, tab) -> None:

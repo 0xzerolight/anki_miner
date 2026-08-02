@@ -100,7 +100,7 @@ class TestIndex:
         entry = _by_id(entries, "filtering.max_frequency_spinbox")
 
         assert entry.title == "Max Frequency Rank"
-        assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Mining Rules"
+        assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Filtering"
 
     def test_a_tab_level_setting_belongs_to_no_page(self, entries):
         entry = _by_id(entries, "app.check_for_updates")
@@ -145,7 +145,8 @@ class TestRenamedDestinations:
 
         assert "subtitles.alass_selector" in results
 
-    def test_the_old_filtering_tab_name_still_finds_mining_rules(self, entries):
+    def test_the_filtering_destination_name_finds_its_settings(self, entries):
+        """Filtering kept its name, so the breadcrumb alone has to match it."""
         results = _ids(search(entries, "filtering"))
 
         assert "filtering.use_i_plus_one_checkbox" in results
@@ -162,7 +163,7 @@ class TestTranslatedIndex:
     _JA = {
         "Max Frequency Rank": "最大頻度ランク",
         "Mining": "採掘",
-        "Mining Rules": "採掘ルール",
+        "Filtering": "フィルタリング",
     }
 
     @pytest.fixture
@@ -196,7 +197,7 @@ class TestTranslatedIndex:
         entry = _by_id(translated_tab.setting_search_entries(), "filtering.max_frequency_spinbox")
 
         assert entry.title == "最大頻度ランク"
-        assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}採掘ルール"
+        assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}フィルタリング"
 
 
 class TestSearchBox:
@@ -209,7 +210,7 @@ class TestSearchBox:
         item = tab.search_box.results.item(0)
         assert item is not None
         assert "Max Frequency Rank" in item.text()
-        assert f"Mining{BREADCRUMB_SEPARATOR}Mining Rules" in item.text()
+        assert f"Mining{BREADCRUMB_SEPARATOR}Filtering" in item.text()
         assert item.data(Qt.ItemDataRole.UserRole) == "filtering.max_frequency_spinbox"
 
     def test_a_query_with_no_match_lists_no_jumpable_row(self, tab):
