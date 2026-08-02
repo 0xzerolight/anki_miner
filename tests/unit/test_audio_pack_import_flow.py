@@ -649,7 +649,7 @@ class TestReimportPack:
 
 class TestSettingsTabAudioPanelWiring:
     def test_audio_destination_exists(self, tab):
-        # Stable key, not the displayed "Word Audio", which translates.
+        # Stable key, not the displayed "Audio", which translates.
         assert "audio" in tab._subtab_index, f"audio destination missing; got: {sorted(tab._subtab_index)}"
 
     def test_audio_comes_after_dictionaries(self, tab):

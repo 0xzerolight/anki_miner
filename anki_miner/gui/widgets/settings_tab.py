@@ -503,14 +503,14 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 self.tr("Resources"),
                 (
                     ("dictionaries", self.tr("Dictionaries"), self.dictionary_panel),
-                    ("audio", self.tr("Word Audio"), self.audio_panel),
+                    ("audio", self.tr("Audio"), self.audio_panel),
                     ("frequency", self.tr("Frequency"), self.frequency_panel),
                     ("pitch", self.tr("Pitch Accent"), self.pitch_panel),
                 ),
             ),
             (
                 self.tr("Mining"),
-                (("filtering", self.tr("Mining Rules"), self.filtering_panel),),
+                (("filtering", self.tr("Filtering"), self.filtering_panel),),
             ),
             (
                 self.tr("Integrations"),
