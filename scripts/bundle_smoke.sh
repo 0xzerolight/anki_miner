@@ -307,6 +307,49 @@ else
 fi
 echo
 
+# --- 4. condenser filter graph: bundled ffmpeg parses a real episode's graph ---
+# ffmpeg's expression parser has a fixed budget that the Audio Condenser's
+# aselect graph can exhaust: a flat `+` chain dies past 100 terms (ENOMEM) and a
+# leaning parenthesised one at 100 (EINVAL). A 25-minute episode yields ~125
+# keep-periods, so this shipped broken while every dev box and CI (ffmpeg 7,
+# which parses a 600-term flat chain) stayed green. The unit suite cannot see
+# this — it is a property of the VENDORED binary, so it is checked here, against
+# the graph build_aselect_graph actually emits.
+GRAPH_TERMS="${BUNDLE_SMOKE_GRAPH_TERMS:-200}"
+echo "=== smoke: condenser filter graph ($GRAPH_TERMS periods) ==="
+if [ -z "$FF" ]; then
+  echo "::warning::Skipping filter-graph smoke — no bundled ffmpeg (already reported above)"
+else
+  PY=""
+  for cand in python3 python; do
+    command -v "$cand" >/dev/null 2>&1 && PY="$cand" && break
+  done
+  if [ -z "$PY" ]; then
+    echo "::error::No python on PATH — cannot build the condenser graph to test"
+    FAILED+=("condenser-filter-graph")
+  else
+    GRAPH_FILE="$SMOKE_HOME/condense_graph_smoke.txt"
+    if ! PYTHONPATH=. "$PY" -c "
+from anki_miner.services.audio_condenser import build_aselect_graph
+periods = [(i * 2000, i * 2000 + 1000) for i in range($GRAPH_TERMS)]
+open('$GRAPH_FILE', 'w', encoding='utf-8').write(build_aselect_graph(periods))
+"; then
+      echo "::error::Could not build the aselect graph via build_aselect_graph"
+      FAILED+=("condenser-filter-graph")
+    elif "$FF" -hide_banner -nostdin -v error \
+        -f lavfi -i "anullsrc=r=44100:cl=stereo" -t 0.1 \
+        -filter_script:a "$GRAPH_FILE" -f null - 2>&1; then
+      echo "BUNDLED_FFMPEG_GRAPH_PASS: $GRAPH_TERMS periods"
+      echo "PASS condenser-filter-graph"
+    else
+      echo "::error::Bundled ffmpeg rejected a $GRAPH_TERMS-period condenser graph"
+      echo "  (expression-parser budget — see build_aselect_graph)"
+      FAILED+=("condenser-filter-graph")
+    fi
+  fi
+fi
+echo
+
 # --- summary ------------------------------------------------------------------
 if [ ${#FAILED[@]} -gt 0 ]; then
   echo "BUNDLE_SMOKE_FAILED: ${FAILED[*]}"
