@@ -756,7 +756,6 @@ class CondenseTab(_ToolTabBase):
 
     def _on_condense(self) -> None:
         """Validate then start the CondenseWorker."""
-        self._begin_attempt()
         if not self._ffmpeg_available():
             # Should not happen (button disabled), but guard anyway.
             return

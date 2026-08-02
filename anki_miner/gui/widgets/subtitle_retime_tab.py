@@ -555,7 +555,6 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _on_retime(self) -> None:
         """Validate then start the SubtitleRetimeWorker."""
-        self._begin_attempt()
         if not self._alass_available():
             # Should not happen (button disabled), but guard anyway.
             return

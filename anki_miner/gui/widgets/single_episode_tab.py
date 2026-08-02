@@ -599,8 +599,6 @@ class SingleEpisodeTab(MiningTabBase):
         if self._is_processing:
             return
 
-        self._begin_attempt()
-
         # Validate inputs using FileSelector validation
         video_path = self.video_selector.path_or_none()
         subtitle_path = self.subtitle_selector.path_or_none()

@@ -230,10 +230,6 @@ class _QueueMiningTabBase(MiningTabBase):
         Progress reset and button state are intentionally NOT touched here: they
         are per-tab UI concerns owned by the caller.
         """
-        # Before the refusals below, not after: a run turned away for an empty
-        # or unavailable queue says so in the log, and that is one of the
-        # warnings the Activity drawer exists to put back on screen (D6).
-        self._begin_attempt()
         if self.worker_thread is not None:
             return False
         if not items:

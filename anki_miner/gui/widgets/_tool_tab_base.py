@@ -193,11 +193,6 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         primary_action_shortcut(self, bar.trigger_primary)
         return bar
 
-    def _begin_attempt(self) -> None:
-        """Re-arm the Activity drawer's one-shot auto-open. No-op without a bar."""
-        if self.action_bar is not None:
-            self.action_bar.begin_attempt()
-
     def _on_log_problem(self, level: str, message: str) -> None:
         """Raise a logged ERROR to the screen banner.
 
