@@ -1,31 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1" language="zh_TW">
-<context>
+  <context>
     <name>AboutDialog</name>
-    <message>
-        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
-        <translation>自動從影片採集日文單字卡片到 Anki——螢幕截圖、音訊與釋義。</translation>
-    </message>
     <message>
         <source>Switch tabs</source>
         <translation>切換分頁</translation>
-    </message>
-    <message>
-        <source>Cycle favorite themes</source>
-        <translation>循環切換常用佈景主題</translation>
     </message>
     <message>
         <source>Open Settings</source>
         <translation>開啟設定</translation>
     </message>
     <message>
-        <source>Run system validation</source>
-        <translation>執行系統驗證</translation>
+        <source>Run this screen's main action</source>
+        <translation>執行此畫面的主要動作</translation>
     </message>
     <message>
-        <source>Show this dialog</source>
-        <translation>顯示此對話框</translation>
+        <source>Find a Feature</source>
+        <translation>尋找功能</translation>
+    </message>
+    <message>
+        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
+        <translation>自動從影片採集日文單字卡片到 Anki——螢幕截圖、音訊與釋義。</translation>
     </message>
     <message>
         <source>About Anki Miner</source>
@@ -59,6 +55,14 @@
     </message>
 </context><context>
     <name>AnalyticsTab</name>
+    <message>
+        <source>Reset Statistics…</source>
+        <translation>重設統計資料…</translation>
+    </message>
+    <message>
+        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
+        <translation>刪除所有記錄的採集工作階段與難度分數。此操作無法復原。</translation>
+    </message>
     <message>
         <source>Refresh</source>
         <translation>重新整理</translation>
@@ -156,6 +160,26 @@
         <translation>里程碑</translation>
     </message>
     <message>
+        <source>Analytics could not be refreshed.</source>
+        <translation>無法重新整理分析資料。</translation>
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation>重試</translation>
+    </message>
+    <message>
+        <source>Reset Statistics</source>
+        <translation>重設統計資料</translation>
+    </message>
+    <message>
+        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
+        <translation>要刪除所有記錄的採集工作階段與系列難度分數嗎？此操作無法復原。Anki 卡片、已知單字及設定不會受到影響。</translation>
+    </message>
+    <message>
+        <source>Statistics could not be reset.</source>
+        <translation>無法重設統計資料。</translation>
+    </message>
+    <message>
         <source>%1 mining sessions completed</source>
         <translation>已完成 %1 次採集工作階段</translation>
     </message>
@@ -200,16 +224,54 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Add Deck</source>
-        <translation>新增牌組</translation>
+        <source>Select a note type before fetching fields</source>
+        <translation>請先選取筆記類型，再擷取欄位</translation>
+    </message>
+    <message>
+        <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation>無法要求取得牌組清單。請檢查「設定」中的 AnkiConnect 位址。</translation>
+    </message>
+    <message>
+        <source>No decks came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation>未取得任何牌組。請確認 Anki 正在執行且已安裝 AnkiConnect 附加元件。</translation>
+    </message>
+    <message>
+        <source>The deck list could not be read from Anki.</source>
+        <translation>無法從 Anki 讀取牌組清單。</translation>
     </message>
     <message>
         <source>Cannot build AnkiService: %1</source>
         <translation>無法建立 AnkiService：%1</translation>
     </message>
     <message>
-        <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
-        <translation>無法取得牌組。Anki 是否已在執行且安裝 AnkiConnect？</translation>
+        <source>Loading decks from Anki…</source>
+        <translation>正在從 Anki 載入牌組…</translation>
+    </message>
+    <message>
+        <source>Loading note types from Anki…</source>
+        <translation>正在從 Anki 載入筆記類型…</translation>
+    </message>
+    <message>
+        <source>Could not load decks. Is Anki running with AnkiConnect?</source>
+        <translation>無法載入牌組。Anki 是否正在執行且有 AnkiConnect？</translation>
+    </message>
+    <message numerus="yes">
+        <source>%n deck(s) loaded</source>
+        <translation>
+            <numerusform>已載入 %n 個牌組</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Deck '%1' is not in Anki — pick one below.</source>
+        <translation>牌組「%1」不在 Anki 中 — 請在下方選取一個。</translation>
+    </message>
+    <message>
+        <source>Could not load note types. Is Anki running with AnkiConnect?</source>
+        <translation>無法載入筆記類型。Anki 是否正在執行且有 AnkiConnect？</translation>
+    </message>
+    <message>
+        <source>Note type '%1' is not in Anki — pick one below.</source>
+        <translation>筆記類型「%1」不在 Anki 中 — 請在下方選取一個。</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -223,6 +285,10 @@
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
+    <message>
+        <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
+        <translation>不在 Anki 中 — 在選取有效項目或於 Anki 建立前，採集會失敗。</translation>
+    </message>
     <message>
         <source>AnkiConnect URL</source>
         <translation>AnkiConnect 網址</translation>
@@ -252,12 +318,12 @@
         <translation>牌組名稱</translation>
     </message>
     <message>
-        <source>Enter deck name...</source>
-        <translation>輸入牌組名稱...</translation>
+        <source>Select a deck…</source>
+        <translation>選取牌組…</translation>
     </message>
     <message>
-        <source>Sync deck list from Anki</source>
-        <translation>從 Anki 同步牌組清單</translation>
+        <source>Reload the deck list from Anki</source>
+        <translation>從 Anki 重新載入牌組清單</translation>
     </message>
     <message>
         <source>Target deck for new cards.</source>
@@ -268,12 +334,12 @@
         <translation>筆記類型</translation>
     </message>
     <message>
-        <source>Enter note type name...</source>
-        <translation>輸入筆記類型名稱...</translation>
+        <source>Select a note type…</source>
+        <translation>選取筆記類型…</translation>
     </message>
     <message>
-        <source>Sync note type list from Anki</source>
-        <translation>從 Anki 同步筆記類型清單</translation>
+        <source>Reload the note type list from Anki</source>
+        <translation>從 Anki 重新載入筆記類型清單</translation>
     </message>
     <message>
         <source>Anki note type whose fields you'll map below.</source>
@@ -373,7 +439,7 @@
     </message>
     <message>
         <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>高低音調欄位需要在「設定」→「高低音調」中設定來源。留白 = 略過。</translation>
     </message>
     <message>
         <source>Pitch Position Field</source>
@@ -496,12 +562,8 @@
         <translation>音訊：</translation>
     </message>
     <message>
-        <source>Syncing deck list...</source>
-        <translation>正在同步牌組清單...</translation>
-    </message>
-    <message>
-        <source>Syncing note type list...</source>
-        <translation>正在同步筆記類型清單...</translation>
+        <source>Refresh</source>
+        <translation>重新整理</translation>
     </message>
     <message>
         <source>Connected</source>
@@ -586,20 +648,12 @@ Continue anyway?</source>
 </context><context>
     <name>AudioPackImportFlow</name>
     <message>
+        <source>That folder could not be scanned.</source>
+        <translation>無法掃描該資料夾。</translation>
+    </message>
+    <message>
         <source>Choose audio pack folder</source>
         <translation>選擇音訊包資料夾</translation>
-    </message>
-    <message>
-        <source>Scan Failed</source>
-        <translation>掃描失敗</translation>
-    </message>
-    <message>
-        <source>Could not scan folder: %1</source>
-        <translation>無法掃描資料夾：%1</translation>
-    </message>
-    <message>
-        <source>No Audio Packs Found</source>
-        <translation>找不到音訊包</translation>
     </message>
     <message>
         <source>No recognisable audio packs were found in:
@@ -636,12 +690,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>完成。</translation>
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation>設定更新失敗</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>匯入已完成，但設定更新失敗：%1</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -652,16 +702,16 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>取消中……</translation>
     </message>
     <message>
+        <source>The audio pack could not be imported.</source>
+        <translation>無法匯入音訊包。</translation>
+    </message>
+    <message>
         <source>The import worker finished without a completion result.</source>
         <translation>匯入工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>選擇要重新匯入的音訊包資料夾</translation>
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
-        <translation>重新匯入已封鎖</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
@@ -680,8 +730,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>正在重新匯入音訊包…</translation>
     </message>
     <message>
-        <source>Re-import Failed</source>
-        <translation>重新匯入失敗</translation>
+        <source>The audio pack could not be re-imported.</source>
+        <translation>無法重新匯入音訊包。</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -694,96 +744,64 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>載入中…</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>移除失敗</translation>
+        <source>Retry</source>
+        <translation>重試</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
-        <translation>無法刪除 %1：
-%2
-
-音訊包未被移除。</translation>
+        <source>Installed audio packs could not be checked.</source>
+        <translation>無法檢查已安裝的音訊包。</translation>
     </message>
     <message>
-        <source>Files left untouched</source>
-        <translation>檔案保持不變</translation>
+        <source>The audio pack was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已從鏈結移除音訊包，但因無法確認資料夾屬於 Anki Miner，故保留其檔案。</translation>
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>此串接項目已移除，但位於 %1 的檔案因無法證明該資料夾屬於 Anki Miner 而保持不變。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>無法移除 %1。其檔案保持完整 — 請再試一次。</translation>
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
-        <translation>無法移除 %1：
-%2
-
-檔案完整無損。請再試一次。</translation>
+        <source>%1 was only partly removed. Re-import or repair this audio pack before retrying.</source>
+        <translation>%1 僅部分移除。請重新匯入或修復此音訊包後再試。</translation>
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this audio pack before retrying.</source>
-        <translation>無法完成移除 %1：
-%2
-
-檔案已部分變更。請在重試前重新匯入或修復此音訊包。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>設定更新失敗後，無法還原 %1。請重新啟動 Anki Miner 後再試。</translation>
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
-        <translation>設定更新失敗後，無法還原 %1：
-%2
-
-檔案已不在安裝位置；設定更新正待處理。請在重試前重新啟動 Anki Miner。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 無法重新整理它。移除作業已儲存，重新啟動後仍會保留。</translation>
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation>%1 的移除已儲存，但 Anki Miner 無法重新整理：
-%2
-
-此移除已儲存，重新啟動後仍會保留。</translation>
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
-        <translation>%1 已移除，但位於 %2 的墓碑標記無法刪除：
-%3
-
-此移除已儲存；清理作業待處理，將於啟動時重試。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但無法刪除其殘留資料夾。將在啟動時重試清理。</translation>
     </message>
     <message>
         <source>Active Audio Sources</source>
         <translation>啟用中的音訊來源</translation>
     </message>
     <message>
-        <source>Top entry is tried first.</source>
-        <translation>會優先嘗試清單最上方的項目。</translation>
+        <source>Retry missing audio</source>
+        <translation>重試遺失的音訊</translation>
     </message>
     <message>
-        <source>+ Add Audio Pack…</source>
-        <translation>+ 新增音訊包…</translation>
+        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
+        <translation>在下次執行時，重新嘗試 JapanesePod101 先前找不到音訊的單字</translation>
     </message>
     <message>
-        <source>+ Add Online Source…</source>
-        <translation>+ 新增線上來源…</translation>
+        <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
+        <translation>來源會由上而下嘗試 — 第一個含有該單字音訊的來源會被採用。</translation>
     </message>
     <message>
-        <source>Add a custom audio URL source</source>
-        <translation>新增自訂音訊 URL 來源</translation>
+        <source>Add audio source…</source>
+        <translation>新增音訊來源…</translation>
+    </message>
+    <message>
+        <source>Remove audio source</source>
+        <translation>移除音訊來源</translation>
+    </message>
+    <message>
+        <source>Remove the selected audio source</source>
+        <translation>移除選取的音訊來源</translation>
     </message>
     <message>
         <source>Move up</source>
@@ -802,16 +820,12 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation>降低優先順序</translation>
     </message>
     <message>
-        <source>Remove</source>
-        <translation>移除</translation>
+        <source>Audio Pack…</source>
+        <translation>音訊包…</translation>
     </message>
     <message>
-        <source>Retry missing expression audio</source>
-        <translation>重試缺少的詞語音訊</translation>
-    </message>
-    <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-        <translation>在下次執行時，重新嘗試 JapanesePod101 先前找不到音訊的單字</translation>
+        <source>Online Source…</source>
+        <translation>線上來源…</translation>
     </message>
     <message>
         <source>Sentence Audio (Reading Sources)</source>
@@ -854,6 +868,30 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation>JapanesePod101（線上）</translation>
     </message>
     <message>
+        <source>%1 entries</source>
+        <translation>%1 個項目</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ 需要重新匯入（應用程式已升級）</translation>
+    </message>
+    <message>
+        <source>⚠ folder missing — re-import</source>
+        <translation>⚠ 資料夾遺失 — 重新匯入</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>已啟用</translation>
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation>啟用 %1</translation>
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation>啟用或停用 %1</translation>
+    </message>
+    <message>
         <source>Remove audio pack</source>
         <translation>移除音訊包</translation>
     </message>
@@ -882,6 +920,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Re-import…</source>
         <translation>重新匯入…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
 </context><context>
     <name>AudioTracksDialog</name>
@@ -912,12 +954,8 @@ Index files on disk will be left untouched because the folder could not be prove
 </context><context>
     <name>AudiobookQueueItemWidget</name>
     <message>
-        <source>%1 cards created</source>
-        <translation>已建立 %1 張卡片</translation>
-    </message>
-    <message>
-        <source>Remove from queue</source>
-        <translation>從佇列移除</translation>
+        <source>%1 cards</source>
+        <translation>%1 張卡片</translation>
     </message>
 </context><context>
     <name>AudiobookTab</name>
@@ -934,12 +972,20 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>採集</translation>
     </message>
     <message>
+        <source>Audio queue</source>
+        <translation>音訊佇列</translation>
+    </message>
+    <message>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation>第 %1／%2 次嘗試 · 將在 %3 秒後重試</translation>
+    </message>
+    <message>
         <source>Cancelling…</source>
         <translation>正在取消…</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>全部停止</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
@@ -978,16 +1024,20 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>完成 — %1 成功，%2 失敗</translation>
     </message>
     <message>
-        <source>Audio queue</source>
-        <translation>音訊佇列</translation>
-    </message>
-    <message>
         <source>Audio File:</source>
         <translation>音訊檔案：</translation>
     </message>
     <message>
         <source>Subtitle File:</source>
         <translation>字幕檔案：</translation>
+    </message>
+    <message>
+        <source>This field takes an audio file.</source>
+        <translation>此欄位接受音訊檔案。</translation>
+    </message>
+    <message>
+        <source>This field takes a subtitle file.</source>
+        <translation>此欄位接受字幕檔案。</translation>
     </message>
     <message>
         <source>Add</source>
@@ -1030,6 +1080,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>進度</translation>
     </message>
     <message>
+        <source>audiobooks</source>
+        <translation>有聲書</translation>
+    </message>
+    <message>
         <source>Audio file not found: %1</source>
         <translation>找不到音訊檔案：%1</translation>
     </message>
@@ -1040,6 +1094,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Subtitle file not found: %1</source>
         <translation>找不到字幕檔案：%1</translation>
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation>找不到檔案：%1</translation>
+    </message>
+    <message>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation>Anki Miner 關閉時已中斷</translation>
     </message>
 </context><context>
     <name>BatchProcessingTab</name>
@@ -1100,60 +1162,52 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>取消處理</translation>
     </message>
     <message>
-        <source>Invalid Folders</source>
-        <translation>無效的資料夾</translation>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>選擇現有的影片與字幕資料夾。</translation>
     </message>
     <message>
-        <source>Please select valid video and subtitle folders</source>
-        <translation>請選擇有效的影片與字幕資料夾</translation>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
+        <translation>在這些資料夾中，沒有字幕檔案能與任何影片檔案配對。</translation>
     </message>
     <message>
-        <source>No Pairs Found</source>
-        <translation>找不到配對</translation>
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found</source>
-        <translation>找不到相符的影片／字幕配對</translation>
+        <source>episodes</source>
+        <translation>集數</translation>
     </message>
     <message>
         <source>Starting batch processing of %1 episodes...</source>
         <translation>正在開始批次處理 %1 集…</translation>
     </message>
     <message>
-        <source>Series '%1' has folders that don't exist. Skipping.</source>
-        <translation>系列「%1」的資料夾不存在。略過。</translation>
+        <source>Batch mining</source>
+        <translation>批次採集</translation>
     </message>
     <message>
-        <source>Incomplete Series</source>
-        <translation>系列不完整</translation>
+        <source>%1 was skipped: its folders no longer exist.</source>
+        <translation>已略過 %1：其資料夾已不存在。</translation>
     </message>
     <message>
-        <source>Series '%1' is missing folders. Skipping.</source>
-        <translation>系列「%1」缺少資料夾。略過。</translation>
+        <source>%1 was skipped: it is missing a folder.</source>
+        <translation>已略過 %1：缺少資料夾。</translation>
     </message>
     <message>
-        <source>Empty Queue</source>
-        <translation>佇列為空</translation>
+        <source>series</source>
+        <translation>系列</translation>
     </message>
     <message>
-        <source>No valid series in queue to process</source>
-        <translation>佇列中沒有可處理的有效系列</translation>
+        <source>No valid series in the queue to process.</source>
+        <translation>佇列中沒有可處理的有效系列。</translation>
     </message>
     <message>
         <source>Starting queue processing (%1 series)...</source>
         <translation>正在開始佇列處理（%1 個系列）…</translation>
     </message>
     <message>
-        <source>■ Cancel</source>
-        <translation>■ 取消</translation>
-    </message>
-    <message>
         <source>Cancelled</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <source>Cancelling...</source>
-        <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
     </message>
     <message>
         <source>Starting queue processing...</source>
@@ -1176,10 +1230,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>系列 %1/%2：%3</translation>
     </message>
     <message>
-        <source>Created %1 cards</source>
-        <translation>已建立 %1 張卡片</translation>
-    </message>
-    <message>
         <source>Failed — see log</source>
         <translation>失敗 — 請查看日誌</translation>
     </message>
@@ -1188,20 +1238,12 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>完成 — 已建立 %1 張卡片</translation>
     </message>
     <message>
-        <source>Processed %1 series
-Total cards created: %2</source>
-        <translation>已處理 %1 個系列
-建立的卡片總數：%2</translation>
+        <source>Folder not found: %1</source>
+        <translation>找不到資料夾：%1</translation>
     </message>
     <message>
-        <source>
-%1 series failed</source>
-        <translation>
-%1 個系列失敗</translation>
-    </message>
-    <message>
-        <source>Queue Processing Complete</source>
-        <translation>佇列處理完成</translation>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation>Anki Miner 關閉時已中斷</translation>
     </message>
     <message>
         <source>No Items to Retry</source>
@@ -1214,22 +1256,6 @@ Total cards created: %2</source>
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>正在重試 %1 個失敗項目…</translation>
-    </message>
-    <message>
-        <source>Processed %1 episodes
-Total cards created: %2</source>
-        <translation>已處理 %1 集
-建立的卡片總數：%2</translation>
-    </message>
-    <message>
-        <source>
-%1 episode(s) failed</source>
-        <translation>
-%1 集失敗</translation>
-    </message>
-    <message>
-        <source>Batch Processing Complete</source>
-        <translation>批次處理完成</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -1358,12 +1384,12 @@ Total cards created: %2</source>
         <translation>從影片或音訊檔及其字幕建立僅含對白的濃縮音訊。</translation>
     </message>
     <message>
-        <source>Backfill fields on existing cards</source>
-        <translation>回填現有卡片的欄位</translation>
+        <source>Fill missing fields on existing notes</source>
+        <translation>填入現有筆記的缺失欄位</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
-        <translation>在已採集的卡片上填入缺少的高低音調、頻率、釋義和讀音欄位。</translation>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
+        <translation>填入已採集筆記中缺失的高低音調、頻率、釋義與讀音欄位。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -1380,6 +1406,14 @@ Total cards created: %2</source>
     <message>
         <source>See what you've mined over time with history and statistics.</source>
         <translation>透過歷史與統計，查看你長期以來採集的內容。</translation>
+    </message>
+    <message>
+        <source>Reset mining statistics</source>
+        <translation>重設採集統計資料</translation>
+    </message>
+    <message>
+        <source>Clear every recorded session and difficulty score to start counting again.</source>
+        <translation>清除所有記錄的工作階段與難度分數，重新開始計算。</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -1623,11 +1657,11 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Settings profiles</source>
-        <translation type="unfinished" />
+        <translation>設定檔</translation>
     </message>
     <message>
         <source>Keep several named snapshots of every setting and switch between them in one click.</source>
-        <translation type="unfinished" />
+        <translation>保留所有設定的多個具名快照，並一鍵切換。</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -1660,8 +1694,8 @@ Total cards created: %2</source>
         <translation>卡片欄位回填</translation>
     </message>
     <message>
-        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
-        <translation>使用目前安裝的字典、頻率來源和高低音調資料，填入先前採集之卡片的缺漏欄位。若收藏庫非常龐大，請逐個牌組執行。覆寫模式可能需要再執行一次「重新設定採集卡片樣式」，以更新卡片樣式。</translation>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>使用目前安裝的字典、頻率來源及高低音調資料，填入先前採集筆記的缺失欄位。對於非常大的收藏，請逐牌組執行。覆寫模式可能需要後續執行「重新套用樣式」來重新整理卡片樣式。</translation>
     </message>
     <message>
         <source>Deck:</source>
@@ -1704,8 +1738,8 @@ Total cards created: %2</source>
         <translation>覆寫現有值</translation>
     </message>
     <message>
-        <source>Scan</source>
-        <translation>掃描</translation>
+        <source>Scan Anki (read-only)</source>
+        <translation>掃描 Anki（唯讀）</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -1728,8 +1762,12 @@ Total cards created: %2</source>
         <translation>新值</translation>
     </message>
     <message>
-        <source>Apply</source>
-        <translation>套用</translation>
+        <source>Update Notes in Anki</source>
+        <translation>更新 Anki 中的筆記</translation>
+    </message>
+    <message>
+        <source>Card Backfill works on the selected Anki deck.</source>
+        <translation>卡片回填會套用到選取的 Anki 牌組。</translation>
     </message>
     <message>
         <source>Map this field in Settings → Anki</source>
@@ -1742,6 +1780,10 @@ Total cards created: %2</source>
     <message>
         <source>Select at least one field group to fill.</source>
         <translation>請至少選取一個要填入的欄位群組。</translation>
+    </message>
+    <message>
+        <source>Card backfill scan</source>
+        <translation>卡片回填掃描</translation>
     </message>
     <message>
         <source>Scanning…</source>
@@ -1765,15 +1807,23 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
-        <translation type="unfinished" />
+        <translation>沒有可覆寫的內容 — 新計算的值與現有內容相同。</translation>
+    </message>
+    <message>
+        <source>Nothing to overwrite — the existing pitch was kept, see below.</source>
+        <translation>沒有可覆寫的內容 — 已保留現有高低音調，請見下方。</translation>
     </message>
     <message>
         <source>No new values were found for the selected fields.</source>
-        <translation type="unfinished" />
+        <translation>找不到所選欄位的新值。</translation>
     </message>
     <message>
         <source>{count} field value(s) already up to date (identical to the computed value).</source>
-        <translation type="unfinished" />
+        <translation>{count} 個欄位值已是最新（與計算值相同）。</translation>
+    </message>
+    <message>
+        <source>{count} pitch field(s) kept — the reading could only be guessed from the word alone, so overwriting could have applied the wrong homograph's accent. Map an Expression Reading or Furigana field to overwrite them.</source>
+        <translation>已保留 {count} 個高低音調欄位 — 讀音只能從單字本身推測，覆寫可能套用到錯誤同形詞的音調。請對應「表達式讀音」或「振假名」欄位以覆寫它們。</translation>
     </message>
     <message>
         <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
@@ -1792,8 +1842,8 @@ Total cards created: %2</source>
         <translation>設定自本次掃描後已變更，套用前請重新掃描。</translation>
     </message>
     <message>
-        <source>Apply backfill?</source>
-        <translation>要套用卡片欄位回填嗎？</translation>
+        <source>Update notes in Anki?</source>
+        <translation>要更新 Anki 中的筆記嗎？</translation>
     </message>
     <message>
         <source>Close Anki's card browser and note editors first.
@@ -1802,6 +1852,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>請先關閉 Anki 的卡片瀏覽器和筆記編輯器。
 
 這將修改 {notes} 則筆記（{fields} 個欄位）並加上標籤 {tag}。要繼續嗎？</translation>
+    </message>
+    <message>
+        <source>Card backfill</source>
+        <translation>卡片回填</translation>
     </message>
     <message>
         <source>Applying…</source>
@@ -1866,6 +1920,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>失敗 — 請查看日誌</translation>
     </message>
     <message>
+        <source>Some files could not be condensed.</source>
+        <translation>部分檔案無法濃縮。</translation>
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation>完成 — 已處理 %1 個檔案</translation>
     </message>
@@ -1876,6 +1934,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Next to source</source>
         <translation>與來源同位置</translation>
+    </message>
+    <message>
+        <source>Audio condensing</source>
+        <translation>音訊濃縮</translation>
     </message>
     <message>
         <source>Input</source>
@@ -1914,8 +1976,16 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>媒體檔案：</translation>
     </message>
     <message>
+        <source>This field takes a video or audio file.</source>
+        <translation>此欄位接受影片或音訊檔案。</translation>
+    </message>
+    <message>
         <source>Subtitle File:</source>
         <translation>字幕檔：</translation>
+    </message>
+    <message>
+        <source>This field takes a subtitle file.</source>
+        <translation>此欄位接受字幕檔案。</translation>
     </message>
     <message>
         <source>Leave empty to auto-detect (sibling file or embedded track).</source>
@@ -2022,28 +2092,20 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>取消勾選時，已存在濃縮音訊的檔案會被略過而非覆寫。</translation>
     </message>
     <message>
-        <source>Actions</source>
-        <translation>動作</translation>
-    </message>
-    <message>
         <source>Condense Audio</source>
         <translation>濃縮音訊</translation>
     </message>
     <message>
-        <source>No Media File Selected</source>
-        <translation>未選擇媒體檔案</translation>
+        <source>Open Media Settings</source>
+        <translation>開啟媒體設定</translation>
     </message>
     <message>
-        <source>Select a media file first.</source>
+        <source>Choose a media file first.</source>
         <translation>請先選擇媒體檔案。</translation>
     </message>
     <message>
-        <source>File Not Found</source>
-        <translation>找不到檔案</translation>
-    </message>
-    <message>
-        <source>Media file not found: </source>
-        <translation>找不到媒體檔案：</translation>
+        <source>That media file no longer exists.</source>
+        <translation>該媒體檔案已不存在。</translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
@@ -2058,12 +2120,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>音軌 %1</translation>
     </message>
     <message>
-        <source>Probe Failed</source>
-        <translation>探測失敗</translation>
-    </message>
-    <message>
-        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation>偵測音訊軌失敗。請確認已安裝 ffprobe。</translation>
+        <source>Audio tracks could not be read.</source>
+        <translation>無法讀取音軌。</translation>
     </message>
     <message>
         <source>No Subtitle Tracks</source>
@@ -2074,48 +2132,36 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>此檔案中未偵測到內嵌字幕軌。</translation>
     </message>
     <message>
-        <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
-        <translation>偵測字幕軌失敗。請確認已安裝 ffprobe。</translation>
+        <source>Subtitle tracks could not be read.</source>
+        <translation>無法讀取字幕軌。</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
         <translation>輸出目錄無法寫入：</translation>
     </message>
     <message>
-        <source>Select a media file before condensing.</source>
-        <translation>濃縮前請先選擇媒體檔案。</translation>
+        <source>Choose a media file before condensing.</source>
+        <translation>請在濃縮前選擇媒體檔案。</translation>
     </message>
     <message>
-        <source>Subtitle file not found: </source>
-        <translation>找不到字幕檔：</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>該字幕檔案已不存在。</translation>
     </message>
     <message>
-        <source>No Media Folder Selected</source>
-        <translation>未選擇媒體資料夾</translation>
+        <source>Choose a media folder before condensing.</source>
+        <translation>請在濃縮前選擇媒體資料夾。</translation>
     </message>
     <message>
-        <source>Select a media folder before condensing.</source>
-        <translation>濃縮前請先選擇媒體資料夾。</translation>
+        <source>That media folder no longer exists.</source>
+        <translation>該媒體資料夾已不存在。</translation>
     </message>
     <message>
-        <source>Folder Not Found</source>
-        <translation>找不到資料夾</translation>
+        <source>That subtitle folder no longer exists.</source>
+        <translation>該字幕資料夾已不存在。</translation>
     </message>
     <message>
-        <source>Media folder not found: </source>
-        <translation>找不到媒體資料夾：</translation>
-    </message>
-    <message>
-        <source>Subtitle folder not found: </source>
-        <translation>找不到字幕資料夾：</translation>
-    </message>
-    <message>
-        <source>No Media Files</source>
-        <translation>沒有媒體檔案</translation>
-    </message>
-    <message>
-        <source>No media files found in the selected folder.</source>
-        <translation>所選資料夾中找不到媒體檔案。</translation>
+        <source>No media files were found in that folder.</source>
+        <translation>該資料夾中找不到媒體檔案。</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
@@ -2126,12 +2172,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>警告：有 %1 個媒體檔案無法配對。</translation>
     </message>
     <message>
-        <source>No Pairs Matched</source>
-        <translation>沒有配對成功</translation>
-    </message>
-    <message>
-        <source>No subtitle files could be matched to the media files in the selected folders.</source>
-        <translation>所選資料夾中沒有字幕檔案能與媒體檔案配對。</translation>
+        <source>No subtitle file could be matched to any media file in those folders.</source>
+        <translation>在這些資料夾中，沒有字幕檔案能與任何媒體檔案配對。</translation>
     </message>
     <message>
         <source>Condensing file %1 of %2</source>
@@ -2196,6 +2238,28 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>GPU libraries installed successfully.</source>
         <translation>GPU 函式庫已成功安裝。</translation>
+    </message>
+</context><context>
+    <name>CurrentJobStrip</name>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Finishing %1</source>
+        <translation>正在完成 %1</translation>
+    </message>
+    <message>
+        <source>Finishing the current item</source>
+        <translation>正在完成目前項目</translation>
+    </message>
+    <message>
+        <source>%1 / %2</source>
+        <translation>%1 / %2</translation>
+    </message>
+    <message>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1（第 %2／%3 個）</translation>
     </message>
 </context><context>
     <name>DeckBuilderTab</name>
@@ -2380,10 +2444,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>正在取消…</translation>
     </message>
     <message>
-        <source>Cancelling...</source>
-        <translation>正在取消…</translation>
-    </message>
-    <message>
         <source>Error: %1</source>
         <translation>錯誤：%1</translation>
     </message>
@@ -2410,12 +2470,16 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>重新整理</translation>
     </message>
     <message>
-        <source>Enter a deck name.</source>
-        <translation>請輸入牌組名稱。</translation>
+        <source>Could not load decks. Is Anki running with AnkiConnect?</source>
+        <translation>無法載入牌組。Anki 是否正在執行且有 AnkiConnect？</translation>
     </message>
     <message>
-        <source>Deck not found — it will be created automatically when mining starts.</source>
-        <translation>找不到牌組——採集開始時將自動建立。</translation>
+        <source>Pick a deck.</source>
+        <translation>選取牌組。</translation>
+    </message>
+    <message>
+        <source>No such deck. Create it in Anki, then press Refresh.</source>
+        <translation>沒有此牌組。請在 Anki 中建立，然後按「重新整理」。</translation>
     </message>
 </context><context>
     <name>DefinitionService</name>
@@ -2470,12 +2534,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>已匯入 %1（%2 筆條目）</translation>
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation>設定更新失敗</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>匯入已完成，但設定更新失敗：%1</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
     </message>
     <message>
         <source>Importing dictionary…</source>
@@ -2486,8 +2546,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>取消</translation>
     </message>
     <message>
-        <source>Import Failed</source>
-        <translation>匯入失敗</translation>
+        <source>The dictionary could not be imported.</source>
+        <translation>無法匯入字典。</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -2502,20 +2562,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>匯入工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
-        <source>Invalid Zip</source>
-        <translation>無效的 Zip</translation>
-    </message>
-    <message>
-        <source>No Recoverable Source</source>
-        <translation>找不到可復原的來源</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>無法掃描該資料夾。</translation>
     </message>
     <message>
         <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
         <translation>找不到「%1」的可復原來源。請還原其已儲存的 source.zip 或設定的 JMdict XML，然後再試一次。</translation>
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
-        <translation>重新匯入已封鎖</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
@@ -2534,12 +2586,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>正在重新匯入字典…</translation>
     </message>
     <message>
-        <source>Re-import Failed</source>
-        <translation>重新匯入失敗</translation>
-    </message>
-    <message>
-        <source>JMdict not found</source>
-        <translation>找不到 JMdict</translation>
+        <source>The dictionary could not be re-imported.</source>
+        <translation>無法重新匯入字典。</translation>
     </message>
     <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
@@ -2550,12 +2598,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>正在重新匯入 JMdict…</translation>
     </message>
     <message>
-        <source>Reimport Failed</source>
-        <translation>重新匯入失敗</translation>
-    </message>
-    <message>
-        <source>Scan Failed</source>
-        <translation>掃描失敗</translation>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>無法重新匯入字典。</translation>
     </message>
     <message>
         <source>No dictionaries eligible for automatic repair were found.
@@ -2634,76 +2678,36 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>載入中…</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>移除失敗</translation>
+        <source>Retry</source>
+        <translation>重試</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
-        <translation>無法刪除 %1：
-%2
-
-字典未被移除。</translation>
+        <source>Installed dictionaries could not be checked.</source>
+        <translation>無法檢查已安裝的字典。</translation>
     </message>
     <message>
-        <source>Files left untouched</source>
-        <translation>檔案保持不變</translation>
+        <source>The dictionary was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已從鏈結移除字典，但因無法確認資料夾屬於 Anki Miner，故保留其檔案。</translation>
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>此串接項目已移除，但位於 %1 的檔案因無法證明該資料夾屬於 Anki Miner 而保持不變。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>無法移除 %1。其檔案保持完整 — 請再試一次。</translation>
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
-        <translation>無法移除 %1：
-%2
-
-檔案完整無損。請再試一次。</translation>
+        <source>%1 was only partly removed. Re-import or repair this dictionary before retrying.</source>
+        <translation>%1 僅部分移除。請重新匯入或修復此字典後再試。</translation>
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this dictionary before retrying.</source>
-        <translation>無法完成移除 %1：
-%2
-
-檔案已部分變更。請在重試前重新匯入或修復此字典。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>設定更新失敗後，無法還原 %1。請重新啟動 Anki Miner 後再試。</translation>
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
-        <translation>設定更新失敗後，無法還原 %1：
-%2
-
-檔案已不在安裝位置；設定更新正待處理。請在重試前重新啟動 Anki Miner。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 無法重新整理它。移除作業已儲存，重新啟動後仍會保留。</translation>
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation>%1 的移除已儲存，但 Anki Miner 無法重新整理：
-%2
-
-此移除已儲存，重新啟動後仍會保留。</translation>
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
-        <translation>%1 已移除，但位於 %2 的墓碑標記無法刪除：
-%3
-
-此移除已儲存；清理作業待處理，將於啟動時重試。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但無法刪除其殘留資料夾。將在啟動時重試清理。</translation>
     </message>
     <message>
         <source>Select dictionary storage folder...</source>
@@ -2726,14 +2730,6 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation>啟用中的字典</translation>
     </message>
     <message>
-        <source>Top entry fills the MainDefinition field.</source>
-        <translation>清單最上方的項目會填入 MainDefinition 欄位。</translation>
-    </message>
-    <message>
-        <source>+ Add Dictionary…</source>
-        <translation>+ 新增字典…</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>全部重新匯入</translation>
     </message>
@@ -2744,6 +2740,22 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
         <translation>重新加入儲存資料夾中找到但不在上方清單的字典（例如設定重設後）。無需重新匯入。</translation>
+    </message>
+    <message>
+        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
+        <translation>字典會由上而下嘗試 — 第一個含有該單字條目的字典會被採用，其釋義會填入 MainDefinition 欄位。</translation>
+    </message>
+    <message>
+        <source>Add dictionary…</source>
+        <translation>新增字典…</translation>
+    </message>
+    <message>
+        <source>Remove dictionary</source>
+        <translation>移除字典</translation>
+    </message>
+    <message>
+        <source>Remove the selected dictionary and delete its files</source>
+        <translation>移除選取的字典並刪除其檔案</translation>
     </message>
     <message>
         <source>Move up</source>
@@ -2762,20 +2774,48 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation>降低優先順序</translation>
     </message>
     <message>
-        <source>Remove</source>
-        <translation>移除</translation>
+        <source>%1 entries</source>
+        <translation>%1 個項目</translation>
+    </message>
+    <message>
+        <source>not installed</source>
+        <translation>未安裝</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 遺失 — 重新匯入</translation>
     </message>
     <message>
         <source>Jisho (online fallback)</source>
         <translation>Jisho（線上備援）</translation>
     </message>
     <message>
+        <source>online</source>
+        <translation>線上</translation>
+    </message>
+    <message>
         <source>⚠ rate-limited, slower</source>
         <translation>⚠ 受速率限制，較慢</translation>
     </message>
     <message>
-        <source>Remove dictionary</source>
-        <translation>移除字典</translation>
+        <source>⚠ re-import to refresh</source>
+        <translation>⚠ 重新匯入以重新整理</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>已啟用</translation>
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation>啟用 %1</translation>
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation>啟用或停用 %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation>重新匯入</translation>
     </message>
     <message>
         <source>Remove '%1' and delete its files from disk?
@@ -2801,15 +2841,27 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Re-import…</source>
         <translation>重新匯入…</translation>
     </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
 </context><context>
     <name>DonePage</name>
     <message>
-        <source>All Set</source>
-        <translation>全部完成</translation>
+        <source>Ready to Mine</source>
+        <translation>準備採集</translation>
     </message>
     <message>
-        <source>Review your setup. You can change anything later in Settings.</source>
-        <translation>檢視你的設定。之後可隨時在設定中變更任何項目。</translation>
+        <source>A last check of everything mining needs. You can change it later in Settings.</source>
+        <translation>最後檢查採集所需的一切。稍後可在「設定」中變更。</translation>
+    </message>
+    <message>
+        <source>Checking your setup...</source>
+        <translation>正在檢查設定...</translation>
+    </message>
+    <message>
+        <source>Could not check your setup: </source>
+        <translation>無法檢查設定： </translation>
     </message>
     <message>
         <source>Yes</source>
@@ -2824,20 +2876,20 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>AnkiConnect 可連線：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Deck: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>牌組：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Deck '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
+        <translation>牌組「%1」存在：&lt;b&gt;%2&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Note type: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>筆記類型：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Note type '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
+        <translation>筆記類型「%1」存在：&lt;b&gt;%2&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Mapped fields: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>已對應欄位：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Every mapped field exists: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation>所有已對應欄位皆存在：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
-        <translation>已設定資源：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Offline dictionary ready: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation>離線字典已就緒：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -2900,12 +2952,20 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>全部 %1 個新單字都被使用中的篩選器移除 — 未建立任何卡片</translation>
     </message>
     <message>
-        <source>All words already in Anki!</source>
-        <translation>所有單字皆已在 Anki 中！</translation>
+        <source>No cards created. Every word is already in Anki.</source>
+        <translation>未建立任何卡片。所有單字都已在 Anki 中。</translation>
     </message>
     <message>
-        <source>Step 1/5 — Parsing subtitles: %1</source>
-        <translation>步驟 1/5——正在解析字幕：%1</translation>
+        <source>Ambiguous reading review required for %1 word(s); current readings kept</source>
+        <translation>%1 個單字需要審查歧義讀音；已保留目前讀音</translation>
+    </message>
+    <message>
+        <source>Parsing subtitles</source>
+        <translation>正在解析字幕</translation>
+    </message>
+    <message>
+        <source>Subtitles: %1</source>
+        <translation>字幕：%1</translation>
     </message>
     <message numerus="yes">
         <source>Found %n unique word(s)</source>
@@ -2918,12 +2978,12 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>頻率資料：%1/%2 個單字已排名</translation>
     </message>
     <message>
-        <source>Step 2/5 — Known-words filter bypassed (include everything mode)</source>
-        <translation>步驟 2/5——已跳過已知單字篩選（納入全部模式）</translation>
+        <source>Filtering against known vocabulary</source>
+        <translation>正在依已知單字篩選</translation>
     </message>
     <message>
-        <source>Step 2/5 — Filtering against known vocabulary</source>
-        <translation>步驟 2/5——正在對照已知詞彙篩選</translation>
+        <source>Known-words filter bypassed (include everything mode)</source>
+        <translation>已略過已知單字篩選器（包含全部模式）</translation>
     </message>
     <message>
         <source>Known word DB synced: %1 new words (%2 total)</source>
@@ -2996,8 +3056,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>已合併 %1 個重複表達的單字</translation>
     </message>
     <message>
-        <source>Step 3/5 — Extracting media from video</source>
-        <translation>步驟 3/5——正在從影片擷取媒體</translation>
+        <source>Extracting media</source>
+        <translation>正在擷取媒體</translation>
     </message>
     <message>
         <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
@@ -3008,8 +3068,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>無法製作動態螢幕截圖——此 ffmpeg 版本沒有 AVIF 或 WebP 編碼器；請在設定中改用靜態螢幕截圖。</translation>
     </message>
     <message>
-        <source>Step 4/5 — Fetching definitions</source>
-        <translation>步驟 4/5——正在擷取釋義</translation>
+        <source>Fetching definitions</source>
+        <translation>正在擷取釋義</translation>
     </message>
     <message numerus="yes">
         <source>Found %n definition(s)</source>
@@ -3022,8 +3082,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>高低音調資料：%1/%2 個單字</translation>
     </message>
     <message>
-        <source>Step 5/5 — Creating Anki cards</source>
-        <translation>步驟 5/5——正在建立 Anki 卡片</translation>
+        <source>Creating Anki cards</source>
+        <translation>正在建立 Anki 卡片</translation>
     </message>
     <message numerus="yes">
         <source>Successfully created %n card(s)</source>
@@ -3082,14 +3142,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         </translation>
     </message>
     <message>
-        <source>Step 3/5 — Preparing card images</source>
-        <translation>步驟 3/5 — 正在準備卡片影像</translation>
-    </message>
-    <message>
-        <source>Step 3/5 — Preparing page images</source>
-        <translation>步驟 3/5 — 正在準備頁面影像</translation>
-    </message>
-    <message>
         <source>Preparing card images</source>
         <translation>正在準備卡片影像</translation>
     </message>
@@ -3118,8 +3170,12 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>已略過無法讀取的頁面影像 %1 — 其卡片沒有圖片</translation>
     </message>
     <message>
-        <source>Step 1/5 — Parsing text: %1</source>
-        <translation>步驟 1/5 — 正在解析文字：%1</translation>
+        <source>Parsing text</source>
+        <translation>正在解析文字</translation>
+    </message>
+    <message>
+        <source>Text: %1</source>
+        <translation>文字：%1</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -3190,14 +3246,8 @@ Files on disk will be left untouched because the folder could not be proven to b
 %2</translation>
     </message>
     <message>
-        <source>Export Failed</source>
-        <translation>匯出失敗</translation>
-    </message>
-    <message>
-        <source>Failed to export:
-%1</source>
-        <translation>匯出失敗：
-%1</translation>
+        <source>The export could not be written.</source>
+        <translation>無法寫入匯出檔。</translation>
     </message>
 </context><context>
     <name>FileSelector</name>
@@ -3258,12 +3308,44 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>未安裝</translation>
     </message>
     <message>
-        <source>File not found</source>
-        <translation>找不到檔案</translation>
+        <source>File not found. Choose an existing file.</source>
+        <translation>找不到檔案。請選擇現有檔案。</translation>
     </message>
     <message>
-        <source>Folder not found</source>
-        <translation>找不到資料夾</translation>
+        <source>Folder not found. Choose an existing folder.</source>
+        <translation>找不到資料夾。請選擇現有資料夾。</translation>
+    </message>
+    <message>
+        <source>Only files and folders can be dropped here.</source>
+        <translation>只能將檔案和資料夾拖放至此處。</translation>
+    </message>
+    <message>
+        <source>Drop one item at a time.</source>
+        <translation>一次只能拖放一個項目。</translation>
+    </message>
+    <message>
+        <source>Only local files can be dropped here.</source>
+        <translation>只能將本機檔案拖放至此處。</translation>
+    </message>
+    <message>
+        <source>That is a folder; this field takes a file.</source>
+        <translation>這是資料夾；此欄位接受檔案。</translation>
+    </message>
+    <message>
+        <source>That is a file; this field takes a folder.</source>
+        <translation>這是檔案；此欄位接受資料夾。</translation>
+    </message>
+    <message>
+        <source>Drop %1 here</source>
+        <translation>將 %1 拖放至此處</translation>
+    </message>
+    <message>
+        <source>Drop the file here</source>
+        <translation>將檔案拖放至此處</translation>
+    </message>
+    <message>
+        <source>Drop the folder here</source>
+        <translation>將資料夾拖放至此處</translation>
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
@@ -3390,6 +3472,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
         <translation>採集前移除非對話的字幕註解：例如整行音效(電話)、開頭的說話者標籤 (Tanaka)，以及行內振假名瀕死(ひんし)。預設開啟；下方的正規表示式篩選器仍會接續套用。</translation>
+    </message>
+    <message>
+        <source>Skip katakana-stylized subtitle cues</source>
+        <translation>略過以片假名呈現的字幕提示</translation>
+    </message>
+    <message>
+        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
+        <translation>當整個字幕提示含有片假名但沒有平假名時略過。僅適用於以片假名呈現說話者對白的來源；有效的純外來語提示也會被略過。預設為關閉。</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3578,12 +3668,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>已從「%2」匯入 %1 個項目。</translation>
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation>設定更新失敗</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation>匯入已完成，但設定更新失敗：%1</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
     </message>
     <message>
         <source>Importing frequency source…</source>
@@ -3594,8 +3680,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>取消</translation>
     </message>
     <message>
-        <source>Import Failed</source>
-        <translation>匯入失敗</translation>
+        <source>The frequency source could not be imported.</source>
+        <translation>無法匯入頻率來源。</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -3610,16 +3696,12 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>匯入工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
-        <source>Scan Failed</source>
-        <translation>掃描失敗</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>無法掃描該資料夾。</translation>
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
         <translation>選擇要重新匯入的頻率來源</translation>
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
-        <translation>重新匯入已封鎖</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
@@ -3638,8 +3720,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>正在重新匯入頻率來源…</translation>
     </message>
     <message>
-        <source>Re-import Failed</source>
-        <translation>重新匯入失敗</translation>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>無法重新匯入頻率來源。</translation>
     </message>
     <message>
         <source>Frequency source (%1);;All Files (*)</source>
@@ -3652,76 +3734,36 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>載入中…</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation>移除失敗</translation>
+        <source>Retry</source>
+        <translation>重試</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
-        <translation>無法刪除 %1：
-%2
-
-頻率來源未被移除。</translation>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>無法檢查已安裝的頻率來源。</translation>
     </message>
     <message>
-        <source>Files left untouched</source>
-        <translation>檔案保持不變</translation>
+        <source>The frequency source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已從鏈結移除頻率來源，但因無法確認資料夾屬於 Anki Miner，故保留其檔案。</translation>
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>此串接項目已移除，但位於 %1 的檔案因無法證明該資料夾屬於 Anki Miner 而保持不變。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>無法移除 %1。其檔案保持完整 — 請再試一次。</translation>
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
-        <translation>無法移除 %1：
-%2
-
-檔案完整無損。請再試一次。</translation>
+        <source>%1 was only partly removed. Re-import or repair this frequency source before retrying.</source>
+        <translation>%1 僅部分移除。請重新匯入或修復此頻率來源後再試。</translation>
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this frequency source before retrying.</source>
-        <translation>無法完成移除 %1：
-%2
-
-檔案已部分變更。請在重試前重新匯入或修復此頻率來源。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>設定更新失敗後，無法還原 %1。請重新啟動 Anki Miner 後再試。</translation>
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
-        <translation>設定更新失敗後，無法還原 %1：
-%2
-
-檔案已不在安裝位置；設定更新正待處理。請在重試前重新啟動 Anki Miner。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 無法重新整理它。移除作業已儲存，重新啟動後仍會保留。</translation>
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation>%1 的移除已儲存，但 Anki Miner 無法重新整理：
-%2
-
-此移除已儲存，重新啟動後仍會保留。</translation>
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
-        <translation>%1 已移除，但位於 %2 的墓碑標記無法刪除：
-%3
-
-此移除已儲存；清理作業待處理，將於啟動時重試。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但無法刪除其殘留資料夾。將在啟動時重試清理。</translation>
     </message>
     <message>
         <source>Active Frequency Sources</source>
@@ -3732,8 +3774,16 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation>來源以疊加方式分層——所有啟用來源中最佳（最低）的排名勝出。最上方的項目優先打破平手。</translation>
     </message>
     <message>
-        <source>+ Add Source…</source>
-        <translation>＋ 新增來源…</translation>
+        <source>Add frequency source…</source>
+        <translation>新增頻率來源…</translation>
+    </message>
+    <message>
+        <source>Remove frequency source</source>
+        <translation>移除頻率來源</translation>
+    </message>
+    <message>
+        <source>Remove the selected frequency source</source>
+        <translation>移除選取的頻率來源</translation>
     </message>
     <message>
         <source>Move up</source>
@@ -3748,12 +3798,32 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation>下移</translation>
     </message>
     <message>
-        <source>Remove</source>
-        <translation>移除</translation>
+        <source>word-based</source>
+        <translation>以單字為基礎</translation>
     </message>
     <message>
-        <source>Remove frequency source</source>
-        <translation>移除頻率來源</translation>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>等級標籤會顯示在卡片上，但不用於頻率篩選。</translation>
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 個項目</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>已啟用</translation>
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation>啟用 %1</translation>
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation>啟用或停用 %1</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 遺失 — 重新匯入</translation>
     </message>
     <message>
         <source>Remove '%1' from the frequency chain?
@@ -3773,23 +3843,33 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <source>Re-import…</source>
         <translation>重新匯入…</translation>
     </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+</context><context>
+    <name>GUIPresenter</name>
+    <message>
+        <source>Step %1 of %2 — %3</source>
+        <translation>步驟 %1／%2 — %3</translation>
+    </message>
 </context><context>
     <name>HeaderWidget</name>
     <message>
         <source>Settings profile:</source>
-        <translation type="unfinished" />
+        <translation>設定檔：</translation>
     </message>
     <message>
         <source>Settings profile</source>
-        <translation type="unfinished" />
+        <translation>設定檔</translation>
     </message>
     <message>
         <source>Switches every Anki Miner setting to the selected profile.</source>
-        <translation type="unfinished" />
+        <translation>將所有 Anki Miner 設定切換為選取的設定檔。</translation>
     </message>
     <message>
         <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
-        <translation type="unfinished" />
+        <translation>使用中的設定檔。切換會替換所有設定；選取「管理設定檔…」即可新增、重新命名或移除。</translation>
     </message>
     <message>
         <source>Theme:</source>
@@ -3797,19 +3877,33 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Theme</source>
-        <translation type="unfinished" />
+        <translation>主題</translation>
     </message>
     <message>
-        <source>All themes…</source>
-        <translation>所有主題…</translation>
+        <source>Browse all %1 themes…</source>
+        <translation>瀏覽全部 %1 個主題…</translation>
     </message>
     <message>
-        <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
-        <translation>啟用中的主題。右上方顯示最愛；選擇「所有主題…」以管理。（Ctrl+T 循環切換最愛）。已安裝：%1</translation>
+        <source>Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.</source>
+        <translation>使用中的主題。此清單顯示最愛；選取「瀏覽全部主題…」以查看預覽。</translation>
     </message>
     <message>
         <source>Manage profiles…</source>
-        <translation type="unfinished" />
+        <translation>管理設定檔…</translation>
+    </message>
+</context><context>
+    <name>InlineReceipt</name>
+    <message>
+        <source>View details</source>
+        <translation>檢視詳細資料</translation>
+    </message>
+    <message>
+        <source>Copy summary</source>
+        <translation>複製摘要</translation>
+    </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>關閉</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -3922,18 +4016,8 @@ Add %3 word(s) to your known list?</source>
         <translation>無法辨識檔案格式。支援：jpdb 複習匯出檔（JSON）、Migaku 單字匯出檔（JSON/CSV）、AnkiMorphs 已知詞素（CSV），以及純文字單字清單（每行一個單字）。</translation>
     </message>
     <message>
-        <source>Import Failed</source>
-        <translation>匯入失敗</translation>
-    </message>
-    <message>
-        <source>Unexpected error while reading the file:
-%1</source>
-        <translation>讀取檔案時發生未預期的錯誤：
-%1</translation>
-    </message>
-    <message>
-        <source>Export Known Words</source>
-        <translation>匯出已知單字</translation>
+        <source>That file could not be read.</source>
+        <translation>無法讀取該檔案。</translation>
     </message>
     <message>
         <source>Export Complete</source>
@@ -3946,22 +4030,46 @@ Add %3 word(s) to your known list?</source>
 %2</translation>
     </message>
     <message>
+        <source>Export Known Words</source>
+        <translation>匯出已知單字</translation>
+    </message>
+    <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>要移除你加入本機已知單字清單的所有單字嗎？此操作無法復原。不會影響與 Anki 同步的快取。</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
     <message>
+        <source>Scroll to the newest line and resume following it.</source>
+        <translation>捲動至最新一行並繼續追蹤。</translation>
+    </message>
+    <message>
         <source>Activity Log</source>
         <translation>活動記錄</translation>
     </message>
     <message>
-        <source>Copy</source>
-        <translation>複製</translation>
+        <source>Copy visible</source>
+        <translation>複製可見內容</translation>
     </message>
     <message>
-        <source>Copy all log content to clipboard</source>
-        <translation>複製所有記錄內容至剪貼簿</translation>
+        <source>Copy only the lines currently shown.</source>
+        <translation>僅複製目前顯示的行。</translation>
+    </message>
+    <message>
+        <source>Copy all</source>
+        <translation>全部複製</translation>
+    </message>
+    <message>
+        <source>Copy every retained line, ignoring the filters.</source>
+        <translation>複製所有保留的行，忽略篩選器。</translation>
+    </message>
+    <message>
+        <source>Save run log…</source>
+        <translation>儲存執行記錄…</translation>
+    </message>
+    <message>
+        <source>Write every retained line to a UTF-8 text file.</source>
+        <translation>將所有保留的行寫入 UTF-8 文字檔。</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -3972,8 +4080,72 @@ Add %3 word(s) to your known list?</source>
         <translation>清除所有記錄訊息</translation>
     </message>
     <message>
-        <source>Copied!</source>
-        <translation>已複製！</translation>
+        <source>All</source>
+        <translation>全部</translation>
+    </message>
+    <message>
+        <source>Info</source>
+        <translation>資訊</translation>
+    </message>
+    <message>
+        <source>Warnings</source>
+        <translation>警告</translation>
+    </message>
+    <message>
+        <source>Errors</source>
+        <translation>錯誤</translation>
+    </message>
+    <message>
+        <source>Show every line.</source>
+        <translation>顯示每一行。</translation>
+    </message>
+    <message>
+        <source>Show progress and success lines.</source>
+        <translation>顯示進度與成功訊息。</translation>
+    </message>
+    <message>
+        <source>Show warnings only.</source>
+        <translation>僅顯示警告。</translation>
+    </message>
+    <message>
+        <source>Show errors only.</source>
+        <translation>僅顯示錯誤。</translation>
+    </message>
+    <message>
+        <source>Search…</source>
+        <translation>搜尋…</translation>
+    </message>
+    <message>
+        <source>Lines shown of lines retained.</source>
+        <translation>已顯示的行／保留的行。</translation>
+    </message>
+    <message>
+        <source>Pause follow</source>
+        <translation>暫停追蹤</translation>
+    </message>
+    <message>
+        <source>Stop scrolling to the newest line while you read.</source>
+        <translation>閱讀時停止捲動到最新一行。</translation>
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation>%1／%2</translation>
+    </message>
+    <message>
+        <source>↓ %1 new — Jump to latest</source>
+        <translation>↓ %1 則新增 — 跳至最新</translation>
+    </message>
+    <message>
+        <source>Save Run Log</source>
+        <translation>儲存執行記錄</translation>
+    </message>
+    <message>
+        <source>Saved run log to %1</source>
+        <translation>已將執行記錄儲存至 %1</translation>
+    </message>
+    <message>
+        <source>Could not save the run log: %1</source>
+        <translation>無法儲存執行記錄：%1</translation>
     </message>
 </context><context>
     <name>MainWindow</name>
@@ -3990,8 +4162,8 @@ Add %3 word(s) to your known list?</source>
         <translation>牌組建立器</translation>
     </message>
     <message>
-        <source>Audio</source>
-        <translation>音訊</translation>
+        <source>Audiobooks</source>
+        <translation>有聲書</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -4002,7 +4174,7 @@ Add %3 word(s) to your known list?</source>
         <translation>分析</translation>
     </message>
     <message>
-        <source>Tools</source>
+        <source>Utilities</source>
         <translation>工具</translation>
     </message>
     <message>
@@ -4030,8 +4202,8 @@ Add %3 word(s) to your known list?</source>
         <translation>主要頁籤</translation>
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
-        <translation>在影片、牌組建立器、音訊、閱讀、分析、工具與設定之間切換</translation>
+        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <translation>在影片、牌組建立器、有聲書、閱讀、分析、工具與設定之間切換</translation>
     </message>
     <message>
         <source>Application Header</source>
@@ -4114,8 +4286,8 @@ Add %3 word(s) to your known list?</source>
         <translation>在 Discord 上加入社群</translation>
     </message>
     <message>
-        <source>Dictionary Change Blocked</source>
-        <translation>字典變更已封鎖</translation>
+        <source>The desktop shortcut could not be created.</source>
+        <translation>無法建立桌面捷徑。</translation>
     </message>
     <message>
         <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
@@ -4124,10 +4296,6 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Desktop Shortcut</source>
         <translation>桌面捷徑</translation>
-    </message>
-    <message>
-        <source>Failed to create desktop shortcut.</source>
-        <translation>建立桌面捷徑失敗。</translation>
     </message>
     <message>
         <source>Shortcut created.</source>
@@ -4150,8 +4318,12 @@ Continue?</source>
 要繼續嗎？</translation>
     </message>
     <message>
-        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
-        <translation>無法開始重新套用樣式 — Anki 欄位設定錯誤：%1</translation>
+        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
+        <translation>無法開始重新套用樣式：Anki 欄位對應不可用。</translation>
+    </message>
+    <message>
+        <source>Open Anki Settings</source>
+        <translation>開啟 Anki 設定</translation>
     </message>
     <message>
         <source>Restyling mined cards…</source>
@@ -4174,6 +4346,10 @@ Continue?</source>
         <translation>重新設定樣式失敗</translation>
     </message>
     <message>
+        <source>The mined cards could not be restyled.</source>
+        <translation>無法重新套用已採集卡片的樣式。</translation>
+    </message>
+    <message>
         <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
         <translation>應用程式升級後，下列字典需要重新匯入（其索引格式已變更）：</translation>
     </message>
@@ -4190,16 +4366,12 @@ Continue?</source>
         <translation>系統驗證通過</translation>
     </message>
     <message>
-        <source>Validation Issues</source>
-        <translation>驗證問題</translation>
+        <source>Some system checks need attention.</source>
+        <translation>部分系統檢查需要注意。</translation>
     </message>
     <message>
-        <source>System validation found issues:
-
-%1</source>
-        <translation>系統驗證發現問題：
-
-%1</translation>
+        <source>Open Settings</source>
+        <translation>開啟設定</translation>
     </message>
     <message>
         <source>Anki note-type fields are misconfigured; check Settings.</source>
@@ -4214,12 +4386,12 @@ Continue?</source>
         <translation>正在執行系統驗證…</translation>
     </message>
     <message>
-        <source>Validation error: %1</source>
-        <translation>驗證錯誤：%1</translation>
+        <source>System check failed. Try again.</source>
+        <translation>系統檢查失敗。請再試一次。</translation>
     </message>
     <message>
-        <source>Validation Error</source>
-        <translation>驗證錯誤</translation>
+        <source>Retry</source>
+        <translation>重試</translation>
     </message>
     <message>
         <source>Migrating JMdict to SQLite…</source>
@@ -4230,6 +4402,14 @@ Continue?</source>
         <translation>JMdict 就緒（%1 個項目）</translation>
     </message>
     <message>
+        <source>Version %1 is available.</source>
+        <translation>版本 %1 已可取得。</translation>
+    </message>
+    <message>
+        <source>Running %1. No newer release was reported.</source>
+        <translation>正在執行 %1。未回報較新版本。</translation>
+    </message>
+    <message>
         <source>Manga</source>
         <translation>漫畫</translation>
     </message>
@@ -4238,8 +4418,8 @@ Continue?</source>
         <translation>小說</translation>
     </message>
     <message>
-        <source>Subtitles</source>
-        <translation>字幕</translation>
+        <source>Subtitle Files</source>
+        <translation>字幕檔案</translation>
     </message>
     <message>
         <source>Text</source>
@@ -4258,8 +4438,8 @@ Continue?</source>
         <translation>濃縮</translation>
     </message>
     <message>
-        <source>Backfill</source>
-        <translation type="unfinished" />
+        <source>Card Backfill</source>
+        <translation>卡片欄位回填</translation>
     </message>
     <message>
         <source>Single</source>
@@ -4272,6 +4452,10 @@ Continue?</source>
     <message>
         <source>YouTube</source>
         <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Failed to create desktop shortcut.</source>
+        <translation>建立桌面捷徑失敗。</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -4418,11 +4602,33 @@ Continue?</source>
         <translation>品質</translation>
     </message>
 </context><context>
-    <name>MiningTabBase</name>
+    <name>MiniJobMonitor</name>
     <message>
-        <source>Complete</source>
-        <translation>完成</translation>
+        <source>Job monitor</source>
+        <translation>工作監控</translation>
     </message>
+    <message>
+        <source>Nothing is running</source>
+        <translation>沒有正在執行的工作</translation>
+    </message>
+    <message>
+        <source>Job to watch</source>
+        <translation>要監看的工作</translation>
+    </message>
+    <message>
+        <source>Keep above other windows</source>
+        <translation>保持在其他視窗上方</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Show main window</source>
+        <translation>顯示主視窗</translation>
+    </message>
+</context><context>
+    <name>MiningTabBase</name>
     <message>
         <source>Failed: %1 — %2</source>
         <translation>失敗：%1 — %2</translation>
@@ -4495,206 +4701,191 @@ You can fine-tune these later in Settings → Anki.</source>
     <name>PitchImportFlow</name>
     <message>
         <source>Choose pitch accent source</source>
-        <translation type="unfinished" />
+        <translation>選擇高低音調來源</translation>
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
-        <translation type="unfinished"> （已跳過 %1 筆格式錯誤的項目）</translation>
+        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
     </message>
     <message>
         <source>Pitch Source Added</source>
-        <translation type="unfinished" />
+        <translation>已新增高低音調來源</translation>
     </message>
     <message>
         <source>Imported %1 entries from '%2'.</source>
-        <translation type="unfinished">已從「%2」匯入 %1 個項目。</translation>
+        <translation>已從「%2」匯入 %1 個項目。</translation>
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation type="unfinished">設定更新失敗</translation>
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
-        <translation type="unfinished">匯入已完成，但設定更新失敗：%1</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
     </message>
     <message>
         <source>Importing pitch source…</source>
-        <translation type="unfinished" />
+        <translation>正在匯入高低音調來源…</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
-        <source>Import Failed</source>
-        <translation type="unfinished">匯入失敗</translation>
+        <source>The pitch source could not be imported.</source>
+        <translation>無法匯入高低音調來源。</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation type="unfinished">另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">取消中……</translation>
+        <translation>取消中……</translation>
     </message>
     <message>
         <source>The import worker finished without a completion result.</source>
-        <translation type="unfinished">匯入工作已結束，但未傳回完成結果。</translation>
+        <translation>匯入工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
-        <source>Scan Failed</source>
-        <translation type="unfinished">掃描失敗</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>無法掃描該資料夾。</translation>
     </message>
     <message>
         <source>Choose pitch source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
-        <translation type="unfinished">重新匯入已封鎖</translation>
+        <translation>選擇要重新匯入的高低音調來源</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation type="unfinished">索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
     </message>
     <message>
         <source>Pitch Source Re-imported</source>
-        <translation type="unfinished" />
+        <translation>已重新匯入高低音調來源</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished">已成功重新匯入 %1。</translation>
+        <translation>已成功重新匯入 %1。</translation>
     </message>
     <message>
         <source>Re-importing pitch source…</source>
-        <translation type="unfinished" />
+        <translation>正在重新匯入高低音調來源…</translation>
     </message>
     <message>
-        <source>Re-import Failed</source>
-        <translation type="unfinished">重新匯入失敗</translation>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>無法重新匯入高低音調來源。</translation>
     </message>
     <message>
         <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation type="unfinished" />
+        <translation>高低音調來源（%1）;;所有檔案（*）</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
-        <translation type="unfinished">載入中…</translation>
+        <translation>載入中…</translation>
     </message>
     <message>
-        <source>Remove failed</source>
-        <translation type="unfinished">移除失敗</translation>
+        <source>Retry</source>
+        <translation>重試</translation>
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The pitch source was not removed.</source>
-        <translation type="unfinished" />
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>無法檢查已安裝的高低音調來源。</translation>
     </message>
     <message>
-        <source>Files left untouched</source>
-        <translation type="unfinished">檔案保持不變</translation>
+        <source>The pitch source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已從鏈結移除高低音調來源，但因無法確認資料夾屬於 Anki Miner，故保留其檔案。</translation>
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation type="unfinished">此串接項目已移除，但位於 %1 的檔案因無法證明該資料夾屬於 Anki Miner 而保持不變。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>無法移除 %1。其檔案保持完整 — 請再試一次。</translation>
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
-        <translation type="unfinished">無法移除 %1：
-%2
-
-檔案完整無損。請再試一次。</translation>
+        <source>%1 was only partly removed. Re-import or repair this pitch source before retrying.</source>
+        <translation>%1 僅部分移除。請重新匯入或修復此高低音調來源後再試。</translation>
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this pitch source before retrying.</source>
-        <translation type="unfinished" />
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>設定更新失敗後，無法還原 %1。請重新啟動 Anki Miner 後再試。</translation>
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
-        <translation type="unfinished">設定更新失敗後，無法還原 %1：
-%2
-
-檔案已不在安裝位置；設定更新正待處理。請在重試前重新啟動 Anki Miner。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 無法重新整理它。移除作業已儲存，重新啟動後仍會保留。</translation>
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation type="unfinished">%1 的移除已儲存，但 Anki Miner 無法重新整理：
-%2
-
-此移除已儲存，重新啟動後仍會保留。</translation>
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
-        <translation type="unfinished">%1 已移除，但位於 %2 的墓碑標記無法刪除：
-%3
-
-此移除已儲存；清理作業待處理，將於啟動時重試。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但無法刪除其殘留資料夾。將在啟動時重試清理。</translation>
     </message>
     <message>
         <source>Active Pitch Accent Sources</source>
-        <translation type="unfinished" />
+        <translation>作用中的高低音調來源</translation>
     </message>
     <message>
         <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-        <translation type="unfinished" />
+        <translation>來源會由上而下檢查 — 第一個含有該單字高低音調條目的來源會被採用。較下方的來源僅填入上方來源遺漏的單字。</translation>
     </message>
     <message>
-        <source>+ Add Source…</source>
-        <translation type="unfinished">＋ 新增來源…</translation>
-    </message>
-    <message>
-        <source>Move up</source>
-        <translation type="unfinished">上移</translation>
-    </message>
-    <message>
-        <source>Move up (wins lookups first)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Move down</source>
-        <translation type="unfinished">下移</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation type="unfinished">移除</translation>
+        <source>Add pitch source…</source>
+        <translation>新增高低音調來源…</translation>
     </message>
     <message>
         <source>Remove pitch source</source>
-        <translation type="unfinished" />
+        <translation>移除高低音調來源</translation>
+    </message>
+    <message>
+        <source>Remove the selected pitch accent source</source>
+        <translation>移除選取的高低音調來源</translation>
+    </message>
+    <message>
+        <source>Move up</source>
+        <translation>上移</translation>
+    </message>
+    <message>
+        <source>Move up (wins lookups first)</source>
+        <translation>上移（優先查詢）</translation>
+    </message>
+    <message>
+        <source>Move down</source>
+        <translation>下移</translation>
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 個項目</translation>
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation>已啟用</translation>
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation>啟用 %1</translation>
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation>啟用或停用 %1</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 遺失 — 重新匯入</translation>
     </message>
     <message>
         <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted.
 This cannot be undone. You would need to re-import to use this source again.</source>
-        <translation type="unfinished" />
+        <translation>要從高低音調鏈結移除「%1」嗎？
+
+僅會刪除索引檔。
+此操作無法復原。若要再次使用此來源，必須重新匯入。</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation type="unfinished">索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
     </message>
     <message>
         <source>Re-import…</source>
-        <translation type="unfinished">重新匯入…</translation>
+        <translation>重新匯入…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
 </context><context>
     <name>PlaylistAddController</name>
@@ -4766,133 +4957,133 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <name>ProfileController</name>
     <message>
         <source>Language</source>
-        <translation type="unfinished">語言</translation>
+        <translation>語言</translation>
     </message>
     <message>
         <source>Interface scale</source>
-        <translation type="unfinished" />
+        <translation>介面縮放</translation>
+    </message>
+    <message>
+        <source>Text size</source>
+        <translation>文字大小</translation>
     </message>
     <message>
         <source>Statistics database</source>
-        <translation type="unfinished" />
+        <translation>統計資料庫</translation>
     </message>
     <message>
         <source>Log file</source>
-        <translation type="unfinished" />
+        <translation>記錄檔</translation>
     </message>
     <message>
         <source>Recovered settings</source>
-        <translation type="unfinished" />
+        <translation>已復原設定</translation>
     </message>
     <message>
         <source>Recovered settings %1</source>
-        <translation type="unfinished" />
+        <translation>已復原設定 %1</translation>
     </message>
     <message>
         <source>Could not create the profile '%1': %2</source>
-        <translation type="unfinished" />
+        <translation>無法建立設定檔「%1」：%2</translation>
     </message>
     <message>
         <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
-        <translation type="unfinished" />
+        <translation>無法儲存目前設定檔「%1」：%2。未切換任何內容。</translation>
     </message>
     <message>
         <source>Could not read the profile file %1: %2. Nothing was switched.</source>
-        <translation type="unfinished" />
+        <translation>無法讀取設定檔 %1：%2。未切換任何內容。</translation>
     </message>
     <message>
         <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Settings Profiles</source>
-        <translation type="unfinished" />
+        <translation>已切換至「%1」，但無法完全重新整理執行中的視窗：%2。若顯示異常，請重新啟動 Anki Miner。</translation>
     </message>
     <message>
         <source>Restart Anki Miner to apply: %1</source>
-        <translation type="unfinished" />
+        <translation>請重新啟動 Anki Miner 以套用：%1</translation>
     </message>
     <message>
         <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
-        <translation type="unfinished" />
+        <translation>設定仍在儲存中，或字典變更正在進行。請稍後再試。</translation>
     </message>
     <message>
         <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
-        <translation type="unfinished" />
+        <translation>採集或卡片回填仍在使用字典。請停止後再試。</translation>
     </message>
     <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
-        <translation type="unfinished" />
+        <translation>無法套用設定檔「%1」：%2。目前設定未變更。</translation>
     </message>
 </context><context>
     <name>ProfileManagerDialog</name>
     <message>
         <source>Settings Profiles</source>
-        <translation type="unfinished" />
+        <translation>設定檔</translation>
     </message>
     <message>
         <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
-        <translation type="unfinished" />
+        <translation>設定檔是所有設定的完整快照 — 字典、篩選器、媒體、Anki 欄位與外觀。切換時會在將目前設定儲存回作用中設定檔後，一次替換所有設定。</translation>
     </message>
     <message>
         <source>New from Current…</source>
-        <translation type="unfinished" />
+        <translation>從目前設定新增…</translation>
     </message>
     <message>
         <source>Save the settings you are using now as a new profile and switch to it.</source>
-        <translation type="unfinished" />
+        <translation>將目前使用的設定儲存為新設定檔，並切換至該設定檔。</translation>
     </message>
     <message>
         <source>Rename…</source>
-        <translation type="unfinished" />
+        <translation>重新命名…</translation>
     </message>
     <message>
         <source>Delete</source>
-        <translation type="unfinished" />
+        <translation>刪除</translation>
     </message>
     <message>
         <source>Switch To</source>
-        <translation type="unfinished" />
+        <translation>切換至</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">關閉</translation>
+        <translation>關閉</translation>
     </message>
     <message>
         <source>%1 (active)</source>
-        <translation type="unfinished" />
+        <translation>%1（作用中）</translation>
     </message>
     <message>
         <source>New Profile</source>
-        <translation type="unfinished" />
+        <translation>新增設定檔</translation>
     </message>
     <message>
         <source>Name for the new profile:</source>
-        <translation type="unfinished" />
+        <translation>新設定檔名稱：</translation>
     </message>
     <message>
         <source>Rename Profile</source>
-        <translation type="unfinished" />
+        <translation>重新命名設定檔</translation>
     </message>
     <message>
         <source>New name for '%1':</source>
-        <translation type="unfinished" />
+        <translation>「%1」的新名稱：</translation>
     </message>
     <message>
-        <source>Rename Failed</source>
-        <translation type="unfinished" />
+        <source>The profile could not be renamed.</source>
+        <translation>無法重新命名設定檔。</translation>
     </message>
     <message>
         <source>Delete Profile</source>
-        <translation type="unfinished" />
+        <translation>刪除設定檔</translation>
     </message>
     <message>
         <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
-        <translation type="unfinished" />
+        <translation>要刪除設定檔「%1」嗎？其儲存的設定無法復原。</translation>
     </message>
     <message>
-        <source>Delete Failed</source>
-        <translation type="unfinished" />
+        <source>The profile could not be deleted.</source>
+        <translation>無法刪除設定檔。</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -4903,6 +5094,88 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>ETA ~</source>
         <translation>剩餘 ~</translation>
+    </message>
+</context><context>
+    <name>QueueControlsBar</name>
+    <message>
+        <source>%1 queued · %2 ready · %3 failed · %4 complete</source>
+        <translation>%1 個已排入佇列 · %2 個已就緒 · %3 個失敗 · %4 個完成</translation>
+    </message>
+    <message>
+        <source>Pause after current item</source>
+        <translation>目前項目完成後暫停</translation>
+    </message>
+    <message>
+        <source>Queue locked while processing.</source>
+        <translation>處理期間佇列已鎖定。</translation>
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation>繼續</translation>
+    </message>
+    <message>
+        <source>Paused after %1 of %2</source>
+        <translation>已在第 %1／%2 個後暫停</translation>
+    </message>
+    <message>
+        <source>All</source>
+        <translation>全部</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>就緒</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>執行中</translation>
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation>失敗</translation>
+    </message>
+    <message>
+        <source>Complete</source>
+        <translation>完成</translation>
+    </message>
+    <message>
+        <source>Search the queue…</source>
+        <translation>搜尋佇列…</translation>
+    </message>
+    <message>
+        <source>Run selected</source>
+        <translation>執行選取項目</translation>
+    </message>
+    <message>
+        <source>Mine the selected rows, in list order.</source>
+        <translation>依清單順序採集選取的列。</translation>
+    </message>
+    <message>
+        <source>Retry selected</source>
+        <translation>重試選取項目</translation>
+    </message>
+    <message>
+        <source>Return the selected failed rows to Ready and mine them again.</source>
+        <translation>將選取的失敗列退回「就緒」並再次採集。</translation>
+    </message>
+    <message>
+        <source>Remove selected</source>
+        <translation>移除選取項目</translation>
+    </message>
+    <message>
+        <source>Drop the selected rows from the queue.</source>
+        <translation>從佇列中移除選取的列。</translation>
+    </message>
+    <message>
+        <source>Stop cleanly once the item being mined is finished.</source>
+        <translation>目前採集項目完成後正常停止。</translation>
+    </message>
+    <message>
+        <source>Finish current, then stop</source>
+        <translation>完成目前項目後停止</translation>
+    </message>
+    <message>
+        <source>Let the current item finish, then end the run.</source>
+        <translation>讓目前項目完成，然後結束執行。</translation>
     </message>
 </context><context>
     <name>QueueItemWidget</name>
@@ -4965,8 +5238,12 @@ This cannot be undone. You would need to re-import to use this source again.</so
 </context><context>
     <name>QueueMiningProgressAdapter</name>
     <message>
-        <source>Complete</source>
-        <translation>完成</translation>
+        <source>Stage %1 of %2</source>
+        <translation>階段 %1／%2</translation>
+    </message>
+    <message>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1（第 %2／%3 個）</translation>
     </message>
 </context><context>
     <name>QueuePanel</name>
@@ -5055,6 +5332,24 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>%1 個系列 - %2 集 - 準備處理</translation>
     </message>
 </context><context>
+    <name>QueueRow</name>
+    <message>
+        <source>Ready</source>
+        <translation>就緒</translation>
+    </message>
+    <message>
+        <source>Running</source>
+        <translation>執行中</translation>
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation>失敗</translation>
+    </message>
+    <message>
+        <source>Complete</source>
+        <translation>完成</translation>
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -5069,12 +5364,16 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>進度</translation>
     </message>
     <message>
+        <source>volumes</source>
+        <translation>冊</translation>
+    </message>
+    <message>
         <source>Volume</source>
-        <translation type="unfinished" />
+        <translation>冊</translation>
     </message>
     <message>
         <source>Volume File:</source>
-        <translation type="unfinished" />
+        <translation>冊檔案：</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -5082,7 +5381,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
-        <translation type="unfinished" />
+        <translation>.mokuro 冊檔，或 .mokuro 位於旁邊或內部的 .cbz／.zip 封存檔。不需要解壓縮。</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -5090,11 +5389,11 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Mine the selected volume into Anki cards.</source>
-        <translation type="unfinished" />
+        <translation>將選取的冊採集成 Anki 卡片。</translation>
     </message>
     <message>
         <source>Manga Folder</source>
-        <translation type="unfinished" />
+        <translation>漫畫資料夾</translation>
     </message>
     <message>
         <source>Folder:</source>
@@ -5106,7 +5405,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Mine Folder</source>
-        <translation type="unfinished">採集資料夾</translation>
+        <translation>採集資料夾</translation>
     </message>
     <message>
         <source>Mine the selected folder's volume(s) into Anki cards.</source>
@@ -5130,7 +5429,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Select a .mokuro, .cbz, or .zip volume first.</source>
-        <translation type="unfinished" />
+        <translation>請先選擇 .mokuro、.cbz 或 .zip 冊檔。</translation>
     </message>
     <message>
         <source>Select a manga folder first.</source>
@@ -5177,6 +5476,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Progress</source>
         <translation>進度</translation>
+    </message>
+    <message>
+        <source>books</source>
+        <translation>書籍</translation>
     </message>
     <message>
         <source>Novel</source>
@@ -5293,6 +5596,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>進度</translation>
     </message>
     <message>
+        <source>subtitle files</source>
+        <translation>字幕檔案</translation>
+    </message>
+    <message>
         <source>Subtitle Files</source>
         <translation>字幕檔案</translation>
     </message>
@@ -5337,6 +5644,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>取消進行中的執行。</translation>
     </message>
     <message>
+        <source>File not found: %1</source>
+        <translation>找不到檔案：%1</translation>
+    </message>
+    <message>
         <source>Add Subtitle Files</source>
         <translation>新增字幕檔案</translation>
     </message>
@@ -5355,10 +5666,6 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Add at least one subtitle file first.</source>
         <translation>請先新增至少一個字幕檔案。</translation>
-    </message>
-    <message>
-        <source>File not found: %1</source>
-        <translation>找不到檔案：%1</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -5403,8 +5710,16 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>採集</translation>
     </message>
     <message>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation>第 %1／%2 次嘗試 · 將在 %3 秒後重試</translation>
+    </message>
+    <message>
         <source>Could not process %1: %2</source>
         <translation>無法處理 %1：%2</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -5417,6 +5732,26 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Complete — %1 cards created</source>
         <translation>完成 — 已建立 %1 張卡片</translation>
+    </message>
+    <message>
+        <source>Manga mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>漫畫採集</translation>
+    </message>
+    <message>
+        <source>Novel mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>小說採集</translation>
+    </message>
+    <message>
+        <source>Subtitle mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>字幕採集</translation>
+    </message>
+    <message>
+        <source>Text mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>文字採集</translation>
     </message>
 </context><context>
     <name>ReadingTextTab</name>
@@ -5443,6 +5778,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Paste text here…</source>
         <translation>在此貼上文字…</translation>
+    </message>
+    <message>
+        <source>Drop or paste text here; files are not supported.</source>
+        <translation>將文字拖放或貼到此處；不支援檔案。</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -5489,50 +5828,76 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>失敗：%1。</translation>
     </message>
 </context><context>
+    <name>RecoveryController</name>
+    <message>
+        <source>Pick up where you left off?</source>
+        <translation>要從中斷處繼續嗎？</translation>
+    </message>
+    <message>
+        <source>Nothing starts on its own — restored rows wait for you.</source>
+        <translation>不會自動開始任何工作 — 已還原的列會等待操作。</translation>
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation>還原</translation>
+    </message>
+    <message>
+        <source>Discard</source>
+        <translation>捨棄</translation>
+    </message>
+    <message>
+        <source>Resume %1? %2 already saved</source>
+        <translation>要繼續 %1 嗎？%2 已儲存</translation>
+    </message>
+    <message>
+        <source>Restore previous queue? %1 items</source>
+        <translation>要還原先前的佇列嗎？共 %1 個項目</translation>
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
-        <source>Download Blocked</source>
-        <translation>下載已封鎖</translation>
+        <source>Starting download…</source>
+        <translation>正在開始下載…</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+        <source>Verifying and installing…</source>
+        <translation>正在驗證並安裝…</translation>
     </message>
     <message>
-        <source>Preparing download…</source>
-        <translation>正在準備下載…</translation>
+        <source>%1 downloaded · Verifying and installing…</source>
+        <translation>已下載 %1 · 正在驗證並安裝…</translation>
     </message>
     <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
+        <source>Building index · %1 entries</source>
+        <translation>正在建立索引 · %1 個條目</translation>
     </message>
     <message>
-        <source>Downloading Recommended Resources</source>
-        <translation>正在下載建議資源</translation>
+        <source>Activating</source>
+        <translation>正在啟用</translation>
     </message>
     <message>
-        <source>%1: %2</source>
-        <translation>%1：%2</translation>
+        <source>Imported, but not active — Retry setup</source>
+        <translation>已匯入但未啟用 — 重試設定</translation>
     </message>
     <message>
-        <source>done</source>
-        <translation>完成</translation>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation>資源下載已取消（部分資源已安裝）</translation>
     </message>
     <message>
-        <source>failed</source>
-        <translation>失敗</translation>
+        <source>Resource Download Cancelled</source>
+        <translation>資源下載已取消</translation>
     </message>
     <message>
-        <source>Cancelling…</source>
-        <translation>取消中……</translation>
+        <source>Resources Installed</source>
+        <translation>資源已安裝</translation>
+    </message>
+    <message>
+        <source>Resources Partially Installed</source>
+        <translation>資源部分安裝</translation>
     </message>
     <message>
         <source>Resource Download Failed</source>
         <translation>資源下載失敗</translation>
-    </message>
-    <message>
-        <source>The download worker finished without a completion result.</source>
-        <translation>下載工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
         <source>✓ %1 — %2</source>
@@ -5553,16 +5918,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
    手動下載：%3</translation>
     </message>
     <message>
-        <source>Resource Download Cancelled (Some Resources Installed)</source>
-        <translation>資源下載已取消（部分資源已安裝）</translation>
-    </message>
-    <message>
         <source>Some resources were installed before cancellation.</source>
         <translation>取消前已安裝部分資源。</translation>
-    </message>
-    <message>
-        <source>Resource Download Cancelled</source>
-        <translation>資源下載已取消</translation>
     </message>
     <message>
         <source>No resources were installed.</source>
@@ -5573,20 +5930,52 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>未處理的資源項目：%1。</translation>
     </message>
     <message>
-        <source>Resources Installed</source>
-        <translation>資源已安裝</translation>
-    </message>
-    <message>
-        <source>Resources Partially Installed</source>
-        <translation>資源部分安裝</translation>
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation>沒有處理任何資源。</translation>
     </message>
     <message>
+        <source>Recommended Resources</source>
+        <translation>建議資源</translation>
+    </message>
+    <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
         <translation>資源從其原始來源下載；其授權條款適用。</translation>
+    </message>
+    <message>
+        <source>Hide</source>
+        <translation>隱藏</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Retry setup</source>
+        <translation>重試設定</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>關閉</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Download Blocked</source>
+        <translation>下載已封鎖</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Recommended resources</source>
+        <translation>建議資源</translation>
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
+        <translation>下載工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -5599,8 +5988,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>建議資源</translation>
     </message>
     <message>
-        <source>Frequency, pitch accent, and a dictionary (optional).</source>
-        <translation>頻率、高低音調與字典（選用）。</translation>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>頻率與高低音調為選填。字典為必填。</translation>
     </message>
     <message>
         <source>What are these resources?</source>
@@ -5611,12 +6000,28 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>下載建議資源</translation>
     </message>
     <message>
+        <source>Checking for an offline dictionary...</source>
+        <translation>正在檢查離線字典...</translation>
+    </message>
+    <message>
+        <source>Could not check the offline dictionary: </source>
+        <translation>無法檢查離線字典： </translation>
+    </message>
+    <message>
+        <source>Dictionary ready: %1</source>
+        <translation>字典已就緒：%1</translation>
+    </message>
+    <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
         <translation>下載已取消。取消前已安裝部分資源。</translation>
     </message>
     <message>
         <source>Download cancelled. No resources were installed.</source>
         <translation>下載已取消。未安裝任何資源。</translation>
+    </message>
+    <message>
+        <source>Imported, but not active — Retry setup</source>
+        <translation>已匯入但未啟用 — 重試設定</translation>
     </message>
     <message>
         <source>Some resources were installed; some failed.</source>
@@ -5631,14 +6036,72 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>資源已安裝。</translation>
     </message>
 </context><context>
+    <name>ResultCopy</name>
+    <message>
+        <source>No cards created.</source>
+        <translation>未建立任何卡片。</translation>
+    </message>
+    <message>
+        <source>Created %1 card in '%2'</source>
+        <translation>已在「%2」中建立 %1 張卡片</translation>
+    </message>
+    <message>
+        <source>Created %1 cards in '%2'</source>
+        <translation>已在「%2」中建立 %1 張卡片</translation>
+    </message>
+    <message>
+        <source>Created %1 card</source>
+        <translation>已建立 %1 張卡片</translation>
+    </message>
+    <message>
+        <source>Created %1 cards</source>
+        <translation>已建立 %1 張卡片</translation>
+    </message>
+    <message>
+        <source>No cards created. Every word is already in Anki.</source>
+        <translation>未建立任何卡片。所有單字都已在 Anki 中。</translation>
+    </message>
+    <message>
+        <source>Copied</source>
+        <translation>已複製</translation>
+    </message>
+    <message>
+        <source>Mining complete — %1 %2, %3 notes added in %4</source>
+        <translation>採集完成 — 在 %4 中建立 %1 %2，新增 %3 則筆記</translation>
+    </message>
+    <message>
+        <source>Mining complete — %1 notes added in %2</source>
+        <translation>採集完成 — 在 %2 中新增 %1 則筆記</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Finished with errors</source>
+        <translation>完成時發生錯誤</translation>
+    </message>
+    <message>
+        <source>Mining failed</source>
+        <translation>採集失敗</translation>
+    </message>
+    <message>
+        <source>%1 — %2 of %3 %4 completed; %5 notes added in %6</source>
+        <translation>%1 — 已完成 %2／%3 %4；在 %6 中新增 %5 則筆記</translation>
+    </message>
+    <message>
+        <source>%1 — %2 notes added in %3</source>
+        <translation>%1 — 在 %3 中新增 %2 則筆記</translation>
+    </message>
+    <message>
+        <source>(asleep time excluded)</source>
+        <translation>（不含休眠時間）</translation>
+    </message>
+</context><context>
     <name>ResultsDialog</name>
     <message>
         <source>Processing Results</source>
         <translation>處理結果</translation>
-    </message>
-    <message>
-        <source>Success!</source>
-        <translation>成功！</translation>
     </message>
     <message>
         <source>Completed with Errors</source>
@@ -5673,8 +6136,8 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>發生錯誤</translation>
     </message>
     <message>
-        <source>Undo (%1 cards)</source>
-        <translation>復原（%1 張卡片）</translation>
+        <source>Undo (%1 notes)</source>
+        <translation>復原（%1 則筆記）</translation>
     </message>
     <message>
         <source>Close</source>
@@ -5685,67 +6148,43 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>確認復原</translation>
     </message>
     <message>
-        <source>Delete %1 cards from Anki? This cannot be undone.</source>
-        <translation>要從 Anki 刪除 %1 張卡片嗎？此操作無法復原。</translation>
+        <source>Delete %1 notes from Anki? This cannot be undone.</source>
+        <translation>要從 Anki 刪除 %1 則筆記嗎？此操作無法復原。</translation>
     </message>
     <message>
         <source>Undoing…</source>
         <translation>正在還原…</translation>
     </message>
     <message>
-        <source>Undone (%1 cards deleted)</source>
-        <translation>已復原（刪除 %1 張卡片）</translation>
+        <source>Undone (%1 notes deleted)</source>
+        <translation>已復原（已刪除 %1 則筆記）</translation>
     </message>
     <message>
         <source>Undo Failed</source>
         <translation>復原失敗</translation>
     </message>
     <message>
-        <source>Failed to delete cards. Check Anki is running.</source>
-        <translation>刪除卡片失敗。請確認 Anki 正在執行。</translation>
+        <source>Failed to delete notes. Check that Anki is running.</source>
+        <translation>無法刪除筆記。請確認 Anki 正在執行。</translation>
+    </message>
+</context><context>
+    <name>ScreenIssueBanner</name>
+    <message>
+        <source>Details</source>
+        <translation>詳細資料</translation>
+    </message>
+</context><context>
+    <name>SettingsSearchBox</name>
+    <message>
+        <source>Search settings</source>
+        <translation>搜尋設定</translation>
+    </message>
+    <message>
+        <source>No matching settings.</source>
+        <translation>沒有相符的設定。</translation>
     </message>
 </context><context>
     <name>SettingsTab</name>
-    <message>
-        <source>Anki</source>
-        <translation>Anki</translation>
-    </message>
-    <message>
-        <source>Media</source>
-        <translation>媒體</translation>
-    </message>
-    <message>
-        <source>Dictionaries</source>
-        <translation>字典</translation>
-    </message>
-    <message>
-        <source>Audio</source>
-        <translation>音訊</translation>
-    </message>
-    <message>
-        <source>Frequency</source>
-        <translation>頻率</translation>
-    </message>
-    <message>
-        <source>Pitch Accent</source>
-        <translation type="unfinished">高低音調</translation>
-    </message>
-    <message>
-        <source>Filtering</source>
-        <translation>篩選</translation>
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation>YouTube</translation>
-    </message>
-    <message>
-        <source>Subtitles</source>
-        <translation>字幕</translation>
-    </message>
-    <message>
-        <source>UI</source>
-        <translation>介面</translation>
-    </message>
     <message>
         <source>Check for updates on startup</source>
         <translation>啟動時檢查更新</translation>
@@ -5779,6 +6218,66 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>從匯出的檔案套用設定；檔案中沒有的項目會保留。</translation>
     </message>
     <message>
+        <source>Cards</source>
+        <translation>卡片</translation>
+    </message>
+    <message>
+        <source>Cards &amp; Anki</source>
+        <translation>卡片與 Anki</translation>
+    </message>
+    <message>
+        <source>Card Media</source>
+        <translation>卡片媒體</translation>
+    </message>
+    <message>
+        <source>Resources</source>
+        <translation>資源</translation>
+    </message>
+    <message>
+        <source>Dictionaries</source>
+        <translation>字典</translation>
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation>音訊</translation>
+    </message>
+    <message>
+        <source>Frequency</source>
+        <translation>頻率</translation>
+    </message>
+    <message>
+        <source>Pitch Accent</source>
+        <translation>高低音調</translation>
+    </message>
+    <message>
+        <source>Mining</source>
+        <translation>採集</translation>
+    </message>
+    <message>
+        <source>Filtering</source>
+        <translation>篩選</translation>
+    </message>
+    <message>
+        <source>Integrations</source>
+        <translation>整合</translation>
+    </message>
+    <message>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Transcription &amp; Alignment</source>
+        <translation>轉錄與對齊</translation>
+    </message>
+    <message>
+        <source>App</source>
+        <translation>應用程式</translation>
+    </message>
+    <message>
+        <source>Appearance &amp; Language</source>
+        <translation>外觀與語言</translation>
+    </message>
+    <message>
         <source>Updating yt-dlp…</source>
         <translation>正在更新 yt-dlp…</translation>
     </message>
@@ -5787,12 +6286,12 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>正在下載…</translation>
     </message>
     <message>
-        <source>yt-dlp update</source>
-        <translation>yt-dlp 更新</translation>
+        <source>yt-dlp could not be updated. Check your connection and try again.</source>
+        <translation>無法更新 yt-dlp。請檢查連線後再試。</translation>
     </message>
     <message>
-        <source>Could not update yt-dlp. Check your connection and retry.</source>
-        <translation>無法更新 yt-dlp。請檢查連線後重試。</translation>
+        <source>Settings</source>
+        <translation>設定</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
@@ -5815,22 +6314,12 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation>✓ 已儲存</translation>
     </message>
     <message>
-        <source>Export Settings</source>
-        <translation>匯出設定</translation>
+        <source>Settings could not be exported.</source>
+        <translation>無法匯出設定。</translation>
     </message>
     <message>
-        <source>JSON Files (*.json);;All Files (*)</source>
-        <translation>JSON 檔案 (*.json);;所有檔案 (*)</translation>
-    </message>
-    <message>
-        <source>Export Failed</source>
-        <translation>匯出失敗</translation>
-    </message>
-    <message>
-        <source>Could not write %1:
-%2</source>
-        <translation>無法寫入 %1：
-%2</translation>
+        <source>Retry</source>
+        <translation>重試</translation>
     </message>
     <message>
         <source>Settings Exported</source>
@@ -5839,6 +6328,14 @@ This cannot be undone. You would need to re-import to use this source again.</so
     <message>
         <source>Portable settings written to %1.</source>
         <translation>可攜式設定已寫入 %1。</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation>匯出設定</translation>
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation>JSON 檔案 (*.json);;所有檔案 (*)</translation>
     </message>
     <message>
         <source>Import Settings</source>
@@ -5857,24 +6354,12 @@ Imported values override your current settings; anything not in the file is kept
 匯入的值會覆寫你目前的設定；檔案中沒有的項目會保留。</translation>
     </message>
     <message>
-        <source>Import Failed</source>
-        <translation>匯入失敗</translation>
+        <source>Settings could not be imported.</source>
+        <translation>無法匯入設定。</translation>
     </message>
     <message>
-        <source>Could not import %1:
-%2</source>
-        <translation>無法匯入 %1：
-%2</translation>
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation>無效的字幕正規表示式</translation>
-    </message>
-    <message>
-        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
-%1</source>
-        <translation>匯入的字幕規則運算式篩選器已遭拒絕；已保留先前的篩選器：
-%1</translation>
+        <source>The imported subtitle regex filter was rejected; your previous filter was kept.</source>
+        <translation>已拒絕匯入的字幕正規表示式篩選器；已保留先前的篩選器。</translation>
     </message>
     <message>
         <source>Invalid imported fields were ignored; current values were kept: %1</source>
@@ -5921,8 +6406,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>已清除 %1 個缺少音訊的標記。這些單字將於下次採集執行時重試。</translation>
     </message>
     <message>
-        <source>Could not clear the markers: %1</source>
-        <translation>無法清除標記：%1</translation>
+        <source>The missing-audio markers could not be cleared.</source>
+        <translation>無法清除遺失音訊標記。</translation>
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5933,20 +6418,16 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>要清除本機的已知單字快取嗎？下次採集時會從 Anki 重新同步，並套用你目前的牌組排除設定。你自己從單字整理器加入的單字會保留。</translation>
     </message>
     <message>
-        <source>Could not clear the cache: %1</source>
-        <translation>無法清除快取：%1</translation>
+        <source>The known-words cache could not be cleared.</source>
+        <translation>無法清除已知單字快取。</translation>
     </message>
     <message>
         <source>Cleared %1 cached word(s). The cache will rebuild on the next run.</source>
         <translation>已清除 %1 個快取單字。快取將於下次執行時重建。</translation>
     </message>
     <message>
-        <source>Manage Known Words</source>
-        <translation>管理已知單字</translation>
-    </message>
-    <message>
-        <source>Could not open the known words list: %1</source>
-        <translation>無法開啟已知單字清單：%1</translation>
+        <source>The known words list could not be opened.</source>
+        <translation>無法開啟已知單字清單。</translation>
     </message>
 </context><context>
     <name>SetupWizard</name>
@@ -5961,6 +6442,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Skip Setup</source>
         <translation>略過設定</translation>
+    </message>
+    <message>
+        <source>Open Video Mining</source>
+        <translation>開啟影片採集</translation>
     </message>
 </context><context>
     <name>SingleEpisodeTab</name>
@@ -6029,12 +6514,28 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>字幕檔案：</translation>
     </message>
     <message>
+        <source>Card Source:</source>
+        <translation>卡片來源：</translation>
+    </message>
+    <message>
         <source>Subtitle Offset:</source>
         <translation>字幕偏移：</translation>
     </message>
     <message>
         <source>Select recent file pair...</source>
         <translation>選擇最近的檔案配對…</translation>
+    </message>
+    <message>
+        <source>Video title shown on cards</source>
+        <translation>顯示在卡片上的影片標題</translation>
+    </message>
+    <message>
+        <source>Source title stored on cards; changing it does not change analytics grouping</source>
+        <translation>儲存在卡片上的來源標題；變更不會影響分析分組</translation>
+    </message>
+    <message>
+        <source>Card source</source>
+        <translation>卡片來源</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -6045,20 +6546,12 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>調整字幕時間軸（正值 = 延後，負值 = 提前）</translation>
     </message>
     <message>
-        <source>Missing Video File</source>
-        <translation>缺少影片檔案</translation>
-    </message>
-    <message>
-        <source>Select a video file first.</source>
+        <source>Choose a video file first.</source>
         <translation>請先選擇影片檔案。</translation>
     </message>
     <message>
-        <source>File Not Found</source>
-        <translation>找不到檔案</translation>
-    </message>
-    <message>
-        <source>Video file not found: %1</source>
-        <translation>找不到影片檔案：%1</translation>
+        <source>That video file no longer exists.</source>
+        <translation>該影片檔案已不存在。</translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
@@ -6069,24 +6562,20 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>未偵測到任何音軌。請確認已安裝 ffprobe 且檔案含有音訊。</translation>
     </message>
     <message>
-        <source>Probe Failed</source>
-        <translation>探測失敗</translation>
+        <source>Audio tracks could not be read.</source>
+        <translation>無法讀取音軌。</translation>
     </message>
     <message>
-        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation>無法偵測音軌。請確認已安裝 ffprobe。</translation>
+        <source>Open Media Settings</source>
+        <translation>開啟媒體設定</translation>
     </message>
     <message>
-        <source>Missing Files</source>
-        <translation>缺少檔案</translation>
+        <source>Choose both a video file and a subtitle file.</source>
+        <translation>請同時選擇影片檔案與字幕檔案。</translation>
     </message>
     <message>
-        <source>Select both video and subtitle files.</source>
-        <translation>請同時選擇影片與字幕檔案。</translation>
-    </message>
-    <message>
-        <source>Subtitle file not found: %1</source>
-        <translation>找不到字幕檔案：%1</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>該字幕檔案已不存在。</translation>
     </message>
     <message>
         <source>No Subtitles</source>
@@ -6097,20 +6586,16 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>檔案中找不到任何字幕項目。</translation>
     </message>
     <message>
-        <source>Parse Error</source>
-        <translation>解析錯誤</translation>
+        <source>The subtitles could not be read. Check the file format.</source>
+        <translation>無法讀取字幕。請檢查檔案格式。</translation>
     </message>
     <message>
-        <source>Failed to parse subtitles. Check the file format.</source>
-        <translation>無法解析字幕。請檢查檔案格式。</translation>
+        <source>Single episode</source>
+        <translation>單集</translation>
     </message>
     <message>
-        <source>■ Cancel</source>
-        <translation>■ 取消</translation>
-    </message>
-    <message>
-        <source>Cancelling...</source>
-        <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -6127,6 +6612,18 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
 </context><context>
     <name>StatusBarWidget</name>
     <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>Running tasks</source>
+        <translation>執行中的工作</translation>
+    </message>
+    <message>
+        <source>Show what is running and go to it</source>
+        <translation>顯示正在執行的工作並前往該處</translation>
+    </message>
+    <message>
         <source>Ready</source>
         <translation>就緒</translation>
     </message>
@@ -6140,6 +6637,20 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <source>Click to view detailed system validation</source>
         <translation>點選以檢視詳細的系統驗證</translation>
     </message>
+    <message numerus="yes">
+        <source>%n task(s)</source>
+        <translation>
+            <numerusform>%n 項工作</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>Open mini monitor</source>
+        <translation>開啟迷你監控</translation>
+    </message>
+    <message>
+        <source>Checking AnkiConnect…</source>
+        <translation>正在檢查 AnkiConnect…</translation>
+    </message>
     <message>
         <source>AnkiConnect is connected</source>
         <translation>AnkiConnect 已連線</translation>
@@ -6147,6 +6658,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>AnkiConnect is not connected</source>
         <translation>AnkiConnect 未連線</translation>
+    </message>
+    <message>
+        <source>Checking ffmpeg…</source>
+        <translation>正在檢查 ffmpeg…</translation>
     </message>
     <message>
         <source>ffmpeg is available</source>
@@ -6195,6 +6710,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>失敗 — 請查看日誌</translation>
     </message>
     <message>
+        <source>Some files could not be transcribed.</source>
+        <translation>部分檔案無法轉錄。</translation>
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation>完成 — 已處理 %1 個檔案</translation>
     </message>
@@ -6205,6 +6724,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Next to source video</source>
         <translation>位於來源影片旁</translation>
+    </message>
+    <message>
+        <source>Subtitle generation</source>
+        <translation>字幕產生</translation>
     </message>
     <message>
         <source>Input</source>
@@ -6219,8 +6742,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>日文</translation>
     </message>
     <message>
-        <source>ASR engine not available. Install the [asr] extra (faster-whisper + ctranslate2) and download a model in Settings → ASR to enable subtitle generation.</source>
-        <translation>ASR 引擎無法使用。請安裝 [asr] 附加元件（faster-whisper + ctranslate2），並在「設定 → ASR」中下載模型以啟用字幕產生。</translation>
+        <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
+        <translation>轉錄尚未就緒。請開啟「設定」→「轉錄與對齊」以完成設定。</translation>
     </message>
     <message>
         <source>Mode:</source>
@@ -6245,6 +6768,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Video File:</source>
         <translation>影片檔案：</translation>
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
+        <translation>此欄位接受影片檔案。</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -6279,10 +6806,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>未勾選時，已有 .srt 檔案的影片會被略過，不會覆寫。</translation>
     </message>
     <message>
-        <source>Actions</source>
-        <translation>動作</translation>
-    </message>
-    <message>
         <source>Generate Subtitles</source>
         <translation>產生字幕</translation>
     </message>
@@ -6291,54 +6814,32 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>輸出目錄無法寫入：</translation>
     </message>
     <message>
-        <source>Model Not Downloaded</source>
-        <translation>模型未下載</translation>
+        <source>The transcription model %1 is not installed. Open Settings → Transcription &amp; Alignment to install it.</source>
+        <translation>未安裝轉錄模型 %1。請開啟「設定」→「轉錄與對齊」進行安裝。</translation>
     </message>
     <message>
-        <source>The selected ASR model (%1) has not been downloaded yet.
-Go to Settings → ASR to download it before generating subtitles.</source>
-        <translation>選定的 ASR 模型（%1）尚未下載。
-請前往「設定 → ASR」下載後再產生字幕。</translation>
+        <source>Open Transcription Settings</source>
+        <translation>開啟轉錄設定</translation>
     </message>
     <message>
-        <source>No File Selected</source>
-        <translation>未選擇檔案</translation>
-    </message>
-    <message>
-        <source>Select a video file before generating subtitles.</source>
+        <source>Choose a video file before generating subtitles.</source>
         <translation>請在產生字幕前選擇影片檔案。</translation>
     </message>
     <message>
-        <source>File Not Found</source>
-        <translation>找不到檔案</translation>
+        <source>That video file no longer exists.</source>
+        <translation>該影片檔案已不存在。</translation>
     </message>
     <message>
-        <source>Video file not found: </source>
-        <translation>找不到影片檔案：</translation>
-    </message>
-    <message>
-        <source>No Folder Selected</source>
-        <translation>未選擇資料夾</translation>
-    </message>
-    <message>
-        <source>Select a folder before generating subtitles.</source>
+        <source>Choose a folder before generating subtitles.</source>
         <translation>請在產生字幕前選擇資料夾。</translation>
     </message>
     <message>
-        <source>Folder Not Found</source>
-        <translation>找不到資料夾</translation>
+        <source>That folder no longer exists.</source>
+        <translation>該資料夾已不存在。</translation>
     </message>
     <message>
-        <source>Folder not found: </source>
-        <translation>找不到資料夾：</translation>
-    </message>
-    <message>
-        <source>No Video Files</source>
-        <translation>沒有影片檔案</translation>
-    </message>
-    <message>
-        <source>No video files found in the selected folder.</source>
-        <translation>選定的資料夾中找不到任何影片檔案。</translation>
+        <source>No video files were found in that folder.</source>
+        <translation>該資料夾中找不到影片檔案。</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -6443,6 +6944,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>失敗 — 請查看日誌</translation>
     </message>
     <message>
+        <source>Some files could not be retimed.</source>
+        <translation>部分檔案無法重新校時。</translation>
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation>完成 — 已處理 %1 個檔案</translation>
     </message>
@@ -6453,6 +6958,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Next to source video</source>
         <translation>與來源影片同一位置</translation>
+    </message>
+    <message>
+        <source>Subtitle retiming</source>
+        <translation>字幕重新校時</translation>
     </message>
     <message>
         <source>Input</source>
@@ -6491,8 +7000,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>影片檔：</translation>
     </message>
     <message>
+        <source>This field takes a video file.</source>
+        <translation>此欄位接受影片檔案。</translation>
+    </message>
+    <message>
         <source>Subtitle File:</source>
         <translation>字幕檔：</translation>
+    </message>
+    <message>
+        <source>This field takes a subtitle file.</source>
+        <translation>此欄位接受字幕檔案。</translation>
     </message>
     <message>
         <source>Audio track:</source>
@@ -6567,28 +7084,16 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>數值越低，廣告插播的切點越多。實用範圍 1–20；預設 7。</translation>
     </message>
     <message>
-        <source>Actions</source>
-        <translation>動作</translation>
-    </message>
-    <message>
         <source>Retime Subtitles</source>
         <translation>重新校時字幕</translation>
     </message>
     <message>
-        <source>No Video File Selected</source>
-        <translation>未選擇影片檔</translation>
+        <source>Choose a video file first.</source>
+        <translation>請先選擇影片檔案。</translation>
     </message>
     <message>
-        <source>Select a video file first.</source>
-        <translation>請先選擇一個影片檔。</translation>
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation>找不到檔案</translation>
-    </message>
-    <message>
-        <source>Video file not found: </source>
-        <translation>找不到影片檔：</translation>
+        <source>That video file no longer exists.</source>
+        <translation>該影片檔案已不存在。</translation>
     </message>
     <message>
         <source>No Audio Tracks</source>
@@ -6603,60 +7108,44 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>音軌 %1</translation>
     </message>
     <message>
-        <source>Probe Failed</source>
-        <translation>探測失敗</translation>
+        <source>Audio tracks could not be read.</source>
+        <translation>無法讀取音軌。</translation>
     </message>
     <message>
-        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
-        <translation>偵測音訊軌失敗。請確認已安裝 ffprobe。</translation>
+        <source>Open Media Settings</source>
+        <translation>開啟媒體設定</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
         <translation>輸出目錄無法寫入：</translation>
     </message>
     <message>
-        <source>Select a video file before retiming subtitles.</source>
-        <translation>重新校時字幕前請先選擇一個影片檔。</translation>
+        <source>Choose a video file before retiming subtitles.</source>
+        <translation>請在重新校時字幕前選擇影片檔案。</translation>
     </message>
     <message>
-        <source>No Subtitle File Selected</source>
-        <translation>未選擇字幕檔</translation>
+        <source>Choose a subtitle file before retiming subtitles.</source>
+        <translation>請在重新校時字幕前選擇字幕檔案。</translation>
     </message>
     <message>
-        <source>Select a subtitle file before retiming subtitles.</source>
-        <translation>重新校時字幕前請先選擇一個字幕檔。</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>該字幕檔案已不存在。</translation>
     </message>
     <message>
-        <source>Subtitle file not found: </source>
-        <translation>找不到字幕檔：</translation>
+        <source>Choose a video folder before retiming subtitles.</source>
+        <translation>請在重新校時字幕前選擇影片資料夾。</translation>
     </message>
     <message>
-        <source>No Video Folder Selected</source>
-        <translation>未選擇影片資料夾</translation>
+        <source>Choose a subtitle folder before retiming subtitles.</source>
+        <translation>請在重新校時字幕前選擇字幕資料夾。</translation>
     </message>
     <message>
-        <source>Select a video folder before retiming subtitles.</source>
-        <translation>重新校時字幕前請先選擇一個影片資料夾。</translation>
+        <source>That video folder no longer exists.</source>
+        <translation>該影片資料夾已不存在。</translation>
     </message>
     <message>
-        <source>No Subtitle Folder Selected</source>
-        <translation>未選擇字幕資料夾</translation>
-    </message>
-    <message>
-        <source>Select a subtitle folder before retiming subtitles.</source>
-        <translation>重新校時字幕前請先選擇一個字幕資料夾。</translation>
-    </message>
-    <message>
-        <source>Folder Not Found</source>
-        <translation>找不到資料夾</translation>
-    </message>
-    <message>
-        <source>Video folder not found: </source>
-        <translation>找不到影片資料夾：</translation>
-    </message>
-    <message>
-        <source>Subtitle folder not found: </source>
-        <translation>找不到字幕資料夾：</translation>
+        <source>That subtitle folder no longer exists.</source>
+        <translation>該字幕資料夾已不存在。</translation>
     </message>
     <message>
         <source>Matched %1 of %2 video files.</source>
@@ -6667,12 +7156,8 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>警告：有 %1 個影片檔無法配對。</translation>
     </message>
     <message>
-        <source>No Pairs Matched</source>
-        <translation>沒有配對成功</translation>
-    </message>
-    <message>
-        <source>No subtitle files could be matched to the video files in the selected folders.</source>
-        <translation>所選資料夾中沒有字幕檔能與影片檔配對。</translation>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
+        <translation>在這些資料夾中，沒有字幕檔案能與任何影片檔案配對。</translation>
     </message>
     <message>
         <source>Retiming file %1 of %2</source>
@@ -6733,12 +7218,32 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>字幕校時檢視器</translation>
     </message>
     <message>
+        <source>Space plays and pauses · Left and Right nudge 100 ms · A compares the original · Ctrl+Enter applies</source>
+        <translation>Space 播放與暫停 · Left 和 Right 微調 100 ms · A 比較原始版本 · Ctrl+Enter 套用</translation>
+    </message>
+    <message>
+        <source>Align automatically</source>
+        <translation>自動對齊</translation>
+    </message>
+    <message>
+        <source>Hand this video and subtitle to the Retime tool, which matches them by audio.</source>
+        <translation>將此影片與字幕交給重新校時工具，它會依音訊比對。</translation>
+    </message>
+    <message>
         <source>Offset:</source>
         <translation>偏移：</translation>
     </message>
     <message>
         <source>Positive = subtitles later, Negative = subtitles earlier</source>
         <translation>正值＝字幕延後，負值＝字幕提前</translation>
+    </message>
+    <message>
+        <source>Compare original (A)</source>
+        <translation>比較原始版本（A）</translation>
+    </message>
+    <message>
+        <source>Play the selected line at its original timing, to hear the difference.</source>
+        <translation>以原始時間播放選取行，以聆聽差異。</translation>
     </message>
     <message>
         <source>Apply Offset</source>
@@ -6748,11 +7253,27 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
+    <message>
+        <source>Original %1 s</source>
+        <translation>原始 %1 秒</translation>
+    </message>
+    <message>
+        <source>Offset %1 s</source>
+        <translation>偏移 %1 秒</translation>
+    </message>
+    <message>
+        <source>Loading video…</source>
+        <translation>正在載入影片…</translation>
+    </message>
+    <message>
+        <source>This video could not be played. The offset can still be set by hand.</source>
+        <translation>無法播放此影片。仍可手動設定偏移。</translation>
+    </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
     <message>
-        <source>Subtitles</source>
-        <translation>字幕</translation>
+        <source>Transcription &amp; Alignment</source>
+        <translation>轉錄與對齊</translation>
     </message>
     <message>
         <source>Speech-to-text</source>
@@ -6911,6 +7432,150 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>此平台無法使用靜音移除。</translation>
     </message>
 </context><context>
+    <name>SystemHealthWindow</name>
+    <message>
+        <source>System Health</source>
+        <translation>系統健康狀態</translation>
+    </message>
+    <message>
+        <source>What Anki Miner needs in order to mine, and whether it has it.</source>
+        <translation>Anki Miner 採集所需的項目，以及是否已具備。</translation>
+    </message>
+    <message>
+        <source>Re-check now</source>
+        <translation>立即重新檢查</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>就緒</translation>
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation>需要注意</translation>
+    </message>
+    <message>
+        <source>Not working</source>
+        <translation>無法運作</translation>
+    </message>
+    <message>
+        <source>Unknown</source>
+        <translation>未知</translation>
+    </message>
+    <message>
+        <source>Not checked yet</source>
+        <translation>尚未檢查</translation>
+    </message>
+    <message>
+        <source>Checked %1</source>
+        <translation>已檢查 %1</translation>
+    </message>
+    <message>
+        <source>Where cards go</source>
+        <translation>卡片儲存位置</translation>
+    </message>
+    <message>
+        <source>Media tools</source>
+        <translation>媒體工具</translation>
+    </message>
+    <message>
+        <source>Language resources</source>
+        <translation>語言資源</translation>
+    </message>
+    <message>
+        <source>Optional features</source>
+        <translation>選用功能</translation>
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation>更新</translation>
+    </message>
+    <message>
+        <source>AnkiConnect</source>
+        <translation>AnkiConnect</translation>
+    </message>
+    <message>
+        <source>Deck</source>
+        <translation>牌組</translation>
+    </message>
+    <message>
+        <source>Note type</source>
+        <translation>筆記類型</translation>
+    </message>
+    <message>
+        <source>Field mapping</source>
+        <translation>欄位對應</translation>
+    </message>
+    <message>
+        <source>ffmpeg</source>
+        <translation>ffmpeg</translation>
+    </message>
+    <message>
+        <source>ffprobe</source>
+        <translation>ffprobe</translation>
+    </message>
+    <message>
+        <source>Offline dictionary</source>
+        <translation>離線字典</translation>
+    </message>
+    <message>
+        <source>yt-dlp (YouTube mining)</source>
+        <translation>yt-dlp（YouTube 採集）</translation>
+    </message>
+    <message>
+        <source>alass (subtitle retiming)</source>
+        <translation>alass（字幕重新校時）</translation>
+    </message>
+    <message>
+        <source>Anki Miner updates</source>
+        <translation>Anki Miner 更新</translation>
+    </message>
+</context><context>
+    <name>ThemeCard</name>
+    <message>
+        <source>Active</source>
+        <translation>使用中</translation>
+    </message>
+    <message>
+        <source>Unfavorite</source>
+        <translation>取消收藏</translation>
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation>收藏</translation>
+    </message>
+    <message>
+        <source>Click to add to / remove from favorites.</source>
+        <translation>點按以加入／移除我的最愛。</translation>
+    </message>
+</context><context>
+    <name>ThemeGalleryWidget</name>
+    <message>
+        <source>Favorite all %1 %2 variants.</source>
+        <translation>將全部 %1 個 %2 變體加入我的最愛。</translation>
+    </message>
+    <message>
+        <source>Unfavorite all %1 %2 variants.</source>
+        <translation>將全部 %1 個 %2 變體移出我的最愛。</translation>
+    </message>
+    <message>
+        <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
+        <translation>%2 個 %3 變體中已將 %1 個加入我的最愛。點按以全部加入。</translation>
+    </message>
+</context><context>
+    <name>ThemePage</name>
+    <message>
+        <source>Pick a Look</source>
+        <translation>選擇外觀</translation>
+    </message>
+    <message>
+        <source>Click a theme to try it. You can change it any time in Settings.</source>
+        <translation>點選主題以試用。可隨時在「設定」中變更。</translation>
+    </message>
+    <message>
+        <source>See all %1 themes…</source>
+        <translation>查看全部 %1 個主題…</translation>
+    </message>
+</context><context>
     <name>UISettingsPanel</name>
     <message>
         <source>Language</source>
@@ -6933,32 +7598,36 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>%1%</translation>
     </message>
     <message>
+        <source>Scale all UI text. Applies after restart.</source>
+        <translation>縮放所有 UI 文字。重新啟動後套用。</translation>
+    </message>
+    <message>
         <source>Text size</source>
         <translation>文字大小</translation>
     </message>
     <message>
-        <source>Scale all UI text. Applies live across the app.</source>
-        <translation>縮放所有 UI 文字。即時套用到整個應用程式。</translation>
+        <source>Text size will change after restart.</source>
+        <translation>文字大小將在重新啟動後變更。</translation>
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation>立即重新啟動</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>稍後</translation>
     </message>
     <message>
         <source>Use system file dialogs</source>
         <translation>使用系統檔案對話方塊</translation>
     </message>
     <message>
-        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
-        <translation>使用作業系統的原生檔案選擇器，而非應用程式內建的選擇器。在部分 Windows 系統上，若網路磁碟機或雲端儲存不穩定，原生對話方塊可能導致應用程式凍結，因此此選項預設為關閉。</translation>
+        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
+        <translation>使用作業系統的原生檔案選擇器。關閉此選項可改用應用程式內建選擇器，它會遵循應用程式主題，且在每個平台上外觀一致。</translation>
     </message>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>為主題加上星號即可將它加入右上角的選擇器。點按任一列即可預覽——變更會即時套用到整個應用程式。按 &lt;b&gt;還原&lt;/b&gt; 即可取消您的預覽。</translation>
-    </message>
-    <message>
-        <source>Name</source>
-        <translation>名稱</translation>
-    </message>
-    <message>
-        <source>Status</source>
-        <translation>狀態</translation>
+        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>每個主題都會顯示為應用程式預覽。點選即可即時套用，並為想要顯示在右上角選擇器的主題加星號。按 &lt;b&gt;還原&lt;/b&gt; 可復原預覽。</translation>
     </message>
     <message>
         <source>Open themes folder</source>
@@ -6974,43 +7643,59 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Manage Profiles…</source>
-        <translation type="unfinished" />
+        <translation>管理設定檔…</translation>
     </message>
     <message>
         <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation type="unfinished" />
+        <translation>保留多個完整設定快照，並在它們之間切換。</translation>
     </message>
     <message>
-        <source>Active</source>
-        <translation>使用中</translation>
+        <source>button labels %1:1</source>
+        <translation>按鈕標籤 %1:1</translation>
     </message>
     <message>
-        <source>Unfavorite</source>
-        <translation>取消收藏</translation>
+        <source>button labels could not be measured</source>
+        <translation>無法測量按鈕標籤</translation>
     </message>
     <message>
-        <source>Favorite</source>
-        <translation>收藏</translation>
+        <source>muted text %1:1</source>
+        <translation>淡化文字 %1:1</translation>
     </message>
     <message>
-        <source>Click to add to / remove from favorites.</source>
-        <translation>點按以加入／移除我的最愛。</translation>
+        <source>muted text could not be measured</source>
+        <translation>無法測量淡化文字</translation>
     </message>
     <message>
-        <source>Favorite all %1 %2 variants.</source>
-        <translation>將全部 %1 個 %2 變體加入我的最愛。</translation>
+        <source>cards against the page %1:1</source>
+        <translation>卡片與頁面的對比 %1:1</translation>
     </message>
     <message>
-        <source>Unfavorite all %1 %2 variants.</source>
-        <translation>將全部 %1 個 %2 變體移出我的最愛。</translation>
+        <source>cards against the page could not be measured</source>
+        <translation>無法測量卡片與頁面的對比</translation>
     </message>
     <message>
-        <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
-        <translation>%2 個 %3 變體中已將 %1 個加入我的最愛。點按以全部加入。</translation>
+        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
+        <translation>低對比，完全依主題作者所寫顯示：%1。</translation>
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>
         <translation>開啟 %1；將佈景主題 JSON 檔案拖放至此，即可在下次啟動時安裝。</translation>
+    </message>
+    <message>
+        <source>The themes folder could not be opened.</source>
+        <translation>無法開啟主題資料夾。</translation>
+    </message>
+    <message>
+        <source>Open Parent Folder</source>
+        <translation>開啟上層資料夾</translation>
+    </message>
+    <message>
+        <source>Could not restart automatically. Close and reopen Anki Miner to apply it.</source>
+        <translation>無法自動重新啟動。請關閉後重新開啟 Anki Miner 以套用。</translation>
+    </message>
+    <message>
+        <source>The Anki Miner executable could not be located from this process.</source>
+        <translation>此程式無法定位 Anki Miner 可執行檔。</translation>
     </message>
 </context><context>
     <name>UpdateBanner</name>
@@ -7087,24 +7772,12 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>依任一欄位篩選…</translation>
     </message>
     <message>
-        <source>Acts on 2+ highlighted rows (Ctrl/Shift+Click), else all visible rows.</source>
-        <translation>適用於 2 列以上反白的列（Ctrl/Shift+點擊），否則適用於所有可見列。</translation>
-    </message>
-    <message>
-        <source>Select All</source>
-        <translation>全選</translation>
-    </message>
-    <message>
-        <source>Deselect All</source>
-        <translation>取消全選</translation>
-    </message>
-    <message>
         <source>Add to Known Words</source>
         <translation>加入已知單字</translation>
     </message>
     <message>
-        <source>Add highlighted rows to your Known Words list — never mined again.</source>
-        <translation>將反白的列新增到您的已知單字清單——之後不會再被採集。</translation>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>將醒目提示的列標記為已知 · 待處理。確認會儲存；取消會捨棄。</translation>
     </message>
     <message>
         <source>Word (mined)</source>
@@ -7129,6 +7802,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Occurrences</source>
         <translation>出現次數</translation>
+    </message>
+    <message>
+        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S 包含／排除 · Space 播放／暫停 · Ctrl+A 包含可見項目 · Ctrl+D 排除可見項目 · Ctrl+Enter 確認</translation>
+    </message>
+    <message>
+        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S 包含／排除 · Ctrl+A 包含可見項目 · Ctrl+D 排除可見項目 · Ctrl+Enter 確認</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -7163,8 +7844,50 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>複製句子</translation>
     </message>
     <message>
-        <source>%1 of %2 words selected</source>
-        <translation>已選取 %2 個單字中的 %1 個</translation>
+        <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>
+        <translation>無法儲存已知單字，因此未建立卡片。再次確認以重試，或取消以捨棄待處理標記。</translation>
+    </message>
+    <message>
+        <source>Known · pending</source>
+        <translation>已知 · 待處理</translation>
+    </message>
+    <message>
+        <source>Include visible (%1)</source>
+        <translation>包含可見項目（%1）</translation>
+    </message>
+    <message>
+        <source>Exclude visible (%1)</source>
+        <translation>排除可見項目（%1）</translation>
+    </message>
+    <message>
+        <source>Include highlighted (%1)</source>
+        <translation>包含醒目提示項目（%1）</translation>
+    </message>
+    <message>
+        <source>Word %1 of %2 · %3 included · %4 shown of %5</source>
+        <translation>單字 %1／%2 · 已包含 %3 個 · 顯示 %4／%5 個</translation>
+    </message>
+    <message>
+        <source>%1 included · %2 shown of %3</source>
+        <translation>已包含 %1 個 · 顯示 %2／%3 個</translation>
+    </message>
+</context><context>
+    <name>WorkflowActionBar</name>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1（第 %2／%3 個）</translation>
+    </message>
+    <message>
+        <source>Activity</source>
+        <translation>活動</translation>
+    </message>
+    <message>
+        <source>Show the run log for this screen.</source>
+        <translation>顯示此畫面的執行記錄。</translation>
     </message>
 </context><context>
     <name>YouTubeFetcher</name>
@@ -7187,28 +7910,18 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>自動日文字幕</translation>
     </message>
     <message>
-        <source>%1 (probing...)</source>
-        <translation>%1（探測中……）</translation>
-    </message>
-    <message>
-        <source>(probing...)</source>
-        <translation>（探測中……）</translation>
-    </message>
-    <message>
-        <source>Probe failed: %1</source>
-        <translation>探測失敗：%1</translation>
-    </message>
-    <message>
-        <source>unknown error</source>
-        <translation>未知錯誤</translation>
+        <source>Checking</source>
+        <translation>正在檢查</translation>
     </message>
     <message>
         <source>%1 cards</source>
         <translation>%1 張卡片</translation>
     </message>
+</context><context>
+    <name>YouTubeQueueWorker</name>
     <message>
-        <source>Remove from queue</source>
-        <translation>從佇列移除</translation>
+        <source>%1 · %2%</source>
+        <translation>%1 · %2%</translation>
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
@@ -7254,27 +7967,27 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Keep yt-dlp up to date automatically</source>
-        <translation type="unfinished" />
+        <translation>自動保持 yt-dlp 為最新版本</translation>
     </message>
     <message>
         <source>Auto-update</source>
-        <translation type="unfinished" />
+        <translation>自動更新</translation>
     </message>
     <message>
         <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
-        <translation type="unfinished" />
+        <translation>每天在啟動時檢查一次，並下載到 Anki Miner 自己的資料夾。關閉此選項表示 YouTube 採集最終會停止運作。</translation>
     </message>
     <message>
         <source>Optional: path to your own yt-dlp executable...</source>
-        <translation type="unfinished" />
+        <translation>選填：自訂 yt-dlp 可執行檔路徑...</translation>
     </message>
     <message>
         <source>yt-dlp location</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp 位置</translation>
     </message>
     <message>
         <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
-        <translation type="unfinished" />
+        <translation>覆寫自動偵測。除非需要特定版本，否則請留白。</translation>
     </message>
     <message>
         <source>Update yt-dlp now</source>
@@ -7303,12 +8016,20 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>採集</translation>
     </message>
     <message>
+        <source>YouTube queue</source>
+        <translation>YouTube 佇列</translation>
+    </message>
+    <message>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation>第 %1／%2 次嘗試 · 將在 %3 秒後重試</translation>
+    </message>
+    <message>
         <source>Cancelling…</source>
         <translation>取消中……</translation>
     </message>
     <message>
-        <source>Stop All</source>
-        <translation>全部停止</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Queue done: %1 succeeded, %2 failed.</source>
@@ -7345,10 +8066,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
         <translation>完成 — %1 成功，%2 失敗</translation>
-    </message>
-    <message>
-        <source>YouTube queue</source>
-        <translation>YouTube 佇列</translation>
     </message>
     <message>
         <source>Add</source>
@@ -7390,6 +8107,18 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Progress</source>
         <translation>進度</translation>
     </message>
+    <message>
+        <source>videos</source>
+        <translation>影片</translation>
+    </message>
+    <message>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation>Anki Miner 關閉時已中斷</translation>
+    </message>
+    <message>
+        <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
+        <translation>將 YouTube 連結拖放至此處。本機檔案請從「影片」與「音訊」分頁採集。</translation>
+    </message>
 </context><context>
     <name>_AddSourceDialog</name>
     <message>
@@ -7405,92 +8134,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation>URL 範本（使用 {term} 與 {reading}）：</translation>
     </message>
 </context><context>
-    <name>_ChainRow</name>
+    <name>_HealthRow</name>
     <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>&lt;i&gt; — re-import to refresh&lt;/i&gt;</source>
-        <translation>&lt;i&gt; — 重新匯入以重新整理&lt;/i&gt;</translation>
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation>%1 個項目</translation>
-    </message>
-    <message>
-        <source>Re-import</source>
-        <translation>重新匯入</translation>
-    </message>
-</context><context>
-    <name>_FreqRow</name>
-    <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>word-based</source>
-        <translation>以單字為基礎</translation>
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation>等級標籤會顯示在卡片上，但不用於頻率篩選。</translation>
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation>%1 個項目</translation>
-    </message>
-    <message>
-        <source>⚠ missing — re-import</source>
-        <translation>⚠ 遺失 — 重新匯入</translation>
-    </message>
-</context><context>
-    <name>_PackRow</name>
-    <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation>%1 個項目</translation>
-    </message>
-    <message>
-        <source>⚠ re-import required (app upgrade)</source>
-        <translation>⚠ 需要重新匯入（應用程式已升級）</translation>
-    </message>
-    <message>
-        <source>⚠ folder missing — re-import</source>
-        <translation>⚠ 資料夾遺失 — 重新匯入</translation>
-    </message>
-</context><context>
-    <name>_PitchRow</name>
-    <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation type="unfinished">%1 個項目</translation>
-    </message>
-    <message>
-        <source>⚠ missing — re-import</source>
-        <translation type="unfinished">⚠ 遺失 — 重新匯入</translation>
+        <source>Fix</source>
+        <translation>修正</translation>
     </message>
 </context><context>
     <name>app</name>

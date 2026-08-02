@@ -1,18 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE TS>
 <TS version="2.1">
-<context>
+  <context>
     <name>AboutDialog</name>
     <message>
-        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Switch tabs</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cycle favorite themes</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -20,11 +12,15 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Run system validation</source>
+        <source>Run this screen's main action</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Show this dialog</source>
+        <source>Find a Feature</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -59,6 +55,14 @@
     </message>
 </context><context>
     <name>AnalyticsTab</name>
+    <message>
+        <source>Reset Statistics…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Refresh</source>
         <translation type="unfinished" />
@@ -156,6 +160,26 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Analytics could not be refreshed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset Statistics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Statistics could not be reset.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 mining sessions completed</source>
         <translation type="unfinished" />
     </message>
@@ -200,7 +224,19 @@
 </context><context>
     <name>AnkiProbeController</name>
     <message>
-        <source>Add Deck</source>
+        <source>Select a note type before fetching fields</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No decks came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The deck list could not be read from Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -208,7 +244,33 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not fetch decks. Is Anki running with AnkiConnect?</source>
+        <source>Loading decks from Anki…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Loading note types from Anki…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load decks. Is Anki running with AnkiConnect?</source>
+        <translation type="unfinished" />
+    </message>
+    <message numerus="yes">
+        <source>%n deck(s) loaded</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>Deck '%1' is not in Anki — pick one below.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not load note types. Is Anki running with AnkiConnect?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -223,6 +285,10 @@
     </message>
 </context><context>
     <name>AnkiSettingsPanel</name>
+    <message>
+        <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>AnkiConnect URL</source>
         <translation type="unfinished" />
@@ -252,11 +318,11 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Enter deck name...</source>
+        <source>Select a deck…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sync deck list from Anki</source>
+        <source>Reload the deck list from Anki</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -268,11 +334,11 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Enter note type name...</source>
+        <source>Select a note type…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sync note type list from Anki</source>
+        <source>Reload the note type list from Anki</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -496,11 +562,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Syncing deck list...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Syncing note type list...</source>
+        <source>Refresh</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -584,19 +646,11 @@ Continue anyway?</source>
 </context><context>
     <name>AudioPackImportFlow</name>
     <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose audio pack folder</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Scan Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not scan folder: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No Audio Packs Found</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -631,11 +685,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
+        <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -647,15 +697,15 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
+        <source>The audio pack could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The import worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -675,7 +725,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-import Failed</source>
+        <source>The audio pack could not be re-imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -689,57 +739,35 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove failed</source>
+        <source>Retry</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The audio pack was not removed.</source>
+        <source>Installed audio packs could not be checked.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Files left untouched</source>
+        <source>The audio pack was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
+        <source>%1 was only partly removed. Re-import or repair this audio pack before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this audio pack before retrying.</source>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -747,19 +775,27 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Top entry is tried first.</source>
+        <source>Retry missing audio</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>+ Add Audio Pack…</source>
+        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>+ Add Online Source…</source>
+        <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add a custom audio URL source</source>
+        <source>Add audio source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove audio source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove the selected audio source</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -779,15 +815,11 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove</source>
+        <source>Audio Pack…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Retry missing expression audio</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
+        <source>Online Source…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -831,6 +863,30 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>%1 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ folder missing — re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Remove audio pack</source>
         <translation type="unfinished" />
     </message>
@@ -853,6 +909,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Re-import…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -884,11 +944,7 @@ Index files on disk will be left untouched because the folder could not be prove
 </context><context>
     <name>AudiobookQueueItemWidget</name>
     <message>
-        <source>%1 cards created</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove from queue</source>
+        <source>%1 cards</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -906,11 +962,19 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Audio queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stop All</source>
+        <source>Cancel</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -950,15 +1014,19 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio queue</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Audio File:</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Subtitle File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes an audio file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a subtitle file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1002,6 +1070,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>audiobooks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio file not found: %1</source>
         <translation type="unfinished" />
     </message>
@@ -1011,6 +1083,14 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Subtitle file not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Interrupted when Anki Miner closed</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1072,19 +1152,15 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Invalid Folders</source>
+        <source>Choose existing video and subtitle folders.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Please select valid video and subtitle folders</source>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Pairs Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No matching video/subtitle pairs found</source>
+        <source>episodes</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1092,23 +1168,23 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Series '%1' has folders that don't exist. Skipping.</source>
+        <source>Batch mining</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Incomplete Series</source>
+        <source>%1 was skipped: its folders no longer exist.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Series '%1' is missing folders. Skipping.</source>
+        <source>%1 was skipped: it is missing a folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Empty Queue</source>
+        <source>series</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No valid series in queue to process</source>
+        <source>No valid series in the queue to process.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1116,15 +1192,11 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>■ Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Cancelled</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cancelling...</source>
+        <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1148,10 +1220,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Created %1 cards</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Failed — see log</source>
         <translation type="unfinished" />
     </message>
@@ -1160,17 +1228,11 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Processed %1 series
-Total cards created: %2</source>
+        <source>Folder not found: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>
-%1 series failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Queue Processing Complete</source>
+        <source>Interrupted when Anki Miner closed</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1183,20 +1245,6 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Retrying %1 failed items...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Processed %1 episodes
-Total cards created: %2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>
-%1 episode(s) failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Batch Processing Complete</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -1326,11 +1374,11 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Backfill fields on existing cards</source>
+        <source>Fill missing fields on existing notes</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined cards.</source>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1347,6 +1395,14 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>See what you've mined over time with history and statistics.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset mining statistics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear every recorded session and difficulty score to start counting again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1628,7 +1684,7 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing fields on cards you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1672,7 +1728,7 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Scan</source>
+        <source>Scan Anki (read-only)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1696,7 +1752,11 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Apply</source>
+        <source>Update Notes in Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Backfill works on the selected Anki deck.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1709,6 +1769,10 @@ Total cards created: %2</source>
     </message>
     <message>
         <source>Select at least one field group to fill.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card backfill scan</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1736,11 +1800,19 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Nothing to overwrite — the existing pitch was kept, see below.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No new values were found for the selected fields.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} pitch field(s) kept — the reading could only be guessed from the word alone, so overwriting could have applied the wrong homograph's accent. Map an Expression Reading or Furigana field to overwrite them.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1760,13 +1832,17 @@ Total cards created: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Apply backfill?</source>
+        <source>Update notes in Anki?</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Close Anki's card browser and note editors first.
 
 This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card backfill</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1832,6 +1908,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Some files could not be condensed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation type="unfinished" />
     </message>
@@ -1841,6 +1921,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Next to source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio condensing</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1880,7 +1964,15 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>This field takes a video or audio file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a subtitle file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1988,27 +2080,19 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Actions</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Condense Audio</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Media File Selected</source>
+        <source>Open Media Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a media file first.</source>
+        <source>Choose a media file first.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>File Not Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Media file not found: </source>
+        <source>That media file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2024,11 +2108,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Probe Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <source>Audio tracks could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2040,7 +2120,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed to detect subtitle tracks. Check that ffprobe is installed.</source>
+        <source>Subtitle tracks could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2048,39 +2128,27 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a media file before condensing.</source>
+        <source>Choose a media file before condensing.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitle file not found: </source>
+        <source>That subtitle file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Media Folder Selected</source>
+        <source>Choose a media folder before condensing.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a media folder before condensing.</source>
+        <source>That media folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Folder Not Found</source>
+        <source>That subtitle folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Media folder not found: </source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle folder not found: </source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No Media Files</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No media files found in the selected folder.</source>
+        <source>No media files were found in that folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2092,11 +2160,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Pairs Matched</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No subtitle files could be matched to the media files in the selected folders.</source>
+        <source>No subtitle file could be matched to any media file in those folders.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2161,6 +2225,28 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>GPU libraries installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>CurrentJobStrip</name>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finishing %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finishing the current item</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 / %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (%2 of %3)</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2346,10 +2432,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cancelling...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Error: %1</source>
         <translation type="unfinished" />
     </message>
@@ -2376,11 +2458,15 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Enter a deck name.</source>
+        <source>Could not load decks. Is Anki running with AnkiConnect?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck not found — it will be created automatically when mining starts.</source>
+        <source>Pick a deck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No such deck. Create it in Anki, then press Refresh.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2436,11 +2522,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
+        <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2452,7 +2534,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Import Failed</source>
+        <source>The dictionary could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2468,19 +2550,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Invalid Zip</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No Recoverable Source</source>
+        <source>That folder could not be scanned.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2500,11 +2574,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-import Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>JMdict not found</source>
+        <source>The dictionary could not be re-imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2516,11 +2586,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Reimport Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Scan Failed</source>
+        <source>The dictionaries could not be re-imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2595,57 +2661,35 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove failed</source>
+        <source>Retry</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The dictionary was not removed.</source>
+        <source>Installed dictionaries could not be checked.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Files left untouched</source>
+        <source>The dictionary was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
+        <source>%1 was only partly removed. Re-import or repair this dictionary before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this dictionary before retrying.</source>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2669,14 +2713,6 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Top entry fills the MainDefinition field.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>+ Add Dictionary…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation type="unfinished" />
     </message>
@@ -2686,6 +2722,22 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
     </message>
     <message>
         <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add dictionary…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove the selected dictionary and delete its files</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2705,7 +2757,15 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove</source>
+        <source>%1 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>not installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2713,11 +2773,31 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>online</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>⚠ rate-limited, slower</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove dictionary</source>
+        <source>⚠ re-import to refresh</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2740,14 +2820,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Re-import…</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>DonePage</name>
     <message>
-        <source>All Set</source>
+        <source>Ready to Mine</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Review your setup. You can change anything later in Settings.</source>
+        <source>A last check of everything mining needs. You can change it later in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking your setup...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check your setup: </source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2763,19 +2855,19 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck: &lt;b&gt;%1&lt;/b&gt;</source>
+        <source>Deck '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Note type: &lt;b&gt;%1&lt;/b&gt;</source>
+        <source>Note type '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mapped fields: &lt;b&gt;%1&lt;/b&gt;</source>
+        <source>Every mapped field exists: &lt;b&gt;%1&lt;/b&gt;</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resources configured: &lt;b&gt;%1&lt;/b&gt;</source>
+        <source>Offline dictionary ready: &lt;b&gt;%1&lt;/b&gt;</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -2839,11 +2931,19 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>All words already in Anki!</source>
+        <source>No cards created. Every word is already in Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 1/5 — Parsing subtitles: %1</source>
+        <source>Ambiguous reading review required for %1 word(s); current readings kept</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Parsing subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitles: %1</source>
         <translation type="unfinished" />
     </message>
     <message numerus="yes">
@@ -2857,11 +2957,11 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 2/5 — Known-words filter bypassed (include everything mode)</source>
+        <source>Filtering against known vocabulary</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 2/5 — Filtering against known vocabulary</source>
+        <source>Known-words filter bypassed (include everything mode)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2935,7 +3035,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 3/5 — Extracting media from video</source>
+        <source>Extracting media</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2947,7 +3047,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 4/5 — Fetching definitions</source>
+        <source>Fetching definitions</source>
         <translation type="unfinished" />
     </message>
     <message numerus="yes">
@@ -2961,7 +3061,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 5/5 — Creating Anki cards</source>
+        <source>Creating Anki cards</source>
         <translation type="unfinished" />
     </message>
     <message numerus="yes">
@@ -3021,14 +3121,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         </translation>
     </message>
     <message>
-        <source>Step 3/5 — Preparing card images</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Step 3/5 — Preparing page images</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Preparing card images</source>
         <translation type="unfinished" />
     </message>
@@ -3057,7 +3149,11 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Step 1/5 — Parsing text: %1</source>
+        <source>Parsing text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text: %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3128,12 +3224,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Export Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed to export:
-%1</source>
+        <source>The export could not be written.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3195,11 +3286,43 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>File not found</source>
+        <source>File not found. Choose an existing file.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Folder not found</source>
+        <source>Folder not found. Choose an existing folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only files and folders can be dropped here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop one item at a time.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only local files can be dropped here.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That is a folder; this field takes a file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That is a file; this field takes a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop %1 here</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop the file here</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop the folder here</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3326,6 +3449,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skip katakana-stylized subtitle cues</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3515,11 +3646,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
+        <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3531,7 +3658,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Import Failed</source>
+        <source>The frequency source could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3547,15 +3674,11 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Scan Failed</source>
+        <source>That folder could not be scanned.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Choose frequency source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3575,7 +3698,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-import Failed</source>
+        <source>The frequency source could not be re-imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3589,57 +3712,35 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove failed</source>
+        <source>Retry</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The frequency source was not removed.</source>
+        <source>Installed frequency sources could not be checked.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Files left untouched</source>
+        <source>The frequency source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
+        <source>%1 was only partly removed. Re-import or repair this frequency source before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this frequency source before retrying.</source>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3651,7 +3752,15 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>+ Add Source…</source>
+        <source>Add frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove frequency source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove the selected frequency source</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3667,11 +3776,31 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove</source>
+        <source>word-based</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove frequency source</source>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enabled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3687,6 +3816,16 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Re-import…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>GUIPresenter</name>
+    <message>
+        <source>Step %1 of %2 — %3</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3716,15 +3855,29 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>All themes…</source>
+        <source>Browse all %1 themes…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Active theme. Top-right shows favorites; pick 'All themes…' to manage them. (Ctrl+T cycles favorites). Installed: %1</source>
+        <source>Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Manage profiles…</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>InlineReceipt</name>
+    <message>
+        <source>View details</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy summary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dismiss</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3834,16 +3987,7 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Import Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Unexpected error while reading the file:
-%1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Export Known Words</source>
+        <source>That file could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3856,21 +4000,45 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Export Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
     <name>LogWidget</name>
     <message>
+        <source>Scroll to the newest line and resume following it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Activity Log</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copy</source>
+        <source>Copy visible</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copy all log content to clipboard</source>
+        <source>Copy only the lines currently shown.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy all</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy every retained line, ignoring the filters.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save run log…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Write every retained line to a UTF-8 text file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3882,7 +4050,71 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copied!</source>
+        <source>All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Info</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Warnings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Errors</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show every line.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show progress and success lines.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show warnings only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show errors only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Lines shown of lines retained.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pause follow</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop scrolling to the newest line while you read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>↓ %1 new — Jump to latest</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save Run Log</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Saved run log to %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not save the run log: %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3900,7 +4132,7 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio</source>
+        <source>Audiobooks</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3912,7 +4144,7 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Tools</source>
+        <source>Utilities</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3940,7 +4172,7 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audio, Reading, Analytics, Tools, and Settings</source>
+        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4024,7 +4256,7 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary Change Blocked</source>
+        <source>The desktop shortcut could not be created.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4033,10 +4265,6 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Desktop Shortcut</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed to create desktop shortcut.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4056,7 +4284,11 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cannot start restyle — Anki fields are misconfigured: %1</source>
+        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Anki Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4080,6 +4312,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>The mined cards could not be restyled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
         <translation type="unfinished" />
     </message>
@@ -4096,13 +4332,11 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Validation Issues</source>
+        <source>Some system checks need attention.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>System validation found issues:
-
-%1</source>
+        <source>Open Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4118,11 +4352,11 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Validation error: %1</source>
+        <source>System check failed. Try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Validation Error</source>
+        <source>Retry</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4134,6 +4368,14 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Version %1 is available.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Running %1. No newer release was reported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Manga</source>
         <translation type="unfinished" />
     </message>
@@ -4142,7 +4384,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitles</source>
+        <source>Subtitle Files</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4162,7 +4404,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Backfill</source>
+        <source>Card Backfill</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4175,6 +4417,10 @@ Continue?</source>
     </message>
     <message>
         <source>YouTube</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed to create desktop shortcut.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4322,11 +4568,33 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>MiningTabBase</name>
+    <name>MiniJobMonitor</name>
     <message>
-        <source>Complete</source>
+        <source>Job monitor</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Nothing is running</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Job to watch</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep above other windows</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show main window</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MiningTabBase</name>
     <message>
         <source>Failed: %1 — %2</source>
         <translation type="unfinished" />
@@ -4413,11 +4681,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Configuration Update Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Import completed, but the configuration update failed: %1</source>
+        <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4429,7 +4693,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Import Failed</source>
+        <source>The pitch source could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4445,15 +4709,11 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Scan Failed</source>
+        <source>That folder could not be scanned.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Choose pitch source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-import Blocked</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4473,7 +4733,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-import Failed</source>
+        <source>The pitch source could not be re-imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4487,57 +4747,35 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove failed</source>
+        <source>Retry</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not delete %1:
-%2
-
-The pitch source was not removed.</source>
+        <source>Installed pitch accent sources could not be checked.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Files left untouched</source>
+        <source>The pitch source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The chain entry was removed, but files at %1 were left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not remove %1:
-%2
-
-The files are intact. Try again.</source>
+        <source>%1 was only partly removed. Re-import or repair this pitch source before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not complete removal of %1:
-%2
-
-The files were partially changed. Re-import or repair this pitch source before retrying.</source>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not restore %1 after its configuration update failed:
-%2
-
-The files are no longer in the installed location; a configuration update is pending. Restart Anki Miner before retrying.</source>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Removal of %1 was saved, but Anki Miner could not refresh it:
-%2
-
-The removal was saved and will remain after restart.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 was removed, but its tombstone at %2 could not be deleted:
-%3
-
-The removal is saved; cleanup is pending and will be retried at startup.</source>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4549,7 +4787,15 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>+ Add Source…</source>
+        <source>Add pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove pitch source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove the selected pitch accent source</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4565,11 +4811,23 @@ The removal is saved; cleanup is pending and will be retried at startup.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove</source>
+        <source>%1 entries</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Remove pitch source</source>
+        <source>Enabled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4585,6 +4843,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Re-import…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4664,6 +4926,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Text size</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Statistics database</source>
         <translation type="unfinished" />
     </message>
@@ -4693,10 +4959,6 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Settings Profiles</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4770,7 +5032,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Rename Failed</source>
+        <source>The profile could not be renamed.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4782,7 +5044,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Delete Failed</source>
+        <source>The profile could not be deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4793,6 +5055,88 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>ETA ~</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>QueueControlsBar</name>
+    <message>
+        <source>%1 queued · %2 ready · %3 failed · %4 complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pause after current item</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Queue locked while processing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resume</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paused after %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search the queue…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine the selected rows, in list order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Return the selected failed rows to Ready and mine them again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove selected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop the selected rows from the queue.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop cleanly once the item being mined is finished.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finish current, then stop</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Let the current item finish, then end the run.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4856,7 +5200,11 @@ This cannot be undone. You would need to re-import to use this source again.</so
 </context><context>
     <name>QueueMiningProgressAdapter</name>
     <message>
-        <source>Complete</source>
+        <source>Stage %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (%2 of %3)</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4946,6 +5294,24 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>QueueRow</name>
+    <message>
+        <source>Ready</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Running</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
         <source>Review words before mining</source>
@@ -4957,6 +5323,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>volumes</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5067,6 +5437,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Progress</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>books</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5184,6 +5558,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
+        <source>subtitle files</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle Files</source>
         <translation type="unfinished" />
     </message>
@@ -5228,6 +5606,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
+        <source>File not found: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Add Subtitle Files</source>
         <translation type="unfinished" />
     </message>
@@ -5245,10 +5627,6 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Add at least one subtitle file first.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>File not found: %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5294,7 +5672,15 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Could not process %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5307,6 +5693,26 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Complete — %1 cards created</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Novel mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Text mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -5333,6 +5739,10 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Paste text here…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop or paste text here; files are not supported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5380,49 +5790,75 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>RecoveryController</name>
+    <message>
+        <source>Pick up where you left off?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing starts on its own — restored rows wait for you.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Discard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resume %1? %2 already saved</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore previous queue? %1 items</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
-        <source>Download Blocked</source>
+        <source>Starting download…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <source>Verifying and installing…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Preparing download…</source>
+        <source>%1 downloaded · Verifying and installing…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cancel</source>
+        <source>Building index · %1 entries</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Downloading Recommended Resources</source>
+        <source>Activating</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>%1: %2</source>
+        <source>Imported, but not active — Retry setup</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>done</source>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>failed</source>
+        <source>Resource Download Cancelled</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Cancelling…</source>
+        <source>Resources Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources Partially Installed</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Resource Download Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The download worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5443,15 +5879,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resource Download Cancelled (Some Resources Installed)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Some resources were installed before cancellation.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Resource Download Cancelled</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5463,19 +5891,51 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Resources Installed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Resources Partially Installed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>No resources were processed.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Recommended Resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Resources are downloaded from their original sources; their licenses apply.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retry setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download Blocked</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Recommended resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The download worker finished without a completion result.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5489,7 +5949,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frequency, pitch accent, and a dictionary (optional).</source>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5501,11 +5961,27 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Checking for an offline dictionary...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not check the offline dictionary: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary ready: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Download cancelled. No resources were installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported, but not active — Retry setup</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5521,13 +5997,71 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>ResultsDialog</name>
+    <name>ResultCopy</name>
     <message>
-        <source>Processing Results</source>
+        <source>No cards created.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Success!</source>
+        <source>Created %1 card in '%2'</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Created %1 cards in '%2'</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Created %1 card</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Created %1 cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No cards created. Every word is already in Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copied</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining complete — %1 %2, %3 notes added in %4</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining complete — %1 notes added in %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finished with errors</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining failed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 — %2 of %3 %4 completed; %5 notes added in %6</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 — %2 notes added in %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(asleep time excluded)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ResultsDialog</name>
+    <message>
+        <source>Processing Results</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5563,7 +6097,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Undo (%1 cards)</source>
+        <source>Undo (%1 notes)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5575,7 +6109,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Delete %1 cards from Anki? This cannot be undone.</source>
+        <source>Delete %1 notes from Anki? This cannot be undone.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5583,7 +6117,7 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Undone (%1 cards deleted)</source>
+        <source>Undone (%1 notes deleted)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5591,51 +6125,27 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed to delete cards. Check Anki is running.</source>
+        <source>Failed to delete notes. Check that Anki is running.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ScreenIssueBanner</name>
+    <message>
+        <source>Details</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SettingsSearchBox</name>
+    <message>
+        <source>Search settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No matching settings.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
     <name>SettingsTab</name>
-    <message>
-        <source>Anki</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Media</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Dictionaries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Audio</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Accent</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Filtering</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>YouTube</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitles</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>UI</source>
-        <translation type="unfinished" />
-    </message>
     <message>
         <source>Check for updates on startup</source>
         <translation type="unfinished" />
@@ -5669,6 +6179,66 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards &amp; Anki</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Media</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Accent</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Filtering</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Integrations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>YouTube</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription &amp; Alignment</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>App</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Appearance &amp; Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Updating yt-dlp…</source>
         <translation type="unfinished" />
     </message>
@@ -5677,11 +6247,11 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>yt-dlp update</source>
+        <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not update yt-dlp. Check your connection and retry.</source>
+        <source>Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5705,20 +6275,11 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Export Settings</source>
+        <source>Settings could not be exported.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>JSON Files (*.json);;All Files (*)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Export Failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not write %1:
-%2</source>
+        <source>Retry</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5727,6 +6288,14 @@ This cannot be undone. You would need to re-import to use this source again.</so
     </message>
     <message>
         <source>Portable settings written to %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5744,21 +6313,11 @@ Imported values override your current settings; anything not in the file is kept
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Import Failed</source>
+        <source>Settings could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not import %1:
-%2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Invalid Subtitle Regex</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The imported subtitle regex filter was rejected; the previous filter was kept:
-%1</source>
+        <source>The imported subtitle regex filter was rejected; your previous filter was kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5804,7 +6363,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not clear the markers: %1</source>
+        <source>The missing-audio markers could not be cleared.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5816,7 +6375,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Could not clear the cache: %1</source>
+        <source>The known-words cache could not be cleared.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5824,11 +6383,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Manage Known Words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Could not open the known words list: %1</source>
+        <source>The known words list could not be opened.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -5843,6 +6398,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Skip Setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Video Mining</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -5912,11 +6471,27 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Card Source:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle Offset:</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Select recent file pair...</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Video title shown on cards</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Source title stored on cards; changing it does not change analytics grouping</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card source</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5928,19 +6503,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Missing Video File</source>
+        <source>Choose a video file first.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a video file first.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video file not found: %1</source>
+        <source>That video file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5952,23 +6519,19 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Probe Failed</source>
+        <source>Audio tracks could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <source>Open Media Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Missing Files</source>
+        <source>Choose both a video file and a subtitle file.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select both video and subtitle files.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle file not found: %1</source>
+        <source>That subtitle file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5980,19 +6543,15 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Parse Error</source>
+        <source>The subtitles could not be read. Check the file format.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed to parse subtitles. Check the file format.</source>
+        <source>Single episode</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>■ Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling...</source>
+        <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6010,6 +6569,18 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
 </context><context>
     <name>StatusBarWidget</name>
     <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Running tasks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show what is running and go to it</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Ready</source>
         <translation type="unfinished" />
     </message>
@@ -6023,12 +6594,30 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <source>Click to view detailed system validation</source>
         <translation type="unfinished" />
     </message>
+    <message numerus="yes">
+        <source>%n task(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>Open mini monitor</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking AnkiConnect…</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>AnkiConnect is connected</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>AnkiConnect is not connected</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking ffmpeg…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6078,6 +6667,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Some files could not be transcribed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation type="unfinished" />
     </message>
@@ -6087,6 +6680,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Next to source video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle generation</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6102,7 +6699,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>ASR engine not available. Install the [asr] extra (faster-whisper + ctranslate2) and download a model in Settings → ASR to enable subtitle generation.</source>
+        <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6127,6 +6724,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Video File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a video file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6162,10 +6763,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Actions</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Generate Subtitles</source>
         <translation type="unfinished" />
     </message>
@@ -6174,52 +6771,31 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Model Not Downloaded</source>
+        <source>The transcription model %1 is not installed. Open Settings → Transcription &amp; Alignment to install it.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The selected ASR model (%1) has not been downloaded yet.
-Go to Settings → ASR to download it before generating subtitles.</source>
+        <source>Open Transcription Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No File Selected</source>
+        <source>Choose a video file before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a video file before generating subtitles.</source>
+        <source>That video file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>File Not Found</source>
+        <source>Choose a folder before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Video file not found: </source>
+        <source>That folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Folder Selected</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select a folder before generating subtitles.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Folder Not Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Folder not found: </source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No Video Files</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No video files found in the selected folder.</source>
+        <source>No video files were found in that folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6325,6 +6901,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Some files could not be retimed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Complete — %1 files processed</source>
         <translation type="unfinished" />
     </message>
@@ -6334,6 +6914,10 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Next to source video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle retiming</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6373,7 +6957,15 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>This field takes a video file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes a subtitle file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6449,27 +7041,15 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Actions</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Retime Subtitles</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Video File Selected</source>
+        <source>Choose a video file first.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a video file first.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>File Not Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video file not found: </source>
+        <source>That video file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6485,11 +7065,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Probe Failed</source>
+        <source>Audio tracks could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed to detect audio tracks. Check that ffprobe is installed.</source>
+        <source>Open Media Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6497,47 +7077,31 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a video file before retiming subtitles.</source>
+        <source>Choose a video file before retiming subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Subtitle File Selected</source>
+        <source>Choose a subtitle file before retiming subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a subtitle file before retiming subtitles.</source>
+        <source>That subtitle file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitle file not found: </source>
+        <source>Choose a video folder before retiming subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Video Folder Selected</source>
+        <source>Choose a subtitle folder before retiming subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Select a video folder before retiming subtitles.</source>
+        <source>That video folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Subtitle Folder Selected</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select a subtitle folder before retiming subtitles.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Folder Not Found</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video folder not found: </source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle folder not found: </source>
+        <source>That subtitle folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6549,11 +7113,7 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No Pairs Matched</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No subtitle files could be matched to the video files in the selected folders.</source>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6615,11 +7175,31 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Space plays and pauses · Left and Right nudge 100 ms · A compares the original · Ctrl+Enter applies</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Align automatically</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hand this video and subtitle to the Retime tool, which matches them by audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Offset:</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Positive = subtitles later, Negative = subtitles earlier</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Compare original (A)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play the selected line at its original timing, to hear the difference.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6630,10 +7210,26 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Cancel</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Original %1 s</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Offset %1 s</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Loading video…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This video could not be played. The offset can still be set by hand.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SubtitlesSettingsPanel</name>
     <message>
-        <source>Subtitles</source>
+        <source>Transcription &amp; Alignment</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6793,6 +7389,150 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>SystemHealthWindow</name>
+    <message>
+        <source>System Health</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>What Anki Miner needs in order to mine, and whether it has it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-check now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not working</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Unknown</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not checked yet</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checked %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Where cards go</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media tools</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Language resources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional features</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>AnkiConnect</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Field mapping</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffmpeg</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>ffprobe</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Offline dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp (YouTube mining)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass (subtitle retiming)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner updates</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ThemeCard</name>
+    <message>
+        <source>Active</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Unfavorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Favorite</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click to add to / remove from favorites.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ThemeGalleryWidget</name>
+    <message>
+        <source>Favorite all %1 %2 variants.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Unfavorite all %1 %2 variants.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ThemePage</name>
+    <message>
+        <source>Pick a Look</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click a theme to try it. You can change it any time in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See all %1 themes…</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>UISettingsPanel</name>
     <message>
         <source>Language</source>
@@ -6815,11 +7555,23 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Scale all UI text. Applies after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Text size</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Scale all UI text. Applies live across the app.</source>
+        <source>Text size will change after restart.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restart now</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Later</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6827,19 +7579,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Use the operating system's native file pickers instead of the app's built-in ones. Native dialogs can freeze the app on some Windows systems with flaky network drives or cloud storage, which is why this is off by default.</source>
+        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Star themes to add them to the top-right selector. Click any row to preview — the change applies live across the app. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Name</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Status</source>
+        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6863,35 +7607,51 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Active</source>
+        <source>button labels %1:1</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Unfavorite</source>
+        <source>button labels could not be measured</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Favorite</source>
+        <source>muted text %1:1</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Click to add to / remove from favorites.</source>
+        <source>muted text could not be measured</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Favorite all %1 %2 variants.</source>
+        <source>cards against the page %1:1</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Unfavorite all %1 %2 variants.</source>
+        <source>cards against the page could not be measured</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
+        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The themes folder could not be opened.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Parent Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not restart automatically. Close and reopen Anki Miner to apply it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Anki Miner executable could not be located from this process.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -6969,23 +7729,11 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Acts on 2+ highlighted rows (Ctrl/Shift+Click), else all visible rows.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select All</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deselect All</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Add to Known Words</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add highlighted rows to your Known Words list — never mined again.</source>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7010,6 +7758,14 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Occurrences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7043,7 +7799,49 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 of %2 words selected</source>
+        <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Known · pending</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include visible (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude visible (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include highlighted (%1)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word %1 of %2 · %3 included · %4 shown of %5</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 included · %2 shown of %3</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>WorkflowActionBar</name>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 (%2 of %3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Activity</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Show the run log for this screen.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -7067,27 +7865,17 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>%1 (probing...)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>(probing...)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Probe failed: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>unknown error</source>
+        <source>Checking</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>%1 cards</source>
         <translation type="unfinished" />
     </message>
+</context><context>
+    <name>YouTubeQueueWorker</name>
     <message>
-        <source>Remove from queue</source>
+        <source>%1 · %2%</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -7183,11 +7971,19 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>YouTube queue</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Cancelling…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stop All</source>
+        <source>Cancel</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7224,10 +8020,6 @@ Go to Settings → ASR to download it before generating subtitles.</source>
     </message>
     <message>
         <source>Complete — %1 succeeded, %2 failed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>YouTube queue</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7270,6 +8062,18 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <source>Progress</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>videos</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>_AddSourceDialog</name>
     <message>
@@ -7285,91 +8089,9 @@ Go to Settings → ASR to download it before generating subtitles.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>_ChainRow</name>
+    <name>_HealthRow</name>
     <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>&lt;i&gt; — re-import to refresh&lt;/i&gt;</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-import</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
-    <name>_FreqRow</name>
-    <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>word-based</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Level labels are shown on the card but not used for frequency filtering.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>⚠ missing — re-import</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
-    <name>_PackRow</name>
-    <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>⚠ folder missing — re-import</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
-    <name>_PitchRow</name>
-    <message>
-        <source>Enable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable or disable %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 entries</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>⚠ missing — re-import</source>
+        <source>Fix</source>
         <translation type="unfinished" />
     </message>
 </context><context>
