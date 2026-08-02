@@ -195,6 +195,49 @@ def _fill_queue(name: str, widget: QWidget) -> None:
     widget._recompute_buttons()
 
 
+#: Height left over once the column fits, before asking who absorbs it. Big
+#: enough that the answer cannot be "nobody, by a rounding error".
+_SURPLUS_MARGIN = 120
+
+
+def _grow_until_the_page_fits(widget: QWidget) -> int:
+    """Resize ``widget`` taller until its column has surplus. Returns the surplus.
+
+    "Who takes the leftover height" is only a question on a page that *has*
+    leftover height. A crowded page in a short window is in the opposite regime:
+    the column's size hint exceeds the viewport, so ``qGeomCalc`` shrinks every
+    item towards its minimum and nobody is given anything -- the queue list sits
+    on its floor and the page scrolls, which is correct behaviour, not the
+    absorber bug this module guards.
+
+    Which regime a fixed window size lands in is not a property of the code under
+    test: it moves with the interface font (a bare CI runner's DejaVu Sans against
+    a desktop's Noto Sans CJK JP), with the UI text scale, and with whatever else
+    the page has grown since. At 1000x800 the Batch page needs 813px of column
+    against a 747px viewport on DejaVu, and all three queue pages overflow at
+    1.5x text -- so a fixed size makes this test an oracle for "does the page
+    happen to fit today", which is why it has flipped red and green repeatedly.
+
+    Growing the window until the page fits asks the absorber question in the only
+    regime where it is defined, on any font at any scale.
+    """
+    scrolls = [s for s in widget.findChildren(QScrollArea) if s.objectName() == PAGE_SCROLL_OBJECT_NAME]
+    assert scrolls, "page declares no scrolled column"
+    scroll = scrolls[0]
+    content = scroll.widget()
+    assert content is not None
+
+    # Iterate: growing the window can re-wrap text and move the hint again.
+    surplus = 0
+    for _ in range(8):
+        QApplication.processEvents()
+        surplus = scroll.viewport().height() - content.sizeHint().height()
+        if surplus >= _SURPLUS_MARGIN:
+            return surplus
+        widget.resize(widget.width(), widget.height() + (_SURPLUS_MARGIN - surplus))
+    raise AssertionError(f"page column never fit its window (last surplus {surplus}px)")
+
+
 def _visible_headings(widget: QWidget) -> list[QWidget]:
     return [
         h
@@ -251,15 +294,26 @@ def test_the_queue_list_takes_the_height_back_once_it_has_a_row(name, qtbot, tes
     queue_list = widget.queue_panel.list_widget if name == "batch" else widget.list_widget
     assert queue_list.isVisible(), f"{name}: the list stayed hidden with a row in it"
     assert not widget.page_filler.isVisible(), f"{name}: the filler still competes with the list"
+
+    # Holds in both regimes: a page too crowded for its window scrolls, it does
+    # not pay for the overflow out of its headings.
+    inflated = [
+        (h.height(), h.sizeHint().height()) for h in _visible_headings(widget) if h.height() > h.sizeHint().height() + 2
+    ]
+    assert not inflated, f"{name}: a filled queue inflated its headings: {inflated}"
+
+    # Now the absorber question itself, asked where it means something.
+    surplus = _grow_until_the_page_fits(widget)
+    QApplication.processEvents()
     assert queue_list.height() > queue_list.minimumHeight(), (
         f"{name}: the list is not taking the page's surplus "
-        f"(h={queue_list.height()}, floor={queue_list.minimumHeight()})"
+        f"(h={queue_list.height()}, floor={queue_list.minimumHeight()}, surplus={surplus})"
     )
 
     inflated = [
         (h.height(), h.sizeHint().height()) for h in _visible_headings(widget) if h.height() > h.sizeHint().height() + 2
     ]
-    assert not inflated, f"{name}: a filled queue inflated its headings: {inflated}"
+    assert not inflated, f"{name}: the grown page inflated its headings: {inflated}"
 
 
 class TestColumnHasVerticalAbsorber:

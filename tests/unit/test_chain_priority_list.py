@@ -438,9 +438,11 @@ class TestRowsCarryTheirOwnFacts:
             },
         )
 
-        assert panel._row_widget(0).metadata_label.text() != panel._row_widget(1).metadata_label.text()
-        assert "40,000 entries" in panel._row_widget(0).metadata_label.text()
-        assert "12 entries" in panel._row_widget(1).metadata_label.text()
+        # ``full_text`` throughout: the row labels elide to their current width, so
+        # ``text()`` is a pixel-dependent truncation of what was set.
+        assert panel._row_widget(0).metadata_label.full_text != panel._row_widget(1).metadata_label.full_text
+        assert "40,000 entries" in panel._row_widget(0).metadata_label.full_text
+        assert "12 entries" in panel._row_widget(1).metadata_label.full_text
 
     def test_an_empty_source_states_zero_rather_than_nothing(self, qtbot, tmp_path):
         panel = FrequencySettingsPanel(tmp_path)
@@ -450,15 +452,15 @@ class TestRowsCarryTheirOwnFacts:
             registry_meta={"empty": _freq_meta("empty", entry_count=0)},
         )
 
-        assert "0 entries" in panel._row_widget(0).metadata_label.text()
+        assert "0 entries" in panel._row_widget(0).metadata_label.full_text
 
     def test_unknown_metadata_states_nothing_rather_than_zero(self, qtbot, tmp_path):
         panel = FrequencySettingsPanel(tmp_path)
         qtbot.addWidget(panel)
         panel.set_chain((FreqEntry(source_id="gone"),), registry_meta={})
 
-        assert panel._row_widget(0).metadata_label.text() == ""
-        assert panel._row_widget(0).warning_label.text() != ""
+        assert panel._row_widget(0).metadata_label.full_text == ""
+        assert panel._row_widget(0).warning_label.full_text != ""
 
     def test_the_rows_spend_no_inline_colours(self, panel):
         """Inline ``gray``/``#d97706`` is a colour no theme could reach."""

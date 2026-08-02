@@ -338,8 +338,24 @@ class TestHeaderProfileBlockFitsTheWindowMinimum:
         return [Profile(id="anime", name=first_name), Profile(id="novels", name="Novels")]
 
     def test_two_profiles_keep_the_window_minimum_inside_its_own_contract(
-        self, qtbot, patch_heavy_init, test_config, hostile_scale
+        self,
+        qtbot,
+        patch_heavy_init,
+        test_config,
+        narrow_latin_interface_font,
+        hostile_scale,
+        # fixture order is load-bearing: the font has to be resolved before
+        # hostile_scale compiles and installs the stylesheet that carries it.
     ):
+        """Also pinned to DejaVu Sans, or this is an oracle for the dev box's fonts.
+
+        The budget is spent in ``horizontalAdvance``, and DejaVu's Latin advances
+        run wider than Noto Sans CJK JP's for the same string -- the opposite
+        direction to the ``averageCharWidth`` trap this module's other cases
+        document. The header measured 937px here and 1028px on a bare runner, so
+        the same build was inside its own contract locally and 4px outside it in
+        CI. Without the fixture this case can only ever go red on CI.
+        """
         from anki_miner.gui.app import compose_main_window
         from anki_miner.gui.constants import WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH
 
