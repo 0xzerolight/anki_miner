@@ -418,9 +418,14 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
     assert row.repair_button is not None
 
     # The name stays the name; the staleness is its own labelled fact (D13).
-    assert row.title_label.text() == "Stale Yomi"
-    assert row.warning_label.text().startswith("⚠ ")
-    assert "re-import to refresh" in row.warning_label.text()
+    # ``full_text``, not ``text()``: these are ElidingLabels, so ``text()`` is the
+    # string as truncated to the row's current width -- a pixel value that moves
+    # with the interface font. On a runner with only DejaVu Sans (Latin advances
+    # ~7% wider than Noto Sans CJK JP's) the row wants 558px instead of 541px and
+    # the warning renders "⚠ re-import to refr…".
+    assert row.title_label.full_text == "Stale Yomi"
+    assert row.warning_label.full_text.startswith("⚠ ")
+    assert "re-import to refresh" in row.warning_label.full_text
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
