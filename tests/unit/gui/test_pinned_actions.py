@@ -146,14 +146,20 @@ def test_the_activity_log_starts_closed(screen):
     assert widget.log_widget.parentWidget().isHidden()
 
 
-def test_a_warning_opens_activity_on_every_screen(screen):
+def test_a_warning_does_not_open_activity_on_any_screen(screen):
+    """No screen may hand its page to the drawer on its own initiative.
+
+    A mining run warns routinely, so an auto-open on the first warning took 40%
+    of the page on nearly every run. The receipt and the screen-issue banner are
+    the failure channel (D24); the drawer waits to be asked.
+    """
     _name, widget = screen
     bar = _bar(widget)
-    bar.begin_attempt()
 
     widget.log_widget.append_warning("something needs attention")
 
-    assert bar.is_activity_open()
+    assert not bar.is_activity_open()
+    assert widget.log_widget.parentWidget().isHidden()
 
 
 def test_batch_keeps_process_folder_in_its_card(qtbot, test_config: AnkiMinerConfig):

@@ -376,16 +376,6 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         primary_action_shortcut(self, bar.trigger_primary)
         return bar
 
-    def _begin_attempt(self) -> None:
-        """Re-arm the Activity drawer's one-shot auto-open. No-op without a bar.
-
-        Called at the top of a primary action, before validation: an attempt
-        refused for a missing file logs its warning without a worker ever
-        starting, and that warning is precisely what the drawer is for.
-        """
-        if self.action_bar is not None:
-            self.action_bar.begin_attempt()
-
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding
     # ------------------------------------------------------------------

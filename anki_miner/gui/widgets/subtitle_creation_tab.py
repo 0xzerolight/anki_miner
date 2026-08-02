@@ -331,7 +331,6 @@ class SubtitleCreationTab(_ToolTabBase):
 
     def _on_generate(self) -> None:
         """Validate then start the SubtitleGenWorker."""
-        self._begin_attempt()
         if not self._engine_is_available:
             # Should not happen (button disabled), but guard anyway.
             return

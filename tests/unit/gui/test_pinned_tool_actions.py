@@ -72,14 +72,14 @@ def test_tool_bar_and_log_sit_outside_the_scroll(tool):
     assert scroll not in _ancestors(widget.log_widget)
 
 
-def test_tool_activity_opens_on_the_first_problem(tool):
+def test_tool_activity_stays_shut_on_a_problem(tool):
+    """A tool's problems reach the screen banner, not the drawer (D24)."""
     widget, _primary = tool
     bar = _bar(widget)
-    bar.begin_attempt()
 
     widget.log_widget.append_error("one file could not be processed")
 
-    assert bar.is_activity_open()
+    assert not bar.is_activity_open()
 
 
 # ----------------------------------------------------------------- backfill

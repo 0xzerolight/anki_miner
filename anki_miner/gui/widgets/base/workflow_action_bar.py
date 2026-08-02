@@ -24,11 +24,14 @@ Two properties are load-bearing:
   else, bound to one exact ``task_id``. ``TaskSnapshot.fraction`` is ``None``
   whenever no honest denominator exists, and the bar answers that with an
   indeterminate bar rather than a number it made up.
-* **Activity opens itself exactly once per attempt.** Info and success never
-  open it; the first warning or error of an attempt does. Closing it again is
-  respected for the rest of that attempt, and :meth:`WorkflowActionBar.begin_attempt`
-  re-arms it for the next one -- so a hidden log can never swallow a problem, and
-  it also cannot keep springing open at someone who has decided to ignore it.
+* **Activity only ever opens because someone asked for it.** Nothing the run
+  logs moves the drawer: a mining run is warning-rich by nature (a word with no
+  definition, no pitch entry, no expression audio all warn), so a log-driven
+  auto-open meant the drawer took 40% of the page on essentially every run. A
+  problem still reaches the user without it -- mining screens raise an
+  :class:`~anki_miner.gui.widgets.inline_receipt.InlineReceipt` and tool screens
+  a :class:`~anki_miner.gui.widgets.base.screen_issue_banner.ScreenIssue`, both
+  off the same ``LogWidget.problem_logged`` signal (D24).
 
 The bar owns no worker, no thread and no cancellation. It is handed the screen's
 existing button objects and never builds a second copy of one.
@@ -77,10 +80,6 @@ _PROGRESS_HEIGHT = SPACING.xxs
 #: proportion of the shell's height. The page above it stays legible.
 _DRAWER_OPEN_SHARE = 0.4
 
-#: Levels that force the drawer open. Info and success never do: a run that is
-#: going to plan must not keep stealing the page it is running on.
-_PROBLEM_LEVELS = frozenset({"WARNING", "ERROR"})
-
 
 class WorkflowActionBar(QWidget):
     """The always-visible foot of a workflow page. See the module docstring."""
@@ -97,7 +96,6 @@ class WorkflowActionBar(QWidget):
         self._run_token: int | None = None
         self._drawer: QWidget | None = None
         self._splitter: QSplitter | None = None
-        self._auto_open_armed = True
         # Set once the splitter has been given an opening split, so a reopen
         # keeps whatever height the user dragged the drawer to.
         self._drawer_sized = False
@@ -197,8 +195,8 @@ class WorkflowActionBar(QWidget):
         panel that implies a log exists somewhere.
 
         Args:
-            log: The screen's existing ``LogWidget``. Its ``problem_logged``
-                signal, if it has one, drives the one-shot auto-open.
+            log: The screen's existing ``LogWidget``. Nothing it logs is wired
+                to the drawer -- the control is the only thing that opens it.
             drawer: The container whose visibility the control toggles. Defaults
                 to ``log`` itself; :func:`install_workflow_shell` passes the
                 splitter pane it wrapped the log in.
@@ -208,9 +206,6 @@ class WorkflowActionBar(QWidget):
         self._remeasure()
         if log is None:
             return
-        problem_logged = getattr(log, "problem_logged", None)
-        if problem_logged is not None:
-            problem_logged.connect(self._on_problem_logged)
         self.set_activity_open(False)
 
     def set_activity_open(self, is_open: bool) -> None:
@@ -236,28 +231,8 @@ class WorkflowActionBar(QWidget):
         """
         return self._drawer is not None and not self._drawer.isHidden()
 
-    def begin_attempt(self) -> None:
-        """Re-arm the one-shot auto-open for a fresh attempt at the action.
-
-        Called before validation, not after launch: an attempt refused by a
-        missing file logs its warning without a worker ever starting, and that
-        warning is exactly the kind the drawer exists to surface.
-
-        Deliberately does not close a drawer the user opened -- re-arming is
-        about the next problem, not about tidying the page.
-        """
-        self._auto_open_armed = True
-
-    def _on_problem_logged(self, level: str, _message: str) -> None:
-        """Open the drawer for the first problem of an attempt, once."""
-        if level not in _PROBLEM_LEVELS or not self._auto_open_armed:
-            return
-        self._auto_open_armed = False
-        self.set_activity_open(True)
-
     def _on_activity_toggled(self, checked: bool) -> None:
-        """A click on Activity is the user's decision and outranks the arming."""
-        self._auto_open_armed = False
+        """A click on Activity is the only thing that moves the drawer."""
         self.set_activity_open(checked)
 
     def set_resize_host(self, splitter: QSplitter) -> None:

@@ -380,7 +380,6 @@ class BatchProcessingTab(MiningTabBase):
         if self._is_processing:
             return
 
-        self._begin_attempt()
         folders = self._get_validated_folders()
         if not folders:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
@@ -560,7 +559,6 @@ class BatchProcessingTab(MiningTabBase):
         if self._is_processing:
             return
 
-        self._begin_attempt()
         # The rows themselves are the model now: each one bound to a persistent
         # QueueItem when its folders validated. The queue is NOT rebuilt here --
         # doing so would mint new identities and lose the episode receipts that

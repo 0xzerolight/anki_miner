@@ -227,55 +227,29 @@ def test_hidden_log_still_accumulates(qtbot):
     assert "second" in log.full_text()
 
 
-def test_info_and_success_never_open_activity(qtbot):
+def test_nothing_the_log_says_opens_activity(qtbot):
+    """The drawer is the user's to open. A run cannot take the page off them.
+
+    A mining run warns as a matter of course -- a word with no definition, no
+    pitch entry, no expression audio -- so a log-driven open fired on nearly
+    every run. Problems reach the user through the inline receipt and the
+    screen-issue banner instead (D24).
+    """
     _page_widget, _scroll, bar, log = _page(qtbot)
-    bar.begin_attempt()
 
     log.append_info("started")
     log.append_success("done")
-
-    assert not bar.is_activity_open()
-
-
-def test_first_warning_opens_activity(qtbot):
-    _page_widget, _scroll, bar, log = _page(qtbot)
-    bar.begin_attempt()
-
     log.append_warning("no subtitle track")
-
-    assert bar.is_activity_open()
-
-
-def test_manual_close_prevents_a_second_forced_open_in_the_same_attempt(qtbot):
-    _page_widget, _scroll, bar, log = _page(qtbot)
-    bar.begin_attempt()
-    log.append_warning("first problem")
-    bar.activity_button.setChecked(False)
-    assert not bar.is_activity_open()
-
-    log.append_error("second problem")
+    log.append_error("Anki is not running")
 
     assert not bar.is_activity_open()
 
 
-def test_begin_attempt_rearms_the_auto_open(qtbot):
+def test_a_problem_does_not_close_a_drawer_the_user_opened(qtbot):
     _page_widget, _scroll, bar, log = _page(qtbot)
-    bar.begin_attempt()
-    log.append_warning("first problem")
-    bar.activity_button.setChecked(False)
-
-    bar.begin_attempt()
-    log.append_error("a new attempt failed")
-
-    assert bar.is_activity_open()
-
-
-def test_begin_attempt_does_not_close_a_drawer_the_user_opened(qtbot):
-    _page_widget, _scroll, bar, _log = _page(qtbot)
     bar.activity_button.setChecked(True)
-    assert bar.is_activity_open()
 
-    bar.begin_attempt()
+    log.append_error("Anki is not running")
 
     assert bar.is_activity_open()
 
