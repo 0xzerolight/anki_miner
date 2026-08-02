@@ -17,6 +17,7 @@ ranked above 20.
 from collections.abc import Callable, Iterable, Sequence
 from enum import Enum
 
+from PyQt6 import sip
 from PyQt6.QtCore import QEvent, QModelIndex, QObject, QSize, Qt, QUrl
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
@@ -55,6 +56,29 @@ CELL_PADDING = SPACING.xs
 #: this is, ``QTableWidget::item``'s vertical padding in ``common.qss`` must
 #: match it, or the taller of the two wins and the shorter one clips.
 CELL_PADDING_Y = SPACING.xxs
+
+
+def widget_alive(widget: QObject) -> bool:
+    """True unless ``widget``'s underlying C++ object has been destroyed.
+
+    A deferred callback — a queued worker-completion signal, or a file
+    dialog's ``finished`` — can be delivered *after* its target is torn down
+    (a tab closed mid-probe, a dialog dismissed while its picker was open, or
+    test teardown freeing the widget tree). Touching the dead wrapper then
+    raises ``RuntimeError: wrapped C/C++ object of type ... has been deleted``.
+    Guard the target with this so a late callback no-ops instead of crashing
+    the Qt event loop.
+
+    Prefer this over a blanket ``contextlib.suppress(RuntimeError)`` around the
+    callback: the suppress would also swallow a RuntimeError raised by the
+    callback's own body, hiding real failures.
+
+    Non-wrapped objects (e.g. a test ``MagicMock`` panel) aren't sip-tracked,
+    so ``isdeleted`` would reject them — treat those as always alive.
+    """
+    if not isinstance(widget, sip.simplewrapper):
+        return True
+    return not sip.isdeleted(widget)
 
 
 def urls_from_event(event: QDropEvent | QDragEnterEvent) -> list[QUrl]:

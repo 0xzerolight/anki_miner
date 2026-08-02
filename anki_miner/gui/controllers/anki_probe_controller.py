@@ -14,11 +14,11 @@ Save.
 from collections.abc import Callable
 from dataclasses import replace
 
-from PyQt6 import sip
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.qt_helpers import widget_alive
 from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
@@ -104,17 +104,13 @@ class AnkiProbeController:
         A worker's completion signal is queued cross-thread, so it can be
         delivered *after* the target panel is torn down (a tab closed mid-probe,
         or test teardown freeing the widget tree before the worker emits).
-        Touching the dead wrapper then raises ``RuntimeError: wrapped C/C++
-        object of type ... has been deleted``. Every worker-completion slot
-        guards its target widget with this so a late signal no-ops instead of
-        crashing the Qt event loop.
+        Every worker-completion slot guards its target widget with this so a
+        late signal no-ops instead of crashing the Qt event loop.
 
-        Non-wrapped objects (e.g. a test ``MagicMock`` panel) aren't sip-tracked,
-        so ``isdeleted`` would reject them — treat those as always alive.
+        Thin alias for :func:`widget_alive`, kept because every probe slot in
+        this class reads better with it.
         """
-        if not isinstance(widget, sip.simplewrapper):
-            return True
-        return not sip.isdeleted(widget)
+        return widget_alive(widget)
 
     # === Fetch fields ===
 
