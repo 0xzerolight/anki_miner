@@ -36,7 +36,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -306,7 +306,55 @@ class EncoderUnavailableError(Exception):
 
 
 class _CondenseOutputIncomplete(Exception):
-    """Internal control flow: discard a failed/cancelled staged output."""
+    """Internal control flow: discard a failed/cancelled staged output.
+
+    Carries the step's :class:`FfmpegStepFailure` (None on cancel) so the reason
+    survives unwinding out of the ``atomic_write_path`` context.
+    """
+
+    def __init__(self, failure: FfmpegStepFailure | None = None) -> None:
+        super().__init__()
+        self.failure = failure
+
+
+#: Cap for the ffmpeg line quoted back to the user. The full tail already goes to
+#: the log; the line that named the aselect-depth bug WAS the whole 4 KB filter
+#: expression, and an Activity Log entry (and the Copy buffer behind it) must not
+#: become a wall of ffmpeg output.
+_FAILURE_REASON_MAX_CHARS = 200
+
+
+@dataclass(frozen=True)
+class FfmpegStepFailure:
+    """Why a streaming ffmpeg step failed, condensed to one user-facing line.
+
+    ``returncode`` is None when the process never launched. ``reason`` is the
+    last meaningful line ffmpeg printed (its errors come last, so the *last*
+    line is the diagnostic one — the first is the input banner), or the OSError
+    text for a launch failure.
+    """
+
+    returncode: int | None
+    timed_out: bool
+    reason: str
+
+    def summary(self) -> str:
+        """One short line: what ffmpeg did and the last thing it said."""
+        if self.returncode is None:
+            head = "ffmpeg could not be started"
+        elif self.timed_out:
+            head = f"ffmpeg timed out (exit {self.returncode})"
+        else:
+            head = f"ffmpeg exited {self.returncode}"
+        return f"{head}: {self.reason}" if self.reason else head
+
+
+def _failure_reason(lines: Iterable[str], fallback: str = "") -> str:
+    """Pick the most diagnostic line from ffmpeg's output tail, truncated."""
+    reason = next((line.strip() for line in reversed(list(lines)) if line.strip()), fallback)
+    if len(reason) > _FAILURE_REASON_MAX_CHARS:
+        reason = reason[: _FAILURE_REASON_MAX_CHARS - 1] + "…"
+    return reason
 
 
 def build_aselect_graph(periods: list[Period]) -> str:
@@ -424,7 +472,7 @@ class AudioCondenserService:
             str(out_path),
         ]
 
-        ok = self._run_streaming(
+        ok, _failure = self._run_streaming(
             cmd,
             total_period_ms=0,
             timeout=_EMBEDDED_SUBTITLE_TIMEOUT,
@@ -452,7 +500,7 @@ class AudioCondenserService:
         bitrate_kbps: int = 96,
         progress_cb: Callable[[int], None] | None = None,
         cancel_event: threading.Event | None = None,
-    ) -> bool:
+    ) -> tuple[bool, FfmpegStepFailure | None]:
         """Condense *media* down to only *periods* of audio, writing *out_audio*.
 
         Runs a single streaming ffmpeg pass (design D2): one decode, exact PTS,
@@ -460,14 +508,17 @@ class AudioCondenserService:
         ``out_audio.suffix`` (``.mp3`` → libmp3lame, ``.opus`` → libopus + stereo
         downmix, ``.flac`` → flac). libmp3lame/libopus are pre-probed and a
         missing encoder raises :class:`EncoderUnavailableError` (so a batch
-        aborts once). An empty *periods* list returns ``False`` immediately
-        (never runs ffmpeg with a select-nothing graph). Progress is reported
-        0–100 via *progress_cb* off the ``-progress`` stream; *cancel_event*
-        kills the in-flight process. Returns ``True`` only on a clean exit.
+        aborts once). An empty *periods* list fails immediately (never runs
+        ffmpeg with a select-nothing graph). Progress is reported 0–100 via
+        *progress_cb* off the ``-progress`` stream; *cancel_event* kills the
+        in-flight process.
+
+        Returns ``(ok, failure)`` — see :meth:`_run_streaming`. ``failure`` is
+        None on both success and cancel.
         """
         if not periods:
             logger.warning("Condense called with no keep-periods for %s — nothing to do.", media)
-            return False
+            return False, FfmpegStepFailure(None, False, "no dialogue periods to keep")
 
         encoder, uses_bitrate, downmix = _encoder_settings(out_audio.suffix)
         if encoder in _PROBE_REQUIRED and not self.extractor._check_encoder_available(encoder):
@@ -517,7 +568,7 @@ class AudioCondenserService:
                     # the kept duration with a floor for tiny selections.
                     timeout = max(600.0, total_ms / 1000 * 4)
 
-                    ok = self._run_streaming(
+                    ok, failure = self._run_streaming(
                         cmd,
                         total_period_ms=total_ms,
                         timeout=timeout,
@@ -525,10 +576,10 @@ class AudioCondenserService:
                         cancel_event=cancel_event,
                     )
                     if not ok:
-                        raise _CondenseOutputIncomplete
-            except _CondenseOutputIncomplete:
-                return False
-            return True
+                        raise _CondenseOutputIncomplete(failure)
+            except _CondenseOutputIncomplete as incomplete:
+                return False, incomplete.failure
+            return True, None
         finally:
             # The graph file is the ONLY temp this service owns (extracted subs
             # belong to the caller). Clean it on every path.
@@ -545,7 +596,7 @@ class AudioCondenserService:
         timeout: float,
         progress_cb: Callable[[int], None] | None,
         cancel_event: threading.Event | None,
-    ) -> bool:
+    ) -> tuple[bool, FfmpegStepFailure | None]:
         """Run *cmd* streaming, parsing ``-progress`` and honouring cancel/timeout.
 
         Modeled on ``subtitle_retimer._run_alass``: ``stderr`` is merged into the
@@ -554,7 +605,13 @@ class AudioCondenserService:
         ``out_time_ms`` are BOTH microseconds — ffmpeg trac #7345), non-progress
         lines are kept in a bounded tail for failure diagnostics, and a watcher
         thread kills the process when *cancel_event* fires or *timeout* elapses.
-        Returns ``True`` only on a clean (non-cancelled, exit-0) finish.
+
+        Returns ``(ok, failure)``. ``ok`` is True only on a clean (non-cancelled,
+        exit-0) finish. ``failure`` carries the exit code / timed-out flag / last
+        ffmpeg line for a real failure, and is None for both success and cancel
+        (a cancel is the user's doing, not a fault to report). The pair is
+        deliberately a tuple rather than a returned object: callers test the
+        result for truth, and any struct — however "empty" — is truthy.
         """
         try:
             proc = subprocess.Popen(
@@ -568,7 +625,7 @@ class AudioCondenserService:
             )
         except (OSError, subprocess.SubprocessError) as exc:
             logger.error("Failed to launch ffmpeg (%s): %s", cmd[0], exc)
-            return False
+            return False, FfmpegStepFailure(None, False, _failure_reason([], str(exc)))
 
         done_event = threading.Event()
         timed_out = threading.Event()
@@ -595,7 +652,7 @@ class AudioCondenserService:
         if proc.stdout is None:  # pragma: no cover - stdout=PIPE always yields a pipe
             done_event.set()
             watcher.join()
-            return False
+            return False, FfmpegStepFailure(proc.returncode, False, "ffmpeg produced no output pipe")
 
         pending_us: int | None = None
         last_pct = -1
@@ -627,10 +684,10 @@ class AudioCondenserService:
         if not cancelled and proc.returncode == 0:
             if progress_cb is not None and last_pct < 100:
                 progress_cb(100)
-            return True
+            return True, None
 
         if cancelled:
-            return False
+            return False, None
 
         logger.warning(
             "ffmpeg step failed (exit %s%s). Last output:\n%s",
@@ -638,7 +695,7 @@ class AudioCondenserService:
             ", timed out" if timed_out.is_set() else "",
             "\n".join(tail),
         )
-        return False
+        return False, FfmpegStepFailure(proc.returncode, timed_out.is_set(), _failure_reason(tail))
 
 
 def _emit_progress(
@@ -711,12 +768,17 @@ class CondenseResult:
     ``sidecar_error`` is the raw exception string when the audio succeeded but the
     optional condensed SRT/LRC sidecar write failed (non-fatal — the worker
     surfaces it as a warning on an otherwise-successful result).
+    ``failure_reason`` is the short one-line ffmpeg diagnosis behind a
+    :attr:`CondenseStatus.CONDENSE_FAILED` — that status covers a launch failure,
+    a nonzero exit and a timeout alike, so without it the user sees three
+    unrelated faults as one opaque message.
     """
 
     status: CondenseStatus
     out_audio: Path | None = None
     codecs: str | None = None
     sidecar_error: str | None = None
+    failure_reason: str | None = None
 
 
 def condense_one(
@@ -769,7 +831,7 @@ def condense_one(
         if not periods:
             return CondenseResult(CondenseStatus.NO_DIALOGUE)
 
-        ok = service.condense(
+        ok, step_failure = service.condense(
             media,
             periods,
             out_audio,
@@ -781,7 +843,10 @@ def condense_one(
         if not ok:
             if _is_cancelled(cancel_event):
                 return CondenseResult(CondenseStatus.CANCELLED)
-            return CondenseResult(CondenseStatus.CONDENSE_FAILED)
+            return CondenseResult(
+                CondenseStatus.CONDENSE_FAILED,
+                failure_reason=step_failure.summary() if step_failure is not None else None,
+            )
 
         sidecar_error = _write_condensed_subs(filtered, periods, out_audio) if write_subs else None
         return CondenseResult(CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error)
