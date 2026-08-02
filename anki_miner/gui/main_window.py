@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QKeySequence, QShortcut
+from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QIcon, QKeySequence, QShortcut, QShowEvent, QWindowStateChangeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -46,6 +46,7 @@ from anki_miner.gui.utils.keyboard_shortcuts import (
     SETTINGS_SEQUENCE,
     TAB_SEQUENCE_TEMPLATE,
 )
+from anki_miner.gui.utils.qt_helpers import fit_window_minimum, widget_alive
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
@@ -123,6 +124,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # close runs closeEvent again after the window has been hidden, and the
         # hidden window's geometry is not what the user left behind.
         self._session_state_saved = False
+        self._screen_change_tracked = False
         # Set once closeEvent has committed to quitting — see is_shutting_down.
         self._close_committed = False
 
@@ -313,6 +315,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.setWindowTitle("Anki Miner")
         self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.resize(WINDOW_DEFAULT_WIDTH, WINDOW_DEFAULT_HEIGHT)
+        # Before anything is restored: the floor decides what a restore can
+        # land on, so a screen-sized cap has to be in place first.
+        self._apply_screen_fit()
 
         # Create central widget with layout
         central_widget = QWidget()
@@ -648,12 +653,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         would un-maximise the window it just restored. The centred default is
         only for an absent or unusable blob.
 
+        ``_apply_screen_fit`` runs afterwards because a blob written on a bigger
+        monitor comes back bigger than this one; it leaves a maximised or
+        full-screen window alone, so it cannot undo the restore above.
+
         Scroll positions are not restored, here or anywhere: nothing writes them,
         so every restored page opens at the top.
         """
         blob = session_state.load_geometry()
         if blob is None or not self.restoreGeometry(blob):
             self._apply_default_geometry()
+        self._apply_screen_fit()
 
         main_tab, subtabs = session_state.load_route()
         # Sub-tabs first: switching the main tab afterwards lands on a container
@@ -670,11 +680,98 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if index >= 0:
                 self.tabs.setCurrentIndex(index)
 
+    def _apply_screen_fit(self) -> None:
+        """Keep the window inside the screen it is on, minimum included.
+
+        The 1024x768 minimum is a design contract written in logical pixels, and
+        on Windows at the 150% scaling it recommends for a 1080p laptop the work
+        area is only ~1280x672. A minimum taller than the screen is enforced by
+        Windows on every sizing operation, so the restore from maximised lands
+        back on a screen-filling rect and the borders stop dragging: the window
+        reads as stuck maximised, and because ``saveGeometry`` persists the
+        maximised state it comes back that way at every launch.
+
+        Two halves, both needed. The cap (:func:`fit_window_minimum`) is what
+        makes a smaller size *legal*; shrinking an already-oversized window is
+        what makes leaving the maximised state visibly do something, because
+        Windows hands back the pre-maximise rect, which is oversized too.
+
+        A maximised or full-screen window is left exactly as it is — that state
+        is the user's, and touching its geometry would cancel it.
+        """
+        screen = self.screen() or QApplication.primaryScreen()
+        if screen is None:
+            return
+        available = screen.availableGeometry()
+        frame = self.frameGeometry()
+        # Both the cap and the shrink are budgeted against the *client* area,
+        # because that is what ``setMinimumSize`` and ``resize`` address while
+        # it is the frame that has to fit the work area. Zero until the native
+        # window exists, which is why this is re-run from ``showEvent``.
+        budget = available.size() - (frame.size() - self.size())
+        self.setMinimumSize(fit_window_minimum(QSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT), budget))
+
+        if self.windowState() & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen):
+            return
+        if available.contains(frame):
+            return
+        self.resize(fit_window_minimum(self.size(), budget))
+        # move() positions a top-level window by its frame, which is what has to
+        # land inside the work area.
+        frame = self.frameGeometry()
+        frame.moveLeft(max(available.left(), min(frame.left(), available.right() - frame.width() + 1)))
+        frame.moveTop(max(available.top(), min(frame.top(), available.bottom() - frame.height() + 1)))
+        self.move(frame.topLeft())
+
+    def changeEvent(self, a0: QEvent | None) -> None:  # noqa: N802 - Qt override
+        """Refit the window when it stops being maximised.
+
+        The restore hands back the geometry the window had before it was
+        maximised, which on an affected screen was already oversized. Without
+        this the restore button appears to do nothing.
+
+        Deferred by one event-loop turn because Qt delivers the state change
+        *before* it applies the restored normal geometry — refitting inline
+        would be overwritten a moment later (measured, offscreen and X11).
+        """
+        super().changeEvent(a0)
+        if a0 is None or a0.type() != QEvent.Type.WindowStateChange:
+            return
+        was_maximised = isinstance(a0, QWindowStateChangeEvent) and bool(
+            a0.oldState() & (Qt.WindowState.WindowMaximized | Qt.WindowState.WindowFullScreen)
+        )
+        if was_maximised and not self.is_shutting_down():
+            QTimer.singleShot(0, self._deferred_screen_fit)
+
+    def _deferred_screen_fit(self) -> None:
+        """``_apply_screen_fit`` for a timer that can outlive the window."""
+        if widget_alive(self):
+            self._apply_screen_fit()
+
+    def showEvent(self, a0: QShowEvent | None) -> None:  # noqa: N802 - Qt override
+        """Track screen changes once the native window exists.
+
+        ``windowHandle()`` is ``None`` until the window is created, so the
+        connection cannot be made in ``_setup_ui``. Dragging the window from a
+        4K monitor onto a 1366x768 laptop panel is the same bug arriving late.
+
+        The refit is repeated here because the window frame only has a size once
+        the platform window exists, and the frame is what has to fit.
+        """
+        super().showEvent(a0)
+        handle = self.windowHandle()
+        if handle is not None and not self._screen_change_tracked:
+            self._screen_change_tracked = True
+            handle.screenChanged.connect(lambda _screen: self._apply_screen_fit())
+        self._apply_screen_fit()
+
     def _apply_default_geometry(self) -> None:
         """1280x800 centred on the primary screen — the no-saved-state default.
 
         Clamped to the screen's available area so the default cannot start
-        partly off a small display; ``setMinimumSize`` still floors it.
+        partly off a small display. ``setMinimumSize`` no longer defeats the
+        clamp: ``_apply_screen_fit`` has already capped the minimum at the
+        screen.
         """
         screen = QApplication.primaryScreen()
         if screen is None:

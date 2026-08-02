@@ -165,6 +165,34 @@ def add_min_max_buttons(dialog: QDialog) -> None:
     )
 
 
+def fit_window_minimum(desired: QSize, available: QSize) -> QSize:
+    """Cap a window's wanted minimum size at what the screen can actually show.
+
+    A minimum taller or wider than the work area is not a floor, it is a trap.
+    Windows enforces it as the ``WM_GETMINMAXINFO`` min track size, so *every*
+    sizing operation clamps back up to it: the restore from maximised lands on
+    a rect that still covers the screen, and dragging a border does nothing.
+    The window reads as permanently stuck maximised.
+
+    Reachable with an ordinary setup because Qt sizes are logical pixels: a
+    1920x1080 laptop at the 150% scaling Windows recommends is 1280x720 logical
+    with a ~672px work area, and ``ui_zoom`` multiplies on top of that.
+
+    Per-axis, so a screen that is only short keeps the full width. This caps the
+    *explicit* minimum only -- Qt still floors a window at its layout's own
+    ``minimumSizeHint``, which is the honest answer when the content genuinely
+    does not fit.
+
+    Args:
+        desired: The minimum the window would like (its design contract).
+        available: The screen's available (work-area) size.
+    """
+    return QSize(
+        min(desired.width(), available.width()),
+        min(desired.height(), available.height()),
+    )
+
+
 class _NoScrollEventFilter(QObject):
     """Swallow wheel events on unfocused spin/combo widgets (Issue #99).
 
