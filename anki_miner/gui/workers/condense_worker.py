@@ -237,4 +237,15 @@ class CondenseWorker(FileQueueWorker):
         elif status is CondenseStatus.NO_DIALOGUE:
             self.file_finished.emit(idx, None, tr_format(self.tr("No dialogue lines found in %1"), name))
         elif status is CondenseStatus.CONDENSE_FAILED:
-            self.file_finished.emit(idx, None, tr_format(self.tr("Condensing failed for %1"), name))
+            # CONDENSE_FAILED covers a launch failure, a nonzero exit and a
+            # timeout alike, so the bare name is not actionable — carry ffmpeg's
+            # own one-line diagnosis. The full 50-line tail stays in the log:
+            # for the aselect-depth bug the offending line was the whole 4 KB
+            # filter expression, and this string lands in the Activity Log and
+            # the Copy buffer behind it.
+            self.file_finished.emit(
+                idx,
+                None,
+                tr_format(self.tr("Condensing failed for %1"), name)
+                + (f" — {result.failure_reason}" if result.failure_reason else ""),
+            )

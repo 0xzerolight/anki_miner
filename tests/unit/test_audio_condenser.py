@@ -8,6 +8,7 @@ is validated later at E2E).
 
 from __future__ import annotations
 
+import math
 import subprocess
 import threading
 from pathlib import Path
@@ -22,6 +23,7 @@ from anki_miner.services.audio_condenser import (
     CondenseResult,
     CondenseStatus,
     EncoderUnavailableError,
+    FfmpegStepFailure,
     build_aselect_graph,
     build_periods,
     condense_one,
@@ -502,7 +504,45 @@ def test_build_aselect_graph_single_period_float_seconds():
 
 def test_build_aselect_graph_multi_period_ms_to_seconds():
     graph = build_aselect_graph([(500, 1500), (3000, 4200)])
-    assert graph == "aselect='between(t,0.500,1.500)+between(t,3.000,4.200)',asetpts=N/SR/TB"
+    assert graph == "aselect='(between(t,0.500,1.500)+between(t,3.000,4.200))',asetpts=N/SR/TB"
+
+
+def test_build_aselect_graph_rejects_empty_periods():
+    with pytest.raises(ValueError):
+        build_aselect_graph([])
+
+
+def _max_paren_depth(expr: str) -> int:
+    depth = peak = 0
+    for ch in expr:
+        if ch == "(":
+            depth += 1
+            peak = max(peak, depth)
+        elif ch == ")":
+            depth -= 1
+    return peak
+
+
+def test_build_aselect_graph_nesting_stays_logarithmic():
+    """The `+` tree must be BALANCED, not merely parenthesised.
+
+    ffmpeg's expression parser has a fixed budget that a 125-term expression
+    blows in two different ways: a flat ``a+b+c`` chain dies past 100 terms with
+    ENOMEM, and a fully-parenthesised but left- or right-leaning chain dies at
+    100 with EINVAL. Only a balanced tree (depth ~log2 n) clears both, so depth
+    is what this pins — a parens-only assertion would still pass for the leaning
+    ``functools.reduce`` spelling that reintroduces the bug.
+
+    125 periods is the count from the real 25-minute source that reported this.
+    """
+    graph = build_aselect_graph([(i * 2000, i * 2000 + 1000) for i in range(125)])
+    depth = _max_paren_depth(graph)
+    balanced = math.ceil(math.log2(125))  # == 7
+
+    assert graph.count("between(t,") == 125
+    # Both bounds are load-bearing. Lower excludes a flat chain (depth 0);
+    # upper excludes a leaning chain (depth 125).
+    assert balanced <= depth <= balanced + 1
 
 
 # --- condense: command shape -----------------------------------------------
@@ -515,7 +555,7 @@ def test_condense_uses_resolved_ffmpeg_and_progress_header(tmp_path):
         patch(_RESOLVE, return_value="/bundled/ffmpeg"),
         patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
     ):
-        ok = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
 
     assert ok is True
     cmd = captured["cmd"]
@@ -581,7 +621,7 @@ def test_condense_graph_file_content_between_seconds_and_asetpts(tmp_path):
     ):
         svc.condense(Path("/v/in.mkv"), [(0, 2000), (3000, 5000)], tmp_path / "out.mp3")
 
-    assert captured["graph"] == ("aselect='between(t,0.000,2.000)+between(t,3.000,5.000)',asetpts=N/SR/TB")
+    assert captured["graph"] == ("aselect='(between(t,0.000,2.000)+between(t,3.000,5.000))',asetpts=N/SR/TB")
 
 
 # --- condense: encoder / bitrate / channel mapping -------------------------
@@ -625,7 +665,7 @@ def test_condense_flac_no_bitrate_no_downmix_no_probe(tmp_path):
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
     ):
-        ok = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.flac")
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.flac")
 
     assert ok is True
     cmd = captured["cmd"]
@@ -648,7 +688,7 @@ def test_condense_progress_out_time_us_is_microseconds(tmp_path):
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN, side_effect=_factory({}, lines)),
     ):
-        ok = svc.condense(Path("/v/in.mkv"), [(0, 14675)], tmp_path / "out.mp3", progress_cb=pcts.append)
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 14675)], tmp_path / "out.mp3", progress_cb=pcts.append)
 
     assert ok is True
     assert pcts[0] == 0
@@ -707,7 +747,7 @@ def test_condense_cancel_kills_process(tmp_path):
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN, side_effect=lambda cmd, **kw: fake),
     ):
-        ok = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3", cancel_event=cancel_event)
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3", cancel_event=cancel_event)
 
     assert ok is False
     assert fake.kill_calls >= 1
@@ -729,7 +769,7 @@ def test_condense_raises_encoder_unavailable_without_running_ffmpeg(tmp_path):
 def test_condense_empty_periods_returns_false_without_ffmpeg(tmp_path):
     svc = _service(tmp_path, global_index=0)
     with patch(_POPEN) as mock_popen:
-        ok = svc.condense(Path("/v/in.mkv"), [], tmp_path / "out.mp3")
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [], tmp_path / "out.mp3")
     assert ok is False
     mock_popen.assert_not_called()
 
@@ -747,7 +787,7 @@ def test_condense_graph_temp_cleaned_on_success(tmp_path):
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN, side_effect=_factory({}, _progress_block(0, end=True), returncode=0)),
     ):
-        ok = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
     assert ok is True
     assert list(tmp_path.glob("condense_graph_*.txt")) == []
 
@@ -758,9 +798,86 @@ def test_condense_graph_temp_cleaned_on_failure(tmp_path):
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN, side_effect=_factory({}, ["Conversion failed!"], returncode=1)),
     ):
-        ok = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
     assert ok is False
     assert list(tmp_path.glob("condense_graph_*.txt")) == []
+
+
+def test_condense_failure_reports_exit_code_and_last_ffmpeg_line(tmp_path):
+    """ffmpeg prints its diagnosis LAST — the banner comes first and is useless."""
+    svc = _service(tmp_path, global_index=0)
+    output = [
+        "Input #0, matroska,webm, from '/v/in.mkv':",
+        "  Duration: 00:25:18.77, start: 0.000000, bitrate: 749 kb/s",
+        "[AVFilterGraph @ 0x1] Error initializing filters",
+        "Error opening output files: Cannot allocate memory",
+    ]
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, output, returncode=1)),
+    ):
+        ok, failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert ok is False
+    assert failure is not None
+    assert failure.returncode == 1
+    assert failure.timed_out is False
+    assert failure.summary() == "ffmpeg exited 1: Error opening output files: Cannot allocate memory"
+
+
+def test_condense_failure_reason_is_truncated(tmp_path):
+    """The line that named the aselect-depth bug WAS the whole filter expression.
+
+    It reaches the Activity Log and the Copy buffer behind it, so it is capped —
+    the untruncated tail stays in the log.
+    """
+    svc = _service(tmp_path, global_index=0)
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, ["x" * 5000], returncode=1)),
+    ):
+        _ok, failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert failure is not None
+    assert len(failure.reason) == 200
+    assert failure.reason.endswith("…")
+
+
+def test_condense_cancel_reports_no_failure(tmp_path):
+    """A cancel is the user's doing, not a fault worth reporting back."""
+    svc = _service(tmp_path, global_index=0)
+    cancel_event = threading.Event()
+    cancel_event.set()
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, ["killed"], returncode=-9)),
+    ):
+        ok, failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3", cancel_event=cancel_event)
+
+    assert ok is False
+    assert failure is None
+
+
+def test_extract_embedded_subtitle_failure_returns_none_not_a_truthy_struct(tmp_path):
+    """Regression: ``_run_streaming`` returns a PAIR, never a bare struct.
+
+    ``extract_embedded_subtitle`` tests the result for truth. A returned
+    dataclass — however empty — is truthy, which would hand the caller a path to
+    a partial subtitle file and skip the cleanup unlink below.
+    """
+    svc = _service(tmp_path, global_index=0)
+    stream = _sub_stream(sub_index=0, codec="subrip")
+    out_path = tmp_path / "ep01.s0.srt"
+    out_path.write_text("partial", encoding="utf-8")
+
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, ["Conversion failed!"], returncode=1)),
+    ):
+        result = svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
+
+    assert result is None
+    assert not out_path.exists()
 
 
 def test_condense_removes_partial_output_on_failure(tmp_path):
@@ -777,7 +894,7 @@ def test_condense_removes_partial_output_on_failure(tmp_path):
         return _FakePopen(["Conversion failed!"], returncode=1)
 
     with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
-        ok = svc.condense(Path("/v/ep01.mkv"), [(0, 2000)], out_audio)
+        ok, _failure = svc.condense(Path("/v/ep01.mkv"), [(0, 2000)], out_audio)
 
     assert ok is False
     assert not out_audio.exists()
@@ -793,7 +910,7 @@ def test_condenser_fault_preserves_existing_output(tmp_path):
         return _FakePopen(["Conversion failed!"], returncode=1)
 
     with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
-        ok = svc.condense(Path("/v/ep01.mkv"), [(0, 2000)], out_audio)
+        ok, _failure = svc.condense(Path("/v/ep01.mkv"), [(0, 2000)], out_audio)
 
     assert ok is False
     assert out_audio.read_bytes() == b"good audio"
@@ -873,7 +990,7 @@ def test_extract_embedded_subtitle_uses_full_demux_timeout(tmp_path):
     stream = _sub_stream(sub_index=0, codec="subrip")
     with (
         patch(_RESOLVE, return_value="ffmpeg"),
-        patch.object(svc, "_run_streaming", return_value=True) as run_streaming,
+        patch.object(svc, "_run_streaming", return_value=(True, None)) as run_streaming,
     ):
         svc.extract_embedded_subtitle(Path("/v/ep01.mkv"), stream, tmp_path)
 
@@ -922,8 +1039,10 @@ class _StubCondenser:
         encoder_error: bool = False,
         cancel_on_condense: bool = False,
         extract_returns: bool = True,
+        condense_failure: FfmpegStepFailure | None = None,
     ) -> None:
         self._condense_result = condense_result
+        self._condense_failure = condense_failure
         self._encoder_error = encoder_error
         self._cancel_on_condense = cancel_on_condense
         self._extract_returns = extract_returns
@@ -954,12 +1073,13 @@ class _StubCondenser:
             raise EncoderUnavailableError("ffmpeg encoder 'libmp3lame' is unavailable")
         if self._cancel_on_condense and cancel_event is not None:
             cancel_event.set()
-            return False
+            return False, None
         if progress_cb is not None:
             progress_cb(50)
         if self._condense_result:
             Path(out_audio).write_bytes(b"AUDIO")
-        return self._condense_result
+            return True, None
+        return False, self._condense_failure
 
 
 def test_condense_one_external_sub_success(tmp_path):
@@ -1069,6 +1189,20 @@ def test_condense_one_condense_failed(tmp_path):
     result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3")
 
     assert result.status is CondenseStatus.CONDENSE_FAILED
+
+
+def test_condense_one_carries_the_ffmpeg_failure_reason(tmp_path):
+    """CONDENSE_FAILED must say WHY — it covers three unrelated faults."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    failure = FfmpegStepFailure(1, False, "Error opening output files: Cannot allocate memory")
+    svc = _StubCondenser(condense_result=False, condense_failure=failure)
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.CONDENSE_FAILED
+    assert result.failure_reason == "ffmpeg exited 1: Error opening output files: Cannot allocate memory"
 
 
 def test_condense_one_cancelled_during_condense(tmp_path):

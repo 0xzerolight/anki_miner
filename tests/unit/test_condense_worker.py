@@ -21,7 +21,7 @@ pytest.importorskip("PyQt6.QtCore")
 import anki_miner.services.audio_condenser as ac
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
-from anki_miner.services.audio_condenser import EncoderUnavailableError
+from anki_miner.services.audio_condenser import EncoderUnavailableError, FfmpegStepFailure
 from anki_miner.utils.audio_track_detector import SubtitleStream
 
 # ---------------------------------------------------------------------------
@@ -74,8 +74,10 @@ class _FakeService:
         encoder_error: bool = False,
         cancel_on_condense: bool = False,
         extract_returns: bool = True,
+        condense_failure: FfmpegStepFailure | None = None,
     ) -> None:
         self._condense_result = condense_result
+        self._condense_failure = condense_failure
         self._encoder_error = encoder_error
         self._cancel_on_condense = cancel_on_condense
         self._extract_returns = extract_returns
@@ -114,12 +116,13 @@ class _FakeService:
             raise EncoderUnavailableError("ffmpeg encoder 'libmp3lame' is unavailable")
         if self._cancel_on_condense and cancel_event is not None:
             cancel_event.set()
-            return False
+            return False, None
         if progress_cb is not None:
             progress_cb(50)
         if self._condense_result:
             Path(out_audio).write_bytes(b"AUDIO")
-        return self._condense_result
+            return True, None
+        return False, self._condense_failure
 
 
 def _make_worker(items, config, *, service=None, **kwargs) -> CondenseWorker:
@@ -318,6 +321,49 @@ def test_condense_false_reports_failure(qapp, tmp_path):
     assert out is None
     assert err is not None and media.name in err
     assert cap["queue_finished"] == [True]
+
+
+def test_condense_failure_message_names_the_ffmpeg_reason(qapp, tmp_path):
+    """The user's only surface is this string — a bare filename is not actionable.
+
+    CONDENSE_FAILED covers a launch failure, a nonzero exit and a timeout alike,
+    so the reason has to ride along with the filename.
+    """
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "a")])
+
+    failure = FfmpegStepFailure(1, False, "Error opening output files: Cannot allocate memory")
+    service = _FakeService(condense_result=False, condense_failure=failure)
+    worker = _make_worker([CondenseItem(media, sub)], config, service=service)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    _idx, out, err = cap["finished"][0]
+    assert out is None
+    assert err is not None
+    assert media.name in err
+    assert "ffmpeg exited 1" in err
+    assert "Cannot allocate memory" in err
+
+
+def test_condense_failure_message_without_a_reason_is_unchanged(qapp, tmp_path):
+    """No detail available → the old bare message, no dangling separator."""
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "a")])
+
+    service = _FakeService(condense_result=False, condense_failure=None)
+    worker = _make_worker([CondenseItem(media, sub)], config, service=service)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    _idx, _out, err = cap["finished"][0]
+    assert err == f"Condensing failed for {media.name}"
 
 
 # ---------------------------------------------------------------------------
