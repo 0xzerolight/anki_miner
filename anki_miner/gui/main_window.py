@@ -1586,6 +1586,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self._mini_job_monitor is not None:
             self._mini_job_monitor.close()
 
+        # File pickers are non-blocking now (gui/utils/file_dialogs), so one can
+        # still be on screen here. It declines WA_QuitOnClose like the monitor
+        # above, but its continuation would land in an application whose panels
+        # and workers are about to be torn down — cancel outright, callback and
+        # all.
+        file_dialogs.cancel_all_pickers()
+
         # Flush a pending Settings auto-save FIRST. Ordering is load-bearing:
         # background_tasks.shutdown below fans out to SettingsTab.shutdown,
         # which stops debounce scheduling and begins worker teardown; persist

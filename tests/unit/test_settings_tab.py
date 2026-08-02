@@ -430,7 +430,7 @@ class TestImportInvalidSubtitleRegex:
     ):
         import json
 
-        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        from PyQt6.QtWidgets import QMessageBox
 
         # A config file with an unbalanced group (re.error).
         source = tmp_path / "settings.json"
@@ -448,7 +448,10 @@ class TestImportInvalidSubtitleRegex:
         widget = SettingsTab(test_config)
         qtbot.addWidget(widget)
         try:
-            monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (str(source), ""))
+            monkeypatch.setattr(
+                "anki_miner.gui.widgets.settings_tab.file_dialogs.pick_open_file",
+                lambda *a, on_done, **k: on_done(str(source)),
+            )
             monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)
@@ -497,8 +500,8 @@ class TestImportResultFeedback:
             encoding="utf-8",
         )
         monkeypatch.setattr(
-            "anki_miner.gui.widgets.settings_tab.file_dialogs.get_open_file_name",
-            lambda *a, **k: (str(source), ""),
+            "anki_miner.gui.widgets.settings_tab.file_dialogs.pick_open_file",
+            lambda *a, on_done, **k: on_done(str(source)),
         )
         monkeypatch.setattr(
             QMessageBox,
@@ -533,8 +536,8 @@ class TestImportResultFeedback:
         source = tmp_path / "clean-settings.json"
         source.write_text(json.dumps({"anki_deck_name": "Clean Import"}), encoding="utf-8")
         monkeypatch.setattr(
-            "anki_miner.gui.widgets.settings_tab.file_dialogs.get_open_file_name",
-            lambda *a, **k: (str(source), ""),
+            "anki_miner.gui.widgets.settings_tab.file_dialogs.pick_open_file",
+            lambda *a, on_done, **k: on_done(str(source)),
         )
         monkeypatch.setattr(
             QMessageBox,

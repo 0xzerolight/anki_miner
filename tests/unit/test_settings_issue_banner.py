@@ -33,15 +33,15 @@ def settings(qtbot, tmp_path, monkeypatch):
 
 def _choose_save(monkeypatch, target: Path) -> None:
     monkeypatch.setattr(
-        "anki_miner.gui.utils.file_dialogs.get_save_file_name",
-        lambda *a, **kw: (str(target), ""),
+        "anki_miner.gui.utils.file_dialogs.pick_save_file",
+        lambda *a, on_done, **kw: on_done(str(target)),
     )
 
 
 def _choose_open(monkeypatch, source: Path) -> None:
     monkeypatch.setattr(
-        "anki_miner.gui.utils.file_dialogs.get_open_file_name",
-        lambda *a, **kw: (str(source), ""),
+        "anki_miner.gui.utils.file_dialogs.pick_open_file",
+        lambda *a, on_done, **kw: on_done(str(source)),
     )
 
 

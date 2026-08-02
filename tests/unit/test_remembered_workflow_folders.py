@@ -15,10 +15,9 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QFileDialog
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils import session_state
+from anki_miner.gui.utils import file_dialogs, session_state
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
@@ -72,7 +71,7 @@ def test_add_files_remembers_the_first_accepted_file(reading_subtitles_tab, monk
     first, second = folder / "ep01.srt", folder / "ep02.srt"
     first.touch()
     second.touch()
-    monkeypatch.setattr(QFileDialog, "getOpenFileNames", lambda *a, **kw: ([str(first), str(second)], ""))
+    monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(first), str(second)]))
 
     reading_subtitles_tab._on_add_files_clicked()
 
@@ -85,18 +84,18 @@ def test_add_files_reopens_in_the_remembered_folder(reading_subtitles_tab, monke
     session_state.remember_accepted_path("reading.subtitles.inputs", str(remembered), file_mode=False)
     captured: dict[str, str] = {}
 
-    def fake_names(*a, **kw):
+    def fake_names(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ([], "")
+        on_done([])
 
-    monkeypatch.setattr(QFileDialog, "getOpenFileNames", fake_names)
+    monkeypatch.setattr(file_dialogs, "pick_open_files", fake_names)
     reading_subtitles_tab._on_add_files_clicked()
 
     assert captured["dir"] == str(remembered)
 
 
 def test_add_files_cancel_records_nothing(reading_subtitles_tab, monkeypatch):
-    monkeypatch.setattr(QFileDialog, "getOpenFileNames", lambda *a, **kw: ([], ""))
+    monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([]))
 
     reading_subtitles_tab._on_add_files_clicked()
 
@@ -141,7 +140,7 @@ def test_each_tool_has_its_own_output_key(tool_tab):
 def test_choosing_an_output_folder_remembers_it(tool_tab, monkeypatch, tmp_path):
     chosen = tmp_path / "results"
     chosen.mkdir()
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
+    monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(chosen)))
 
     tool_tab._on_choose_output()
 
@@ -154,11 +153,11 @@ def test_the_output_chooser_reopens_where_it_last_wrote(tool_tab, monkeypatch, t
     session_state.remember_accepted_path(tool_tab.OUTPUT_HISTORY_KEY, str(remembered), file_mode=False)
     captured: dict[str, str] = {}
 
-    def fake_existing(*a, **kw):
+    def fake_existing(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ""
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_existing)
+    monkeypatch.setattr(file_dialogs, "pick_directory", fake_existing)
     tool_tab._on_choose_output()
 
     assert captured["dir"] == str(remembered)
@@ -168,7 +167,7 @@ def test_cancelling_the_output_chooser_records_nothing(tool_tab, monkeypatch, tm
     seed = tmp_path / "seed"
     seed.mkdir()
     session_state.remember_accepted_path(tool_tab.OUTPUT_HISTORY_KEY, str(seed), file_mode=False)
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: "")
+    monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(""))
 
     tool_tab._on_choose_output()
 
@@ -182,7 +181,7 @@ def test_an_output_folder_does_not_disturb_the_input_anchor(tool_tab, monkeypatc
     results.mkdir()
     inputs_key = tool_tab.OUTPUT_HISTORY_KEY.replace(".output", ".inputs")
     session_state.remember_accepted_path(inputs_key, str(sources), file_mode=False)
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(results))
+    monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(results)))
 
     tool_tab._on_choose_output()
 

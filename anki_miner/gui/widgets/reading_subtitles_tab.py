@@ -347,7 +347,13 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         accepted file anchors the whole selection: a multi-select is one visit
         to one folder, so the rest say nothing new.
         """
-        files, _ = file_dialogs.get_open_file_names(
+
+        def _on_picked(files: list[str]) -> None:
+            if files:
+                session_state.remember_accepted_path(_HISTORY_KEY, files[0], file_mode=True)
+                self._add_paths([Path(f) for f in files])
+
+        file_dialogs.pick_open_files(
             self,
             self.tr("Add Subtitle Files"),
             resolve_start_dir(
@@ -356,10 +362,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
                 remembered_dir=session_state.remembered_directory(_HISTORY_KEY),
             ),
             f"{self.tr('Subtitles')} ({_SUBTITLE_FILTER_GLOB})",
+            on_done=_on_picked,
         )
-        if files:
-            session_state.remember_accepted_path(_HISTORY_KEY, files[0], file_mode=True)
-            self._add_paths([Path(f) for f in files])
 
     def _on_remove_selected_clicked(self) -> None:
         """Remove the selected rows from the list.

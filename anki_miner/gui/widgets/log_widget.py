@@ -448,29 +448,33 @@ class LogWidget(QWidget):
 
     def _on_save_clicked(self) -> None:
         default_name = f"anki-miner-log-{datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
-        path_str, _ = file_dialogs.get_save_file_name(
+
+        def _on_picked(path_str: str) -> None:
+            if not path_str:
+                return
+
+            target = Path(path_str)
+            text = self.full_text()
+
+            def work() -> object:
+                target.write_text(text, encoding="utf-8")
+                return str(target)
+
+            self.save_button.setEnabled(False)
+            run_off_thread(
+                self,
+                work,
+                self._on_save_done,
+                self._on_save_error,
+                on_finished=self._on_save_finished,
+            )
+
+        file_dialogs.pick_save_file(
             self,
             self.tr("Save Run Log"),
             str(Path(resolve_start_dir(None, file_mode=True)) / default_name),
             "Text Files (*.txt);;All Files (*)",
-        )
-        if not path_str:
-            return
-
-        target = Path(path_str)
-        text = self.full_text()
-
-        def work() -> object:
-            target.write_text(text, encoding="utf-8")
-            return str(target)
-
-        self.save_button.setEnabled(False)
-        run_off_thread(
-            self,
-            work,
-            self._on_save_done,
-            self._on_save_error,
-            on_finished=self._on_save_finished,
+            on_done=_on_picked,
         )
 
     def _on_save_done(self, result: object) -> None:

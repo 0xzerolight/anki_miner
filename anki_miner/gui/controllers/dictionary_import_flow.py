@@ -155,12 +155,16 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             return
         trace_id = _begin_import_trace("dictionary add")
         picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
-        zip_path_str, _ = file_dialogs.get_open_file_name(
+        file_dialogs.pick_open_file(
             self._parent,
             QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
             QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
+            on_done=lambda chosen: self._add_dict_picked(trace_id, picker_started, chosen),
         )
+
+    def _add_dict_picked(self, trace_id: str, picker_started: float, zip_path_str: str) -> None:
+        """Run the dictionary import for the zip ``add_dict``'s picker returned."""
         _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
         if not zip_path_str:
             self._set_import_buttons_enabled(True)

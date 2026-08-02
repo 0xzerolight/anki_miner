@@ -6,10 +6,10 @@ from pathlib import Path
 
 from PyQt6.QtCore import QMimeData, QPointF, Qt, QUrl
 from PyQt6.QtGui import QDropEvent
-from PyQt6.QtWidgets import QFileDialog
 
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.utils import session_state
+from anki_miner.gui.widgets.enhanced import file_selector as file_selector_mod
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 
 # ---------------------------------------------------------------------------
@@ -32,11 +32,11 @@ def test_file_mode_no_path_no_default_opens_at_home(qtbot, monkeypatch):
     w = _make_selector(qtbot, file_mode=True)
     captured: dict[str, str] = {}
 
-    def fake_open(*a, **kw):
+    def fake_open(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ("", "")
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_open)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_open_file", fake_open)
     w.browse()
 
     assert captured["dir"] == str(Path.home())
@@ -51,11 +51,11 @@ def test_folder_mode_with_default_dir_opens_at_default(qtbot, monkeypatch, tmp_p
     w = _make_selector(qtbot, file_mode=False, default_dir=tmp_path)
     captured: dict[str, str] = {}
 
-    def fake_existing(*a, **kw):
+    def fake_existing(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ""
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_existing)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_directory", fake_existing)
     w.browse()
 
     assert captured["dir"] == str(tmp_path)
@@ -75,11 +75,11 @@ def test_file_mode_with_existing_file_opens_at_parent(qtbot, monkeypatch, tmp_pa
 
     captured: dict[str, str] = {}
 
-    def fake_open(*a, **kw):
+    def fake_open(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ("", "")
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_open)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_open_file", fake_open)
     w.browse()
 
     assert captured["dir"] == str(tmp_path)
@@ -94,11 +94,11 @@ def test_start_dir_never_empty_or_root_file_mode(qtbot, monkeypatch):
     w = _make_selector(qtbot, file_mode=True)
     captured: dict[str, str] = {}
 
-    def fake_open(*a, **kw):
+    def fake_open(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ("", "")
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_open)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_open_file", fake_open)
     w.browse()
 
     assert captured["dir"] != ""
@@ -109,11 +109,11 @@ def test_start_dir_never_empty_or_root_folder_mode(qtbot, monkeypatch):
     w = _make_selector(qtbot, file_mode=False)
     captured: dict[str, str] = {}
 
-    def fake_existing(*a, **kw):
+    def fake_existing(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ""
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_existing)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_directory", fake_existing)
     w.browse()
 
     assert captured["dir"] != ""
@@ -137,11 +137,11 @@ def test_default_dir_stored_on_widget(qtbot):
 
 
 def _accept_file(monkeypatch, path: Path) -> None:
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(path), ""))
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(path)))
 
 
 def _accept_folder(monkeypatch, path: Path) -> None:
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(path))
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(path)))
 
 
 def test_no_history_key_records_nothing(qtbot, monkeypatch, tmp_path):
@@ -184,7 +184,7 @@ def test_cancelling_records_nothing(qtbot, monkeypatch, tmp_path):
     seed.mkdir()
     session_state.remember_accepted_path("reading.manga.inputs", str(seed), file_mode=False)
     w = _make_selector(qtbot, file_mode=False, history_key="reading.manga.inputs")
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: "")
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(""))
 
     w.browse()
 
@@ -239,11 +239,11 @@ def test_browse_reopens_in_the_remembered_folder(qtbot, monkeypatch, tmp_path):
     w = _make_selector(qtbot, file_mode=False, history_key="reading.manga.inputs")
     captured: dict[str, str] = {}
 
-    def fake_existing(*a, **kw):
+    def fake_existing(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ""
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_existing)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_directory", fake_existing)
     w.browse()
 
     assert captured["dir"] == str(remembered)
@@ -259,11 +259,11 @@ def test_a_field_path_still_outranks_the_remembered_folder(qtbot, monkeypatch, t
     w.set_path(str(current))
     captured: dict[str, str] = {}
 
-    def fake_existing(*a, **kw):
+    def fake_existing(*a, on_done, **kw):
         captured["dir"] = a[2]
-        return ""
+        on_done("")
 
-    monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_existing)
+    monkeypatch.setattr(file_selector_mod.file_dialogs, "pick_directory", fake_existing)
     w.browse()
 
     assert captured["dir"] == str(current)

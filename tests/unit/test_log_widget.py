@@ -265,8 +265,8 @@ class TestSave:
     def test_cancelled_dialog_writes_nothing(self, log, tmp_path, monkeypatch):
         monkeypatch.setattr(
             log_widget_module.file_dialogs,
-            "get_save_file_name",
-            lambda *a, **k: ("", ""),
+            "pick_save_file",
+            lambda *a, on_done, **k: on_done(""),
         )
         _fill(log)
         log.save_button.click()
@@ -276,8 +276,8 @@ class TestSave:
         target = tmp_path / "run.txt"
         monkeypatch.setattr(
             log_widget_module.file_dialogs,
-            "get_save_file_name",
-            lambda *a, **k: (str(target), ""),
+            "pick_save_file",
+            lambda *a, on_done, **k: on_done(str(target)),
         )
         _fill(log)
         log.filter_buttons["error"].click()
@@ -292,8 +292,8 @@ class TestSave:
         unwritable = tmp_path / "missing-dir" / "run.txt"
         monkeypatch.setattr(
             log_widget_module.file_dialogs,
-            "get_save_file_name",
-            lambda *a, **k: (str(unwritable), ""),
+            "pick_save_file",
+            lambda *a, on_done, **k: on_done(str(unwritable)),
         )
         log.append_info("parsed subtitles")
         log.save_button.click()
@@ -303,11 +303,11 @@ class TestSave:
     def test_suggested_name_is_a_text_file(self, log, monkeypatch):
         captured: list[str] = []
 
-        def _fake(parent, caption, directory, file_filter):
+        def _fake(parent, caption, directory, file_filter, *, on_done):
             captured.append(directory)
-            return ("", "")
+            on_done("")
 
-        monkeypatch.setattr(log_widget_module.file_dialogs, "get_save_file_name", _fake)
+        monkeypatch.setattr(log_widget_module.file_dialogs, "pick_save_file", _fake)
         log.save_button.click()
         assert captured and Path(captured[0]).suffix == ".txt"
 

@@ -7,9 +7,10 @@ import json
 from dataclasses import replace
 
 import pytest
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
@@ -49,7 +50,7 @@ class TestExportButton:
 
     def test_export_writes_portable_file(self, tab, tmp_path, monkeypatch, messageboxes):
         target = tmp_path / "my_settings.json"
-        monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(target), "")))
+        monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(str(target)))
 
         tab.export_settings_button.click()
 
@@ -61,7 +62,7 @@ class TestExportButton:
         assert not messageboxes["critical"]
 
     def test_export_cancelled_is_noop(self, tab, monkeypatch, messageboxes):
-        monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: ("", "")))
+        monkeypatch.setattr(file_dialogs, "pick_save_file", lambda *a, on_done, **k: on_done(""))
 
         tab.export_settings_button.click()
 
@@ -77,7 +78,7 @@ class TestImportButton:
 
     def test_import_confirm_yes_applies_and_reloads(self, tab, test_config, tmp_path, monkeypatch, messageboxes, qtbot):
         path = self._write_export(tmp_path, replace(test_config, anki_deck_name="ImportedDeck"))
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(path), "")))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(path)))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
@@ -98,7 +99,7 @@ class TestImportButton:
     def test_import_confirm_no_is_noop(self, tab, test_config, tmp_path, monkeypatch, messageboxes):
         messageboxes["_reply"]["question"] = QMessageBox.StandardButton.No
         path = self._write_export(tmp_path, replace(test_config, anki_deck_name="Rejected"))
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(path), "")))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(path)))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
@@ -108,7 +109,7 @@ class TestImportButton:
         assert tab.anki_panel.get_deck_name() == test_config.anki_deck_name
 
     def test_import_file_dialog_cancelled_is_noop(self, tab, monkeypatch, messageboxes):
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: ("", "")))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(""))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
@@ -120,7 +121,7 @@ class TestImportButton:
     def test_import_malformed_file_reports_an_issue_and_emits_nothing(self, tab, tmp_path, monkeypatch, messageboxes):
         bad = tmp_path / "broken.json"
         bad.write_text("{not json", encoding="utf-8")
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(bad), "")))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(bad)))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
@@ -134,7 +135,7 @@ class TestImportButton:
     def test_import_wrong_shape_json_reports_an_issue_and_emits_nothing(self, tab, tmp_path, monkeypatch, messageboxes):
         bad = tmp_path / "list.json"
         bad.write_text("[1, 2, 3]", encoding="utf-8")
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", staticmethod(lambda *a, **k: (str(bad), "")))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(str(bad)))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 

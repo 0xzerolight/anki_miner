@@ -113,8 +113,13 @@ class TestPatchTargetsStillExist:
     def test_the_file_dialog_wrappers_are_all_present(self):
         import anki_miner.gui.utils.file_dialogs as fd
 
-        for name in ("get_open_file_name", "get_open_file_names", "get_save_file_name", "get_existing_directory"):
+        for name in ("pick_open_file", "pick_open_files", "pick_save_file", "pick_directory"):
             assert hasattr(fd, name), f"file_dialogs.{name} is gone; isolation.patched_modals is now partly inert"
+        assert hasattr(fd, "cancel_all_pickers"), "isolation.patched_modals calls this on teardown"
+        # A half-finished rename would leave the old blocking wrappers behind
+        # and the atlas would patch the wrong four names.
+        for gone in ("get_open_file_name", "get_open_file_names", "get_save_file_name", "get_existing_directory"):
+            assert not hasattr(fd, gone), f"file_dialogs.{gone} is back; the blocking wrappers must stay deleted"
 
     def test_validation_start_is_still_suppressible(self):
         from anki_miner.gui.controllers.background_tasks import BackgroundTaskController

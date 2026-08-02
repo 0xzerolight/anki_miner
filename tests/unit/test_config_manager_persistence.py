@@ -808,3 +808,74 @@ class TestActiveProfileIdMarker:
         monkeypatch.setattr(Path, "open", _boom)
 
         assert GUIConfigManager.read_active_profile_id() is None
+
+
+class TestNativeFileDialogsMigration:
+    """Schema 4 turns the OS-native file pickers back on, once.
+
+    The dataclass default alone reaches nobody who has already run the app:
+    every existing gui_config.json carries an explicit False that a load would
+    otherwise preserve. Both halves of the shim matter — the load path here,
+    and the import path (the field is portable, so a pre-v4 export would write
+    the old value straight back).
+    """
+
+    def test_pre_v4_config_gets_native_pickers(self, tmp_config: Path):
+        tmp_config.write_text(
+            json.dumps({"config_schema_version": 3, "use_native_file_dialogs": False}),
+            encoding="utf-8",
+        )
+
+        assert GUIConfigManager.load_config().use_native_file_dialogs is True
+
+    def test_unversioned_config_gets_native_pickers(self, tmp_config: Path):
+        tmp_config.write_text(json.dumps({"use_native_file_dialogs": False}), encoding="utf-8")
+
+        assert GUIConfigManager.load_config().use_native_file_dialogs is True
+
+    def test_v4_opt_out_is_preserved(self, tmp_config: Path):
+        tmp_config.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                    "use_native_file_dialogs": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        assert GUIConfigManager.load_config().use_native_file_dialogs is False
+
+    def test_saved_config_is_stamped_with_the_current_schema(self, tmp_config: Path):
+        GUIConfigManager.save_config(create_default_config())
+
+        written = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert written["config_schema_version"] == GUIConfigManager.CONFIG_SCHEMA_VERSION
+        assert written["use_native_file_dialogs"] is True
+
+    def test_pre_v4_import_does_not_revert_the_user(self, tmp_config: Path, tmp_path: Path):
+        source = tmp_path / "old-settings.json"
+        source.write_text(
+            json.dumps({"config_schema_version": 3, "use_native_file_dialogs": False}),
+            encoding="utf-8",
+        )
+
+        result = GUIConfigManager.import_config(source, create_default_config())
+
+        assert result.config.use_native_file_dialogs is True
+
+    def test_v4_import_honours_an_explicit_opt_out(self, tmp_config: Path, tmp_path: Path):
+        source = tmp_path / "new-settings.json"
+        source.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                    "use_native_file_dialogs": False,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = GUIConfigManager.import_config(source, create_default_config())
+
+        assert result.config.use_native_file_dialogs is False

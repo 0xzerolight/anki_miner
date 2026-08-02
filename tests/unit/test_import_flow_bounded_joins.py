@@ -21,9 +21,10 @@ from dataclasses import replace
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
@@ -205,7 +206,7 @@ class TestFrequencyBoundedJoin:
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         warnings: list[tuple[str, str]] = []
         monkeypatch.setattr(
@@ -241,7 +242,7 @@ class TestFrequencyBoundedJoin:
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
         dialog = MagicMock()
         monkeypatch.setattr(
             "anki_miner.gui.controllers.import_flow_common.QProgressDialog",
@@ -270,7 +271,7 @@ class TestFrequencyBoundedJoin:
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **kw: (str(src), ""))
+        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         _silence_dialogs(monkeypatch)
 
@@ -324,7 +325,7 @@ class TestAudioPackBoundedJoin:
         new = self._patch_worker(monkeypatch)
         pack_dir = tmp_path / "nhk16_files"
         pack_dir.mkdir()
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         monkeypatch.setattr(
             "anki_miner.gui.controllers.audio_pack_import_flow.scan_importable_packs",
             lambda _root, *, cancel_check=None: [(pack_dir, "nhk16")],
@@ -406,7 +407,7 @@ class TestAudioPackBoundedJoin:
         new = self._patch_worker(monkeypatch)
         pack_dir = tmp_path / "repick"
         pack_dir.mkdir()
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _silence_dialogs(monkeypatch)
 
         flow = tab._audio_pack_import_flow

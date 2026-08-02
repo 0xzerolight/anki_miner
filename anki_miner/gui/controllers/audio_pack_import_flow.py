@@ -149,35 +149,39 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             if not self._begin_mutation("add"):
                 return
             picker_started = _log_import_picker_enter(trace_id, "audio pack folder")
-            chosen_dir = file_dialogs.get_existing_directory(
+
+            def _on_picked(chosen_dir: str) -> None:
+                _log_import_picker_return(trace_id, "audio pack folder", picker_started, chosen_dir)
+                if not chosen_dir:
+                    self._set_import_buttons_enabled(True)
+                    return
+
+                def _on_done(result: object) -> None:
+                    assert isinstance(result, list)
+                    self.add_pack(_scan_result=(chosen_dir, result), _trace_id=trace_id)
+
+                def _on_error(message: str) -> None:
+                    self._set_import_buttons_enabled(True)
+                    self._report_import_issue(
+                        QCoreApplication.translate("AudioPackImportFlow", "That folder could not be scanned."),
+                        message,
+                    )
+
+                self._run_latest_scan(
+                    lambda is_cancelled: scan_importable_packs(
+                        Path(chosen_dir),
+                        cancel_check=is_cancelled,
+                    ),
+                    _on_done,
+                    _on_error,
+                    pass_cancel_check=True,
+                )
+
+            file_dialogs.pick_directory(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder"),
                 resolve_start_dir(None, file_mode=False),
-            )
-            _log_import_picker_return(trace_id, "audio pack folder", picker_started, chosen_dir)
-            if not chosen_dir:
-                self._set_import_buttons_enabled(True)
-                return
-
-            def _on_done(result: object) -> None:
-                assert isinstance(result, list)
-                self.add_pack(_scan_result=(chosen_dir, result), _trace_id=trace_id)
-
-            def _on_error(message: str) -> None:
-                self._set_import_buttons_enabled(True)
-                self._report_import_issue(
-                    QCoreApplication.translate("AudioPackImportFlow", "That folder could not be scanned."),
-                    message,
-                )
-
-            self._run_latest_scan(
-                lambda is_cancelled: scan_importable_packs(
-                    Path(chosen_dir),
-                    cancel_check=is_cancelled,
-                ),
-                _on_done,
-                _on_error,
-                pass_cancel_check=True,
+                on_done=_on_picked,
             )
             return
 
@@ -306,11 +310,15 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             return
         trace_id = _begin_import_trace("audio pack reimport")
         picker_started = _log_import_picker_enter(trace_id, "audio pack folder")
-        chosen_dir = file_dialogs.get_existing_directory(
+        file_dialogs.pick_directory(
             self._parent,
             QCoreApplication.translate("AudioPackImportFlow", "Choose audio pack folder to re-import"),
             resolve_start_dir(None, file_mode=False),
+            on_done=lambda chosen: self._reimport_pack_picked(pack_id, trace_id, picker_started, chosen),
         )
+
+    def _reimport_pack_picked(self, pack_id: str, trace_id: str, picker_started: float, chosen_dir: str) -> None:
+        """Repair ``pack_id`` from the folder ``reimport_pack``'s picker returned."""
         _log_import_picker_return(trace_id, "audio pack folder", picker_started, chosen_dir)
         if not chosen_dir:
             self._set_import_buttons_enabled(True)

@@ -529,9 +529,9 @@ def _write_config(tmp_config: Path, body: dict) -> None:
     tmp_config.write_text(json.dumps(body), encoding="utf-8")
 
 
-def test_schema_version_is_three():
-    """The latest bump carries the updater-containment shim."""
-    assert GUIConfigManager.CONFIG_SCHEMA_VERSION == 3
+def test_schema_version_is_four():
+    """The latest bump turns the OS-native file pickers back on."""
+    assert GUIConfigManager.CONFIG_SCHEMA_VERSION == 4
 
 
 class TestWordsetSeedMigration:

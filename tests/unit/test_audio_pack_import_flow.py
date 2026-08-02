@@ -20,9 +20,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 
 
@@ -189,7 +190,7 @@ class TestAddPackNoPacks:
     def test_empty_dir_shows_warning_no_worker(self, tab, monkeypatch, stub_worker, tmp_path):
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(empty_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(empty_dir)))
         warnings = _capture_warnings(monkeypatch)
 
         tab._audio_pack_import_flow.add_pack()
@@ -198,14 +199,14 @@ class TestAddPackNoPacks:
         stub_worker.assert_not_called()
 
     def test_cancelled_dialog_skips_scan(self, tab, monkeypatch, stub_worker):
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: "")
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(""))
         tab._audio_pack_import_flow.add_pack()
         stub_worker.assert_not_called()
 
     def test_gui_thread_scan_runs_off_thread_and_reports_errors(self, tab, monkeypatch, stub_worker, tmp_path, qtbot):
         chosen = tmp_path / "unreadable"
         chosen.mkdir()
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(chosen)))
         warnings = _capture_warnings(monkeypatch)
         scan_thread: dict[str, int] = {}
 
@@ -233,7 +234,7 @@ class TestAddPackNoPacks:
         chosen = tmp_path / "many-packs"
         for name in ("a", "b", "c"):
             (chosen / name).mkdir(parents=True)
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(chosen))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(chosen)))
 
         entered = threading.Event()
         release = threading.Event()
@@ -308,7 +309,7 @@ class TestAddPackSingleHappyPath:
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_warnings(monkeypatch)
         infos = _capture_infos(monkeypatch)
 
@@ -340,7 +341,7 @@ class TestAddPackSingleHappyPath:
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_warnings(monkeypatch)
 
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
@@ -366,7 +367,7 @@ class TestAddPackSingleHappyPath:
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_warnings(monkeypatch)
         infos = _capture_infos(monkeypatch)
 
@@ -391,7 +392,7 @@ class TestAddPackSingleHappyPath:
         pack_dir = tmp_path / "forvo_pack"
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         infos = _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
         persist_calls: list[tuple[AudioSourceEntry, ...]] = []
@@ -427,7 +428,7 @@ class TestAddPackMultiPack:
         pack_b.mkdir()
         _make_ajt_pack(pack_b)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(parent))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         infos = _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -498,7 +499,7 @@ class TestAddPackMultiPack:
         pack_b.mkdir()
         _make_ajt_pack(pack_b)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(parent))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         infos = _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -541,7 +542,7 @@ class TestAddPackMultiPack:
         pack_b.mkdir()
         _make_ajt_pack(pack_b)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(parent))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         infos = _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -576,7 +577,7 @@ class TestAddPackMultiPack:
 class TestReimportPack:
     def test_reimport_refused_while_mining_active(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = _make_forvo_pack(tmp_path / "forvo_pack")
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
         warnings = _capture_warnings(monkeypatch)
 
@@ -593,7 +594,7 @@ class TestReimportPack:
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -604,7 +605,7 @@ class TestReimportPack:
         assert kw.get("pack_id") == "my-pack-id", "pack_id must be forwarded to worker"
 
     def test_reimport_cancelled_dir_dialog_skips_worker(self, tab, monkeypatch, stub_worker):
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: "")
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(""))
         tab._audio_pack_import_flow.reimport_pack("some-id")
         stub_worker.assert_not_called()
         stub_worker.repair_factory.assert_not_called()
@@ -614,7 +615,7 @@ class TestReimportPack:
         pack_dir.mkdir()
         _make_forvo_pack(pack_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(pack_dir))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         infos = _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -821,7 +822,7 @@ class TestAddPackPriorityOrdering:
         nhk16_dir.mkdir()
         _make_nhk16_pack(nhk16_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(parent))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -869,7 +870,7 @@ class TestAddPackPriorityOrdering:
         shinmeikai8_dir.mkdir()
         _make_ajt_pack(shinmeikai8_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(parent))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -914,7 +915,7 @@ class TestAddPackPriorityOrdering:
         nhk16_dir.mkdir()
         _make_nhk16_pack(nhk16_dir)
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **kw: str(parent))
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(parent)))
         _capture_infos(monkeypatch)
         _capture_warnings(monkeypatch)
 
@@ -950,7 +951,7 @@ class TestBrowseStartDir:
             captured["dir"] = start_dir
             return ""  # user cancels — no worker needed
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_dialog)
+        monkeypatch.setattr(file_dialogs, "pick_directory", fake_dialog)
         tab._audio_pack_import_flow.add_pack()
 
         home = str(Path.home())
@@ -965,7 +966,7 @@ class TestBrowseStartDir:
             captured["dir"] = start_dir
             return ""  # user cancels
 
-        monkeypatch.setattr(QFileDialog, "getExistingDirectory", fake_dialog)
+        monkeypatch.setattr(file_dialogs, "pick_directory", fake_dialog)
         tab._audio_pack_import_flow.reimport_pack("any-pack-id")
 
         home = str(Path.home())

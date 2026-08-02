@@ -54,7 +54,8 @@ def swapped_config(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
         test_config,
         ui_zoom=1.5,
         ui_language="ja",
-        use_native_file_dialogs=True,
+        # Native pickers are the default, so the differing value is False.
+        use_native_file_dialogs=False,
         theme="dark",
         ui_font_scale=1.25,
     )
@@ -104,8 +105,8 @@ class TestUIPanelLoadFromConfig:
         assert ui_panel._ui_zoom == 1.5
         assert ui_panel.zoom_combo.currentData() == 150
         assert ui_panel.font_scale_combo.currentData() == 125
-        assert ui_panel._use_native_file_dialogs is True
-        assert ui_panel.native_dialogs_checkbox.isChecked() is True
+        assert ui_panel._use_native_file_dialogs is False
+        assert ui_panel.native_dialogs_checkbox.isChecked() is False
         assert _active_theme_key(ui_panel) == "dark"
 
     def test_emits_nothing(self, ui_panel, swapped_config):
@@ -131,7 +132,7 @@ class TestUIPanelLoadFromConfig:
 
         assert ui_panel.language_combo.currentData(Qt.ItemDataRole.UserRole) == "en"
         assert ui_panel._ui_zoom == test_config.ui_zoom
-        assert ui_panel.native_dialogs_checkbox.isChecked() is False
+        assert ui_panel.native_dialogs_checkbox.isChecked() is True
 
 
 class TestUIPanelRestartNotes:
@@ -412,7 +413,7 @@ class TestSettingsTabLoadConfigFanOut:
         panel = tab.ui_panel
         assert panel.language_combo.currentData(Qt.ItemDataRole.UserRole) == "ja"
         assert panel.zoom_combo.currentData() == 150
-        assert panel.native_dialogs_checkbox.isChecked() is True
+        assert panel.native_dialogs_checkbox.isChecked() is False
         assert _active_theme_key(panel) == "dark"
 
     def test_reload_does_not_write_the_stale_panel_state_back(self, tab, swapped_config):

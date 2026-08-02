@@ -114,12 +114,16 @@ class PitchImportFlow(ModalImportFlowMixin):
             return
         trace_id = _begin_import_trace("pitch add")
         picker_started = _log_import_picker_enter(trace_id, "pitch source")
-        chosen, _ = file_dialogs.get_open_file_name(
+        file_dialogs.pick_open_file(
             self._parent,
             QCoreApplication.translate("PitchImportFlow", "Choose pitch accent source"),
             resolve_start_dir(None, file_mode=True),
             self._source_picker_filter(),
+            on_done=lambda chosen: self._add_source_picked(trace_id, picker_started, chosen),
         )
+
+    def _add_source_picked(self, trace_id: str, picker_started: float, chosen: str) -> None:
+        """Import the file ``add_source``'s picker returned as a new source."""
         _log_import_picker_return(trace_id, "pitch source", picker_started, chosen)
         if not chosen:
             self._set_import_buttons_enabled(True)
@@ -235,19 +239,43 @@ class PitchImportFlow(ModalImportFlowMixin):
 
         dest_root, source_file, existing_name = _scan_result
         if source_file is None:
+            # No persisted copy — ask, then rejoin the shared tail from the
+            # callback. The picker no longer blocks, so the rest of this flow
+            # cannot simply fall through to it.
             picker_started = _log_import_picker_enter(trace_id, "pitch source")
-            chosen, _ = file_dialogs.get_open_file_name(
+
+            def _on_picked(chosen: str) -> None:
+                _log_import_picker_return(trace_id, "pitch source", picker_started, chosen)
+                if not chosen:
+                    self._set_import_buttons_enabled(True)
+                    return
+                self._continue_reimport(source_id, trace_id, dest_root, Path(chosen), existing_name)
+
+            file_dialogs.pick_open_file(
                 self._parent,
                 QCoreApplication.translate("PitchImportFlow", "Choose pitch source to re-import"),
                 resolve_start_dir(None, file_mode=True),
                 self._source_picker_filter(),
+                on_done=_on_picked,
             )
-            _log_import_picker_return(trace_id, "pitch source", picker_started, chosen)
-            if not chosen:
-                self._set_import_buttons_enabled(True)
-                return
-            source_file = Path(chosen)
+            return
 
+        self._continue_reimport(source_id, trace_id, dest_root, source_file, existing_name)
+
+    def _continue_reimport(
+        self,
+        source_id: str,
+        trace_id: str,
+        dest_root: Path,
+        source_file: Path,
+        existing_name: str | None,
+    ) -> None:
+        """Repair ``source_id`` from ``source_file``.
+
+        Shared tail of :meth:`reimport_source`: reached directly when the
+        persisted ``source.<ext>`` copy exists, and from the picker callback
+        when the user had to re-pick.
+        """
         # Preserve the existing display name across reimport. Corrupt or missing
         # metadata falls back to the stable source id instead of the persisted
         # copy's generic "source" stem.

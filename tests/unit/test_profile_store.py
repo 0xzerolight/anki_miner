@@ -484,3 +484,46 @@ class TestDelete:
     def test_delete_of_a_missing_profile_raises(self):
         with pytest.raises(FileNotFoundError):
             ProfileStore.delete("nope")
+
+
+class TestNativeFileDialogsMigration:
+    """Profile sidecars ride the same schema-4 shim as gui_config.json.
+
+    They need no shim of their own — ``read_profile`` goes through
+    ``_parse_and_migrate`` and ``write_profile`` stamps the current version —
+    but nothing else pins that, and a profile saved before the flip would
+    otherwise hand the user back the old Qt-only picker on activation.
+    """
+
+    def test_a_pre_v4_sidecar_activates_with_native_pickers(self):
+        _write_raw(
+            "old",
+            {
+                "config_schema_version": 3,
+                "profile_name": "Old",
+                "use_native_file_dialogs": False,
+            },
+        )
+
+        assert ProfileStore.read_profile("old").use_native_file_dialogs is True
+
+    def test_a_v4_sidecar_keeps_an_explicit_opt_out(self):
+        _write_raw(
+            "modern",
+            {
+                "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                "profile_name": "Modern",
+                "use_native_file_dialogs": False,
+            },
+        )
+
+        assert ProfileStore.read_profile("modern").use_native_file_dialogs is False
+
+    def test_written_profiles_round_trip_the_opt_out(self):
+        ProfileStore.write_profile(
+            "qt-dialogs",
+            replace(create_default_config(), use_native_file_dialogs=False),
+            name="Qt dialogs",
+        )
+
+        assert ProfileStore.read_profile("qt-dialogs").use_native_file_dialogs is False

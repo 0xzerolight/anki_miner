@@ -1380,34 +1380,38 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     def _on_export_settings(self) -> None:
         """Export a portable settings file (machine-specific fields stripped)."""
-        target, _ = file_dialogs.get_save_file_name(
+
+        def _on_picked(target: str) -> None:
+            if not target:
+                return
+            try:
+                GUIConfigManager.export_config(self.config, Path(target))
+            except OSError as e:
+                # The path and the errno are what a bug report needs and what a
+                # reader does not: Details, not the sentence (D24).
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr("Settings could not be exported."),
+                        details=f"{target}: {e}",
+                        action_id="settings.export-retry",
+                        action_text=self.tr("Retry"),
+                    ),
+                    action=self._on_export_settings,
+                )
+                return
+            self.clear_screen_issue()
+            QMessageBox.information(
+                self,
+                self.tr("Settings Exported"),
+                tr_format(self.tr("Portable settings written to %1."), target),
+            )
+
+        file_dialogs.pick_save_file(
             self,
             self.tr("Export Settings"),
             str(Path(resolve_start_dir(None, file_mode=True)) / "anki_miner_settings.json"),
             self.tr("JSON Files (*.json);;All Files (*)"),
-        )
-        if not target:
-            return
-        try:
-            GUIConfigManager.export_config(self.config, Path(target))
-        except OSError as e:
-            # The path and the errno are what a bug report needs and what a
-            # reader does not: Details, not the sentence (D24).
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("Settings could not be exported."),
-                    details=f"{target}: {e}",
-                    action_id="settings.export-retry",
-                    action_text=self.tr("Retry"),
-                ),
-                action=self._on_export_settings,
-            )
-            return
-        self.clear_screen_issue()
-        QMessageBox.information(
-            self,
-            self.tr("Settings Exported"),
-            tr_format(self.tr("Portable settings written to %1."), target),
+            on_done=_on_picked,
         )
 
     def _on_import_settings(self) -> None:
@@ -1418,12 +1422,21 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         strips — keeps its current value. Applies via the same
         ``config_changed`` path as a commit, then reloads every panel.
         """
-        source, _ = file_dialogs.get_open_file_name(
+        file_dialogs.pick_open_file(
             self,
             self.tr("Import Settings"),
             resolve_start_dir(None, file_mode=True),
             self.tr("JSON Files (*.json);;All Files (*)"),
+            on_done=self._apply_settings_import,
         )
+
+    def _apply_settings_import(self, source: str) -> None:
+        """Confirm and apply a settings file chosen by ``_on_import_settings``.
+
+        Split out of the picker slot because the picker is non-blocking now: the
+        continuation is a callback, and this body is far too long to read as a
+        closure.
+        """
         if not source:
             return
         reply = QMessageBox.question(

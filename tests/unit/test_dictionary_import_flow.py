@@ -45,7 +45,7 @@ def test_add_dict_dialog_defaults_to_dicts_dir():
 
     with (
         patch(f"{MOD}.resolve_start_dir", return_value=str(dicts_root)) as rsd,
-        patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=("", "")),
+        patch(f"{MOD}.file_dialogs.pick_open_file", side_effect=lambda *a, on_done, **k: on_done("")),
     ):
         flow.add_dict()  # empty selection → early return after the dialog
 
@@ -71,7 +71,7 @@ def test_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(tmp_path: Path):
     with (
         patch(f"{MOD}.ImportWorker.for_yomitan_repair") as yomitan,
         patch(f"{MOD}.ImportWorker.for_jmdict_repair", return_value=worker) as jmdict,
-        patch(f"{MOD}.file_dialogs.get_open_file_name") as picker,
+        patch(f"{MOD}.file_dialogs.pick_open_file") as picker,
     ):
         flow.reimport_dict("jmdict-english")
 
@@ -200,7 +200,10 @@ def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wir
 
     try:
         with (
-            patch(f"{MOD}.file_dialogs.get_open_file_name", return_value=(str(tmp_path / "picked.zip"), "")),
+            patch(
+                f"{MOD}.file_dialogs.pick_open_file",
+                side_effect=lambda *a, on_done, **k: on_done(str(tmp_path / "picked.zip")),
+            ),
             patch(f"{MOD}.ImportWorker.for_yomitan", return_value=worker),
             patch("anki_miner.gui.controllers.import_flow_common.QProgressDialog", return_value=dialog),
             patch("anki_miner.gui.controllers.import_flow_common.QTimer", return_value=MagicMock()),

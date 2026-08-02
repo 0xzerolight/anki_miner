@@ -502,11 +502,14 @@ class AnkiMinerConfig:
     # the source language: no translator is installed for it. Persisted via
     # gui_config.json; applied at startup (restart-to-apply). Discussion #76.
     ui_language: str = "en"
-    # File pickers use Qt's built-in dialog by default: the OS-native dialog
-    # can hang the GUI thread indefinitely on some Windows setups (Explorer
-    # shell/cloud enumeration on a bad network — Issue #100). True restores
-    # native dialogs. Consumed via gui/utils/file_dialogs.set_use_native.
-    use_native_file_dialogs: bool = False
+    # File pickers use the OS-native dialog by default. Issue #100 froze the
+    # GUI thread inside the native Windows picker, and the first fix forced
+    # Qt's own dialog everywhere — but the hang came from the BLOCKING static
+    # call, not from being native (see gui/utils/file_dialogs). The pickers are
+    # non-blocking now, so native is safe and is what users expect. False
+    # switches to Qt's built-in dialog, which also follows the app's QSS theme.
+    # Consumed via gui/utils/file_dialogs.set_use_native.
+    use_native_file_dialogs: bool = True
 
     # Monotonic identity for committed GUI settings. Not user-editable.
     config_version: int = 0

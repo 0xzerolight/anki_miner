@@ -227,13 +227,10 @@ def test_existing_config_migrated_to_updater_off(tmp_path: Path, monkeypatch: py
     config_path = tmp_path / "gui_config.json"
     monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
 
+    # Pinned to the literal pre-shim version, NOT CONFIG_SCHEMA_VERSION - 1:
+    # the shim gates on "< 3", so a later bump would silently stop exercising it.
     config_path.write_text(
-        json.dumps(
-            {
-                "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION - 1,
-                "auto_update_ytdlp": True,
-            }
-        ),
+        json.dumps({"config_schema_version": 2, "auto_update_ytdlp": True}),
         encoding="utf-8",
     )
     assert GUIConfigManager.load_config().auto_update_ytdlp is False

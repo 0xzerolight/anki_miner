@@ -179,14 +179,21 @@ def patched_modals():
     import anki_miner.gui.utils.file_dialogs as fd
 
     canned = str(SCRATCH_HOME / "picked")
-    stack.enter_context(patch.object(fd, "get_open_file_name", lambda *a, **k: (canned, "")))
-    stack.enter_context(patch.object(fd, "get_open_file_names", lambda *a, **k: ([canned], "")))
-    stack.enter_context(patch.object(fd, "get_save_file_name", lambda *a, **k: (canned, "")))
-    stack.enter_context(patch.object(fd, "get_existing_directory", lambda *a, **k: canned))
+    # on_done is keyword-only on every wrapper, so the fakes can bind it by name
+    # and swallow the positional args. They answer immediately, which is what
+    # the atlas wants: the real picker no longer blocks the event loop, but it
+    # would leave a live top-level window that keeps the app alive instead.
+    stack.enter_context(patch.object(fd, "pick_open_file", lambda *a, on_done, **k: on_done(canned)))
+    stack.enter_context(patch.object(fd, "pick_open_files", lambda *a, on_done, **k: on_done([canned])))
+    stack.enter_context(patch.object(fd, "pick_save_file", lambda *a, on_done, **k: on_done(canned)))
+    stack.enter_context(patch.object(fd, "pick_directory", lambda *a, on_done, **k: on_done(canned)))
 
     try:
         yield
     finally:
+        # Belt and braces: anything that slipped past the patches must not
+        # outlive the sweep as a live window.
+        fd.cancel_all_pickers()
         stack.close()
 
 

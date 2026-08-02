@@ -221,7 +221,15 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         the source library every time.
         """
         current = self._custom_output_dir
-        folder = file_dialogs.get_existing_directory(
+
+        def _on_picked(folder: str) -> None:
+            if folder:
+                session_state.remember_accepted_path(self.OUTPUT_HISTORY_KEY, folder, file_mode=False)
+                self._custom_output_dir = Path(folder)
+                self.output_location_label.setText(folder)
+                self.clear_output_button.show()
+
+        file_dialogs.pick_directory(
             self,
             self._strings.select_output_folder,
             resolve_start_dir(
@@ -229,12 +237,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                 file_mode=False,
                 remembered_dir=session_state.remembered_directory(self.OUTPUT_HISTORY_KEY),
             ),
+            on_done=_on_picked,
         )
-        if folder:
-            session_state.remember_accepted_path(self.OUTPUT_HISTORY_KEY, folder, file_mode=False)
-            self._custom_output_dir = Path(folder)
-            self.output_location_label.setText(folder)
-            self.clear_output_button.show()
 
     def _on_clear_output(self) -> None:
         self._custom_output_dir = None

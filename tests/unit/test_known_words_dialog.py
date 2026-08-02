@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QMessageBox
 
 import anki_miner.gui.widgets.dialogs.known_words_dialog as known_words_dialog_mod
 from anki_miner.gui.widgets.dialogs.known_words_dialog import KnownWordsManagerDialog
@@ -118,18 +118,18 @@ class TestSearch:
 
 class TestExportDialogStartDir:
     def test_on_export_opens_save_dialog_at_home(self, qtbot, tmp_path, monkeypatch):
-        """_on_export must pass a path under home as the initial path arg to getSaveFileName."""
+        """_on_export must pass a path under home as the initial path arg to the save picker."""
         db = _db_with_user_words(tmp_path, user=("ラーメン",))
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
 
         captured: dict = {}
 
-        def fake_save(parent, title, initial_path, file_filter, *a, **kw):
+        def fake_save(parent, title, initial_path, file_filter, *a, on_done, **kw):
             captured["initial"] = initial_path
-            return ("", "")  # user cancels
+            on_done("")  # user cancels
 
-        monkeypatch.setattr(QFileDialog, "getSaveFileName", fake_save)
+        monkeypatch.setattr(known_words_dialog_mod.file_dialogs, "pick_save_file", fake_save)
         dlg._on_export()
 
         home = str(Path.home())
@@ -245,7 +245,7 @@ def message_boxes(monkeypatch):
 
 
 def _start_import(dlg, monkeypatch, path="/fake/words.txt"):
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *a, **k: (path, ""))
+    monkeypatch.setattr(known_words_dialog_mod.file_dialogs, "pick_open_file", lambda *a, on_done, **k: on_done(path))
     dlg._on_import()
 
 

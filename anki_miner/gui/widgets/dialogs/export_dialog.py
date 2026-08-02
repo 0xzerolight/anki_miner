@@ -217,18 +217,21 @@ class ExportDialog(ScreenIssueHost, QDialog):
         file_filter = _FILE_FILTERS.get(fmt_id, "All Files (*)")
         default_name = _DEFAULT_NAMES.get(fmt_id, "export.txt")
 
-        path, _ = file_dialogs.get_save_file_name(
+        def _on_picked(path: str) -> None:
+            if path:
+                self._output_path = Path(path)
+                self._path_input.setText(path)
+                self._path_input.setCursorPosition(0)
+                self._path_input.setToolTip(path)
+                self._export_btn.setEnabled(True)
+
+        file_dialogs.pick_save_file(
             self,
             self.tr("Export Words"),
             str(Path(resolve_start_dir(None, file_mode=True)) / default_name),
             file_filter,
+            on_done=_on_picked,
         )
-        if path:
-            self._output_path = Path(path)
-            self._path_input.setText(path)
-            self._path_input.setCursorPosition(0)
-            self._path_input.setToolTip(path)
-            self._export_btn.setEnabled(True)
 
     def _on_export(self) -> None:
         if not self._output_path:

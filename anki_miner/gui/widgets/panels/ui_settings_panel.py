@@ -127,7 +127,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         themes_root: Path,
         ui_zoom: float = 1.0,
         ui_language: str = "en",
-        use_native_file_dialogs: bool = False,
+        use_native_file_dialogs: bool = True,
         ui_font_scale: float = 1.0,
         parent: QWidget | None = None,
     ) -> None:
@@ -142,7 +142,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             ui_language: The persisted UI language code, used to seed the
                 Language dropdown. Restart-to-apply, so it is passed in.
             use_native_file_dialogs: Seeds the "Use system file dialogs"
-                checkbox (Issue #100 — non-native Qt dialogs are the default).
+                checkbox (native pickers are the default).
             ui_font_scale: The persisted UI font scale, used to seed the Text
                 size dropdown. Restart-to-apply (D39b-A), so the *pending*
                 config value is what the combo shows — never the running
@@ -315,15 +315,15 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.font_scale_restart_row.setVisible(False)
         layout.addWidget(self.font_scale_restart_row)
 
-        # File-dialog mode. Qt's built-in dialog is the default because the
-        # OS-native one can hang the GUI thread on some Windows setups
-        # (Explorer shell/cloud enumeration on a bad network — Issue #100).
+        # File-dialog mode. The OS-native picker is the default; the pickers are
+        # non-blocking, so the Issue #100 freeze that once forced Qt's own
+        # dialog can no longer happen (see gui/utils/file_dialogs).
         self.native_dialogs_checkbox = QCheckBox(self.tr("Use system file dialogs"))
         self.native_dialogs_checkbox.setToolTip(
             self.tr(
-                "Use the operating system's native file pickers instead of the app's built-in ones. "
-                "Native dialogs can freeze the app on some Windows systems with flaky network drives "
-                "or cloud storage, which is why this is off by default."
+                "Use the operating system's native file pickers. Turn this off to use the app's "
+                "built-in picker instead, which follows the app's theme and looks the same on "
+                "every platform."
             )
         )
         self.native_dialogs_checkbox.setChecked(self._use_native_file_dialogs)

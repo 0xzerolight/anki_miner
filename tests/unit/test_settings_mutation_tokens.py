@@ -297,8 +297,8 @@ def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path)
     tab.config_changed.connect(tab.update_config)
     tab.dictionary_panel.dicts_root_selector.set_path(str(new_root))
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.get_open_file_name",
-        lambda *args, **kwargs: (str(tmp_path / "dictionary.zip"), ""),
+        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.pick_open_file",
+        lambda *args, on_done, **kwargs: on_done(str(tmp_path / "dictionary.zip")),
     )
     captured_roots = []
 
@@ -358,7 +358,7 @@ def test_retained_migration_worker_refuses_every_settings_dictionary_entry_point
     )
     unexpected = MagicMock(side_effect=AssertionError("mutation continued after refused preflight"))
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.get_open_file_name",
+        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.pick_open_file",
         unexpected,
     )
     monkeypatch.setattr(tab.dictionary_panel, "_confirm_remove", unexpected)

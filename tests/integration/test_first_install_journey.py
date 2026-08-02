@@ -200,11 +200,11 @@ def test_first_install_journey(
 
     picker_paths = deque((first_zip, cancelled_zip, second_zip))
 
-    def choose_fixture(*_args: object, **_kwargs: object) -> tuple[str, str]:
+    def choose_fixture(*_args: object, on_done, **_kwargs: object) -> None:
         assert picker_paths, "unexpected extra native picker request"
-        return str(picker_paths.popleft()), "Yomitan zip (*.zip)"
+        on_done(str(picker_paths.popleft()))
 
-    monkeypatch.setattr(dictionary_import_flow.file_dialogs, "get_open_file_name", choose_fixture)
+    monkeypatch.setattr(dictionary_import_flow.file_dialogs, "pick_open_file", choose_fixture)
 
     real_progress_dialog = QProgressDialog
 

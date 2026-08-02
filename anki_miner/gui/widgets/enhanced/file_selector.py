@@ -126,6 +126,10 @@ class FileSelector(QWidget):
         self._history_key = history_key
         self._drop_validator = drop_validator
         self._is_valid = False
+        # True while this selector's browse picker is on screen; see
+        # _on_browse_clicked. A flag rather than the dialog itself, so this
+        # module never has to import QFileDialog.
+        self._picker_open = False
 
         self._label_text = label
         self._setup_ui()
@@ -269,7 +273,15 @@ class FileSelector(QWidget):
         A non-empty return is the ONLY thing that moves the remembered folder.
         Typing, dropping, ``set_path`` and a cancelled dialog are not statements
         about where the user keeps this kind of file, so they leave it alone.
+
+        The picker is non-blocking, so this can be re-entered while one is
+        already up. A second dialog is not mouse-reachable (the picker is the
+        application's active modal widget), but ``browse()`` is documented as
+        keyboard-shortcut-callable and a programmatic call bypasses that
+        blocking — hence the explicit guard.
         """
+        if self._picker_open:
+            return
         start_dir = resolve_start_dir(
             # Never .strip() a filesystem-bound path: a folder whose name ends
             # in a space is a real folder (the batch-mining core dump).
@@ -278,31 +290,33 @@ class FileSelector(QWidget):
             remembered_dir=session_state.remembered_directory(self._history_key),
             default_dir=self._default_dir,
         )
+
+        def _on_picked(path: str) -> None:
+            self._picker_open = False
+            if path:
+                session_state.remember_accepted_path(self._history_key, path, file_mode=self._file_mode)
+                self.input.setText(path)
+                self.input.setCursorPosition(0)
+                self.input.setToolTip(path)
+
+        self._picker_open = True
         if self._file_mode:
             # File selection
-            file_path, _ = file_dialogs.get_open_file_name(
+            file_dialogs.pick_open_file(
                 self,
                 tr_format(self.tr("Select %1"), self._label_text),
                 start_dir,
                 self._file_filter,
+                on_done=_on_picked,
             )
-            if file_path:
-                session_state.remember_accepted_path(self._history_key, file_path, file_mode=True)
-                self.input.setText(file_path)
-                self.input.setCursorPosition(0)
-                self.input.setToolTip(file_path)
         else:
             # Folder selection
-            folder_path = file_dialogs.get_existing_directory(
+            file_dialogs.pick_directory(
                 self,
                 tr_format(self.tr("Select %1"), self._label_text),
                 start_dir,
+                on_done=_on_picked,
             )
-            if folder_path:
-                session_state.remember_accepted_path(self._history_key, folder_path, file_mode=False)
-                self.input.setText(folder_path)
-                self.input.setCursorPosition(0)
-                self.input.setToolTip(folder_path)
 
     def _validate_path(self, path_str: str) -> None:
         """Validate the provided path.

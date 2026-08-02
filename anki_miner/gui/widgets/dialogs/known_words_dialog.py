@@ -200,26 +200,29 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
 
     def _on_import(self) -> None:
 
-        path_str, _ = file_dialogs.get_open_file_name(
+        def _on_picked(path_str: str) -> None:
+            if not path_str:
+                return
+            path = Path(path_str)
+            self.import_button.setEnabled(False)
+
+            def work() -> KnownWordsImportResult | KnownWordsImportError:
+                # Expected failures travel through on_done so the reason survives
+                # (run_off_thread's on_error only receives a message string).
+                try:
+                    return parse_known_words_file(path)
+                except KnownWordsImportError as exc:
+                    return exc
+
+            run_off_thread(self, work, self._on_import_parsed, self._on_import_failed)
+
+        file_dialogs.pick_open_file(
             self,
             self.tr("Import Known Words"),
             resolve_start_dir(None, file_mode=True),
             self.tr("Known word lists (*.csv *.txt *.json);;All Files (*)"),
+            on_done=_on_picked,
         )
-        if not path_str:
-            return
-        path = Path(path_str)
-        self.import_button.setEnabled(False)
-
-        def work() -> KnownWordsImportResult | KnownWordsImportError:
-            # Expected failures travel through on_done so the reason survives
-            # (run_off_thread's on_error only receives a message string).
-            try:
-                return parse_known_words_file(path)
-            except KnownWordsImportError as exc:
-                return exc
-
-        run_off_thread(self, work, self._on_import_parsed, self._on_import_failed)
 
     def _on_import_parsed(self, outcome: object) -> None:
         self.import_button.setEnabled(True)
@@ -293,19 +296,22 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
 
     def _on_export(self) -> None:
 
-        path_str, _ = file_dialogs.get_save_file_name(
+        def _on_picked(path_str: str) -> None:
+            if not path_str:
+                return
+            count = self.export_to(Path(path_str))
+            QMessageBox.information(
+                self,
+                self.tr("Export Complete"),
+                tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+            )
+
+        file_dialogs.pick_save_file(
             self,
             self.tr("Export Known Words"),
             str(Path(resolve_start_dir(None, file_mode=True)) / "known_words.txt"),
             "Text Files (*.txt);;All Files (*)",
-        )
-        if not path_str:
-            return
-        count = self.export_to(Path(path_str))
-        QMessageBox.information(
-            self,
-            self.tr("Export Complete"),
-            tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+            on_done=_on_picked,
         )
 
     def _on_reset(self) -> None:
