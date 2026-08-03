@@ -140,9 +140,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
-        manage_profiles_requested: Re-emitted from the UI panel's "Manage
-            Profiles…" button. The window opens the dialog, not this tab: a
-            profile switch reloads every panel here from the incoming config.
+        manage_profiles_requested: Emitted by the footer's "Settings Profiles…"
+            button. The window opens the dialog, not this tab: a profile switch
+            reloads every panel here from the incoming config.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -424,6 +424,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         button_layout.addStretch()
 
+        # Settings Profiles sits with the other whole-config actions rather than
+        # at the foot of Appearance & Language, where the theme gallery pushed it
+        # below the fold and it read as a third theme button. This footer is
+        # outside the panels' scroll area, so one button serves all ten pages.
+        # Left of Export/Import because it is the same kind of action: a named
+        # snapshot of every setting, kept in the app instead of in a file.
+        self.manage_profiles_button = ModernButton(self.tr("Settings Profiles…"), variant="secondary")
+        self.manage_profiles_button.setToolTip(
+            self.tr("Keep several complete settings snapshots and switch between them.")
+        )
+        self.manage_profiles_button.clicked.connect(self._on_manage_profiles_clicked)
+        button_layout.addWidget(self.manage_profiles_button)
+
         self.export_settings_button = ModernButton(self.tr("Export Settings…"), variant="secondary")
         self.export_settings_button.setToolTip(
             self.tr("Save a portable settings file (machine-specific paths and resources excluded).")
@@ -694,10 +707,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
         self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
-        # Straight through to the window — the dialog must not be owned by a
-        # panel that a profile switch reloads underneath it.
-        self.ui_panel.manage_profiles_requested.connect(self.manage_profiles_requested)
-
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
         self.youtube_panel.update_ytdlp_requested.connect(self._on_ytdlp_update_clicked)
@@ -1377,6 +1386,15 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.save_status_label.setText(tr_format(self.tr("⚠ Saved — kept previous: %1"), ", ".join(kept_back)))
         else:
             self._flash_save_status(self.tr("✓ Saved"))
+
+    def _on_manage_profiles_clicked(self) -> None:
+        """Ask the window for the profile manager; never own the dialog here.
+
+        A profile switch fans ``config_refreshed`` into every panel in this tab,
+        so a dialog parented here would be repainted mid-CRUD. MainWindow owns it
+        (see ``_open_profile_manager``).
+        """
+        self.manage_profiles_requested.emit()
 
     def _on_export_settings(self) -> None:
         """Export a portable settings file (machine-specific fields stripped)."""

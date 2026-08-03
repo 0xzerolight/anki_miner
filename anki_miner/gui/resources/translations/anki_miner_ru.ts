@@ -6453,6 +6453,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <source>The known words list could not be opened.</source>
         <translation>Не удалось открыть список известных слов.</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>Профили настроек…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>Храните несколько полных снимков настроек и переключайтесь между ними.</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7668,14 +7676,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Восстановить тему, которая была активна при открытии этой вкладки.</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>Управление профилями…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Храните несколько полных снимков настроек и переключайтесь между ними.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

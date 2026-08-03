@@ -6429,6 +6429,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <source>The known words list could not be opened.</source>
         <translation>既知単語リストを開けませんでした。</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>設定プロファイル…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>完全な設定スナップショットを複数保持し、それらを切り替えます。</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7640,14 +7648,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>このタブを開いたときに有効だったテーマを復元します。</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>プロファイルを管理…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>完全な設定スナップショットを複数保持し、それらを切り替えます。</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

@@ -6441,6 +6441,14 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
         <source>The known words list could not be opened.</source>
         <translation>Impossibile aprire l'elenco di parole conosciute.</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>Profili delle impostazioni…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>Conserva più istantanee complete delle impostazioni e passa da una all'altra.</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7654,14 +7662,6 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Ripristina il tema attivo all'apertura di questa scheda.</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>Gestisci profili…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Conserva più istantanee complete delle impostazioni e passa da una all'altra.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

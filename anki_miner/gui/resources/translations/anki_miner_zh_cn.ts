@@ -6429,6 +6429,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <source>The known words list could not be opened.</source>
         <translation>无法打开已知单词列表。</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>设置配置文件…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>保存多个完整设置快照并在其间切换。</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7640,14 +7648,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>恢复打开此标签页时处于活动状态的主题。</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>管理配置文件…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>保存多个完整设置快照并在其间切换。</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

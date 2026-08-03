@@ -6429,6 +6429,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <source>The known words list could not be opened.</source>
         <translation>Daftar kata yang dikenal tidak dapat dibuka.</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>Profil Pengaturan…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>Simpan beberapa snapshot pengaturan lengkap dan beralihlah di antaranya.</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7640,14 +7648,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Pulihkan tema yang aktif saat tab ini dibuka.</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>Kelola Profil…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Simpan beberapa snapshot pengaturan lengkap dan beralihlah di antaranya.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

@@ -6441,6 +6441,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <source>The known words list could not be opened.</source>
         <translation>Die Liste bekannter Wörter konnte nicht geöffnet werden.</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>Einstellungsprofile…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>Mehrere vollständige Einstellungs-Schnappschüsse behalten und zwischen ihnen wechseln.</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7654,14 +7662,6 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Stellt das Design wieder her, das beim Öffnen dieses Tabs aktiv war.</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>Profile verwalten…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Mehrere vollständige Einstellungs-Schnappschüsse behalten und zwischen ihnen wechseln.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

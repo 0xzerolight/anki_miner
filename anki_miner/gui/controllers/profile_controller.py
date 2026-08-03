@@ -241,8 +241,9 @@ class ProfileController:
         profiles, active_id = self._reconcile()
         GUIConfigManager.ACTIVE_PROFILE_ID = active_id
         self._active_name = next((profile.name for profile in profiles if profile.id == active_id), None)
-        # Stays hidden at fewer than two profiles, so an existing user who never
-        # creates one sees no change at all.
+        # Visible from the first profile on (HeaderWidget.set_profiles owns the
+        # rule); a reconcile that could not enumerate the directory passes () and
+        # the block stays out of the header.
         self._header().set_profiles(profiles, active_id)
 
     def _reconcile(self) -> tuple[tuple[Profile, ...], str | None]:

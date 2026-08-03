@@ -6441,6 +6441,14 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <source>The known words list could not be opened.</source>
         <translation>La liste de mots connus n'a pas pu être ouverte.</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>Profils de paramètres…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>Conservez plusieurs instantanés complets des paramètres et basculez entre eux.</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7654,14 +7662,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Restaurer le thème qui était actif à l'ouverture de cet onglet.</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>Gérer les profils…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Conservez plusieurs instantanés complets des paramètres et basculez entre eux.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

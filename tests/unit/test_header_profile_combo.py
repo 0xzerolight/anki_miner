@@ -78,14 +78,19 @@ def test_a_fresh_header_hides_the_profile_block(qtbot):
     assert header.profile_combo.isHidden()
 
 
-def test_one_profile_hides_the_block(qtbot):
-    """A one-profile world must look exactly like no profiles at all."""
+def test_one_profile_shows_the_block(qtbot):
+    """The picker is how the feature is discovered, so one profile is enough.
+
+    ``bootstrap`` adopts the live config as a single "Default" profile, so under
+    the old two-profile rule a user who never hand-created a second one never saw
+    the picker at all.
+    """
     header = _header(qtbot)
 
     header.set_profiles([ANIME], "anime")
 
-    assert header.profile_label.isHidden()
-    assert header.profile_combo.isHidden()
+    assert not header.profile_label.isHidden()
+    assert not header.profile_combo.isHidden()
 
 
 def test_two_profiles_show_the_block(qtbot):
@@ -97,23 +102,25 @@ def test_two_profiles_show_the_block(qtbot):
     assert not header.profile_combo.isHidden()
 
 
-def test_dropping_back_to_one_profile_hides_the_block_again(qtbot):
-    """Idempotent both ways: deleting a profile puts the header back."""
+def test_dropping_back_to_one_profile_keeps_the_block(qtbot):
+    """Idempotent both ways: deleting the second profile leaves the picker up."""
     header = _header(qtbot)
     header.set_profiles([ANIME, NOVELS], "anime")
 
     header.set_profiles([ANIME], "anime")
 
-    assert header.profile_label.isHidden()
-    assert header.profile_combo.isHidden()
+    assert not header.profile_label.isHidden()
+    assert not header.profile_combo.isHidden()
 
 
 def test_an_empty_sequence_is_safe(qtbot):
+    """Empty means the store could not be enumerated, not "one profile"."""
     header = _header(qtbot)
     header.set_profiles([ANIME, NOVELS], "anime")
 
     header.set_profiles((), None)
 
+    assert header.profile_label.isHidden()
     assert header.profile_combo.isHidden()
     # Only the sentinel is left, and it is never reported as a profile change.
     assert header.profile_combo.count() == 1

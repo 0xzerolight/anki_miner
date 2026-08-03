@@ -367,9 +367,14 @@ class HeaderWidget(QWidget):
         self.profile_combo.setMaximumWidth(self._profile_combo_max_width(metrics))
         self._sync_profile_tooltip(profiles, active_id)
 
-        # One profile is indistinguishable from none, so the block stays out of
-        # the header until there is a choice to make.
-        visible = len(profiles) >= 2
+        # Visible as soon as ONE profile exists. ``ProfileController.bootstrap``
+        # adopts the live config as a single "Default", so the old two-profile
+        # rule kept the picker out of the header forever for anyone who never
+        # hand-created a second one — and the picker is where the feature is
+        # discovered. An EMPTY sequence still hides the block: that means the
+        # profiles directory could not be enumerated, so the combo holds nothing
+        # but the sentinel.
+        visible = bool(profiles)
         self.profile_label.setVisible(visible)
         self.profile_combo.setVisible(visible)
 
