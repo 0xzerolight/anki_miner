@@ -6429,6 +6429,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <source>The known words list could not be opened.</source>
         <translation>Không thể mở danh sách từ đã biết.</translation>
     </message>
+    <message>
+        <source>Settings Profiles…</source>
+        <translation>Hồ sơ cài đặt…</translation>
+    </message>
+    <message>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>Giữ nhiều ảnh chụp nhanh cài đặt hoàn chỉnh và chuyển đổi giữa chúng.</translation>
+    </message>
 </context><context>
     <name>SetupWizard</name>
     <message>
@@ -7640,14 +7648,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Khôi phục chủ đề đã hoạt động khi tab này được mở.</translation>
-    </message>
-    <message>
-        <source>Manage Profiles…</source>
-        <translation>Quản lý hồ sơ…</translation>
-    </message>
-    <message>
-        <source>Keep several complete settings snapshots and switch between them.</source>
-        <translation>Giữ nhiều ảnh chụp nhanh cài đặt hoàn chỉnh và chuyển đổi giữa chúng.</translation>
     </message>
     <message>
         <source>button labels %1:1</source>
