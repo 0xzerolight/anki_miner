@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
     BackfillOptions,
@@ -37,12 +37,40 @@ _SVG_GRAPH = '<svg viewBox="0 0 100 40"><circle cx="5" cy="5" r="4"/><path d="M0
 _GLOSS_HTML = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">gloss</li></ol></div>'
 
 
-class FakeAnkiService:
-    """Records find_notes queries; serves canned notesInfo dicts."""
+class _AllFields(frozenset):
+    """A note type that has every field the config maps (the default fixture)."""
 
-    def __init__(self, notes: dict[int, dict] | None = None):
+    def __contains__(self, item: object) -> bool:
+        return True
+
+
+class FakeAnkiService:
+    """Records find_notes queries and preflight probes; serves canned notesInfo.
+
+    ``note_types``/``note_fields`` default to a collection where the configured
+    note type and every mapped field exist, so the computation tests stay about
+    computation. Pass either to exercise the preflight.
+    """
+
+    def __init__(
+        self,
+        notes: dict[int, dict] | None = None,
+        note_types: list[str] | None = None,
+        note_fields: set[str] | None = None,
+    ):
         self.notes = notes or {}
         self.queries: list[str] = []
+        self.probes: list[str] = []
+        self.note_types = ["test_note_type"] if note_types is None else note_types
+        self.note_fields = _AllFields() if note_fields is None else note_fields
+
+    def note_type_names(self) -> list[str]:
+        self.probes.append("modelNames")
+        return list(self.note_types)
+
+    def note_type_field_names(self, note_type: str) -> set[str]:
+        self.probes.append(f"modelFieldNames:{note_type}")
+        return self.note_fields
 
     def find_notes(self, query: str) -> list[int]:
         self.queries.append(query)
@@ -253,6 +281,97 @@ class TestScanQuery:
         config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "word": ""})
         with pytest.raises(ValueError, match="[Ee]xpression field"):
             scan_backfill(FakeAnkiService(), config, _services(), _options({"frequency"}))
+
+
+class TestScanPreflight:
+    """The check mining has had all along (verify_card_target), backfill-scoped.
+
+    Without it every one of these cases returned an empty plan and wrote
+    nothing to the log, which is indistinguishable from a broken tool.
+    """
+
+    def test_missing_note_type_raises_before_querying(self, backfill_config):
+        anki = FakeAnkiService(note_types=["Basic", "Other"])
+        with pytest.raises(SetupError, match="test_note_type"):
+            scan_backfill(anki, backfill_config, _services(), _options({"frequency"}))
+        assert anki.queries == []
+
+    def test_missing_expression_field_raises(self, backfill_config):
+        anki = FakeAnkiService(note_fields={"Frequency", "FrequencySort"})
+        with pytest.raises(SetupError, match="word"):
+            scan_backfill(anki, backfill_config, _services(), _options({"frequency"}))
+        assert anki.queries == []
+
+    def test_absent_selected_field_reported_and_dropped(self, backfill_config):
+        # Frequency mapped to a name the note type doesn't have; FrequencySort
+        # is fine. The group must not silently propose nothing at all.
+        anki = FakeAnkiService(
+            {1: _note(1, word="猫", FrequencySort="")},
+            note_fields={"word", "FrequencySort"},
+        )
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency", "frequency_sort"}))
+        assert plan.absent_fields == ("Frequency",)
+        assert _changes_by_key(plan, 1) == {"frequency_sort": "42"}
+
+    def test_absent_field_does_not_stop_other_groups(self, backfill_config):
+        anki = FakeAnkiService(
+            {1: _note(1, word="猫", PitchGraph="")},
+            note_fields={"word", "PitchGraph"},
+        )
+        pitch = FakePitchService({("猫", "ねこ"): "1"})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(pitch=pitch, freq=FakeFrequencyService()),
+            _options({"frequency", "pitch_graph"}),
+        )
+        assert plan.absent_fields == ("Frequency",)
+        assert "pitch_graph" in _changes_by_key(plan, 1)
+
+    def test_probes_once_each_per_scan(self, backfill_config):
+        anki = FakeAnkiService({i: _note(i, word="猫", Frequency="") for i in range(1, 6)})
+        scan_backfill(anki, backfill_config, _services(freq=FakeFrequencyService()), _options({"frequency"}))
+        assert anki.probes == ["modelNames", "modelFieldNames:test_note_type"]
+
+
+class TestScanLogging:
+    """One INFO line per phase — the only trace a no-op run leaves in a user log."""
+
+    def test_scan_logs_a_summary_line(self, backfill_config, caplog):
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="")})
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        with caplog.at_level("INFO", logger="anki_miner.services.card_backfiller"):
+            scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency", "frequency_sort"}))
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill scan:"))
+        assert "matched=1" in line
+        assert "scanned=1" in line
+        assert "notes=1" in line
+        assert "fields=2" in line
+
+    def test_zero_match_scan_is_visible_in_the_log(self, backfill_config, caplog):
+        with caplog.at_level("INFO", logger="anki_miner.services.card_backfiller"):
+            plan = scan_backfill(FakeAnkiService(), backfill_config, _services(), _options({"frequency"}))
+        assert plan.scanned == 0
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill scan:"))
+        assert "matched=0" in line
+        assert "scanned=0" in line
+
+    def test_absent_fields_named_in_the_log(self, backfill_config, caplog):
+        anki = FakeAnkiService({1: _note(1, word="猫")}, note_fields={"word"})
+        with caplog.at_level("INFO", logger="anki_miner.services.card_backfiller"):
+            scan_backfill(anki, backfill_config, _services(freq=FakeFrequencyService()), _options({"frequency"}))
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill scan:"))
+        assert "absent=Frequency" in line
+
+    def test_apply_logs_a_summary_line(self, caplog):
+        anki = RecordingAnkiService({1: _note(1, word="猫", Frequency="")})
+        plan = _plan([NotePlan(1, "猫", (FieldChange("frequency", "Frequency", "", "42"),))])
+        with caplog.at_level("INFO", logger="anki_miner.services.card_backfiller"):
+            apply_backfill(anki, plan)
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill apply:"))
+        assert "notes=1" in line
+        assert "fields=1" in line
 
 
 class TestScanIdentity:

@@ -32,10 +32,13 @@ from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
     _SOUND_REF_RE,
     _strip_for_dedup,
+    missing_fields_message,
+    missing_note_type_message,
 )
 
 # Generic Anki-search escaper (backslash/quote/``*``/``_``); the historical name
@@ -142,6 +145,11 @@ class BackfillPlan:
     # was a context-free tokenizer guess. Surfaced so an overwrite run that
     # deliberately protects existing pitch does not read as "nothing found".
     guessed_reading_skips: int = 0
+    # Selected field NAMES the preflight found are not on the note type — a
+    # stale Settings → Anki mapping. Their keys are dropped before the scan,
+    # so without this the whole group silently proposes nothing and the summary
+    # reads as "already have values".
+    absent_fields: tuple[str, ...] = ()
 
     @property
     def total_field_changes(self) -> int:
@@ -285,6 +293,9 @@ def scan_backfill(
         selected -= _FREQ_KEYS
     definition_service = services.definition_service
 
+    absent_fields = _preflight(anki_service, config, selected, word_field)
+    selected -= {key for key in selected if anki_fields[key] in absent_fields}
+
     query = f'note:"{_escape_anki_search(config.anki_note_type)}"'
     if options.deck:
         query += f' deck:"{_escape_anki_search(options.deck)}"'
@@ -348,7 +359,7 @@ def scan_backfill(
         if progress:
             progress(scanned, len(note_ids))
 
-    return BackfillPlan(
+    plan = BackfillPlan(
         options=options,
         notes=tuple(note_plans),
         scanned=scanned,
@@ -359,7 +370,59 @@ def scan_backfill(
         config_version=config.config_version,
         identical_skips=identical_skips,
         guessed_reading_skips=guessed_reading_skips,
+        absent_fields=absent_fields,
     )
+    # The one line that tells a bug report which no-op this was: query matched
+    # nothing, notes matched but every target was filled, or the mapping is
+    # stale. Without it a scan that proposes nothing leaves no trace at all in
+    # anki_miner.log, and every failure mode reads the same to a maintainer.
+    logger.info(
+        "Backfill scan: query=%s matched=%d scanned=%d notes=%d fields=%d " "overwrite=%s absent=%s unavailable=%s",
+        query,
+        len(note_ids),
+        scanned,
+        len(plan.notes),
+        plan.total_field_changes,
+        options.overwrite,
+        ",".join(absent_fields) or "-",
+        ",".join(unavailable) or "-",
+    )
+    return plan
+
+
+def _preflight(
+    anki_service: AnkiService,
+    config: AnkiMinerConfig,
+    selected: set[str],
+    word_field: str,
+) -> tuple[str, ...]:
+    """Check the note type and the selected field names before scanning.
+
+    Deliberately NOT ``AnkiService.verify_card_target`` — that validates every
+    configured field including the card-type marker field, so unrelated mapping
+    drift would hard-fail a backfill that never touches those fields. Two
+    checks are fatal (nothing can be scanned without them) and the third is
+    reported:
+
+    - note type absent from the collection → ``SetupError``;
+    - the Expression field absent from the note type → ``SetupError``, since no
+      note can then carry the identity every lookup and the apply-time
+      staleness recheck key on;
+    - any other selected field absent → returned by name, its key dropped by
+      the caller. The remaining groups still run.
+
+    Two AnkiConnect calls per scan, both before the note loop.
+    """
+    note_types = anki_service.note_type_names()
+    if config.anki_note_type not in note_types:
+        raise SetupError(missing_note_type_message(config.anki_note_type, note_types))
+
+    actual = anki_service.note_type_field_names(config.anki_note_type)
+    if word_field not in actual:
+        raise SetupError(missing_fields_message(config.anki_note_type, {word_field}, actual))
+
+    anki_fields = config.anki_fields
+    return tuple(sorted({anki_fields[key] for key in selected if anki_fields[key] not in actual}))
 
 
 def _resolve_context(
@@ -693,6 +756,15 @@ def apply_backfill(
         if progress:
             progress(written_so_far, total_notes)
 
+    logger.info(
+        "Backfill apply: planned=%d notes=%d fields=%d tagged=%d stale=%d failed=%d",
+        total_notes,
+        notes_updated,
+        fields_filled,
+        tagged,
+        skipped_stale,
+        failed,
+    )
     return BackfillResult(
         notes_updated=notes_updated,
         fields_filled=fields_filled,
