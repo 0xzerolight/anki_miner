@@ -570,3 +570,69 @@ class TestSettingsNavigatorKeepsEveryCategoryReachable:
         assert tab.nav_list.width() > 0 and tab.nav_list.isVisible()
 
         self._join_workers(tab)
+
+
+class TestSettingsFooterFitsTheWindowMinimum:
+    """Five widgets now share the Settings footer, and it cannot scroll.
+
+    Reset / Settings Profiles / Export / Import plus the save-status label sit in
+    one ``QHBoxLayout`` outside the panels' scroll area, so their combined
+    minimum is a hard floor on the tab's width -- the profiles button moved here
+    out of Appearance & Language, which could absorb it by scrolling.
+
+    Measured at ui_font_scale 1.5 in the REAL locale against the app's own
+    ``WINDOW_MIN_WIDTH`` contract. The +25-character pseudo-locale is
+    deliberately not stacked on here, for the reason spelled out in
+    ``TestHeaderProfileBlockFitsTheWindowMinimum``: applied to four button
+    captions at once it is red for reasons that have nothing to do with this row.
+    """
+
+    @staticmethod
+    def _settings_tab(qtbot, monkeypatch, test_config):
+        from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
+        from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+        monkeypatch.setattr(AnkiProbeController, "refresh_name_lists", lambda _self: None)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.resize(1024, 768)
+        tab.show()
+        qtbot.waitExposed(tab)
+        QApplication.processEvents()
+        return tab
+
+    def test_the_footer_row_fits_the_minimum_window(
+        self,
+        qtbot,
+        monkeypatch,
+        test_config,
+        narrow_latin_interface_font,
+        hostile_scale,
+        # fixture order is load-bearing: the font has to be resolved before
+        # hostile_scale compiles and installs the stylesheet that carries it.
+    ):
+        from anki_miner.gui.constants import WINDOW_MIN_WIDTH
+        from anki_miner.gui.resources.styles import SPACING
+
+        tab = self._settings_tab(qtbot, monkeypatch, test_config)
+        row = (
+            tab.reset_settings_button,
+            tab.manage_profiles_button,
+            tab.export_settings_button,
+            tab.import_settings_button,
+        )
+        needed = sum(button.minimumSizeHint().width() for button in row) + SPACING.sm * len(row)
+
+        # Vacuity guard: an unpolished or empty-captioned button reports a hint
+        # near zero, which would pass for the wrong reason.
+        assert all(button.text() for button in row)
+        assert needed > 400, f"the row measured {needed}px, which is not a real measurement"
+        assert needed <= WINDOW_MIN_WIDTH, (
+            f"the settings footer needs {needed}px of the {WINDOW_MIN_WIDTH}px minimum window; "
+            f"per button: {[(b.text(), b.minimumSizeHint().width()) for b in row]}"
+        )
+
+        tab.shutdown()
+        for worker in tab.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
