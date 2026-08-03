@@ -259,12 +259,15 @@ class TestPreviewTable:
         assert tab.summary_label.text() != ""
 
     def test_empty_plan_fill_mode_keeps_already_have_values_wording(self, tab):
-        tab._on_scan_finished(_plan([]))
+        # scanned>0 is what makes this sentence true: notes WERE examined and
+        # every target already had a value.
+        tab._on_scan_finished(_plan([], scanned=12))
         assert "already have values" in tab.summary_label.text()
 
     def test_empty_plan_overwrite_with_identicals_says_identical(self, tab):
         plan = _plan(
             [],
+            scanned=12,
             options=BackfillOptions(field_keys=frozenset({"frequency"}), overwrite=True),
             identical_skips=2,
         )
@@ -278,6 +281,7 @@ class TestPreviewTable:
         # must NOT claim values are identical or already present.
         plan = _plan(
             [],
+            scanned=12,
             options=BackfillOptions(field_keys=frozenset({"frequency"}), overwrite=True),
             identical_skips=0,
         )
@@ -298,8 +302,43 @@ class TestPreviewTable:
         assert "3" in text
         assert "up to date" in text
 
+    def test_zero_notes_matched_names_the_scope_not_the_fields(self, tab):
+        # The bug this replaces: a query that matched nothing reported "all
+        # selected fields already have values", sending the user to hunt
+        # through a collection that was never examined.
+        tab._on_scan_finished(_plan([], scanned=0))
+        text = tab.summary_label.text()
+        assert "No notes matched" in text
+        assert "test_note_type" in text
+        assert "already have values" not in text
+
+    def test_zero_notes_matched_names_the_deck_when_one_was_chosen(self, tab):
+        plan = _plan(
+            [],
+            scanned=0,
+            options=BackfillOptions(field_keys=frozenset({"frequency"}), deck="Mining::JP"),
+        )
+        tab._on_scan_finished(plan)
+        text = tab.summary_label.text()
+        assert "Mining::JP" in text
+        assert "test_note_type" in text
+
+    def test_absent_fields_reported_as_a_stale_mapping(self, tab):
+        # Distinct from unavailable_fields: the field name is not on the note
+        # type at all, so installing resources cannot help.
+        plan = _plan([], scanned=12, absent_fields=("PitchGraph",))
+        tab._on_scan_finished(plan)
+        text = tab.summary_label.text()
+        assert "PitchGraph" in text
+        assert "stale mapping" in text.lower()
+
+    def test_absent_fields_reported_alongside_a_nonempty_plan(self, tab):
+        plan = _plan([_note_plan(1)], absent_fields=("PitchGraph",))
+        tab._on_scan_finished(plan)
+        assert "PitchGraph" in tab.summary_label.text()
+
     def test_unavailable_fields_reported(self, tab):
-        plan = _plan([], unavailable_fields=("pitch_graph", "pitch_text"))
+        plan = _plan([], scanned=12, unavailable_fields=("pitch_graph", "pitch_text"))
         tab._on_scan_finished(plan)
         assert "pitch" in tab.summary_label.text().lower()
 

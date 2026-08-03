@@ -504,7 +504,24 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
 
     def _summary_text(self, plan: BackfillPlan, shown_rows: int) -> str:
         parts: list[str] = []
-        if plan.notes:
+        if plan.scanned == 0:
+            # A query that matched nothing is NOT "all fields already have
+            # values" — that sentence sent users hunting for a filled-in
+            # collection when the note type or deck simply didn't match. Name
+            # the scope that came back empty instead.
+            if plan.options.deck:
+                parts.append(
+                    self.tr(
+                        'No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.'
+                    ).format(note_type=self.config.anki_note_type, deck=plan.options.deck)
+                )
+            else:
+                parts.append(
+                    self.tr('No notes matched — note type "{note_type}". Check Settings → Anki.').format(
+                        note_type=self.config.anki_note_type
+                    )
+                )
+        elif plan.notes:
             parts.append(
                 self.tr("{fields} field(s) across {notes} note(s) will be filled.").format(
                     fields=plan.total_field_changes, notes=len(plan.notes)
@@ -545,6 +562,15 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
                 self.tr("{count} sort value(s) are the 9999999 no-frequency-found placeholder.").format(
                     count=plan.sentinel_only_sorts
                 )
+            )
+        if plan.absent_fields:
+            # Distinct from unavailable_fields (resource not loaded): the field
+            # name itself is not on the note type, so the mapping is stale and
+            # no amount of installing dictionaries will help.
+            parts.append(
+                self.tr(
+                    "Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping."
+                ).format(fields=", ".join(plan.absent_fields))
             )
         if plan.unavailable_fields:
             parts.append(
