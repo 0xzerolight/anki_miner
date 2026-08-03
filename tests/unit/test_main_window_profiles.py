@@ -214,11 +214,11 @@ def test_manager_callback_repoints_the_header(qtbot, monkeypatch, patch_heavy_in
 
 
 def test_settings_manage_button_opens_the_manager(wired_window, opened_dialogs):
-    """Settings → UI → "Manage Profiles…" lands on the same window handler."""
+    """Settings footer → "Settings Profiles…" lands on the same window handler."""
     window, _titles, tabs = wired_window
     settings_tab = next(tab for tab in tabs.values() if isinstance(tab, SettingsTab))
 
-    settings_tab.ui_panel.manage_profiles_btn.click()
+    settings_tab.manage_profiles_button.click()
 
     assert len(opened_dialogs) == 1
     assert opened_dialogs[0].controller is window.profile_controller

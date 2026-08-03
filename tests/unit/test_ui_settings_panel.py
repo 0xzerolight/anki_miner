@@ -260,23 +260,6 @@ class TestLanguage:
         assert emitted == ["fr"]
 
 
-class TestManageProfilesButton:
-    """The panel only ASKS for the profile manager (Task 7).
-
-    It must not own the dialog: switching a profile fans ``config_refreshed``
-    back into ``load_from_config`` on this very panel, so a dialog parented here
-    would be repainted underneath the user.
-    """
-
-    def test_button_emits_the_request(self, panel: UISettingsPanel) -> None:
-        emitted: list[int] = []
-        panel.manage_profiles_requested.connect(lambda: emitted.append(1))
-
-        panel.manage_profiles_btn.click()
-
-        assert emitted == [1]
-
-
 class TestThemesFolderFailureIsVisible:
     """Opening the themes folder used to fail into the log alone (D24, string 12)."""
 

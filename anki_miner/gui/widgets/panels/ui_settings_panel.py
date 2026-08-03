@@ -107,9 +107,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         zoom_changed: Emitted with the new whole-UI zoom factor.
         language_changed: Emitted with the selected language code when the user
             picks a new UI language (not on programmatic ``set_language``).
-        manage_profiles_requested: Emitted when the user asks for the settings
-            profile manager. The panel deliberately does not own the dialog —
-            switching a profile reloads this very panel.
     """
 
     ANCHOR_NAMESPACE = "ui"
@@ -120,7 +117,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
     native_dialogs_changed = pyqtSignal(bool)
-    manage_profiles_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -382,16 +378,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         buttons.addStretch()
 
-        # Panel-level action, right-aligned past the stretch so it does not read
-        # as a third theme button. It only asks; MainWindow owns the dialog,
-        # because a profile switch reloads this panel from the new config.
-        self.manage_profiles_btn = ModernButton(self.tr("Manage Profiles…"), variant="secondary")
-        self.manage_profiles_btn.setToolTip(
-            self.tr("Keep several complete settings snapshots and switch between them.")
-        )
-        self.manage_profiles_btn.clicked.connect(self._on_manage_profiles)
-        buttons.addWidget(self.manage_profiles_btn)
-
         layout.addLayout(buttons)
 
         self.setLayout(layout)
@@ -556,10 +542,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             return
         self.clear_screen_issue()
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._themes_root)))
-
-    def _on_manage_profiles(self) -> None:
-        """Ask the window to open the settings-profile manager."""
-        self.manage_profiles_requested.emit()
 
     def _revert_preview(self) -> None:
         """Restore the theme that was active when the panel was opened."""
