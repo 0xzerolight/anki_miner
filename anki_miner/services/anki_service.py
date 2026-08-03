@@ -23,6 +23,8 @@ from anki_miner.services.anki_note_builder import (
     _strip_for_dedup,
     build_note,
     configured_target_field_names,
+    missing_fields_message,
+    missing_note_type_message,
 )
 from anki_miner.utils.i18n import tr_format
 
@@ -224,6 +226,30 @@ class AnkiService:
             timeout=15,
         )
 
+    def note_type_names(self) -> list[str]:
+        """Every note type in the collection (AnkiConnect ``modelNames``)."""
+        return _expect_list(
+            post_action(self.config.ankiconnect_url, "modelNames", timeout=15) or [],
+            "modelNames",
+            elem_type=str,
+        )
+
+    def note_type_field_names(self, note_type: str) -> set[str]:
+        """Field names defined on ``note_type`` (AnkiConnect ``modelFieldNames``)."""
+        return set(
+            _expect_list(
+                post_action(
+                    self.config.ankiconnect_url,
+                    "modelFieldNames",
+                    params={"modelName": note_type},
+                    timeout=15,
+                )
+                or [],
+                "modelFieldNames",
+                elem_type=str,
+            )
+        )
+
     def verify_card_target(self) -> None:
         """Validate note type, field mapping, and that the target deck exists.
 
@@ -240,37 +266,15 @@ class AnkiService:
                 or the configured deck absent from the collection.
             AnkiConnectionError: AnkiConnect unreachable or errors.
         """
-        models = post_action(self.config.ankiconnect_url, "modelNames", timeout=15) or []
+        models = self.note_type_names()
         if self.config.anki_note_type not in models:
-            available = ", ".join(models[:5])
-            more = "..." if len(models) > 5 else ""
-            raise SetupError(
-                f"Note type '{self.config.anki_note_type}' not found. "
-                f"Available: {available}{more}. "
-                f"Check Settings → Anki."
-            )
+            raise SetupError(missing_note_type_message(self.config.anki_note_type, models))
 
-        actual = set(
-            post_action(
-                self.config.ankiconnect_url,
-                "modelFieldNames",
-                params={"modelName": self.config.anki_note_type},
-                timeout=15,
-            )
-            or []
-        )
+        actual = self.note_type_field_names(self.config.anki_note_type)
         required = configured_target_field_names(self.config)
         missing = required - actual
         if missing:
-            _sorted_actual = sorted(actual)
-            _available = ", ".join(_sorted_actual[:5])
-            _more = "..." if len(actual) > 5 else ""
-            raise SetupError(
-                f"Field(s) {', '.join(sorted(missing))} not found on note type "
-                f"'{self.config.anki_note_type}'. "
-                f"Available: {_available}{_more}. "
-                f"Check Settings → Anki field mapping."
-            )
+            raise SetupError(missing_fields_message(self.config.anki_note_type, missing, actual))
 
         decks = post_action(self.config.ankiconnect_url, "deckNames", timeout=15) or []
         if self.config.anki_deck_name not in decks:

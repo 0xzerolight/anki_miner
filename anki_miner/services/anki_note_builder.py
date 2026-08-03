@@ -48,6 +48,31 @@ def configured_target_field_names(config: AnkiMinerConfig) -> set[str]:
     return field_names
 
 
+def missing_note_type_message(note_type: str, available: list[str]) -> str:
+    """The one sentence every note-type-not-found check raises.
+
+    Shared by ``AnkiService.verify_card_target`` (the mining preflight) and the
+    Card Backfill preflight, so a user who trips it from either path reads the
+    identical wording. Lives here rather than in ``anki_service`` because the
+    backfill caller is deliberately PyQt-free and cannot import that module.
+    """
+    shown = ", ".join(available[:5])
+    more = "..." if len(available) > 5 else ""
+    return f"Note type '{note_type}' not found. Available: {shown}{more}. Check Settings → Anki."
+
+
+def missing_fields_message(note_type: str, missing: set[str], actual: set[str]) -> str:
+    """The one sentence every field-absent-from-note-type check raises."""
+    shown = ", ".join(sorted(actual)[:5])
+    more = "..." if len(actual) > 5 else ""
+    return (
+        f"Field(s) {', '.join(sorted(missing))} not found on note type "
+        f"'{note_type}'. "
+        f"Available: {shown}{more}. "
+        f"Check Settings → Anki field mapping."
+    )
+
+
 # Optional fields whose value is pre-rendered HTML/SVG inserted verbatim (like
 # glossary), NOT html.escape()d by the OPTIONAL pass — escaping would turn the
 # tags into literal text. They follow the skip-when-empty contract: an absent
