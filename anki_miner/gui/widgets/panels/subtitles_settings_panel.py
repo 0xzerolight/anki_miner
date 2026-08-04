@@ -42,6 +42,7 @@ from anki_miner.services.asr import (
     onnx_pack_installer,
 )
 from anki_miner.utils import alass_resolver
+from anki_miner.utils.logging_ext import suppressed
 
 logger = logging.getLogger(__name__)
 
@@ -588,10 +589,11 @@ class SubtitlesSettingsPanel(FormPanel):
         ``find_spec`` is light (a sys.path scan, no import); only used on the rare
         probe-failure path, so a direct check here is fine on the GUI thread.
         """
-        try:
-            return importlib.util.find_spec("onnxruntime") is not None
-        except Exception:  # noqa: BLE001 — degrade to "not importable"
-            return False
+        importable = False
+        # bucket B: an absent or unprobeable optional VAD runtime is a normal fallback.
+        with suppressed(logger, "probing optional onnxruntime availability"):
+            importable = importlib.util.find_spec("onnxruntime") is not None
+        return importable
 
     def notify_asr_download_finished(self, name: str, models_root) -> None:
         """Clear the in-flight guard and refresh the button/status after a download.
@@ -832,7 +834,12 @@ class SubtitlesSettingsPanel(FormPanel):
             else:
                 try:
                     engine_available = _engine.available()
-                except Exception:  # noqa: BLE001 — degrade to "unavailable"
+                except Exception as exc:  # noqa: BLE001 — bucket A: the ASR feature is disabled.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "asr_engine",
+                        type(exc).__name__,
+                    )
                     engine_available = False
 
             if cuda_cache is not None:
@@ -840,21 +847,36 @@ class SubtitlesSettingsPanel(FormPanel):
             else:
                 try:
                     cuda_device_count = _engine.cuda_device_count()
-                except Exception:  # noqa: BLE001 — degrade to "no GPU"
+                except Exception as exc:  # noqa: BLE001 — bucket A: CUDA is silently disabled.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "cuda_device",
+                        type(exc).__name__,
+                    )
                     cuda_device_count = 0
 
             model_downloaded = False
             if engine_available and models_root is not None:
                 try:
                     model_downloaded = model_manager.is_downloaded(name, models_root)
-                except Exception:  # noqa: BLE001 — guard any model_manager failure
+                except Exception as exc:  # noqa: BLE001 — bucket A: model state falls back to missing.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "asr_model",
+                        type(exc).__name__,
+                    )
                     model_downloaded = False
 
             cuda_pack_installed = False
             if cuda_libs_root is not None:
                 try:
                     cuda_pack_installed = cuda_pack_installer.is_installed(cuda_libs_root)
-                except Exception:  # noqa: BLE001 — guard any installer probe failure
+                except Exception as exc:  # noqa: BLE001 — bucket A: CUDA pack state falls back to missing.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "cuda_pack",
+                        type(exc).__name__,
+                    )
                     cuda_pack_installed = False
 
             alass_installed = False
@@ -865,21 +887,31 @@ class SubtitlesSettingsPanel(FormPanel):
                     # bundled or PATH alass is mislabeled "Not installed" while
                     # the retime tab (which uses the same resolver) works fine.
                     alass_installed = alass_resolver.alass_available(alass_location, bin_root)
-                except Exception:  # noqa: BLE001 — guard any resolver probe failure
+                except Exception as exc:  # noqa: BLE001 — bucket A: alass falls back to unavailable.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "alass",
+                        type(exc).__name__,
+                    )
                     alass_installed = False
 
             # onnxruntime importability (find_spec scans sys.path) is the heavy
             # VAD probe; the install flag is a cheap dir check.
-            try:
+            onnxruntime_importable = False
+            # bucket B: an absent or unprobeable optional VAD runtime is a normal fallback.
+            with suppressed(logger, "probing optional onnxruntime availability"):
                 onnxruntime_importable = importlib.util.find_spec("onnxruntime") is not None
-            except Exception:  # noqa: BLE001 — degrade to "not importable"
-                onnxruntime_importable = False
 
             vad_pack_installed = False
             if onnx_pack_root is not None:
                 try:
                     vad_pack_installed = onnx_pack_installer.is_installed(onnx_pack_root)
-                except Exception:  # noqa: BLE001 — guard any installer probe failure
+                except Exception as exc:  # noqa: BLE001 — bucket A: VAD pack state falls back to missing.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "vad_pack",
+                        type(exc).__name__,
+                    )
                     vad_pack_installed = False
 
             # The Vulkan model is "installed" only when BOTH ggml files are
@@ -891,7 +923,12 @@ class SubtitlesSettingsPanel(FormPanel):
                     vulkan_installed = ggml_model_installer.is_ggml_downloaded(
                         name, models_root
                     ) and ggml_model_installer.is_vad_downloaded(models_root)
-                except Exception:  # noqa: BLE001 — guard any installer probe failure
+                except Exception as exc:  # noqa: BLE001 — bucket A: Vulkan model state falls back to missing.
+                    logger.warning(
+                        "ASR probe degraded: service=%s error=%s",
+                        "vulkan_model",
+                        type(exc).__name__,
+                    )
                     vulkan_installed = False
 
             return _AsrState(
