@@ -164,11 +164,13 @@ class ModalImportFlowMixin:
 
         def _on_done(result: object) -> None:
             if generation == self._scan_generation:
+                # bucket C: a deleted Qt receiver makes this superseded callback irrelevant.
                 with contextlib.suppress(RuntimeError):
                     on_done(result)
 
         def _on_error(message: str) -> None:
             if generation == self._scan_generation:
+                # bucket C: a deleted Qt receiver makes this superseded callback irrelevant.
                 with contextlib.suppress(RuntimeError):
                     on_error(message)
 
@@ -180,8 +182,9 @@ class ModalImportFlowMixin:
                 _on_error,
                 pass_cancel_check=pass_cancel_check,
             )
-        except Exception as exc:  # noqa: BLE001 - dispatch failure must release the flow token
+        except Exception as exc:  # noqa: BLE001 - bucket A: dispatch failed before user-visible scanning.
             self._scan_worker = None
+            logger.warning("Import scan dispatch failed: error=%s", type(exc).__name__)
             _on_error(str(exc))
 
     def _create_modal_import_dialog(
@@ -219,6 +222,7 @@ class ModalImportFlowMixin:
         on_native_finished: Callable[[], None],
     ) -> Callable[[], None]:
         """Wire one worker's guarded progress, first-result latch, and native barrier."""
+        # bucket C: disconnecting an absent/deleted Qt timer signal is teardown-safe.
         with contextlib.suppress(TypeError, RuntimeError):
             no_progress_timer.timeout.disconnect()
         no_progress_timer.timeout.connect(
@@ -281,6 +285,7 @@ class ModalImportFlowMixin:
             state.resource_id = resource_id
             state.meta = meta
             state.error = error
+            # bucket C: terminal signal delivery may race deletion of its Qt timer.
             with contextlib.suppress(RuntimeError):
                 no_progress_timer.stop()
             logger.info("Import trace %s domain latch kind=%s index=%d", trace_id, kind, job_index)
@@ -298,6 +303,7 @@ class ModalImportFlowMixin:
             if not is_current() or state.terminal_handled:
                 logger.warning("Import trace %s late native finish ignored index=%d", trace_id, job_index)
                 return
+            # bucket C: native finish may arrive after Qt has deleted the timer.
             with contextlib.suppress(RuntimeError):
                 no_progress_timer.stop()
             logger.info("Import trace %s native finished index=%d", trace_id, job_index)
@@ -335,7 +341,7 @@ class ModalImportFlowMixin:
         try:
             try:
                 on_finished()
-            except Exception as exc:  # noqa: BLE001 - terminal cleanup must still run
+            except Exception as exc:  # noqa: BLE001 - bucket C: callback owner handles or receives same failure.
                 if on_finished_error is None:
                     raise
                 on_finished_error(exc)
@@ -345,14 +351,18 @@ class ModalImportFlowMixin:
                 logger.info("Import trace %s buttons restored", trace_id)
             finally:
                 try:
+                    # bucket C: modal teardown may race deletion of the Qt timer.
                     with contextlib.suppress(RuntimeError):
                         no_progress_timer.stop()
+                    # bucket C: deleteLater is best-effort during modal teardown.
                     with contextlib.suppress(RuntimeError):
                         no_progress_timer.deleteLater()
                 finally:
                     try:
+                        # bucket C: closing an already-deleted modal is harmless cleanup.
                         with contextlib.suppress(RuntimeError):
                             dlg.close()
+                        # bucket C: deleteLater is best-effort during modal teardown.
                         with contextlib.suppress(RuntimeError):
                             dlg.deleteLater()
                     finally:
@@ -437,7 +447,7 @@ class ModalImportFlowMixin:
                     assert state.meta is not None
                     try:
                         on_success(state.resource_id, state.meta)
-                    except Exception as exc:  # noqa: BLE001 — restore UI after callback failure
+                    except Exception as exc:  # noqa: BLE001 — bucket A: imported data cannot update settings.
                         logger.exception("Import trace %s success handler failed", trace_id)
                         if on_success_error is not None:
                             on_success_error(exc)
@@ -474,11 +484,12 @@ class ModalImportFlowMixin:
         logger.info("Import trace %s worker start", trace_id)
         try:
             worker.start()
-        except Exception as exc:  # noqa: BLE001 - synchronous start failure must not strand the modal
+        except Exception as exc:  # noqa: BLE001 - bucket A: worker failed before import could run.
             logger.exception("Import trace %s worker start failed", trace_id)
             if still_running(worker):
                 state.kind = "failed"
                 state.error = str(exc)
+                # bucket C: failure cleanup may race deletion of the watchdog timer.
                 with contextlib.suppress(RuntimeError):
                     no_progress_timer.stop()
             else:
@@ -594,6 +605,7 @@ class ModalImportFlowMixin:
             step.kind = "failed"
             step.error = str(exc)
             step.terminal_handled = True
+            # bucket C: failed worker construction may leave no live Qt timer.
             with contextlib.suppress(RuntimeError):
                 no_progress_timer.stop()
             state.failures.append((job, str(exc)))
@@ -651,7 +663,7 @@ class ModalImportFlowMixin:
 
             try:
                 worker = make_worker(job)
-            except Exception as exc:  # noqa: BLE001 - one bad job must not strand the batch
+            except Exception as exc:  # noqa: BLE001 - bucket A: one batch item cannot be imported.
                 logger.exception("Import trace %s worker construction failed index=%d", trace_id, index)
                 state.failures.append((job, str(exc)))
                 state.index += 1
@@ -741,11 +753,12 @@ class ModalImportFlowMixin:
                 return
             try:
                 worker.start()
-            except Exception as exc:  # noqa: BLE001 - one bad job must not strand the batch
+            except Exception as exc:  # noqa: BLE001 - bucket A: one batch item cannot start.
                 logger.exception("Import trace %s worker start failed index=%d", trace_id, index)
                 if still_running(worker):
                     step.kind = "failed"
                     step.error = str(exc)
+                    # bucket C: start-failure cleanup may race deletion of the timer.
                     with contextlib.suppress(RuntimeError):
                         no_progress_timer.stop()
                 else:
