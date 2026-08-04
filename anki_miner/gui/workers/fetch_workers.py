@@ -31,6 +31,7 @@ def FetchNotetypesWorker(service: AnkiService, parent=None) -> SingleCallWorker:
     return SingleCallWorker(
         lambda: service.get_model_names(),
         error_prefix="Error fetching note type names: ",
+        context="FetchNotetypesWorker",
         parent=parent,
     )
 
@@ -54,6 +55,7 @@ def FetchFieldsWorker(service: AnkiService, note_type: str, parent=None) -> Sing
     return SingleCallWorker(
         lambda: service.get_note_type_fields(note_type),
         error_prefix="Error fetching note type fields: ",
+        context="FetchFieldsWorker",
         parent=parent,
     )
 
@@ -78,5 +80,6 @@ def FetchDecksWorker(service: AnkiService, parent=None) -> SingleCallWorker:
     return SingleCallWorker(
         lambda: service.get_deck_names(),
         error_prefix="Error fetching deck names: ",
+        context="FetchDecksWorker",
         parent=parent,
     )

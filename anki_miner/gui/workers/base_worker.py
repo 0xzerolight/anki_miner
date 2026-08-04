@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, cast
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from anki_miner.exceptions import AnkiMinerException, OperationCancelled
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,27 @@ class CancellableWorker(QThread):
             True if cancellation was requested
         """
         return self._cancel_event.is_set()
+
+    def log_start(self, context: str, **fields: object) -> None:
+        """Log this worker's single boundary-entry receipt at INFO.
+
+        Call exactly once at the top of ``run()``, before any work. This is not
+        a progress hook and must never be called in a loop.
+
+        Like :meth:`report_failure`, this resolves the logger from the concrete
+        instance so records keep the subclass's own module name instead of
+        collapsing onto ``base_worker``. ``log_summary`` keeps every worker
+        start line in the app's shared summary shape.
+
+        Args:
+            context: Worker identity for the stable ``<context> started:`` prefix.
+            **fields: Bounded operation-shape fields for the start receipt.
+        """
+        log = logging.getLogger(type(self).__module__)
+        # ``log_summary`` reserves the keyword ``level``, so forwarding an
+        # untyped ``**fields`` dict cannot be proven safe statically. Direct
+        # callers with literal kwargs type-check without this.
+        log_summary(log, f"{context} started", **fields)  # type: ignore[arg-type]
 
     def report_failure(
         self,
@@ -190,6 +212,7 @@ class SingleCallWorker(CancellableWorker):
         *,
         error_prefix: str = "",
         pass_cancel_check: bool = False,
+        context: str | None = None,
         parent=None,
     ) -> None:
         """Initialize the single-call worker.
@@ -200,15 +223,20 @@ class SingleCallWorker(CancellableWorker):
                 predicate for checkpoints inside long work.
             error_prefix: Prepended to the exception text on the error signal.
             pass_cancel_check: Pass :meth:`check_cancelled` to ``work``.
+            context: Worker identity for start and failure log records. Defaults
+                to ``"SingleCallWorker"`` for compatibility.
             parent: Optional parent QObject for lifetime management.
         """
         super().__init__(parent)
         self._work = work
         self._error_prefix = error_prefix
         self._pass_cancel_check = pass_cancel_check
+        self._context = context
 
     def run(self) -> None:
         """Execute the callable in the background thread and emit the result."""
+        context = self._context or "SingleCallWorker"
+        self.log_start(context)
         try:
             if self.check_cancelled():
                 return
@@ -225,6 +253,6 @@ class SingleCallWorker(CancellableWorker):
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             self.report_failure(
                 e,
-                context="SingleCallWorker",
+                context=context,
                 on_error=lambda msg: self.error.emit(f"{self._error_prefix}{msg}"),
             )
