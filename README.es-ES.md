@@ -168,6 +168,8 @@ Utiliza conjuntos de palabras de nombres incluidos derivados de [JMnedict](https
 | Instalación limpia sin definiciones | Ejecuta Tools -> Setup Wizard o Tools -> Download Recommended Resources. Para importación manual, mantén el archivo ZIP de Yomitan intacto (no lo descomprimas). |
 | Add Dictionary se congela o falla | Anota la última etapa visible y adjunta los logs (ver "¿Dónde están los logs?" abajo). Incluye el nombre, fuente y tamaño del ZIP del diccionario en el reporte. |
 | ¿Dónde están los logs?      | Usa Help -> Open Log Folder, o abre `%USERPROFILE%\.anki_miner\anki_miner.log` en Windows o `~/.anki_miner/anki_miner.log` en macOS/Linux. Los logs rotados usan los sufijos `.1` al `.5`. |
+| Informar de un error        | Help → Export Diagnostics… crea un ZIP con los logs y los detalles del sistema en la ubicación que elijas. Revísalo antes de subirlo porque contiene rutas y nombres de archivos de tu ordenador. No se sube nada automáticamente. |
+| Registro de diagnóstico ampliado | Define `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar Anki Miner para capturar detalles de terceros de yt-dlp, urllib3 y fugashi. El valor predeterminado es `WARNING`; los logs de Anki Miner permanecen en DEBUG. |
 | El audio está en el idioma incorrecto  | La herramienta intenta primero las pistas de audio en japonés, luego recurre a la predeterminada.      |
 | Subtítulos desincronizados    | Usa el control de desplazamiento (offset) de subtítulos en la GUI (rango ±300 segundos).                 |
 

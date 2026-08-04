@@ -32,6 +32,11 @@ def test_readme_exposes_first_install_recovery_and_troubleshooting() -> None:
     assert "%USERPROFILE%\\.anki_miner\\anki_miner.log" in troubleshooting
     assert "~/.anki_miner/anki_miner.log" in troubleshooting
     assert "`.1` through `.5` suffixes" in troubleshooting
+    assert "Help → Export Diagnostics…" in troubleshooting
+    assert (
+        "Review it before uploading because it contains file paths and file names from your computer" in troubleshooting
+    )
+    assert "`ANKI_MINER_LOG_LEVEL=DEBUG`" in troubleshooting
 
 
 def test_bug_report_collects_log_files_and_status() -> None:
@@ -46,6 +51,7 @@ def test_bug_report_collects_log_files_and_status() -> None:
     assert "Rotated logs use `.1` through `.5`" in upload_help
     assert "ZIP the `anki_miner.log*` files" in upload_help
     assert "Help → Open Log Folder" in upload_help
+    assert "Help → Export Diagnostics…" in upload_help
     assert "Review logs for private information before uploading" in upload_help
     assert upload["validations"] == {"required": False, "accept": ".log,.txt,.zip"}
 
