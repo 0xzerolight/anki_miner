@@ -9,11 +9,14 @@ underscore therefore stays and the module path is a deliberately stable test sur
 do not rename it or reroute those patch targets.
 """
 
+import logging
 from typing import Any
 
 import requests
 
 from anki_miner.exceptions import AnkiConnectionError
+
+logger = logging.getLogger(__name__)
 
 
 def post_action(
@@ -38,6 +41,12 @@ def post_action(
         AnkiConnectionError: on connection failure, HTTP/JSON parse failure,
             or AnkiConnect-side error (where ``result["error"]`` is set).
     """
+    logger.debug(
+        "AnkiConnect request: action=%s params=%d timeout=%d",
+        action,
+        len(params or {}),
+        timeout,
+    )
     try:
         response = requests.post(
             ankiconnect_url,
@@ -47,17 +56,39 @@ def post_action(
         response.raise_for_status()
         result = response.json()
     except requests.exceptions.ConnectionError as e:
+        logger.debug(
+            "AnkiConnect connection failed: url=%s action=%s exc=%s",
+            ankiconnect_url,
+            action,
+            type(e).__name__,
+        )
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except (requests.RequestException, ValueError) as e:
+        logger.warning(
+            "AnkiConnect request failed: action=%s status=%s exc=%s",
+            action,
+            getattr(getattr(e, "response", None), "status_code", None),
+            type(e).__name__,
+        )
         raise AnkiConnectionError(f"AnkiConnect call '{action}' failed: {e}") from e
     if not isinstance(result, dict):
         # A non-object body (wrong service on the port, a proxy error page that
         # still parses as JSON) would otherwise crash on `result.get(...)`.
+        logger.warning(
+            "AnkiConnect response invalid: action=%s type=%s",
+            action,
+            type(result).__name__,
+        )
         raise AnkiConnectionError(
             f"AnkiConnect '{action}' returned a non-object response "
             f"({type(result).__name__}); is another service listening on this port?"
         )
     if result.get("error"):
+        logger.warning(
+            "AnkiConnect error: action=%s error=%s",
+            action,
+            result["error"],
+        )
         raise AnkiConnectionError(f"AnkiConnect error in '{action}': {result['error']}")
     return result.get("result")
 
@@ -85,6 +116,11 @@ def post_multi(
         AnkiConnectionError: on connection failure, HTTP/JSON parse failure,
             or a top-level AnkiConnect error on the ``multi`` envelope itself.
     """
+    logger.debug(
+        "AnkiConnect request: action=multi actions=%d timeout=%d",
+        len(actions),
+        timeout,
+    )
     try:
         response = requests.post(
             ankiconnect_url,
@@ -94,15 +130,33 @@ def post_multi(
         response.raise_for_status()
         result = response.json()
     except requests.exceptions.ConnectionError as e:
+        logger.debug(
+            "AnkiConnect connection failed: url=%s action=multi exc=%s",
+            ankiconnect_url,
+            type(e).__name__,
+        )
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except (requests.RequestException, ValueError) as e:
+        logger.warning(
+            "AnkiConnect request failed: action=multi status=%s exc=%s",
+            getattr(getattr(e, "response", None), "status_code", None),
+            type(e).__name__,
+        )
         raise AnkiConnectionError(f"AnkiConnect call 'multi' failed: {e}") from e
     if not isinstance(result, dict):
+        logger.warning(
+            "AnkiConnect response invalid: action=multi type=%s",
+            type(result).__name__,
+        )
         raise AnkiConnectionError(
             f"AnkiConnect 'multi' returned a non-object response "
             f"({type(result).__name__}); is another service listening on this port?"
         )
     if result.get("error"):
+        logger.warning(
+            "AnkiConnect error: action=multi error=%s",
+            result["error"],
+        )
         raise AnkiConnectionError(f"AnkiConnect error in 'multi': {result['error']}")
     return _expect_list(result.get("result"), "multi", len(actions))
 
@@ -145,12 +199,30 @@ def _expect_list(
             non-negative ``expected_len``, or an element has the wrong type.
     """
     if not isinstance(result, list):
+        logger.warning(
+            "AnkiConnect response shape invalid: action=%s type=%s expected=list",
+            action,
+            type(result).__name__,
+        )
         raise AnkiConnectionError(f"AnkiConnect '{action}' returned {type(result).__name__}, expected a list")
     if expected_len >= 0 and len(result) != expected_len:
+        logger.warning(
+            "AnkiConnect response shape invalid: action=%s length=%d expected=%d",
+            action,
+            len(result),
+            expected_len,
+        )
         raise AnkiConnectionError(f"AnkiConnect '{action}' returned {len(result)} item(s), expected {expected_len}")
     if elem_type is not None:
         for i, item in enumerate(result):
             if not isinstance(item, elem_type):
+                logger.warning(
+                    "AnkiConnect response shape invalid: action=%s index=%d type=%s expected=%s",
+                    action,
+                    i,
+                    type(item).__name__,
+                    _expected_type_name(elem_type),
+                )
                 raise AnkiConnectionError(
                     f"AnkiConnect '{action}' item at index {i} is "
                     f"{type(item).__name__}, expected {_expected_type_name(elem_type)}"
