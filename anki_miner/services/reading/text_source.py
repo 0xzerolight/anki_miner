@@ -10,9 +10,14 @@ titles would be noise in history/stats.
 
 from __future__ import annotations
 
+import logging
+
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef, ReadingUnit
+from anki_miner.utils.logging_ext import log_summary
 
 from .sentence_splitter import split_sentences
+
+logger = logging.getLogger(__name__)
 
 
 def load(ref: ReadingSourceRef) -> ReadingDocument:
@@ -30,9 +35,11 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     units: list[ReadingUnit] = []
     index = 0
     para_no = 0
+    skipped = 0
     for raw in text.split("\n"):
         stripped = raw.strip()
         if not stripped:
+            skipped += 1
             continue
         para_no += 1
         for sentence in split_sentences(stripped):
@@ -46,10 +53,20 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             )
             index += 1
 
-    return ReadingDocument(
+    doc = ReadingDocument(
         title="Text",
         kind="book",
         series="Text",
         episode="Text",
         units=units,
     )
+    log_summary(
+        logger,
+        "Text parse",
+        file=ref.path or ref.title,
+        paragraphs=para_no,
+        units=index,
+        chars=sum(len(unit.text) for unit in units),
+        skipped=skipped,
+    )
+    return doc

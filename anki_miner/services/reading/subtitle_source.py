@@ -21,6 +21,8 @@ MicroDVD ``.sub`` is unsupported: it is frame-based and pysubs2 raises
 
 from __future__ import annotations
 
+import logging
+
 import pysubs2
 
 from anki_miner.exceptions import SetupError
@@ -30,7 +32,10 @@ from anki_miner.models.reading import (
     ReadingUnit,
 )
 from anki_miner.services.reading._util import _decode
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import clean_subtitle_text
+
+logger = logging.getLogger(__name__)
 
 _MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
 
@@ -71,6 +76,7 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
                 f"subtitle file '{path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
             )
     except OSError as e:
+        logger.debug("Subtitle read failed: file=%s error=%s detail=%s", path, type(e).__name__, e)
         raise SetupError(f"Cannot read subtitle file '{path.name}': {e}") from e
 
     text = _decode(raw)
@@ -80,6 +86,8 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
         format_ = pysubs2.formats.get_format_identifier(path.suffix.lower())
         subs = pysubs2.SSAFile.from_string(text, format_=format_)
     except Exception as e:  # pysubs2 raises format-specific parse errors
+        # Parser exceptions can contain cue text; retain type, never message.
+        logger.debug("Subtitle parse failed: file=%s error=%s", path, type(e).__name__)
         raise SetupError(f"Cannot parse subtitle file '{path.name}': {e}") from e
 
     units: list[ReadingUnit] = []
@@ -105,10 +113,19 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
     if not units:
         raise SetupError(f"No subtitle cues found in '{path.name}' — is it really a subtitle file?")
 
-    return ReadingDocument(
+    doc = ReadingDocument(
         title=path.stem,
         kind="subtitle",
         series=path.parent.name,
         episode=path.stem,
         units=units,
     )
+    log_summary(
+        logger,
+        "Subtitle parse",
+        file=path,
+        cues=len(subs),
+        units=len(units),
+        skipped=len(subs) - len(units),
+    )
+    return doc

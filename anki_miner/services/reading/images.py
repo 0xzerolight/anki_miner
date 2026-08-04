@@ -12,6 +12,7 @@ can never influence the written path.
 from __future__ import annotations
 
 import hashlib
+import logging
 import lzma
 import threading
 import zipfile
@@ -24,6 +25,8 @@ from PIL import Image, UnidentifiedImageError
 from anki_miner.models.reading import ImageRef
 from anki_miner.services.dictionary.zip_safety import validate_zip_safe
 from anki_miner.utils.pil_limits import apply_pil_image_limits, validate_image_pixel_budget
+
+logger = logging.getLogger(__name__)
 
 # Decompression-bomb ceiling: explicit project pin (== Pillow's default) so the
 # card-image decode limit is an intentional, tested value, not an inherited one.
@@ -79,11 +82,23 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
             with Image.open(ref.source) as img:
                 _encode_jpeg(img, out_path)
         except _MEMBER_ERRORS as exc:
+            logger.debug(
+                "Reading image decode failed: source=%s error=%s detail=%s",
+                ref.source,
+                type(exc).__name__,
+                exc,
+            )
             raise ReadingImageMemberError(str(exc)) from exc
     else:
         try:
             zf = zipfile.ZipFile(ref.source)
         except (OSError, zipfile.BadZipFile) as exc:
+            logger.debug(
+                "Reading image archive failed: source=%s error=%s detail=%s",
+                ref.source,
+                type(exc).__name__,
+                exc,
+            )
             raise ReadingImageArchiveError(str(exc)) from exc
         with zf:
             _validate_archive_once(zf, ref.source, dest_dir)
@@ -91,6 +106,13 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
                 with zf.open(ref.entry) as member, Image.open(member) as img:
                     _encode_jpeg(img, out_path)
             except _MEMBER_ERRORS as exc:
+                logger.debug(
+                    "Reading image member failed: source=%s entry=%s error=%s detail=%s",
+                    ref.source,
+                    ref.entry,
+                    type(exc).__name__,
+                    exc,
+                )
                 raise ReadingImageMemberError(str(exc)) from exc
     return out_path
 
