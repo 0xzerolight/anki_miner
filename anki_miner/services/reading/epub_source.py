@@ -26,6 +26,7 @@ touch beyond text is the bomb-safe cover peek. The single shared cover
 
 from __future__ import annotations
 
+import logging
 import lzma
 import posixpath
 import re
@@ -44,6 +45,9 @@ from anki_miner.models.reading import (
     ReadingUnit,
 )
 from anki_miner.services.reading.sentence_splitter import split_sentences
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 _CONTAINER_PATH = "META-INF/container.xml"
 _ENCRYPTION_PATH = "META-INF/encryption.xml"
@@ -216,6 +220,16 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
 
         if gaiji_total:
             doc.warnings.append(f"Skipped {gaiji_total} inline image(s) (gaiji) that carried no text.")
+    log_summary(
+        logger,
+        "EPUB parse",
+        file=epub_path,
+        chapters=content_i,
+        units=index,
+        chars=sum(len(unit.text) for unit in doc.units),
+        skipped=len(spine_idrefs) - content_i,
+        gaiji=gaiji_total,
+    )
     return doc
 
 
@@ -264,12 +278,17 @@ def _resolve(base_dir: str, href: str) -> str:
 def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> None:
     if _ENCRYPTION_PATH not in names:
         return
-    unsupported_message = f"'{epub_path.name}' is DRM-protected and cannot be mined."
     parser = etree.XMLParser(resolve_entities=False, load_dtd=False, no_network=True)
     try:
         root = etree.fromstring(_read_member(zf, _ENCRYPTION_PATH, epub_path), parser)
-    except etree.XMLSyntaxError:
-        raise SetupError(unsupported_message) from None
+    except etree.XMLSyntaxError as exc:
+        logger.debug(
+            "EPUB encryption metadata parse failed: file=%s error=%s detail=%s",
+            epub_path,
+            type(exc).__name__,
+            exc,
+        )
+        _reject_drm(epub_path, "malformed_encryption_metadata")
     found_encrypted_data = False
     for enc in root.iter():
         if _local(enc) != "encrypteddata":
@@ -291,9 +310,21 @@ def _check_encryption(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> 
             else:
                 if uri_path.endswith(_FONT_EXTS):
                     continue
-        raise SetupError(unsupported_message)
+        _reject_drm(epub_path, "unsupported_encryption")
     if not found_encrypted_data:
-        raise SetupError(unsupported_message)
+        _reject_drm(epub_path, "missing_encrypted_data")
+
+
+def _reject_drm(epub_path: Path, reason: str) -> None:
+    """Log one reason token, then reject unsupported content encryption."""
+    log_summary(
+        logger,
+        "EPUB rejected",
+        level=logging.WARNING,
+        file=epub_path,
+        reason=reason,
+    )
+    raise SetupError(f"'{epub_path.name}' is DRM-protected and cannot be mined.")
 
 
 # --------------------------------------------------------------------------- #

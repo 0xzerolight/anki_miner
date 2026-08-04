@@ -11,6 +11,7 @@ image bytes are touched at load time — archive pages become deferred
 from __future__ import annotations
 
 import json
+import logging
 import re
 import unicodedata
 import zipfile
@@ -33,6 +34,9 @@ from anki_miner.services.reading._util import (
 )
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 # A single block over this many characters is a pathological merged block and is
 # split into sentences; normal manga speech balloons stay one mining unit.
@@ -136,6 +140,14 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         doc.warnings.append(f"Skipped {skipped_malformed} malformed Mokuro record(s).")
     if not doc.units:
         raise SetupError(f"Invalid .mokuro file '{ocr_name}': no usable text records.")
+    log_summary(
+        logger,
+        "Mokuro parse",
+        file=ref.path,
+        pages=len(pages),
+        units=index,
+        skipped=skipped_malformed,
+    )
     return doc
 
 
