@@ -93,17 +93,17 @@ def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -
             **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
     except (subprocess.SubprocessError, OSError, ValueError) as e:
-        logger.warning(f"Error probing {video_path} (select={select_streams}): {e}")
+        logger.warning("Error probing %s (select=%s): %s", video_path, select_streams, e)
         return None
 
     if proc.returncode != 0:
-        logger.warning(f"ffprobe failed for {video_path}: {proc.stderr}")
+        logger.warning("ffprobe failed for %s: %s", video_path, proc.stderr)
         return None
 
     try:
         data: dict = json.loads(proc.stdout)
     except json.JSONDecodeError as e:
-        logger.warning(f"ffprobe returned malformed JSON for {video_path}: {e}")
+        logger.warning("ffprobe returned malformed JSON for %s: %s", video_path, e)
         return None
     return data
 
@@ -237,13 +237,15 @@ def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -
     for stream in streams:
         if stream.language_tag in JAPANESE_LANGUAGE_CODES:
             logger.info(
-                f"Found Japanese audio: global stream {stream.global_index}, "
-                f"audio track {stream.audio_index} (language: {stream.language_tag})"
+                "Found Japanese audio: global stream %d, audio track %d (language: %s)",
+                stream.global_index,
+                stream.audio_index,
+                stream.language_tag,
             )
             return stream
 
     available_langs = [s.language_tag or "unknown" for s in streams]
-    logger.warning(f"No Japanese audio found in {video_file}. Available languages: {available_langs}")
+    logger.warning("No Japanese audio found in %s. Available languages: %s", video_file, available_langs)
     return None
 
 

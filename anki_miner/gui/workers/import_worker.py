@@ -410,6 +410,7 @@ class ImportWorker(CancellableWorker):
 
     def run(self) -> None:
         """Run the importer and emit progress/import_finished/cancelled/failed."""
+        self.log_start("ImportWorker")
         self._log_trace_input()
         try:
             resource_id, meta = self._runner(

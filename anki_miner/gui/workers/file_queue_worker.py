@@ -78,6 +78,10 @@ class FileQueueWorker(CancellableWorker):
 
     def run(self) -> None:
         """Process every queued item on the background thread."""
+        # type(self).__name__ so the three subclasses that inherit this run()
+        # (condense, subtitle generation, subtitle retiming) each identify
+        # themselves rather than all reporting as FileQueueWorker.
+        self.log_start(type(self).__name__)
         try:
             self._process_queue()
         except Exception as exc:  # noqa: BLE001 - never escape QThread.run

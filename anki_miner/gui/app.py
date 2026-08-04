@@ -1291,7 +1291,11 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
     """Run installed-artifact assertions over two event-loop ticks."""
 
     def fail(stage: str) -> None:
-        logger.critical("Installer smoke failed during %s", stage, exc_info=True)
+        logger.critical(
+            "Installer smoke failed during %s",
+            stage,
+            exc_info=True,  # noqa: LOG014 - fail() is called only while handling an active exception.
+        )
         # Close the window here too, exactly as the success path does before
         # finish(). Without it the whole MainWindow widget tree is still ALIVE at
         # interpreter exit, and PyQt/sip's exit-time cleanup walks it and

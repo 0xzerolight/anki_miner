@@ -141,6 +141,7 @@ class YouTubePlaylistProbeWorker(CancellableWorker):
         Cancellation is polled before each entry.  Failures emit
         ``entry_failed`` and processing continues to the next URL.
         """
+        self.log_start("YouTubePlaylistProbeWorker", urls=len(self._urls))
         for idx, url in enumerate(self._urls):
             if self.is_cancelled:
                 return

@@ -127,6 +127,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
 
     def run(self):
         """Process all pending items in queue sequentially."""
+        self.log_start("BatchQueueWorkerThread", items=len(self.batch_queue.get_all_items()))
         total_cards = self.batch_queue.total_cards_created
         if not isinstance(total_cards, int):
             total_cards = 0

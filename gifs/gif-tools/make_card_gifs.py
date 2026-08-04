@@ -242,7 +242,7 @@ def make_handler(docs: dict[str, str], resolver: MediaResolver):
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args) -> None:  # noqa: D401 - silence default stderr spam
-            logger.debug("http: " + args[0], *args[1:])
+            logger.debug("http: %s", args[0] % args[1:])
 
         def _send(self, body: bytes, ctype: str, code: int = 200) -> None:
             self.send_response(code)

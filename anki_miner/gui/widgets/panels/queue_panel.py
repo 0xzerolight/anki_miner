@@ -372,7 +372,7 @@ class QueuePanel(QFrame):
                     pairs = FilePairMatcher.find_pairs_by_episode_number(Path(video_path), Path(subtitle_path))
                     widget.set_episode_count(len(pairs))
                 except Exception as e:
-                    logger.warning(f"Failed to count episodes for {widget.display_name}: {e}")
+                    logger.warning("Failed to count episodes for %s: %s", widget.display_name, e)
 
             widget.subtitle_offset = offset_spinbox.value()
             self._bind_widget(widget)
