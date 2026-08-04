@@ -11,12 +11,13 @@ method, which error prefix) is pinned per factory.
 subclasses with the same emit-or-stay-silent shape — so each gets its own
 contract block.
 
-All workers are exercised synchronously by calling ``run()`` directly; Qt
-threading itself is not under test.
+Behavior contracts call ``run()`` directly. Logging contracts start the
+``QThread`` and wait for it so records are verified at the real boundary.
 """
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import MagicMock
 
 from anki_miner.gui.workers.base_worker import SingleCallWorker
@@ -38,6 +39,55 @@ class _Capture:
 # ===========================================================================
 # SingleCallWorker — shared contract (tested once on the merged class)
 # ===========================================================================
+
+
+def test_log_start_uses_concrete_worker_module(qtbot, caplog):
+    """Start receipts keep the concrete worker's logger and summary shape."""
+    del qtbot
+    worker = UpdateWorkerThread(MagicMock())
+
+    with caplog.at_level(logging.INFO, logger="anki_miner.gui.workers"):
+        worker.log_start("UpdateProbeWorker", backend="github")
+
+    assert worker.wait(3000)
+    record = next(r for r in caplog.records if r.getMessage().startswith("UpdateProbeWorker started:"))
+    assert record.levelno == logging.INFO
+    assert record.name == "anki_miner.gui.workers.update_worker"
+    assert record.name != "anki_miner.gui.workers.base_worker"
+    assert "backend=github" in record.getMessage()
+
+
+def test_single_call_context_names_start_and_failure(qtbot, caplog):
+    """One supplied identity follows the worker through both boundary records."""
+    del qtbot
+
+    def boom():
+        raise RuntimeError("connection refused")
+
+    worker = SingleCallWorker(boom, context="FetchDecksWorker")
+
+    with caplog.at_level(logging.INFO, logger="anki_miner.gui.workers"):
+        worker.start()
+        assert worker.wait(3000)
+
+    start = next(r for r in caplog.records if r.getMessage().startswith("FetchDecksWorker started:"))
+    failure = next(r for r in caplog.records if r.getMessage().startswith("FetchDecksWorker unhandled exception"))
+    assert start.levelno == logging.INFO
+    assert failure.levelno == logging.ERROR
+    assert failure.exc_info is not None
+
+
+def test_single_call_default_context_is_unchanged(qtbot, caplog):
+    """Callers omitting context retain the historical SingleCallWorker identity."""
+    del qtbot
+    worker = SingleCallWorker(lambda: None)
+
+    with caplog.at_level(logging.INFO, logger="anki_miner.gui.workers"):
+        worker.start()
+        assert worker.wait(3000)
+
+    record = next(r for r in caplog.records if r.getMessage().startswith("SingleCallWorker started:"))
+    assert record.levelno == logging.INFO
 
 
 def test_single_call_emits_callable_return_verbatim():
