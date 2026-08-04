@@ -1811,11 +1811,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>沒有相符的筆記 — 牌組「{deck}」中的筆記類型「{note_type}」。請檢查「設定 → Anki」。</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>沒有相符的筆記 — 筆記類型「{note_type}」。請檢查「設定 → Anki」。</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1855,7 +1855,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>此筆記類型上不存在（對應已過期）：{fields}。請在「設定 → Anki」的欄位對應中修正。</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4313,6 +4313,14 @@ Add %3 word(s) to your known list?</source>
       <translation>在您的檔案管理員中開啟記錄檔資料夾</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>匯出診斷資訊…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>儲存包含記錄檔與系統詳細資訊的 zip，用於回報錯誤</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>回報錯誤／建議功能</translation>
     </message>
@@ -4343,6 +4351,26 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>啟動時的 JMdict 遷移作業仍在停止中。請等待其完成後再試一次。</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>匯出診斷資訊</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Zip 壓縮檔 (*.zip);;所有檔案 (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>診斷資訊已寫入 %1</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>無法匯出診斷資訊。</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>重試</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4439,10 +4467,6 @@ Continue?</source>
     <message>
       <source>System check failed. Try again.</source>
       <translation>系統檢查失敗。請再試一次。</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>重試</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7546,6 +7570,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Re-check now</source>
       <translation>立即重新檢查</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>匯出診斷資訊…</translation>
     </message>
     <message>
       <source>Ready</source>

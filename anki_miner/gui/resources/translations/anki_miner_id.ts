@@ -1811,11 +1811,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Tidak ada catatan yang cocok — tipe catatan "{note_type}" di dek "{deck}". Periksa Pengaturan → Anki.</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Tidak ada catatan yang cocok — tipe catatan "{note_type}". Periksa Pengaturan → Anki.</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1855,7 +1855,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>Tidak ada pada tipe catatan ini (pemetaan usang): {fields}. Perbaiki di pemetaan bidang Pengaturan → Anki.</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4313,6 +4313,14 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
       <translation>Buka folder log di pengelola berkas</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>Ekspor Diagnostik…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>Simpan zip berisi log dan detail sistem untuk laporan bug</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>Laporkan Bug / Sarankan Fitur</translation>
     </message>
@@ -4343,6 +4351,26 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>Migrasi JMdict saat startup masih dalam proses berhenti. Tunggu hingga selesai lalu coba lagi.</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>Ekspor Diagnostik</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Arsip Zip (*.zip);;Semua Berkas (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>Diagnostik ditulis ke %1</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>Diagnostik tidak dapat diekspor.</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>Coba Lagi</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4439,10 +4467,6 @@ Lanjutkan?</translation>
     <message>
       <source>System check failed. Try again.</source>
       <translation>Pemeriksaan sistem gagal. Coba lagi.</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>Coba Lagi</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7546,6 +7570,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
       <source>Re-check now</source>
       <translation>Periksa lagi sekarang</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>Ekspor diagnostik…</translation>
     </message>
     <message>
       <source>Ready</source>

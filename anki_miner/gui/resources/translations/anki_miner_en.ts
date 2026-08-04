@@ -4283,6 +4283,14 @@ Add %3 word(s) to your known list?</source>
       <translation type="unfinished" />
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation type="unfinished" />
     </message>
@@ -4312,6 +4320,26 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Retry</source>
       <translation type="unfinished" />
     </message>
     <message>
@@ -4404,10 +4432,6 @@ Continue?</source>
     </message>
     <message>
       <source>System check failed. Try again.</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source>Retry</source>
       <translation type="unfinished" />
     </message>
     <message>
@@ -7502,6 +7526,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
       <source>Re-check now</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
       <translation type="unfinished" />
     </message>
     <message>

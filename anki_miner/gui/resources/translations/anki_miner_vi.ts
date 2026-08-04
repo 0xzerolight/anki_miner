@@ -1811,11 +1811,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Không có ghi chú nào khớp — loại ghi chú "{note_type}" trong bộ thẻ "{deck}". Hãy kiểm tra Cài đặt → Anki.</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Không có ghi chú nào khớp — loại ghi chú "{note_type}". Hãy kiểm tra Cài đặt → Anki.</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1855,7 +1855,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>Không có trên loại ghi chú này (ánh xạ cũ): {fields}. Hãy sửa trong ánh xạ trường Cài đặt → Anki.</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4313,6 +4313,14 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
       <translation>Mở thư mục nhật ký trong trình quản lý tệp</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>Xuất chẩn đoán…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>Lưu tệp zip chứa nhật ký và thông tin hệ thống để báo lỗi</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>Báo lỗi / Đề xuất tính năng</translation>
     </message>
@@ -4343,6 +4351,26 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>Quá trình di chuyển JMdict khi khởi động vẫn đang dừng lại. Hãy đợi nó hoàn tất rồi thử lại.</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>Xuất chẩn đoán</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Kho lưu trữ Zip (*.zip);;Tất cả tệp (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>Đã ghi chẩn đoán vào %1</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>Không thể xuất chẩn đoán.</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>Thử lại</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4439,10 +4467,6 @@ Tiếp tục?</translation>
     <message>
       <source>System check failed. Try again.</source>
       <translation>Kiểm tra hệ thống thất bại. Hãy thử lại.</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>Thử lại</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7546,6 +7570,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
       <source>Re-check now</source>
       <translation>Kiểm tra lại ngay</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>Xuất chẩn đoán…</translation>
     </message>
     <message>
       <source>Ready</source>

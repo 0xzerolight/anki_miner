@@ -1812,11 +1812,11 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Nenhuma nota corresponde — tipo de nota "{note_type}" no baralho "{deck}". Verifique Configurações → Anki.</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Nenhuma nota corresponde — tipo de nota "{note_type}". Verifique Configurações → Anki.</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1856,7 +1856,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>Não estão neste tipo de nota (mapeamento desatualizado): {fields}. Corrija no mapeamento de campos em Configurações → Anki.</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4325,6 +4325,14 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
       <translation>Abrir a pasta de logs no seu gerenciador de arquivos</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>Exportar Diagnósticos…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>Salvar um zip com logs e detalhes do sistema para um relatório de bug</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>Relatar um Bug / Sugerir um Recurso</translation>
     </message>
@@ -4355,6 +4363,26 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>A migração do JMdict na inicialização ainda está sendo interrompida. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>Exportar Diagnósticos</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Arquivos Zip (*.zip);;Todos os Arquivos (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>Diagnósticos gravados em %1</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>Não foi possível exportar os diagnósticos.</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>Tentar novamente</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4451,10 +4479,6 @@ Continuar?</translation>
     <message>
       <source>System check failed. Try again.</source>
       <translation>Falha na verificação do sistema. Tente novamente.</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>Tentar novamente</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7560,6 +7584,10 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
       <source>Re-check now</source>
       <translation>Verificar novamente agora</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>Exportar diagnósticos…</translation>
     </message>
     <message>
       <source>Ready</source>

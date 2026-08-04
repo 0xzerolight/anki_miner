@@ -1811,11 +1811,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>没有匹配的笔记——牌组“{deck}”中的笔记类型“{note_type}”。请检查设置 → Anki。</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>没有匹配的笔记——笔记类型“{note_type}”。请检查设置 → Anki。</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1855,7 +1855,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>此笔记类型上不存在（映射已过期）：{fields}。请在设置 → Anki 的字段映射中修正。</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4313,6 +4313,14 @@ Add %3 word(s) to your known list?</source>
       <translation>在文件管理器中打开日志文件夹</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>导出诊断信息…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>保存包含日志和系统信息的 zip，用于报告 Bug</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>报告 Bug / 建议功能</translation>
     </message>
@@ -4343,6 +4351,26 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>启动时的 JMdict 迁移仍在停止中。请等待其完成后重试。</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>导出诊断信息</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Zip 压缩包 (*.zip);;所有文件 (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>诊断信息已写入 %1</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>无法导出诊断信息。</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>重试</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4439,10 +4467,6 @@ Continue?</source>
     <message>
       <source>System check failed. Try again.</source>
       <translation>系统检查失败。请重试。</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>重试</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7546,6 +7570,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Re-check now</source>
       <translation>立即重新检查</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>导出诊断信息…</translation>
     </message>
     <message>
       <source>Ready</source>
