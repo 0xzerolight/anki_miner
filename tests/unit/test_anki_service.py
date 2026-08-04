@@ -25,6 +25,114 @@ def _mock_response(result=None, error=None):
     return resp
 
 
+class TestAnkiConnectLogging:
+    """The shared HTTP seam preserves diagnostics while translating failures."""
+
+    def test_connection_error_logs_debug_before_translation(self, caplog):
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectionError("refused"),
+            ),
+            caplog.at_level(logging.DEBUG, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            post_action("http://localhost:8765", "findNotes")
+
+        record = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect connection failed:"))
+        assert record.name == "anki_miner.services._ankiconnect"
+        assert record.levelno == logging.DEBUG
+        assert "action=findNotes" in record.getMessage()
+        assert str(exc_info.value) == "Cannot connect to AnkiConnect. Is Anki running?"
+
+    def test_http_failure_logs_status_before_translation(self, caplog):
+        resp = _mock_response()
+        http_response = requests.Response()
+        http_response.status_code = 503
+        resp.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable", response=http_response)
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            post_action("http://localhost:8765", "findNotes")
+
+        record = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect request failed:"))
+        assert record.name == "anki_miner.services._ankiconnect"
+        assert record.levelno == logging.WARNING
+        assert "status=503" in record.getMessage()
+        assert str(exc_info.value) == "AnkiConnect call 'findNotes' failed: 503 Service Unavailable"
+
+    def test_non_object_body_logs_type_before_translation(self, caplog):
+        resp = MagicMock()
+        resp.json.return_value = ["not", "an", "object"]
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            post_action("http://localhost:8765", "findNotes")
+
+        record = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect response invalid:"))
+        assert record.name == "anki_miner.services._ankiconnect"
+        assert record.levelno == logging.WARNING
+        assert "type=list" in record.getMessage()
+        assert str(exc_info.value) == (
+            "AnkiConnect 'findNotes' returned a non-object response (list); is another service listening on this port?"
+        )
+
+    def test_ankiconnect_error_logs_diagnostic_before_translation(self, caplog):
+        resp = _mock_response(error="deck was not found")
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            post_action("http://localhost:8765", "addNotes")
+
+        record = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect error:"))
+        assert record.name == "anki_miner.services._ankiconnect"
+        assert record.levelno == logging.WARNING
+        assert "error=deck was not found" in record.getMessage()
+        assert str(exc_info.value) == "AnkiConnect error in 'addNotes': deck was not found"
+
+    def test_expect_list_shape_violation_logs_observed_type(self, caplog):
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            _expect_list({"error": "x"}, "findNotes")
+
+        record = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect response shape invalid:"))
+        assert record.name == "anki_miner.services._ankiconnect"
+        assert record.levelno == logging.WARNING
+        assert "type=dict" in record.getMessage()
+        assert str(exc_info.value) == "AnkiConnect 'findNotes' returned dict, expected a list"
+
+    def test_request_debug_logs_param_count_without_values(self, caplog):
+        distinctive_value = "PRIVATE-SENTENCE-DO-NOT-LOG"
+        resp = _mock_response(result=[123])
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            caplog.at_level(logging.DEBUG, logger="anki_miner.services._ankiconnect"),
+        ):
+            assert post_action(
+                "http://localhost:8765",
+                "findNotes",
+                params={"query": distinctive_value},
+            ) == [123]
+
+        record = next(r for r in caplog.records if r.getMessage().startswith("AnkiConnect request:"))
+        assert record.name == "anki_miner.services._ankiconnect"
+        assert record.levelno == logging.DEBUG
+        assert "params=1" in record.getMessage()
+        assert all(distinctive_value not in r.getMessage() for r in caplog.records)
+
+
 @pytest.mark.parametrize(
     "call",
     [
