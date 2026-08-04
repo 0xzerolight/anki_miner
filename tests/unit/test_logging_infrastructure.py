@@ -220,7 +220,15 @@ class TestConfigureLogging:
             types.SimpleNamespace(uuid4=lambda: types.SimpleNamespace(hex="12345678rest")),
             raising=False,
         )
-        monkeypatch.setattr(app_module, "platform", types.SimpleNamespace(platform=lambda: "TestOS-1"), raising=False)
+        monkeypatch.setattr(
+            app_module,
+            "platform",
+            types.SimpleNamespace(
+                platform=lambda: "TestOS-1",
+                python_version=lambda: "3.11.test",
+            ),
+            raising=False,
+        )
         monkeypatch.setattr(app_module.os, "getpid", lambda: 4321)
         monkeypatch.setattr(app_module.sys, "frozen", True, raising=False)
         try:
@@ -236,6 +244,11 @@ class TestConfigureLogging:
             assert "platform=TestOS-1" in content
             assert "frozen=True" in content
             assert "pid=4321" in content
+            assert "python=3.11.test" in content
+            assert "qt=" in content
+            assert f"home={app_module.ANKI_MINER_HOME}" in content
+            assert f"log={log_path}" in content
+            assert "maxbytes=8388608" in content
         finally:
             root.setLevel(root_level)
             anki_logger.setLevel(anki_level)
@@ -393,8 +406,101 @@ class TestConfigureLogging:
         assert log_path.exists()
         chmod.assert_not_called()
 
-    def test_root_logger_level_is_warning(self, tmp_path):
+    def test_rotation_capacity_is_eight_megabytes(self, tmp_path):
+        """The active file can retain one large batch before rotation."""
+        configure_logging = self._import_configure_logging()
+        log_path = tmp_path / "app.log"
+
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(log_path)
+            sink = next(h for h in root.handlers if getattr(h, "_anki_miner_sink", False))
+            assert isinstance(sink, logging.handlers.RotatingFileHandler)
+            assert sink.maxBytes == 8 * 1024 * 1024
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for handler in list(root.handlers):
+                if handler not in handlers_before:
+                    root.removeHandler(handler)
+                    handler.close()
+
+    def test_root_level_honours_env_override(self, tmp_path, monkeypatch):
+        from anki_miner.gui import app as app_module
+
+        log_path = tmp_path / "app.log"
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            monkeypatch.setenv(app_module._LOG_LEVEL_ENV, " debug ")
+            app_module._configure_logging(log_path)
+            assert root.level == logging.DEBUG
+
+            monkeypatch.setenv(app_module._LOG_LEVEL_ENV, "not-a-level")
+            app_module._configure_logging(log_path)
+            assert root.level == logging.WARNING
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for handler in list(root.handlers):
+                if handler not in handlers_before:
+                    root.removeHandler(handler)
+                    handler.close()
+
+    def test_format_includes_line_number(self, tmp_path):
+        configure_logging = self._import_configure_logging()
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(tmp_path / "app.log")
+            sink = next(h for h in root.handlers if getattr(h, "_anki_miner_sink", False))
+            assert sink.formatter is not None
+            assert "%(lineno)d" in sink.formatter._fmt
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for handler in list(root.handlers):
+                if handler not in handlers_before:
+                    root.removeHandler(handler)
+                    handler.close()
+
+    def test_early_and_rotating_formats_match(self, tmp_path):
+        from anki_miner.gui import launch
+
+        configure_logging = self._import_configure_logging()
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(tmp_path / "app.log")
+            sink = next(h for h in root.handlers if getattr(h, "_anki_miner_sink", False))
+            assert sink.formatter is not None
+            assert sink.formatter._fmt == launch._LOG_FORMAT
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for handler in list(root.handlers):
+                if handler not in handlers_before:
+                    root.removeHandler(handler)
+                    handler.close()
+
+    def test_root_logger_level_is_warning(self, tmp_path, monkeypatch):
         """_configure_logging sets root logger to WARNING (not DEBUG)."""
+        from anki_miner.gui import app as app_module
+
+        monkeypatch.delenv(app_module._LOG_LEVEL_ENV, raising=False)
         configure_logging = self._import_configure_logging()
         log_path = tmp_path / "app.log"
 
@@ -418,8 +524,11 @@ class TestConfigureLogging:
                 h.close()
                 root.removeHandler(h)
 
-    def test_anki_miner_logger_level_is_debug(self, tmp_path):
+    def test_anki_miner_logger_level_is_debug(self, tmp_path, monkeypatch):
         """_configure_logging sets the anki_miner namespace logger to DEBUG."""
+        from anki_miner.gui import app as app_module
+
+        monkeypatch.delenv(app_module._LOG_LEVEL_ENV, raising=False)
         configure_logging = self._import_configure_logging()
         log_path = tmp_path / "app.log"
 

@@ -9,6 +9,7 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
   marker before exiting.
 """
 
+import locale
 import logging
 import os
 import platform
@@ -21,7 +22,19 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QLockFile, QObject, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import (
+    PYQT_VERSION_STR,
+    QT_VERSION_STR,
+    QCoreApplication,
+    QEvent,
+    QLockFile,
+    QObject,
+    QProcess,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtBoundSignal,
+)
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -59,6 +72,11 @@ from anki_miner.utils.file_utils import ensure_directory
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+# Hidden by design: ``anki_miner`` is always DEBUG, so a UI toggle could only
+# enable noisy third-party DEBUG and would require config/UI/i18n churn. This
+# follows the existing ANKI_MINER_HOME / KEEP_TEMP / SMOKE env-only convention.
+_LOG_LEVEL_ENV = "ANKI_MINER_LOG_LEVEL"
 
 
 @dataclass(frozen=True)
@@ -184,7 +202,7 @@ def _run_bundled_smoke() -> int:
         )
         if targets_proc.returncode != 0:
             raise RuntimeError(
-                f"bundled yt-dlp --list-impersonate-targets exited " f"{targets_proc.returncode}: {targets_proc.stderr}"
+                f"bundled yt-dlp --list-impersonate-targets exited {targets_proc.returncode}: {targets_proc.stderr}"
             )
         available = available_impersonate_targets(targets_proc.stdout or "")
         if not available:
@@ -320,7 +338,11 @@ def _configure_logging(log_path: Path) -> None:
 
     Called from main() so all modules that already call
     ``logging.getLogger(__name__)`` have their records captured to disk.
-    Five 2 MB backup files → at most ~12 MB on disk at any time.
+    The 8 MB active file plus five backups uses at most ~48 MB. Eight MB keeps
+    one full high-coverage batch readable in the active file or active + ``.1``;
+    a 2 MB ring could overwrite the session boundary several times in one run.
+    The module name plus source line identifies the exact logging statement for
+    the version pinned in that boundary, at about 5% extra line length.
 
     Idempotent: a handler attached by a previous call is removed and replaced,
     so calling this twice — bootstrap default-path → config-path re-point (F3),
@@ -335,7 +357,7 @@ def _configure_logging(log_path: Path) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handler = _OwnerOnlyRotatingFileHandler(
             log_path,
-            maxBytes=2 * 1024 * 1024,
+            maxBytes=8 * 1024 * 1024,
             backupCount=5,
             encoding="utf-8",
             delay=False,
@@ -344,7 +366,7 @@ def _configure_logging(log_path: Path) -> None:
         handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
         handler.setFormatter(
             logging.Formatter(
-                "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+                "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d: %(message)s",
                 datefmt="%Y-%m-%dT%H:%M:%S",
             )
         )
@@ -355,12 +377,14 @@ def _configure_logging(log_path: Path) -> None:
         logger.warning("Failed to configure log at %s; keeping existing log sink", log_path, exc_info=True)
         return
 
-    # Root logger at WARNING so third-party libs (yt-dlp, fugashi, …) only
-    # write WARNING+ to the file; the project namespace gets full DEBUG coverage.
+    # Root defaults to WARNING so third-party libs (yt-dlp, fugashi, …) only
+    # write WARNING+; the hidden env override exists for developer diagnostics.
+    # The project namespace remains pinned to full DEBUG coverage either way.
     # A record must clear both its logger's effective level AND the handler's
     # level — setting the handler to DEBUG here means the handler itself never
     # silences anything; filtering happens at the logger level.
-    root.setLevel(logging.WARNING)
+    requested_level = os.environ.get(_LOG_LEVEL_ENV, "").strip().upper()
+    root.setLevel(logging.getLevelNamesMapping().get(requested_level, logging.WARNING))
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
     for existing in old_sinks:
         root.removeHandler(existing)
@@ -382,14 +406,59 @@ def _log_session_boundary() -> None:
         logging.getLogger("anki_miner").setLevel(logging.DEBUG)
         for handler in sinks:
             handler.setLevel(logging.DEBUG)
+
+    failed_fields: list[str] = []
+
+    def _probe(field: str, value: Callable[[], object], default: object = "") -> object:
+        try:
+            return value()
+        except Exception:
+            # Header metadata is diagnostic-only. Record degraded probes once,
+            # but never let them block the session boundary or application boot.
+            failed_fields.append(field)
+            return default
+
+    def _system_locale() -> str:
+        language, encoding = locale.getlocale()
+        return ".".join(part for part in (language, encoding) if part) or os.environ.get("LANG", "")
+
+    active_sink = sinks[-1] if sinks else None
+    session_id = _probe("session_id", lambda: uuid.uuid4().hex[:8])
+    version = _probe("version", lambda: __version__)
+    platform_name = _probe("platform", platform.platform)
+    frozen = _probe("frozen", lambda: bool(getattr(sys, "frozen", False)), False)
+    pid = _probe("pid", os.getpid, 0)
+    python_version = _probe("python", platform.python_version)
+    qt_version = _probe("qt", lambda: QT_VERSION_STR)
+    pyqt_version = _probe("pyqt", lambda: PYQT_VERSION_STR)
+    executable = _probe("exe", lambda: sys.executable)
+    home = _probe("home", lambda: ANKI_MINER_HOME)
+    log_path = _probe("log", get_effective_log_path)
+    locale_name = _probe("locale", _system_locale, os.environ.get("LANG", ""))
+    argv_count = _probe("argv_n", lambda: len(sys.argv), 0)
+    max_bytes = _probe("maxbytes", lambda: getattr(active_sink, "maxBytes", 0), 0)
+    backups = _probe("backups", lambda: getattr(active_sink, "backupCount", 0), 0)
     logger.info(
-        "Session start session_id=%s version=%s platform=%s frozen=%s pid=%s",
-        uuid.uuid4().hex[:8],
-        __version__,
-        platform.platform(),
-        bool(getattr(sys, "frozen", False)),
-        os.getpid(),
+        "Session start session_id=%s version=%s platform=%s frozen=%s pid=%s "
+        "python=%s qt=%s pyqt=%s exe=%s home=%s log=%s locale=%s argv_n=%s maxbytes=%s backups=%s",
+        session_id,
+        version,
+        platform_name,
+        frozen,
+        pid,
+        python_version,
+        qt_version,
+        pyqt_version,
+        executable,
+        home,
+        log_path,
+        locale_name,
+        argv_count,
+        max_bytes,
+        backups,
     )
+    if failed_fields:
+        logger.warning("Session header degraded: fields=%s", ",".join(failed_fields))
 
 
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:

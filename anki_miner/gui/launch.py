@@ -16,7 +16,10 @@ APP_MUTEX_NAME = r"Local\AnkiMiner-15B09250-AC39-4792-A15A-B73BD8E218A1"
 _APP_MUTEX_HANDLE: int | None = None
 
 _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
-_LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s: %(message)s"
+# Module + line number form an exact source coordinate against the version in
+# the later session header. Thread name is intentionally absent: bare Qt worker
+# names are unhelpful ``Dummy-N`` noise and consume materially more ring space.
+_LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d: %(message)s"
 _LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
