@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from anki_miner.services.asr import _engine, ggml_model_installer
+from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.timing import timed_phase
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +106,9 @@ def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
             # cannot shadow any same-named module already on the path.
             sys.path.append(root)
             importlib.invalidate_caches()
-    except Exception:  # noqa: BLE001  (best-effort; a path problem must not abort)
-        pass
+    except Exception as exc:  # noqa: BLE001  (best-effort; a path problem must not abort)
+        # Bucket B: an unusable optional VAD pack falls back to no speech mask.
+        logger.debug("ASR VAD pack probe: available=false exc=%s", type(exc).__name__)
 
 
 def vad_available(onnx_pack_root: Path | None = None) -> bool:
@@ -289,7 +292,13 @@ def _cpp_ggml_present(model_name: str, models_root: Path) -> bool:
     """
     try:
         return ggml_model_installer.is_ggml_downloaded(model_name, models_root)
-    except Exception:  # noqa: BLE001 — unknown model / odd path → treat as absent
+    except Exception as exc:  # noqa: BLE001 — unknown model / odd path → treat as absent
+        # Bucket B: a missing optional ggml model falls back to CT2.
+        logger.debug(
+            "ASR ggml model probe: model=%s available=false exc=%s",
+            model_name,
+            type(exc).__name__,
+        )
         return False
 
 
@@ -387,8 +396,13 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
                 ctypes.CDLL(path, mode=mode)
             else:
                 ctypes.CDLL(path)
-        except Exception:  # noqa: BLE001  (best-effort; a single bad lib must not abort)
-            pass
+        except Exception as exc:  # noqa: BLE001  (best-effort; a single bad lib must not abort)
+            # Bucket B: one unusable optional CUDA library may be bypassed.
+            logger.debug(
+                "ASR CUDA library preload: path=%s result=failed exc=%s",
+                path,
+                type(exc).__name__,
+            )
 
     # --- Source 1: managed pack dir ---
     if cuda_libs_root is not None:
@@ -403,8 +417,9 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
             for pattern in patterns:
                 for match in glob.glob(pattern, recursive=True):
                     _load(match)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # Bucket B: an unusable optional managed CUDA pack falls back to other sources.
+            logger.debug("ASR CUDA pack probe: source=managed available=false exc=%s", type(exc).__name__)
 
     # --- Source 2: pip packages (nvidia-cudnn-cu12 / nvidia-cublas-cu12) ---
     for pkg_name, lib_glob, dll_glob in (
@@ -422,8 +437,13 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
             for subdir, file_glob in (("lib", lib_glob), ("bin", dll_glob)):
                 for match in glob.glob(str(pkg_dir / subdir / file_glob)):
                     _load(match)
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # Bucket B: an absent optional pip CUDA package is a normal fallback.
+            logger.debug(
+                "ASR CUDA pack probe: source=%s available=false exc=%s",
+                pkg_name,
+                type(exc).__name__,
+            )
 
 
 def _cuda_device_count() -> int:
@@ -432,7 +452,9 @@ def _cuda_device_count() -> int:
         import ctranslate2  # noqa: PLC0415  (function-local: stays importable without backend)
 
         return int(ctranslate2.get_cuda_device_count())
-    except Exception:  # noqa: BLE001  (no backend / driver error → treat as no GPU)
+    except Exception as exc:  # noqa: BLE001  (no backend / driver error → treat as no GPU)
+        # Bucket B: an absent optional CUDA accelerator is a normal fallback.
+        logger.debug("ASR CUDA probe: devices=0 exc=%s", type(exc).__name__)
         return 0
 
 
@@ -548,42 +570,55 @@ def transcribe(
             progress_cb(1.0)
         return []
 
-    # Pick the engine from *device*. CT2 (cpu/cuda) is the unchanged default; only
-    # vulkan/auto with a usable Vulkan device and a present ggml model route to the
-    # whisper.cpp engine. A GPU/engine problem there never crashes the run — it
-    # falls back to a full CT2 CPU re-decode.
-    if _use_whisper_cpp_engine(device, model_name, models_root):
-        return _transcribe_cpp(
-            audio,
-            model_name=model_name,
-            models_root=models_root,
-            duration_s=duration_s,
-            cancel_event=cancel_event,
-            progress_cb=progress_cb,
-            cuda_libs_root=cuda_libs_root,
-            onnx_pack_root=onnx_pack_root,
-        )
+    with timed_phase("ASR transcribe", logger):
+        # Pick the engine from *device*. CT2 (cpu/cuda) is the unchanged default; only
+        # vulkan/auto with a usable Vulkan device and a present ggml model route to the
+        # whisper.cpp engine. A GPU/engine problem there never crashes the run — it
+        # falls back to a full CT2 CPU re-decode.
+        if _use_whisper_cpp_engine(device, model_name, models_root):
+            results = _transcribe_cpp(
+                audio,
+                model_name=model_name,
+                models_root=models_root,
+                duration_s=duration_s,
+                cancel_event=cancel_event,
+                progress_cb=progress_cb,
+                cuda_libs_root=cuda_libs_root,
+                onnx_pack_root=onnx_pack_root,
+            )
+        else:
+            # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not
+            # route to whisper.cpp (backend lib absent — e.g. the CPU-only PyPI
+            # wheel — no Vulkan device, or missing ggml) falls back to CT2 "auto",
+            # NOT forced CPU: the user asked for GPU, so use a CUDA GPU if one is
+            # present and usable (auto already rebuilds on CPU for no-GPU /
+            # CUDA-init failure). This salvages GPU speed for a persisted
+            # device='vulkan' config before the user reopens Settings (where the
+            # now-unavailable option is dropped to 'auto' by the load_from_config
+            # hygiene); strictly >= the old forced-CPU behaviour.
+            ct2_device = "auto" if device == "vulkan" else device
+            results = _transcribe_ct2(
+                audio,
+                model_name=model_name,
+                models_root=models_root,
+                duration_s=duration_s,
+                cancel_event=cancel_event,
+                progress_cb=progress_cb,
+                device=ct2_device,
+                cuda_libs_root=cuda_libs_root,
+                onnx_pack_root=onnx_pack_root,
+            )
 
-    # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not route to
-    # whisper.cpp (backend lib absent — e.g. the CPU-only PyPI wheel — no Vulkan
-    # device, or missing ggml) falls back to CT2 "auto", NOT forced CPU: the user
-    # asked for GPU, so use a CUDA GPU if one is present and usable (auto already
-    # rebuilds on CPU for no-GPU / CUDA-init failure). This salvages GPU speed for
-    # a persisted device='vulkan' config before the user reopens Settings (where
-    # the now-unavailable option is dropped to 'auto' by the load_from_config
-    # hygiene); strictly >= the old forced-CPU behaviour.
-    ct2_device = "auto" if device == "vulkan" else device
-    return _transcribe_ct2(
-        audio,
-        model_name=model_name,
-        models_root=models_root,
+    log_summary(
+        logger,
+        "ASR transcribe done",
+        model=model_name,
+        language="ja",
         duration_s=duration_s,
-        cancel_event=cancel_event,
-        progress_cb=progress_cb,
-        device=ct2_device,
-        cuda_libs_root=cuda_libs_root,
-        onnx_pack_root=onnx_pack_root,
+        segments=len(results),
+        chars=sum(len(text) for _start, _end, text in results),
     )
+    return results
 
 
 def _use_whisper_cpp_engine(device: str, model_name: str, models_root: Path) -> bool:
@@ -604,10 +639,10 @@ def _use_whisper_cpp_engine(device: str, model_name: str, models_root: Path) -> 
 
     if device == "vulkan":
         if not _engine.whisper_cpp_available():
-            logger.info("ASR: device='vulkan' but whisper.cpp is unavailable; using CPU.")
+            logger.info("ASR backend fallback: requested=vulkan reason=backend_unavailable fallback=ctranslate2")
             return False
         if _engine.vulkan_device_count() <= 0:
-            logger.info("ASR: device='vulkan' but no Vulkan device is available; using CPU.")
+            logger.info("ASR backend fallback: requested=vulkan reason=no_device fallback=ctranslate2")
             return False
     elif device == "auto":
         # CUDA wins over Vulkan when both are present.
@@ -620,7 +655,7 @@ def _use_whisper_cpp_engine(device: str, model_name: str, models_root: Path) -> 
 
     if not _cpp_ggml_present(model_name, models_root):
         logger.warning(
-            "ASR: whisper.cpp selected but the ggml model for %r is not downloaded; falling back to CPU.",
+            "ASR backend fallback: requested=whisper.cpp reason=model_missing fallback=ctranslate2 model=%s",
             model_name,
         )
         return False
@@ -690,6 +725,13 @@ def _transcribe_cpp(
 
         if progress_cb is not None:
             progress_cb(1.0)
+        log_summary(
+            logger,
+            "ASR backend selected",
+            backend="whisper.cpp",
+            device="vulkan",
+            devices=_engine.vulkan_device_count(),
+        )
         return results
     except Exception as exc:  # noqa: BLE001 — any cpp/GPU failure → full CT2 CPU re-decode
         logger.warning("ASR: whisper.cpp transcription failed (%s); falling back to CPU.", exc)
@@ -786,11 +828,34 @@ def _transcribe_ct2(
             first = next(segments_iter, _PEEK_EMPTY)
         except Exception as exc:  # noqa: BLE001  (deferred CUDA runtime failure)
             logger.warning("ASR: CUDA inference failed (%s); falling back to CPU.", exc)
-            model, _ = _resolve_model("cpu", cuda_libs_root, whisper_model_cls, model_name, models_root, cpu_threads)
+            model, device_used = _resolve_model(
+                "cpu",
+                cuda_libs_root,
+                whisper_model_cls,
+                model_name,
+                models_root,
+                cpu_threads,
+            )
             segments_iter, _info = model.transcribe(audio, **transcribe_kwargs)
             first = next(segments_iter, _PEEK_EMPTY)
         if first is not _PEEK_EMPTY:
             segments_iter = itertools.chain((first,), segments_iter)
+
+    if device_used == "cuda":
+        log_summary(
+            logger,
+            "ASR backend selected",
+            backend="ctranslate2",
+            device=device_used,
+            devices=_cuda_device_count(),
+        )
+    else:
+        log_summary(
+            logger,
+            "ASR backend selected",
+            backend="ctranslate2",
+            device=device_used,
+        )
 
     results: list[tuple[float, float, str]] = []
     for seg in segments_iter:
