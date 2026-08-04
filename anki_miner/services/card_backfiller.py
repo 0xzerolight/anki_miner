@@ -55,11 +55,13 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_text_field,
 )
 from anki_miner.services.tagger import get_shared_tagger
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import (
     _format_furigana,
     generate_reading,
     katakana_to_hiragana,
 )
+from anki_miner.utils.timing import timed_phase
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -253,6 +255,8 @@ class _NoteContext:
     reading: str  # hiragana; may be a tokenizer guess (see reading_recovered)
     reading_source: str  # "field" | "furigana" | "tokenizer"
     lemma: str
+    reading_failed: bool
+    lemma_failed: bool
 
 
 def scan_backfill(
@@ -270,6 +274,34 @@ def scan_backfill(
     only ``definition_service`` / ``pitch_accent_service`` /
     ``frequency_service`` are read. Read-only: nothing is written to Anki.
     """
+    log_summary(
+        logger,
+        "Backfill scan start",
+        note_type=config.anki_note_type,
+        fields=len(options.field_keys),
+        overwrite=options.overwrite,
+        deck=options.deck,
+    )
+    with timed_phase("backfill-scan", logger):
+        return _scan_backfill_impl(
+            anki_service,
+            config,
+            services,
+            options,
+            progress=progress,
+            is_cancelled=is_cancelled,
+        )
+
+
+def _scan_backfill_impl(
+    anki_service: AnkiService,
+    config: AnkiMinerConfig,
+    services: Any,
+    options: BackfillOptions,
+    *,
+    progress: Callable[[int, int], None] | None = None,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> BackfillPlan:
     anki_fields = config.anki_fields
     word_field = anki_fields.get("word")
     if not word_field:
@@ -312,7 +344,8 @@ def scan_backfill(
     tagger = get_shared_tagger()
 
     scanned = skipped_no_identity = sentinel_only_sorts = identical_skips = 0
-    guessed_reading_skips = 0
+    guessed_reading_skips = reading_failures = lemma_failures = 0
+    first_failed_mined_form: str | None = None
     note_plans: list[NotePlan] = []
 
     for chunk in _chunks(note_ids, _CHUNK):
@@ -332,7 +365,12 @@ def scan_backfill(
             if not mined_form:
                 skipped_no_identity += 1
                 continue
-            contexts.append(_resolve_context(note_id, fields, mined_form, anki_fields, tagger))
+            context = _resolve_context(note_id, fields, mined_form, anki_fields, tagger)
+            reading_failures += int(context.reading_failed)
+            lemma_failures += int(context.lemma_failed)
+            if first_failed_mined_form is None and (context.reading_failed or context.lemma_failed):
+                first_failed_mined_form = mined_form
+            contexts.append(context)
 
         definitions, glossaries = _chunk_definition_lookups(definition_service, contexts, selected)
 
@@ -359,6 +397,16 @@ def scan_backfill(
         if progress:
             progress(scanned, len(note_ids))
 
+    if reading_failures or lemma_failures:
+        log_summary(
+            logger,
+            "Backfill tokenizer degraded",
+            level=logging.WARNING,
+            reading_failures=reading_failures,
+            lemma_failures=lemma_failures,
+            mined_form=first_failed_mined_form,
+        )
+
     plan = BackfillPlan(
         options=options,
         notes=tuple(note_plans),
@@ -376,16 +424,23 @@ def scan_backfill(
     # nothing, notes matched but every target was filled, or the mapping is
     # stale. Without it a scan that proposes nothing leaves no trace at all in
     # anki_miner.log, and every failure mode reads the same to a maintainer.
-    logger.info(
-        "Backfill scan: query=%s matched=%d scanned=%d notes=%d fields=%d " "overwrite=%s absent=%s unavailable=%s",
-        query,
-        len(note_ids),
-        scanned,
-        len(plan.notes),
-        plan.total_field_changes,
-        options.overwrite,
-        ",".join(absent_fields) or "-",
-        ",".join(unavailable) or "-",
+    log_summary(
+        logger,
+        "Backfill scan",
+        query=query,
+        matched=len(note_ids),
+        scanned=scanned,
+        notes=len(plan.notes),
+        fields=plan.total_field_changes,
+        overwrite=options.overwrite,
+        absent=absent_fields,
+        unavailable=unavailable,
+        skipped_no_identity=skipped_no_identity,
+        identical=identical_skips,
+        guessed_reading=guessed_reading_skips,
+        sentinel_only_sorts=sentinel_only_sorts,
+        reading_failures=reading_failures,
+        lemma_failures=lemma_failures,
     )
     return plan
 
@@ -415,10 +470,21 @@ def _preflight(
     """
     note_types = anki_service.note_type_names()
     if config.anki_note_type not in note_types:
+        logger.warning(
+            "Backfill preflight failed: note_type=%s available=%d",
+            config.anki_note_type,
+            len(note_types),
+        )
         raise SetupError(missing_note_type_message(config.anki_note_type, note_types))
 
     actual = anki_service.note_type_field_names(config.anki_note_type)
     if word_field not in actual:
+        logger.warning(
+            "Backfill preflight failed: note_type=%s field=%s fields=%d",
+            config.anki_note_type,
+            word_field,
+            len(actual),
+        )
         raise SetupError(missing_fields_message(config.anki_note_type, {word_field}, actual))
 
     anki_fields = config.anki_fields
@@ -441,6 +507,7 @@ def _resolve_context(
     """
     reading = ""
     reading_source = "tokenizer"
+    reading_failed = False
     stored = _field_value(fields, anki_fields.get("expression_reading"))
     if stored and not _is_empty(stored):
         reading = katakana_to_hiragana(_strip_for_dedup(stored))
@@ -457,17 +524,28 @@ def _resolve_context(
             reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
         except Exception:  # pragma: no cover - tagger failure is environmental
             reading = ""
+            reading_failed = True
         reading_source = "tokenizer"
 
     lemma = mined_form
+    lemma_failed = False
     try:
         tokens = list(tagger(mined_form))
         if len(tokens) == 1:
             lemma = extract_lemma(tokens[0]) or mined_form
     except Exception:  # pragma: no cover - tagger failure is environmental
-        pass
+        lemma_failed = True
 
-    return _NoteContext(note_id, fields, mined_form, reading, reading_source, lemma)
+    return _NoteContext(
+        note_id,
+        fields,
+        mined_form,
+        reading,
+        reading_source,
+        lemma,
+        reading_failed,
+        lemma_failed,
+    )
 
 
 def _chunk_definition_lookups(
@@ -703,6 +781,31 @@ def apply_backfill(
     Cancellation is honored between chunks: committed chunks stay written and
     tagged (the restyler precedent); partial counts are returned.
     """
+    log_summary(
+        logger,
+        "Backfill apply start",
+        planned=len(plan.notes),
+        fields=plan.total_field_changes,
+        overwrite=plan.options.overwrite,
+    )
+    with timed_phase("backfill-apply", logger):
+        return _apply_backfill_impl(
+            anki_service,
+            plan,
+            tag=tag,
+            progress=progress,
+            is_cancelled=is_cancelled,
+        )
+
+
+def _apply_backfill_impl(
+    anki_service: AnkiService,
+    plan: BackfillPlan,
+    *,
+    tag: str = BACKFILL_TAG,
+    progress: Callable[[int, int], None] | None = None,
+    is_cancelled: Callable[[], bool] | None = None,
+) -> BackfillResult:
     overwrite = plan.options.overwrite
     total_notes = len(plan.notes)
     notes_updated = fields_filled = tagged = skipped_stale = failed = 0
@@ -756,14 +859,16 @@ def apply_backfill(
         if progress:
             progress(written_so_far, total_notes)
 
-    logger.info(
-        "Backfill apply: planned=%d notes=%d fields=%d tagged=%d stale=%d failed=%d",
-        total_notes,
-        notes_updated,
-        fields_filled,
-        tagged,
-        skipped_stale,
-        failed,
+    log_summary(
+        logger,
+        "Backfill apply",
+        planned=total_notes,
+        processed=written_so_far,
+        notes=notes_updated,
+        fields=fields_filled,
+        tagged=tagged,
+        stale=skipped_stale,
+        failed=failed,
     )
     return BackfillResult(
         notes_updated=notes_updated,
