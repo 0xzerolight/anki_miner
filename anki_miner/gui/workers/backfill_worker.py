@@ -38,12 +38,12 @@ class BackfillScanWorker(CancellableWorker):
         self.options = options
 
     def run(self) -> None:
-        logger.info(
-            "BackfillScanWorker started: fields=%d overwrite=%s deck=%s note_type=%s",
-            len(self.options.field_keys),
-            self.options.overwrite,
-            self.options.deck or "-",
-            self.config.anki_note_type,
+        self.log_start(
+            "BackfillScanWorker",
+            fields=len(self.options.field_keys),
+            overwrite=self.options.overwrite,
+            deck=self.options.deck,
+            note_type=self.config.anki_note_type,
         )
         try:
             if self.check_cancelled():
@@ -98,13 +98,13 @@ class BackfillApplyWorker(CancellableWorker):
         self.plan = plan
 
     def run(self) -> None:
-        logger.info(
-            "BackfillApplyWorker started: notes=%d fields=%d overwrite=%s deck=%s note_type=%s",
-            len(self.plan.notes),
-            self.plan.total_field_changes,
-            self.plan.options.overwrite,
-            self.plan.options.deck or "-",
-            self.config.anki_note_type,
+        self.log_start(
+            "BackfillApplyWorker",
+            notes=len(self.plan.notes),
+            fields=self.plan.total_field_changes,
+            overwrite=self.plan.options.overwrite,
+            deck=self.plan.options.deck,
+            note_type=self.config.anki_note_type,
         )
         try:
             if self.check_cancelled():
