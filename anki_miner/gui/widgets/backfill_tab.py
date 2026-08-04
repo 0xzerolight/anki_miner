@@ -397,13 +397,24 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
     def _load_decks(self) -> None:
         try:
             service = AnkiService(self.config)
-        except ValueError:
+        except ValueError as exc:
+            logger.warning(
+                "Card Backfill deck fetch skipped: missing=field_mapping fallback=all_decks error=%s",
+                exc,
+            )
             return  # mapping incomplete; deck filter stays "All decks"
         worker = FetchDecksWorker(service, parent=self)
         worker.result_ready.connect(self._on_decks_fetched)
-        worker.error.connect(lambda _msg: self._on_decks_fetched([]))
+        worker.error.connect(self._on_deck_fetch_error)
         self._deck_worker = worker
         worker.start()
+
+    def _on_deck_fetch_error(self, message: str) -> None:
+        logger.warning(
+            "Card Backfill deck fetch degraded: fallback=all_decks error=%s",
+            message,
+        )
+        self._on_decks_fetched([])
 
     def _on_decks_fetched(self, decks: list) -> None:
         if decks:
@@ -443,6 +454,13 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self._set_running(True)
         self._publish_task_start(self.tr("Card backfill scan"))
         self.status_label.setText(self.tr("Scanning…"))
+        logger.info(
+            "Card Backfill scan started: field_groups=%d overwrite=%s deck=%s note_type=%s",
+            sum(checkbox.isChecked() for checkbox in self.field_checkboxes.values()),
+            options.overwrite,
+            options.deck or "-",
+            self.config.anki_note_type,
+        )
         worker.start()
 
     def _on_scan_finished(self, plan: BackfillPlan) -> None:
@@ -621,6 +639,16 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self._set_running(True)
         self._publish_task_start(self.tr("Card backfill"), total=len(plan.notes))
         self.status_label.setText(self.tr("Applying…"))
+        logger.info(
+            "Card Backfill apply started: field_groups=%d overwrite=%s deck=%s note_type=%s",
+            sum(
+                any(field_key in plan.options.field_keys for field_key in group_keys)
+                for group_keys in FIELD_GROUPS.values()
+            ),
+            plan.options.overwrite,
+            plan.options.deck or "-",
+            self.config.anki_note_type,
+        )
         worker.start()
 
     def _on_apply_finished(self, result: BackfillResult) -> None:
@@ -687,6 +715,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self._publish_task_count(current=done, total=total or None, detail="")
 
     def _on_worker_error(self, message: str) -> None:
+        logger.warning("Card Backfill worker failed: error=%s", message)
         self._run_failed = True
         self._set_running(False)
         self.status_label.setText(message)

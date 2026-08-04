@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import MagicMock, patch
 
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
@@ -26,6 +27,27 @@ _WORKER_MOD = "anki_miner.gui.workers.backfill_worker"
 
 
 class TestBackfillScanWorker:
+    def test_logs_start_and_completion_summary(self, test_config, monkeypatch, caplog):
+        shared_lookup = MagicMock()
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "create_shared_lookup_services",
+            MagicMock(return_value=shared_lookup),
+        )
+        monkeypatch.setattr(backfill_worker_module, "scan_backfill", MagicMock(return_value=_PLAN))
+
+        worker = BackfillScanWorker(test_config, _OPTIONS)
+        with caplog.at_level(logging.INFO, logger=_WORKER_MOD):
+            worker.run()
+
+        start = next(
+            record for record in caplog.records if record.getMessage().startswith("BackfillScanWorker started:")
+        )
+        assert start.name == _WORKER_MOD
+        done = next(record for record in caplog.records if record.getMessage().startswith("BackfillScanWorker done:"))
+        assert "notes=0" in done.getMessage()
+
     def test_closes_shared_lookup_bundle_on_success(self, test_config, monkeypatch):
         anki_service = MagicMock()
         shared_lookup = MagicMock()
