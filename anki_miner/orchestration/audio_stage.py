@@ -15,6 +15,7 @@ memoized sentence TTS); they share one cancel-aware loop skeleton
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -26,10 +27,14 @@ from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.utils import has_katakana, hiragana_to_katakana
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.timing import timed_phase
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
+
+logger = logging.getLogger(__name__)
 
 
 def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
@@ -217,10 +222,14 @@ class AudioStage:
         self,
         media_results: list[tuple[TokenizedWord, MediaData]],
         progress_callback: ProgressCallback | None,
+        stage: str,
+        enabled_entries: int,
+        fetcher: object,
+        diagnose_fn: Callable[[dict[str, int], int], str | None],
         start_label: str,
         item_template: str,
-        per_item: Callable[[TokenizedWord, MediaData], None],
-    ) -> bool:
+        per_item: Callable[[TokenizedWord, MediaData], bool | None],
+    ) -> tuple[bool, int, int, int]:
         """Cancel-aware loop skeleton shared by both fetch entry points.
 
         Band-invariant (the one behavior a naive extraction drops): once the
@@ -231,30 +240,67 @@ class AudioStage:
         on the next phase (definitions), silently stealing its weight. The gate
         (checked by the caller) must NOT include ``media_results``.
 
-        Returns ``False`` when cancelled mid-loop (``on_complete`` already
-        emitted, caller must return early without summary/diagnosis), ``True``
-        when the loop ran to completion.
+        ``per_item`` returns True for a new successful fetch, False for a new
+        miss, and None when no fetch was attempted (blank sentence or a memoized
+        sentence). This keeps the shared boundary authoritative for attempts,
+        hits, and misses without logging inside the hot loop.
+
+        Returns ``(completed, attempts, hits, misses)``. ``completed`` is False
+        when cancelled mid-loop (``on_complete`` already emitted; caller must
+        return early without a presenter summary). The diagnostic and log
+        summary are emitted here only after a completed loop.
         """
-        if progress_callback is not None:
-            progress_callback.on_start(len(media_results), start_label)
-        for i, (word, media) in enumerate(media_results):
-            if self._is_cancelled():
-                if progress_callback is not None:
-                    progress_callback.on_complete()
-                return False
-            per_item(word, media)
+        words = len(media_results)
+        log_summary(
+            logger,
+            "Audio stage",
+            stage=stage,
+            words=words,
+            chain_entries=enabled_entries,
+        )
+        attempts = 0
+        hits = 0
+        misses = 0
+        with timed_phase(f"{stage}_audio", logger):
             if progress_callback is not None:
-                progress_callback.on_progress(i + 1, tr_format(item_template, word.mined_form))
-        if progress_callback is not None:
-            progress_callback.on_complete()
-        return True
+                progress_callback.on_start(words, start_label)
+            for i, (word, media) in enumerate(media_results):
+                if self._is_cancelled():
+                    if progress_callback is not None:
+                        progress_callback.on_complete()
+                    return False, attempts, hits, misses
+                outcome = per_item(word, media)
+                if outcome is not None:
+                    attempts += 1
+                    if outcome:
+                        hits += 1
+                    else:
+                        misses += 1
+                if progress_callback is not None:
+                    progress_callback.on_progress(i + 1, tr_format(item_template, word.mined_form))
+            if progress_callback is not None:
+                progress_callback.on_complete()
+
+            failure_counts = self._diagnose(fetcher, diagnose_fn, attempts, stage)
+            log_summary(
+                logger,
+                "Audio stage done",
+                stage=stage,
+                words=words,
+                attempts=attempts,
+                hits=hits,
+                misses=misses,
+                **failure_counts,
+            )
+        return True, attempts, hits, misses
 
     def _diagnose(
         self,
         fetcher: object,
         diagnose_fn: Callable[[dict[str, int], int], str | None],
         attempts: int,
-    ) -> None:
+        stage: str,
+    ) -> dict[str, int]:
         """Warn when transient failures dominate, so a systemic cause reads as
         actionable rather than an indistinguishable low "X/Y available".
 
@@ -262,7 +308,9 @@ class AudioStage:
         omits it, so a chain without a network source simply has nothing to
         report. The isinstance guard ignores a duck-typed fetcher (or test
         MagicMock) that does not return a real counts dict — never crashing the
-        run over a diagnostic.
+        run over a diagnostic. The returned dict is the same object passed to
+        the diagnosis helper, so the stage summary never re-reads or recomputes
+        failure counts.
         """
         stats_fn = getattr(fetcher, "stats", None)
         if callable(stats_fn):
@@ -270,7 +318,16 @@ class AudioStage:
             if isinstance(counts, dict):
                 diagnosis = diagnose_fn(counts, attempts)
                 if diagnosis is not None:
+                    log_summary(
+                        logger,
+                        "Audio stage diagnosis",
+                        level=logging.WARNING,
+                        stage=stage,
+                        diagnosis=diagnosis,
+                    )
                     self.presenter.show_warning(diagnosis)
+                return counts
+        return {}
 
     def fetch_expression_audio(
         self,
@@ -290,12 +347,16 @@ class AudioStage:
         # Progress note: on_start/on_complete MUST be called unconditionally when
         # this stage is active (even when media_results is empty) to consume the
         # dedicated band that process_episode registered — see _run_stage.
-        if not self.expression_audio_active:
+        active = self.expression_audio_active
+        reason: str | None = None
+        if not active:
+            reason = "field_not_mapped" if not self.config.anki_fields.get("expression_audio") else "chain_empty"
+        log_summary(logger, "Expression audio gate", active=active, reason=reason)
+        if not active:
             return
-        fetched_count = 0
+        enabled_entries = sum(entry.enabled for entry in self.config.expression_audio_chain)
 
-        def _per_item(word: TokenizedWord, media: MediaData) -> None:
-            nonlocal fetched_count
+        def _per_item(word: TokenizedWord, media: MediaData) -> bool:
             # Source-priority outer / candidate-ladder inner: each source
             # tries ALL candidate forms before the chain falls through to a
             # lower-priority source, so a synthetic fallback can't satisfy
@@ -307,11 +368,16 @@ class AudioStage:
             if path is not None:
                 media.expression_audio_path = path
                 media.expression_audio_filename = path.name
-                fetched_count += 1
+                return True
+            return False
 
-        completed = self._run_stage(
+        completed, _, hits, _ = self._run_stage(
             media_results,
             progress_callback,
+            "expression",
+            enabled_entries,
+            self.expression_audio_fetcher,
+            _audio_failure_diagnosis,
             QCoreApplication.translate("EpisodeProcessor", "Fetching expression audio"),
             QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1"),
             _per_item,
@@ -321,13 +387,10 @@ class AudioStage:
         self.presenter.show_info(
             tr_format(
                 QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1/%2 available"),
-                fetched_count,
+                hits,
                 len(media_results),
             )
         )
-        # Diagnose *why* audio failed when transient failures dominate the run,
-        # so an expired JPod101 certificate reads as an actionable warning.
-        self._diagnose(self.expression_audio_fetcher, _audio_failure_diagnosis, len(media_results))
 
     def fetch_sentence_audio(
         self,
@@ -345,47 +408,60 @@ class AudioStage:
         # this stage is active (even when media_results is empty) to consume the
         # band process_reading registered — same discipline as expression audio,
         # centralized in _run_stage.
-        if not self.reading_tts_active:
+        active = self.reading_tts_active
+        reason: str | None = None
+        enabled_entries = sum((self.config.reading_tts_google_enabled, self.config.reading_tts_papago_enabled))
+        if not active:
+            if not self.config.reading_tts_enabled:
+                reason = "disabled"
+            elif not self.config.anki_fields.get("audio"):
+                reason = "field_not_mapped"
+            else:
+                reason = "chain_empty"
+        log_summary(logger, "Sentence audio gate", active=active, reason=reason)
+        if not active:
             return
         # Words share sentences (novel sentence-units, manga bubbles):
         # synthesize once per unique sentence and share the Path. Failures
         # are memoized too, so a failing shared bubble is not re-hammered.
         memo: dict[str, Path | None] = {}
 
-        def _per_item(word: TokenizedWord, media: MediaData) -> None:
+        def _per_item(word: TokenizedWord, media: MediaData) -> bool | None:
             sentence = word.sentence
             if sentence.strip():
                 if sentence in memo:
                     path = memo[sentence]
+                    outcome = None
                 else:
                     path = self.sentence_audio_fetcher.fetch(  # type: ignore[union-attr]
                         sentence,
                         cancelled_check=self._is_cancelled,
                     )
                     memo[sentence] = path
+                    outcome = path is not None
                 if path is not None:
                     media.audio_path = path
                     media.audio_filename = path.name
+                return outcome
+            return None
 
-        completed = self._run_stage(
+        completed, attempts, hits, _ = self._run_stage(
             media_results,
             progress_callback,
+            "sentence",
+            enabled_entries,
+            self.sentence_audio_fetcher,
+            _sentence_audio_failure_diagnosis,
             QCoreApplication.translate("EpisodeProcessor", "Generating sentence audio"),
             QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1"),
             _per_item,
         )
         if not completed:
             return
-        hits = sum(1 for p in memo.values() if p is not None)
         self.presenter.show_info(
             tr_format(
                 QCoreApplication.translate("EpisodeProcessor", "Sentence audio: %1/%2 sentences"),
                 hits,
-                len(memo),
+                attempts,
             )
         )
-        # Diagnose *why* TTS failed when transient failures dominate. The
-        # attempts denominator is the UNIQUE-sentence count (len(memo)): the
-        # memo dedups fetch calls, so stats() failures are per unique sentence —
-        # a word-count denominator would dilute the ratio.
-        self._diagnose(self.sentence_audio_fetcher, _sentence_audio_failure_diagnosis, len(memo))
