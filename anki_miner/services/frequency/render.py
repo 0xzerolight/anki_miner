@@ -13,9 +13,6 @@ dictionary metadata; ranks are integers (no escaping needed).
 from __future__ import annotations
 
 import html
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 def render_frequency_html(sources: list[tuple[str, int, str | None]]) -> str:

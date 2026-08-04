@@ -37,12 +37,14 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_dir
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +199,14 @@ def install_cuda_pack(
     if specs is None:
         raise SetupError(f"In-app CUDA library install is not supported on this platform ({sys.platform}).")
 
+    hosts = ",".join(dict.fromkeys(urlsplit(spec.url).hostname or "-" for spec in specs))
+    logger.info(
+        "CUDA pack install: host=%s expected_bytes=%s components=%d",
+        hosts,
+        "-",
+        len(specs),
+    )
+
     if cancel_event is not None and cancel_event.is_set():
         raise OperationCancelled("CUDA library installation cancelled")
 
@@ -240,6 +250,16 @@ def install_cuda_pack(
         finally:
             cleanup_part(part_path)
 
+    byte_count = sum(
+        path.stat().st_size for spec in specs for path in (cuda_libs_root / spec.component).rglob("*") if path.is_file()
+    )
+    log_summary(
+        logger,
+        "CUDA pack install done",
+        installed=cuda_libs_root,
+        bytes=byte_count,
+        components=len(specs),
+    )
     return cuda_libs_root
 
 
@@ -262,12 +282,17 @@ def _extract_component(part_path: Path, spec: _CudaLibSpec, cuda_libs_root: Path
                     basename = os.path.basename(member)
                     (staging / basename).write_bytes(zf.read(member))
         except zipfile.BadZipFile as exc:
+            logger.warning(
+                "CUDA pack install failed: stage=extract exc=%s",
+                type(exc).__name__,
+            )
             raise SetupError(f"CUDA {spec.component} download is not a valid wheel: {exc}") from exc
 
         atomic_replace_dir(staging, target)
         staging = None  # type: ignore[assignment]  # promoted; do not rmtree.
     finally:
         if staging is not None:
+            # Best-effort cleanup on an already-failing extraction path.
             shutil.rmtree(staging, ignore_errors=True)
 
 

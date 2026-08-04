@@ -13,6 +13,7 @@ from pathlib import Path
 
 from anki_miner.services.asr import _engine
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_backups_in
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,12 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
             mid-download cancel takes effect once the transfer finishes — at
             which point nothing is promoted.
     """
+    logger.info(
+        "ASR model install: host=%s expected_bytes=%s model=%s",
+        "huggingface.co",
+        "-",
+        name,
+    )
     if cancel_event is not None and cancel_event.is_set():
         return
     models_root.mkdir(parents=True, exist_ok=True)
@@ -121,6 +128,8 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
             # Cancelled after the transfer completed; discard the staged copy.
             return
 
+        byte_count = sum(path.stat().st_size for path in staging.rglob("*") if path.is_file())
+
         # Promote each top-level staged entry into models_root atomically.
         for entry in staging.iterdir():
             dest = models_root / entry.name
@@ -128,5 +137,12 @@ def download(name: str, models_root: Path, cancel_event=None) -> None:
                 atomic_replace_dir(entry, dest)
             else:
                 os.replace(entry, dest)
+        log_summary(
+            logger,
+            "ASR model install done",
+            installed=name,
+            bytes=byte_count,
+        )
     finally:
+        # Best-effort cleanup on success or an already-failing install path.
         shutil.rmtree(staging, ignore_errors=True)
