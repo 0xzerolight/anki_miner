@@ -39,6 +39,7 @@ from anki_miner.gui.utils.queue_state_store import QueueSnapshot
 from anki_miner.gui.utils.runtime_state import download_resume_root, is_within
 from anki_miner.services.download_resume import ResumeState
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,15 @@ class RecoveryInventory:
 
 def take_inventory() -> RecoveryInventory:
     """Report what is recoverable. Never raises, never mutates anything."""
-    return RecoveryInventory(downloads=_partial_downloads(), queues=_queue_snapshots())
+    inventory = RecoveryInventory(downloads=_partial_downloads(), queues=_queue_snapshots())
+    log_summary(
+        logger,
+        "Recovery inventory",
+        snapshots=len(inventory.queues),
+        downloads=len(inventory.downloads),
+        queued_items=inventory.queued_items,
+    )
+    return inventory
 
 
 def _partial_downloads() -> tuple[PartialDownload, ...]:
@@ -192,7 +201,15 @@ class RecoveryController:
         )
         box.setDefaultButton(restore)
         box.exec()
-        return box.clickedButton() is restore
+        restored = box.clickedButton() is restore
+        log_summary(
+            logger,
+            "Recovery choice",
+            action="restore" if restored else "discard",
+            snapshots=len(inventory.queues),
+            queued_items=inventory.queued_items,
+        )
+        return restored
 
 
 def describe(inventory: RecoveryInventory) -> str:

@@ -78,6 +78,7 @@ from anki_miner.models.audiobook_queue import AudiobookQueue, AudiobookQueueItem
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
@@ -364,11 +365,25 @@ class AudiobookTab(_ListQueueMiningTabBase):
         if audio_text is None and sub_text is None:
             return
         if audio_text is None or not Path(audio_text).is_file():
+            log_summary(
+                logger,
+                "Audiobook add rejected",
+                level=logging.WARNING,
+                reason="audio_file_missing",
+                file=Path(audio_text) if audio_text else None,
+            )
             self.log_widget.append_error(
                 tr_format(self.tr("Audio file not found: %1"), audio_text or self.tr("(none selected)"))
             )
             return
         if sub_text is None or not Path(sub_text).is_file():
+            log_summary(
+                logger,
+                "Audiobook add rejected",
+                level=logging.WARNING,
+                reason="subtitle_file_missing",
+                file=Path(sub_text) if sub_text else None,
+            )
             self.log_widget.append_error(
                 tr_format(self.tr("Subtitle file not found: %1"), sub_text or self.tr("(none selected)"))
             )

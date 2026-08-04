@@ -11,6 +11,7 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,14 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
 
     def run(self) -> None:
         """Execute episode processing in background thread."""
+        self.log_start(
+            "EpisodeWorkerThread",
+            video=self.video_file,
+            subtitle=self.subtitle_file,
+            processor_factory=self.processor is None,
+            curation=self.curation_callback is not None,
+            audio_track=self.audio_track_override,
+        )
         try:
             if self.check_cancelled():
                 return
@@ -123,6 +132,14 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
             # cancelled runs remain silent.
             if result.cards_created or not self.check_cancelled():
                 self.result_ready.emit(result)
+                log_summary(
+                    logger,
+                    "EpisodeWorkerThread done",
+                    total_words=result.total_words_found,
+                    new_words=result.new_words_found,
+                    cards=result.cards_created,
+                    errors=len(result.errors),
+                )
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             self.report_failure(

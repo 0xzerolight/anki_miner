@@ -23,6 +23,7 @@ from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.wordset_service import load_wordset_catalog
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -711,6 +712,14 @@ class FilteringSettingsPanel(FormPanel):
         # it). Surface that here so the setting doesn't look active. frequency_active
         # is derived from the enabled sources in the chain (Dictionaries tab).
         self.max_frequency_warning.setVisible(config.max_frequency_rank > 0 and not config.frequency_active)
+        if config.max_frequency_rank > 0 and not config.frequency_active:
+            log_summary(
+                logger,
+                "Filtering config degraded",
+                level=logging.WARNING,
+                reason="frequency_source_missing",
+                max_frequency_rank=config.max_frequency_rank,
+            )
         self.set_use_known_words_db(config.use_known_words_db)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)
