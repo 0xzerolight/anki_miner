@@ -32,6 +32,7 @@ from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.corpus_aggregator import aggregate, select
 from anki_miner.services.subtitle_parser import PARSE_RELEVANT_CONFIG_FIELDS
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,14 @@ class DeckBuilderWorker(ProcessorOwningWorker):
 
     def run(self) -> None:
         """Run the aggregate → preview → (gated) build flow."""
+        self.log_start(
+            "DeckBuilderWorker",
+            pairs=len(self.request.pairs),
+            deck=self.request.deck_name,
+            mode=self.request.mode.value,
+            value=self.request.value,
+            collection_filter=self.request.collection_filter,
+        )
         base: EpisodeProcessor | None = None
         try:
             # Phase 1: aggregate + preview. Every step here is slow (processor
@@ -290,6 +299,17 @@ class DeckBuilderWorker(ProcessorOwningWorker):
             if self.check_cancelled():
                 return
             self.build_finished.emit(total, preview.projected_coverage_pct)
+            log_summary(
+                logger,
+                "DeckBuilderWorker done",
+                pairs=len(self.request.pairs),
+                total_tokens=preview.total_tokens,
+                unique_lemmas=preview.unique_lemmas,
+                candidates=preview.candidate_count,
+                known_skipped=preview.known_skipped,
+                carded=len(carded),
+                cards=total,
+            )
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             # A real failure surfaces even if the cancel flag is already set:
             # the build loop returns before this on a clean cancel, so reaching

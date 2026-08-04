@@ -706,8 +706,11 @@ class TestWorkerExceptionLogging:
             worker.run()
 
         records = [r for r in caplog.records if r.name == "anki_miner.gui.workers.episode_worker"]
-        assert [r.levelno for r in records] == [logging.WARNING]
-        assert records[0].exc_info is None
+        # Ignore the INFO start receipt; the point is that the failure is one
+        # WARNING with nothing at ERROR or above, i.e. no traceback.
+        failures = [r for r in records if r.levelno >= logging.WARNING]
+        assert [r.levelno for r in failures] == [logging.WARNING]
+        assert failures[0].exc_info is None
         assert seen == ["Error processing episode: Cannot connect to AnkiConnect. Is Anki running?"]
 
     def test_import_worker_cancel_logs_no_traceback(self, qapp, caplog):

@@ -212,6 +212,10 @@ class TestSingleCallWorkerRouting:
             worker.run()
 
         records = [r for r in caplog.records if r.name == "anki_miner.gui.workers.base_worker"]
-        assert [r.levelno for r in records] == [logging.WARNING]
-        assert records[0].exc_info is None
+        # The INFO record ahead of it is the worker's start receipt. What this
+        # test pins is the failure record: one WARNING, and nothing at ERROR or
+        # above, so Anki simply not running never writes a traceback.
+        failures = [r for r in records if r.levelno >= logging.WARNING]
+        assert [r.levelno for r in failures] == [logging.WARNING]
+        assert failures[0].exc_info is None
         assert seen == ["Could not load decks: Is Anki running?"]

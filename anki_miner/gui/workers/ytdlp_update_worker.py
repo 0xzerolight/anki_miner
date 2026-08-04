@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.ytdlp_updater import YtdlpUpdater
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class YtdlpUpdateWorker(CancellableWorker):
 
     def run(self) -> None:
         """Execute the throttled check + (if newer) install in the background."""
+        self.log_start("YtdlpUpdateWorker", force=self._force)
         try:
             if self.check_cancelled():
                 return
@@ -44,6 +46,15 @@ class YtdlpUpdateWorker(CancellableWorker):
 
             if not self.check_cancelled():
                 self.result_ready.emit(result)
+                log_summary(
+                    logger,
+                    "YtdlpUpdateWorker done",
+                    results=1,
+                    action=result.action,
+                    installed_version=result.installed_version,
+                    available_version=result.available_version,
+                    artifact=result.path,
+                )
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             self.report_failure(
                 e,

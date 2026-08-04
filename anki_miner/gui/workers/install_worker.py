@@ -38,6 +38,7 @@ from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,10 @@ class InstallWorker(CancellableWorker):
         that lands during the task suppresses both emits — matching the five
         originals — so the native ``finished`` alone drives handle release.
         """
+        self.log_start(
+            "InstallWorker",
+            task=getattr(self._task, "__name__", type(self._task).__name__),
+        )
         if self.check_cancelled():
             return
 
@@ -117,6 +122,7 @@ class InstallWorker(CancellableWorker):
 
         if not self.check_cancelled():
             self.result_ready.emit(True, message)
+            log_summary(logger, "InstallWorker done", succeeded=1)
 
 
 def _progress_template(context: str) -> str:
