@@ -124,8 +124,11 @@ def test_run_off_thread_default_on_error_does_not_double_log(qtbot, caplog):
 
     worker_records = [r for r in caplog.records if r.name == "anki_miner.gui.workers.base_worker"]
     sink_records = [r for r in caplog.records if r.name == "anki_miner.gui.utils.run_off_thread"]
-    assert [r.levelno for r in worker_records] == [logging.ERROR]
-    assert "nope" in str(worker_records[0].exc_info[1])
+    # Skip the INFO start receipt; what this pins is that the FAILURE is
+    # recorded once, by the worker guard, and not again by the sink.
+    worker_failures = [r for r in worker_records if r.levelno >= logging.WARNING]
+    assert [r.levelno for r in worker_failures] == [logging.ERROR]
+    assert "nope" in str(worker_failures[0].exc_info[1])
     assert [r.levelno for r in sink_records] == [logging.DEBUG]
 
 

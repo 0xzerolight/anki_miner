@@ -70,12 +70,15 @@ def log_summary(
         level: Logging level, normally ``logging.INFO`` or ``logging.WARNING``.
         **fields: Ordered summary field names and values.
     """
+    # stacklevel=2 so the record's %(lineno)d resolves to the CALLER, not to
+    # this helper. Without it every summary line in the app would point at this
+    # one statement, defeating the line number in the log format.
     if not fields:
-        log.log(level, "%s:", event)
+        log.log(level, "%s:", event, stacklevel=2)
         return
 
     body = " ".join(f"{key}={_render_value(value)}" for key, value in fields.items())
-    log.log(level, "%s: %s", event, body)
+    log.log(level, "%s: %s", event, body, stacklevel=2)
 
 
 @contextlib.contextmanager
@@ -112,4 +115,7 @@ def suppressed(
             what,
             type(exc).__name__,
             exc,
+            # 3, not 2: the frame above this generator is contextlib's
+            # __exit__, so only the third level reaches the `with` statement.
+            stacklevel=3,
         )

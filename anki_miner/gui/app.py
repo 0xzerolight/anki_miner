@@ -412,9 +412,10 @@ def _log_session_boundary() -> None:
     def _probe(field: str, value: Callable[[], object], default: object = "") -> object:
         try:
             return value()
-        except Exception:
-            # Header metadata is diagnostic-only. Record degraded probes once,
-            # but never let them block the session boundary or application boot.
+        except Exception:  # noqa: BLE001 — bucket A: aggregated into one WARNING after the loop.
+            # Header metadata is diagnostic-only and must never block the
+            # session boundary or application boot, so a failed probe is
+            # recorded by field name rather than raised or logged per probe.
             failed_fields.append(field)
             return default
 
