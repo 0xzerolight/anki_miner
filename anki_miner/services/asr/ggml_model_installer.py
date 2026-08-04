@@ -26,12 +26,14 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.asr import model_manager
 from anki_miner.services.resource_downloader import download_to_temp
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +132,12 @@ def _is_present(path: Path, min_size_bytes: int) -> bool:
             return False
         with path.open("rb") as model_file:
             return model_file.read(len(_GGML_MAGIC)) == _GGML_MAGIC
-    except OSError:
+    except OSError as exc:
+        logger.debug(
+            "GGML presence probe failed: file=%s exc=%s",
+            path.name,
+            type(exc).__name__,
+        )
         return False
 
 
@@ -215,9 +222,21 @@ def _install_spec(
 ) -> Path:
     """Shared download/verify/promote path for one ggml file spec."""
     target = ggml_models_root(asr_models_root) / spec.filename
+    logger.info(
+        "GGML install: host=%s expected_bytes=%d",
+        urlsplit(spec.url).hostname or "-",
+        spec.size_bytes,
+    )
 
     # Skip when already present and complete; nothing to download.
     if _is_present(target, spec.size_bytes):
+        log_summary(
+            logger,
+            "GGML install done",
+            installed=target,
+            bytes=target.stat().st_size,
+            cached=True,
+        )
         return target
 
     if cancel_event is not None and cancel_event.is_set():
@@ -260,4 +279,11 @@ def _install_spec(
     finally:
         cleanup_part(part_path)
 
+    log_summary(
+        logger,
+        "GGML install done",
+        installed=target,
+        bytes=target.stat().st_size,
+        cached=False,
+    )
     return target

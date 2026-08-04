@@ -6,7 +6,12 @@ from html import escape
 
 import requests
 
+from anki_miner.utils.logging_ext import log_summary
+
 logger = logging.getLogger(__name__)
+
+#: Cap on individually-logged Jisho failures per provider instance.
+_MAX_LOGGED_FAILURES = 3
 
 
 class JishoProvider:
@@ -28,6 +33,15 @@ class JishoProvider:
         """
         self._api_url = api_url
         self._delay = delay
+        self._requests = 0
+        self._hits = 0
+        self._misses = 0
+        self._rate_limit_waits = 0
+        self._summary_logged = False
+        # Jisho is queried once per word on a definition miss, so a failing
+        # network would otherwise write one WARNING per candidate word. Only
+        # the first few are named individually; close() carries the totals.
+        self._failures_logged = 0
 
     @property
     def name(self) -> str:
@@ -41,6 +55,12 @@ class JishoProvider:
         return True
 
     def load(self) -> bool:
+        if self._summary_logged:
+            self._requests = 0
+            self._hits = 0
+            self._misses = 0
+            self._rate_limit_waits = 0
+            self._summary_logged = False
         return True
 
     def lookup(self, word: str) -> str | None:
@@ -52,6 +72,9 @@ class JishoProvider:
         Returns:
             HTML-formatted definition, or None.
         """
+        self._requests += 1
+        if self._delay > 0:
+            self._rate_limit_waits += 1
         time.sleep(self._delay)
 
         try:
@@ -62,11 +85,19 @@ class JishoProvider:
             )
 
             if response.status_code != 200:
+                self._misses += 1
+                if self._failures_logged < _MAX_LOGGED_FAILURES:
+                    self._failures_logged += 1
+                    logger.warning(
+                        "Jisho request failed: stage=http status=%d",
+                        response.status_code,
+                    )
                 return None
 
             data = response.json()
             results = data.get("data", [])
             if not results:
+                self._misses += 1
                 return None
 
             first = results[0]
@@ -83,6 +114,7 @@ class JishoProvider:
                     senses.append(joined)
 
             if not senses:
+                self._misses += 1
                 return None
 
             # Emit the same markup shape as the offline IndexedDictProvider so the
@@ -92,7 +124,7 @@ class JishoProvider:
             # no hand-written "1." prefix — so single-sense entries drop the ordinal
             # via the `gloss-list[data-count="1"]` rule, matching the offline path.
             items = "".join(f'<li class="gloss-item"><div class="gloss-content">{sense}</div></li>' for sense in senses)
-            return (
+            result = (
                 '<div class="yomitan-glossary">'
                 '<ol data-count="1">'
                 f'<li data-dictionary="{escape(self.name)}">'
@@ -102,8 +134,38 @@ class JishoProvider:
                 "</ol>"
                 "</div>"
             )
+            self._hits += 1
+            return result
 
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as exc:
+            self._misses += 1
+            if self._failures_logged < _MAX_LOGGED_FAILURES:
+                self._failures_logged += 1
+                logger.warning(
+                    "Jisho request failed: stage=request exc=%s",
+                    type(exc).__name__,
+                )
             return None
-        except (requests.RequestException, ValueError, KeyError):
+        except (requests.RequestException, ValueError, KeyError) as exc:
+            self._misses += 1
+            if self._failures_logged < _MAX_LOGGED_FAILURES:
+                self._failures_logged += 1
+                logger.warning(
+                    "Jisho request failed: stage=request exc=%s",
+                    type(exc).__name__,
+                )
             return None
+
+    def close(self) -> None:
+        """Emit the once-per-run online-fallback summary."""
+        if self._summary_logged:
+            return
+        log_summary(
+            logger,
+            "Jisho requests done",
+            requests=self._requests,
+            hits=self._hits,
+            misses=self._misses,
+            rate_limit_waits=self._rate_limit_waits,
+        )
+        self._summary_logged = True

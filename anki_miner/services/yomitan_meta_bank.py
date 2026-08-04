@@ -21,7 +21,7 @@ import tempfile
 import zipfile
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -32,6 +32,7 @@ from anki_miner.services.dictionary.schema_validation import (
 )
 from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
 from anki_miner.utils.atomic_io import atomic_write_path
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,8 @@ class YomitanMetaBanks:
     # Structurally-malformed entries dropped during :meth:`iter_banks`. Read by
     # the importers *after* the generator is exhausted and surfaced to the user.
     skipped_malformed: int = 0
+    _entry_count: int = field(default=0, init=False, repr=False)
+    _malformed_exemplar: str = field(default="-", init=False, repr=False)
 
     @property
     def title(self) -> str:
@@ -98,6 +101,10 @@ class YomitanMetaBanks:
             try:
                 bank = json.loads(meta_file.read_text(encoding="utf-8"))
             except json.JSONDecodeError as e:
+                logger.warning(
+                    "Yomitan meta import failed: stage=parse exc=%s",
+                    type(e).__name__,
+                )
                 raise SetupError(f"Invalid {meta_file.name}: {e}") from e
             bank = ensure_bank_array(bank, meta_file.name)
 
@@ -107,7 +114,10 @@ class YomitanMetaBanks:
                     valid.append(entry)
                 else:
                     self.skipped_malformed += 1
+                    if self._malformed_exemplar == "-":
+                        self._malformed_exemplar = f"{meta_file.name}:{type(entry).__name__}"
 
+            self._entry_count += len(valid)
             yield valid
 
             if progress:
@@ -143,6 +153,11 @@ def open_yomitan_meta_banks(
             paths, missing/invalid index.json, missing title, unsupported
             format version, or missing meta banks).
     """
+    logger.info(
+        "Yomitan meta import: source=%s kind=%s",
+        zip_path.name,
+        kind,
+    )
     if not zip_path.exists():
         raise SetupError(f"Yomitan {kind} zip not found: {zip_path}")
 
@@ -153,6 +168,10 @@ def open_yomitan_meta_banks(
                 validate_zip_safe(zf, tmp_path)
                 zf.extractall(tmp_path)
         except zipfile.BadZipFile as e:
+            logger.warning(
+                "Yomitan meta import failed: stage=extract exc=%s",
+                type(e).__name__,
+            )
             raise SetupError(f"Corrupt zip file: {e}") from e
 
         index_file = tmp_path / "index.json"
@@ -163,6 +182,10 @@ def open_yomitan_meta_banks(
         try:
             raw_index = json.loads(index_file.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
+            logger.warning(
+                "Yomitan meta import failed: stage=index exc=%s",
+                type(e).__name__,
+            )
             raise SetupError(f"Invalid index.json: {e}") from e
 
         title = str(raw_index.get("title", "")).strip()
@@ -193,9 +216,27 @@ def open_yomitan_meta_banks(
                 "Settings → Dictionary → Add Dictionary instead."
             )
 
-        yield YomitanMetaBanks(
+        banks = YomitanMetaBanks(
             index=YomitanMetaIndex(title=title, revision=revision, frequency_mode=frequency_mode),
             _meta_files=meta_files,
+        )
+        yield banks
+        if banks.skipped_malformed:
+            log_summary(
+                logger,
+                "Yomitan meta rows dropped",
+                level=logging.WARNING,
+                count=banks.skipped_malformed,
+                exemplar=banks._malformed_exemplar,
+            )
+        log_summary(
+            logger,
+            "Yomitan meta import done",
+            source=zip_path,
+            kind=kind,
+            files=len(meta_files),
+            entries=banks._entry_count,
+            malformed=banks.skipped_malformed,
         )
 
 

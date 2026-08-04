@@ -278,16 +278,40 @@ class ResumeState:
         live hasher comes back with the manifest so the caller can keep hashing
         the appended bytes without reading the prefix a second time.
         """
+        attempted = self.part_path.exists() or self.manifest_path.exists()
+        logger.debug(
+            "Download resume: key=%s attempted=%s",
+            self._key,
+            attempted,
+        )
         manifest = self.load()
         if manifest is None or manifest.url != url:
+            logger.debug(
+                "Download resume decision: key=%s safe=%s reason=%s",
+                self._key,
+                False,
+                "manifest",
+            )
             self.discard()
             return None
         try:
             size = self.part_path.stat().st_size
         except OSError:
+            logger.debug(
+                "Download resume decision: key=%s safe=%s reason=%s",
+                self._key,
+                False,
+                "stat",
+            )
             self.discard()
             return None
         if size < manifest.length:
+            logger.debug(
+                "Download resume decision: key=%s safe=%s reason=%s",
+                self._key,
+                False,
+                "short",
+            )
             self.discard()
             return None
         try:
@@ -296,11 +320,29 @@ class ResumeState:
                     handle.truncate(manifest.length)
             hasher = _prefix_hasher(self.part_path, manifest.length)
         except OSError:
+            logger.debug(
+                "Download resume decision: key=%s safe=%s reason=%s",
+                self._key,
+                False,
+                "read",
+            )
             self.discard()
             return None
         if hasher is None or hasher.hexdigest() != manifest.sha256:
+            logger.debug(
+                "Download resume decision: key=%s safe=%s reason=%s",
+                self._key,
+                False,
+                "digest",
+            )
             self.discard()
             return None
+        logger.debug(
+            "Download resume decision: key=%s safe=%s bytes=%d",
+            self._key,
+            True,
+            manifest.length,
+        )
         return RestoredPartial(manifest=manifest, hasher=hasher)
 
     # -- writing ---------------------------------------------------------
@@ -349,12 +391,17 @@ class ResumeState:
 
     def discard(self) -> None:
         """Remove both files. Never raises."""
+        part_existed = self.part_path.exists()
         for path in (self.manifest_path, self.part_path):
+            # Best-effort cleanup of invalid resume state; restart remains safe.
             with contextlib.suppress(OSError):
                 path.unlink(missing_ok=True)
+        if part_existed:
+            logger.warning("Download partial discarded: key=%s", self._key)
 
     def drop_manifest(self) -> None:
         """Remove the manifest only, leaving the body to be promoted."""
+        # Best-effort cleanup after the completed body is already durable.
         with contextlib.suppress(OSError):
             self.manifest_path.unlink(missing_ok=True)
 
@@ -367,7 +414,12 @@ class ResumeState:
         dest.parent.mkdir(parents=True, exist_ok=True)
         try:
             os.replace(self.part_path, dest)
-        except OSError:
+        except OSError as exc:
+            logger.debug(
+                "Download promotion fallback: key=%s exc=%s",
+                self._key,
+                type(exc).__name__,
+            )
             shutil.move(str(self.part_path), str(dest))
         self.drop_manifest()
         return dest

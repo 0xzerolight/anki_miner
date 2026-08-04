@@ -11,6 +11,7 @@ from typing import Literal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
@@ -326,10 +327,14 @@ def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
     Raises:
         SetupError: If the file is missing or unreadable.
     """
+    logger.info("Pitch CSV parse: source=%s", path.name)
     if not path.exists():
         raise SetupError(
             f"Pitch accent file not found at: {path}. Download pitch accent data and place it in ~/.anki_miner/"
         )
+    malformed_rows = 0
+    malformed_exemplar = "-"
+    parsed_rows = 0
     try:
         with open(path, encoding="utf-8") as f:
             sample = f.read(4096)
@@ -337,9 +342,35 @@ def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
             delimiter = detect_delimiter(sample)
 
             reader = csv.reader(f, delimiter=delimiter)
-            valid_rows = (row for row in reader if len(row) >= 3)
+
+            def rows_with_valid_shape() -> Iterator[list[str]]:
+                nonlocal malformed_rows, malformed_exemplar
+                for row in reader:
+                    if len(row) >= 3:
+                        yield row
+                        continue
+                    malformed_rows += 1
+                    if malformed_exemplar == "-":
+                        malformed_exemplar = f"cols-{len(row)}"
+
+            valid_rows = rows_with_valid_shape()
             first_row = next(valid_rows, None)
             if first_row is None:
+                if malformed_rows:
+                    log_summary(
+                        logger,
+                        "Pitch CSV rows dropped",
+                        level=logging.WARNING,
+                        count=malformed_rows,
+                        exemplar=malformed_exemplar,
+                    )
+                log_summary(
+                    logger,
+                    "Pitch CSV parse done",
+                    source=path,
+                    entries=parsed_rows,
+                    malformed=malformed_rows,
+                )
                 return
 
             header_order = _header_column_order(first_row)
@@ -362,10 +393,34 @@ def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
             for row in chain(buffered_rows, valid_rows):
                 parsed = _parse_pitch_row(row, column_order)
                 if parsed is not None:
+                    parsed_rows += 1
                     yield parsed
+                else:
+                    malformed_rows += 1
+                    if malformed_exemplar == "-":
+                        malformed_exemplar = f"cols-{len(row)}"
+            if malformed_rows:
+                log_summary(
+                    logger,
+                    "Pitch CSV rows dropped",
+                    level=logging.WARNING,
+                    count=malformed_rows,
+                    exemplar=malformed_exemplar,
+                )
+            log_summary(
+                logger,
+                "Pitch CSV parse done",
+                source=path,
+                entries=parsed_rows,
+                malformed=malformed_rows,
+            )
     except SetupError:
         raise
     except Exception as e:
+        logger.warning(
+            "Pitch CSV parse failed: stage=parse exc=%s",
+            type(e).__name__,
+        )
         raise SetupError(f"Error loading pitch accent data: {e}") from e
 
 
