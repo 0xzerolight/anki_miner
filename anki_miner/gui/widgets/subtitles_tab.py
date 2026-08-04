@@ -19,6 +19,7 @@ Close contract:
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
@@ -35,6 +36,8 @@ from anki_miner.gui.workers.backfill_worker import BackfillScanWorker
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.base_worker import CancellableWorker
+
+logger = logging.getLogger(__name__)
 
 
 class SubtitlesTab(QWidget):
@@ -101,6 +104,7 @@ class SubtitlesTab(QWidget):
         """
         index = self._subtab_index.get(key)
         if index is not None:
+            logger.debug("Utilities subtab opened: key=%s index=%d", key, index)
             self._inner_tabs.setCurrentIndex(index)
 
     def open_retime(self, video_path: Path, subtitle_path: Path) -> None:

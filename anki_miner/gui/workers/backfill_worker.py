@@ -16,6 +16,7 @@ from anki_miner.services.card_backfiller import (
     apply_backfill,
     scan_backfill,
 )
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,13 @@ class BackfillScanWorker(CancellableWorker):
         self.options = options
 
     def run(self) -> None:
+        logger.info(
+            "BackfillScanWorker started: fields=%d overwrite=%s deck=%s note_type=%s",
+            len(self.options.field_keys),
+            self.options.overwrite,
+            self.options.deck or "-",
+            self.config.anki_note_type,
+        )
         try:
             if self.check_cancelled():
                 return
@@ -54,6 +62,12 @@ class BackfillScanWorker(CancellableWorker):
                     is_cancelled=self.check_cancelled,
                 )
                 if not self.check_cancelled():
+                    log_summary(
+                        logger,
+                        "BackfillScanWorker done",
+                        notes=len(plan.notes),
+                        fields=plan.total_field_changes,
+                    )
                     self.result_ready.emit(plan)
             finally:
                 shared_lookup.close()
@@ -84,6 +98,14 @@ class BackfillApplyWorker(CancellableWorker):
         self.plan = plan
 
     def run(self) -> None:
+        logger.info(
+            "BackfillApplyWorker started: notes=%d fields=%d overwrite=%s deck=%s note_type=%s",
+            len(self.plan.notes),
+            self.plan.total_field_changes,
+            self.plan.options.overwrite,
+            self.plan.options.deck or "-",
+            self.config.anki_note_type,
+        )
         try:
             if self.check_cancelled():
                 self.result_ready.emit(BackfillResult(0, 0, 0, 0))
@@ -103,6 +125,15 @@ class BackfillApplyWorker(CancellableWorker):
             self.result_ready.emit(result)
             if self.check_cancelled():
                 self.cancelled.emit()
+            else:
+                log_summary(
+                    logger,
+                    "BackfillApplyWorker done",
+                    applied=result.notes_updated,
+                    tagged=result.tagged,
+                    stale=result.skipped_stale,
+                    failed=result.failed,
+                )
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             self.report_failure(
                 e,
