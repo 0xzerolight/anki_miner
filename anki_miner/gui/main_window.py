@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIcon, QKeySequence, QShortcut, QShowEvent, QWindowStateChangeEvent
@@ -25,6 +25,13 @@ from PyQt6.QtWidgets import (
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.diagnostics.bundle import BundleResult, default_bundle_name, write_diagnostics_bundle
+from anki_miner.diagnostics.environment import (
+    EnvironmentSnapshot,
+    collect_environment,
+    format_environment_lines,
+    format_health_lines,
+)
 from anki_miner.gui.constants import (
     WINDOW_DEFAULT_HEIGHT,
     WINDOW_DEFAULT_WIDTH,
@@ -41,6 +48,7 @@ from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.keyboard_shortcuts import (
     HELP_SEQUENCE,
     SETTINGS_SEQUENCE,
@@ -51,7 +59,9 @@ from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
 from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
 from anki_miner.gui.widgets.dialogs.system_health_window import (
+    HEALTH_KEYS,
     HEALTH_OK,
+    HEALTH_UNKNOWN,
     HEALTH_WARN,
     HealthReport,
     SystemHealthWindow,
@@ -174,7 +184,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # window is immediately correct (D26). The window itself is built the
         # first time it is asked for.
         self._health_report = HealthReport.unknown()
+        self._last_logged_health_states: dict[str, str] | None = None
         self._system_health_window: SystemHealthWindow | None = None
+        self._diagnostics_export_running = False
 
         # The floating job monitor (D53). Built the first time it is asked for,
         # and read-only: it observes self.task_registry and holds nothing else.
@@ -220,6 +232,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 "legacy pitch migration",
                 self._maybe_migrate_legacy_pitch,
             )
+            self._run_optional_boot_step("environment snapshot", self._start_environment_snapshot)
 
         previous = self.config.last_known_version
         if previous != __version__:
@@ -443,6 +456,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         assert open_log_action is not None
         open_log_action.setToolTip(self.tr("Open the log folder in your file manager"))
         open_log_action.triggered.connect(self._open_log_folder)
+
+        export_diagnostics_action = help_menu.addAction(self.tr("Export Diagnostics…"))
+        assert export_diagnostics_action is not None
+        self.export_diagnostics_action = export_diagnostics_action
+        export_diagnostics_action.setToolTip(self.tr("Save a zip with logs and system details for a bug report"))
+        export_diagnostics_action.triggered.connect(self._export_diagnostics)
 
         # Top-right corner of the menu bar holds a small button bar. A QMenuBar
         # allows only one corner widget per corner, so both buttons live inside
@@ -949,6 +968,91 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _open_log_folder(self) -> None:
         """Open the log folder in the system file manager (Help → Open Log Folder)."""
         open_log_folder(get_effective_log_path(self.config.log_path))
+
+    def _export_diagnostics(self) -> None:
+        """Ask where to write a diagnostics bundle without blocking the GUI."""
+        if self._diagnostics_export_running:
+            return
+        default_path = Path(resolve_start_dir(None, file_mode=True)) / default_bundle_name()
+        file_dialogs.pick_save_file(
+            self,
+            self.tr("Export Diagnostics"),
+            str(default_path),
+            self.tr("Zip Archives (*.zip);;All Files (*)"),
+            on_done=self._on_diagnostics_target_picked,
+        )
+
+    def _on_diagnostics_target_picked(self, path_str: str) -> None:
+        """Snapshot GUI-owned state, then collect and write on a worker.
+
+        Guards the flag here rather than before the picker: a cancelled picker
+        never calls back, so an early set would strand both entry points
+        disabled. Two menu invocations can therefore open two pickers, and this
+        is what keeps the second one from starting a concurrent export.
+        """
+        if not path_str or self._diagnostics_export_running:
+            return
+
+        target = Path(path_str)
+        config = self.config
+        health_report = self._health_report
+
+        def work() -> BundleResult:
+            snapshot = collect_environment(config)
+            rows = []
+            for key in HEALTH_KEYS:
+                check = health_report.get(key)
+                rows.append((check.key, check.state, check.detail, check.checked_at))
+            return write_diagnostics_bundle(
+                target,
+                config=config,
+                snapshot=snapshot,
+                health_lines=format_health_lines(rows),
+            )
+
+        self._diagnostics_export_running = True
+        self.export_diagnostics_action.setEnabled(False)
+        if self._system_health_window is not None:
+            self._system_health_window.set_export_enabled(False)
+        run_off_thread(
+            self,
+            work,
+            self._on_diagnostics_done,
+            self._on_diagnostics_error,
+            on_finished=self._on_diagnostics_finished,
+        )
+
+    def _on_diagnostics_done(self, result: object) -> None:
+        """Report a completed bundle without exposing its absolute path."""
+        bundle = cast(BundleResult, result)
+        banner = self.issue_banner()
+        if banner is not None:
+            issue = banner.current_issue()
+            if issue is not None and issue.action_id == "diagnostics.export-retry":
+                self.clear_screen_issue()
+        self.status_bar.set_operation(
+            tr_format(self.tr("Diagnostics written to %1"), bundle.path.name),
+            "info",
+        )
+
+    def _on_diagnostics_error(self, message: str) -> None:
+        """Keep a recoverable export failure on the main screen."""
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("Diagnostics could not be exported."),
+                details=message,
+                action_id="diagnostics.export-retry",
+                action_text=self.tr("Retry"),
+            ),
+            action=self._export_diagnostics,
+        )
+
+    def _on_diagnostics_finished(self) -> None:
+        """Restore every diagnostics entry point after either outcome."""
+        self._diagnostics_export_running = False
+        self.export_diagnostics_action.setEnabled(True)
+        if self._system_health_window is not None:
+            self._system_health_window.set_export_enabled(True)
 
     def _create_desktop_shortcut(self) -> None:
         """Create a desktop shortcut via ShortcutService and report the result."""
@@ -1757,7 +1861,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if window is None:
             window = SystemHealthWindow(self)
             window.recheck_requested.connect(self._run_validation)
+            window.export_requested.connect(self._export_diagnostics)
             window.fix_requested.connect(self.reveal_setting)
+            window.set_export_enabled(not self._diagnostics_export_running)
             self._system_health_window = window
             window.show_health(self._health_report)
         window.show()
@@ -1800,8 +1906,42 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _publish_health(self, report: HealthReport) -> None:
         """Record the latest readiness facts and repaint the screen if it is up."""
         self._health_report = report
+        self._log_health_snapshot(report)
         if self._system_health_window is not None:
             self._system_health_window.show_health(report)
+
+    def _log_health_snapshot(self, report: HealthReport) -> None:
+        """Log complete health state once, then only after a state change."""
+        validation_checks = [report.get(key) for key in HEALTH_KEYS if key != "app.updates"]
+        if not any(check.state != HEALTH_UNKNOWN for check in validation_checks):
+            return
+
+        states = {key: report.get(key).state for key in HEALTH_KEYS}
+        if states == self._last_logged_health_states:
+            return
+        self._last_logged_health_states = states
+
+        rows = []
+        for key in HEALTH_KEYS:
+            check = report.get(key)
+            rows.append((check.key, check.state, check.detail, check.checked_at))
+        for line in format_health_lines(rows):
+            logger.info("health %s", line)
+
+    def _start_environment_snapshot(self) -> None:
+        """Dispatch the blocking environment probes to a worker."""
+        run_off_thread(
+            self,
+            lambda: collect_environment(self.config),
+            self._on_environment_snapshot,
+        )
+
+    def _on_environment_snapshot(self, result: object) -> None:
+        """Log one stable line per collected environment field."""
+        if not isinstance(result, EnvironmentSnapshot):
+            return
+        for line in format_environment_lines(result):
+            logger.info("env %s", line)
 
     def reveal_setting(self, stable_id: str) -> None:
         """Open Settings on the exact control ``stable_id`` addresses (D11).

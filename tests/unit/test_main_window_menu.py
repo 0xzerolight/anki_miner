@@ -198,6 +198,18 @@ def test_open_log_folder_uses_effective_sink_path(main_window, monkeypatch, tmp_
     assert opened == [effective_path]
 
 
+def test_export_diagnostics_immediately_follows_open_log_folder(main_window):
+    """The two log-report actions stay adjacent in the Help menu."""
+    actions = _help_menu(main_window).actions()
+    open_log_index = next(index for index, action in enumerate(actions) if action.text() == "Open Log Folder")
+
+    export_action = actions[open_log_index + 1]
+
+    assert not export_action.isSeparator()
+    assert export_action.text() == "Export Diagnostics…"
+    assert export_action.toolTip() == "Save a zip with logs and system details for a bug report"
+
+
 def test_about_dialog_builds_and_shows_version(qtbot):
     """AboutDialog constructs headless and renders the version."""
     from PyQt6.QtWidgets import QLabel
