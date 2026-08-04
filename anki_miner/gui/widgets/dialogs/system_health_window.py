@@ -324,10 +324,12 @@ class SystemHealthWindow(EnhancedDialog):
 
     Signals:
         recheck_requested: The user asked for a fresh sweep.
+        export_requested: The user asked to export the current diagnostics.
         fix_requested: Emitted with the stable setting-anchor id to reveal.
     """
 
     recheck_requested = pyqtSignal()
+    export_requested = pyqtSignal()
     fix_requested = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -350,6 +352,11 @@ class SystemHealthWindow(EnhancedDialog):
         self.add_content(self._build_rows(), 1)
 
         self.recheck_button = self.add_button(self.tr("Re-check now"), "secondary", self.recheck_requested.emit)
+        self.export_button = self.add_button(
+            self.tr("Export diagnostics…"),
+            "secondary",
+            self.export_requested.emit,
+        )
         self.add_close_button()
 
         self.show_health(HealthReport.unknown())
@@ -421,6 +428,10 @@ class SystemHealthWindow(EnhancedDialog):
     # ------------------------------------------------------------------
     # Rendering
     # ------------------------------------------------------------------
+
+    def set_export_enabled(self, enabled: bool) -> None:
+        """Enable both visible and programmatic diagnostics export."""
+        self.export_button.setEnabled(enabled)
 
     def show_health(self, report: HealthReport) -> None:
         """Repaint every row from ``report``. Safe to call while hidden."""
