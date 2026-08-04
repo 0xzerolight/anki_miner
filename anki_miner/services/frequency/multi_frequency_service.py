@@ -26,6 +26,7 @@ from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
 from anki_miner.services.frequency.storage import CATEGORICAL_RANK
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +77,13 @@ class MultiFrequencyService:
 
     def __init__(self, providers: list[IndexedFreqProvider]):
         self._providers = providers
+        entries = ",".join(f"{provider.name}:{_provider_entry_count(provider)}" for provider in providers) or "-"
+        log_summary(
+            logger,
+            "Frequency chain load done",
+            sources=len(providers),
+            entries=entries,
+        )
 
     def is_available(self) -> bool:
         """True if any wrapped provider is available."""
@@ -141,5 +149,15 @@ class MultiFrequencyService:
         for provider in self._providers:
             close = getattr(provider, "close", None)
             if callable(close):
+                # Teardown is best-effort; one broken handle must not leak others.
                 with contextlib.suppress(Exception):
                     close()
+
+
+def _provider_entry_count(provider: IndexedFreqProvider) -> int:
+    """Return the number of rows held by one already-loaded provider."""
+    conn = getattr(provider, "_conn", None)
+    if conn is None:
+        return 0
+    row = conn.execute("SELECT COUNT(*) FROM entries").fetchone()
+    return int(row[0]) if row is not None else 0

@@ -1813,11 +1813,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Нет подходящих заметок — тип заметки «{note_type}» в колоде «{deck}». Проверьте Настройки → Anki.</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>Нет подходящих заметок — тип заметки «{note_type}». Проверьте Настройки → Anki.</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1857,7 +1857,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>Нет в этом типе заметки (устаревшее сопоставление): {fields}. Исправьте сопоставление полей в Настройки → Anki.</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4337,6 +4337,14 @@ Add %3 word(s) to your known list?</source>
       <translation>Открыть папку журналов в файловом менеджере</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>Экспорт диагностики…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>Сохранить zip-архив с журналами и сведениями о системе для отчёта об ошибке</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>Сообщить об ошибке / Предложить функцию</translation>
     </message>
@@ -4367,6 +4375,26 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>Миграция JMdict при запуске всё ещё останавливается. Дождитесь её завершения и повторите попытку.</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>Экспорт диагностики</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Zip-архивы (*.zip);;Все файлы (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>Диагностика записана в %1</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>Не удалось экспортировать диагностику.</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>Повторить</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4463,10 +4491,6 @@ Continue?</source>
     <message>
       <source>System check failed. Try again.</source>
       <translation>Системная проверка не пройдена. Попробуйте снова.</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>Повторить</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7574,6 +7598,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Re-check now</source>
       <translation>Проверить снова</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>Экспортировать диагностику…</translation>
     </message>
     <message>
       <source>Ready</source>

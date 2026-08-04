@@ -6,6 +6,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.update_checker import UpdateChecker
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class UpdateWorkerThread(CancellableWorker):
 
     def run(self) -> None:
         """Execute update check in background thread."""
+        self.log_start("UpdateWorkerThread", checker=type(self.checker).__name__)
         try:
             if self.check_cancelled():
                 return
@@ -45,6 +47,7 @@ class UpdateWorkerThread(CancellableWorker):
                 # Always emit (info may be None) so the main-thread slot can
                 # take the single config-write code path either way.
                 self.result_ready.emit(info)
+                log_summary(logger, "UpdateWorkerThread done", results=1, update_available=info is not None)
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             self.report_failure(
                 e,

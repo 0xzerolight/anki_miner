@@ -17,7 +17,10 @@ Internal-but-tested: this private module (leading underscore) has no public faca
 The underscore stays and the module path is a stable test surface; do not rename it.
 """
 
+import logging
 import sys
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -43,7 +46,9 @@ def main() -> int:
         count = int(get_device_count())
         print(count)
         return 0
-    except Exception:  # noqa: BLE001 — any failure means "no usable Vulkan device"
+    except Exception as exc:  # noqa: BLE001 — any failure means "no usable Vulkan device"
+        # Bucket B: an absent optional Vulkan accelerator is a normal fallback.
+        logger.debug("ASR Vulkan child probe: devices=0 exc=%s", type(exc).__name__)
         print("0")
         return 0
 

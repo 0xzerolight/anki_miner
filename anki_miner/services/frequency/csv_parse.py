@@ -17,12 +17,9 @@ Two concerns live here:
 
 from __future__ import annotations
 
-import logging
 import math
 import re
 from typing import Any
-
-logger = logging.getLogger(__name__)
 
 # Ported from Yomitan Translator._numberRegex / _convertStringToNumber
 # (ext/js/language/translator.js, upstream commit e2ed450): the first

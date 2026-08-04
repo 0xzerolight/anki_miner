@@ -8,6 +8,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.card_restyler import restyle_mined_cards
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,11 @@ class RestyleCardsWorker(CancellableWorker):
         self.config = config
 
     def run(self) -> None:
+        self.log_start(
+            "RestyleCardsWorker",
+            deck=self.config.anki_deck_name,
+            note_type=self.config.anki_note_type,
+        )
         try:
             if self.check_cancelled():
                 return
@@ -40,6 +46,15 @@ class RestyleCardsWorker(CancellableWorker):
             )
             if not self.check_cancelled():
                 self.result_ready.emit(result)
+                log_summary(
+                    logger,
+                    "RestyleCardsWorker done",
+                    scanned=result.scanned,
+                    restyled=result.restyled,
+                    skipped_styled=result.skipped_styled,
+                    skipped_no_markup=result.skipped_no_markup,
+                    failed=result.failed,
+                )
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             self.report_failure(
                 e,

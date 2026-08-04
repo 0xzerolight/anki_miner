@@ -52,7 +52,7 @@ class StatsService:
             with self._connect() as conn:
                 self._create_tables(conn)
             self._initialized = True
-            logger.info(f"Stats database initialized at {self._db_path}")
+            logger.info("Stats database initialized at %s", self._db_path)
             return True
         except Exception:
             logger.exception("Failed to initialize stats database")
@@ -308,7 +308,7 @@ class StatsService:
             removed += conn.execute("SELECT COUNT(*) FROM series_difficulty").fetchone()[0]
             conn.execute("DELETE FROM mining_sessions")
             conn.execute("DELETE FROM series_difficulty")
-        logger.info(f"Reset stats database, removed {removed} row(s)")
+        logger.info("Reset stats database, removed %d row(s)", removed)
         return int(removed)
 
     @staticmethod

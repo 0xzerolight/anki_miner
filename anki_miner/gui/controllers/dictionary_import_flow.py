@@ -172,7 +172,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
         try:
             worker = ImportWorker.for_yomitan(Path(zip_path_str), self._get_config().dicts_root)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket C: release UI, then re-raise the same failure.
             self._set_import_buttons_enabled(True)
             raise
 
@@ -238,14 +238,24 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         """
         try:
             zip_title = read_yomitan_title(zip_path)
-        except Exception:  # noqa: BLE001 — surfaced to the user as a slot mismatch
+        except Exception as exc:  # noqa: BLE001 — bucket A: saved source silently becomes ineligible.
+            logger.warning(
+                "Dictionary source unavailable: source=%s error=%s",
+                slot_id,
+                type(exc).__name__,
+            )
             return False
         db = self._get_config().dicts_root / slot_id / "index.sqlite"
         if not db.exists():
             return False
         try:
             existing_name = read_meta(db).get("source_name", "")
-        except Exception:  # noqa: BLE001 — corrupt/locked slot index → reject
+        except Exception as exc:  # noqa: BLE001 — bucket A: corrupt metadata silently drops the source.
+            logger.warning(
+                "Dictionary metadata unavailable: source=%s error=%s",
+                slot_id,
+                type(exc).__name__,
+            )
             return False
         zip_base, zip_had = strip_date_bracket(zip_title)
         cur_base, cur_had = strip_date_bracket(existing_name)
@@ -255,7 +265,12 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         """Return whether a saved Yomitan zip is safe to pin to ``slot_id``."""
         try:
             derived_id = derive_dict_id_from_zip(zip_path)
-        except Exception:  # noqa: BLE001 — invalid saved source falls through
+        except Exception as exc:  # noqa: BLE001 — bucket A: invalid saved source silently disappears.
+            logger.warning(
+                "Dictionary source unavailable: source=%s error=%s",
+                slot_id,
+                type(exc).__name__,
+            )
             return False
         return derived_id == slot_id or (
             slot_id in _PINNED_DICT_SLOT_IDS and self._catalog_slot_base_matches(slot_id, zip_path)
@@ -335,7 +350,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 )
             else:
                 worker = ImportWorker.for_jmdict_repair(source_path, self._get_config().dicts_root)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket C: release UI, then re-raise the same failure.
             self._set_import_buttons_enabled(True)
             raise
 
@@ -414,7 +429,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
         try:
             worker = ImportWorker.for_jmdict(xml, self._get_config().dicts_root)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket C: release UI, then re-raise the same failure.
             self._set_import_buttons_enabled(True)
             raise
 

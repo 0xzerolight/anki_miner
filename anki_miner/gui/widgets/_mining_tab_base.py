@@ -321,8 +321,10 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         presenter = getattr(self, "_presenter", None) or getattr(self, "presenter", None)
         show = getattr(presenter, "show_run_details", None)
         if callable(show):
-            with contextlib.suppress(Exception):
+            try:
                 show(aggregate)
+            except Exception as exc:  # noqa: BLE001 — bucket A: requested details stay unavailable.
+                logger.warning("Run details unavailable: error=%s", type(exc).__name__)
 
     @staticmethod
     def _receipt_now() -> tuple[float, float]:
@@ -442,6 +444,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         if hasattr(self, "_curation_event"):
             self._cancel_active_curation_dialog()
             self._poison_curation_gate()
+        # bucket C: disconnecting an absent/deleted Qt signal is teardown-safe.
         with contextlib.suppress(TypeError, RuntimeError):
             self.worker_thread.finished.disconnect(self._restore_buttons)  # type: ignore[attr-defined]
         self.worker_thread.cancel()  # type: ignore[attr-defined]
@@ -450,6 +453,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             logger.warning("Lingering %s worker did not stop within 5 s; replacing it anyway", label)
         old_processor = self.worker_thread.curation_processor  # type: ignore[attr-defined]
         if joined and old_processor is not None:
+            # bucket C: processor close is best-effort teardown after its worker stopped.
             with contextlib.suppress(Exception):
                 old_processor.close()
         elif not joined:
@@ -515,6 +519,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             # processor may be None when the worker timed out before its
             # EpisodeProcessor was constructed (G3) — nothing to close then.
             if processor is not None:
+                # bucket C: leaked-run cleanup must not block later runs.
                 with contextlib.suppress(Exception):
                     processor.close()
         self._leaked_runs = survivors
@@ -700,8 +705,8 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                 offset=offset,
                 audio_track_override=audio_track_override,
             )
-        except Exception:
-            logger.exception("Failed to build media context for curation; proceeding without player")
+        except Exception as exc:  # noqa: BLE001 — bucket A: curation loses its media player.
+            logger.warning("Curation media unavailable: error=%s", type(exc).__name__)
             return None
 
     def _on_curation_requested(self, words: list) -> None:
@@ -825,12 +830,13 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             dialog.show()
             dialog.raise_()
             dialog.activateWindow()
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket C: cleanup then unchanged failure reaches its owner.
             self._curation_pending_dialog = 0
             self._active_curation_dialog = None
             self._curation_result = None
             self._curation_event.set()
             if dialog is not None:
+                # bucket C: deleteLater is best-effort on an already-failing path.
                 with contextlib.suppress(RuntimeError):
                     dialog.deleteLater()
             raise
@@ -873,8 +879,8 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             # list is the "skip just this item" verb — the queue continues.
             try:
                 selection = dialog.get_selected_words()
-            except Exception:
-                logger.exception("Curation window could not report its selection; treating it as cancelled")
+            except Exception as exc:  # noqa: BLE001 — bucket A: the selection is discarded and run cancelled.
+                logger.warning("Curation selection unavailable: error=%s", type(exc).__name__)
         if selection is None:
             # Rejected (dialog Cancel / window-X / Esc, a programmatic reject
             # from the tab Cancel button / teardown / shutdown, or a destroyed
@@ -897,6 +903,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             if worker is not None:
                 # Suppressed so a dead worker handle can never cost us the gate
                 # release below — a hung worker is worse than a missed cancel.
+                # bucket C: deleted-worker cancellation race must not strand the gate.
                 with contextlib.suppress(RuntimeError):
                     worker.cancel()
         self._curation_result = selection
@@ -906,6 +913,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is freed
             # deterministically rather than accumulating per mining session
             # until GC — OVH-016 / Issue #55 multimedia teardown.
+            # bucket C: deleteLater is best-effort after the curation decision.
             with contextlib.suppress(RuntimeError):
                 dialog.deleteLater()
 
@@ -950,15 +958,19 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         for worker, processor in list(self._leaked_runs):
             cancel = getattr(worker, "cancel", None)
             if callable(cancel):
+                # bucket C: shutdown cancellation may see an already-deleted worker.
                 with contextlib.suppress(RuntimeError):
                     cancel()
             joined = False
+            # bucket C: shutdown join may see an already-deleted worker.
             with contextlib.suppress(RuntimeError):
                 joined = bool(worker.wait(_LEAKED_RUN_CLOSE_JOIN_MS))
             if joined:
                 if processor is not None:
+                    # bucket C: processor close is best-effort during shutdown.
                     with contextlib.suppress(Exception):
                         processor.close()
+                # bucket C: a concurrent reap may already have removed this entry.
                 with contextlib.suppress(ValueError):
                     self._leaked_runs.remove((worker, processor))
 
@@ -983,5 +995,6 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._curation_cancelled = True
         dialog = self._active_curation_dialog
         if dialog is not None:
+            # bucket C: deleted-dialog rejection is a documented Qt teardown race.
             with contextlib.suppress(RuntimeError):
                 dialog.force_reject()

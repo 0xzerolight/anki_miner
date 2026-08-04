@@ -262,6 +262,7 @@ class ResourceDownloadWorker(CancellableWorker):
 
     def run(self) -> None:
         """Download + import each spec in order, isolating per-item failures."""
+        self.log_start("ResourceDownloadWorker", specs=len(self._specs))
         summary = ResourceDownloadSummary(requested_count=len(self._specs))
 
         for spec in self._specs:

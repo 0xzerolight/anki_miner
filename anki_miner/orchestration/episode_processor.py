@@ -52,6 +52,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.timing import timed_phase
 
 logger = logging.getLogger(__name__)
@@ -563,6 +564,15 @@ class EpisodeProcessor:
             QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
         )
         ctx.total_words_found = len(all_words)
+        represented_lines = len(self.subtitle_parser.parse_raw_entries(subtitle_file))
+        produced_tokens = sum(self.subtitle_parser.count_lemmas(subtitle_file).values())
+        log_summary(
+            logger,
+            "Phase 1 parse",
+            lines=represented_lines,
+            tokens=produced_tokens,
+            unique=len(all_words),
+        )
         return all_words, line_index
 
     def _phase2_filter(
@@ -572,12 +582,30 @@ class EpisodeProcessor:
         line_index: list[LineLemmas] | None,
         cross_episode_counts: dict[str, int] | None,
         progress_callback: ProgressCallback | None = None,
+        occurrence_counts: dict[str, int] | None = None,
+        min_occurrence: int = 1,
     ) -> list[TokenizedWord]:
         """Phase 2: attach frequency data, filter against known vocab, apply optional filters.
 
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
         Records difficulty stats if a stats service is available.
         """
+        frequency_ranked = 0
+        known_hits = 0
+        known_db_added = 0
+        known_db_total = 0
+        frequency_rejects = 0
+        word_list_rejects = 0
+        script_rejects = 0
+        wordset_rejects = 0
+        episode_rejects = 0
+        duplicate_sentence_rejects = 0
+        i_plus_one_rejects = 0
+        sentence_length_rejects = 0
+        whitelist_force_includes = 0
+        no_definition_rejects = 0
+        duplicate_expression_rejects = 0
+
         # Attach frequency data if available (mutates words in-place). Each word
         # gets the per-source breakdown (frequency_sources) for the card display,
         # the min rank (frequency_rank) that drives the top-N filter, and the
@@ -639,6 +667,7 @@ class EpisodeProcessor:
                 word.frequency_rank = min_rank(sources)
                 word.frequency_harmonic_rank = harmonic_rank(sources)
             ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
+            frequency_ranked = ranked_count
             self.presenter.show_info(
                 tr_format(
                     QCoreApplication.translate("EpisodeProcessor", "Frequency data: %1/%2 words ranked"),
@@ -691,6 +720,8 @@ class EpisodeProcessor:
                     # diff in-memory below to avoid a post-sync re-read.
                     anki_vocab = self.anki_service.get_existing_vocabulary()
                     added, total = self.known_word_db.sync_with_anki(anki_vocab, existing=known_words)
+                    known_db_added = added
+                    known_db_total = total
                     if added > 0:
                         self.presenter.show_info(
                             tr_format(
@@ -713,6 +744,7 @@ class EpisodeProcessor:
                 known_words = self.anki_service.get_existing_vocabulary()
 
             unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            known_hits = len(all_words) - len(unknown_words)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
         )
@@ -771,6 +803,7 @@ class EpisodeProcessor:
             forced_include, unknown_words = self.word_filter.partition_whitelisted(
                 unknown_words, self.word_list_service
             )
+            whitelist_force_includes = len(forced_include)
             ctx.forced_include_lemmas = {w.lemma for w in forced_include}
 
         # Frequency rank cutoff. Gate on an actually-loaded NUMERIC frequency
@@ -791,6 +824,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
             filtered_out = before - len(unknown_words)
+            frequency_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -817,6 +851,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_word_lists(unknown_words, self.word_list_service)
             filtered_out = before - len(unknown_words)
+            word_list_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -836,6 +871,7 @@ class EpisodeProcessor:
                 exclude_katakana_only=self.config.exclude_katakana_only_words,
             )
             removed = before - len(unknown_words)
+            script_rejects = removed
             if removed > 0:
                 kinds = []
                 if self.config.exclude_hiragana_only_words:
@@ -858,6 +894,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_wordsets(unknown_words, self.wordset_service)
             filtered_out = before - len(unknown_words)
+            wordset_rejects = filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -880,6 +917,7 @@ class EpisodeProcessor:
                 MIN_EPISODE_APPEARANCES,
             )
             filtered_out = before - len(unknown_words)
+            episode_rejects += filtered_out
             if filtered_out > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -902,6 +940,7 @@ class EpisodeProcessor:
             before = len(unknown_words)
             unknown_words = self.word_filter.deduplicate_by_sentence(unknown_words)
             deduped = before - len(unknown_words)
+            duplicate_sentence_rejects = deduped
             if deduped > 0:
                 self.presenter.show_info(
                     tr_format(
@@ -923,6 +962,7 @@ class EpisodeProcessor:
                 unknown_words, line_index or [], all_unknown_lemmas=all_unknown_lemmas
             )
             kept = len(unknown_words)
+            i_plus_one_rejects = before - kept
             pct = (kept / before * 100.0) if before else 0.0
             self.presenter.show_info(
                 tr_format(
@@ -950,6 +990,7 @@ class EpisodeProcessor:
                 max_chars=self.config.max_sentence_chars,
             )
             filtered_out = before - len(unknown_words)
+            sentence_length_rejects = filtered_out
             if filtered_out > 0:
                 caps = []
                 if self.config.max_sentence_duration_seconds > 0.0:
@@ -1010,6 +1051,7 @@ class EpisodeProcessor:
             kept_words = [w for w in unknown_words if has_def.get(w.mined_form) or has_def.get(w.lemma)]
             dropped = [w.mined_form for w in unknown_words if not (has_def.get(w.mined_form) or has_def.get(w.lemma))]
             unknown_words = kept_words
+            no_definition_rejects = len(dropped)
             if dropped:
                 preview = ", ".join(dropped[:10])
                 more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
@@ -1056,6 +1098,7 @@ class EpisodeProcessor:
                 collapsed.append(word)
             removed = len(unknown_words) - len(collapsed)
             unknown_words = collapsed
+            duplicate_expression_rejects = removed
             if removed:
                 self.presenter.show_info(
                     tr_format(
@@ -1090,7 +1133,42 @@ class EpisodeProcessor:
                     e,
                 )
 
+        # Reading-specific in-document occurrence floor. The reading path passes
+        # its parse Counter here so the floor remains part of Phase 2 and its
+        # rejects land in the one filter summary. Force-included whitelist words
+        # bypass this coverage filter, matching every optional filter above.
+        if occurrence_counts is not None:
+            forced = [word for word in unknown_words if word.lemma in ctx.forced_include_lemmas]
+            rest = [word for word in unknown_words if word.lemma not in ctx.forced_include_lemmas]
+            before = len(rest)
+            rest = self.word_filter.filter_by_episode_count(rest, occurrence_counts, min_occurrence)
+            episode_rejects += before - len(rest)
+            unknown_words = forced + rest
+
         ctx.new_words_found = len(unknown_words)
+        log_summary(
+            logger,
+            "Phase 2 filter",
+            **{
+                "in": len(all_words),
+                "out": len(unknown_words),
+                "frequency_ranked": frequency_ranked,
+                "known_hits": known_hits,
+                "known_db_added": known_db_added,
+                "known_db_total": known_db_total,
+                "frequency_rejects": frequency_rejects,
+                "word_list_rejects": word_list_rejects,
+                "script_rejects": script_rejects,
+                "wordset_rejects": wordset_rejects,
+                "episode_rejects": episode_rejects,
+                "duplicate_sentence_rejects": duplicate_sentence_rejects,
+                "i_plus_one_rejects": i_plus_one_rejects,
+                "sentence_length_rejects": sentence_length_rejects,
+                "whitelist_force_includes": whitelist_force_includes,
+                "no_definition_rejects": no_definition_rejects,
+                "duplicate_expression_rejects": duplicate_expression_rejects,
+            },
+        )
         return unknown_words
 
     def _phase3_extract(
@@ -1157,6 +1235,13 @@ class EpisodeProcessor:
 
         self._audio_stage.fetch_expression_audio(media_results, progress_callback)
 
+        log_summary(
+            logger,
+            "Phase 3 extract",
+            attempted=len(unknown_words),
+            produced=len(media_results),
+            failures=max(0, len(unknown_words) - len(media_results)),
+        )
         return media_results
 
     def _phase4_lookup(
@@ -1294,6 +1379,17 @@ class EpisodeProcessor:
                 )
             )
 
+        definition_hits = sum(1 for definition in definitions if definition)
+        log_summary(
+            logger,
+            "Phase 4 lookup",
+            looked_up=len(words_with_media),
+            definition_hits=definition_hits,
+            definition_misses=max(0, len(words_with_media) - definition_hits),
+            frequency_hits=sum(1 for word in words_with_media if word.frequency_sources),
+            pitch_hits=sum(1 for position, _category in pitch_data if position),
+            audio_hits=sum(1 for _word, media in media_results if media.audio_path is not None or media.audio_filename),
+        )
         return definitions, glossaries, pitch_data
 
     def _phase5_create(
@@ -1495,6 +1591,18 @@ class EpisodeProcessor:
                     e,
                 )
 
+        media_failure_count = media_failures if isinstance(media_failures, int) and media_failures > 0 else 0
+        duplicate_count = skipped_duplicates if isinstance(skipped_duplicates, int) and skipped_duplicates > 0 else 0
+        log_summary(
+            logger,
+            "Phase 5 create",
+            attempted=len(card_data),
+            created=cards_created,
+            duplicates=duplicate_count,
+            failures=max(0, len(card_data) - cards_created - duplicate_count),
+            no_definition=len(skipped_words),
+            media_failures=media_failure_count,
+        )
         return cards_created, created_note_ids, mined_forms_for_undo
 
     def _run_pipeline(
@@ -1551,6 +1659,7 @@ class EpisodeProcessor:
         try:
             return self._stamp_write_provenance(body(run_temp_folder))
         except AnkiMinerException as e:
+            logger.warning("%s: %s", "EpisodeProcessor", e)
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
@@ -1998,6 +2107,17 @@ class EpisodeProcessor:
 
         self._audio_stage.fetch_sentence_audio(media_results, progress_callback)
 
+        log_summary(
+            logger,
+            "Phase 3 reading media",
+            attempted=len(unknown_words),
+            produced=len(media_results),
+            failures=max(0, len(unknown_words) - len(media_results)),
+            images=len(ref_cache),
+            degradations=len(failed_archives) + len(failed_refs),
+            archive_failures=len(failed_archives),
+            ref_failures=len(failed_refs),
+        )
         return media_results
 
     def process_reading(
@@ -2080,6 +2200,13 @@ class EpisodeProcessor:
                 all_words, line_index, counts = self.subtitle_parser.parse_text_units(
                     document.units, want_line_index, subtitle_cleanup=document.kind == "subtitle"
                 )
+                log_summary(
+                    logger,
+                    "Phase 1 parse",
+                    lines=len(document.units),
+                    tokens=sum(counts.values()),
+                    unique=len(all_words),
+                )
             self._report_ambiguous_readings()
             self.presenter.show_success(
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
@@ -2094,19 +2221,15 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("filter", logger):
-                unknown_words = self._phase2_filter(ctx, all_words, line_index, None, progress_callback)
-            # Reading-specific in-document occurrence floor (reuses the
-            # cross-episode filter's <=1 early-return). counts is the parse
-            # Counter — replaces the episode path's count_lemmas(subtitle_file).
-            # Force-included whitelist words bypass this floor too (it is a
-            # coverage filter applied outside _phase2_filter): floor only the
-            # non-forced remainder, then re-prepend. A no-op when nothing was
-            # force-included, so the default reading config is unchanged.
-            forced = [w for w in unknown_words if w.lemma in ctx.forced_include_lemmas]
-            rest = [w for w in unknown_words if w.lemma not in ctx.forced_include_lemmas]
-            rest = self.word_filter.filter_by_episode_count(rest, counts, self.config.reading_min_occurrence)
-            unknown_words = forced + rest
-            ctx.new_words_found = len(unknown_words)
+                unknown_words = self._phase2_filter(
+                    ctx,
+                    all_words,
+                    line_index,
+                    None,
+                    progress_callback,
+                    occurrence_counts=counts,
+                    min_occurrence=self.config.reading_min_occurrence,
+                )
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)

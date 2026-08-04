@@ -35,12 +35,14 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_dir
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +184,12 @@ def install_onnx_pack(
             f"{sys.version_info[0]}.{sys.version_info[1]})."
         )
 
+    logger.info(
+        "ONNX pack install: host=%s expected_bytes=%s",
+        urlsplit(spec.url).hostname or "-",
+        "-",
+    )
+
     if cancel_event is not None and cancel_event.is_set():
         raise OperationCancelled("onnxruntime installation cancelled")
 
@@ -219,6 +227,14 @@ def install_onnx_pack(
     finally:
         cleanup_part(part_path)
 
+    target = onnx_pack_root / "onnxruntime"
+    byte_count = sum(path.stat().st_size for path in target.rglob("*") if path.is_file())
+    log_summary(
+        logger,
+        "ONNX pack install done",
+        installed=target,
+        bytes=byte_count,
+    )
     return onnx_pack_root
 
 
@@ -252,6 +268,10 @@ def _extract_package(part_path: Path, onnx_pack_root: Path) -> None:
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     dest.write_bytes(zf.read(member))
         except zipfile.BadZipFile as exc:
+            logger.warning(
+                "ONNX pack install failed: stage=extract exc=%s",
+                type(exc).__name__,
+            )
             raise SetupError(f"onnxruntime download is not a valid wheel: {exc}") from exc
 
         extracted_pkg = staging / "onnxruntime"
@@ -260,4 +280,5 @@ def _extract_package(part_path: Path, onnx_pack_root: Path) -> None:
 
         atomic_replace_dir(extracted_pkg, target)
     finally:
+        # Best-effort cleanup on success or an already-failing extraction path.
         shutil.rmtree(staging, ignore_errors=True)

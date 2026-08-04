@@ -75,6 +75,7 @@ from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.youtube_url import classify_youtube_url
 
 if TYPE_CHECKING:
@@ -482,6 +483,12 @@ class YouTubeTab(_ListQueueMiningTabBase):
         url = self._dropped_youtube_url(event)
         if url is None:
             # A file is the common wrong payload here, and it has a right home.
+            log_summary(
+                logger,
+                "YouTube drop rejected",
+                level=logging.WARNING,
+                reason="invalid_payload",
+            )
             self.log_widget.append_warning(
                 self.tr("Drop a YouTube link here. Local files are mined from the Video and Audio tabs.")
             )

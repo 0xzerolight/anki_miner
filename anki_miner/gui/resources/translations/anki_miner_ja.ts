@@ -1811,11 +1811,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>一致するノートがありません — デッキ「{deck}」内のノートタイプ「{note_type}」。設定 → Anki を確認してください。</translation>
     </message>
     <message>
       <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation type="unfinished" />
+      <translation>一致するノートがありません — ノートタイプ「{note_type}」。設定 → Anki を確認してください。</translation>
     </message>
     <message>
       <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -1855,7 +1855,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
       <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation type="unfinished" />
+      <translation>このノートタイプには存在しません（マッピングが古い）：{fields}。設定 → Anki のフィールド割り当てで修正してください。</translation>
     </message>
     <message>
       <source>Skipped (resource not loaded): {fields}.</source>
@@ -4313,6 +4313,14 @@ Add %3 word(s) to your known list?</source>
       <translation>ログフォルダをファイルマネージャーで開く</translation>
     </message>
     <message>
+      <source>Export Diagnostics…</source>
+      <translation>診断情報をエクスポート…</translation>
+    </message>
+    <message>
+      <source>Save a zip with logs and system details for a bug report</source>
+      <translation>バグ報告用に、ログとシステム情報を含む zip を保存します</translation>
+    </message>
+    <message>
       <source>Report a Bug / Suggest a Feature</source>
       <translation>バグを報告 / 機能を提案</translation>
     </message>
@@ -4343,6 +4351,26 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
       <translation>起動時の JMdict 移行処理はまだ停止中です。完了するまで待ってから再試行してください。</translation>
+    </message>
+    <message>
+      <source>Export Diagnostics</source>
+      <translation>診断情報をエクスポート</translation>
+    </message>
+    <message>
+      <source>Zip Archives (*.zip);;All Files (*)</source>
+      <translation>Zip アーカイブ (*.zip);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+      <source>Diagnostics written to %1</source>
+      <translation>診断情報を %1 に書き出しました</translation>
+    </message>
+    <message>
+      <source>Diagnostics could not be exported.</source>
+      <translation>診断情報をエクスポートできませんでした。</translation>
+    </message>
+    <message>
+      <source>Retry</source>
+      <translation>再試行</translation>
     </message>
     <message>
       <source>Desktop Shortcut</source>
@@ -4439,10 +4467,6 @@ Continue?</source>
     <message>
       <source>System check failed. Try again.</source>
       <translation>システムチェックに失敗しました。再試行してください。</translation>
-    </message>
-    <message>
-      <source>Retry</source>
-      <translation>再試行</translation>
     </message>
     <message>
       <source>Migrating JMdict to SQLite…</source>
@@ -7546,6 +7570,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Re-check now</source>
       <translation>今すぐ再確認</translation>
+    </message>
+    <message>
+      <source>Export diagnostics…</source>
+      <translation>診断情報をエクスポート…</translation>
     </message>
     <message>
       <source>Ready</source>

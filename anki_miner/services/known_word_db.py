@@ -7,6 +7,8 @@ import unicodedata
 from contextlib import closing
 from pathlib import Path
 
+from anki_miner.utils.logging_ext import log_summary
+
 logger = logging.getLogger(__name__)
 
 #: Schema revision stored in ``PRAGMA user_version``. Bumped when a migration
@@ -126,7 +128,14 @@ class KnownWordDB:
         Returns:
             True if the database is ready for use.
         """
-        return self._db_path.exists() and os.access(self._db_path, os.R_OK)
+        exists = self._db_path.exists()
+        readable = exists and os.access(self._db_path, os.R_OK)
+        if exists and not readable:
+            logger.warning(
+                "Known words unavailable: file=%s reason=unreadable",
+                self._db_path.name,
+            )
+        return readable
 
     def get_known_words(self) -> set[str]:
         """Return all known word lemmas, NFC-normalized.
@@ -144,7 +153,9 @@ class KnownWordDB:
         """
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words")
-            return _normalize_all({row[0] for row in cursor.fetchall()})
+            words = _normalize_all({row[0] for row in cursor.fetchall()})
+        log_summary(logger, "Known words load done", rows=len(words))
+        return words
 
     def get_words_by_source(self, source: str) -> set[str]:
         """Return all lemmas stored under a given source label, NFC-normalized.
@@ -163,7 +174,14 @@ class KnownWordDB:
         """
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words WHERE source = ?", (source,))
-            return _normalize_all({row[0] for row in cursor.fetchall()})
+            words = _normalize_all({row[0] for row in cursor.fetchall()})
+        log_summary(
+            logger,
+            "Known words source load done",
+            source=source,
+            rows=len(words),
+        )
+        return words
 
     def add_words(self, words: set[str], source: str = "anki") -> int:
         """Bulk insert words into the database, ignoring duplicates.
@@ -318,7 +336,28 @@ class KnownWordDB:
                 conn.execute("DELETE FROM known_words")
             conn.commit()
             after = self._count(conn)
-            return before - after
+            removed = before - after
+        if preserve_user:
+            log_summary(
+                logger,
+                "Known words rebuild done",
+                preserve_user=preserve_user,
+                before=before,
+                after=after,
+                removed=removed,
+                user=after,
+            )
+        else:
+            log_summary(
+                logger,
+                "Known words clear done",
+                preserve_user=preserve_user,
+                before=before,
+                after=after,
+                removed=removed,
+                user=0,
+            )
+        return removed
 
     def clear_user(self) -> int:
         """Delete only the user-curated ignore list (Issue #42).

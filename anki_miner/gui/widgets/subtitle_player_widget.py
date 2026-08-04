@@ -505,19 +505,20 @@ class SubtitlePlayerWidget(QWidget):
         if self._audio_track_override is not None:
             if self._audio_track_override >= len(audio_tracks):
                 logger.warning(
-                    f"Audio track index {self._audio_track_override} out of range "
-                    f"(player reports {len(audio_tracks)} audio tracks)"
+                    "Audio track index %d out of range (player reports %d audio tracks)",
+                    self._audio_track_override,
+                    len(audio_tracks),
                 )
                 return
             self.player.aid = self._audio_track_override + 1
-            logger.info(f"Selected audio track {self._audio_track_override} in mini-player")
+            logger.info("Selected audio track %d in mini-player", self._audio_track_override)
             return
 
         for position, track in enumerate(audio_tracks):
             lang = (track.get("lang") or "").lower()
             if lang in JAPANESE_LANGUAGE_CODES:
                 self.player.aid = track.get("id", position + 1)
-                logger.info(f"Selected Japanese audio track {position} via mpv track metadata")
+                logger.info("Selected Japanese audio track %d via mpv track metadata", position)
                 return
         # No JP tag anywhere — leave mpv's default selection.
 

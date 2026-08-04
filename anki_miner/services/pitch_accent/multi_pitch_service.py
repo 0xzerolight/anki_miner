@@ -30,6 +30,7 @@ from collections.abc import Sequence
 
 from anki_miner.services.pitch_accent.provider import IndexedPitchProvider
 from anki_miner.services.pitch_accent_service import PitchEntry, PitchMapsStore
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,13 @@ class MultiPitchAccentService(PitchMapsStore):
     def __init__(self, providers: Sequence[IndexedPitchProvider]):
         super().__init__()
         self._providers: list[IndexedPitchProvider] = list(providers)
+        entries = ",".join(f"{provider.display_name}:{provider.entry_count}" for provider in self._providers) or "-"
+        log_summary(
+            logger,
+            "Pitch chain load done",
+            sources=len(self._providers),
+            entries=entries,
+        )
 
     @property
     def providers(self) -> list[IndexedPitchProvider]:

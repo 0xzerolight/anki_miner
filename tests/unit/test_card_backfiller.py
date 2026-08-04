@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -336,7 +337,7 @@ class TestScanPreflight:
 
 
 class TestScanLogging:
-    """One INFO line per phase — the only trace a no-op run leaves in a user log."""
+    """Stable operation receipts make no-op and degraded scans diagnosable."""
 
     def test_scan_logs_a_summary_line(self, backfill_config, caplog):
         anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="")})
@@ -363,6 +364,77 @@ class TestScanLogging:
             scan_backfill(anki, backfill_config, _services(freq=FakeFrequencyService()), _options({"frequency"}))
         line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill scan:"))
         assert "absent=Frequency" in line
+
+    def test_scan_summary_includes_every_skip_counter(self, backfill_config, caplog):
+        from anki_miner.services.frequency.render import render_frequency_html
+
+        current = render_frequency_html([("JPDB", 42, None)])
+        anki = FakeAnkiService(
+            {
+                1: _note(1, word="", Frequency=""),
+                2: _note(2, word="猫", ExpressionReading="ねこ", Frequency=current),
+            }
+        )
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.card_backfiller"):
+            scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}, overwrite=True))
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill scan:"))
+        assert "skipped_no_identity=1" in line
+        assert "identical=1" in line
+        assert "guessed_reading=0" in line
+        assert "sentinel_only_sorts=0" in line
+
+    def test_preflight_missing_note_type_logs_before_raising(self, backfill_config, caplog):
+        anki = FakeAnkiService(note_types=["Basic", "Other"])
+        with (
+            caplog.at_level(logging.INFO, logger="anki_miner.services.card_backfiller"),
+            pytest.raises(SetupError),
+        ):
+            scan_backfill(anki, backfill_config, _services(), _options({"frequency"}))
+        record = next(r for r in caplog.records if r.levelno == logging.WARNING and "note_type=" in r.getMessage())
+        assert record.name == "anki_miner.services.card_backfiller"
+
+    def test_preflight_missing_expression_field_logs_before_raising(self, backfill_config, caplog):
+        anki = FakeAnkiService(note_fields={"Frequency", "FrequencySort"})
+        with (
+            caplog.at_level(logging.INFO, logger="anki_miner.services.card_backfiller"),
+            pytest.raises(SetupError),
+        ):
+            scan_backfill(anki, backfill_config, _services(), _options({"frequency"}))
+        record = next(r for r in caplog.records if r.levelno == logging.WARNING and "field=word" in r.getMessage())
+        assert record.name == "anki_miner.services.card_backfiller"
+
+    def test_tagger_failure_is_counted_in_scan_summary(self, backfill_config, caplog, monkeypatch):
+        def broken_tagger(_text):
+            raise RuntimeError("broken tagger")
+
+        monkeypatch.setattr(
+            "anki_miner.services.card_backfiller.get_shared_tagger",
+            lambda: broken_tagger,
+        )
+        anki = FakeAnkiService(
+            {
+                1: _note(1, word="猫", Frequency=""),
+                2: _note(2, word="犬", Frequency=""),
+            }
+        )
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.card_backfiller"):
+            scan_backfill(
+                anki,
+                backfill_config,
+                _services(freq=FakeFrequencyService()),
+                _options({"frequency"}),
+            )
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Backfill scan:"))
+        assert "reading_failures=2" in line
+        assert "lemma_failures=2" in line
+        warnings = [
+            r
+            for r in caplog.records
+            if r.levelno == logging.WARNING and r.name == "anki_miner.services.card_backfiller"
+        ]
+        assert len(warnings) == 1
+        assert "mined_form=猫" in warnings[0].getMessage()
 
     def test_apply_logs_a_summary_line(self, caplog):
         anki = RecordingAnkiService({1: _note(1, word="猫", Frequency="")})

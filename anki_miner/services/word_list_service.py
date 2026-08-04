@@ -40,11 +40,11 @@ class WordListService:
         """
         if self._blacklist_path is not None:
             self._blacklist = self._read_word_file(self._blacklist_path)
-            logger.info(f"Loaded {len(self._blacklist)} blacklisted words")
+            logger.info("Loaded %d blacklisted words", len(self._blacklist))
 
         if self._whitelist_path is not None:
             self._whitelist = self._read_word_file(self._whitelist_path)
-            logger.info(f"Loaded {len(self._whitelist)} whitelisted words")
+            logger.info("Loaded %d whitelisted words", len(self._whitelist))
 
         self._loaded = True
 

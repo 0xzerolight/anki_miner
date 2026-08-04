@@ -22,11 +22,14 @@ test surface; do not rename it.
 """
 
 import importlib.util
+import logging
 import os
 import subprocess
 import sys
 from enum import Enum, auto
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def available() -> bool:
@@ -75,8 +78,12 @@ def cuda_device_count() -> int:
     try:
         import ctranslate2  # noqa: PLC0415  (intentional function-local import)
 
-        return int(ctranslate2.get_cuda_device_count())
-    except Exception:  # noqa: BLE001 — any failure means "no usable GPU"
+        count = int(ctranslate2.get_cuda_device_count())
+        logger.debug("ASR CUDA probe: devices=%d", count)
+        return count
+    except Exception as exc:  # noqa: BLE001 — any failure means "no usable GPU"
+        # Bucket B: an absent optional CUDA accelerator is a normal fallback.
+        logger.debug("ASR CUDA probe: devices=0 exc=%s", type(exc).__name__)
         return 0
 
 
@@ -140,7 +147,9 @@ def _ggml_lib_search_dirs() -> list[Path]:
             if sibling.is_dir():
                 dirs.append(sibling)
         return dirs
-    except Exception:  # noqa: BLE001 — a missing/odd install means "no dirs"
+    except Exception as exc:  # noqa: BLE001 — a missing/odd install means "no dirs"
+        # Bucket B: an uninspectable optional install means no backend dirs.
+        logger.debug("ASR backend library search: backend=ggml dirs=0 exc=%s", type(exc).__name__)
         return []
 
 
@@ -168,7 +177,12 @@ def _find_ggml_vulkan_lib() -> Path | None:
                     if hit.is_file():
                         return hit
         return None
-    except Exception:  # noqa: BLE001 — a missing/odd install means "no Vulkan lib"
+    except Exception as exc:  # noqa: BLE001 — a missing/odd install means "no Vulkan lib"
+        # Bucket B: an uninspectable optional install means Vulkan is absent.
+        logger.debug(
+            "ASR backend library search: backend=ggml-vulkan result=absent exc=%s",
+            type(exc).__name__,
+        )
         return None
 
 
@@ -214,6 +228,8 @@ def ensure_ggml_backends_loaded() -> None:
     """
     if _BackendState.SUCCEEDED in _GGML_BACKEND_STATES.values():
         return
+    if _BackendState.UNTRIED not in _GGML_BACKEND_STATES.values():
+        return
     try:
         vulkan_lib = _find_ggml_vulkan_lib()
         if vulkan_lib is None:
@@ -249,12 +265,26 @@ def ensure_ggml_backends_loaded() -> None:
                 fn.restype = None
                 fn.argtypes = argtypes
                 fn(*args)
-            except Exception:  # noqa: BLE001 — try the next backend loader
+            except Exception as exc:  # noqa: BLE001 — try the next backend loader
+                # Bucket A: loader failure silently degrades all later work to CPU.
+                logger.warning(
+                    "ASR backend load: backend=%s result=failed exc=%s",
+                    name,
+                    type(exc).__name__,
+                )
                 _GGML_BACKEND_STATES[name] = _BackendState.FAILED
                 continue
             _GGML_BACKEND_STATES[name] = _BackendState.SUCCEEDED
             return
-    except Exception:  # noqa: BLE001 — a load failure must degrade to CPU/CT2, never abort
+    except Exception as exc:  # noqa: BLE001 — a load failure must degrade to CPU/CT2, never abort
+        # Bucket A: Vulkan backend setup failure silently degrades later work to CPU.
+        for name, state in _GGML_BACKEND_STATES.items():
+            if state is _BackendState.UNTRIED:
+                _GGML_BACKEND_STATES[name] = _BackendState.FAILED
+        logger.warning(
+            "ASR backend load: backend=ggml-vulkan result=failed exc=%s",
+            type(exc).__name__,
+        )
         return
 
 
@@ -267,9 +297,17 @@ def whisper_cpp_available() -> bool:
     """
     try:
         if importlib.util.find_spec("pywhispercpp") is None:
+            logger.debug("ASR backend probe: backend=whisper.cpp available=false")
             return False
-        return _find_ggml_vulkan_lib() is not None
-    except Exception:  # noqa: BLE001 — any failure means "not available"
+        is_available = _find_ggml_vulkan_lib() is not None
+        logger.debug("ASR backend probe: backend=whisper.cpp available=%s", is_available)
+        return is_available
+    except Exception as exc:  # noqa: BLE001 — any failure means "not available"
+        # Bucket B: an absent optional whisper.cpp backend is a normal fallback.
+        logger.debug(
+            "ASR backend probe: backend=whisper.cpp available=false exc=%s",
+            type(exc).__name__,
+        )
         return False
 
 
@@ -325,7 +363,12 @@ def _probe_vulkan_device_count() -> int:
             env=env,
         )
         if proc.returncode != 0:
+            logger.debug("ASR Vulkan probe: devices=0 returncode=%d", proc.returncode)
             return 0
-        return int(proc.stdout.strip())
-    except Exception:  # noqa: BLE001 — timeout / spawn / parse failure all mean 0
+        count = int(proc.stdout.strip())
+        logger.debug("ASR Vulkan probe: devices=%d", count)
+        return count
+    except Exception as exc:  # noqa: BLE001 — timeout / spawn / parse failure all mean 0
+        # Bucket B: an absent optional Vulkan accelerator is a normal fallback.
+        logger.debug("ASR Vulkan probe: devices=0 exc=%s", type(exc).__name__)
         return 0

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
@@ -125,6 +126,43 @@ class TestDeckDropdown:
             tab.showEvent(QShowEvent())
         assert factory.call_count == 1
         fake_worker.start.assert_called_once()
+
+    def test_deck_fetch_error_reaches_the_log(self, tab, caplog):
+        from anki_miner.gui.workers.base_worker import SingleCallWorker
+
+        message = "Cannot connect to AnkiConnect. Is Anki running?"
+        worker = SingleCallWorker(lambda: [], parent=tab)
+        with (
+            patch(f"{_TAB_MOD}.AnkiService"),
+            patch(f"{_TAB_MOD}.FetchDecksWorker", return_value=worker),
+            patch.object(worker, "start"),
+            caplog.at_level(logging.WARNING, logger=_TAB_MOD),
+        ):
+            tab._load_decks()
+            worker.error.emit(message)
+
+        record = next(
+            record for record in caplog.records if record.getMessage().startswith("Card Backfill deck fetch degraded:")
+        )
+        assert record.name == _TAB_MOD
+        assert record.levelno == logging.WARNING
+        assert message in record.getMessage()
+        assert tab.deck_combo.count() == 1
+        assert "all decks" in tab.status_label.text().lower()
+
+    def test_incomplete_field_mapping_is_logged(self, tab, caplog):
+        fields = dict(tab.config.anki_fields)
+        fields.pop("word")
+        tab.config = replace(tab.config, anki_fields=fields)
+
+        with caplog.at_level(logging.WARNING, logger=_TAB_MOD):
+            tab._load_decks()
+
+        record = next(
+            record for record in caplog.records if record.getMessage().startswith("Card Backfill deck fetch skipped:")
+        )
+        assert record.levelno == logging.WARNING
+        assert "missing=field_mapping" in record.getMessage()
 
 
 class TestScanFlow:

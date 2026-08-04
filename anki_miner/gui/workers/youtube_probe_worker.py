@@ -20,11 +20,13 @@ signals and the single call they make.
 from __future__ import annotations
 
 import logging
+from urllib.parse import urlsplit
 
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +56,22 @@ class _SingleCallProbeThread(CancellableWorker):
 
     def run(self) -> None:
         """Execute the probe and emit the appropriate signal."""
+        self.log_start(type(self).__name__, host=self._url_host(), timeout_s=self._timeout_s)
         try:
             result = self._do_call()
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
             self.report_failure(exc, context="YouTubeProbeWorker", on_error=self._emit_error)
         else:
             self._emit_result(result)
+            log_summary(logger, "YouTube probe done", results=1)
+
+    def _url_host(self) -> str:
+        """Return the bounded URL host used by the worker start receipt."""
+        try:
+            return urlsplit(str(getattr(self, "_url", ""))).hostname or "-"
+        except ValueError as exc:
+            logger.debug("YouTube probe host parse failed: error_type=%s", type(exc).__name__)
+            return "-"
 
     def _do_call(self) -> object:  # pragma: no cover - abstract
         raise NotImplementedError

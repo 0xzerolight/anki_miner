@@ -28,11 +28,13 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -151,6 +153,12 @@ def install_alass(
     if spec is None:
         raise SetupError(f"In-app alass install is not supported on this platform ({sys.platform}).")
 
+    logger.info(
+        "Alass install: host=%s expected_bytes=%s",
+        urlsplit(spec.url).hostname or "-",
+        "-",
+    )
+
     if cancel_event is not None and cancel_event.is_set():
         raise OperationCancelled("alass installation cancelled")
 
@@ -185,6 +193,12 @@ def install_alass(
         if sys.platform != "win32":
             os.chmod(target, 0o755)
 
+        log_summary(
+            logger,
+            "Alass install done",
+            installed=target,
+            bytes=target.stat().st_size,
+        )
         return target
     finally:
         cleanup_part(part_path)
@@ -196,6 +210,10 @@ def _place_file(part_path: Path, target: Path) -> None:
     try:
         os.replace(part_path, staged)
     except OSError as exc:
+        logger.warning(
+            "Alass install failed: stage=stage exc=%s",
+            type(exc).__name__,
+        )
         raise SetupError(f"Failed to stage alass binary: {exc}") from exc
     _promote(staged, target)
 
@@ -209,17 +227,32 @@ def _place_zip_member(part_path: Path, spec: _AlassSpec, target: Path) -> None:
             try:
                 member_bytes = zf.read(spec.zip_member)
             except KeyError as exc:
+                logger.warning(
+                    "Alass install failed: stage=extract exc=%s",
+                    type(exc).__name__,
+                )
                 raise SetupError(f"alass archive is missing expected entry '{spec.zip_member}'") from exc
         staged.write_bytes(member_bytes)
     except zipfile.BadZipFile as exc:
+        logger.warning(
+            "Alass install failed: stage=extract exc=%s",
+            type(exc).__name__,
+        )
+        # Best-effort cleanup on an already-failing extraction path.
         with contextlib.suppress(OSError):
             staged.unlink()
         raise SetupError(f"alass download is not a valid zip archive: {exc}") from exc
     except SetupError:
+        # Best-effort cleanup on an already-failing extraction path.
         with contextlib.suppress(OSError):
             staged.unlink()
         raise
     except OSError as exc:
+        logger.warning(
+            "Alass install failed: stage=write exc=%s",
+            type(exc).__name__,
+        )
+        # Best-effort cleanup on an already-failing extraction path.
         with contextlib.suppress(OSError):
             staged.unlink()
         raise SetupError(f"Failed to write alass binary: {exc}") from exc
@@ -238,6 +271,11 @@ def _promote(staged: Path, target: Path) -> None:
     try:
         os.replace(staged, target)
     except OSError as exc:
+        logger.warning(
+            "Alass install failed: stage=promote exc=%s",
+            type(exc).__name__,
+        )
+        # Best-effort cleanup on an already-failing promotion path.
         with contextlib.suppress(OSError):
             staged.unlink()
         raise SetupError(f"Failed to install alass binary: {exc}") from exc

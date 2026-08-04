@@ -27,6 +27,7 @@ from anki_miner.utils import (
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
@@ -316,6 +317,15 @@ class MediaExtractorService:
             succeeded (or, in audio_only mode, whose audio succeeded); the
             other medium's failure does not exclude.
         """
+        log_summary(
+            logger,
+            "Media extraction",
+            words=len(words),
+            screenshots=include_screenshot,
+            audio=include_audio,
+            audio_only=audio_only,
+            animated=include_screenshot and self.config.screenshot_animated and not audio_only,
+        )
         if progress_callback:
             progress_callback.on_start(
                 len(words),
@@ -337,6 +347,12 @@ class MediaExtractorService:
         media_data_list: list[tuple[TokenizedWord, MediaData]] = []
         max_workers = self.config.max_parallel_workers
         was_cancelled = False
+        attempted = 0
+        succeeded = 0
+        screenshot_failures = 0
+        audio_failures = 0
+        exception_failures = 0
+        n_logged = 0
         # Per-run registry of live ffmpeg processes so the cancel path can
         # kill them instead of waiting out their 30-60s encode timeouts.
         proc_registry = _FfmpegProcRegistry()
@@ -348,6 +364,18 @@ class MediaExtractorService:
         # proc_registry.kill_all() cannot reach it from this thread — so honour
         # an already-set cancellation before starting it, mirroring the loop.
         if cancelled_check and cancelled_check():
+            was_cancelled = True
+            log_summary(
+                logger,
+                "Media extraction done",
+                attempted=attempted,
+                succeeded=succeeded,
+                screenshot_failures=screenshot_failures,
+                audio_failures=audio_failures,
+                exception_failures=exception_failures,
+                warnings_logged=n_logged,
+                cancelled=was_cancelled,
+            )
             return []
         cover_path: Path | None = None
         if audio_only and include_screenshot:
@@ -380,7 +408,6 @@ class MediaExtractorService:
             # noticed while encodes are still in flight, not only after one
             # of them happens to finish.
             pending = set(future_to_word)
-            completed = 0
             while pending and not was_cancelled:
                 done, pending = wait(pending, timeout=poll, return_when=FIRST_COMPLETED)
                 if not done:
@@ -394,27 +421,44 @@ class MediaExtractorService:
                         was_cancelled = True
                         break
 
-                    completed += 1
+                    attempted += 1
                     word = future_to_word[future]
 
                     try:
                         media = future.result()
+                        has_screenshot = media.has_screenshot
+                        has_audio = media.has_audio
+                        failed_media: list[str] = []
+                        if include_screenshot and not audio_only and not has_screenshot:
+                            screenshot_failures += 1
+                            failed_media.append("screenshot")
+                        if include_audio and not has_audio:
+                            audio_failures += 1
+                            failed_media.append("audio")
+                        if failed_media and n_logged < 5:
+                            logger.warning(
+                                "Media extraction failed: lemma=%s medium=%s",
+                                word.lemma,
+                                ",".join(failed_media),
+                            )
+                            n_logged += 1
 
                         # audio_only keys the keep/drop decision on audio (there
                         # is no per-word screenshot); default mode keeps the
                         # original screenshot-based filter.
                         if audio_only:
-                            keep = media.has_audio if include_audio else include_screenshot and cover_path is not None
+                            keep = has_audio if include_audio else include_screenshot and cover_path is not None
                         else:
-                            keep = media.has_screenshot if include_screenshot else include_audio and media.has_audio
+                            keep = has_screenshot if include_screenshot else include_audio and has_audio
                         if keep:
                             if audio_only and include_screenshot and cover_path is not None:
                                 media.screenshot_path = cover_path
                                 media.screenshot_filename = cover_path.name
                             media_data_list.append((word, media))
+                            succeeded += 1
                             if progress_callback:
                                 progress_callback.on_progress(
-                                    completed,
+                                    attempted,
                                     tr_format(
                                         QCoreApplication.translate("MediaExtractorService", "Extracting media: %1"),
                                         word.lemma,
@@ -427,7 +471,7 @@ class MediaExtractorService:
                             # audio_only mode is untouched: its keep decision already
                             # keys on has_audio, so a word reaching here always has
                             # audio.
-                            if not audio_only and include_audio and not media.has_audio and progress_callback:
+                            if not audio_only and include_audio and not has_audio and progress_callback:
                                 progress_callback.on_error(
                                     word.lemma,
                                     QCoreApplication.translate("MediaExtractorService", "audio extraction failed"),
@@ -441,7 +485,7 @@ class MediaExtractorService:
                                 else QCoreApplication.translate("MediaExtractorService", "No screenshot: %1")
                             )
                             if progress_callback:
-                                progress_callback.on_progress(completed, tr_format(skip_template, word.lemma))
+                                progress_callback.on_progress(attempted, tr_format(skip_template, word.lemma))
                             # OVH-043: word dropped because the primary medium
                             # failed (screenshot in default mode, audio in
                             # audio_only mode).  A frame can always be grabbed at a
@@ -459,6 +503,14 @@ class MediaExtractorService:
                                 )
 
                     except Exception as e:
+                        exception_failures += 1
+                        if n_logged < 5:
+                            logger.warning(
+                                "Media extraction exception: lemma=%s medium=unknown exc=%s",
+                                word.lemma,
+                                type(e).__name__,
+                            )
+                            n_logged += 1
                         if progress_callback:
                             progress_callback.on_error(word.lemma, str(e))
 
@@ -471,6 +523,17 @@ class MediaExtractorService:
         if progress_callback and not was_cancelled:
             progress_callback.on_complete()
 
+        log_summary(
+            logger,
+            "Media extraction done",
+            attempted=attempted,
+            succeeded=succeeded,
+            screenshot_failures=screenshot_failures,
+            audio_failures=audio_failures,
+            exception_failures=exception_failures,
+            warnings_logged=n_logged,
+            cancelled=was_cancelled,
+        )
         return media_data_list
 
     def extract_cover_art(
@@ -749,7 +812,8 @@ class MediaExtractorService:
             # Killed by a batch cancel — expected, not an ffmpeg failure.
             logger.debug("%s cancelled%s", op_name, suffix)
             return False
-        logger.warning("%s failed%s: ffmpeg exit code %s: %s", op_name, suffix, proc.returncode, stderr)
+        stderr_last_line = stderr.rstrip().splitlines()[-1] if stderr.strip() else "-"
+        logger.warning("%s failed%s: ffmpeg exit code %s: %s", op_name, suffix, proc.returncode, stderr_last_line)
         return False
 
     def _extract_static_screenshot(
@@ -822,14 +886,15 @@ class MediaExtractorService:
                 )
                 available = proc.returncode == 0 and encoder in proc.stdout
             except (subprocess.SubprocessError, OSError) as e:
-                logger.warning(f"ffmpeg encoder probe failed: {e}")
+                logger.warning("ffmpeg encoder probe failed: %s", e)
                 available = False
             self._animated_encoder_ok[encoder] = available
             if not available:
                 logger.error(
-                    f"ffmpeg encoder '{encoder}' not available. "
+                    "ffmpeg encoder '%s' not available. "
                     "Animated screenshots in this format will fail. "
-                    "Install ffmpeg with the required encoder, or switch format in Settings."
+                    "Install ffmpeg with the required encoder, or switch format in Settings.",
+                    encoder,
                 )
             return available
 
@@ -1091,7 +1156,7 @@ class MediaExtractorService:
 
         if global_index is not None:
             cmd.extend(["-map", f"0:{global_index}"])
-            logger.debug(f"Using audio stream {global_index}")
+            logger.debug("Using audio stream %d", global_index)
         else:
             cmd.extend(["-map", "0:a:0"])  # First audio stream
             self._warn_no_japanese_audio_once(video_file)

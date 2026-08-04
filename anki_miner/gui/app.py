@@ -9,6 +9,7 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
   marker before exiting.
 """
 
+import locale
 import logging
 import os
 import platform
@@ -21,7 +22,19 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from PyQt6.QtCore import QCoreApplication, QEvent, QLockFile, QObject, QProcess, Qt, QThread, QTimer, pyqtBoundSignal
+from PyQt6.QtCore import (
+    PYQT_VERSION_STR,
+    QT_VERSION_STR,
+    QCoreApplication,
+    QEvent,
+    QLockFile,
+    QObject,
+    QProcess,
+    Qt,
+    QThread,
+    QTimer,
+    pyqtBoundSignal,
+)
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -59,6 +72,11 @@ from anki_miner.utils.file_utils import ensure_directory
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+# Hidden by design: ``anki_miner`` is always DEBUG, so a UI toggle could only
+# enable noisy third-party DEBUG and would require config/UI/i18n churn. This
+# follows the existing ANKI_MINER_HOME / KEEP_TEMP / SMOKE env-only convention.
+_LOG_LEVEL_ENV = "ANKI_MINER_LOG_LEVEL"
 
 
 @dataclass(frozen=True)
@@ -184,7 +202,7 @@ def _run_bundled_smoke() -> int:
         )
         if targets_proc.returncode != 0:
             raise RuntimeError(
-                f"bundled yt-dlp --list-impersonate-targets exited " f"{targets_proc.returncode}: {targets_proc.stderr}"
+                f"bundled yt-dlp --list-impersonate-targets exited {targets_proc.returncode}: {targets_proc.stderr}"
             )
         available = available_impersonate_targets(targets_proc.stdout or "")
         if not available:
@@ -204,7 +222,7 @@ def _run_bundled_smoke() -> int:
         _jpeg_buf = io.BytesIO()
         Image.new("RGB", (8, 8)).save(_jpeg_buf, "JPEG")
         Image.open(io.BytesIO(_jpeg_buf.getvalue())).convert("RGB").load()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print(f"BUNDLED_SMOKE_PASS: bundled yt-dlp {ytdlp_version}")
@@ -227,7 +245,7 @@ def _run_asr_bundled_smoke() -> int:
             raise RuntimeError("faster-whisper or ctranslate2 not importable from bundle (available() returned False)")
         # Importing the class exercises ctranslate2 native lib resolution.
         _engine.get_whisper_model_cls()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print("BUNDLED_SMOKE_PASS: asr faster_whisper+ctranslate2 resolved")
@@ -278,7 +296,7 @@ def _run_whispercpp_bundled_smoke() -> int:
         # The real runtime import path: pulls pywhispercpp.model and its
         # platformdirs/requests/tqdm transitive imports.
         model_cls = _engine.get_whisper_cpp_model_cls()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 
@@ -300,7 +318,7 @@ def _run_whispercpp_bundled_smoke() -> int:
         # real cpp decode params. No VAD (no silero file needed in the smoke).
         audio = np.zeros(16000, dtype=np.float32)
         model.transcribe(audio, language="ja", no_context=True)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print("BUNDLED_SMOKE_PASS: whispercpp pywhispercpp.model construct+decode resolved (CPU backend)")
@@ -320,7 +338,11 @@ def _configure_logging(log_path: Path) -> None:
 
     Called from main() so all modules that already call
     ``logging.getLogger(__name__)`` have their records captured to disk.
-    Five 2 MB backup files → at most ~12 MB on disk at any time.
+    The 8 MB active file plus five backups uses at most ~48 MB. Eight MB keeps
+    one full high-coverage batch readable in the active file or active + ``.1``;
+    a 2 MB ring could overwrite the session boundary several times in one run.
+    The module name plus source line identifies the exact logging statement for
+    the version pinned in that boundary, at about 5% extra line length.
 
     Idempotent: a handler attached by a previous call is removed and replaced,
     so calling this twice — bootstrap default-path → config-path re-point (F3),
@@ -335,7 +357,7 @@ def _configure_logging(log_path: Path) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handler = _OwnerOnlyRotatingFileHandler(
             log_path,
-            maxBytes=2 * 1024 * 1024,
+            maxBytes=8 * 1024 * 1024,
             backupCount=5,
             encoding="utf-8",
             delay=False,
@@ -344,29 +366,31 @@ def _configure_logging(log_path: Path) -> None:
         handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
         handler.setFormatter(
             logging.Formatter(
-                "%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+                "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d: %(message)s",
                 datefmt="%Y-%m-%dT%H:%M:%S",
             )
         )
         root.addHandler(handler)
-    except Exception:
+    except Exception:  # noqa: BLE001 — bucket A: boot continues on the retained log sink.
         if handler is not None:
             handler.close()
         logger.warning("Failed to configure log at %s; keeping existing log sink", log_path, exc_info=True)
         return
 
-    # Root logger at WARNING so third-party libs (yt-dlp, fugashi, …) only
-    # write WARNING+ to the file; the project namespace gets full DEBUG coverage.
+    # Root defaults to WARNING so third-party libs (yt-dlp, fugashi, …) only
+    # write WARNING+; the hidden env override exists for developer diagnostics.
+    # The project namespace remains pinned to full DEBUG coverage either way.
     # A record must clear both its logger's effective level AND the handler's
     # level — setting the handler to DEBUG here means the handler itself never
     # silences anything; filtering happens at the logger level.
-    root.setLevel(logging.WARNING)
+    requested_level = os.environ.get(_LOG_LEVEL_ENV, "").strip().upper()
+    root.setLevel(logging.getLevelNamesMapping().get(requested_level, logging.WARNING))
     logging.getLogger("anki_miner").setLevel(logging.DEBUG)
     for existing in old_sinks:
         root.removeHandler(existing)
         try:
             existing.close()
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket A: stale sink cleanup failed and is reported.
             logger.warning("Failed to close replaced log sink", exc_info=True)
 
 
@@ -382,14 +406,60 @@ def _log_session_boundary() -> None:
         logging.getLogger("anki_miner").setLevel(logging.DEBUG)
         for handler in sinks:
             handler.setLevel(logging.DEBUG)
+
+    failed_fields: list[str] = []
+
+    def _probe(field: str, value: Callable[[], object], default: object = "") -> object:
+        try:
+            return value()
+        except Exception:  # noqa: BLE001 — bucket A: aggregated into one WARNING after the loop.
+            # Header metadata is diagnostic-only and must never block the
+            # session boundary or application boot, so a failed probe is
+            # recorded by field name rather than raised or logged per probe.
+            failed_fields.append(field)
+            return default
+
+    def _system_locale() -> str:
+        language, encoding = locale.getlocale()
+        return ".".join(part for part in (language, encoding) if part) or os.environ.get("LANG", "")
+
+    active_sink = sinks[-1] if sinks else None
+    session_id = _probe("session_id", lambda: uuid.uuid4().hex[:8])
+    version = _probe("version", lambda: __version__)
+    platform_name = _probe("platform", platform.platform)
+    frozen = _probe("frozen", lambda: bool(getattr(sys, "frozen", False)), False)
+    pid = _probe("pid", os.getpid, 0)
+    python_version = _probe("python", platform.python_version)
+    qt_version = _probe("qt", lambda: QT_VERSION_STR)
+    pyqt_version = _probe("pyqt", lambda: PYQT_VERSION_STR)
+    executable = _probe("exe", lambda: sys.executable)
+    home = _probe("home", lambda: ANKI_MINER_HOME)
+    log_path = _probe("log", get_effective_log_path)
+    locale_name = _probe("locale", _system_locale, os.environ.get("LANG", ""))
+    argv_count = _probe("argv_n", lambda: len(sys.argv), 0)
+    max_bytes = _probe("maxbytes", lambda: getattr(active_sink, "maxBytes", 0), 0)
+    backups = _probe("backups", lambda: getattr(active_sink, "backupCount", 0), 0)
     logger.info(
-        "Session start session_id=%s version=%s platform=%s frozen=%s pid=%s",
-        uuid.uuid4().hex[:8],
-        __version__,
-        platform.platform(),
-        bool(getattr(sys, "frozen", False)),
-        os.getpid(),
+        "Session start session_id=%s version=%s platform=%s frozen=%s pid=%s "
+        "python=%s qt=%s pyqt=%s exe=%s home=%s log=%s locale=%s argv_n=%s maxbytes=%s backups=%s",
+        session_id,
+        version,
+        platform_name,
+        frozen,
+        pid,
+        python_version,
+        qt_version,
+        pyqt_version,
+        executable,
+        home,
+        log_path,
+        locale_name,
+        argv_count,
+        max_bytes,
+        backups,
     )
+    if failed_fields:
+        logger.warning("Session header degraded: fields=%s", ",".join(failed_fields))
 
 
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
@@ -540,7 +610,7 @@ def _run_store_recovery_if_locked(
             config,
             allow_collection=allow_collection,
         )
-    except Exception:
+    except Exception:  # noqa: BLE001 — bucket A: recovery is skipped and startup continues.
         logger.exception("Startup store recovery failed; continuing startup")
 
 
@@ -886,7 +956,7 @@ def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
             box.exec()
             if box.clickedButton() is open_button:
                 open_log_folder(log_path)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket A: best-effort error dialog failed and is reported.
             logger.exception("Failed to display error dialog for unhandled exception")
         finally:
             _in_excepthook = False
@@ -901,13 +971,13 @@ def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], N
     def wrapped() -> None:
         try:
             fn()
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket C: cleanup runs before unchanged startup failure escapes.
             laggards = join_all_off_thread_workers()
             for worker in laggards:
                 try:
                     if still_running(worker):
                         worker.wait()
-                except RuntimeError:
+                except RuntimeError:  # bucket C: worker wrapper was already deleted during fault cleanup.
                     pass
             if os.environ.get("ANKI_MINER_SMOKE") == "installer":
                 logger.critical("Installer smoke failed during startup", exc_info=True)
@@ -1222,7 +1292,11 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
     """Run installed-artifact assertions over two event-loop ticks."""
 
     def fail(stage: str) -> None:
-        logger.critical("Installer smoke failed during %s", stage, exc_info=True)
+        logger.critical(
+            "Installer smoke failed during %s",
+            stage,
+            exc_info=True,  # noqa: LOG014 - fail() is called only while handling an active exception.
+        )
         # Close the window here too, exactly as the success path does before
         # finish(). Without it the whole MainWindow widget tree is still ALIVE at
         # interpreter exit, and PyQt/sip's exit-time cleanup walks it and
@@ -1237,7 +1311,7 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
         # in the import graph can surface it (bisected to a no-op dataclass, 4/4).
         try:
             window.close()
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket C: close is best-effort on an already-failing smoke path.
             logger.debug("installer smoke: window.close() on the failure path raised", exc_info=True)
         app.exit(1)
 
@@ -1261,7 +1335,7 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
             result_path.parent.mkdir(parents=True, exist_ok=True)
             with atomic_write_path(result_path) as staged:
                 staged.write_bytes(f"ANKI_MINER_INSTALLER_READY {__version__}\n".encode())
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket A: terminal smoke failure is reported by fail().
             fail("post-close checks")
             return
         app.exit(0)
@@ -1307,7 +1381,7 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
             if not window.close():
                 raise RuntimeError("main window refused installer-smoke close")
             QTimer.singleShot(0, finish)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket A: terminal smoke failure is reported by fail().
             fail("GUI checks")
 
     QTimer.singleShot(0, validate_and_close)
@@ -1400,12 +1474,12 @@ def main():
     _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
     try:
         _configure_logging(_default_log_path)
-    except Exception:
+    except Exception:  # noqa: BLE001 — bucket A: boot continues with stderr logging.
         logger.exception("Failed to configure startup log; continuing with stderr logging")
     try:
         _early_config, _allow_store_collection = GUIConfigManager.load_config_with_provenance()
         _log_path = _early_config.log_path
-    except Exception:
+    except Exception:  # noqa: BLE001 — bucket A: config falls back to defaults outside installer smoke.
         # Never leave _early_config unbound (would NameError at the zoom call
         # and every later read) — fall back to defaults so startup can proceed.
         if installer_smoke:
@@ -1419,7 +1493,7 @@ def main():
     if _log_path != _default_log_path:
         try:
             _configure_logging(_log_path)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket A: boot retains the startup log sink.
             logger.exception("Failed to configure custom log path; keeping startup logger")
 
     _log_session_boundary()
@@ -1479,7 +1553,7 @@ def main():
             font_scale=_early_config.ui_font_scale,
         )
         Theme.apply_to_app(app)
-    except Exception:
+    except Exception:  # noqa: BLE001 — bucket A: boot continues with Qt's default theme.
         if installer_smoke:
             raise
         logger.exception("Failed to initialize theme; continuing with Qt defaults")
@@ -1517,7 +1591,7 @@ def main():
     if not installer_smoke:
         try:
             offer_recovery(window)
-        except Exception:
+        except Exception:  # noqa: BLE001 — bucket A: recovery offer is skipped for this session.
             logger.exception("Could not offer the previous session's downloads and queues")
 
     # Show window first so the user sees the UI immediately. The stats DB open

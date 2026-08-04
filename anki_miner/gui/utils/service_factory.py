@@ -235,7 +235,7 @@ def _build_pitch_service(
     except MemoryError:
         raise  # never an optional-source miss; see the module note
     except Exception as e:
-        logger.warning(f"Could not load pitch accent data: {e}")
+        logger.warning("Could not load pitch accent data: %s", e)
         load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
         return None
 
@@ -276,7 +276,7 @@ def _build_frequency_service(
     except MemoryError:
         raise  # never an optional-source miss; see the module note
     except Exception as e:
-        logger.warning(f"Could not load frequency data: {e}")
+        logger.warning("Could not load frequency data: %s", e)
         load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
         return None
 
@@ -541,7 +541,7 @@ def create_services(
         except MemoryError:
             raise  # never an optional-source miss; see the module note
         except Exception as e:
-            logger.warning(f"Could not load name wordsets: {e}")
+            logger.warning("Could not load name wordsets: %s", e)
             load_result.warnings.append(tr_format(_tr("Couldn't load name wordsets: %1"), e))
             wordset_service = None
 
@@ -615,7 +615,7 @@ def create_services(
     except MemoryError:
         raise  # never an optional-source miss; see the module note
     except Exception as e:
-        logger.warning(f"Could not initialize known word database: {e}")
+        logger.warning("Could not initialize known word database: %s", e)
         load_result.warnings.append(tr_format(_tr("Couldn't initialize known word database: %1"), e))
         known_word_db = None
 
@@ -630,7 +630,7 @@ def create_services(
         except MemoryError:
             raise  # never an optional-source miss; see the module note
         except Exception as e:
-            logger.warning(f"Could not load word lists: {e}")
+            logger.warning("Could not load word lists: %s", e)
             load_result.warnings.append(tr_format(_tr("Couldn't load word lists: %1"), e))
             word_list_service = None
 

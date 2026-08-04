@@ -226,7 +226,7 @@ def _build_store_media_action(filename: str, src_path: Path, content_hash: bool 
         with open(src_path, "rb") as f:
             raw = f.read(_MAX_MEDIA_FILE_BYTES + 1)
     except OSError as e:
-        logger.warning(f"Failed to read media file {filename}: {e}")
+        logger.warning("Failed to read media file %s: %s", filename, e)
         return None
     if len(raw) > _MAX_MEDIA_FILE_BYTES:
         logger.warning("Media file %s exceeds the %d-byte cap; skipping upload", filename, _MAX_MEDIA_FILE_BYTES)

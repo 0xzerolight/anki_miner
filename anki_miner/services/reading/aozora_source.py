@@ -13,6 +13,7 @@ so a ``《reading》`` can't confuse the annotation scanner.
 
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 
@@ -27,6 +28,9 @@ from anki_miner.models.reading import (
 # here both for load() and as a re-export for tests that patch/call it.
 from anki_miner.services.reading._util import _decode
 from anki_miner.services.reading.sentence_splitter import split_sentences
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 _MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
 
@@ -245,10 +249,11 @@ def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
 # --- unit emission -------------------------------------------------------
 
 
-def _emit_units(body_lines: list[str], aozora: bool = True) -> list[ReadingUnit]:
+def _emit_units(body_lines: list[str], aozora: bool = True) -> tuple[list[ReadingUnit], int, int]:
     units: list[ReadingUnit] = []
     index = 0
     para_no = 0
+    skipped = 0
     current_chapter: str | None = None
     heading_block = False
     heading_buf: list[str] = []
@@ -268,6 +273,7 @@ def _emit_units(body_lines: list[str], aozora: bool = True) -> list[ReadingUnit]
             heading_buf = []
 
         if not stripped:  # blank or marker-only line: a break, no unit
+            skipped += 1
             if block_end:
                 heading_block = False
             continue
@@ -304,7 +310,7 @@ def _emit_units(body_lines: list[str], aozora: bool = True) -> list[ReadingUnit]
         if block_end:
             heading_block = False
 
-    return units
+    return units, para_no, skipped
 
 
 # --- public API ----------------------------------------------------------
@@ -327,6 +333,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
                 f"novel file '{ref.path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
             )
     except OSError as e:
+        logger.debug("Aozora read failed: file=%s error=%s detail=%s", ref.path, type(e).__name__, e)
         raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e
     text = _decode(raw)
     lines = _cut_footer(_splitlines(text))
@@ -339,10 +346,21 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         title = ref.title
         body_lines = lines
 
-    return ReadingDocument(
+    units, paragraphs, skipped = _emit_units(body_lines, aozora=aozora)
+    doc = ReadingDocument(
         title=title,
         kind="book",
         series="Books",
         episode=title,
-        units=_emit_units(body_lines, aozora=aozora),
+        units=units,
     )
+    log_summary(
+        logger,
+        "Aozora parse",
+        file=ref.path,
+        paragraphs=paragraphs,
+        units=len(units),
+        chars=sum(len(unit.text) for unit in units),
+        skipped=skipped,
+    )
+    return doc

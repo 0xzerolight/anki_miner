@@ -104,6 +104,10 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
         """
         results: list = []
         try:
+            # Inside the try on purpose: ``pairs`` is caller-supplied and its
+            # __len__ can raise, and an exception out of QThread.run() aborts
+            # the process under PyQt6.
+            self.log_start("ManualPairWorkerThread", pairs=len(self.pairs))
             if self.check_cancelled():
                 self.result_ready.emit(results)
                 return
