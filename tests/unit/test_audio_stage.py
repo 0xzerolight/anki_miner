@@ -7,6 +7,7 @@ and assert on the fetch loops the stage now owns. The pure diagnosis helper is
 imported straight from ``orchestration.audio_stage``.
 """
 
+import logging
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -14,7 +15,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.models import MediaData, TokenizedWord
-from anki_miner.orchestration.audio_stage import _audio_failure_diagnosis
+from anki_miner.orchestration.audio_stage import AudioStage, _audio_failure_diagnosis
 from anki_miner.orchestration.episode_processor import _EpisodeContext
 from anki_miner.presenters import NullPresenter
 from tests.conftest import build_processor
@@ -78,6 +79,81 @@ def _wire_pipeline(mock_services, pairs):
     mock_services["media_extractor"].extract_media_batch.return_value = pairs
     mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"] * len(words)
     mock_services["anki_service"].create_cards_batch.return_value = list(range(len(words)))
+
+
+class TestAudioStageLogging:
+    """Bounded operation receipts for the hot expression-audio loop."""
+
+    @staticmethod
+    def _stage(config, fetcher, presenter=None):
+        return AudioStage(
+            config=config,
+            presenter=presenter or NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=fetcher,
+            sentence_audio_fetcher=None,
+        )
+
+    @staticmethod
+    def _enabled_config(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    def test_stage_summary_includes_failure_counter(self, test_config, caplog):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts(ssl=1)
+        stage = self._stage(self._enabled_config(test_config), fetcher)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_expression_audio([(_make_word(), _make_media())], None)
+
+        record = next(record for record in caplog.records if record.getMessage().startswith("Audio stage done:"))
+        assert "ssl=1" in record.getMessage()
+        assert record.levelno == logging.INFO
+        assert record.name == "anki_miner.orchestration.audio_stage"
+
+    def test_inactive_stage_logs_field_not_mapped_reason(self, test_config, caplog):
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": ""},
+        )
+        stage = self._stage(config, MagicMock())
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_expression_audio([(_make_word(), _make_media())], None)
+
+        record = next(record for record in caplog.records if record.getMessage().startswith("Expression audio gate:"))
+        assert "reason=field_not_mapped" in record.getMessage()
+
+    def test_stage_logging_does_not_scale_per_word(self, test_config, caplog):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts()
+        stage = self._stage(self._enabled_config(test_config), fetcher)
+        pairs = [(_make_word(lemma=f"word-{index}"), _make_media(str(index))) for index in range(50)]
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_expression_audio(pairs, None)
+
+        records = [record for record in caplog.records if record.name == "anki_miner.orchestration.audio_stage"]
+        assert any(record.getMessage().startswith("Audio stage done:") for record in records)
+        assert len(records) < 10
+
+    def test_diagnosis_is_logged_at_warning(self, test_config, caplog):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts(timeout=1)
+        stage = self._stage(self._enabled_config(test_config), fetcher, MagicMock())
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_expression_audio([(_make_word(), _make_media())], None)
+
+        record = next(record for record in caplog.records if record.getMessage().startswith("Audio stage diagnosis:"))
+        assert record.levelno == logging.WARNING
+        assert record.name == "anki_miner.orchestration.audio_stage"
 
 
 class TestExpressionAudio:
