@@ -1974,7 +1974,7 @@ class SubtitleParserService:
         )
 
     def _recover_kana_content_word(self, word_token) -> bool:
-        """Whether an otherwise-rejected pure-hiragana content word is recoverable.
+        """Whether an otherwise-rejected hiragana content word is recoverable.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
@@ -1986,8 +1986,10 @@ class SubtitleParserService:
            grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな) and
            auxiliary-capable verbs (いる/ある/くれる in ている/てくれる)
            content_gate_ok alone would let through.
-        3. The surface is pure hiragana — the only class the script gate dropped;
-           everything else was already decided by ``should_include``.
+        3. Removing ``ー`` leaves non-empty pure hiragana — the script gate also
+           drops colloquial hiragana words containing the prolonged-sound mark.
+           Removal is only for this check; cache/mining/attestation keep the
+           original surface.
         4. ``content_gate_ok`` passes and the mined-form card front is attested
            (memoized per ``(surface, pos1)`` — steps 4+ run once per distinct
            token, never per occurrence).
@@ -2003,7 +2005,7 @@ class SubtitleParserService:
             # grammar, not vocabulary. See constant for the full rationale.
             return False
         surface = word_token.surface
-        if not isinstance(surface, str) or not _is_pure_hiragana(surface):
+        if not isinstance(surface, str) or not _is_pure_hiragana(surface.replace("ー", "")):
             return False
         key = (surface, pos1)
         if key not in self._kana_recover_cache:

@@ -1105,12 +1105,13 @@ def _attest_lookup(*attested):
 
 
 class TestKanaWordRecovery:
-    """Parser-seam recovery of pure-hiragana content words the script gate drops.
+    """Parser-seam recovery of hiragana content words the script gate drops.
 
     _should_include_word admits a token should_include rejects when ALL hold:
     POS ∈ {動詞,形容詞,形状詞} (never 名詞), content_gate_ok passes, the surface
-    is pure hiragana, and its mined-form card front is attested via the injected
-    term-OR-reading existence probe. No probe wired ⇒ today's behavior.
+    is hiragana after removing prolonged-sound marks, and its mined-form card
+    front is attested via the injected term-OR-reading existence probe. No probe
+    wired ⇒ today's behavior.
     """
 
     def _service(self, test_config, lookup):
@@ -1157,6 +1158,20 @@ class TestKanaWordRecovery:
         service = self._service(test_config, lookup)
         token = _make_token(surface, "形容詞", pos2="一般", lemma=lemma, orth_base=surface)
         assert service._should_include_word(token) is True
+
+    def test_recovers_hiragana_adjective_with_prolonged_sound_mark(self, test_config):
+        lookup = _attest_lookup("すごい")
+        service = self._service(test_config, lookup)
+        token = _make_token("すげー", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["すごい"]]
+
+    def test_does_not_recover_only_prolonged_sound_marks(self, test_config):
+        lookup = _attest_lookup("すごい")
+        service = self._service(test_config, lookup)
+        token = _make_token("ーー", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい")
+        assert service._recover_kana_content_word(token) is False
+        assert lookup.calls == []
 
     @pytest.mark.parametrize(("surface", "lemma"), [("こと", "事"), ("もの", "物"), ("ため", "為")])
     def test_does_not_recover_formal_noun(self, test_config, surface, lemma):

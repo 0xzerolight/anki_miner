@@ -163,7 +163,7 @@ def test_anchor_strictly_beats_orthbase_on_colloquial() -> None:
     results = _scored()
     a_co = recall(results["a-lite-orthbase"].by_category["colloquial"])
     b_co = recall(results["b-lite-anchor"].by_category["colloquial"])
-    # Load-bearing: すげえ/やべえ/うめえ/わかんない are pure-kana orthBases only
+    # Load-bearing: すげえ/すげー/やべえ/うめえ/わかんない are kana orthBases only
     # the attested kana recovery can mine; dict-free (a) gets 食う alone.
     assert b_co > a_co, f"strategy (b) colloquial recall {b_co} did not beat (a) {a_co}"
 
@@ -172,7 +172,7 @@ def test_anchor_meets_colloquial_floor() -> None:
     results = _scored()
     b_co = results["b-lite-anchor"].by_category["colloquial"]
     # Tripwire, not a fix: unidic-lite's orthBase is ALREADY modern for these
-    # (すげえ→すごい). Perfect score pins that; junk would mean a wrong form
+    # (すげえ/すげー→すごい). Perfect score pins that; junk would mean a wrong form
     # (e.g. the kanji lemma 凄い) or a reject regression (する from しちゃった).
     assert recall(b_co) == 1.0, f"strategy (b) colloquial recall {recall(b_co)} below 1.0"
     assert junk_rate(b_co) == 0.0, f"strategy (b) colloquial junk_rate {junk_rate(b_co)} above 0.0"
