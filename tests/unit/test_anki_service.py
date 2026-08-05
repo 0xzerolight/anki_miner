@@ -3509,6 +3509,18 @@ class TestVerifyCardTarget:
         ):
             service.verify_card_target()
 
+    def test_model_field_names_connection_error_propagates(self, test_config):
+        """A modelFieldNames failure must not become a field-mapping SetupError."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, AnkiConnectionError("field lookup failed")],
+            ),
+            pytest.raises(AnkiConnectionError, match="field lookup failed"),
+        ):
+            service.verify_card_target()
+
     def test_active_card_type_marker_validated_pass(self, test_config):
         """When a card type is active, its marker field must exist on the note type."""
         from dataclasses import replace

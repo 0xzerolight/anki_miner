@@ -273,19 +273,21 @@ class AnkiService:
 
     def note_type_field_names(self, note_type: str) -> set[str]:
         """Field names defined on ``note_type`` (AnkiConnect ``modelFieldNames``)."""
+        return set(self._ordered_note_type_field_names(note_type))
+
+    def _ordered_note_type_field_names(self, note_type: str) -> list[str]:
+        """Ordered field names defined on ``note_type``."""
         logger.debug("Anki note type field names: note_type=%s", note_type)
-        fields = set(
-            _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
-                    "modelFieldNames",
-                    params={"modelName": note_type},
-                    timeout=15,
-                )
-                or [],
+        fields = _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
                 "modelFieldNames",
-                elem_type=str,
+                params={"modelName": note_type},
+                timeout=15,
             )
+            or [],
+            "modelFieldNames",
+            elem_type=str,
         )
         logger.debug("Anki note type field names done: fields=%d", len(fields))
         return fields
@@ -324,7 +326,7 @@ class AnkiService:
                 f"Map each Anki Miner field to a different field on note type '{self.config.anki_note_type}'."
             )
 
-        ordered_actual = self.get_note_type_fields(self.config.anki_note_type)
+        ordered_actual = self._ordered_note_type_field_names(self.config.anki_note_type)
         actual = set(ordered_actual)
         required = configured_target_field_names(self.config)
         missing = required - actual
