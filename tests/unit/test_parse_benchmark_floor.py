@@ -274,6 +274,14 @@ def test_anchor_meets_katakana_pronoun_floor() -> None:
     assert junk_rate(b_kp) == 0.0, f"strategy (b) katakana-pronoun junk_rate {junk_rate(b_kp)} above 0.0"
 
 
+def test_both_strategies_meet_reading_override_floor() -> None:
+    results = _scored()
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["reading-override"]
+        assert recall(counts) == 1.0, f"{strategy} reading-override recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} reading-override junk_rate {junk_rate(counts)} above 0.0"
+
+
 def test_orthbase_meets_kana_runs_floor() -> None:
     results = _scored()
     # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)
