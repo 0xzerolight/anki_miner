@@ -151,10 +151,17 @@ class EpisodeMatcher:
         # Match by episode number. A subtitle is consumed once and never reused:
         # without this, multiple videos sharing an episode number (multiple shows
         # in one folder) all collapse onto the first matching subtitle (Issue #39).
+        # Prefer an explicit same-season match before a seasonless fallback.
         pairs = []
         used_subtitles: set[Path] = set()
         for video_info in video_episodes:
-            for subtitle_info in subtitle_episodes:
+            subtitle_candidates = sorted(
+                subtitle_episodes,
+                key=lambda candidate: (
+                    not (video_info.season_number is not None and candidate.season_number == video_info.season_number)
+                ),
+            )
+            for subtitle_info in subtitle_candidates:
                 if subtitle_info.file_path in used_subtitles:
                     continue
                 # Match if episode numbers are the same

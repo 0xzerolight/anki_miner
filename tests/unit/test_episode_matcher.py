@@ -449,6 +449,16 @@ class TestEpisodeMatcher:
         # Should not match - seasons differ
         assert len(pairs) == 0
 
+    def test_prefers_explicit_same_season_before_seasonless(self, tmp_path):
+        videos = [tmp_path / "Show.S02E01.mkv", tmp_path / "Show.S01E01.mkv"]
+        subtitles = [tmp_path / "Show.01.srt", tmp_path / "Show.S02E01.ass"]
+        for path in videos + subtitles:
+            path.touch()
+
+        pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
+
+        assert pairs == [(videos[0], subtitles[1]), (videos[1], subtitles[0])]
+
     def test_returns_sorted_by_episode(self, tmp_path):
         """Should return pairs sorted by episode number."""
         video_dir = tmp_path / "videos"
