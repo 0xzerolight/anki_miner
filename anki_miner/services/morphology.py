@@ -678,13 +678,15 @@ def _merge_noun_suffixes(tokens: list, attest: AttestLookup | None = None) -> li
     like ~性 / ~中 / ~的 carry their own dictionary form and we preserve it.
 
     Attested-or-bail gate (``attest`` not None): a chain is minted only when its
-    concatenated surface is a dictionary headword OR it is a curated kinship
-    compound (``special_head`` — 兄ちゃん/父さま, whose reading the dictionary
-    does not attest but which we must keep). Otherwise the WHOLE greedy chain
-    bails to its components: the head is emitted alone and the suffix tokens
-    re-enter the loop as bare tokens (a following dictionary matcher can then
-    recover the longest attested sub-span). One batched probe per line covers
-    every candidate. ``attest=None`` mints unconditionally (pre-gate behavior).
+    concatenated surface is a dictionary headword. On a full-surface miss, a
+    curated kinship compound (``special_head`` — 兄ちゃん/父さま, whose reading
+    the dictionary does not attest but which we must keep) mints only through
+    its first licensing suffix; later suffixes re-enter the loop as bare tokens.
+    Every other miss bails the WHOLE greedy chain to its components: the head is
+    emitted alone and all suffix tokens re-enter the loop (a following dictionary
+    matcher can then recover the longest attested sub-span). One batched probe
+    per line covers every candidate. ``attest=None`` mints unconditionally
+    (pre-gate behavior).
 
     The non-kinship branch overlaps CompoundDictionaryMatcher (which also
     recovers attested 名詞+接尾辞 spans) but is retained deliberately: the
@@ -704,13 +706,16 @@ def _merge_noun_suffixes(tokens: list, attest: AttestLookup | None = None) -> li
             # concatenated isolated-head アニチャン (see _KINSHIP_HEAD_READINGS).
             # Licensed by the first suffix in the chain (the adjacent honorific).
             special_head = resolve_special_reading(head.surface, chain[0].surface)
-            # Attested-or-bail: unattested, non-kinship chains fragment back to
-            # their components. Kinship carve-out (special_head not None) mints
-            # even when unattested.
-            if attested is not None and surf not in attested and special_head is None:
-                merged.append(head)
-                i += 1
-                continue
+            # Attested-or-bail: ordinary misses fragment back to their
+            # components. The kinship carve-out covers only the head plus its
+            # adjacent licensing suffix; any later suffix must re-enter bare.
+            if attested is not None and surf not in attested:
+                if special_head is None:
+                    merged.append(head)
+                    i += 1
+                    continue
+                chain = chain[:1]
+                surf = head.surface + chain[0].surface
             try:
                 head_kana = head.feature.kana or head.surface
             except AttributeError:

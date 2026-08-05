@@ -136,12 +136,15 @@ def test_anchor_meets_nominal_suffix_floor() -> None:
     results = _scored()
     b_ns = results["b-lite-anchor"].by_category["nominal-suffix"]
     # The gate must be perfect on the finalized nominal-suffix corpus: every
-    # attested compound stays whole (刑務所/不可能/重要性) and every unattested one
-    # bails to exactly its bare noun (状況/会議/反応) — no misses, no junk.
+    # attested compound stays whole (刑務所/不可能/重要性), every ordinary
+    # unattested one bails to its bare noun (状況/会議/反応), and an unattested
+    # kinship tail stops at the licensed 兄ちゃん boundary — no misses, no junk.
     assert recall(b_ns) == 1.0, f"strategy (b) nominal-suffix recall {recall(b_ns)} below 1.0"
     assert junk_rate(b_ns) == 0.0, f"strategy (b) nominal-suffix junk_rate {junk_rate(b_ns)} above 0.0"
     assert mine_lite_orthbase("食べる方") == {"食べる"}
     assert mine_lite_anchor("食べる方") == {"食べる"}
+    assert mine_lite_orthbase("兄ちゃん的には") == {"兄ちゃん的"}
+    assert mine_lite_anchor("兄ちゃん的には") == {"兄ちゃん"}
 
 
 def test_both_strategies_meet_verb_nominalizer_floor() -> None:

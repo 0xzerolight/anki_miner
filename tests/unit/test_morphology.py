@@ -687,6 +687,24 @@ class TestMergeCompoundSuffixesAttestGate:
         assert merged[0].feature.kana == "ニイチャン"
         assert getattr(merged[0].feature, "kana_special", False) is True
 
+    def test_unattested_kinship_tail_consumes_only_licensing_suffix(self):
+        trailing = _suffix_token("的", "テキ")
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン"), trailing],
+            attest=self._attest(set()),
+        )
+        assert [t.surface for t in merged] == ["兄ちゃん", "的"]
+        assert merged[0].feature.kana == "ニイチャン"
+        assert merged[1] is trailing
+
+    def test_attested_full_kinship_chain_stays_whole(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン"), _suffix_token("的", "テキ")],
+            attest=self._attest({"兄ちゃん的"}),
+        )
+        assert [t.surface for t in merged] == ["兄ちゃん的"]
+        assert merged[0].feature.kana == "ニイチャンテキ"
+
     # --- verb nominalizer is NEVER gated ----------------------------------
 
     def test_verb_nominalizer_is_ungated(self):
@@ -746,6 +764,14 @@ class TestMergeCompoundSuffixesAttestGate:
         )
         assert len(merged) == 1
         assert merged[0].surface == "状況的"
+
+    def test_none_attest_keeps_full_kinship_chain_unchanged(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン"), _suffix_token("的", "テキ")],
+            attest=None,
+        )
+        assert [t.surface for t in merged] == ["兄ちゃん的"]
+        assert merged[0].feature.kana == "ニイチャンテキ"
 
 
 class TestApplySpecialReadings:
