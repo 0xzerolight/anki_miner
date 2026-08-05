@@ -1715,9 +1715,13 @@ class SubtitleParserService:
         own all-katakana orthBase (ヤル) whose lForm/kanaBase readings are equal
         (both ヤル), so ``mining_base`` and ``_attest_or_remap_front`` both keep
         it — the card front ships as ヤル, splitting definition/frequency/dedup/
-        audio from the やる card the learner already has. Reached only after
-        ``resolve_dictionary_form`` and ``_attest_or_remap_front`` both left
-        ``orth_base`` unchanged (a 動詞/形容詞 with a wired ``term_lookup``).
+        audio from the やる card the learner already has. Two call sites: the
+        mining path reaches it only after ``resolve_dictionary_form`` and
+        ``_attest_or_remap_front`` both left ``orth_base`` unchanged (a
+        動詞/形容詞 with a wired ``term_lookup``); ``_is_katakana_run_fragment``
+        (X3-004) probes it BEFORE those seams to prove a katakana verb token
+        folds to a non-katakana common front and must survive the run-fragment
+        guard.
 
         Folds ``orth_base`` → its hiragana reading iff ALL hold:
 
@@ -1788,10 +1792,12 @@ class SubtitleParserService:
           U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
           window reject never touches a morphology-accepted token.
         - ``should_include`` rejects → last-chance ``_recover_kana_content_word``
-          (pure-hiragana content word attested as its own front). On a recovery
-          acceptance, apply the U4 lexicalized-window reject
-          (``_rejected_by_lexicalized_window``). Recovery surfaces are pure
-          hiragana, so the katakana guard can never fire on this branch.
+          (hiragana content word — pure hiragana once prolonged-sound marks are
+          set aside for the script check, e.g. すげー — attested as its own
+          front). On a recovery acceptance, apply the U4 lexicalized-window
+          reject (``_rejected_by_lexicalized_window``). Recovery surfaces are
+          never all-katakana, so the katakana guard can never fire on this
+          branch.
 
         ``_should_include_word`` stays the token-only, span-free gate that unit
         tests and non-span callers use directly; this method reproduces its
