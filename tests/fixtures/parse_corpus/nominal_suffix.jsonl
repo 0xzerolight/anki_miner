@@ -7,3 +7,4 @@
 {"id":"ns07","sentence":"食べる方","expected":["食べる"],"category":"nominal-suffix","note":"方 must not nominalize a verb in 終止形; only a 連用形 head licenses the merge"}
 {"id":"ns-new-terminal-verb","sentence":"食べる方。","expected":["食べる"],"category":"nominal-suffix","note":"終止形 食べる must not mint the non-headword 食べる方; only 連用形 stems enter pass 3."}
 {"id":"ns-new-kinship-tail","sentence":"兄ちゃん的には","expected":["兄ちゃん"],"category":"nominal-suffix","note":"The curated unattested carve-out covers 兄ちゃん only, not the unattested trailing 的."}
+{"id":"ns-new-prefix-final-only","sentence":"不可能性","expected":["不可能性"],"category":"nominal-suffix","note":"The final prefixed suffix chain is attested although the temporary 不可能 intermediate is absent."}

@@ -136,7 +136,7 @@ def test_anchor_meets_nominal_suffix_floor() -> None:
     results = _scored()
     b_ns = results["b-lite-anchor"].by_category["nominal-suffix"]
     # The gate must be perfect on the finalized nominal-suffix corpus: every
-    # attested compound stays whole (刑務所/不可能/重要性), every ordinary
+    # attested compound stays whole (刑務所/不可能/不可能性/重要性), every ordinary
     # unattested one bails to its bare noun (状況/会議/反応), and an unattested
     # kinship tail stops at the licensed 兄ちゃん boundary — no misses, no junk.
     assert recall(b_ns) == 1.0, f"strategy (b) nominal-suffix recall {recall(b_ns)} below 1.0"

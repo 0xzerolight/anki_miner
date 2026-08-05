@@ -452,15 +452,18 @@ def merge_compound_suffixes(tokens: list, attest: AttestLookup | None = None) ->
        suffix is a verb-stem nominalizer (方/手/様). Independent of (1)
        and (2) so order is irrelevant.
 
-    ``attest`` gates passes 1 and 2: a synthetic prefix/noun-suffix compound is
-    minted only when the dictionary attests its surface (or, for the noun-suffix
-    pass, it is a curated kinship compound — 兄ちゃん — whose reading must be
-    preserved even though no dictionary attests it). An unattested candidate
-    bails the WHOLE greedy chain to its bare components, letting the downstream
-    dictionary matcher recover the longest attested sub-span (入院中的 → 入院中).
-    Pass 3 is NEVER gated — its {方,手,様} whitelist is productive, near-zero
-    junk. ``attest=None`` (the default that keeps every existing direct caller
-    byte-identical) leaves all three passes ungated.
+    ``attest`` gates passes 1 and 2: a prefix synthetic is minted when the
+    dictionary attests either its surface or the complete immediate noun-suffix
+    chain that needs it as a temporary head; the noun-suffix pass remains the
+    authority that validates and mints that final chain. Otherwise a synthetic
+    is minted only when the dictionary attests its surface (or, for the
+    noun-suffix pass, it is a curated kinship compound — 兄ちゃん — whose reading
+    must be preserved even though no dictionary attests it). An unattested
+    candidate bails the WHOLE greedy chain to its bare components, letting the
+    downstream dictionary matcher recover the longest attested sub-span
+    (入院中的 → 入院中). Pass 3 is NEVER gated — its {方,手,様} whitelist is
+    productive, near-zero junk. ``attest=None`` (the default that keeps every
+    existing direct caller byte-identical) leaves all three passes ungated.
     """
     tokens = _merge_prefix_compounds(tokens, attest)
     tokens = _merge_noun_suffixes(tokens, attest)
@@ -612,6 +615,23 @@ def replace_overridden_spans(text: str, raw_tokens: list, merged_tokens: list) -
     return out
 
 
+def _nominal_suffix_run(tokens: list, start: int) -> list:
+    """Consecutive nominal-suffix tokens starting at ``start``."""
+    chain: list = []
+    n = len(tokens)
+    while start < n:
+        try:
+            p1 = tokens[start].feature.pos1
+            p2 = tokens[start].feature.pos2
+        except AttributeError:
+            break
+        if p1 != "接尾辞" or p2 not in _NOMINAL_SUFFIX_POS2:
+            break
+        chain.append(tokens[start])
+        start += 1
+    return chain
+
+
 def _nominal_suffix_chain(tokens: list, i: int) -> list:
     """Run of nominal-suffix tokens immediately following a 名詞 head at ``i``.
 
@@ -626,21 +646,7 @@ def _nominal_suffix_chain(tokens: list, i: int) -> list:
             return []
     except AttributeError:
         return []
-    chain: list = []
-    j = i + 1
-    n = len(tokens)
-    while j < n:
-        try:
-            p1 = tokens[j].feature.pos1
-            p2 = tokens[j].feature.pos2
-        except AttributeError:
-            break
-        if p1 == "接尾辞" and p2 in _NOMINAL_SUFFIX_POS2:
-            chain.append(tokens[j])
-            j += 1
-        else:
-            break
-    return chain
+    return _nominal_suffix_run(tokens, i + 1)
 
 
 def _attested_noun_suffix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
@@ -765,11 +771,11 @@ def _merge_noun_suffixes(tokens: list, attest: AttestLookup | None = None) -> li
 
 
 def _attested_prefix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
-    """One batched attestation probe of every 接頭辞+名詞/形状詞 compound surface.
+    """Batch prefix intermediates and their complete immediate suffix chains.
 
     Greedy walk mirroring ``_merge_prefix_compounds``, so the probed set is
-    exactly what the merge loop weighs; bail-invariant (a bailed prefix
-    re-exposes only its 名詞/形状詞 root, which never starts a 接頭辞 compound).
+    exactly what the merge loop weighs. A final chain hit licenses the temporary
+    prefix synthetic that ``_merge_noun_suffixes`` needs as its 名詞 head.
     Returns the attested SUBSET; no probe when the line has no candidate.
     """
     surfaces: set[str] = set()
@@ -789,7 +795,11 @@ def _attested_prefix_surfaces(tokens: list, attest: AttestLookup) -> set[str]:
                 i += 1
                 continue
             if root_pos1 in {"名詞", "形状詞"}:
-                surfaces.add(head.surface + root.surface)
+                surf = head.surface + root.surface
+                surfaces.add(surf)
+                suffix_run = _nominal_suffix_run(tokens, i + 2)
+                if suffix_run:
+                    surfaces.add(surf + "".join(t.surface for t in suffix_run))
                 i += 2
                 continue
         i += 1
@@ -811,13 +821,15 @@ def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) ->
     from the root, defaulting to 普通名詞 when unidic emits "*".
 
     Attested-or-bail gate (``attest`` not None): the prefix synthetic is minted
-    only when its surface is a dictionary headword. Otherwise it bails — the
-    接頭辞 head is emitted alone (the inclusion gate drops it later, 接頭辞 ∉
-    allowed_pos) and the root re-enters the loop to be mined on its own (超反応
-    → 反応). One batched probe per line. ``attest=None`` mints unconditionally
-    (pre-gate behavior). This pass cannot move to the matcher — the matcher's
-    span-start requires a mineable POS and 接頭辞 is not one, which would give
-    不可能 → 可能.
+    when either its surface or its complete immediate noun-suffix chain is a
+    dictionary headword. A final-chain hit licenses only the temporary prefix
+    synthetic; ``_merge_noun_suffixes`` still validates and mints the final
+    chain. Otherwise it bails — the 接頭辞 head is emitted alone (the inclusion
+    gate drops it later, 接頭辞 ∉ allowed_pos) and the root re-enters the loop to
+    be mined on its own (超反応 → 反応). One batched probe per line.
+    ``attest=None`` mints unconditionally (pre-gate behavior). This pass cannot
+    move to the matcher — the matcher's span-start requires a mineable POS and
+    接頭辞 is not one, which would give 不可能 → 可能.
     """
     attested = _attested_prefix_surfaces(tokens, attest) if attest is not None else None
     merged: list = []
@@ -841,13 +853,15 @@ def _merge_prefix_compounds(tokens: list, attest: AttestLookup | None = None) ->
                 continue
             if root_pos1 in {"名詞", "形状詞"}:
                 surf = head.surface + root.surface
-                # Attested-or-bail: an unattested prefix compound bails — append
-                # the 接頭辞 (dropped later by the inclusion gate) and let the
-                # root re-enter and be mined on its own.
-                if attested is not None and surf not in attested:
-                    merged.append(head)
-                    i += 1
-                    continue
+                if attested is not None:
+                    suffix_run = _nominal_suffix_run(tokens, i + 2)
+                    final_surf = surf + "".join(t.surface for t in suffix_run)
+                    # The full chain may license this temporary synthetic; the
+                    # noun-suffix pass still owns the final mint-or-bail gate.
+                    if surf not in attested and final_surf not in attested:
+                        merged.append(head)
+                        i += 1
+                        continue
                 # Treat unidic's "*" placeholder as missing pos2.
                 root_pos2 = raw_root_pos2 if raw_root_pos2 and raw_root_pos2 != "*" else "普通名詞"
                 try:

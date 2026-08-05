@@ -9,6 +9,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services import morphology
 from anki_miner.services.morphology import (
     SyntheticToken,
@@ -23,6 +25,7 @@ from anki_miner.services.morphology import (
     resolve_reading_override,
     resolve_special_reading,
 )
+from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
 def _fugashi_available() -> bool:
@@ -675,6 +678,38 @@ class TestMergeCompoundSuffixesAttestGate:
         assert len(merged) == 1
         assert merged[0].surface == "無関係"
 
+    def test_prefix_mints_temporary_when_only_final_chain_is_attested(self):
+        merged = merge_compound_suffixes(
+            [
+                _prefix_token("不", "フ"),
+                _keijoushi_token("可能", "カノウ"),
+                _suffix_token("性", "セイ"),
+            ],
+            attest=self._attest({"不可能性"}),
+        )
+        assert [t.surface for t in merged] == ["不可能性"]
+
+    def test_prefix_chain_stops_at_attested_intermediate_when_final_is_unattested(self):
+        merged = merge_compound_suffixes(
+            [
+                _prefix_token("不", "フ"),
+                _keijoushi_token("可能", "カノウ"),
+                _suffix_token("性", "セイ"),
+            ],
+            attest=self._attest({"不可能"}),
+        )
+        assert [t.surface for t in merged] == ["不可能", "性"]
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_final_prefixed_suffix_attests_without_intermediate_real_pipeline(self):
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=lambda terms: set(terms) & {"不可能性"},
+        )
+        unit = ReadingUnit(text="不可能性", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        assert {word.mined_form for word in words} == {"不可能性"}
+
     # --- kinship carve-out: mint even when unattested ---------------------
 
     def test_kinship_compound_mints_even_when_unattested(self):
@@ -764,6 +799,17 @@ class TestMergeCompoundSuffixesAttestGate:
         )
         assert len(merged) == 1
         assert merged[0].surface == "状況的"
+
+    def test_none_attest_keeps_full_prefix_suffix_chain_unchanged(self):
+        merged = merge_compound_suffixes(
+            [
+                _prefix_token("不", "フ"),
+                _keijoushi_token("可能", "カノウ"),
+                _suffix_token("性", "セイ"),
+            ],
+            attest=None,
+        )
+        assert [t.surface for t in merged] == ["不可能性"]
 
     def test_none_attest_keeps_full_kinship_chain_unchanged(self):
         merged = merge_compound_suffixes(
