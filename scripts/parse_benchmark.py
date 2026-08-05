@@ -334,13 +334,14 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # long-compound (Task 6): the 2-token attested compounds the matcher must
     # keep whole — 走り出す pins inflected-tail kind-A deinflection, 応急処置 is
     # attestation-only, and the 13-char katakana compound needs the 16-char span
-    # cap. The 14-char greeting is DELIBERATELY attested: it must still NOT merge
-    # (7 tokens > the 5-token cap) — the adversarial proof the token cap holds
-    # even for attested long phrases.
+    # cap. The 18-char katakana string is DELIBERATELY attested: it must still NOT
+    # merge (over the 16-char cap). The 14-char greeting is also attested: it must
+    # still NOT merge (7 tokens > the 5-token cap).
     "走り出す",
     "応急処置",
     "アプリケーションプログラム",
     "お誕生日おめでとうございます",
+    "インターナショナルコミュニケーション",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
