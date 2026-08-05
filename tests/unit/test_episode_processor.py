@@ -16,6 +16,7 @@ from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     MIN_EPISODE_APPEARANCES,
+    EpisodeProcessor,
     _EpisodeContext,
     sanitize_source_label,
 )
@@ -3258,6 +3259,61 @@ def _make_line_lemmas(text="新しい単語", lemmas=("新しい",), start=1.0, 
         end_time=end,
         duration=end - start,
     )
+
+
+def test_i_plus_one_cannot_change_unknown_noun_front_to_known_sibling(test_config):
+    config = replace(test_config, use_i_plus_one_filter=True)
+    processor = EpisodeProcessor.__new__(EpisodeProcessor)
+    processor.config = config
+    processor.presenter = MagicMock()
+    processor.frequency_service = None
+    processor.known_word_db = None
+    processor.anki_service = MagicMock()
+    processor.anki_service.get_existing_vocabulary.return_value = {"取引"}
+    processor.word_filter = WordFilterService(config)
+    processor.word_list_service = None
+    processor.wordset_service = None
+    processor.stats_service = None
+    processor.definition_service = MagicMock()
+    processor.definition_service.has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
+    processor.definition_service.offline_term_identities.return_value = {}
+
+    def _noun(surface: str, start_time: float) -> TokenizedWord:
+        return TokenizedWord(
+            surface=surface,
+            lemma="取り引き",
+            reading="トリヒキ",
+            expression_reading="とりひき",
+            sentence=f"{surface}する。",
+            start_time=start_time,
+            end_time=start_time + 1.0,
+            duration=1.0,
+            pos="名詞",
+        )
+
+    lines = [
+        LineLemmas(
+            "取引する。",
+            frozenset({"取り引き"}),
+            0.0,
+            1.0,
+            1.0,
+            lemma_spans=(("取り引き", "取引", 0, 2, 2),),
+        ),
+        LineLemmas(
+            "取り引きする。",
+            frozenset({"取り引き"}),
+            2.0,
+            3.0,
+            1.0,
+            lemma_spans=(("取り引き", "取り引き", 0, 4, 4),),
+        ),
+    ]
+    ctx = _EpisodeContext(0.0, "", "", "e", "s", "")
+
+    result = processor._phase2_filter(ctx, [_noun("取引", 0.0), _noun("取り引き", 2.0)], lines, None)
+
+    assert [word.mined_form for word in result] == ["取り引き"]
 
 
 class TestIPlusOneFilter:

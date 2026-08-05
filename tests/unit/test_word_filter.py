@@ -880,6 +880,7 @@ class TestWordFilterService:
                 start_time=0.0,
                 end_time=1.0,
                 duration=1.0,
+                pos="動詞",
                 surface_start=0,
                 surface_end=3,
             )
@@ -903,11 +904,44 @@ class TestWordFilterService:
             assert swapped.sentence_bolded == ""
             assert swapped.sentence_furigana_bolded == ""
 
-        def test_i_plus_one_swap_recomputes_noun_furigana_reading(self):
-            """Regression for T-37: a noun (mined_form == surface) whose surface
-            differs across lines must end up with Expression, furigana, and
-            reading mutually consistent — furigana/reading recomputed from the
-            swapped-in surface, not left stale from the original surface.
+        def test_i_plus_one_skips_same_lemma_different_front(self, test_config):
+            service = WordFilterService(test_config)
+            word = TokenizedWord(
+                surface="取り引き",
+                lemma="取引",
+                reading="トリヒキ",
+                sentence="original",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                pos="名詞",
+            )
+            lines = [
+                LineLemmas(
+                    line_text="今日の取引",
+                    lemmas=frozenset({"取引"}),
+                    start_time=10.0,
+                    end_time=12.0,
+                    duration=2.0,
+                    lemma_spans=(("取引", "取引", 3, 5, 5),),
+                ),
+                LineLemmas(
+                    line_text="別の取り引き",
+                    lemmas=frozenset({"取引"}),
+                    start_time=20.0,
+                    end_time=22.0,
+                    duration=2.0,
+                    lemma_spans=(("取引", "取り引き", 2, 6, 6),),
+                ),
+            ]
+
+            result = service.filter_i_plus_one([word], lines)
+
+            assert [(item.mined_form, item.sentence) for item in result] == [("取り引き", "別の取り引き")]
+
+        def test_i_plus_one_compatible_surface_swap_recomputes_noun_furigana_reading(self):
+            """T-37 recomputation remains active when both noun surfaces select
+            the same card front.
             """
             from unittest.mock import MagicMock
 
@@ -915,7 +949,7 @@ class TestWordFilterService:
 
             # Mock tagger: returns one token whose surface+kana matches the text
             # it is handed, so generate_furigana/reading reflect the NEW surface.
-            kana_by_surface = {"取り引き": "トリヒキ", "取引": "トリヒキ"}
+            kana_by_surface = {"手": "テ"}
 
             def _tagger(text):
                 token = MagicMock()
@@ -926,40 +960,36 @@ class TestWordFilterService:
             config = AnkiMinerConfig()  # bold flag off; recompute must NOT depend on it
             service = WordFilterService(config, tagger=_tagger)
 
-            # Original word: noun mined as surface 取り引き; furigana/reading were
-            # computed from that original surface.
+            # 手ぇ and 手 both select the same noun card front (手), so this is
+            # a compatible surface swap rather than a cross-front identity change.
             word = TokenizedWord(
-                surface="取り引き",
-                lemma="取引",
-                reading="トリヒキ",
+                surface="手ぇ",
+                lemma="手",
+                reading="テェ",
                 sentence="original",
                 start_time=0.0,
                 end_time=1.0,
                 duration=1.0,
                 pos="名詞",
-                expression_furigana="取り引き[とりひき]",
-                expression_reading="とりひき",
+                expression_furigana="stale",
+                expression_reading="stale",
             )
-            # New i+1 line writes the same lemma with a DIFFERENT surface (取引).
             line = LineLemmas(
-                line_text="今日の取引",
-                lemmas=frozenset({"取引"}),
+                line_text="その手",
+                lemmas=frozenset({"手"}),
                 start_time=10.0,
                 end_time=12.0,
                 duration=2.0,
-                lemma_spans=(("取引", "取引", 3, 5, 5),),
+                lemma_spans=(("手", "手", 2, 3, 3),),
             )
 
             result = service.filter_i_plus_one([word], [line])
 
             assert len(result) == 1
             swapped = result[0]
-            # The Expression (mined_form == surface for a noun) is the new surface.
-            assert swapped.mined_form == "取引"
-            # ...and furigana/reading are consistent WITH that new surface, not
-            # the stale 取り引き[とりひき] / とりひき from the original.
-            assert swapped.expression_furigana == "取引[とりひき]"
-            assert swapped.expression_reading == "とりひき"
+            assert swapped.mined_form == "手"
+            assert swapped.expression_furigana == "手[て]"
+            assert swapped.expression_reading == "て"
 
         def test_i_plus_one_swap_recomputes_bolded_when_flag_on(self):
             """When the bold flag is on and a tagger is supplied, the swap rebuilds
@@ -992,6 +1022,7 @@ class TestWordFilterService:
                 start_time=0.0,
                 end_time=1.0,
                 duration=1.0,
+                pos="動詞",
             )
             line = LineLemmas(
                 line_text="今日も食べる",
@@ -1128,6 +1159,53 @@ class TestAttachSentenceCandidates:
         # Timing follows each candidate line.
         assert word.sentence_candidates[1].start_time == 5.0
         assert word.sentence_candidates[1].end_time == 6.0
+
+    def test_sentence_candidates_skip_same_lemma_different_front(self, test_config):
+        service = WordFilterService(test_config)
+        word = TokenizedWord(
+            surface="取り引き",
+            lemma="取引",
+            reading="トリヒキ",
+            sentence="元の取り引き",
+            start_time=0.0,
+            end_time=1.0,
+            duration=1.0,
+            pos="名詞",
+        )
+        line_index = [
+            LineLemmas(
+                line_text="元の取り引き",
+                lemmas=frozenset({"取引"}),
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                lemma_spans=(("取引", "取り引き", 2, 6, 6),),
+            ),
+            LineLemmas(
+                line_text="今日の取引",
+                lemmas=frozenset({"取引"}),
+                start_time=10.0,
+                end_time=12.0,
+                duration=2.0,
+                lemma_spans=(("取引", "取引", 3, 5, 5),),
+            ),
+            LineLemmas(
+                line_text="別の取り引き",
+                lemmas=frozenset({"取引"}),
+                start_time=20.0,
+                end_time=22.0,
+                duration=2.0,
+                lemma_spans=(("取引", "取り引き", 2, 6, 6),),
+            ),
+        ]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert [candidate.sentence for candidate in word.sentence_candidates] == [
+            "元の取り引き",
+            "別の取り引き",
+        ]
+        assert all(candidate.mined_form == "取り引き" for candidate in word.sentence_candidates)
 
     def test_current_sentence_is_among_candidates(self, test_config):
         """The word's current pick is always present so the curator can default-select it."""
