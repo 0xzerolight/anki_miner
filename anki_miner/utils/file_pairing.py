@@ -8,10 +8,10 @@ from pathlib import Path
 
 DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
-# Case folding is correct only where the filesystem is case-insensitive (Windows,
-# default macOS). On a case-sensitive volume, folding would treat two genuinely
-# distinct files as the same and an overwrite would destroy the wrong one.
-_CASE_INSENSITIVE_FS = sys.platform in ("win32", "darwin")
+# Explicit case folding is needed only on Windows. On macOS, preserving the
+# requested spelling lets the mounted volume decide whether case variants alias
+# or name distinct files, avoiding destructive matches on case-sensitive volumes.
+_CASE_INSENSITIVE_FS = sys.platform == "win32"
 
 
 def _nfc(name: str) -> str:
@@ -24,9 +24,9 @@ def _name_match_key(name: str) -> str:
 
     NFC always: NTFS stores exact UTF-16 and never normalizes, so an NFC request
     otherwise never matches an existing NFD file (the duplicate-subtitle bug).
-    Casefold only on a case-insensitive FS, so case-distinct files on a
-    case-sensitive volume are never collapsed into a destructive overwrite.
-    macOS folds NFC/NFD itself, so this is effectively a Windows-NTFS fix.
+    Casefold only on Windows. macOS keeps the requested case and lets the mounted
+    volume decide whether it aliases an existing path, so case-distinct files on
+    case-sensitive volumes are never collapsed into a destructive overwrite.
     """
     key = _nfc(name)
     return key.casefold() if _CASE_INSENSITIVE_FS else key
@@ -36,10 +36,10 @@ def resolve_output_path(out_dir: Path, name: str) -> Path:
     """Return the exact path the caller should write/replace for *name* in *out_dir*.
 
     Returns an EXISTING file when one is the "same" file as *name* up to NFC
-    normalization (and case, on a case-insensitive FS), so an overwrite replaces
-    it in place instead of creating a visually-identical twin that Windows treats
-    as a separate file. The returned path may already exist — the caller will
-    overwrite it.
+    normalization (and case on Windows), so an overwrite replaces it in place
+    instead of creating a visually-identical twin that Windows treats as a
+    separate file. The returned path may already exist — the caller will overwrite
+    it.
 
     Safety: a byte-exact match wins outright. If two or more DISTINCT files match
     only after normalization (and none is byte-exact), this refuses to guess and
@@ -68,8 +68,8 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     """Return the highest-priority sibling subtitle for *video_path*, or None.
 
     Looks in the same folder for a file whose stem matches *video_path*'s stem
-    and whose extension is one of *priority*.  Returns the first hit in priority
-    order, or None when no sibling exists.
+    and whose extension is one of *priority*.  Returns the best match in priority
+    order, preferring an exact stem, or None when no unambiguous sibling exists.
 
     Args:
         video_path: Video (or media) file whose sibling subtitle is sought.
@@ -81,7 +81,9 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     Matching is case-insensitive on both stem and extension, and NFC-normalized
     on the stem, so a ``.SRT`` (a differing-case stem, or an NFD-encoded stem) is
     still found on case-sensitive filesystems. Reads are non-destructive, so the
-    casefold here is unconditional (unlike the write-side resolver).
+    casefold here is unconditional (unlike the write-side resolver). Within one
+    extension, an exact stem wins; multiple normalization-only matches are
+    ambiguous and return ``None`` rather than depending on directory order.
     """
     exts = DEFAULT_SUBTITLE_PRIORITY if priority is None else tuple(priority)
     folder = video_path.parent
@@ -90,14 +92,20 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
         entries = [p for p in folder.iterdir() if p.is_file()]
     except OSError:
         return None
-    by_ext: dict[str, Path] = {}
+    by_ext: dict[str, list[Path]] = {}
     for p in entries:
         ext = p.suffix.lower()
         if ext in exts and _nfc(p.stem).casefold() == stem_cf:
-            by_ext.setdefault(ext, p)
+            by_ext.setdefault(ext, []).append(p)
     for ext in exts:
-        if ext in by_ext:
-            return by_ext[ext]
+        candidates = by_ext.get(ext, [])
+        exact = next((p for p in candidates if p.stem == video_path.stem), None)
+        if exact is not None:
+            return exact
+        if len(candidates) == 1:
+            return candidates[0]
+        if candidates:
+            return None
     return None
 
 
@@ -160,6 +168,18 @@ class FilePairMatcher:
             subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
         except OSError:
             return []
+
+        subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
+        subtitles.sort(
+            key=lambda subtitle: (
+                subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
+                subtitle.suffix.lower(),
+                _nfc(subtitle.name),
+                # NFC collapses canonically equivalent spellings to one key; the
+                # raw name makes the order total so iterdir() order can't decide.
+                subtitle.name,
+            )
+        )
 
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)

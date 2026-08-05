@@ -1,6 +1,11 @@
 """Tests for file_pairing module."""
 
+import subprocess
+import sys
 import unicodedata
+from pathlib import Path
+
+import pytest
 
 from anki_miner.utils import file_pairing
 from anki_miner.utils.file_pairing import FilePair, FilePairMatcher, resolve_output_path
@@ -166,6 +171,74 @@ class TestFilePairMatcher:
 
             assert [p.video.name for p in pairs] == ["Show_01.mkv", "Show_02.mkv", "Show_03.mkv"]
 
+        @pytest.mark.parametrize(
+            ("subtitle_names", "subtitle_extensions", "expected"),
+            [
+                (("Show_01.srt", "Show_01.ssa", "Show_01.ass"), None, "Show_01.ass"),
+                (("Show_01.srt", "Show_01.ssa"), None, "Show_01.ssa"),
+                (("Show_01.vtt", "Show_01.srt"), frozenset({".vtt", ".srt"}), "Show_01.srt"),
+                (("Zulu_01.vtt", "Alpha_01.sub"), frozenset({".vtt", ".sub"}), "Alpha_01.sub"),
+                (("Zulu_01.vtt", "Alpha_01.vtt"), frozenset({".vtt"}), "Alpha_01.vtt"),
+            ],
+        )
+        def test_subtitle_priority_is_independent_of_directory_order(
+            self,
+            tmp_path,
+            monkeypatch,
+            subtitle_names,
+            subtitle_extensions,
+            expected,
+        ):
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            video = video_dir / "Show_01.mkv"
+            video.touch()
+            subtitles = [sub_dir / name for name in subtitle_names]
+            for subtitle in subtitles:
+                subtitle.touch()
+
+            entries = {video_dir: [video], sub_dir: subtitles}
+            monkeypatch.setattr(Path, "iterdir", lambda path: iter(entries[path]))
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(
+                video_dir,
+                sub_dir,
+                subtitle_extensions=subtitle_extensions,
+            )
+
+            assert [pair.subtitle.name for pair in pairs] == [expected]
+
+        @pytest.mark.parametrize("reverse", [False, True])
+        def test_canonically_equivalent_names_pick_nfc_regardless_of_dir_order(self, tmp_path, monkeypatch, reverse):
+            """NFC and NFD spellings share one _nfc key; the raw-name tie-break
+            must make selection independent of iterdir() enumeration order."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            video = video_dir / (_DECOMPOSING_STEM + "_01.mkv")
+            video.touch()
+            names = [
+                unicodedata.normalize("NFC", _DECOMPOSING_STEM) + "_01.srt",
+                unicodedata.normalize("NFD", _DECOMPOSING_STEM) + "_01.srt",
+            ]
+            subtitles = [sub_dir / name for name in names]
+            for subtitle in subtitles:
+                subtitle.touch()
+            ordered = list(reversed(subtitles)) if reverse else list(subtitles)
+
+            entries = {video_dir: [video], sub_dir: ordered}
+            monkeypatch.setattr(Path, "iterdir", lambda path: iter(entries[path]))
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+
+            assert len(pairs) == 1
+            # Raw-name key makes the winner order-independent. By codepoint
+            # order the NFD spelling wins (base か U+304B < composed が U+304C).
+            assert pairs[0].subtitle.name == names[1]
+
 
 class TestResolveOutputPath:
     """Tests for resolve_output_path — the write-target resolver that stops the
@@ -226,6 +299,27 @@ class TestResolveOutputPath:
         (tmp_path / "ep01.srt").write_text("unrelated")
         assert resolve_output_path(tmp_path, "EP01.srt") == tmp_path / "EP01.srt"
 
+    def test_darwin_keeps_requested_case_for_case_distinct_file(self, tmp_path):
+        """Darwin may host a case-sensitive volume, so it must not enable
+        explicit case folding for output paths."""
+        (tmp_path / "ep01.srt").write_text("unrelated")
+        code = (
+            "import sys;"
+            "from pathlib import Path;"
+            "sys.platform='darwin';"
+            "from anki_miner.utils.file_pairing import resolve_output_path;"
+            "print(resolve_output_path(Path(sys.argv[1]), 'EP01.srt'))"
+        )
+
+        result = subprocess.run(
+            [sys.executable, "-c", code, str(tmp_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.stdout.strip() == str(tmp_path / "EP01.srt")
+
     def test_case_insensitive_fs_matches_case_variant(self, tmp_path, monkeypatch):
         """On a case-insensitive FS, a single case variant resolves to it."""
         monkeypatch.setattr(file_pairing, "_CASE_INSENSITIVE_FS", True)
@@ -244,6 +338,38 @@ def test_find_sibling_subtitle_matches_nfd_stem(tmp_path):
     sub = tmp_path / _NFD_NAME
     sub.touch()
     assert find_sibling_subtitle(video) == sub
+
+
+class TestFindSiblingSubtitleIdentity:
+    def test_exact_stem_wins_over_earlier_casefold_match(self, monkeypatch):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/Ep.mkv")
+        entries = [Path("/d/ep.ass"), Path("/d/Ep.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) == Path("/d/Ep.ass")
+
+    def test_sole_casefold_match_is_returned(self, monkeypatch):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/Ep.mkv")
+        entries = [Path("/d/ep.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) == Path("/d/ep.ass")
+
+    def test_ambiguous_normalization_only_matches_return_none(self, monkeypatch):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/EP.mkv")
+        entries = [Path("/d/ep.ass"), Path("/d/Ep.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) is None
 
 
 class TestFindPairsMissingFolder:

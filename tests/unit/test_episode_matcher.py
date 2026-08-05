@@ -1,10 +1,35 @@
 """Tests for episode_matcher module."""
 
+import pytest
+
 from anki_miner.utils.episode_matcher import EpisodeMatcher, EpisodeNumberExtractor
 
 
 class TestEpisodeNumberExtractor:
     """Tests for EpisodeNumberExtractor class."""
+
+    @pytest.mark.parametrize(
+        ("filename", "season", "episode"),
+        [
+            ("[SubsPlease] One Piece - 1120 (1080p).mkv", None, 1120),
+            ("[Group] Show - 01v2 [1080p].mkv", None, 1),
+            ("[Group] Show - 03 [1080p][HEVC][FLAC 2.0].mkv", None, 3),
+            ("[Group] Show - 03 [720p][x264-Hi10P].mkv", None, 3),
+            ("[Group] Show - 07 - 5 Centimeters per Second [1080p].mkv", None, 7),
+            ("3x3 Eyes - 01 [1080p].mkv", None, 1),
+            ("Anime_S01E05.mp4", 1, 5),
+            ("Show_1x05.mp4", 1, 5),
+            ("[Group] Special - 5 Centimeters per Second - 07 [1080p].mkv", None, 7),
+        ],
+    )
+    def test_prioritized_episode_patterns(self, tmp_path, filename, season, episode):
+        path = tmp_path / filename
+        path.touch()
+
+        result = EpisodeNumberExtractor.extract_episode_info(path)
+
+        assert result is not None
+        assert (result.season_number, result.episode_number) == (season, episode)
 
     class TestSeasonEpisodePatterns:
         """Tests for S01E01 style patterns."""
@@ -65,6 +90,28 @@ class TestEpisodeNumberExtractor:
 
             assert result is not None
             assert result.episode_number == 5
+
+        def test_does_not_extract_ep_inside_step(self, tmp_path):
+            path = tmp_path / "[Group] Show_01_Step 3 [1080p].mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == 1
+
+        def test_step_number_survives_as_sole_bare_candidate(self, tmp_path):
+            """Suppressing the embedded-ep candidate must not extract nothing
+            when it holds the only number in the name (Step_03.mkv → 3)."""
+            for name, episode in [("Step_03.mkv", 3), ("Show_Step_03.mkv", 3)]:
+                path = tmp_path / name
+                path.touch()
+
+                result = EpisodeNumberExtractor.extract_episode_info(path)
+
+                assert result is not None, name
+                assert result.episode_number == episode
+                assert result.season_number is None
 
         def test_extracts_standalone_number(self, tmp_path):
             """Should extract standalone numbers."""
@@ -414,6 +461,16 @@ class TestEpisodeMatcher:
 
         # Should not match - seasons differ
         assert len(pairs) == 0
+
+    def test_prefers_explicit_same_season_before_seasonless(self, tmp_path):
+        videos = [tmp_path / "Show.S02E01.mkv", tmp_path / "Show.S01E01.mkv"]
+        subtitles = [tmp_path / "Show.01.srt", tmp_path / "Show.S02E01.ass"]
+        for path in videos + subtitles:
+            path.touch()
+
+        pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
+
+        assert pairs == [(videos[0], subtitles[1]), (videos[1], subtitles[0])]
 
     def test_returns_sorted_by_episode(self, tmp_path):
         """Should return pairs sorted by episode number."""

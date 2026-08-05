@@ -42,10 +42,17 @@ class EpisodeNumberExtractor:
         # separator class lets "Show.S02 E05" be read as season 2 / episode 5
         # instead of falling through to BARE_NUMBER and mining the season.
         (r"[Ss](\d+)[\s._-]*[Ee](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
+        # Fansub release slot: "Title - 01v2 [1080p]" or "Title - 01 - Name".
+        # The following delimiter is required so an internal title fragment such
+        # as "- 5 Centimeters" cannot steal the episode slot.
+        (r"\s+-\s+(\d{1,4})(?:[vV]\d+)?(?=\s*(?:-|[\[(]|$))", lambda m: (None, int(m.group(1)))),
         # 1x01, 1X01 (season x episode)
         (r"(\d+)[xX](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
         # Episode 01, Ep01, ep.01, episode_01 (no season)
-        (r"[Ee][Pp](?:isode)?[\s._-]*(\d+)", lambda m: (None, int(m.group(1)))),
+        (
+            r"(?<![0-9A-Za-z])[Ee][Pp](?:isode)?[\s._-]*(\d+)(?![0-9A-Za-z])",
+            lambda m: (None, int(m.group(1))),
+        ),
     ]
 
     @classmethod
@@ -90,11 +97,22 @@ class EpisodeNumberExtractor:
                 season, episode = extractor(match)
                 return EpisodeInfo(file_path, episode, season)
 
+        # A number attached to an embedded "ep" token belongs to the ordinary
+        # word, not the episode marker (for example, "Step 3"). Prefer the
+        # remaining candidates over it — but when it holds the ONLY number in
+        # the name ("Step_03.mkv"), it is also the only episode candidate, so
+        # fall back to the unsuppressed name rather than extracting nothing.
+        suppressed = re.sub(
+            r"(?<=[0-9A-Za-z])[Ee][Pp](?:isode)?[\s._-]*\d+(?![0-9A-Za-z])",
+            "",
+            filename,
+        )
+
         # Last resort: bare number. Take the LAST 1-3 digit run, not the first —
         # numeric show titles ("86 - 03", "Mob Psycho 100 - 05") put the title
         # number first and the episode number last; taking the first collapsed
         # every file in the folder onto the title number (T-04).
-        bare = re.findall(cls.BARE_NUMBER, filename)
+        bare = re.findall(cls.BARE_NUMBER, suppressed) or re.findall(cls.BARE_NUMBER, filename)
         if bare:
             return EpisodeInfo(file_path, int(bare[-1]), None)
 
@@ -135,10 +153,17 @@ class EpisodeMatcher:
         # Match by episode number. A subtitle is consumed once and never reused:
         # without this, multiple videos sharing an episode number (multiple shows
         # in one folder) all collapse onto the first matching subtitle (Issue #39).
+        # Prefer an explicit same-season match before a seasonless fallback.
         pairs = []
         used_subtitles: set[Path] = set()
         for video_info in video_episodes:
-            for subtitle_info in subtitle_episodes:
+            subtitle_candidates = sorted(
+                subtitle_episodes,
+                key=lambda candidate: (
+                    not (video_info.season_number is not None and candidate.season_number == video_info.season_number)
+                ),
+            )
+            for subtitle_info in subtitle_candidates:
                 if subtitle_info.file_path in used_subtitles:
                     continue
                 # Match if episode numbers are the same
