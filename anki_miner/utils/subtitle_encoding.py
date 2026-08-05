@@ -1,4 +1,4 @@
-"""Shared pysubs2 encoding fallback (cp932-first, then detector).
+"""Shared pysubs2 encoding fallback (Unicode BOM, then cp932-first, then detector).
 
 Japanese subtitle files are frequently cp932/Shift-JIS, but pysubs2 defaults to
 UTF-8 and raises :class:`UnicodeDecodeError` on them. Both the Audio Condenser
@@ -11,22 +11,30 @@ the fallback chain lives in exactly one place.
 
 from __future__ import annotations
 
+import codecs
 from pathlib import Path
 
 import pysubs2
 
 
 def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
-    """Retry loading *path* with cp932, then a detected encoding (D10).
+    """Retry loading *path* from its BOM, then cp932, then detection (D10).
 
-    cp932 is tried before the charset-normalizer detector on purpose: the
-    detector confidently mis-detects real cp932 Japanese as ``cp949`` and
-    decodes it *without* raising (silent mojibake), so for the app's dominant
-    non-UTF-8 input the explicit cp932 attempt must win first. Only if cp932
-    itself raises :class:`UnicodeDecodeError` do we consult the (soft-imported)
-    detector; if that also fails, *original_error* (the UTF-8 error) is raised.
+    UTF-16/UTF-32 BOMs are authoritative and checked before cp932 because their
+    NUL-interleaved bytes can decode as cp932 without producing usable cues.
+    For BOM-free input, cp932 is tried before the charset-normalizer detector
+    on purpose: the detector confidently mis-detects real cp932 Japanese as
+    ``cp949`` and decodes it *without* raising (silent mojibake), so for the
+    app's dominant non-UTF-8 input the explicit cp932 attempt must win first.
+    Only if cp932 itself raises :class:`UnicodeDecodeError` do we consult the
+    (soft-imported) detector; if that also fails, *original_error* (the UTF-8
+    error) is raised.
     """
     path = Path(path)
+    if original_error.object.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
+        return pysubs2.load(str(path), encoding="utf_32")
+    if original_error.object.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
+        return pysubs2.load(str(path), encoding="utf_16")
     try:
         return pysubs2.load(str(path), encoding="cp932")
     except UnicodeDecodeError:
@@ -44,8 +52,8 @@ def _detect_encoding(path: Path) -> str | None:
     """Best-guess encoding for *path* via charset-normalizer, or None.
 
     charset-normalizer is soft-imported so its absence simply means the
-    detector leg of :func:`load_with_fallback_encoding` is skipped (the cp932
-    attempt there runs first and independently).
+    detector leg of :func:`load_with_fallback_encoding` is skipped (for
+    BOM-free input, the cp932 attempt there runs first and independently).
     """
     try:
         from charset_normalizer import from_path

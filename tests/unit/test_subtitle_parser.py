@@ -144,6 +144,17 @@ class TestParseSubtitleFile:
         assert "本" in lemmas
         assert "読む" in lemmas
 
+    def test_parses_bom_utf16_when_cp932_would_return_empty(self, test_config, tmp_path):
+        data = "1\r\n00:00:01,000 --> 00:00:03,000\r\n猫\r\n\r\n".encode("utf-16")
+        data.decode("cp932")  # Regression precondition: cp932 accepts these bytes.
+        sub_file = tmp_path / "utf16.srt"
+        sub_file.write_bytes(data)
+
+        service = SubtitleParserService(test_config)
+        words = service.parse_subtitle_file(sub_file)
+
+        assert [word.lemma for word in words] == ["猫"]
+
     def test_parses_words_from_lines(self, test_config, tmp_path):
         """Should extract TokenizedWord objects from subtitle lines."""
         sub_file = tmp_path / "test.ass"
