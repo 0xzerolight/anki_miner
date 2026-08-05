@@ -1,5 +1,7 @@
 """Tests for file_pairing module."""
 
+import subprocess
+import sys
 import unicodedata
 
 from anki_miner.utils import file_pairing
@@ -225,6 +227,27 @@ class TestResolveOutputPath:
         monkeypatch.setattr(file_pairing, "_CASE_INSENSITIVE_FS", False)
         (tmp_path / "ep01.srt").write_text("unrelated")
         assert resolve_output_path(tmp_path, "EP01.srt") == tmp_path / "EP01.srt"
+
+    def test_darwin_keeps_requested_case_for_case_distinct_file(self, tmp_path):
+        """Darwin may host a case-sensitive volume, so it must not enable
+        explicit case folding for output paths."""
+        (tmp_path / "ep01.srt").write_text("unrelated")
+        code = (
+            "import sys;"
+            "from pathlib import Path;"
+            "sys.platform='darwin';"
+            "from anki_miner.utils.file_pairing import resolve_output_path;"
+            "print(resolve_output_path(Path(sys.argv[1]), 'EP01.srt'))"
+        )
+
+        result = subprocess.run(
+            [sys.executable, "-c", code, str(tmp_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        assert result.stdout.strip() == str(tmp_path / "EP01.srt")
 
     def test_case_insensitive_fs_matches_case_variant(self, tmp_path, monkeypatch):
         """On a case-insensitive FS, a single case variant resolves to it."""

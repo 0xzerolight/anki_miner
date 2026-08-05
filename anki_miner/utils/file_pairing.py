@@ -8,10 +8,10 @@ from pathlib import Path
 
 DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
-# Case folding is correct only where the filesystem is case-insensitive (Windows,
-# default macOS). On a case-sensitive volume, folding would treat two genuinely
-# distinct files as the same and an overwrite would destroy the wrong one.
-_CASE_INSENSITIVE_FS = sys.platform in ("win32", "darwin")
+# Explicit case folding is needed only on Windows. On macOS, preserving the
+# requested spelling lets the mounted volume decide whether case variants alias
+# or name distinct files, avoiding destructive matches on case-sensitive volumes.
+_CASE_INSENSITIVE_FS = sys.platform == "win32"
 
 
 def _nfc(name: str) -> str:
@@ -24,9 +24,9 @@ def _name_match_key(name: str) -> str:
 
     NFC always: NTFS stores exact UTF-16 and never normalizes, so an NFC request
     otherwise never matches an existing NFD file (the duplicate-subtitle bug).
-    Casefold only on a case-insensitive FS, so case-distinct files on a
-    case-sensitive volume are never collapsed into a destructive overwrite.
-    macOS folds NFC/NFD itself, so this is effectively a Windows-NTFS fix.
+    Casefold only on Windows. macOS keeps the requested case and lets the mounted
+    volume decide whether it aliases an existing path, so case-distinct files on
+    case-sensitive volumes are never collapsed into a destructive overwrite.
     """
     key = _nfc(name)
     return key.casefold() if _CASE_INSENSITIVE_FS else key
@@ -36,10 +36,10 @@ def resolve_output_path(out_dir: Path, name: str) -> Path:
     """Return the exact path the caller should write/replace for *name* in *out_dir*.
 
     Returns an EXISTING file when one is the "same" file as *name* up to NFC
-    normalization (and case, on a case-insensitive FS), so an overwrite replaces
-    it in place instead of creating a visually-identical twin that Windows treats
-    as a separate file. The returned path may already exist — the caller will
-    overwrite it.
+    normalization (and case on Windows), so an overwrite replaces it in place
+    instead of creating a visually-identical twin that Windows treats as a
+    separate file. The returned path may already exist — the caller will overwrite
+    it.
 
     Safety: a byte-exact match wins outright. If two or more DISTINCT files match
     only after normalization (and none is byte-exact), this refuses to guess and
