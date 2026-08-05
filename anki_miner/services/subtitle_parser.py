@@ -909,8 +909,8 @@ class SubtitleParserService:
             # here the MeCab token IS the trustworthy contextual source, so we
             # propagate it outward rather than re-derive. ``reading`` here
             # equals extract_reading(word_token)
-            # (the compound branch above, excluded by the guard, is the only
-            # thing that overrides it). Compound synthetics carry wrong
+            # (only the compound branch above — excluded by the guard — and the
+            # curated override just below replace it). Compound synthetics carry wrong
             # concatenated component kana, so they take the else branch and keep
             # the headword-regenerated reading.
             expression_reading = katakana_to_hiragana(reading)
