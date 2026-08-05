@@ -87,6 +87,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         # --- FilteringSettingsPanel ---
         max_frequency_rank=5000,
         use_known_words_db=True,
+        known_words_match_kana_variants=False,  # default is True
         excluded_decks=("Deck A", "Deck B"),
         excluded_wordsets=("surnames", "given-names"),
         blacklist_path=bl,
@@ -144,6 +145,7 @@ _SAVE_PATH_FIELDS = frozenset(
         # FilteringSettingsPanel
         "max_frequency_rank",
         "use_known_words_db",
+        "known_words_match_kana_variants",
         "excluded_decks",
         "excluded_wordsets",
         "blacklist_path",
@@ -284,6 +286,7 @@ class TestSavePathRoundTrip:
         for field_name in (
             "max_frequency_rank",
             "use_known_words_db",
+            "known_words_match_kana_variants",
             "excluded_decks",
             "excluded_wordsets",
             "blacklist_path",
