@@ -62,7 +62,14 @@ _EPUB_TYPE_ATTRS = ("{http://www.idpf.org/2007/ops}type", "epub:type")
 _FONT_OBFUSCATION_ALGS = frozenset({"http://www.idpf.org/2008/embedding", "http://ns.adobe.com/pdf/enc#RC"})
 _FONT_EXTS = (".otf", ".ttf", ".ttc", ".woff", ".woff2", ".eot", ".dfont")
 _FONT_MEDIA_TYPES = frozenset(f"font/{ext[1:]}" for ext in _FONT_EXTS) | frozenset(
-    {"font/collection", "application/vnd.ms-opentype", "application/font-woff"}
+    {
+        "font/collection",
+        "application/vnd.ms-opentype",
+        "application/font-woff",
+        # Deprecated EPUB 3.3 core alias for TrueType/OpenType resources —
+        # still emitted by older packaging tools.
+        "application/font-sfnt",
+    }
 )
 
 # Subtrees whose text is never body prose (ruby readings live in rt/rp).

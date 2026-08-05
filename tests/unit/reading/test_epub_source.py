@@ -294,6 +294,26 @@ def test_font_obfuscation_accepts_extensionless_manifest_font(tmp_path: Path) ->
     assert [u.text for u in doc.units] == ["本文。"]
 
 
+def test_font_obfuscation_accepts_sfnt_media_type(tmp_path: Path) -> None:
+    """application/font-sfnt (deprecated EPUB 3.3 alias) counts as a manifest font."""
+    files = {
+        "OEBPS/content.opf": _opf(
+            [
+                ("c1", "ch1.xhtml", "application/xhtml+xml", ""),
+                ("font", "fonts/main", "application/font-sfnt", ""),
+            ],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml("<p>本文。</p>"),
+        "OEBPS/fonts/main": b"\x00\x01\x00\x00font",
+        "META-INF/encryption.xml": _encryption("http://www.idpf.org/2008/embedding", "OEBPS/fonts/main"),
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["本文。"]
+
+
 def test_font_obfuscation_rejects_manifest_non_font_with_font_suffix(tmp_path: Path) -> None:
     files = {
         "OEBPS/content.opf": _opf(
