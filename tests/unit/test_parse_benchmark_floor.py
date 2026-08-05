@@ -140,6 +140,18 @@ def test_anchor_meets_nominal_suffix_floor() -> None:
     # bails to exactly its bare noun (状況/会議/反応) — no misses, no junk.
     assert recall(b_ns) == 1.0, f"strategy (b) nominal-suffix recall {recall(b_ns)} below 1.0"
     assert junk_rate(b_ns) == 0.0, f"strategy (b) nominal-suffix junk_rate {junk_rate(b_ns)} above 0.0"
+    assert mine_lite_orthbase("食べる方") == {"食べる"}
+    assert mine_lite_anchor("食べる方") == {"食べる"}
+
+
+def test_both_strategies_meet_verb_nominalizer_floor() -> None:
+    results = _scored()
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["verb-nominalizer"]
+        assert recall(counts) == 1.0, f"{strategy} verb-nominalizer recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} verb-nominalizer junk_rate {junk_rate(counts)} above 0.0"
+    assert mine_lite_orthbase("読み方を学ぶ") == {"読み方", "学ぶ"}
+    assert mine_lite_anchor("読み方を学ぶ") == {"読み方", "学ぶ"}
 
 
 def test_anchor_strictly_beats_orthbase_on_colloquial() -> None:

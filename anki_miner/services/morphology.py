@@ -896,11 +896,12 @@ def _merge_verb_nominalizers(tokens: list) -> list:
         head = tokens[i]
         try:
             head_pos1 = head.feature.pos1
+            head_c_form = head.feature.cForm
         except AttributeError:
             merged.append(head)
             i += 1
             continue
-        if head_pos1 == "動詞" and i + 1 < n:
+        if head_pos1 == "動詞" and isinstance(head_c_form, str) and head_c_form.startswith("連用形") and i + 1 < n:
             suffix = tokens[i + 1]
             try:
                 suf_pos1 = suffix.feature.pos1

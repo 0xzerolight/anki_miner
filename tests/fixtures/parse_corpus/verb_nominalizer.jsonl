@@ -1,0 +1,1 @@
+{"id":"vn01","sentence":"読み方を学ぶ","expected":["読み方","学ぶ"],"category":"verb-nominalizer","note":"Dict-free witness that 動詞連用形+方 merges and remains ungated."}

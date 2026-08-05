@@ -694,7 +694,9 @@ class TestMergeCompoundSuffixesAttestGate:
         # is productive and never gated.
         verb = SimpleNamespace(
             surface="言い",
-            feature=SimpleNamespace(pos1="動詞", pos2="一般", lemma="言う", kana="イイ", orthBase="言う"),
+            feature=SimpleNamespace(
+                pos1="動詞", pos2="一般", lemma="言う", kana="イイ", orthBase="言う", cForm="連用形-一般"
+            ),
         )
         merged = merge_compound_suffixes([verb, _suffix_token("方", "カタ")], attest=self._attest(set()))
         assert len(merged) == 1

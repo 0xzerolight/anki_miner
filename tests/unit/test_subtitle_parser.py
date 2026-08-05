@@ -35,6 +35,7 @@ def _make_token(
     orth_base=None,
     l_form=None,
     kana_base=None,
+    c_form=None,
 ):
     """Build a mock fugashi word token with feature attributes.
 
@@ -45,7 +46,8 @@ def _make_token(
     the given values (default None) for the same reason: an auto-created
     Mock attribute would be truthy but non-str, silently exercising
     mining_base's isinstance guard in every test. Set both explicitly when
-    testing the fold.
+    testing the fold. ``cForm`` is likewise explicit so conjugation-sensitive
+    tests must opt into realistic data.
     """
     token = MagicMock()
     token.surface = surface
@@ -56,6 +58,7 @@ def _make_token(
     token.feature.orthBase = orth_base if orth_base is not None else token.feature.lemma
     token.feature.lForm = l_form
     token.feature.kanaBase = kana_base
+    token.feature.cForm = c_form
     return token
 
 
@@ -2147,7 +2150,7 @@ class TestVerbNominalizers:
     )
     def test_merges_verb_stem_plus_nominalizer(self, service, verb_surface, verb_lemma, suffix_surface, expected):
         """Verb 連用形 + nominalizer (方/手/様) → synthetic with surface=lemma=連用形+suffix."""
-        verb = _make_token(verb_surface, "動詞", pos2="一般", lemma=verb_lemma)
+        verb = _make_token(verb_surface, "動詞", pos2="一般", lemma=verb_lemma, c_form="連用形-一般")
         suffix = _make_token(suffix_surface, "接尾辞", pos2="名詞的", lemma=suffix_surface)
         result = service._merge_compound_suffixes([verb, suffix])
         assert len(result) == 1
@@ -2165,7 +2168,7 @@ class TestVerbNominalizers:
         Example: 話し + 者 — 者 is not a productive verb-stem nominalizer in
         the same way 方/手/様 are, so we don't merge it here.
         """
-        verb = _make_token("話し", "動詞", pos2="一般", lemma="話す")
+        verb = _make_token("話し", "動詞", pos2="一般", lemma="話す", c_form="連用形-一般")
         suffix = _make_token("者", "接尾辞", pos2="名詞的", lemma="者")
         result = service._merge_compound_suffixes([verb, suffix])
         assert len(result) == 2
@@ -2174,14 +2177,14 @@ class TestVerbNominalizers:
 
     def test_verb_at_line_end_not_merged(self, service):
         """A 動詞 with no following suffix must pass through unchanged."""
-        verb = _make_token("言い", "動詞", pos2="一般", lemma="言う")
+        verb = _make_token("言い", "動詞", pos2="一般", lemma="言う", c_form="連用形-一般")
         result = service._merge_compound_suffixes([verb])
         assert len(result) == 1
         assert result[0] is verb
 
     def test_verb_plus_non_nominal_suffix_not_merged(self, service):
         """動詞 + 接尾辞(動詞的) (e.g. する) is not a nominalizer — no merge here."""
-        verb = _make_token("勉強し", "動詞", pos2="一般", lemma="勉強する")
+        verb = _make_token("勉強し", "動詞", pos2="一般", lemma="勉強する", c_form="連用形-一般")
         suffix = _make_token("する", "接尾辞", pos2="動詞的", lemma="する")
         result = service._merge_compound_suffixes([verb, suffix])
         assert len(result) == 2
@@ -5703,6 +5706,10 @@ class TestCompoundMergeAttestGate:
         # dictionary — the verb-nominalizer pass is never gated.
         assert self._mine("言い方", dictionary=set()) == {"言い方"}
         assert self._mine("言い方", dictionary=None) == {"言い方"}
+
+    def test_non_continuative_verb_does_not_merge_nominalizer(self):
+        assert self._mine("食べる方", dictionary=set()) == {"食べる"}
+        assert self._mine("食べる方", dictionary=None) == {"食べる"}
 
     def test_kinship_reading_preserved_though_unattested(self):
         # The curated kinship carve-out survives the gate: 兄ちゃん is not
