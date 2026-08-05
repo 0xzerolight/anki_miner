@@ -136,15 +136,15 @@ def _segmentize_furigana(
     reading_normalized: str,
     groups: list[_FuriganaGroup],
     groups_start: int,
-) -> list[FuriganaSegment] | None:
+) -> tuple[list[FuriganaSegment] | None, bool]:
     """Recursive backtracking split of ``reading`` across ``groups``.
 
-    Returns ``None`` when no split (or more than one) is consistent, so the
-    caller can fall back to whole-word bracketing.
+    Returns a candidate and whether more than one split is consistent, so
+    ambiguity remains distinct from an impossible branch.
     """
     group_count = len(groups) - groups_start
     if group_count <= 0:
-        return [] if len(reading) == 0 else None
+        return ([] if len(reading) == 0 else None), False
 
     group = groups[groups_start]
     is_kana = group.is_kana
@@ -153,39 +153,43 @@ def _segmentize_furigana(
     if is_kana:
         text_normalized = group.text_normalized
         if text_normalized is not None and reading_normalized.startswith(text_normalized):
-            segments = _segmentize_furigana(
+            segments, ambiguous = _segmentize_furigana(
                 reading[text_length:],
                 reading_normalized[text_length:],
                 groups,
                 groups_start + 1,
             )
+            if ambiguous:
+                return None, True
             if segments is not None:
                 if reading.startswith(text):
                     segments.insert(0, FuriganaSegment(text, ""))
                 else:
                     segments[0:0] = _get_furigana_kana_segments(text, reading)
-                return segments
-        return None
+                return segments, False
+        return None, False
     else:
         result: list[FuriganaSegment] | None = None
         for i in range(len(reading), text_length - 1, -1):
-            segments = _segmentize_furigana(
+            segments, ambiguous = _segmentize_furigana(
                 reading[i:],
                 reading_normalized[i:],
                 groups,
                 groups_start + 1,
             )
+            if ambiguous:
+                return None, True
             if segments is not None:
                 if result is not None:
                     # More than one way to segmentize the tail; mark as ambiguous
-                    return None
+                    return None, True
                 segment_reading = reading[0:i]
                 segments.insert(0, FuriganaSegment(text, segment_reading))
                 result = segments
             # There is only one way to segmentize the last non-kana group
             if group_count == 1:
                 break
-        return result
+        return result, False
 
 
 def _get_furigana_kana_segments(text: str, reading: str) -> list[FuriganaSegment]:
@@ -242,8 +246,8 @@ def distribute_furigana(term: str, reading: str) -> list[FuriganaSegment]:
             group.text_normalized = _convert_katakana_to_hiragana(group.text)
 
     reading_normalized = _convert_katakana_to_hiragana(reading)
-    segments = _segmentize_furigana(reading, reading_normalized, groups, 0)
-    if segments is not None:
+    segments, ambiguous = _segmentize_furigana(reading, reading_normalized, groups, 0)
+    if segments is not None and not ambiguous:
         return segments
 
     # Fallback

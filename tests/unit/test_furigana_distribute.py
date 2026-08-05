@@ -133,6 +133,12 @@ def test_distribute_furigana_returns_segment_objects():
     assert segments[0].reading == "た"
 
 
+def test_nested_ambiguity_returns_whole_word_fallback():
+    segments = distribute_furigana("漢あ漢い漢", "あああいいあ")
+
+    assert [(segment.text, segment.reading) for segment in segments] == [("漢あ漢い漢", "あああいいあ")]
+
+
 class TestGetStemLength:
     """Common-prefix (codepoint) length, ported from getStemLength."""
 
