@@ -328,7 +328,10 @@ def _format_furigana(surface: str, reading: str) -> str:
     segments are collapsed to plain text here, with adjacent plain segments
     merged, so ``バカ力``/``ばかりょく`` renders ``バカ 力[りょく]`` and
     ``エネルギー源``/``えねるぎーげん`` renders ``エネルギー 源[げん]``. The
-    ``distribute_furigana`` port itself stays byte-faithful.
+    ``distribute_furigana`` port itself follows upstream except for its own
+    documented deviations (ambiguous splits and budget exhaustion return the
+    whole-word fallback instead of upstream's first consistent guess — see
+    :mod:`anki_miner.utils.furigana_distribute`).
 
     ``reading`` is expected to already be hiragana (the callers apply
     :func:`katakana_to_hiragana`). Interior kana and rendaku now segment

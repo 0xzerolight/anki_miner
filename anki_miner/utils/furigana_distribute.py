@@ -1,7 +1,10 @@
 """Per-kanji furigana distribution.
 
-Line-for-line Python port of Yomitan's furigana-distribution family from
+Python port of Yomitan's furigana-distribution family from
 ``ext/js/language/ja/japanese.js`` (upstream commit ``e2ed450``), GPL-3.0.
+The port follows upstream line-for-line except for two deliberate deviations
+described below: ambiguous splits and budget exhaustion return the whole-word
+fallback where upstream committed to its first consistent guess.
 The ported symbols are:
 
 ======================================  ============================
