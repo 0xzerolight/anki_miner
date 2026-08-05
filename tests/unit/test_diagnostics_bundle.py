@@ -91,7 +91,14 @@ def test_collect_log_members_includes_existing_rotations_and_locks_each_read(tmp
         ("anki_miner.log.3", b"three"),
     ]
     assert missing == []
-    assert events == ["acquire", "release"] * len(members)
+    # The event COUNT is interpreter-specific: StreamHandler.flush() re-enters
+    # acquire/release on <=3.12 and uses `with self.lock` on 3.13, so pinning the
+    # exact sequence passes only on 3.13. What the read has to prove is that the
+    # lock wraps every member and is left released, not how deep it nests.
+    assert events[0] == "acquire"
+    assert events[-1] == "release"
+    assert events.count("acquire") == events.count("release")
+    assert events.count("acquire") >= len(members)
 
 
 def test_collect_log_members_adds_distinct_early_crash_fallback(tmp_path: Path, monkeypatch) -> None:

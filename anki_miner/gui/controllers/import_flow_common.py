@@ -565,7 +565,9 @@ class ModalImportFlowMixin:
             )
 
             def report_error(exc: Exception) -> None:
-                logger.exception("Import trace %s batch finish handler failed", trace_id, exc_info=exc)
+                # error(exc_info=exc), not exception(): identical output, but the
+                # callback runs outside the handler that caught it (ruff LOG004).
+                logger.error("Import trace %s batch finish handler failed", trace_id, exc_info=exc)
                 if on_finished_error is not None:
                     on_finished_error(exc, result)
                 else:

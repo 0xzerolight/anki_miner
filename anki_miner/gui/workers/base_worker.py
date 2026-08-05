@@ -111,7 +111,7 @@ class CancellableWorker(QThread):
         No ``MemoryError`` re-raise branch, deliberately: ``EpisodeProcessor``
         re-raises it so it reaches *this* guard. Re-raising again would leave it
         unhandled out of ``QThread.run()``, where PyQt6 aborts the process. It
-        is not an ``AnkiMinerException``, so it lands in the ``logger.exception``
+        is not an ``AnkiMinerException``, so it lands in the traceback-logging
         arm — the correct terminal handling.
 
         Args:
@@ -142,7 +142,9 @@ class CancellableWorker(QThread):
         if isinstance(exc, AnkiMinerException):
             log.warning("%s: %s", context, exc)
         else:
-            log.exception("%s unhandled exception", context, exc_info=exc)
+            # error(exc_info=exc), not exception(): identical output, but this
+            # runs outside the handler that caught `exc` (ruff LOG004).
+            log.error("%s unhandled exception", context, exc_info=exc)
         on_error(str(exc))
 
 
