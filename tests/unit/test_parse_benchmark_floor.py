@@ -238,6 +238,7 @@ def test_anchor_meets_ellipsis_floor() -> None:
     # fixtures, not independent ground truth.
     assert junk_rate(b_el) == 0.0, f"strategy (b) ellipsis-truncation junk_rate {junk_rate(b_el)} above 0.0"
     assert recall(b_el) == 1.0, f"strategy (b) ellipsis-truncation recall {recall(b_el)} below 1.0"
+    assert mine_lite_orthbase("アプリケーションプログラム… アプリケーションプログラム…") == {"アプリケーション"}
 
 
 def test_anchor_meets_classical_adjective_floor() -> None:

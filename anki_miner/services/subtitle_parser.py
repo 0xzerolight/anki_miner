@@ -176,12 +176,14 @@ _ELLIPSIS_CHARS: frozenset[str] = frozenset({"…", "‥"})
 # hyphenated values (連用形-一般, 連用形-促音便), so bare equality would never fire.
 _ELLIPSIS_CUT_POS1: frozenset[str] = frozenset({"動詞", "形容詞"})
 _ELLIPSIS_CUT_CFORM: frozenset[str] = frozenset({"連用形", "未然形", "語幹", "仮定形"})
-# (b) Short fragment (all-katakana or single-char surface) inside a STUTTER line
-# of ≥2 ellipsis GROUPS, where a group is a maximal ellipsis run: ``……`` (the
-# standard fansub double-marker) collapses to ONE group, so a lone trailing 夢……
-# survives while タ… イガ… stays two groups.
+# (b) Short fragment (≤5-char all-katakana or single-char surface) inside a
+# STUTTER line of ≥2 ellipsis GROUPS, where a group is a maximal ellipsis run:
+# ``……`` (the standard fansub double-marker) collapses to ONE group, so a lone
+# trailing 夢…… survives while タ… イガ… stays two groups. Five chars is the
+# smallest bound retaining the dict-free baseline's trailing プログラム fragment.
 _ELLIPSIS_GROUP_RE = re.compile(r"[…‥]+")
 _ELLIPSIS_STUTTER_MIN_GROUPS: int = 2
+_ELLIPSIS_KATAKANA_FRAGMENT_MAX_CHARS: int = 5
 
 _SUBTITLE_REGEX_MAX_PATTERN_CHARS = 512
 _SUBTITLE_REGEX_MAX_REPLACEMENT_CHARS = 512
@@ -1945,9 +1947,9 @@ class SubtitleParserService:
             buffered from the ellipsis by a 助詞/接尾辞 (待って…, 続いて…) never
             abuts, so it survives; 意志推量形 (行こう…) is not a cut form, so it
             survives too.
-        (b) a short fragment (all-katakana or single-char surface) in a STUTTER
-            line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one group, so a
-            single trailing 夢…… survives.
+        (b) a short fragment (≤5-char all-katakana or single-char surface) in a
+            STUTTER line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one
+            group, so a single trailing 夢…… survives.
 
         Adjacency is SET membership; the line-edge sentinel "" (a token at a line
         boundary) is not a member, so a boundary token is never falsely adjacent.
@@ -1969,7 +1971,10 @@ class SubtitleParserService:
         surface = getattr(word_token, "surface", None)
         return (
             isinstance(surface, str)
-            and (len(surface) == 1 or _is_all_katakana(surface))
+            and (
+                len(surface) == 1
+                or (len(surface) <= _ELLIPSIS_KATAKANA_FRAGMENT_MAX_CHARS and _is_all_katakana(surface))
+            )
             and len(_ELLIPSIS_GROUP_RE.findall(text)) >= _ELLIPSIS_STUTTER_MIN_GROUPS
         )
 

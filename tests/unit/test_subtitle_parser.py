@@ -6346,16 +6346,24 @@ class TestKatakanaFragmentGuard:
 class TestEllipsisTruncationGuard:
     """Dict-free reject of words cut off mid-utterance at an ellipsis (U8).
 
-    Real fugashi/unidic on live fansub-style lines. The three reject targets are
-    ATTESTED in a fixture dict (合わせ/欲する/イガ) so the test proves an
-    otherwise-mineable, dictionary-real word is dropped BY THIS guard, not by a
-    tokenizer miss: every reject case first asserts ``should_include`` accepts the
-    token, then that ``_is_ellipsis_truncation_fragment`` is what rejects it. The
-    keep-cases (buffered verbs, single-group nouns, 意志推量形, the line-initial
-    sentinel) prove the guard does not over-fire.
+    Real fugashi/unidic on live fansub-style lines. The three reject targets
+    (合わせ/欲する/イガ) and long keep target (アプリケーションプログラム) are ATTESTED in a
+    fixture dict, so every result exercises this guard rather than a dictionary
+    miss. Each reject case first asserts ``should_include`` accepts the token,
+    then that ``_is_ellipsis_truncation_fragment`` rejects it. The keep-cases
+    prove the guard does not over-fire.
     """
 
-    _ATTESTED = ("合わせ", "欲する", "イガ", "合", "夢", "声", "年")
+    _ATTESTED = (
+        "合わせ",
+        "欲する",
+        "イガ",
+        "アプリケーションプログラム",
+        "合",
+        "夢",
+        "声",
+        "年",
+    )
 
     def _service(self):
         return SubtitleParserService(
@@ -6430,6 +6438,30 @@ class TestEllipsisTruncationGuard:
         assert service._memoized_attest(["イガ"]) == {"イガ"}
         assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
         assert self._mine("タ… イガ… さん") == set()
+
+    def test_katakana_short_fragment_boundary_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "プログラム… プログラム…")
+        tok, start, end = self._find(spans, "プログラム")
+        assert len(tok.surface) == 5
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("プログラム… プログラム…") == set()
+
+    def test_katakana_over_short_fragment_boundary_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "データベース… データベース…")
+        tok, start, end = self._find(spans, "データベース")
+        assert len(tok.surface) == 6
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("データベース… データベース…") == {"データベース"}
+
+    def test_long_katakana_word_survives_stutter_guard(self):
+        service = self._service()
+        sentence = "アプリケーションプログラム… アプリケーションプログラム…"
+        text, spans = self._spans(service, sentence)
+        tok, start, end = self._find(spans, "アプリケーションプログラム")
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine(sentence) == {"アプリケーションプログラム"}
 
     # --- Keep: a verb buffered from the ellipsis by 助詞/接尾辞 never abuts. ---
 
