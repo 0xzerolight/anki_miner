@@ -14,6 +14,7 @@ from anki_miner.services.deinflection import (
     find_highlight_end_with_trace,
     get_japanese_deinflector,
 )
+from anki_miner.services.tagger import get_shared_tagger
 
 # Synthetic mini-table exercising the engine mechanics without fugashi or
 # the full Japanese rule table.
@@ -453,14 +454,13 @@ class TestFindHighlightEnd:
         ]
         assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
 
-    def test_window_cap_thirteen_chars(self):
+    def test_invalid_repetitive_tail_does_not_overextend(self):
         text = "蒔い" + "た" * 20
         tokens = [_tok("蒔い", "動詞", lemma="蒔く", orth_base="蒔く", ctype="五段-カ行")]
         tokens += [_tok("た", "助動詞") for _ in range(20)]
-        # The candidate walk is capped at tok_end + 13; among the bounded
-        # candidates only 蒔いた (the first た) deinflects to 蒔く, so the
-        # longest VALID candidate wins — no crash, no overrun, no
-        # over-extension into the たた... run.
+        # Among the bounded candidates only 蒔いた (the first た) deinflects
+        # to 蒔く, so the longest VALID candidate wins — no crash, no overrun,
+        # no over-extension into the たた... run.
         assert find_highlight_end(text, tokens, 0, 2, tokens[0]) == 3
 
     def test_no_chain_falls_back_to_tok_end(self):
@@ -540,6 +540,15 @@ class TestFindHighlightEndWithTrace:
     """The chain returned alongside the end offset is in Yomitan attachment
     order (dictionary form outward), matching japanese-transforms.test.js."""
 
+    def test_fourteen_character_supported_tail_extends_fully(self):
+        text = "食べさせられたくありませんでした"
+        tokens = list(get_shared_tagger()(text))
+
+        assert find_highlight_end_with_trace(text, tokens, 0, len(tokens[0].surface), tokens[0]) == (
+            len(text),
+            ("causative", "potential or passive", "-たい", "-ます", "negative", "-た"),
+        )
+
     def test_single_past_transform(self):
         text = "種を蒔いた"
         tokens = [
@@ -578,6 +587,25 @@ class TestFindHighlightEndWithTrace:
         text = "刑務所だ"
         tokens = [_tok("刑務所", "名詞"), _tok("だ", "助動詞")]
         assert find_highlight_end_with_trace(text, tokens, 0, 3, tokens[0]) == (3, ())
+
+    def test_jiru_potential_targets_resolved_modern_front(self):
+        text = "信じられない"
+        tokens = list(get_shared_tagger()(text))
+
+        assert find_highlight_end_with_trace(
+            text,
+            tokens,
+            0,
+            len(tokens[0].surface),
+            tokens[0],
+            additional_target="信じる",
+        ) == (len(text), ("potential or passive", "negative"))
+
+    def test_jiru_potential_without_resolved_front_stays_stem_only(self):
+        text = "信じられない"
+        tokens = list(get_shared_tagger()(text))
+
+        assert find_highlight_end_with_trace(text, tokens, 0, len(tokens[0].surface), tokens[0]) == (2, ())
 
 
 class TestCommonPrefixLen:

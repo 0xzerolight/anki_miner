@@ -25,6 +25,7 @@ from anki_miner.services.deinflection import (
     TermRulesLookup,
     _is_pure_hiragana,
     find_highlight_end,
+    find_highlight_end_with_trace,
     resolve_dictionary_form,
 )
 from anki_miner.services.morphology import (
@@ -1096,6 +1097,18 @@ class SubtitleParserService:
             # Computed once per token here and reused by the second pass, so
             # parse_subtitle_file and _with_index stay output-identical.
             highlight_end = self._find_highlight_end(text, raw_tokens, tok_start, tok_end, word_token)
+            orth_base = self._mining_base(word_token)
+            resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
+            if resolved_front != orth_base:
+                resolved_end, _ = find_highlight_end_with_trace(
+                    text,
+                    raw_tokens,
+                    tok_start,
+                    tok_end,
+                    word_token,
+                    additional_target=resolved_front,
+                )
+                highlight_end = max(highlight_end, resolved_end)
             included_spans.append((tok_start, tok_end, highlight_end))
             if collect_index:
                 lemma_first_span.setdefault(lemma_here, (word_token.surface, tok_start, tok_end, highlight_end))

@@ -259,7 +259,8 @@ class Deinflector:
 # the deinflection validator is the correctness guarantee).
 _EXTENDABLE_POS1 = ("動詞", "形容詞")
 _INFLECTIONAL_TAIL_POS1 = frozenset({"助動詞", "助詞", "動詞", "形容詞"})
-_WINDOW_CAP_CHARS = 13  # させられませんでした-class stacks are 10 kana; margin for …なかったです tails
+# 食べさせられたくありませんでした has a supported 14-char tail after 食べ.
+_WINDOW_CAP_CHARS = 14
 
 
 def _is_pure_hiragana(text: str) -> bool:
@@ -293,15 +294,18 @@ def find_highlight_end_with_trace(
     tok_start: int,
     tok_end: int,
     token: Any,
+    additional_target: str | None = None,
 ) -> tuple[int, tuple[str, ...]]:
     """Full-inflected-form end offset plus the accepted deinflection chain.
 
     Yomitan's ``originalTextLength`` mechanic adapted to a known lemma:
     extend the mined 動詞/形容詞 token's span over following raw tokens and
     accept the LONGEST candidate substring whose deinflection chain reaches
-    the token's ``orthBase``/lemma under the cType condition mask. No valid
-    chain (or any malformed input) ⇒ ``(tok_end, ())`` — today's stem-only span
-    with an empty chain.
+    the token's ``orthBase``/lemma under the cType condition mask, or an optional
+    dictionary-attested ``additional_target`` under its compatible mask. A
+    resolved modern 〜じる target uses its dictionary ``v1`` mask instead of the
+    source token's サ変 mask. No valid chain (or any malformed input) ⇒
+    ``(tok_end, ())`` — today's stem-only span with an empty chain.
 
     The second element is the accepted result's transform-id chain in
     Yomitan *attachment order* (dictionary form outward): 食べませんでした →
@@ -315,7 +319,7 @@ def find_highlight_end_with_trace(
     Window stops (bounds only, never the correctness guarantee): a
     following raw token must be adjacent in ``text``, pure hiragana,
     inflectional POS (助動詞/助詞/動詞/形容詞 — a 名詞 like こと stops the
-    window), and within ``tok_end + 13`` chars.
+    window), and within ``tok_end + _WINDOW_CAP_CHARS`` chars.
     """
     feature = getattr(token, "feature", None)
     if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
@@ -335,12 +339,28 @@ def find_highlight_end_with_trace(
 
     deinflector = get_japanese_deinflector()
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
+    additional_mask = mask
+    if (
+        additional_target is not None
+        and additional_target.endswith("じる")
+        and f"{additional_target[:-2]}ずる" in targets
+    ):
+        # UniDic tags the source stem サ変, but the dictionary-attested modern
+        # front is ichidan. Keep the original targets on vs|vz; only the resolved
+        # じる identity validates against v1.
+        additional_mask = deinflector.condition_flags("v1")
 
     candidate_ends = _extension_candidate_ends(text, raw_tokens, tok_end)
     for candidate_end in reversed(candidate_ends):  # longest-first
         candidate = text[tok_start:candidate_end]
         for result in deinflector.transform(candidate):
-            if result.text in targets and conditions_match_mask(result.conditions, mask):
+            base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
+            additional_matches = (
+                additional_target is not None
+                and result.text == additional_target
+                and conditions_match_mask(result.conditions, additional_mask)
+            )
+            if base_matches or additional_matches:
                 chain = tuple(frame[0] for frame in reversed(result.trace))
                 return candidate_end, chain
     return tok_end, ()

@@ -5013,12 +5013,12 @@ class TestVerbFrontResolver:
     modern JMdict headword via the real tagger + injected offline term_lookup.
     """
 
-    def _mine(self, sentence, term_lookup=_resolver_term_lookup):
+    def _mine(self, sentence, term_lookup=_resolver_term_lookup, *, bold_target_in_sentence=False):
         term_rules_lookup = (
             None if term_lookup is None else lambda candidates: term_lookup([text for text, _conditions in candidates])
         )
         service = SubtitleParserService(
-            AnkiMinerConfig(),
+            AnkiMinerConfig(bold_target_in_sentence=bold_target_in_sentence),
             term_lookup=term_lookup,
             term_rules_lookup=term_rules_lookup,
         )
@@ -5046,6 +5046,11 @@ class TestVerbFrontResolver:
 
     def test_shinjirarenai_produces_shinjiru(self):
         assert self._one("信じられない").mined_form == "信じる"
+
+    def test_shinjirarenai_bolds_full_inflected_form(self):
+        word = self._one("信じられない", bold_target_in_sentence=True)
+
+        assert word.sentence_bolded == "<b>信じられない</b>"
 
     def test_shojita_produces_shojiru(self):
         assert self._one("生じた").mined_form == "生じる"
