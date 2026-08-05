@@ -383,10 +383,9 @@ class SubtitleParserService:
         if self._attest is not None and COMPOUND_MATCHING:
             self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
         # Name resources define raw-source boundaries independently of the
-        # ordinary dictionary. This pass runs after dictionary matching so a
-        # dictionary-attested vocabulary span keeps its established boundary;
-        # remaining raw-surface spans can still be reconstructed for the late
-        # exact name-wordset filter.
+        # ordinary dictionary. This pass runs before dictionary matching so an
+        # exact name remains available to the late exact name-wordset filter;
+        # the dictionary matcher then processes only the residual tokens.
         self._name_matcher: NameSpanMatcher | None = None
         if name_lookup is not None:
             self._name_matcher = NameSpanMatcher(name_lookup, self._inclusion_rule)
@@ -699,17 +698,18 @@ class SubtitleParserService:
 
         Returns ``(text, raw_tokens, merged_tokens, start, end, duration)``:
         ``raw_tokens`` is the direct ``self.tagger(text)`` output,
-        ``merged_tokens`` is that run through ``_merge_compound_suffixes`` and
-        the optional compound matcher, and ``duration`` is ``end - start``.
+        ``merged_tokens`` is that run through ``_merge_compound_suffixes``, the
+        optional name matcher, and the optional compound matcher; ``duration``
+        is ``end - start``.
         Shared by the subtitle path (``_iter_parsed_lines``) and the future
         text-unit path so per-line tokenization stays in one place.
         """
         raw_tokens = list(self.tagger(text))
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
-        if self._compound_matcher is not None:
-            merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
         if self._name_matcher is not None:
             merged_tokens = self._name_matcher.merge_line(text, merged_tokens)
+        if self._compound_matcher is not None:
+            merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
         # Dictionary reading attestation for merged compounds (audit F2): fixes
         # rendaku/junction kana on the synthetics; no-op (and no lookup) when
         # no reading_lookup is wired or the line produced no merges.
