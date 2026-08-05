@@ -1683,8 +1683,11 @@ class SubtitleParserService:
           ``lemma`` canonicalizes kanji-variant homographs onto a different-kanji
           headword (帰れる→返る "can go home" vs "revert", 殺る→遣る, 混ぜる→交ぜる).
           Remapping onto such a lemma would ship the wrong homograph — so a kanji
-          change blocks the remap and the source spelling is kept (its correct
-          definition still arrives via the mined-form→lemma miss fallback).
+          change blocks the remap and the source spelling is kept. Its definition
+          resolves via direct mined-form lookup or validated deinflection only:
+          the different-kanji lemma retry was itself the X2-001 homograph leak
+          and is deliberately blocked (see episode_processor's okurigana-only
+          guard on lemma retries).
         * the offline dictionary does NOT attest ``orth_base`` as a term (exact
           headword, no kana folding) — an attested front is a real word and is
           always KEPT; attestation, not a fold table, decides.
