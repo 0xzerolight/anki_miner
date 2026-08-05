@@ -29,8 +29,8 @@ def strip_subtitle_markup(text: str) -> str:
     Returns:
         Text with formatting markup removed; whitespace untouched.
     """
-    # Remove ASS/SSA style tags like {\pos(x,y)}, {\fad(100,200)}, etc.
-    text = re.sub(r"\{[^}]*\}", "", text)
+    # Remove backslash-led ASS/SSA override tags like {\pos(x,y)}, {\fad(100,200)}, etc.
+    text = re.sub(r"\{\\[^}]*\}", "", text)
 
     # Remove line break tags
     text = re.sub(r"\\[nN]", " ", text)

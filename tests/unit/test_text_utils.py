@@ -40,6 +40,9 @@ class TestStripSubtitleMarkup:
     def test_removes_multiple_ass_tags(self):
         assert strip_subtitle_markup(r"{\fad(100,200)}{\b1}Bold text{\b0}") == "Bold text"
 
+    def test_preserves_literal_brace_groups(self):
+        assert strip_subtitle_markup("集合は{A}です") == "集合は{A}です"
+
     def test_converts_line_break_tags_to_spaces(self):
         assert strip_subtitle_markup(r"Line one\NLine two\nLine three") == "Line one Line two Line three"
 
