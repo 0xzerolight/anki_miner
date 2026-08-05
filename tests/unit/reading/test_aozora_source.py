@@ -353,3 +353,11 @@ def test_ruby_attached_base_detected_as_aozora(tmp_path):
     doc = load(_ref(p, title="ruby"))
     assert doc.title == "峠の物語"  # Aozora path extracts the header title
     assert [u.text for u in doc.units] == ["山道を歩いた。"]  # ruby reading gone
+
+
+def test_explicit_latin_base_ruby_detected_as_aozora(tmp_path):
+    text = "\n".join(["題名", "著者", "", "｜JavaScript《ジャバスクリプト》を学ぶ。"])
+    p = _write(tmp_path, text, "utf-8", name="latin-ruby.txt")
+    doc = load(_ref(p, title="latin-ruby"))
+    assert doc.title == "題名"
+    assert [u.text for u in doc.units] == ["JavaScriptを学ぶ。"]

@@ -125,13 +125,13 @@ def _resolve_gaiji(line: str) -> str:
 # quotation, so an unconditional strip is safe on the Aozora path.
 _RUBY_RE = re.compile(r"《[^》]*》")
 
-# A ruby span *attached* to base text: the ｜ base-marker or a kanji/kana run
-# directly before 《. A bare, standalone 《…》 (a plain novel using the double-
-# angle bracket as title/quotation punctuation) has whitespace / line-start /
-# punctuation before 《 and is NOT ruby — so it must not, on its own, mark a
-# file as Aozora (Bug Y4: doing so dropped the first block as a "header" and
-# stripped every 《…》 span silently).
-_RUBY_ATTACHED_RE = re.compile(r"[｜々぀-ヿ一-鿿]《")
+# A ruby span *attached* to base text: the ｜ base-marker and its bounded base
+# through 《, or a kanji/kana run directly before 《. A bare, standalone 《…》
+# (a plain novel using the double-angle bracket as title/quotation punctuation)
+# has whitespace / line-start / punctuation before 《 and is NOT ruby — so it
+# must not, on its own, mark a file as Aozora (Bug Y4: doing so dropped the first
+# block as a "header" and stripped every 《…》 span silently).
+_RUBY_ATTACHED_RE = re.compile(r"｜[^｜《》\r\n]+《|[々぀-ヿ一-鿿]《")
 
 
 def _strip_ruby(line: str) -> str:
