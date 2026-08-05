@@ -109,6 +109,20 @@ class FilteringSettingsPanel(FormPanel):
         self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
         self.add_field("", self.use_known_words_db_checkbox)
 
+        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
+        # the kanji dictionary form (頷く) is already carded. Script-gated in
+        # WordFilterService.filter_unknown; kanji variants never fold.
+        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
+        self.match_kana_variants_checkbox.setToolTip(
+            self.tr(
+                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
+                "dictionary form (頷く) is already in your collection or known list, "
+                "skip it instead of creating a second card. Kanji spellings are "
+                "never merged this way."
+            )
+        )
+        self.add_field("", self.match_kana_variants_checkbox)
+
         # Rebuild button: clears the local cache so deck exclusions take effect.
         # The cache is additive (never removes), so a deck synced before being
         # excluded would otherwise stay cached forever (Issue #38).
@@ -528,6 +542,14 @@ class FilteringSettingsPanel(FormPanel):
         """Set the use-known-words-DB checkbox."""
         self.use_known_words_db_checkbox.setChecked(value)
 
+    def get_match_kana_variants(self) -> bool:
+        """Return whether kana spellings of known words count as known."""
+        return self.match_kana_variants_checkbox.isChecked()
+
+    def set_match_kana_variants(self, value: bool) -> None:
+        """Set the kana-variant fold checkbox."""
+        self.match_kana_variants_checkbox.setChecked(value)
+
     # --- Word lists ---
 
     def get_blacklist_path(self) -> Path | None:
@@ -721,6 +743,7 @@ class FilteringSettingsPanel(FormPanel):
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
+        self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)
         # T-11: always set (including '' for None) so Reset-to-Defaults clears
@@ -760,6 +783,7 @@ class FilteringSettingsPanel(FormPanel):
             config,
             max_frequency_rank=self.get_max_frequency_rank(),
             use_known_words_db=self.get_use_known_words_db(),
+            known_words_match_kana_variants=self.get_match_kana_variants(),
             excluded_decks=self.get_excluded_decks(),
             excluded_wordsets=self.get_excluded_wordsets(),
             blacklist_path=self.get_blacklist_path(),

@@ -15,6 +15,7 @@ def create_word(
     surface: str = None,
     sentence: str = "Test sentence",
     pos: str | None = None,
+    orth_base: str = "",
 ) -> TokenizedWord:
     """Helper to create a TokenizedWord for testing."""
     return TokenizedWord(
@@ -26,6 +27,7 @@ def create_word(
         end_time=1.0,
         duration=1.0,
         pos=pos,
+        orth_base=orth_base,
     )
 
 
@@ -112,6 +114,73 @@ class TestWordFilterService:
             service = WordFilterService(test_config)
 
             result = service.filter_unknown([], {"知る"})
+
+            assert result == []
+
+        def test_kana_spelling_of_known_kanji_lemma_is_known(self, test_config):
+            """Kana-spelled verb folds to its kanji lemma when that card exists.
+
+            Subtitle spells the verb in kana (うなずく), so ``mined_form`` is the
+            kana orthBase; the existing Anki card front is the kanji lemma 頷く.
+            With ``known_words_match_kana_variants`` on (default), the kana-only
+            mined_form falls back to a lemma membership check and the word is
+            treated as known instead of minting a same-lexeme duplicate.
+            """
+            service = WordFilterService(test_config)
+            words = [create_word(lemma="頷く", surface="うなずい", pos="動詞", orth_base="うなずく")]
+            existing = {"頷く"}
+
+            result = service.filter_unknown(words, existing)
+
+            assert result == []
+
+        def test_kana_fold_disabled_keeps_exact_match_only(self, test_config):
+            """Setting off restores the pre-fix exact ``mined_form`` behavior."""
+            import dataclasses
+
+            config = dataclasses.replace(test_config, known_words_match_kana_variants=False)
+            service = WordFilterService(config)
+            words = [create_word(lemma="頷く", surface="うなずい", pos="動詞", orth_base="うなずく")]
+            existing = {"頷く"}
+
+            result = service.filter_unknown(words, existing)
+
+            assert len(result) == 1
+
+        def test_kanji_variant_homograph_never_folds_to_lemma(self, test_config):
+            """Kanji-spelled variants keep the exact-match rule (Issue #19/#5).
+
+            unidic's canonical lemma collapses kanji variants (殺る→遣る); a
+            learner who knows 遣る does not know 殺る, so a kanji mined_form must
+            never fall back to the lemma even with the kana-fold setting on.
+            """
+            service = WordFilterService(test_config)
+            words = [create_word(lemma="遣る", surface="殺る", pos="動詞", orth_base="殺る")]
+            existing = {"遣る"}
+
+            result = service.filter_unknown(words, existing)
+
+            assert len(result) == 1
+
+        def test_mixed_script_kana_tail_noun_not_folded(self, test_config):
+            """Mixed kanji+kana spellings (子ども, lemma 子供) are not kana-only
+            and stay on the exact-match rule."""
+            service = WordFilterService(test_config)
+            words = [create_word(lemma="子供", surface="子ども", pos="名詞")]
+            existing = {"子供"}
+
+            result = service.filter_unknown(words, existing)
+
+            assert len(result) == 1
+
+        def test_pure_kana_noun_folds_to_known_kanji_lemma(self, test_config):
+            """A pure-kana noun surface (ともだち, lemma 友達) folds too — the
+            rule is script-gated, not POS-gated."""
+            service = WordFilterService(test_config)
+            words = [create_word(lemma="友達", surface="ともだち", pos="名詞")]
+            existing = {"友達"}
+
+            result = service.filter_unknown(words, existing)
 
             assert result == []
 
