@@ -9,7 +9,7 @@ fixture dictionary wired into the parser's offline ``term_lookup``, activating
 
 This test parses ~30 short corpus sentences through real fugashi/unidic (no
 network, no full UniDic, no user ``~/.anki_miner`` — the fixture index is built
-under a temp dir at import). It pins two things:
+under a temp dir at import). It pins three things:
 
 1. The load-bearing assertions: (b) jiru-zuru recall, (b) kana-written recall
    AND (b) nominal-suffix f1 are each STRICTLY GREATER than (a)'s. Equality
@@ -19,6 +19,8 @@ under a temp dir at import). It pins two things:
    kana-written recall floor, is perfect (recall 1.0 / junk 0.0) on the
    finalized nominal-suffix corpus, AND does not regress the guard categories
    that were already correct under (a).
+3. Exact post-resolver fronts: (b) exercises the commonness-gated katakana fold
+   and same-kanji remap, while (a) retains the observed dict-free fronts.
 
 Aux-context pins the 非自立可能 kana-recovery reject: its fixtures deliberately
 attest いる/ある/くれる/おく/しまう so the floor can only be green because the
@@ -282,6 +284,16 @@ def test_both_strategies_meet_reading_override_floor() -> None:
         assert junk_rate(counts) == 0.0, f"{strategy} reading-override junk_rate {junk_rate(counts)} above 0.0"
 
 
+def test_anchor_meets_katakana_verb_front_floor() -> None:
+    assert mine_lite_orthbase("ヤラれた") == {"ヤル"}
+    assert mine_lite_anchor("ヤラれた") == {"やる"}
+
+
+def test_anchor_meets_front_remap_floor() -> None:
+    assert mine_lite_orthbase("神を恐る") == {"神", "恐る"}
+    assert mine_lite_anchor("神を恐る") == {"神", "恐れる"}
+
+
 def test_orthbase_meets_kana_runs_floor() -> None:
     results = _scored()
     # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)
@@ -311,6 +323,6 @@ def test_pos_suffix_lemma_strip_folds_potential() -> None:
 
 
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
-# colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
-# ellipsis-truncation (U8) floors are gated above; linebreak-split is
-# scoreboard-only.
+# colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2),
+# ellipsis-truncation (U8), katakana-verb-front and front-remap floors are gated
+# above; linebreak-split is scoreboard-only.

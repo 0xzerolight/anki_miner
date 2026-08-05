@@ -66,9 +66,11 @@ from anki_miner.services.dictionary.registry import DictionaryRegistry  # noqa: 
 from anki_miner.services.dictionary.storage import (  # noqa: E402
     SCHEMA_VERSION,
     DictRow,
+    TagMeta,
     bulk_insert,
     create_index,
     write_meta,
+    write_tags,
 )
 from anki_miner.services.subtitle_parser import SubtitleParserService  # noqa: E402
 
@@ -241,10 +243,10 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # Strategy (b) — the REAL app pipeline WITH the resolver active
 # ---------------------------------------------------------------------------
 
-# Headwords the deterministic fixture dictionary attests. Both consumers gate on
-# EXISTENCE — the resolver (``resolve_dictionary_form``) and the WS2 kana
-# recovery (``has_offline_definitions``) never read glosses or scores — so a bare
-# ``term`` per line is all either fix needs. The set covers every corpus target a
+# Headwords the deterministic fixture dictionary attests. The resolver
+# (``resolve_dictionary_form``) and WS2 kana recovery
+# (``has_offline_definitions``) gate on existence; the katakana-verb front fold
+# additionally requires a commonness tag. The set covers every corpus target a
 # 動詞/形容詞 resolver, compound-existence probe, or kana-recovery probe can key
 # on: the seven modern じる headwords the resolver must recover, plus the guard
 # forms whose orthBase is ALREADY the correct headword (乞う, 立つ, 見る, …) so a
@@ -279,6 +281,9 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "立つ",
     "待つ",
     "言う",
+    # post-resolver front-remap targets
+    "恐れる",
+    "やる",
     # katakana loanword verb
     "サボる",
     # kana / kanji adjective pairs + non-priority adjectives
@@ -341,15 +346,17 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
 _ANCHOR_RULES: dict[str, str] = {
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる"), "v1"),
-    **dict.fromkeys(("報いる", "帰れる", "見る", "いる", "くれる"), "v1"),
+    **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
     # godan, keyed by their final mora
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
     **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),
-    **dict.fromkeys(("サボる", "わかる", "ある"), "v5r"),
+    **dict.fromkeys(("サボる", "やる", "わかる", "ある"), "v5r"),
     "おく": "v5k",
     # i-adjectives
     **dict.fromkeys(("すごい", "凄い", "かわいい", "可愛い", "あざとい", "しがない", "やばい", "うまい"), "adj-i"),
 }
+
+_ANCHOR_COMMON_HEADWORDS = frozenset({"やる"})
 
 _ANCHOR_DICT_ID = "anchor-fixture"
 _anchor_service: SubtitleParserService | None = None
@@ -359,10 +366,10 @@ def build_anchor_index(dicts_root: Path, dict_id: str = _ANCHOR_DICT_ID) -> Path
     """Seed a deterministic offline index of ``_ANCHOR_HEADWORDS`` under ``dicts_root``.
 
     Reuses the production storage primitives (``create_index`` / ``bulk_insert``
-    / ``write_meta`` — the exact path a real Yomitan/JMdict import writes), so
-    the fixture can never diverge from a real index's schema. Returns the
-    ``index.sqlite`` path. Pure disk write under the caller-owned ``dicts_root``;
-    no network, no ``~/.anki_miner``.
+    / ``write_tags`` / ``write_meta`` — the exact path a real Yomitan/JMdict
+    import writes), so the fixture can never diverge from a real index's schema.
+    Returns the ``index.sqlite`` path. Pure disk write under the caller-owned
+    ``dicts_root``; no network, no ``~/.anki_miner``.
     """
     folder = dicts_root / dict_id
     folder.mkdir(parents=True, exist_ok=True)
@@ -373,12 +380,14 @@ def build_anchor_index(dicts_root: Path, dict_id: str = _ANCHOR_DICT_ID) -> Path
             term=term,
             reading=None,
             content=f'<li class="gloss-item">{term}</li>',
+            tags="popular" if term in _ANCHOR_COMMON_HEADWORDS else "",
             sequence=i,
             rules=_ANCHOR_RULES.get(term, ""),
         )
         for i, term in enumerate(_ANCHOR_HEADWORDS, start=1)
     ]
     bulk_insert(db, rows)
+    write_tags(db, [TagMeta(name="popular", category="popular", ord=0, notes="", score=0.0)])
     write_meta(
         db,
         {
@@ -398,9 +407,11 @@ def _get_anchor_service() -> SubtitleParserService:
     user's ``~/.anki_miner``), assembles the real provider chain via
     ``DictionaryRegistry`` + ``DefinitionService``, and injects the SAME probes
     production wires: ``offline_terms_exist`` as ``term_lookup`` (so
-    ``resolve_dictionary_form`` fires) and ``has_offline_definitions`` as
-    ``kana_attest_lookup`` (so the WS2 pure-hiragana kana recovery fires). Same
-    real parse path as strategy (a); the ONLY difference is the live probes.
+    ``resolve_dictionary_form`` fires), ``offline_term_commonness`` as
+    ``term_common_lookup`` (so commonness-gated front folds fire), and
+    ``has_offline_definitions`` as ``kana_attest_lookup`` (so the WS2
+    pure-hiragana kana recovery fires). Same real parse path as strategy (a);
+    the ONLY difference is the live probes.
     """
     global _anchor_service
     if _anchor_service is None:
@@ -418,6 +429,7 @@ def _get_anchor_service() -> SubtitleParserService:
         _anchor_service = SubtitleParserService(
             config,
             term_lookup=definition_service.offline_terms_exist,
+            term_common_lookup=definition_service.offline_term_commonness,
             term_rules_lookup=definition_service.offline_deinflection_terms_exist,
             kana_attest_lookup=definition_service.has_offline_definitions,
         )
@@ -430,10 +442,11 @@ def mine_lite_anchor(sentence: str) -> set[str]:
     Identical to ``mine_lite_orthbase`` — same real
     ``SubtitleParserService.parse_text_units`` path, same ``_emit_word`` /
     ``mining_base`` — except the service carries offline probes backed by the
-    fixture index: the ``term_lookup`` rewrites archaic じる/ずる orthBases
-    (感ずる → 感じる), and the ``kana_attest_lookup`` recovers pure-hiragana
-    content words the script gate drops (きれい, すごい, かわいい) when the
-    fixture attests them (WS2).
+    fixture index: the term probes rewrite archaic じる/ずる orthBases
+    (感ずる → 感じる), remap unattested derived fronts, and fold an unattested
+    katakana verb front onto a common hiragana headword; ``kana_attest_lookup``
+    recovers pure-hiragana content words the script gate drops (きれい, すごい,
+    かわいい) when the fixture attests them (WS2).
     """
     service = _get_anchor_service()
     unit = ReadingUnit(text=sentence, index=0, location_label="benchmark")
