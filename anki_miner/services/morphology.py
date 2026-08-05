@@ -59,7 +59,11 @@ def resolve_attested_reading(
 # dependency-injection pattern as ReadingLookup / attest_merged_readings. When
 # None, the merge passes run UNGATED (output byte-identical to the pre-gate
 # behavior); when present, the noun-suffix and prefix passes bail any synthetic
-# compound the dictionary does not attest.
+# compound the dictionary does not attest. One deliberate exception: the prefix
+# pass may mint a TEMPORARY unattested prefix synthetic when the prefix+root
+# plus its immediate nominal-suffix run IS attested (e.g. 不可能性 without
+# 不可能) — the final chain is still validated and minted by the noun-suffix
+# pass, so nothing unattested survives to the output.
 AttestLookup = Callable[[list[str]], set[str]]
 
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
