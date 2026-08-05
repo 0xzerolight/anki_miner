@@ -259,7 +259,8 @@ class Deinflector:
 # the deinflection validator is the correctness guarantee).
 _EXTENDABLE_POS1 = ("動詞", "形容詞")
 _INFLECTIONAL_TAIL_POS1 = frozenset({"助動詞", "助詞", "動詞", "形容詞"})
-_WINDOW_CAP_CHARS = 13  # させられませんでした-class stacks are 10 kana; margin for …なかったです tails
+# 食べさせられたくありませんでした has a supported 14-char tail after 食べ.
+_WINDOW_CAP_CHARS = 14
 
 
 def _is_pure_hiragana(text: str) -> bool:
@@ -315,7 +316,7 @@ def find_highlight_end_with_trace(
     Window stops (bounds only, never the correctness guarantee): a
     following raw token must be adjacent in ``text``, pure hiragana,
     inflectional POS (助動詞/助詞/動詞/形容詞 — a 名詞 like こと stops the
-    window), and within ``tok_end + 13`` chars.
+    window), and within ``tok_end + _WINDOW_CAP_CHARS`` chars.
     """
     feature = getattr(token, "feature", None)
     if getattr(feature, "pos1", None) not in _EXTENDABLE_POS1:
