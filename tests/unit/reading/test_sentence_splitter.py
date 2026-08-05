@@ -67,6 +67,12 @@ _CASES = [
         ["本当!?", "すごい!"],
     ),
     (
+        "halfwidth-quotes-and-full-stop",
+        "彼は｢行くぞ。帰るぞ。｣と言った｡次｡",
+        {},
+        ["彼は｢行くぞ。帰るぞ。｣と言った｡", "次｡"],
+    ),
+    (
         "fullwidth-bang-question-absorbed",
         "やめて！？本当？",
         {},

@@ -133,6 +133,16 @@ def test_mokuro_file_text_only_when_no_images(tmp_path):
     assert refs[0].kind == "mokuro"
 
 
+def test_mokuro_non_utf8_raises_setup_error(tmp_path):
+    mok = tmp_path / "bad.mokuro"
+    mok.write_bytes(b"\xff")
+
+    with pytest.raises(SetupError, match=r"bad\.mokuro.*UTF-8") as excinfo:
+        detector.detect(mok)
+
+    assert isinstance(excinfo.value.__cause__, UnicodeDecodeError)
+
+
 # --------------------------------------------------------------------------- #
 # Case 2: a dropped ``.cbz``/``.zip`` → requires a sibling ``.mokuro``.
 # --------------------------------------------------------------------------- #
@@ -152,6 +162,18 @@ def test_cbz_with_sibling_mokuro(tmp_path):
     assert ref.path == mok
     assert ref.image_root == cbz
     assert ref.volume == "Vol1"
+
+
+def test_cbz_with_uppercase_sibling_mokuro(tmp_path):
+    mok = tmp_path / "Vol1.MOKURO"
+    _write_mokuro(mok, volume="Vol1")
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK")
+
+    refs = detector.detect(cbz)
+
+    assert refs[0].path == mok
+    assert refs[0].image_root == cbz
 
 
 def test_zip_with_sibling_mokuro(tmp_path):
@@ -352,6 +374,19 @@ def test_title_dir_embedded_cbz_beats_zip_same_stem(tmp_path):
     assert refs[0].path == title_dir / "Vol2.cbz"
 
 
+def test_title_dir_embedded_cbz_beats_uppercase_zip_same_stem(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_archive(title_dir / "Vol2.cbz", {"Vol2.mokuro": _mokuro_bytes(volume="FromCbz")})
+    _write_archive(title_dir / "Vol2.ZIP", {"Vol2.mokuro": _mokuro_bytes(volume="FromZip")})
+
+    refs = detector.detect(title_dir)
+
+    assert len(refs) == 1
+    assert refs[0].volume == "FromCbz"
+    assert refs[0].path == title_dir / "Vol2.cbz"
+
+
 def test_title_dir_bad_archive_skipped_not_fatal(tmp_path):
     # One corrupt/ambiguous/OCR-less archive must not abort the folder scan.
     title_dir = tmp_path / "MyManga"
@@ -411,6 +446,18 @@ def test_dropped_image_dir_finds_sibling_sidecar(tmp_path):
     assert len(refs) == 1
     assert refs[0].path == mok
     # the dropped dir is exactly the sidecar's resolved image root
+    assert refs[0].image_root == img_dir
+
+
+def test_dropped_image_dir_finds_uppercase_sibling_sidecar(tmp_path):
+    img_dir = tmp_path / "Vol1"
+    img_dir.mkdir()
+    mok = tmp_path / "Vol1.MOKURO"
+    _write_mokuro(mok, volume="Vol1")
+
+    refs = detector.detect(img_dir)
+
+    assert refs[0].path == mok
     assert refs[0].image_root == img_dir
 
 

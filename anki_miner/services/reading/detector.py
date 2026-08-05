@@ -321,11 +321,23 @@ def _subtitle_ref(path: Path) -> ReadingSourceRef:
 def _detect_archive(archive_path: Path) -> list[ReadingSourceRef]:
     """A dropped ``.cbz``/``.zip`` resolves through its ``.mokuro`` OCR data.
 
-    The sibling sidecar always wins (the standard mokuro-CLI layout); a
-    self-contained archive carrying its ``.mokuro`` as a member is the
-    fallback (Issue #103).
+    The sibling sidecar always wins (the standard mokuro-CLI layout). Exact
+    lowercase wins among extension case variants; otherwise lexicographic
+    filename order breaks ties. A self-contained archive carrying its
+    ``.mokuro`` as a member is the fallback (Issue #103).
     """
     sidecar = archive_path.with_suffix(".mokuro")
+    if not sidecar.is_file() and archive_path.parent.is_dir():
+        sidecars = sorted(
+            (
+                entry
+                for entry in archive_path.parent.iterdir()
+                if entry.is_file() and entry.stem == archive_path.stem and entry.suffix.lower() == ".mokuro"
+            ),
+            key=lambda entry: entry.name,
+        )
+        if sidecars:
+            sidecar = sidecars[0]
     if sidecar.is_file():
         return [_mokuro_ref(sidecar)]
     embedded = _embedded_mokuro_ref(archive_path, strict=True)
@@ -370,7 +382,11 @@ def _detect_directory(
             and not is_junk_path(child.name)
         ),
         # Same-stem .cbz/.zip pairs: keep the first per stem, .cbz preferred.
-        key=lambda child: (natural_sort_key(child.name), _ARCHIVE_EXTS.index(child.suffix.lower())),
+        key=lambda child: (
+            natural_sort_key(child.stem),
+            _ARCHIVE_EXTS.index(child.suffix.lower()),
+            natural_sort_key(child.name),
+        ),
     )
     seen_stems: set[str] = set()
     embedded_pairs: list[tuple[Path, ReadingSourceRef]] = []
@@ -391,8 +407,20 @@ def _detect_directory(
         volumes.sort(key=lambda pair: natural_sort_key(pair[0].name))
         return [ref for _, ref in volumes]
 
-    # User dropped the image dir itself: look for a sibling "<name>.mokuro".
+    # User dropped the image dir itself: prefer an exact "<name>.mokuro",
+    # then the first filename-sorted exact-stem extension case variant.
     sidecar = directory.parent / (directory.name + ".mokuro")
+    if not sidecar.is_file():
+        sidecars = sorted(
+            (
+                entry
+                for entry in directory.parent.iterdir()
+                if entry.is_file() and entry.stem == directory.name and entry.suffix.lower() == ".mokuro"
+            ),
+            key=lambda entry: entry.name,
+        )
+        if sidecars:
+            sidecar = sidecars[0]
     if sidecar.is_file():
         return [_mokuro_ref(sidecar)]
 

@@ -13,7 +13,11 @@ from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
 )
-from anki_miner.services.reading.mokuro_source import _BLOCK_SPLIT_THRESHOLD, load
+from anki_miner.services.reading.mokuro_source import (
+    _BLOCK_SPLIT_THRESHOLD,
+    _page_unit_entries,
+    load,
+)
 
 # ---------------------------------------------------------------------------
 # Fixture builders (dict -> json.dumps -> tmp_path). No real images are opened,
@@ -92,6 +96,23 @@ def test_metadata_comes_from_ref_not_json(tmp_path):
     assert doc.title == "RefSeries"
     assert doc.series == "RefSeries"
     assert doc.episode == "7"
+
+
+def test_non_utf8_sidecar_raises_setup_error(tmp_path):
+    path = tmp_path / "bad.mokuro"
+    path.write_bytes(b"\xff")
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=path,
+        image_root=None,
+        title="bad",
+        volume="1",
+    )
+
+    with pytest.raises(SetupError, match=r"bad\.mokuro.*UTF-8") as excinfo:
+        load(ref)
+
+    assert isinstance(excinfo.value.__cause__, UnicodeDecodeError)
 
 
 def test_per_page_version_drift_and_unknown_keys_tolerated(tmp_path):
@@ -208,6 +229,10 @@ def test_junk_blocks_dropped(tmp_path):
     ]
     doc = load(_write_ref(tmp_path, _mokuro(pages), None))
     assert [u.text for u in doc.units] == ["まとも"]
+
+
+def test_halfwidth_katakana_block_is_mineable():
+    assert _page_unit_entries({"blocks": [{"lines": ["ｶﾅ"]}]}) == ([("ｶﾅ", None)], 0)
 
 
 def test_repeat_run_over_8_collapsed_boundary_of_8_kept(tmp_path):
@@ -385,6 +410,22 @@ def test_pairing_tier3_positional_when_counts_match(tmp_path):
     # natural sort: pages -> [a_second(idx1), z_first(idx0)]; imgs -> [p001, p002]
     assert doc.units[0].image_ref == ImageRef(p2)  # z_first (doc order 0) -> p002
     assert doc.units[1].image_ref == ImageRef(p1)  # a_second -> p001
+
+
+def test_pairing_partial_named_match_does_not_consume_unrelated_image(tmp_path):
+    img_root = tmp_path / "imgs"
+    named = _mkimg(img_root, "001.jpg")
+    _mkimg(img_root, "cover.jpg")
+    pages = [
+        _page("001.jpg", [_block(["いち"])]),
+        _page("002.jpg", [_block(["にー"])]),
+    ]
+
+    doc = load(_write_ref(tmp_path, _mokuro(pages), img_root))
+
+    assert doc.units[0].image_ref == ImageRef(named)
+    assert doc.units[1].image_ref is None
+    assert any("page 2" in w and "no image matched" in w for w in doc.warnings)
 
 
 def test_pairing_no_positional_when_counts_differ(tmp_path):

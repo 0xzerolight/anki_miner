@@ -25,13 +25,23 @@ MAX_MOKURO_JSON_BYTES = 64 * 1024 * 1024
 def read_text_capped(path: Path, cap: int, description: str) -> str:
     """UTF-8 ``read_text`` with a stat-before-read size gate.
 
-    Raises :class:`SetupError` when the on-disk size exceeds ``cap``; ``OSError``
-    from ``stat``/``read_text`` propagates for the caller's existing wrapping.
+    Raises :class:`SetupError` when the on-disk size exceeds ``cap`` or the file
+    is not valid UTF-8; ``OSError`` from ``stat``/``read_text`` propagates for
+    the caller's existing wrapping.
     """
     size = path.stat().st_size
     if size > cap:
         raise SetupError(f"{description} '{path.name}' is {size:,} bytes (cap {cap:,}); refusing to load.")
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        logger.debug(
+            "Reading text decode failed: file=%s error=%s detail=%s",
+            path,
+            type(e).__name__,
+            e,
+        )
+        raise SetupError(f"{description} '{path.name}' is not valid UTF-8.") from e
 
 
 def read_zip_member_text_capped(
@@ -131,13 +141,23 @@ def _is_jp(ch: str) -> bool:
     o = ord(ch)
     return (
         0x3040 <= o <= 0x30FF  # hiragana + katakana
+        or 0xFF66 <= o <= 0xFF9F  # halfwidth katakana letters + marks
         or 0x3400 <= o <= 0x9FFF  # CJK ideographs (+ ext A)
         or 0xF900 <= o <= 0xFAFF  # CJK compatibility ideographs
     )
 
 
+_EUC_JP_HIRAGANA_AS_CP932_RE = re.compile(r"(?:､[ｦ-ﾟ]){2,}")
+
+
 def _jp_ratio(text: str) -> float:
-    return sum(_is_jp(c) for c in text) / len(text) if text else 0.0
+    if not text:
+        return 0.0
+    score = sum(_is_jp(c) for c in text)
+    # EUC-JP hiragana byte pairs decode under CP932 as repeated
+    # halfwidth-comma + katakana pairs; discount that narrow signature.
+    score -= sum(len(match.group()) // 2 for match in _EUC_JP_HIRAGANA_AS_CP932_RE.finditer(text))
+    return score / len(text)
 
 
 def _decode(raw: bytes) -> str:
