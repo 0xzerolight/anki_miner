@@ -1450,18 +1450,22 @@ class SubtitleParserService:
         morphology compound-merge gate and the compound matcher. Clear-on-cap
         bounds the memo on whole-corpus Deck Builder runs (mirrors _front_cache /
         the matcher's existence cache). Only bound to ``self._attest`` when a
-        ``term_lookup`` exists; the ``None`` guard is defensive.
+        ``term_lookup`` exists; the ``None`` guard is defensive. The returned
+        subset comes from a per-call verdict snapshot so a cap clear cannot drop
+        a cached hit requested by the current batch.
         """
         if self._term_lookup is None:
             return set()
-        unknown = [s for s in dict.fromkeys(surfaces) if s not in self._exist_memo]
+        deduped = list(dict.fromkeys(surfaces))
+        unknown = [s for s in deduped if s not in self._exist_memo]
+        verdicts = {s: self._exist_memo[s] for s in deduped if s not in unknown}
         if unknown:
             if len(self._exist_memo) + len(unknown) > _FRONT_CACHE_CAP:
                 self._exist_memo.clear()
             hits = self._term_lookup(unknown)
             for s in unknown:
-                self._exist_memo[s] = s in hits
-        return {s for s in surfaces if self._exist_memo.get(s)}
+                verdicts[s] = self._exist_memo[s] = s in hits
+        return {s for s in surfaces if verdicts[s]}
 
     def _memoized_term_common(self, surfaces: list[str]) -> dict[str, bool] | None:
         """Per-instance memoized commonness probe (see _resolve_front).

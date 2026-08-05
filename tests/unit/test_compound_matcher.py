@@ -437,6 +437,18 @@ class TestLookupBatchingAndCache:
         out = m.merge_line("走り出した", _hashiridashita())
         assert out[0].feature.lemma == "走り出す"
 
+    def test_cache_cap_clear_preserves_current_line_hit(self, monkeypatch):
+        monkeypatch.setattr("anki_miner.services.compound_matcher._EXIST_CACHE_CAP", 1)
+        m = _matcher({"応急処置"}, max_span_tokens=2)
+        assert [t.surface for t in m.merge_line("応急処置", [_tok("応急", "名詞"), _tok("処置", "名詞")])] == [
+            "応急処置"
+        ]
+
+        tokens = [_tok("応急", "名詞"), _tok("処置", "名詞"), _tok("室", "名詞")]
+        out = m.merge_line("応急処置室", tokens)
+
+        assert [t.surface for t in out] == ["応急処置", "室"]
+
 
 class TestInputPreservation:
     def test_input_list_never_mutated(self):

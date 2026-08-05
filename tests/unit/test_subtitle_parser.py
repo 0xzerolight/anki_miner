@@ -5287,6 +5287,36 @@ class TestVerbFrontCommonnessResolver:
         assert "呼ぶ" not in forms
 
 
+class TestMemoizedAttest:
+    def _service(self, term_lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+
+    def test_cap_clear_preserves_precached_hit(self, monkeypatch):
+        service = self._service(lambda terms: {"猫"} & set(terms))
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+
+        assert service._memoized_attest(["猫"]) == {"猫"}
+        assert service._memoized_attest(["猫", "犬"]) == {"猫"}
+
+    def test_cap_clear_preserves_hit_for_compound_matcher(self, monkeypatch):
+        service = self._service(lambda terms: {"応急処置"} & set(terms))
+        service._memoized_attest(["応急処置"])
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        matcher = service._compound_matcher
+        assert matcher is not None
+        matcher._max_span = 2
+        tokens = [
+            _make_token("応急", "名詞", lemma="応急"),
+            _make_token("処置", "名詞", lemma="処置"),
+            _make_token("室", "名詞", lemma="室"),
+        ]
+
+        out = matcher.merge_line("応急処置室", tokens)
+
+        assert [token.surface for token in out] == ["応急処置", "室"]
+
+
 class TestMemoizedTermCommon:
     """``_memoized_term_common`` — the per-instance commonness cache used by the
     verb-front resolver. Verdicts are read from a local snapshot so a clear-on-cap

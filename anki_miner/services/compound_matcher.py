@@ -245,12 +245,17 @@ class CompoundDictionaryMatcher:
 
     def _resolve(self, candidates: dict[tuple[int, int], tuple[str, str]]) -> None:
         """One batched lookup for all uncached candidate strings."""
-        unknown = {c for c, _kind in candidates.values() if c not in self._exist_cache}
+        current = {c for c, _kind in candidates.values()}
+        verdicts = {c: self._exist_cache[c] for c in current if c in self._exist_cache}
+        unknown = {c for c in current if c not in verdicts}
         if not unknown:
             return
         hits = self._lookup(sorted(unknown))
         if len(self._exist_cache) + len(unknown) > _EXIST_CACHE_CAP:
             self._exist_cache.clear()
+            # merge_line reads this cache after resolution; retain verdicts
+            # required by the current line across the clear.
+            self._exist_cache.update(verdicts)
         for candidate in unknown:
             self._exist_cache[candidate] = candidate in hits
 
