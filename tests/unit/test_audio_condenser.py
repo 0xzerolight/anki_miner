@@ -344,13 +344,22 @@ def test_load_subtitle_events_cp932_fallback(tmp_path):
 _UTF16_DETECTOR_TEXT = "1\r\n00:00:01,000 --> 00:00:02,000\r\nこんにちは、世界。ありがとうございました。\r\n\r\n"
 
 
-def test_load_subtitle_events_detector_leg_utf16(tmp_path):
-    # Detector leg (D10 amended): UTF-16-with-BOM fails the UTF-8 default AND the
-    # cp932 retry, so the load falls through to charset-normalizer, which detects
-    # utf_16. No monkeypatch — this exercises the real detector branch end to end
-    # (charset-normalizer detects utf_16 reliably for this fixture).
-    path = tmp_path / "utf16.srt"
+def test_load_subtitle_events_bom_utf16_parses_before_detector(tmp_path):
+    # BOM dispatch (S6-002): UTF-16-with-BOM is decoded by the BOM branch before
+    # the cp932 retry or the detector ever run.
+    path = tmp_path / "utf16_bom.srt"
     path.write_bytes(_UTF16_DETECTOR_TEXT.encode("utf-16"))  # includes a BOM
+
+    assert load_subtitle_events(path) == [(1000, 2000, "こんにちは、世界。ありがとうございました。")]
+
+
+def test_load_subtitle_events_detector_leg_utf16(tmp_path):
+    # Detector leg (D10 amended): BOM-less UTF-16LE fails the UTF-8 default AND
+    # the cp932 retry, and has no BOM for the BOM dispatch, so the load falls
+    # through to charset-normalizer. No monkeypatch — this exercises the real
+    # detector branch end to end.
+    path = tmp_path / "utf16.srt"
+    path.write_bytes(_UTF16_DETECTOR_TEXT.encode("utf-16-le"))  # no BOM
 
     assert load_subtitle_events(path) == [(1000, 2000, "こんにちは、世界。ありがとうございました。")]
 
@@ -363,7 +372,9 @@ def test_load_subtitle_events_detector_unavailable_raises_original(tmp_path, mon
         lambda _path: None,
     )
     path = tmp_path / "utf16_no_detector.srt"
-    path.write_bytes(_UTF16_DETECTOR_TEXT.encode("utf-16"))
+    # BOM-less on purpose: a BOM'd file would be decoded by the BOM dispatch
+    # (S6-002) and never reach the detector leg under test.
+    path.write_bytes(_UTF16_DETECTOR_TEXT.encode("utf-16-le"))
 
     with pytest.raises(UnicodeDecodeError):
         load_subtitle_events(path)
