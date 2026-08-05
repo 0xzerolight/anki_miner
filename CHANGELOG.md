@@ -14,7 +14,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Removed
 
-## [2.9.0] - 2026-08-02
+## [2.9.1] - 2026-08-05
+
+The diagnosability release. Almost every user report of "it did nothing" was previously unfalsifiable: whole subsystems — the Anki wire, the reading parsers, expression audio, media extraction, the ASR backend — declared a logger and never called it, so `anki_miner.log` recorded that a run happened and nothing about what it did. This release instruments them, adds a one-click **Export Diagnostics** bundle to hand to a bug report, and fixes the Card Backfill reports that were actively misleading.
+
+### Added
+- **Export Diagnostics**, from the System Health footer and the Help menu. Writes a zip carrying the active log and every rotation, an environment snapshot (version, Python/Qt, frozen state, the resolved ffmpeg/ffprobe/yt-dlp/alass, and all four resource chains), the on-screen health report, and your settings, plus a README stating what is in it. There is deliberately **no redaction** — paths carry your username and media titles, and that is the evidence the path and Unicode bugs need — so review the zip before uploading it.
+- **Card Backfill preflights the note type.** A missing note type or a missing Expression field now fails with the reason instead of returning an empty plan, and any other selected field absent from the note type is reported as absent rather than silently dropping its siblings.
+- **A kana spelling of a word you already have counts as known.** A subtitle writing うなずく no longer mines a second card when 頷く is already in your collection. One-way and script-gated, so the collapsed kanji homographs (殺る/遣る) still match exactly. New Settings → Filtering toggle, on by default.
+- **`ANKI_MINER_LOG_LEVEL`** raises the log level for a reproduction run.
+
+### Changed
+- **Settings Profiles moved into the settings footer**, and the picker is shown from the first profile onward.
+- **The log ring grew from 2MB to 8MB** (still five rotations). One full batch run at the new coverage is around 8.6MB and was overwriting its own session boundary. Log lines now carry their source line number, and the session header records Python, Qt, executable, home, log path, locale and the ring size.
+- **Around thirty previously silent subsystems now log.** The AnkiConnect wire (including the vocabulary query that decides what counts as unknown), the five pipeline phases with per-phase counts rather than only timing, the reading parsers and format detector, the expression-audio and sentence-TTS stage, the in-app installers, the frequency/pitch chains, the known-words database, download resume decisions, and every worker's start line. Counters and shapes only — no field values, no transcript text, no absolute paths in summaries.
+- **ASR backend selection and fallback are visible.** A Vulkan load failure silently degrading every transcription to CPU used to leave no trace, so "transcription is slow" could not be checked.
+- **Silent exception handlers are classified.** 46 handlers across the densest five GUI files swallowed failures with no record — among them an installed Vulkan pack reported missing, a scan that never started, and corrupt dictionary metadata making a configured source disappear. Fourteen now report; the rest carry a comment naming why they stay quiet, enforced by a test.
+- **Interface translations back to 100%** across all 11 languages.
+
+### Fixed
+- **Card Backfill no longer claims your notes "already have values" when it matched nothing.** A scan that examined zero notes reported the sentence for a scan that found nothing to fill, sending people hunting through a collection that was never looked at. It now names the scope that came back empty, and reports a stale field mapping separately from an unloaded resource.
+- **Card Backfill stops discarding the AnkiConnect error.** A failed deck fetch silently degraded to "All decks", so the one piece of evidence that Anki was unreachable never reached the log.
+- **Per-word media extraction failures are logged.** The message said "media extraction failed — see log" and the log had nothing.
 
 The interface release. An end-to-end UI/UX overhaul touching every screen — what a run tells you while it works, what it leaves behind when it finishes, where failures appear, and what survives a crash — alongside multi-source pitch accent, named settings profiles, a theme gallery you can see before you pick, and yt-dlp finally shipping inside the bundle. It also carries a round of card-accuracy fixes: readings, deinflection, name spans, pitch patterns and glossary rendering were each getting a class of word wrong.
 
