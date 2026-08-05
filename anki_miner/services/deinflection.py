@@ -294,15 +294,18 @@ def find_highlight_end_with_trace(
     tok_start: int,
     tok_end: int,
     token: Any,
+    additional_target: str | None = None,
 ) -> tuple[int, tuple[str, ...]]:
     """Full-inflected-form end offset plus the accepted deinflection chain.
 
     Yomitan's ``originalTextLength`` mechanic adapted to a known lemma:
     extend the mined 動詞/形容詞 token's span over following raw tokens and
     accept the LONGEST candidate substring whose deinflection chain reaches
-    the token's ``orthBase``/lemma under the cType condition mask. No valid
-    chain (or any malformed input) ⇒ ``(tok_end, ())`` — today's stem-only span
-    with an empty chain.
+    the token's ``orthBase``/lemma under the cType condition mask, or an optional
+    dictionary-attested ``additional_target`` under its compatible mask. A
+    resolved modern 〜じる target uses its dictionary ``v1`` mask instead of the
+    source token's サ変 mask. No valid chain (or any malformed input) ⇒
+    ``(tok_end, ())`` — today's stem-only span with an empty chain.
 
     The second element is the accepted result's transform-id chain in
     Yomitan *attachment order* (dictionary form outward): 食べませんでした →
@@ -336,12 +339,28 @@ def find_highlight_end_with_trace(
 
     deinflector = get_japanese_deinflector()
     mask = deinflector.mask_for_ctype(getattr(feature, "cType", None))
+    additional_mask = mask
+    if (
+        additional_target is not None
+        and additional_target.endswith("じる")
+        and f"{additional_target[:-2]}ずる" in targets
+    ):
+        # UniDic tags the source stem サ変, but the dictionary-attested modern
+        # front is ichidan. Keep the original targets on vs|vz; only the resolved
+        # じる identity validates against v1.
+        additional_mask = deinflector.condition_flags("v1")
 
     candidate_ends = _extension_candidate_ends(text, raw_tokens, tok_end)
     for candidate_end in reversed(candidate_ends):  # longest-first
         candidate = text[tok_start:candidate_end]
         for result in deinflector.transform(candidate):
-            if result.text in targets and conditions_match_mask(result.conditions, mask):
+            base_matches = result.text in targets and conditions_match_mask(result.conditions, mask)
+            additional_matches = (
+                additional_target is not None
+                and result.text == additional_target
+                and conditions_match_mask(result.conditions, additional_mask)
+            )
+            if base_matches or additional_matches:
                 chain = tuple(frame[0] for frame in reversed(result.trace))
                 return candidate_end, chain
     return tok_end, ()

@@ -588,6 +588,25 @@ class TestFindHighlightEndWithTrace:
         tokens = [_tok("刑務所", "名詞"), _tok("だ", "助動詞")]
         assert find_highlight_end_with_trace(text, tokens, 0, 3, tokens[0]) == (3, ())
 
+    def test_jiru_potential_targets_resolved_modern_front(self):
+        text = "信じられない"
+        tokens = list(get_shared_tagger()(text))
+
+        assert find_highlight_end_with_trace(
+            text,
+            tokens,
+            0,
+            len(tokens[0].surface),
+            tokens[0],
+            additional_target="信じる",
+        ) == (len(text), ("potential or passive", "negative"))
+
+    def test_jiru_potential_without_resolved_front_stays_stem_only(self):
+        text = "信じられない"
+        tokens = list(get_shared_tagger()(text))
+
+        assert find_highlight_end_with_trace(text, tokens, 0, len(tokens[0].surface), tokens[0]) == (2, ())
+
 
 class TestCommonPrefixLen:
     """``common_prefix_len`` — leading shared-character count."""
