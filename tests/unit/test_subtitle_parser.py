@@ -1223,6 +1223,32 @@ class TestKanaWordRecovery:
         assert service._should_include_word(token) is True
         assert lookup.calls == [["わかる"]]
 
+    def test_recovers_kana_written_jiru_with_resolved_front(self, test_config):
+        terms = {"かんじる"}
+        lookup = _attest_lookup(*terms)
+        service = SubtitleParserService(
+            test_config,
+            term_lookup=lambda candidates: set(candidates) & terms,
+            term_rules_lookup=lambda candidates: {text for text, _conditions in candidates if text in terms},
+            kana_attest_lookup=lookup,
+        )
+        unit = ReadingUnit(text="かんじた", index=0, location_label="t")
+
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+
+        assert [word.mined_form for word in words] == ["かんじる"]
+        assert lookup.calls == [["かんじる"], ["かんじた"]]
+
+    def test_kana_written_jiru_without_term_lookup_safe_degrades(self, test_config):
+        lookup = _attest_lookup("かんじる")
+        service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+        unit = ReadingUnit(text="かんじた", index=0, location_label="t")
+
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+
+        assert words == []
+        assert lookup.calls == [["かんずる"]]
+
     def test_does_not_recover_non_attested_kana(self, test_config):
         # A pure-hiragana verb the dictionary does NOT attest stays dropped.
         lookup = _attest_lookup()  # attests nothing

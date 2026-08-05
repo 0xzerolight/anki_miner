@@ -2023,10 +2023,10 @@ class SubtitleParserService:
         """content_gate_ok + term-OR-reading attestation of the mined-form front.
 
         The form probed is the exact card front ``_emit_word`` would mint
-        (``select_mined_form``): the surface for 形状詞 (きれい), the orthBase
-        dictionary form for 動詞/形容詞 (わかった's わかっ token → わかる, since
-        unidic's orthBase is already deinflected). Existence-gated only — the
-        probe never reads ``entries.score`` (uniformly 0 on the bundled dict).
+        (``_resolve_front`` then ``select_mined_form``): the surface for 形状詞
+        (きれい), the resolved orthBase dictionary form for 動詞/形容詞
+        (かんじた's かんじ token → かんじる). Existence-gated only — the probe
+        never reads ``entries.score`` (uniformly 0 on the bundled dict).
         """
         lookup = self._kana_attest_lookup
         if lookup is None:  # unreachable via _recover_kana_content_word; narrows for mypy
@@ -2034,8 +2034,9 @@ class SubtitleParserService:
         if not self._inclusion_rule.content_gate_ok(word_token):
             return False
         orth_base = self._mining_base(word_token)
+        resolved_front = self._resolve_front(word_token, orth_base, surface, 0, len(surface))
         lemma = self._extract_lemma(word_token)
-        form = select_mined_form(pos1, orth_base, lemma, surface)
+        form = select_mined_form(pos1, resolved_front, lemma, surface)
         if not form:
             return False
         return bool(lookup([form]).get(form))

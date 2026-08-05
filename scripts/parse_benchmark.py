@@ -248,7 +248,7 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # (``has_offline_definitions``) gate on existence; the katakana-verb front fold
 # additionally requires a commonness tag. The set covers every corpus target a
 # 動詞/形容詞 resolver, compound-existence probe, or kana-recovery probe can key
-# on: the seven modern じる headwords the resolver must recover, plus the guard
+# on: the modern じる headwords the resolver must recover, plus the guard
 # forms whose orthBase is ALREADY the correct headword (乞う, 立つ, 見る, …) so a
 # strictly-greater override can never fire, plus the kana/kanji adjective pairs
 # and kana 形状詞/形容詞 the recovery attests (きれい, すごい, かわいい, あざとい,
@@ -270,6 +270,7 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "演じる",
     "通じる",
     "準じる",
+    "かんじる",
     # archaic-lemma / kanji-variant / cross-conjugation / potential guards
     "乞う",
     "彷徨う",
@@ -345,7 +346,7 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
 # Unlisted headwords keep "" on purpose: nouns and collocations do not inflect.
 _ANCHOR_RULES: dict[str, str] = {
     # ichidan (jiru-zuru targets + other ichidan guards)
-    **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる"), "v1"),
+    **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
     # godan, keyed by their final mora
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),

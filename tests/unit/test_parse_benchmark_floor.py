@@ -111,8 +111,8 @@ def test_anchor_strictly_beats_orthbase_on_kana_written() -> None:
 def test_anchor_meets_kana_written_recall_floor() -> None:
     results = _scored()
     b_kw = recall(results["b-lite-anchor"].by_category["kana-written"])
-    # 5 kana-written records (きれい/すごい/かわいい/あざとい/しがない); allow one straggler.
-    assert b_kw >= 4 / 5, f"strategy (b) kana-written recall {b_kw} below floor 4/5"
+    # All 6 kana-written records must resolve, including archaic かんずる → かんじる.
+    assert b_kw == 1.0, f"strategy (b) kana-written recall {b_kw} below 1.0"
 
 
 def test_anchor_does_not_regress_guard_categories() -> None:
