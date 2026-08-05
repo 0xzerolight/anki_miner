@@ -1246,9 +1246,16 @@ def _gloss(text: str) -> str:
 class TestFallbackCandidates:
     """``DefinitionService._fallback_candidates`` — the variant/deinflection fan-out."""
 
-    def test_orth_base_first_with_wildcard_conditions(self):
-        cands = DefinitionService._fallback_candidates("請う", "乞う", None)
-        assert cands[0] == ("乞う", 0)
+    def test_same_stem_alternate_first_with_wildcard_conditions(self):
+        cands = DefinitionService._fallback_candidates("表せる", "表わす", None)
+        assert cands[0] == ("表わす", 0)
+
+    def test_unsafe_lemma_skipped_before_valid_deinflection(self):
+        cands = DefinitionService._fallback_candidates("帰れる", "返る", None)
+        texts = [text for text, _conditions in cands]
+
+        assert "返る" not in texts
+        assert "帰る" in texts
 
     def test_orth_base_equal_to_word_not_emitted(self):
         cands = DefinitionService._fallback_candidates("乞う", "乞う", None)
@@ -1343,15 +1350,35 @@ class TestOfflineDeinflectionTermsExist:
 class TestGetDefinitionsBatchFallback:
     """Miss-only fallback inside ``get_definitions_batch`` (pipeline path)."""
 
-    def test_orth_base_variant_resolves_lemma_miss(self, test_config, tmp_path: Path):
-        # Dict stores only the source-orthography variant 乞う; the lemma 請う misses.
-        p = _seed_rows(tmp_path, "d", "D", [DictRow(term="乞う", reading="こう", content=_gloss("beg"), rules="v5")])
+    def test_same_stem_alternate_resolves_miss(self, test_config, tmp_path: Path):
+        p = _seed_rows(
+            tmp_path,
+            "d",
+            "D",
+            [DictRow(term="表わす", reading="あらわす", content=_gloss("express"), rules="v5s")],
+        )
         service = DefinitionService(test_config, providers=[p])
-        # Without context: pure miss.
-        assert service.get_definitions_batch([("請う", None)]) == [None]
-        # With context mapping lemma → (orth_base, cType): fallback resolves it.
-        out = service.get_definitions_batch([("請う", None)], None, {"請う": ("乞う", None)})
-        assert out[0] is not None and "beg" in out[0]
+
+        out = service.get_definitions_batch([("表せる", None)], None, {"表せる": ("表わす", None)})
+
+        assert out[0] is not None and "express" in out[0]
+
+    def test_unsafe_lemma_does_not_preempt_valid_deinflection(self, test_config, tmp_path: Path):
+        p = _seed_rows(
+            tmp_path,
+            "d",
+            "D",
+            [
+                DictRow(term="返る", reading="かえる", content=_gloss("revert"), rules="v5"),
+                DictRow(term="帰る", reading="かえる", content=_gloss("go home"), rules="v5"),
+            ],
+        )
+        service = DefinitionService(test_config, providers=[p])
+
+        out = service.get_definitions_batch([("帰れる", None)], None, {"帰れる": ("返る", None)})
+
+        assert out[0] is not None and "go home" in out[0]
+        assert "revert" not in out[0]
 
     def test_katakana_lemma_matches_hiragana_headword(self, test_config, tmp_path: Path):
         p = _seed_rows(tmp_path, "d", "D", [DictRow(term="ねこ", reading="ねこ", content=_gloss("cat"), rules="")])

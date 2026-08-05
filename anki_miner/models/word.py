@@ -5,11 +5,14 @@ from pathlib import Path
 
 from anki_miner.models.media import MediaData
 
-# Colloquial vowel-elongation tail characters a 名詞 surface can carry over its
-# lemma (手ぇ, 気い, 目ー): small kana vowels, full kana vowels and the long-vowel
-# mark. Restricted to these so only a genuine drawn-out reading folds — an ordinary
-# okurigana/compound tail (パン→パンダ) never matches.
+# Candidate vowel-elongation tail characters a 名詞 surface can carry over its
+# lemma (手ぇ, 気い, 目ー). Small kana and the long-vowel mark prove elongation in
+# the spelling; a full-size vowel only qualifies when UniDic pronunciation ends
+# in ー (気い/キー, but not lexical 舞い/マイ). Other okurigana/compound tails
+# (パン→パンダ) never match. ``None`` remains the compatibility sentinel for
+# older hand-built words/callers that carry no pronunciation field at all.
 _VOWEL_ELONGATION_TAIL = frozenset("ぁぃぅぇぉあいうえおー")
+_WRITTEN_VOWEL_ELONGATION = frozenset("ぁぃぅぇぉー")
 
 # Curated katakana pronoun spellings unidic-lite emits as their own 代名詞 token,
 # paired with the conventional kanji card front AND its hiragana reading. Explicit
@@ -43,7 +46,13 @@ def resolve_pronoun_fold_reading(surface: str, mined: str) -> str | None:
     return fold[1] if fold is not None and fold[0] == mined else None
 
 
-def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str) -> str:
+def select_mined_form(
+    pos: str | None,
+    orth_base: str,
+    lemma: str,
+    surface: str,
+    pronunciation: str | None = None,
+) -> str:
     """Single selection rule for the card-front form.
 
     Shared by ``TokenizedWord.mined_form`` and the parser's ``_emit_word``
@@ -61,9 +70,13 @@ def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str)
 
     Nouns whose surface is the lemma plus a 1-2 char colloquial vowel-elongation
     tail (手ぇ→手, 気い→気) fold to the lemma so the card dedups against the plain
-    form. String-only: the ``surface.startswith(lemma)`` guard keeps Issue #5
-    homographs (豪腕/剛腕, surface does not start with the variant lemma) on the
-    surface, and only ``_VOWEL_ELONGATION_TAIL`` chars qualify. コーヒー is
+    form. The ``surface.startswith(lemma)`` guard keeps Issue #5 homographs
+    (豪腕/剛腕, surface does not start with the variant lemma) on the surface, and
+    only ``_VOWEL_ELONGATION_TAIL`` chars qualify. A small vowel or long-vowel
+    mark proves elongation directly; a full-size-only tail also requires UniDic
+    ``pronunciation`` ending in ー, which keeps lexical 舞い/マイ on the surface.
+    ``None`` preserves the pre-evidence rule for legacy hand-built callers; real
+    parser output always supplies a string (empty when unavailable). コーヒー is
     unaffected (its gloss-stripped lemma equals the surface). Any ``known_words``
     rows keyed on the old 手ぇ front go dead — benign, no migration.
     """
@@ -75,7 +88,15 @@ def select_mined_form(pos: str | None, orth_base: str, lemma: str, surface: str)
             return fold[0]
     if pos == "名詞" and lemma and surface != lemma and surface.startswith(lemma):
         tail = surface[len(lemma) :]
-        if 1 <= len(tail) <= 2 and all(c in _VOWEL_ELONGATION_TAIL for c in tail):
+        if (
+            1 <= len(tail) <= 2
+            and all(c in _VOWEL_ELONGATION_TAIL for c in tail)
+            and (
+                any(c in _WRITTEN_VOWEL_ELONGATION for c in tail)
+                or pronunciation is None
+                or pronunciation.endswith("ー")
+            )
+        ):
             return lemma
     return surface
 
@@ -107,11 +128,14 @@ class TokenizedWord:
     lemma_reading: str = ""  # Plain kana reading of the lemma, for audio retry
     # Kana reading of the resolved card front when the JMdict verb-front resolver
     # overrode ``orth_base`` (感じた: front 感じる / reading かんじる) — see
-    # deinflection.resolve_dictionary_form. Empty when no override fired. Pitch
-    # is otherwise lemma-reading-keyed, but the じる/ずる override diverges the
-    # front's reading (かんじる) from the archaic lemma's own (感ずる→かんずる),
-    # so the pitch sites prefer this field over ``lemma_reading`` when it is set.
+    # deinflection.resolve_dictionary_form. Empty when no override fired. An
+    # identity-safe lemma pitch retry uses ``lemma_reading``, but the じる/ずる
+    # override diverges the front's reading (かんじる) from the archaic lemma's
+    # own (感ずる→かんずる), so that retry prefers this field when it is set.
     resolved_reading: str = ""
+    # UniDic pronunciation (pron), whose ー-normalized morae distinguish a true
+    # full-vowel elongation (気い/キー) from a lexical suffix (舞い/マイ).
+    pronunciation: str | None = None
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
     frequency_rank: int | None = None  # Word frequency rank (1 = most common); = min across sources
@@ -175,16 +199,17 @@ class TokenizedWord:
         sentence actually used. Yomitan behaves the same way — it
         deinflects the raw string and never normalizes to a canonical
         headword. ``lemma`` remains the fallback when ``orth_base`` is
-        empty. Definition and frequency lookups also key on ``mined_form``
-        (with a miss-only ``lemma`` fallback) so the fetched data matches
-        the spelling the card shows — 殺る must not get 遣る's "to do"
-        definition or 掛ける's rank; only pitch stays lemma-keyed
-        (variants share the reading, canonical orthography has the better
-        hit rate in reading-scoped pitch CSVs). The one exception: when the
-        JMdict verb-front resolver overrides ``orth_base`` (感じた: 感ずる →
-        感じる), the front's reading (かんじる) diverges from the archaic
-        lemma's own (感ずる→かんずる), so ``resolved_reading`` carries the
-        front reading and the pitch sites prefer it over ``lemma_reading``.
+        empty. Definition, frequency, glossary, pitch, and expression-audio
+        lookups key on ``mined_form``. A miss retries ``lemma`` only when the
+        spelling differs by trailing okurigana over the same kanji stem; a
+        different-kanji UniDic lemma may be another homograph. Thus fetched
+        data matches the spelling the card shows — 殺る must not get 遣る's
+        "to do" definition or 掛ける's rank. Definition fallback may still use
+        rules-validated deinflection of ``mined_form``. When the JMdict
+        verb-front resolver overrides ``orth_base`` (感じた: 感ずる → 感じる),
+        the front's reading (かんじる) diverges from the archaic lemma's own
+        (感ずる→かんずる), so ``resolved_reading`` carries the front reading and
+        the identity-safe pitch fallback prefers it over ``lemma_reading``.
         Kana-surface verbs never reach mining (TokenInclusionRule requires
         kanji or katakana), so orthBase-vs-lemma only ever differs on
         kanji-surface variant tokens. Verbs carded before this change
@@ -212,10 +237,16 @@ class TokenizedWord:
         (``豪腕`` → ``剛腕``); preserving surface for nouns avoids that
         regression (Issue #5). The one carve-out: a 名詞 surface that is the
         lemma plus a short colloquial vowel-elongation tail (``手ぇ`` → ``手``,
-        ``気い`` → ``気``) folds to the lemma — see ``select_mined_form`` for the
-        string-only rule and its guards.
+        ``気い`` → ``気``) folds to the lemma when its spelling or UniDic
+        pronunciation proves elongation — see ``select_mined_form`` for the guards.
         """
-        return select_mined_form(self.pos, self.orth_base, self.lemma, self.surface)
+        return select_mined_form(
+            self.pos,
+            self.orth_base,
+            self.lemma,
+            self.surface,
+            pronunciation=self.pronunciation,
+        )
 
     def __str__(self) -> str:
         return f"{self.lemma} ({self.reading})"

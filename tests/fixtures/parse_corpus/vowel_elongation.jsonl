@@ -3,3 +3,5 @@
 {"id":"ve03","sentence":"目ぇ開けろ","expected":["目","開ける"],"category":"vowel-elongation"}
 {"id":"ve04","sentence":"コーヒーを飲む","expected":["コーヒー","飲む"],"category":"vowel-elongation","note":"KEEP: コーヒー surface == gloss-stripped lemma, no fold"}
 {"id":"ve05","sentence":"スーパーに行く","expected":["スーパー","行く"],"category":"vowel-elongation","note":"KEEP: スーパー surface == lemma, no fold"}
+{"id":"vowel-elongation-lexical-mai","sentence":"華麗な舞いを披露した","expected":["華麗","舞い","披露"],"category":"vowel-elongation"}
+{"id":"ve06","sentence":"美しい舞い","expected":["美しい","舞い"],"category":"vowel-elongation","note":"KEEP: lexical noun 舞い has a full-size vowel tail but no elongated mora; it must not fold to 舞"}

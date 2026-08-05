@@ -823,7 +823,16 @@ class SubtitleParserService:
         orth_base = self._mining_base(word_token)
         resolved_front = self._resolve_front(word_token, orth_base, text, tok_start, highlight_end)
         front_overridden = resolved_front != orth_base
-        mined = select_mined_form(word_token.feature.pos1, resolved_front, lemma, word_token.surface)
+        pronunciation = getattr(word_token.feature, "pron", "")
+        if not isinstance(pronunciation, str):
+            pronunciation = ""
+        mined = select_mined_form(
+            word_token.feature.pos1,
+            resolved_front,
+            lemma,
+            word_token.surface,
+            pronunciation=pronunciation,
+        )
         return lemma, resolved_front, mined, front_overridden
 
     def _apply_single_token_sentence_attestation(
@@ -924,6 +933,9 @@ class SubtitleParserService:
             tok_start,
             highlight_end,
         )
+        pronunciation = getattr(word_token.feature, "pron", "")
+        if not isinstance(pronunciation, str):
+            pronunciation = ""
 
         # Dedup on mined_form, NOT lemma: UniDic collapses kanji-variant
         # homographs onto one canonical lemma (賭ける/掛ける → 掛ける), but they
@@ -1115,6 +1127,7 @@ class SubtitleParserService:
             expression_reading=expression_reading,
             lemma_reading=lemma_reading,
             resolved_reading=resolved_reading,
+            pronunciation=pronunciation,
             sentence_furigana=sentence_furigana,
             sentence_reading=sentence_reading,
             pos=word_token.feature.pos1,
@@ -1670,8 +1683,11 @@ class SubtitleParserService:
           ``lemma`` canonicalizes kanji-variant homographs onto a different-kanji
           headword (帰れる→返る "can go home" vs "revert", 殺る→遣る, 混ぜる→交ぜる).
           Remapping onto such a lemma would ship the wrong homograph — so a kanji
-          change blocks the remap and the source spelling is kept (its correct
-          definition still arrives via the mined-form→lemma miss fallback).
+          change blocks the remap and the source spelling is kept. Its definition
+          resolves via direct mined-form lookup or validated deinflection only:
+          the different-kanji lemma retry was itself the X2-001 homograph leak
+          and is deliberately blocked (see episode_processor's okurigana-only
+          guard on lemma retries).
         * the offline dictionary does NOT attest ``orth_base`` as a term (exact
           headword, no kana folding) — an attested front is a real word and is
           always KEPT; attestation, not a fold table, decides.

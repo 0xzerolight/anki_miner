@@ -411,7 +411,10 @@ class WordFilterService:
             # Legacy/hand-built indexes without spans keep the original surface
             # in _swap_word_to_line, so they cannot change the card front.
             return True
-        return select_mined_form(word.pos, word.orth_base, word.lemma, surface) == word.mined_form
+        # Thread the word's own pronunciation evidence (S4-01): omitting it takes
+        # the no-evidence compatibility path, which folds lexical vowel-tail
+        # nouns (舞い → 舞) and wrongly rejects every line for such words.
+        return select_mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation) == word.mined_form
 
     def _swap_word_to_line(self, word: TokenizedWord, match: LineLemmas) -> TokenizedWord:
         """Rebuild ``word`` as if it had been mined from the ``match`` line.

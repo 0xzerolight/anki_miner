@@ -31,6 +31,7 @@ measurement, no fix shipped).
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -53,8 +54,11 @@ def _fugashi_available() -> bool:
 
 pytestmark = pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 
+from anki_miner.models.reading import ReadingUnit  # noqa: E402
+from anki_miner.orchestration.audio_stage import _expression_audio_candidates  # noqa: E402
 from scripts.parse_benchmark import (  # noqa: E402
     DEFAULT_CORPUS_DIR,
+    _get_service,
     f1,
     junk_rate,
     load_corpus,
@@ -265,13 +269,14 @@ def test_anchor_meets_classical_adjective_floor() -> None:
 
 def test_anchor_meets_vowel_elongation_floor() -> None:
     results = _scored()
-    b_ve = results["b-lite-anchor"].by_category["vowel-elongation"]
     # V5: the vowel-elongation 名詞 fold (手ぇ→手) lives in select_mined_form and is
-    # DICT-FREE (string-only), so it fires the same on (a) and (b) — a regression
-    # tripwire. A revert mines the elongated surface 手ぇ (junk) and misses 手, so
-    # both recall<1 and junk>0; コーヒー/スーパー stay on the surface (no fold).
-    assert recall(b_ve) == 1.0, f"strategy (b) vowel-elongation recall {recall(b_ve)} below 1.0"
-    assert junk_rate(b_ve) == 0.0, f"strategy (b) vowel-elongation junk_rate {junk_rate(b_ve)} above 0.0"
+    # DICT-FREE (UniDic pronunciation evidence), so it fires the same on (a) and
+    # (b) — a regression tripwire. A revert misses 手/気; an over-broad fold mints
+    # 舞 as junk and misses lexical 舞い. Loanwords stay on the surface.
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["vowel-elongation"]
+        assert recall(counts) == 1.0, f"{strategy} vowel-elongation recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} vowel-elongation junk_rate {junk_rate(counts)} above 0.0"
 
 
 def test_anchor_meets_katakana_pronoun_floor() -> None:
@@ -331,6 +336,29 @@ def test_pos_suffix_lemma_strip_folds_potential() -> None:
     # sole corpus witness.
     assert mine_lite_orthbase("引けいって") == {"引く"}
     assert mine_lite_anchor("引けいって") == {"引く"}
+
+
+def test_form_identity_assertion_corpus() -> None:
+    path = DEFAULT_CORPUS_DIR / "form_identity" / "unsafe_lemma.jsonl"
+    record = json.loads(path.read_text(encoding="utf-8"))
+    assert record == {
+        "id": "fi01",
+        "sentence": "帰れる。",
+        "expected_fronts": ["帰れる"],
+        "assertions": [
+            "definition fallback must not resolve 返る",
+            "expression-audio candidates must not contain 返る/かえる",
+        ],
+    }
+
+    words, _index, _counts = _get_service().parse_text_units(
+        [ReadingUnit(record["sentence"], 0, "form-identity")],
+        want_line_index=False,
+    )
+    word = next(word for word in words if word.mined_form == "帰れる")
+
+    assert [word.mined_form] == record["expected_fronts"]
+    assert ("返る", "かえる") not in _expression_audio_candidates(word)
 
 
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
