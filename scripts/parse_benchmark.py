@@ -251,7 +251,7 @@ def mine_lite_orthbase(sentence: str) -> set[str]:
 # strictly-greater override can never fire, plus the kana/kanji adjective pairs
 # and kana 形状詞/形容詞 the recovery attests (きれい, すごい, かわいい, あざとい,
 # しがない) and the nominal-suffix / prefix compound headwords the attested-or-bail
-# merge gate must keep whole (重要性, 刑務所, 不可能) for a fair (b) table — while
+# merge gate must keep whole (重要性, 刑務所, 不可能, 不可能性) for a fair (b) table — while
 # 状況的/会議中/超反応 are deliberately absent so the gate bails them to bare nouns.
 # The kana forms are stored as ``term`` (not ``reading``), so the term-OR-reading probe finds
 # them by term and ``reading`` stays empty — production's real JMdict attests the
@@ -291,11 +291,12 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "あざとい",
     "しがない",
     # nominal-suffix / prefix compound headwords the gate must keep whole
-    # (刑務所/不可能 are attested; 状況的/会議中/超反応 are deliberately ABSENT so
-    # the attested-or-bail gate bails them to their bare nouns).
+    # (刑務所/不可能/不可能性 are attested; 状況的/会議中/超反応 are deliberately
+    # ABSENT so the attested-or-bail gate bails them to their bare nouns).
     "重要性",
     "刑務所",
     "不可能",
+    "不可能性",
     # colloquial orthBase targets (kana recovery mines these from すげえ/やべえ/
     # うめえ/わかんない; the expected form is the orthBase, never the kanji lemma)
     "やばい",

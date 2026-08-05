@@ -136,10 +136,25 @@ def test_anchor_meets_nominal_suffix_floor() -> None:
     results = _scored()
     b_ns = results["b-lite-anchor"].by_category["nominal-suffix"]
     # The gate must be perfect on the finalized nominal-suffix corpus: every
-    # attested compound stays whole (刑務所/不可能/重要性) and every unattested one
-    # bails to exactly its bare noun (状況/会議/反応) — no misses, no junk.
+    # attested compound stays whole (刑務所/不可能/不可能性/重要性), every ordinary
+    # unattested one bails to its bare noun (状況/会議/反応), and an unattested
+    # kinship tail stops at the licensed 兄ちゃん boundary — no misses, no junk.
     assert recall(b_ns) == 1.0, f"strategy (b) nominal-suffix recall {recall(b_ns)} below 1.0"
     assert junk_rate(b_ns) == 0.0, f"strategy (b) nominal-suffix junk_rate {junk_rate(b_ns)} above 0.0"
+    assert mine_lite_orthbase("食べる方") == {"食べる"}
+    assert mine_lite_anchor("食べる方") == {"食べる"}
+    assert mine_lite_orthbase("兄ちゃん的には") == {"兄ちゃん的"}
+    assert mine_lite_anchor("兄ちゃん的には") == {"兄ちゃん"}
+
+
+def test_both_strategies_meet_verb_nominalizer_floor() -> None:
+    results = _scored()
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["verb-nominalizer"]
+        assert recall(counts) == 1.0, f"{strategy} verb-nominalizer recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} verb-nominalizer junk_rate {junk_rate(counts)} above 0.0"
+    assert mine_lite_orthbase("読み方を学ぶ") == {"読み方", "学ぶ"}
+    assert mine_lite_anchor("読み方を学ぶ") == {"読み方", "学ぶ"}
 
 
 def test_anchor_strictly_beats_orthbase_on_colloquial() -> None:
@@ -185,11 +200,13 @@ def test_anchor_meets_aux_keijoushi_floor() -> None:
 
 def test_counter_category_is_clean() -> None:
     results = _scored()
-    b_ct = results["b-lite-anchor"].by_category["counter"]
     # Number+counter chains die on the inherited 数詞 subtype exclusion whether
-    # the merge gate fires or not; only the real verb survives.
-    assert recall(b_ct) == 1.0, f"strategy (b) counter recall {recall(b_ct)} below 1.0"
-    assert junk_rate(b_ct) == 0.0, f"strategy (b) counter junk_rate {junk_rate(b_ct)} above 0.0"
+    # the merge gate fires or not. A whitespace-stitched chain must not consume
+    # a later contiguous lexical token with the same surface.
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["counter"]
+        assert recall(counts) == 1.0, f"{strategy} counter recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} counter junk_rate {junk_rate(counts)} above 0.0"
 
 
 def test_anchor_meets_long_compound_floor() -> None:

@@ -9,6 +9,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.services import morphology
 from anki_miner.services.morphology import (
     SyntheticToken,
@@ -23,6 +25,7 @@ from anki_miner.services.morphology import (
     resolve_reading_override,
     resolve_special_reading,
 )
+from anki_miner.services.subtitle_parser import SubtitleParserService
 
 
 def _fugashi_available() -> bool:
@@ -675,6 +678,38 @@ class TestMergeCompoundSuffixesAttestGate:
         assert len(merged) == 1
         assert merged[0].surface == "無関係"
 
+    def test_prefix_mints_temporary_when_only_final_chain_is_attested(self):
+        merged = merge_compound_suffixes(
+            [
+                _prefix_token("不", "フ"),
+                _keijoushi_token("可能", "カノウ"),
+                _suffix_token("性", "セイ"),
+            ],
+            attest=self._attest({"不可能性"}),
+        )
+        assert [t.surface for t in merged] == ["不可能性"]
+
+    def test_prefix_chain_stops_at_attested_intermediate_when_final_is_unattested(self):
+        merged = merge_compound_suffixes(
+            [
+                _prefix_token("不", "フ"),
+                _keijoushi_token("可能", "カノウ"),
+                _suffix_token("性", "セイ"),
+            ],
+            attest=self._attest({"不可能"}),
+        )
+        assert [t.surface for t in merged] == ["不可能", "性"]
+
+    @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+    def test_final_prefixed_suffix_attests_without_intermediate_real_pipeline(self):
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=lambda terms: set(terms) & {"不可能性"},
+        )
+        unit = ReadingUnit(text="不可能性", index=0, location_label="t")
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+        assert {word.mined_form for word in words} == {"不可能性"}
+
     # --- kinship carve-out: mint even when unattested ---------------------
 
     def test_kinship_compound_mints_even_when_unattested(self):
@@ -687,6 +722,24 @@ class TestMergeCompoundSuffixesAttestGate:
         assert merged[0].feature.kana == "ニイチャン"
         assert getattr(merged[0].feature, "kana_special", False) is True
 
+    def test_unattested_kinship_tail_consumes_only_licensing_suffix(self):
+        trailing = _suffix_token("的", "テキ")
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン"), trailing],
+            attest=self._attest(set()),
+        )
+        assert [t.surface for t in merged] == ["兄ちゃん", "的"]
+        assert merged[0].feature.kana == "ニイチャン"
+        assert merged[1] is trailing
+
+    def test_attested_full_kinship_chain_stays_whole(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン"), _suffix_token("的", "テキ")],
+            attest=self._attest({"兄ちゃん的"}),
+        )
+        assert [t.surface for t in merged] == ["兄ちゃん的"]
+        assert merged[0].feature.kana == "ニイチャンテキ"
+
     # --- verb nominalizer is NEVER gated ----------------------------------
 
     def test_verb_nominalizer_is_ungated(self):
@@ -694,7 +747,9 @@ class TestMergeCompoundSuffixesAttestGate:
         # is productive and never gated.
         verb = SimpleNamespace(
             surface="言い",
-            feature=SimpleNamespace(pos1="動詞", pos2="一般", lemma="言う", kana="イイ", orthBase="言う"),
+            feature=SimpleNamespace(
+                pos1="動詞", pos2="一般", lemma="言う", kana="イイ", orthBase="言う", cForm="連用形-一般"
+            ),
         )
         merged = merge_compound_suffixes([verb, _suffix_token("方", "カタ")], attest=self._attest(set()))
         assert len(merged) == 1
@@ -744,6 +799,25 @@ class TestMergeCompoundSuffixesAttestGate:
         )
         assert len(merged) == 1
         assert merged[0].surface == "状況的"
+
+    def test_none_attest_keeps_full_prefix_suffix_chain_unchanged(self):
+        merged = merge_compound_suffixes(
+            [
+                _prefix_token("不", "フ"),
+                _keijoushi_token("可能", "カノウ"),
+                _suffix_token("性", "セイ"),
+            ],
+            attest=None,
+        )
+        assert [t.surface for t in merged] == ["不可能性"]
+
+    def test_none_attest_keeps_full_kinship_chain_unchanged(self):
+        merged = merge_compound_suffixes(
+            [_noun_token("兄", "アニ"), _suffix_token("ちゃん", "チャン"), _suffix_token("的", "テキ")],
+            attest=None,
+        )
+        assert [t.surface for t in merged] == ["兄ちゃん的"]
+        assert merged[0].feature.kana == "ニイチャンテキ"
 
 
 class TestApplySpecialReadings:
