@@ -336,9 +336,33 @@ def test_min_occurrence_filters_singletons(test_config):
     assert fronts == {"頻"}
 
 
+def test_min_occurrence_precedes_sentence_dedup(test_config):
+    shared_sentence = "共有文"
+    rare = replace(_word("希", 0), sentence=shared_sentence)
+    common = replace(_word("常", 0), sentence=shared_sentence)
+    counts = collections.Counter({"希": 1, "常": 2})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([rare, common], None, counts)
+    anki = _make_anki_service()
+    cfg = replace(
+        test_config,
+        reading_min_occurrence=2,
+        deduplicate_sentences=True,
+    )
+
+    with patch(_IMG), patch("anki_miner.orchestration.episode_processor.log_summary") as summary:
+        result = _make_processor(cfg, subtitle_parser=sp, anki_service=anki).process_reading(_document([_unit(0)]))
+
+    assert result.cards_created == 1
+    assert [payload.word.mined_form for payload in anki.last_card_data] == ["常"]
+    phase2 = next(call for call in summary.call_args_list if call.args[1] == "Phase 2 filter")
+    assert phase2.kwargs["episode_rejects"] == 1
+    assert phase2.kwargs["duplicate_sentence_rejects"] == 0
+
+
 def test_whitelist_force_includes_past_min_occurrence(test_config, tmp_path):
     """A whitelisted hapax survives reading_min_occurrence=2 (force-include bypasses
-    the reading path's occurrence floor, which runs OUTSIDE _phase2_filter)."""
+    the reading path's pre-dedup occurrence floor in _phase2_filter)."""
     wl = tmp_path / "wl.txt"
     wl.write_text("稀\n", encoding="utf-8")
     wls = WordListService(whitelist_path=wl)
@@ -356,8 +380,8 @@ def test_whitelist_force_includes_past_min_occurrence(test_config, tmp_path):
     )
 
     # Both survive: 頻 by occurrence count, 稀 by whitelist force-include.
-    fronts = {p.word.lemma for p in anki.last_card_data}
-    assert fronts == {"頻", "稀"}
+    fronts = [p.word.lemma for p in anki.last_card_data]
+    assert fronts == ["稀", "頻"]
 
 
 def test_whitelist_admits_lemma_sibling_at_floor3(test_config, tmp_path):
@@ -381,12 +405,46 @@ def test_whitelist_admits_lemma_sibling_at_floor3(test_config, tmp_path):
     assert "lemma-siblings" in (WordFilterService.partition_whitelisted.__doc__ or "")
 
 
+def test_front_whitelist_does_not_force_distinct_lemma_sibling(test_config, tmp_path):
+    wl = tmp_path / "wl.txt"
+    wl.write_text("賭ける\n", encoding="utf-8")
+    wls = WordListService(whitelist_path=wl)
+    wls.load()
+
+    cfg = replace(test_config, reading_min_occurrence=3, use_whitelist=True)
+    whitelisted = _word("掛ける", 0, pos="動詞", surface="賭けた")
+    whitelisted.orth_base = "賭ける"
+    sibling = _word("掛ける", 1, pos="動詞", surface="掛けた")
+    sibling.orth_base = "掛ける"
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(
+        [whitelisted, sibling],
+        None,
+        collections.Counter({"掛ける": 2}),
+    )
+    definitions = MagicMock()
+    definitions.offline_term_identities.return_value = {
+        ("賭ける", "かな"): {("jmdict", 1, "かける")},
+        ("掛ける", "かな"): {("jmdict", 2, "かける")},
+    }
+    anki = _make_anki_service()
+
+    _make_processor(
+        cfg,
+        subtitle_parser=sp,
+        anki_service=anki,
+        definition_service=definitions,
+        word_list_service=wls,
+    ).process_reading(_document([_unit(0), _unit(1)]))
+
+    assert [payload.word.mined_form for payload in anki.last_card_data] == ["賭ける"]
+
+
 def test_no_mineable_words_message_names_filters_on_reading_path(test_config):
-    """Regression B (reading path): reading_min_occurrence runs OUTSIDE _phase2_filter
-    (episode_processor.py:1779), so it can empty the list after words survived the
-    known-vocab filter. The shared terminal helper must then say 'removed by active
-    filters', NOT 'All words already in Anki!' — proving the filter-agnostic wording
-    is correct even when a non-_phase2 filter does the emptying."""
+    """Regression B (reading path): reading_min_occurrence can empty the list
+    after words survive the known-vocab filter. The shared terminal helper must
+    then say 'removed by active filters', NOT 'All words already in Anki!' —
+    proving the filter-agnostic wording remains correct."""
     words = [_word("犬", 0), _word("猫", 1)]
     counts = collections.Counter({"犬": 1, "猫": 1})  # both hapax
     cfg = replace(test_config, reading_min_occurrence=2)  # drops every hapax → empty set

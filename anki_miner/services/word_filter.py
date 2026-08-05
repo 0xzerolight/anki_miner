@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas, TokenizedWord
+from anki_miner.models.word import select_mined_form
 from anki_miner.utils import (
     generate_furigana,
     generate_reading,
@@ -335,8 +336,8 @@ class WordFilterService:
         filters (frequency rank, blacklist, script type, name wordsets) are
         still unknown to the learner, so a line packed with them must not
         qualify. For each candidate word, the earliest such line in
-        ``line_index`` order wins the tie-break; words with no i+1 line are
-        dropped.
+        ``line_index`` order whose card front remains compatible wins the
+        tie-break; words with no compatible i+1 line are dropped.
 
         The returned words have their sentence/timing/sentence_furigana/
         sentence_reading swapped to those of the selected line. ``surface`` and
@@ -378,21 +379,39 @@ class WordFilterService:
         # target must not make that target unmatchable.
         unknown_lemmas = (all_unknown_lemmas | target_lemmas) if all_unknown_lemmas is not None else target_lemmas
 
-        earliest: dict[str, LineLemmas] = {}
+        lines_by_lemma: dict[str, list[LineLemmas]] = {}
         for line in line_index:
             unknown_in_line = line.lemmas & unknown_lemmas
             if len(unknown_in_line) == 1:
                 (only,) = unknown_in_line
                 if only in target_lemmas:
-                    earliest.setdefault(only, line)
+                    lines_by_lemma.setdefault(only, []).append(line)
 
         result: list[TokenizedWord] = []
         for word in mineable_unknowns:
-            match = earliest.get(word.lemma)
+            match = next(
+                (line for line in lines_by_lemma.get(word.lemma, ()) if self._line_preserves_mined_form(word, line)),
+                None,
+            )
             if match is None:
                 continue
             result.append(self._swap_word_to_line(word, match))
         return result
+
+    @staticmethod
+    def _line_preserves_mined_form(word: TokenizedWord, line: LineLemmas) -> bool:
+        """Whether swapping to ``line`` keeps a surface-mined card front."""
+        if word.pos in ("動詞", "形容詞"):
+            return True
+        surface = next(
+            (surface for lemma, surface, *_ in line.lemma_spans if lemma == word.lemma),
+            None,
+        )
+        if surface is None:
+            # Legacy/hand-built indexes without spans keep the original surface
+            # in _swap_word_to_line, so they cannot change the card front.
+            return True
+        return select_mined_form(word.pos, word.orth_base, word.lemma, surface) == word.mined_form
 
     def _swap_word_to_line(self, word: TokenizedWord, match: LineLemmas) -> TokenizedWord:
         """Rebuild ``word`` as if it had been mined from the ``match`` line.
@@ -433,11 +452,11 @@ class WordFilterService:
             new_furi_bolded = ""
 
         # The swap above replaces ``surface``. For surface-mined POS (nouns and
-        # everything that is not 動詞/形容詞), ``mined_form`` IS the surface, so
-        # the new surface becomes the card's Expression — its
+        # everything that is not 動詞/形容詞), callers only select a surface
+        # that resolves to the same card Expression. Its
         # ``expression_furigana``/``expression_reading`` (computed from the
         # ORIGINAL surface at parse time) would otherwise go stale, leaving the
-        # Expression inconsistent with its own furigana/reading (T-37).
+        # swapped spelling inconsistent with its furigana/reading (T-37).
         # Verbs/adjectives mine as ``orth_base``, which dataclasses.replace
         # below preserves (it is not swapped), so their Expression fields stay
         # valid and are left untouched. Recompute
@@ -479,12 +498,14 @@ class WordFilterService:
         """Populate ``word.sentence_candidates`` for words that repeat across lines.
 
         For each word, collects every ``line_index`` entry whose content lemmas
-        include ``word.lemma`` (subtitle order preserved). When a word appears on
-        two or more lines, builds one fully-swapped :class:`TokenizedWord`
-        variant per line (capped at ``max_candidates``, earliest-first) via
+        include ``word.lemma`` and whose matched surface preserves the card front
+        (subtitle order preserved). When a word appears on two or more compatible
+        lines, builds one fully-swapped :class:`TokenizedWord` variant per line
+        (capped at ``max_candidates``, earliest-first) via
         :meth:`_swap_word_to_line` and assigns the list — including the variant
         for the word's current sentence, so the curator can default-select it.
-        Words on a single line are left untouched (empty candidates ⇒ no picker).
+        Words on a single compatible line are left untouched (empty candidates
+        ⇒ no picker).
 
         Mutates ``words`` in place. Safe to call with an empty ``line_index``.
         """
@@ -496,7 +517,7 @@ class WordFilterService:
                 lines_by_lemma.setdefault(lemma, []).append(line)
 
         for word in words:
-            lines = lines_by_lemma.get(word.lemma, ())
+            lines = [line for line in lines_by_lemma.get(word.lemma, ()) if self._line_preserves_mined_form(word, line)]
             if len(lines) < 2:
                 continue
             word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines[:max_candidates]]

@@ -16,6 +16,8 @@ from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     MIN_EPISODE_APPEARANCES,
+    EpisodeProcessor,
+    _EpisodeContext,
     sanitize_source_label,
 )
 from anki_miner.presenters import NullPresenter
@@ -2402,14 +2404,55 @@ class TestStatsServiceIntegration:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # Verify difficulty was recorded with correct counts.
-        # With no optional filters active, all_unknown_lemmas == unknown_words (1).
+        # With no optional filters active, the pre-filter candidate count is 1.
         call_args = mock_stats.record_difficulty.call_args
         assert call_args.kwargs["total_words"] == 2  # len(all_words)
-        assert call_args.kwargs["unknown_words"] == 1  # len(all_unknown_lemmas) == 1
+        assert call_args.kwargs["unknown_words"] == 1
+
+    def test_difficulty_counts_distinct_unknown_fronts_sharing_lemma(self, test_config, mock_services, tmp_path):
+        config = replace(
+            test_config,
+            include_known_words=True,
+            bypass_optional_filters=True,
+            allow_duplicate_cards=True,
+        )
+        words = [
+            TokenizedWord(
+                surface=front,
+                lemma="掛ける",
+                orth_base=front,
+                reading="カケル",
+                sentence=front,
+                start_time=float(index),
+                end_time=float(index + 1),
+                duration=1.0,
+                pos="動詞",
+            )
+            for index, front in enumerate(("賭ける", "掛ける"))
+        ]
+        mock_stats = MagicMock()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (word, _make_media(str(index))) for index, word in enumerate(words)
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["definition"] * 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
+
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert mock_stats.record_difficulty.call_args.kwargs["unknown_words"] == 2
 
     def test_difficulty_uses_pre_filter_unknown_count(self, test_config, mock_services, tmp_path):
         """OVH-024: record_difficulty must use the pre-filter comprehension-unknown
-        count (all_unknown_lemmas), not the post-filter mineable count.
+        count (candidate_words_found), not the post-filter mineable count.
 
         With i+1 or frequency filters active the mineable set can collapse to a
         handful; difficulty_score would then report near-zero for a hard episode.
@@ -2454,7 +2497,7 @@ class TestStatsServiceIntegration:
         # Pre-filter unknown count (2) must be used, not the post-filter count (1).
         assert (
             call_kwargs["unknown_words"] == 2
-        ), "record_difficulty must use all_unknown_lemmas (pre-filter), not unknown_words (post-filter)"
+        ), "record_difficulty must use candidate_words_found (pre-filter), not unknown_words (post-filter)"
         assert call_kwargs["total_words"] == 2  # len(all_words) unchanged
 
     def test_no_crash_without_stats_service(self, test_config, mock_services, tmp_path):
@@ -3257,6 +3300,61 @@ def _make_line_lemmas(text="新しい単語", lemmas=("新しい",), start=1.0, 
         end_time=end,
         duration=end - start,
     )
+
+
+def test_i_plus_one_cannot_change_unknown_noun_front_to_known_sibling(test_config):
+    config = replace(test_config, use_i_plus_one_filter=True)
+    processor = EpisodeProcessor.__new__(EpisodeProcessor)
+    processor.config = config
+    processor.presenter = MagicMock()
+    processor.frequency_service = None
+    processor.known_word_db = None
+    processor.anki_service = MagicMock()
+    processor.anki_service.get_existing_vocabulary.return_value = {"取引"}
+    processor.word_filter = WordFilterService(config)
+    processor.word_list_service = None
+    processor.wordset_service = None
+    processor.stats_service = None
+    processor.definition_service = MagicMock()
+    processor.definition_service.has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
+    processor.definition_service.offline_term_identities.return_value = {}
+
+    def _noun(surface: str, start_time: float) -> TokenizedWord:
+        return TokenizedWord(
+            surface=surface,
+            lemma="取り引き",
+            reading="トリヒキ",
+            expression_reading="とりひき",
+            sentence=f"{surface}する。",
+            start_time=start_time,
+            end_time=start_time + 1.0,
+            duration=1.0,
+            pos="名詞",
+        )
+
+    lines = [
+        LineLemmas(
+            "取引する。",
+            frozenset({"取り引き"}),
+            0.0,
+            1.0,
+            1.0,
+            lemma_spans=(("取り引き", "取引", 0, 2, 2),),
+        ),
+        LineLemmas(
+            "取り引きする。",
+            frozenset({"取り引き"}),
+            2.0,
+            3.0,
+            1.0,
+            lemma_spans=(("取り引き", "取り引き", 0, 4, 4),),
+        ),
+    ]
+    ctx = _EpisodeContext(0.0, "", "", "e", "s", "")
+
+    result = processor._phase2_filter(ctx, [_noun("取引", 0.0), _noun("取り引き", 2.0)], lines, None)
+
+    assert [word.mined_form for word in result] == ["取り引き"]
 
 
 class TestIPlusOneFilter:
@@ -4690,6 +4788,35 @@ class TestMinedFormsOnResult:
         locked = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
         assert locked.cards_created == 2
         assert locked.mined_forms == []
+
+
+def test_definition_filter_precedes_sentence_dedup(test_config):
+    config = replace(
+        test_config,
+        include_known_words=True,
+        deduplicate_sentences=True,
+    )
+    definition_service = MagicMock()
+    definition_service.has_offline_definitions.return_value = {
+        "学校": False,
+        "猫": True,
+    }
+    definition_service.offline_term_identities.return_value = {}
+    processor = build_processor(
+        config=config,
+        word_filter=WordFilterService(config),
+        definition_service=definition_service,
+    )
+    sentence = "学校で猫を見る。"
+    school = _make_word("学校", surface="学校", pos="名詞")
+    cat = _make_word("猫", surface="猫", pos="名詞", start_time=5.0)
+    school.sentence = sentence
+    cat.sentence = sentence
+    ctx = _EpisodeContext(0.0, "", "", "episode", "series", "")
+
+    result = processor._phase2_filter(ctx, [school, cat], None, None)
+
+    assert [word.mined_form for word in result] == ["猫"]
 
 
 class TestOfflineDefinitionPreFilter:
