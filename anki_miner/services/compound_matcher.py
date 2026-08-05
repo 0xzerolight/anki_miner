@@ -285,10 +285,19 @@ class CompoundDictionaryMatcher:
             pos1 = _pos1(span[-1]) or "動詞"
             pos2 = "一般"
         else:
+            # Inherit the tail's POS only when the tail is itself a content
+            # word (動く歩道 → 歩道 keeps 名詞). A suffix tail (入院中, 可能性)
+            # would smuggle 接尾辞 onto the synthetic and the inclusion gate
+            # would reject the whole attested compound — those chains are
+            # lexicalized nouns, so they take the nominal default instead.
             tail_pos1 = _pos1(span[-1])
             tail_pos2 = _pos2(span[-1])
-            pos1 = tail_pos1 if tail_pos1 else "名詞"
-            pos2 = tail_pos2 if tail_pos2 and tail_pos2 != "*" else "普通名詞"
+            if tail_pos1 in ("名詞", "形状詞", "代名詞"):
+                pos1 = tail_pos1
+                pos2 = tail_pos2 if tail_pos2 and tail_pos2 != "*" else "普通名詞"
+            else:
+                pos1 = "名詞"
+                pos2 = "普通名詞"
         return CompoundSyntheticToken(
             surface=surface,
             pos1=pos1,
