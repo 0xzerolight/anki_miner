@@ -269,7 +269,8 @@ def standardize_kanji_variants(text: str) -> str:
 # TV-caption decoration glyphs stripped from mined text (owned, non-Yomitan —
 # see module docstring). Arrows: line-continuation marks (➡ dominant in the
 # audited broadcast subs, plus the double-arrow/curved variants seen in other
-# stations' captions). Emoji: device/speaker markers (📱 phone-call lines).
+# stations' captions). Emoji: device/speaker markers (📱 phone-call lines),
+# including U+FE0E/U+FE0F presentation selectors attached to stripped glyphs.
 # U+FFFD replacement char and the whole BMP private-use area are renderer
 # garbage by definition in caption text. Deliberately NOT stripped: ♪♫ music
 # marks (the opt-in subtitle regex-filter presets own that choice) and
@@ -283,7 +284,9 @@ _DECORATION_GLYPHS = (
     "\ufffd"  # replacement character
     "\ue000-\uf8ff"  # BMP private-use area
 )
-_DECORATION_RUN_RE = re.compile(f"[ \t]*[{_DECORATION_GLYPHS}]+(?:[ \t]+[{_DECORATION_GLYPHS}]+)*[ \t]*")
+_DECORATION_RUN_RE = re.compile(
+    f"[ \t]*(?:[{_DECORATION_GLYPHS}][\ufe0e\ufe0f]?)+(?:[ \t]+(?:[{_DECORATION_GLYPHS}][\ufe0e\ufe0f]?)+)*[ \t]*"
+)
 
 
 def strip_decoration_glyphs(text: str) -> str:
@@ -295,6 +298,8 @@ def strip_decoration_glyphs(text: str) -> str:
     and no doubled interior spaces are introduced. Only spaces the glyph run
     itself absorbs are touched; other interior whitespace is preserved (the
     reading/OCR path stores this text verbatim and does not pre-collapse).
+    U+FE0E/U+FE0F presentation selectors are consumed only when attached to a
+    stripped glyph.
     """
 
     def _repl(m: re.Match[str]) -> str:

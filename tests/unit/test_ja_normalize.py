@@ -302,7 +302,19 @@ class TestStripDecorationGlyphs:
     def test_strips_decoration_runs(self, raw, expected):
         assert strip_decoration_glyphs(raw) == expected
 
-    @pytest.mark.parametrize("kept", ["♪〜ラララ♪", "《今から十数年前》", "〈回想〉", "普通の文。"])
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("話す➡️", "話す"),
+            ("➡️話す", "話す"),
+            ("話す➡️聞く", "話す 聞く"),
+            ("話す➡︎", "話す"),
+        ],
+    )
+    def test_strips_emoji_variation_selector(self, raw, expected):
+        assert strip_decoration_glyphs(raw) == expected
+
+    @pytest.mark.parametrize("kept", ["♪〜ラララ♪", "《今から十数年前》", "〈回想〉", "❤️", "普通の文。"])
     def test_keeps_music_marks_brackets_and_plain_text(self, kept):
         assert strip_decoration_glyphs(kept) == kept
 
