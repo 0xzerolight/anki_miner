@@ -25,13 +25,23 @@ MAX_MOKURO_JSON_BYTES = 64 * 1024 * 1024
 def read_text_capped(path: Path, cap: int, description: str) -> str:
     """UTF-8 ``read_text`` with a stat-before-read size gate.
 
-    Raises :class:`SetupError` when the on-disk size exceeds ``cap``; ``OSError``
-    from ``stat``/``read_text`` propagates for the caller's existing wrapping.
+    Raises :class:`SetupError` when the on-disk size exceeds ``cap`` or the file
+    is not valid UTF-8; ``OSError`` from ``stat``/``read_text`` propagates for
+    the caller's existing wrapping.
     """
     size = path.stat().st_size
     if size > cap:
         raise SetupError(f"{description} '{path.name}' is {size:,} bytes (cap {cap:,}); refusing to load.")
-    return path.read_text(encoding="utf-8")
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        logger.debug(
+            "Reading text decode failed: file=%s error=%s detail=%s",
+            path,
+            type(e).__name__,
+            e,
+        )
+        raise SetupError(f"{description} '{path.name}' is not valid UTF-8.") from e
 
 
 def read_zip_member_text_capped(

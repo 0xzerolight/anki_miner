@@ -133,6 +133,16 @@ def test_mokuro_file_text_only_when_no_images(tmp_path):
     assert refs[0].kind == "mokuro"
 
 
+def test_mokuro_non_utf8_raises_setup_error(tmp_path):
+    mok = tmp_path / "bad.mokuro"
+    mok.write_bytes(b"\xff")
+
+    with pytest.raises(SetupError, match=r"bad\.mokuro.*UTF-8") as excinfo:
+        detector.detect(mok)
+
+    assert isinstance(excinfo.value.__cause__, UnicodeDecodeError)
+
+
 # --------------------------------------------------------------------------- #
 # Case 2: a dropped ``.cbz``/``.zip`` → requires a sibling ``.mokuro``.
 # --------------------------------------------------------------------------- #

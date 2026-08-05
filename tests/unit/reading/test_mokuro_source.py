@@ -98,6 +98,23 @@ def test_metadata_comes_from_ref_not_json(tmp_path):
     assert doc.episode == "7"
 
 
+def test_non_utf8_sidecar_raises_setup_error(tmp_path):
+    path = tmp_path / "bad.mokuro"
+    path.write_bytes(b"\xff")
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=path,
+        image_root=None,
+        title="bad",
+        volume="1",
+    )
+
+    with pytest.raises(SetupError, match=r"bad\.mokuro.*UTF-8") as excinfo:
+        load(ref)
+
+    assert isinstance(excinfo.value.__cause__, UnicodeDecodeError)
+
+
 def test_per_page_version_drift_and_unknown_keys_tolerated(tmp_path):
     pages = [
         _page("001.jpg", [_block(["いちぺーじ"])], version="0.2.0", surprise_page_key=1),
