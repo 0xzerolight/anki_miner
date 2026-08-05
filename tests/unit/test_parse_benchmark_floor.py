@@ -269,13 +269,14 @@ def test_anchor_meets_classical_adjective_floor() -> None:
 
 def test_anchor_meets_vowel_elongation_floor() -> None:
     results = _scored()
-    b_ve = results["b-lite-anchor"].by_category["vowel-elongation"]
     # V5: the vowel-elongation 名詞 fold (手ぇ→手) lives in select_mined_form and is
-    # DICT-FREE (string-only), so it fires the same on (a) and (b) — a regression
-    # tripwire. A revert mines the elongated surface 手ぇ (junk) and misses 手, so
-    # both recall<1 and junk>0; コーヒー/スーパー stay on the surface (no fold).
-    assert recall(b_ve) == 1.0, f"strategy (b) vowel-elongation recall {recall(b_ve)} below 1.0"
-    assert junk_rate(b_ve) == 0.0, f"strategy (b) vowel-elongation junk_rate {junk_rate(b_ve)} above 0.0"
+    # DICT-FREE (UniDic pronunciation evidence), so it fires the same on (a) and
+    # (b) — a regression tripwire. A revert misses 手/気; an over-broad fold mints
+    # 舞 as junk and misses lexical 舞い. Loanwords stay on the surface.
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["vowel-elongation"]
+        assert recall(counts) == 1.0, f"{strategy} vowel-elongation recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} vowel-elongation junk_rate {junk_rate(counts)} above 0.0"
 
 
 def test_anchor_meets_katakana_pronoun_floor() -> None:
