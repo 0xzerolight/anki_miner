@@ -1121,10 +1121,11 @@ class EpisodeProcessor:
                 )
 
         # Record difficulty data if a stats service is configured.
-        # OVH-024: use the pre-filter comprehension-unknown count (all_unknown_lemmas),
-        # NOT the post-filter mineable count (unknown_words). difficulty_score measures
-        # how hard the episode is to comprehend; i+1/frequency filters can collapse
-        # unknown_words to a handful, making a hard episode appear near-zero difficulty.
+        # OVH-024: use the pre-filter comprehension-unknown count
+        # (ctx.candidate_words_found), NOT the post-filter mineable count
+        # (unknown_words). difficulty_score measures how hard the episode is to
+        # comprehend; i+1/frequency filters can collapse unknown_words to a handful,
+        # making a hard episode appear near-zero difficulty.
         #
         # A locked stats.db (Anki or a parallel run) raises OperationalError here.
         # Do NOT let it bubble into process_episode's generic except — that would
@@ -1136,7 +1137,7 @@ class EpisodeProcessor:
                     series_name=ctx.series_name,
                     episode_name=ctx.episode_name,
                     total_words=len(all_words),
-                    unknown_words=len(all_unknown_lemmas),
+                    unknown_words=ctx.candidate_words_found,
                     unique_words=len(all_words),
                 )
             except (sqlite3.Error, OSError) as e:

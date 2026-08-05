@@ -2404,14 +2404,55 @@ class TestStatsServiceIntegration:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # Verify difficulty was recorded with correct counts.
-        # With no optional filters active, all_unknown_lemmas == unknown_words (1).
+        # With no optional filters active, the pre-filter candidate count is 1.
         call_args = mock_stats.record_difficulty.call_args
         assert call_args.kwargs["total_words"] == 2  # len(all_words)
-        assert call_args.kwargs["unknown_words"] == 1  # len(all_unknown_lemmas) == 1
+        assert call_args.kwargs["unknown_words"] == 1
+
+    def test_difficulty_counts_distinct_unknown_fronts_sharing_lemma(self, test_config, mock_services, tmp_path):
+        config = replace(
+            test_config,
+            include_known_words=True,
+            bypass_optional_filters=True,
+            allow_duplicate_cards=True,
+        )
+        words = [
+            TokenizedWord(
+                surface=front,
+                lemma="掛ける",
+                orth_base=front,
+                reading="カケル",
+                sentence=front,
+                start_time=float(index),
+                end_time=float(index + 1),
+                duration=1.0,
+                pos="動詞",
+            )
+            for index, front in enumerate(("賭ける", "掛ける"))
+        ]
+        mock_stats = MagicMock()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (word, _make_media(str(index))) for index, word in enumerate(words)
+        ]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["definition"] * 2
+        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
+
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert mock_stats.record_difficulty.call_args.kwargs["unknown_words"] == 2
 
     def test_difficulty_uses_pre_filter_unknown_count(self, test_config, mock_services, tmp_path):
         """OVH-024: record_difficulty must use the pre-filter comprehension-unknown
-        count (all_unknown_lemmas), not the post-filter mineable count.
+        count (candidate_words_found), not the post-filter mineable count.
 
         With i+1 or frequency filters active the mineable set can collapse to a
         handful; difficulty_score would then report near-zero for a hard episode.
@@ -2456,7 +2497,7 @@ class TestStatsServiceIntegration:
         # Pre-filter unknown count (2) must be used, not the post-filter count (1).
         assert (
             call_kwargs["unknown_words"] == 2
-        ), "record_difficulty must use all_unknown_lemmas (pre-filter), not unknown_words (post-filter)"
+        ), "record_difficulty must use candidate_words_found (pre-filter), not unknown_words (post-filter)"
         assert call_kwargs["total_words"] == 2  # len(all_words) unchanged
 
     def test_no_crash_without_stats_service(self, test_config, mock_services, tmp_path):
