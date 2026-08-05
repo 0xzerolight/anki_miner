@@ -20,6 +20,7 @@ from anki_miner.utils.text_utils import (
     katakana_to_hiragana,
     strip_inline_annotations,
     strip_subtitle_markup,
+    wrap_target_furigana_from_tokens,
 )
 
 _ANKI_FURIGANA_RE = re.compile(r" ?([^ >]+?)\[(.+?)\]")
@@ -718,6 +719,30 @@ class TestTokenSeparatorSpaceRule:
             _make_mock_token("王国", kana="オウコク"),
         ]
         assert generate_furigana_from_tokens(tokens) == "は 王国[おうこく]"
+
+    def test_literal_open_bracket_gets_no_ruby_separator(self):
+        tokens = [
+            _make_mock_token("これは", kana="コレハ"),
+            _make_mock_token("[", kana=None),
+            _make_mock_token("重要", kana="ジュウヨウ"),
+            _make_mock_token("]です", kana=None),
+        ]
+
+        assert generate_furigana_from_tokens(tokens) == "これは[ 重要[じゅうよう]]です"
+
+    def test_literal_open_bracket_gets_no_ruby_separator_when_bold(self):
+        text = "これは[重要]です"
+        tokens = [
+            _make_mock_token("これは", kana="コレハ"),
+            _make_mock_token("[", kana=None),
+            _make_mock_token("重要", kana="ジュウヨウ"),
+            _make_mock_token("]です", kana=None),
+        ]
+        start = text.index("重要")
+
+        result = wrap_target_furigana_from_tokens(text, tokens, start, start + len("重要"))
+
+        assert result == "これは[<b> 重要[じゅうよう]</b>]です"
 
 
 class TestStripInlineAnnotations:

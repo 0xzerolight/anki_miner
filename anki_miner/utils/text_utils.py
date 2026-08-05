@@ -366,19 +366,21 @@ def _format_furigana(surface: str, reading: str) -> str:
 
 
 def _leads_with_bracket(rendered: str) -> bool:
-    """True iff a ``_format_furigana`` render starts with a bracketed segment.
+    """True iff a ``_format_furigana`` render starts with a kanji ruby segment.
 
     Only then does a token-separator space serve its purpose (binding the
     leading ``[...]`` to this token's kanji instead of the previous run). A
     plain-leading render (``しっぽ 切[き]り``) must NOT get one — Anki's furigana
     filter only consumes a space directly before a ``X[...]`` group, so a space
     before plain kana renders literally on the card (audit F6: トカゲの しっぽ).
+    Literal ``[`` surfaces likewise have no kanji-bearing base and must not be
+    mistaken for a generated ruby group.
     """
     bracket = rendered.find("[")
     if bracket == -1:
         return False
     space = rendered.find(" ")
-    return space == -1 or bracket < space
+    return any(_is_kanji(char) for char in rendered[:bracket]) and (space == -1 or bracket < space)
 
 
 def _render_furigana_token(token: Any) -> str:
