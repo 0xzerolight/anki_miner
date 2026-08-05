@@ -131,13 +131,23 @@ def _is_jp(ch: str) -> bool:
     o = ord(ch)
     return (
         0x3040 <= o <= 0x30FF  # hiragana + katakana
+        or 0xFF66 <= o <= 0xFF9F  # halfwidth katakana letters + marks
         or 0x3400 <= o <= 0x9FFF  # CJK ideographs (+ ext A)
         or 0xF900 <= o <= 0xFAFF  # CJK compatibility ideographs
     )
 
 
+_EUC_JP_HIRAGANA_AS_CP932_RE = re.compile(r"(?:､[ｦ-ﾟ]){2,}")
+
+
 def _jp_ratio(text: str) -> float:
-    return sum(_is_jp(c) for c in text) / len(text) if text else 0.0
+    if not text:
+        return 0.0
+    score = sum(_is_jp(c) for c in text)
+    # EUC-JP hiragana byte pairs decode under CP932 as repeated
+    # halfwidth-comma + katakana pairs; discount that narrow signature.
+    score -= sum(len(match.group()) // 2 for match in _EUC_JP_HIRAGANA_AS_CP932_RE.finditer(text))
+    return score / len(text)
 
 
 def _decode(raw: bytes) -> str:

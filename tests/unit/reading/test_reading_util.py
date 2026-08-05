@@ -61,6 +61,18 @@ def test_decode_lives_in_util():
     assert _decode("日本語".encode("cp932")) == "日本語"
 
 
+def test_decode_cp932_halfwidth_katakana_without_euc_mojibake():
+    raw = "ｶﾅ".encode("cp932")
+    assert raw.decode("euc_jp") == "凝"
+    assert _decode(raw) == "ｶﾅ"
+
+
+def test_decode_euc_jp_hiragana_without_cp932_mojibake():
+    raw = "かな".encode("euc_jp")
+    assert raw.decode("cp932") == "､ｫ､ﾊ"
+    assert _decode(raw) == "かな"
+
+
 def _zip_with(path, members: dict[str, bytes]):
     with zipfile.ZipFile(path, "w") as zf:
         for name, data in members.items():
