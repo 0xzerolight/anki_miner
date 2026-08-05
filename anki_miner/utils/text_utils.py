@@ -18,7 +18,7 @@ def strip_subtitle_markup(text: str) -> str:
 
     Removes the three tag families that :func:`clean_subtitle_text` handles:
     ASS/SSA override blocks (``{\\...}``), the ``\\N``/``\\n`` line-break markers
-    (each replaced by a space), and HTML tags (``<...>``). It deliberately does
+    (each replaced by a space), and HTML tags (``<tag ...>``). It deliberately does
     NOT run the MeCab-oriented Japanese normalization (halfwidth→fullwidth kana,
     NFKD folding, kanji-variant mapping) nor collapse whitespace, so the returned
     string is safe to display verbatim to the user (e.g. condensed subtitles).
@@ -35,8 +35,12 @@ def strip_subtitle_markup(text: str) -> str:
     # Remove line break tags
     text = re.sub(r"\\[nN]", " ", text)
 
-    # Remove HTML tags if present
-    text = re.sub(r"<[^>]+>", "", text)
+    # Remove actual HTML tags while preserving literal angle comparisons.
+    text = re.sub(
+        r"""</?[A-Za-z][A-Za-z0-9:-]*(?:\s+(?:[^<>"']|"[^"]*"|'[^']*')*)?\s*/?>""",
+        "",
+        text,
+    )
 
     return text
 

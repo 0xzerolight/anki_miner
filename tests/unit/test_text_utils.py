@@ -46,6 +46,16 @@ class TestStripSubtitleMarkup:
     def test_removes_html_tags(self):
         assert strip_subtitle_markup("<b>Bold</b> and <i>italic</i>") == "Bold and italic"
 
+    def test_preserves_literal_angle_comparisons(self):
+        text = "3 < 5 だけど 7 > 4"
+
+        assert strip_subtitle_markup(text) == text
+
+    def test_removes_html_tags_with_quoted_angle_attributes(self):
+        text = "<span title=\"3 > 2\" data-note='1 < 2'>Text</span>"
+
+        assert strip_subtitle_markup(text) == "Text"
+
     def test_handles_empty_string(self):
         assert strip_subtitle_markup("") == ""
 
