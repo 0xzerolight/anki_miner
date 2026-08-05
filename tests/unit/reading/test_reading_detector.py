@@ -154,6 +154,18 @@ def test_cbz_with_sibling_mokuro(tmp_path):
     assert ref.volume == "Vol1"
 
 
+def test_cbz_with_uppercase_sibling_mokuro(tmp_path):
+    mok = tmp_path / "Vol1.MOKURO"
+    _write_mokuro(mok, volume="Vol1")
+    cbz = tmp_path / "Vol1.cbz"
+    cbz.write_bytes(b"PK")
+
+    refs = detector.detect(cbz)
+
+    assert refs[0].path == mok
+    assert refs[0].image_root == cbz
+
+
 def test_zip_with_sibling_mokuro(tmp_path):
     mok = tmp_path / "Vol1.mokuro"
     _write_mokuro(mok)
@@ -424,6 +436,18 @@ def test_dropped_image_dir_finds_sibling_sidecar(tmp_path):
     assert len(refs) == 1
     assert refs[0].path == mok
     # the dropped dir is exactly the sidecar's resolved image root
+    assert refs[0].image_root == img_dir
+
+
+def test_dropped_image_dir_finds_uppercase_sibling_sidecar(tmp_path):
+    img_dir = tmp_path / "Vol1"
+    img_dir.mkdir()
+    mok = tmp_path / "Vol1.MOKURO"
+    _write_mokuro(mok, volume="Vol1")
+
+    refs = detector.detect(img_dir)
+
+    assert refs[0].path == mok
     assert refs[0].image_root == img_dir
 
 
