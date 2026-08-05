@@ -11,7 +11,10 @@ from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
-from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.services.subtitle_parser import (
+    SubtitleParserService,
+    compile_subtitle_regex_filter,
+)
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.utils import generate_furigana, generate_reading
@@ -140,6 +143,17 @@ class TestParseSubtitleFile:
         lemmas = {w.lemma for w in words}
         assert "本" in lemmas
         assert "読む" in lemmas
+
+    def test_parses_bom_utf16_when_cp932_would_return_empty(self, test_config, tmp_path):
+        data = "1\r\n00:00:01,000 --> 00:00:03,000\r\n猫\r\n\r\n".encode("utf-16")
+        data.decode("cp932")  # Regression precondition: cp932 accepts these bytes.
+        sub_file = tmp_path / "utf16.srt"
+        sub_file.write_bytes(data)
+
+        service = SubtitleParserService(test_config)
+        words = service.parse_subtitle_file(sub_file)
+
+        assert [word.lemma for word in words] == ["猫"]
 
     def test_parses_words_from_lines(self, test_config, tmp_path):
         """Should extract TokenizedWord objects from subtitle lines."""
@@ -2840,6 +2854,46 @@ class TestSubtitleRegexFilter:
         assert entries[0][2] == "テスト"
         assert any("Invalid subtitle_regex_filter" in rec.message for rec in caplog.records)
 
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            r"^(a|aa)+$",
+            r"^([a]|aa)+$",
+            r"^(a|[a]a)+$",
+            r"^(ab|abab)*$",
+            r"^(foo|foofoo){1,}$",
+            r"^(?:xy|xyxy)+$",
+        ],
+    )
+    def test_overlapping_quantified_alternation_is_rejected(self, pattern):
+        with pytest.raises(ValueError, match="overlapping alternatives"):
+            compile_subtitle_regex_filter(pattern, "")
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            r"^(a|b)+$",
+            r"^(ab|ac)+$",
+            r"^(?:cat|dog)*$",
+            r"^(foo|bar){1,}$",
+        ],
+    )
+    def test_safe_quantified_alternation_compiles(self, pattern):
+        assert compile_subtitle_regex_filter(pattern, "").pattern == pattern
+
+    def test_overlapping_quantified_alternation_disables_parser_filter(self, tmp_path):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"^(a|aa)+$",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = self._build_raw_service(config)
+
+        assert service._filter_pattern is None
+        assert service._apply_text_filter("aaaa!") == "aaaa!"
+
     def test_mining_path_applies_same_filter(self, tmp_path):
         # parse_subtitle_file must honor the filter identically to parse_raw_entries:
         # if we strip the only content character, MeCab sees an empty line and
@@ -3719,8 +3773,8 @@ class TestPerFileLineCache:
     """Tests for the per-file tokenization cache (Task 5).
 
     The cache must make a second parse of the SAME unchanged file skip MeCab,
-    while an mtime change forces a fresh re-tokenization. Output must remain
-    byte-identical to an uncached parse.
+    while a stat fingerprint change forces a fresh re-tokenization. Output must
+    remain byte-identical to an uncached parse.
     """
 
     @staticmethod
@@ -3839,6 +3893,55 @@ class TestPerFileLineCache:
         assert counts["猫"] == 1
         assert counts["犬"] == 1
         assert {w.lemma for w in words} == {"猫", "犬"}
+
+    def test_same_mtime_content_replacement_reloads_file(self, test_config, tmp_path):
+        """Replacing content with the same mtime must not replay cached tokens."""
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        replacement = tmp_path / "replacement.srt"
+        sub_file.write_text("猫", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+        original_stat = sub_file.stat()
+
+        by_text = {
+            "猫": _make_token("猫", "名詞", lemma="猫", kana="ネコ"),
+            "犬": _make_token("犬", "名詞", lemma="犬", kana="イヌ"),
+        }
+        mock_tagger = MagicMock(side_effect=lambda text: [by_text[text]])
+
+        def load_current_file(_path):
+            text = sub_file.read_text(encoding="utf-8")
+            return self._make_mock_subs([{"text": text, "start": 1000, "end": 3000}])
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                side_effect=load_current_file,
+            ) as mock_load,
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="fg"),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="rd"),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+            replacement.write_text("犬", encoding="utf-8")
+            os.utime(
+                replacement,
+                ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns),
+            )
+            os.replace(replacement, sub_file)
+            replaced_stat = sub_file.stat()
+
+            words = service.parse_subtitle_file(sub_file)
+
+        assert replaced_stat.st_mtime_ns == original_stat.st_mtime_ns
+        assert replaced_stat.st_ctime_ns != original_stat.st_ctime_ns
+        assert counts["猫"] == 1
+        assert [word.lemma for word in words] == ["犬"]
+        assert mock_load.call_count == 2
+        assert mock_tagger.call_count == 2
 
 
 class TestAbandonedGeneratorCacheNonCommit:

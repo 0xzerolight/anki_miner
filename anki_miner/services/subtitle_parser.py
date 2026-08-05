@@ -189,6 +189,54 @@ _REGEX_ATOM = r"(?:\\.|\[(?:\\.|[^\]\\])*\]|[^()[\]\\])"
 _NESTED_UNBOUNDED_REPEAT_RE = re.compile(
     r"\(" + _REGEX_ATOM + r"*(?:[*+]|\{\d+,\})" + _REGEX_ATOM + r"*\)(?:[*+]|\{\d+,\})"
 )
+_REGEX_ALTERNATION_ATOM = r"(?:\\.|\[(?:\\.|[^\]\\])*\]|[^|()[\]\\])"
+_QUANTIFIED_ALTERNATION_RE = re.compile(
+    r"\((?:\?:)?(?P<body>"
+    + _REGEX_ALTERNATION_ATOM
+    + r"*(?:\|"
+    + _REGEX_ALTERNATION_ATOM
+    + r"*)+)\)(?:[*+]|\{\d+,\})(?!\+)"
+)
+
+
+# A character class holding one literal, non-meta character is the character
+# (``[a]`` ≡ ``a``). Folding it before the branch comparison keeps the overlap
+# check from being defeated by trivially equivalent spellings. Anything richer
+# (ranges, negation, multi-char classes) is left alone — the detector stays a
+# conservative syntactic screen, not a regex-equivalence prover.
+_TRIVIAL_CHAR_CLASS_RE = re.compile(r"\[([^\\\^\]])\]")
+
+
+def _normalize_alternation_branch(branch: str) -> str:
+    return _TRIVIAL_CHAR_CLASS_RE.sub(r"\1", branch)
+
+
+def _has_overlapping_quantified_alternation(pattern: str) -> bool:
+    """Whether a simple quantified alternation has prefix-overlapping branches."""
+    for match in _QUANTIFIED_ALTERNATION_RE.finditer(pattern):
+        branches: list[str] = []
+        start = 0
+        escaped = False
+        in_class = False
+        body = match.group("body")
+        for index, char in enumerate(body):
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "[":
+                in_class = True
+            elif char == "]":
+                in_class = False
+            elif char == "|" and not in_class:
+                branches.append(body[start:index])
+                start = index + 1
+        branches.append(body[start:])
+        branches = [_normalize_alternation_branch(branch) for branch in branches]
+        for index, branch in enumerate(branches):
+            if any(branch.startswith(other) or other.startswith(branch) for other in branches[index + 1 :]):
+                return True
+    return False
 
 
 def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[str]:
@@ -204,8 +252,10 @@ def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[
         raise ValueError(str(e)) from e
     if _NESTED_UNBOUNDED_REPEAT_RE.search(pattern):
         raise ValueError("nested unbounded repeats are not allowed")
-    # stdlib re has no wall-clock timeout. Size limits plus the obvious nested-
-    # repeat reject bound validation cost, but cannot prove every pattern safe.
+    if _has_overlapping_quantified_alternation(pattern):
+        raise ValueError("quantified groups with overlapping alternatives are not allowed")
+    # stdlib re has no wall-clock timeout. Size limits plus the nested-repeat and
+    # overlapping-alternation rejects cover common stalls, but cannot prove safety.
     return compiled
 
 
@@ -416,18 +466,21 @@ class SubtitleParserService:
         self._rd_cache: dict[str, str] = {}
         self._reset_caches()
         # Per-FILE tokenization cache (distinct lifetime from the per-parse memo
-        # caches above): resolved path -> (mtime, list of line-state tuples).
+        # caches above): resolved path -> (stat fingerprint, line-state tuples).
         # Filled on the first _iter_parsed_lines pass over a file and reused by
-        # any later pass over the SAME path+mtime (e.g. the Deck Builder's
-        # count_lemmas → parse_subtitle_file double-parse). Survives across
-        # parse_* calls; an mtime change invalidates the entry. _reset_caches()
-        # does NOT touch this — it is not a per-parse cache.
+        # any later pass over the SAME path+mtime_ns+ctime_ns+size (e.g. the
+        # Deck Builder's count_lemmas → parse_subtitle_file double-parse).
+        # Survives across parse_* calls; a fingerprint change invalidates the
+        # entry. _reset_caches() does NOT touch this — it is not a per-parse cache.
         #
         # Size-bounded: capped at _LINE_CACHE_MAX_FILES entries via LRU
         # eviction (pop the oldest key when full). Prevents unbounded growth during
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
-        self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
+        self._line_cache: dict[
+            Path,
+            tuple[tuple[int, int, int], list[tuple[str, list, list, float, float, float]]],
+        ] = {}
         # Verb-front resolver memo (distinct lifetime from the per-parse memos,
         # like _line_cache): the deinflect + offline existence lookup is
         # deterministic per (inflected_surface, orth_base, cType), so it survives
@@ -597,8 +650,9 @@ class SubtitleParserService:
         Shared by every public parse_* method so error wrapping stays
         consistent regardless of entry point. The UTF-8 default is tried first
         (the ``pysubs2.load`` seam patched by tests); on a decode failure the
-        shared cp932-first fallback (see utils/subtitle_encoding.py) runs so
-        Shift-JIS subtitles parse instead of aborting the episode.
+        shared fallback (see utils/subtitle_encoding.py) dispatches on a
+        UTF-16/32 BOM first, then tries cp932, so both UTF-16 and Shift-JIS
+        subtitles parse instead of aborting the episode.
         """
         try:
             try:
@@ -623,30 +677,37 @@ class SubtitleParserService:
         (callers apply ``_should_include_word`` themselves so the index path and
         mining path share identical token selection logic).
 
-        Per-file cache: keyed by resolved path → (mtime, line-state list);
+        Per-file cache: keyed by resolved path → (stat fingerprint, line-state
+        list), where the fingerprint is ``(mtime_ns, ctime_ns, size)``;
         bounded to ``_LINE_CACHE_MAX_FILES`` entries via oldest-first eviction.
-        On a cache HIT for the same path+mtime the subtitle file is neither
+        On a cache HIT for the same path+fingerprint the subtitle file is neither
         reloaded nor re-tokenized — the stored line-state (the very tuples a
         fresh parse would yield, including ``_SyntheticToken``s) is replayed.
-        An mtime mismatch (file edited between passes) invalidates the entry and
-        forces a fresh load + tokenize. The multi-entry cache supports the Deck
-        Builder's Phase-1 (``count_lemmas``) → Phase-2 (``parse_subtitle_file``)
-        cross-file reuse pattern: every file visited in Phase 1 remains cached
-        for Phase 2, eliminating a second full MeCab pass over the corpus.
+        A fingerprint mismatch (file edited or replaced between passes)
+        invalidates the entry and forces a fresh load + tokenize. The multi-entry
+        cache supports the Deck Builder's Phase-1 (``count_lemmas``) → Phase-2
+        (``parse_subtitle_file``) cross-file reuse pattern: every file visited in
+        Phase 1 remains cached for Phase 2, eliminating a second full MeCab pass
+        over the corpus.
         Consumers MUST NOT mutate the yielded ``merged_tokens`` lists/tokens, as
         they are shared across passes; current consumers only read them.
         """
         key = subtitle_file.resolve()
         try:
-            mtime = subtitle_file.stat().st_mtime
+            stat_result = subtitle_file.stat()
+            fingerprint = (
+                stat_result.st_mtime_ns,
+                stat_result.st_ctime_ns,
+                stat_result.st_size,
+            )
         except OSError:
             # Can't stat (e.g. missing file): fall through to _load_subs, which
             # raises the normalized SubtitleParseError. Bypass the cache.
-            mtime = None
+            fingerprint = None
 
-        if mtime is not None:
+        if fingerprint is not None:
             cached = self._line_cache.get(key)
-            if cached is not None and cached[0] == mtime:
+            if cached is not None and cached[0] == fingerprint:
                 self._line_cache.pop(key)
                 self._line_cache[key] = cached
                 yield from cached[1]
@@ -682,16 +743,17 @@ class SubtitleParserService:
             line_states.append(line_state)
             yield line_state
 
-        # mtime is None only when stat() failed, in which case _load_subs above
-        # already raised, so this assignment is reachable only with a real mtime.
+        # fingerprint is None only when stat() failed, in which case _load_subs
+        # above already raised, so this assignment is reachable only with a real
+        # fingerprint.
         #
         # Evict the least-recently-used entry at capacity so growth stays bounded
         # (see _LINE_CACHE_MAX_FILES). dict preserves insertion order in Python
         # 3.7+, so next(iter(...)) yields the oldest key.
-        if mtime is not None:
+        if fingerprint is not None:
             if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
                 self._line_cache.pop(next(iter(self._line_cache)))
-            self._line_cache[key] = (mtime, line_states)
+            self._line_cache[key] = (fingerprint, line_states)
 
     def _build_line_state(
         self, text: str, start: float, end: float
