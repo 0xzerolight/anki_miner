@@ -332,10 +332,12 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # attested collocation for the long-compound swallow-by-design fixture
     "気がする",
     # long-compound (Task 6): the 2-token attested compounds the matcher must
-    # keep whole — 応急処置 (attestation-only) and the 13-char katakana compound
-    # the 16-char span cap exists for. The 14-char greeting is DELIBERATELY
-    # attested: it must still NOT merge (7 tokens > the 5-token cap) — the
-    # adversarial proof the token cap holds even for attested long phrases.
+    # keep whole — 走り出す pins inflected-tail kind-A deinflection, 応急処置 is
+    # attestation-only, and the 13-char katakana compound needs the 16-char span
+    # cap. The 14-char greeting is DELIBERATELY attested: it must still NOT merge
+    # (7 tokens > the 5-token cap) — the adversarial proof the token cap holds
+    # even for attested long phrases.
+    "走り出す",
     "応急処置",
     "アプリケーションプログラム",
     "お誕生日おめでとうございます",
@@ -356,6 +358,7 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
     **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),
     **dict.fromkeys(("サボる", "やる", "わかる", "ある"), "v5r"),
+    "走り出す": "v5s",
     "すむ": "v5m",
     "おく": "v5k",
     # i-adjectives
