@@ -261,7 +261,10 @@ def test_drm_content_encryption_raises(tmp_path: Path) -> None:
 def test_font_obfuscation_encryption_proceeds(tmp_path: Path) -> None:
     files = {
         "OEBPS/content.opf": _opf(
-            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [
+                ("c1", "ch1.xhtml", "application/xhtml+xml", ""),
+                ("font", "fonts/gothic.otf", "font/otf", ""),
+            ],
             [("c1", None)],
         ),
         "OEBPS/ch1.xhtml": _xhtml("<p>本文。</p>"),
@@ -270,6 +273,40 @@ def test_font_obfuscation_encryption_proceeds(tmp_path: Path) -> None:
     }
     doc = load(_ref(_build_epub(tmp_path, files)))
     assert [u.text for u in doc.units] == ["本文。"]
+
+
+def test_font_obfuscation_accepts_extensionless_manifest_font(tmp_path: Path) -> None:
+    files = {
+        "OEBPS/content.opf": _opf(
+            [
+                ("c1", "ch1.xhtml", "application/xhtml+xml", ""),
+                ("font", "fonts/main", "font/otf", ""),
+            ],
+            [("c1", None)],
+        ),
+        "OEBPS/ch1.xhtml": _xhtml("<p>本文。</p>"),
+        "OEBPS/fonts/main": b"\x00\x01\x00\x00font",
+        "META-INF/encryption.xml": _encryption("http://www.idpf.org/2008/embedding", "OEBPS/fonts/main"),
+    }
+
+    doc = load(_ref(_build_epub(tmp_path, files)))
+
+    assert [u.text for u in doc.units] == ["本文。"]
+
+
+def test_font_obfuscation_rejects_manifest_non_font_with_font_suffix(tmp_path: Path) -> None:
+    files = {
+        "OEBPS/content.opf": _opf(
+            [("c1", "chapter.otf", "application/xhtml+xml", "")],
+            [("c1", None)],
+        ),
+        "OEBPS/chapter.otf": _xhtml("<p>本文。</p>"),
+        "META-INF/encryption.xml": _encryption("http://www.idpf.org/2008/embedding", "OEBPS/chapter.otf"),
+    }
+    epub_path = _build_epub(tmp_path, files)
+
+    with pytest.raises(SetupError):
+        load(_ref(epub_path))
 
 
 @pytest.mark.parametrize(
@@ -306,7 +343,10 @@ def test_epub_encryption_requires_allowed_algorithm_and_font_uri(
     )
     files = {
         "OEBPS/content.opf": _opf(
-            [("c1", "ch1.xhtml", "application/xhtml+xml", "")],
+            [
+                ("c1", "ch1.xhtml", "application/xhtml+xml", ""),
+                ("font", "fonts/gothic.otf", "font/otf", ""),
+            ],
             [("c1", None)],
         ),
         "OEBPS/ch1.xhtml": _xhtml("<p>本文。</p>"),
