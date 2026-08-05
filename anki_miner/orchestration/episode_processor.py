@@ -166,10 +166,6 @@ class _EpisodeContext:
     # apart from "removed by active filters" (survivors, then filtered out).
     candidate_words_found: int = 0
     comprehension_percentage: float = 0.0
-    # Lemmas force-included by the user whitelist (populated in _phase2_filter's
-    # partition step). Read by the Reading path so its post-phase2 occurrence
-    # floor does not re-drop force-included words. Empty on every other path.
-    forced_include_lemmas: set[str] = field(default_factory=set)
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
         """Construct a ProcessingResult from accumulated state.
@@ -847,7 +843,6 @@ class EpisodeProcessor:
                 unknown_words, self.word_list_service
             )
             whitelist_force_includes = len(forced_include)
-            ctx.forced_include_lemmas = {w.lemma for w in forced_include}
 
         # Frequency rank cutoff. Gate on an actually-loaded NUMERIC frequency
         # source — NOT just max_frequency_rank > 0, and NOT is_available(). With
