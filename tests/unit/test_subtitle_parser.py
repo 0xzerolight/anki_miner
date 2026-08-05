@@ -2858,6 +2858,8 @@ class TestSubtitleRegexFilter:
         "pattern",
         [
             r"^(a|aa)+$",
+            r"^([a]|aa)+$",
+            r"^(a|[a]a)+$",
             r"^(ab|abab)*$",
             r"^(foo|foofoo){1,}$",
             r"^(?:xy|xyxy)+$",

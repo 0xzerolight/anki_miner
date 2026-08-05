@@ -158,11 +158,19 @@ class TestPerFieldValidation:
         [
             ("(", ""),
             (r"(a+)+$", ""),
+            (r"^(a|aa)+$", ""),
             ("a" * 513, ""),
             ("a", "x" * 513),
             (r"(a)", r"\2"),
         ],
-        ids=("invalid", "catastrophic", "long-pattern", "long-replacement", "bad-backreference"),
+        ids=(
+            "invalid",
+            "catastrophic",
+            "overlapping-alternation",
+            "long-pattern",
+            "long-replacement",
+            "bad-backreference",
+        ),
     )
     def test_invalid_or_catastrophic_regex_filter_rejected_at_commit(
         self, tab, test_config, no_modals, pattern, replacement

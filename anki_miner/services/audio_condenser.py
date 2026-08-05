@@ -82,9 +82,10 @@ _BRACKET_PAIRS: tuple[tuple[str, str], ...] = (
 def load_subtitle_events(path: str | Path) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
-    Uses pysubs2 with a UTF-8 default; on a decode failure it retries with
-    ``cp932`` first (the dominant non-UTF-8 input), then — only if cp932 also
-    fails to decode — with a charset-normalizer-detected encoding, and finally
+    Uses pysubs2 with a UTF-8 default; on a decode failure it dispatches on a
+    UTF-16/32 BOM when one is present, otherwise retries with ``cp932`` first
+    (the dominant non-BOM non-UTF-8 input), then — only if cp932 also fails to
+    decode — with a charset-normalizer-detected encoding, and finally
     re-raises the original UTF-8 error (D10). ``Comment`` events are skipped.
     Times come straight from ``event.start`` / ``event.end`` (millisecond
     ints); text is the raw cue text — markup stripping happens later in

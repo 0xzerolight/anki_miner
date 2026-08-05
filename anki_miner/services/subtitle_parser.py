@@ -199,6 +199,18 @@ _QUANTIFIED_ALTERNATION_RE = re.compile(
 )
 
 
+# A character class holding one literal, non-meta character is the character
+# (``[a]`` ≡ ``a``). Folding it before the branch comparison keeps the overlap
+# check from being defeated by trivially equivalent spellings. Anything richer
+# (ranges, negation, multi-char classes) is left alone — the detector stays a
+# conservative syntactic screen, not a regex-equivalence prover.
+_TRIVIAL_CHAR_CLASS_RE = re.compile(r"\[([^\\\^\]])\]")
+
+
+def _normalize_alternation_branch(branch: str) -> str:
+    return _TRIVIAL_CHAR_CLASS_RE.sub(r"\1", branch)
+
+
 def _has_overlapping_quantified_alternation(pattern: str) -> bool:
     """Whether a simple quantified alternation has prefix-overlapping branches."""
     for match in _QUANTIFIED_ALTERNATION_RE.finditer(pattern):
@@ -220,6 +232,7 @@ def _has_overlapping_quantified_alternation(pattern: str) -> bool:
                 branches.append(body[start:index])
                 start = index + 1
         branches.append(body[start:])
+        branches = [_normalize_alternation_branch(branch) for branch in branches]
         for index, branch in enumerate(branches):
             if any(branch.startswith(other) or other.startswith(branch) for other in branches[index + 1 :]):
                 return True
@@ -637,8 +650,9 @@ class SubtitleParserService:
         Shared by every public parse_* method so error wrapping stays
         consistent regardless of entry point. The UTF-8 default is tried first
         (the ``pysubs2.load`` seam patched by tests); on a decode failure the
-        shared cp932-first fallback (see utils/subtitle_encoding.py) runs so
-        Shift-JIS subtitles parse instead of aborting the episode.
+        shared fallback (see utils/subtitle_encoding.py) dispatches on a
+        UTF-16/32 BOM first, then tries cp932, so both UTF-16 and Shift-JIS
+        subtitles parse instead of aborting the episode.
         """
         try:
             try:
