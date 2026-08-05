@@ -175,6 +175,9 @@ class FilePairMatcher:
                 subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
                 subtitle.suffix.lower(),
                 _nfc(subtitle.name),
+                # NFC collapses canonically equivalent spellings to one key; the
+                # raw name makes the order total so iterdir() order can't decide.
+                subtitle.name,
             )
         )
 

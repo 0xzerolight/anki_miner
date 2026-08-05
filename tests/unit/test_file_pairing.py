@@ -210,6 +210,35 @@ class TestFilePairMatcher:
 
             assert [pair.subtitle.name for pair in pairs] == [expected]
 
+        @pytest.mark.parametrize("reverse", [False, True])
+        def test_canonically_equivalent_names_pick_nfc_regardless_of_dir_order(self, tmp_path, monkeypatch, reverse):
+            """NFC and NFD spellings share one _nfc key; the raw-name tie-break
+            must make selection independent of iterdir() enumeration order."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            video = video_dir / (_DECOMPOSING_STEM + "_01.mkv")
+            video.touch()
+            names = [
+                unicodedata.normalize("NFC", _DECOMPOSING_STEM) + "_01.srt",
+                unicodedata.normalize("NFD", _DECOMPOSING_STEM) + "_01.srt",
+            ]
+            subtitles = [sub_dir / name for name in names]
+            for subtitle in subtitles:
+                subtitle.touch()
+            ordered = list(reversed(subtitles)) if reverse else list(subtitles)
+
+            entries = {video_dir: [video], sub_dir: ordered}
+            monkeypatch.setattr(Path, "iterdir", lambda path: iter(entries[path]))
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+
+            assert len(pairs) == 1
+            # Raw-name key makes the winner order-independent. By codepoint
+            # order the NFD spelling wins (base か U+304B < composed が U+304C).
+            assert pairs[0].subtitle.name == names[1]
+
 
 class TestResolveOutputPath:
     """Tests for resolve_output_path — the write-target resolver that stops the

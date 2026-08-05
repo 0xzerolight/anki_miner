@@ -98,9 +98,11 @@ class EpisodeNumberExtractor:
                 return EpisodeInfo(file_path, episode, season)
 
         # A number attached to an embedded "ep" token belongs to the ordinary
-        # word, not the episode marker (for example, "Step 3"). Do not let it
-        # re-enter as the winning candidate through the bare-number fallback.
-        filename = re.sub(
+        # word, not the episode marker (for example, "Step 3"). Prefer the
+        # remaining candidates over it — but when it holds the ONLY number in
+        # the name ("Step_03.mkv"), it is also the only episode candidate, so
+        # fall back to the unsuppressed name rather than extracting nothing.
+        suppressed = re.sub(
             r"(?<=[0-9A-Za-z])[Ee][Pp](?:isode)?[\s._-]*\d+(?![0-9A-Za-z])",
             "",
             filename,
@@ -110,7 +112,7 @@ class EpisodeNumberExtractor:
         # numeric show titles ("86 - 03", "Mob Psycho 100 - 05") put the title
         # number first and the episode number last; taking the first collapsed
         # every file in the folder onto the title number (T-04).
-        bare = re.findall(cls.BARE_NUMBER, filename)
+        bare = re.findall(cls.BARE_NUMBER, suppressed) or re.findall(cls.BARE_NUMBER, filename)
         if bare:
             return EpisodeInfo(file_path, int(bare[-1]), None)
 

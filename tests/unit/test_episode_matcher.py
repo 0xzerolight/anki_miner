@@ -100,6 +100,19 @@ class TestEpisodeNumberExtractor:
             assert result is not None
             assert result.episode_number == 1
 
+        def test_step_number_survives_as_sole_bare_candidate(self, tmp_path):
+            """Suppressing the embedded-ep candidate must not extract nothing
+            when it holds the only number in the name (Step_03.mkv → 3)."""
+            for name, episode in [("Step_03.mkv", 3), ("Show_Step_03.mkv", 3)]:
+                path = tmp_path / name
+                path.touch()
+
+                result = EpisodeNumberExtractor.extract_episode_info(path)
+
+                assert result is not None, name
+                assert result.episode_number == episode
+                assert result.season_number is None
+
         def test_extracts_standalone_number(self, tmp_path):
             """Should extract standalone numbers."""
             path = tmp_path / "Anime_01.mp4"
