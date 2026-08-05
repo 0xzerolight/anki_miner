@@ -1,0 +1,1 @@
+{"id":"lw01","sentence":"すみません","expected":[],"category":"lexicalized-window","note":"Anchor both すむ and the joined window すみません so only the lexicalized-window reject prevents すむ junk."}

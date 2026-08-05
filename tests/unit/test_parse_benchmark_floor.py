@@ -192,6 +192,18 @@ def test_anchor_meets_colloquial_floor() -> None:
     assert junk_rate(b_co) == 0.0, f"strategy (b) colloquial junk_rate {junk_rate(b_co)} above 0.0"
 
 
+def test_anchor_meets_lexicalized_window_floor() -> None:
+    results = _scored()
+    b_lw = results["b-lite-anchor"].by_category["lexicalized-window"]
+    assert junk_rate(b_lw) == 0.0, f"strategy (b) lexicalized-window junk_rate {junk_rate(b_lw)} above 0.0"
+    # The standalone recovery proves すむ is attested; the joined attestation is
+    # therefore the only reason strategy (b) suppresses it inside すみません.
+    assert mine_lite_anchor("すみます") == {"すむ"}
+    assert mine_lite_anchor("すみません") == set()
+    # No dictionary keeps the byte-identical safe-degrade baseline.
+    assert mine_lite_orthbase("すみません") == set()
+
+
 def test_anchor_meets_aux_context_floor() -> None:
     results = _scored()
     b_ac = results["b-lite-anchor"].by_category["aux-context"]

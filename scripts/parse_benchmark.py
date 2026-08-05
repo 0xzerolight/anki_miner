@@ -308,6 +308,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "やばい",
     "うまい",
     "わかる",
+    # lexicalized-window anchors: the standalone verb is recoverable, while the
+    # attested joined expression must suppress it inside すみません.
+    "すむ",
+    "すみません",
     # auxiliary verbs, DELIBERATELY attested: the aux-context category must fail
     # on attestation-PASS + pos2-reject, not on a fixture-dict miss — otherwise
     # the floor stays green even if the 非自立可能 reject is reverted (the same
@@ -352,6 +356,7 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
     **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),
     **dict.fromkeys(("サボる", "やる", "わかる", "ある"), "v5r"),
+    "すむ": "v5m",
     "おく": "v5k",
     # i-adjectives
     **dict.fromkeys(("すごい", "凄い", "かわいい", "可愛い", "あざとい", "しがない", "やばい", "うまい"), "adj-i"),
