@@ -387,6 +387,22 @@ def test_pairing_tier3_positional_when_counts_match(tmp_path):
     assert doc.units[1].image_ref == ImageRef(p1)  # a_second -> p001
 
 
+def test_pairing_partial_named_match_does_not_consume_unrelated_image(tmp_path):
+    img_root = tmp_path / "imgs"
+    named = _mkimg(img_root, "001.jpg")
+    _mkimg(img_root, "cover.jpg")
+    pages = [
+        _page("001.jpg", [_block(["いち"])]),
+        _page("002.jpg", [_block(["にー"])]),
+    ]
+
+    doc = load(_write_ref(tmp_path, _mokuro(pages), img_root))
+
+    assert doc.units[0].image_ref == ImageRef(named)
+    assert doc.units[1].image_ref is None
+    assert any("page 2" in w and "no image matched" in w for w in doc.warnings)
+
+
 def test_pairing_no_positional_when_counts_differ(tmp_path):
     img_root = tmp_path / "imgs"
     _mkimg(img_root, "x.png")  # only one image; stem-matches page 1 only

@@ -277,8 +277,18 @@ def _unique_stem_index(records: list[_ImageRecord]) -> dict[str, _ImageRecord]:
 
 
 def _positional_pairs(pages: list[dict | None], records: list[_ImageRecord]) -> dict[int, _ImageRecord]:
-    """Tier-3 fallback: pair pages to images by natural sort when counts match."""
+    """Tier-3 fallback: natural-sort pairs when counts match and names give no partial signal."""
     if not records or len(pages) != len(records):
+        return {}
+    exact_keys = {record.norm_full for record in records}
+    stem_index = _unique_stem_index(records)
+    named_matches: list[bool] = []
+    for page in pages:
+        if page is None:
+            continue
+        norm = _norm_key(str(page.get("img_path") or ""))
+        named_matches.append(norm in exact_keys or _stem_of(norm) in stem_index)
+    if any(named_matches) and not all(named_matches):
         return {}
     ordered = sorted(records, key=lambda r: natural_sort_key(r.raw_key))
     if any(page is None for page in pages):
@@ -304,7 +314,7 @@ def _match_page(
     record = stem_index.get(_stem_of(norm))  # tier 2: unique stem
     if record is not None:
         return record
-    return positional.get(page_idx)  # tier 3: positional (counts-match only)
+    return positional.get(page_idx)  # tier 3: safe positional fallback
 
 
 def _norm_key(path: str) -> str:
