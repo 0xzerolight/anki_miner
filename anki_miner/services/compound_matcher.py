@@ -9,9 +9,10 @@ positions come from MeCab tokens, and deinflection is delegated to MeCab (the
 span's tail token contributes its ``orthBase`` dictionary form).
 
 Runs AFTER ``morphology.merge_compound_suffixes``. For spans of adjacent
-tokens starting at a mineable token, the longest span whose candidate string
-is an exact offline-dictionary headword is merged into one synthetic token;
-consumed tokens are skipped (greedy left-to-right, like Yomitan's scan).
+tokens starting at a structurally contentful token, the longest span whose
+candidate string is an exact offline-dictionary headword is merged into one
+synthetic token; consumed tokens are skipped (greedy left-to-right, like
+Yomitan's scan).
 
 Lives outside ``morphology.py`` because the matcher is a stateful object — it
 holds a mutable existence cache and an injected lookup dependency — unlike
@@ -105,8 +106,8 @@ class CompoundDictionaryMatcher:
     """Greedy longest-match merger over one line's token stream.
 
     ``term_lookup`` is injected (no SQLite here); ``inclusion_rule`` is the
-    same gate the parser mines with, reused for span starts so spans never
-    begin at particles/aux/kana-only tokens.
+    same gate the parser mines with, applied to completed synthetic tokens.
+    Candidate boundaries use structural content checks instead.
     """
 
     def __init__(
@@ -167,7 +168,7 @@ class CompoundDictionaryMatcher:
 
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""
-        return self._rule.should_include(token)
+        return self._can_end(token)
 
     @staticmethod
     def _can_end(token) -> bool:
@@ -258,11 +259,12 @@ class CompoundDictionaryMatcher:
         front is the headword; its pos2 is pinned to 一般 — the real tails
         carry pos2=非自立可能, and inheriting that would make the merge's
         survival depend on the user's ``excluded_subtypes`` (the 非自立 vs
-        非自立可能 trap) and silently drop compounds. Kind B (all-content
-        span, tail uninflected) keeps the head's nominal POS; surface equals
-        the headword there, so mined_form is right either way. No new POS
-        value is invented — a novel pos1 would silently break the
-        ``pos in ("動詞", "形容詞")`` checks in word/pitch code.
+        非自立可能 trap) and silently drop compounds. Kind B inherits the
+        uninflected tail's POS, which identifies the attested headword's type
+        even when the first token has a different POS (動く+歩道). Surface
+        equals the headword there, so mined_form is right either way. No new
+        POS value is invented — a novel pos1 would silently break the ``pos in
+        ("動詞", "形容詞")`` checks in word/pitch code.
         """
         surface = "".join(t.surface for t in span)
         kana = "".join(extract_reading(t) for t in span)
@@ -270,10 +272,10 @@ class CompoundDictionaryMatcher:
             pos1 = _pos1(span[-1]) or "動詞"
             pos2 = "一般"
         else:
-            head_pos1 = _pos1(span[0])
-            head_pos2 = _pos2(span[0])
-            pos1 = head_pos1 if head_pos1 else "名詞"
-            pos2 = head_pos2 if head_pos2 and head_pos2 != "*" else "普通名詞"
+            tail_pos1 = _pos1(span[-1])
+            tail_pos2 = _pos2(span[-1])
+            pos1 = tail_pos1 if tail_pos1 else "名詞"
+            pos2 = tail_pos2 if tail_pos2 and tail_pos2 != "*" else "普通名詞"
         return CompoundSyntheticToken(
             surface=surface,
             pos1=pos1,
