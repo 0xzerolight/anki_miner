@@ -405,6 +405,41 @@ def test_whitelist_admits_lemma_sibling_at_floor3(test_config, tmp_path):
     assert "lemma-siblings" in (WordFilterService.partition_whitelisted.__doc__ or "")
 
 
+def test_front_whitelist_does_not_force_distinct_lemma_sibling(test_config, tmp_path):
+    wl = tmp_path / "wl.txt"
+    wl.write_text("賭ける\n", encoding="utf-8")
+    wls = WordListService(whitelist_path=wl)
+    wls.load()
+
+    cfg = replace(test_config, reading_min_occurrence=3, use_whitelist=True)
+    whitelisted = _word("掛ける", 0, pos="動詞", surface="賭けた")
+    whitelisted.orth_base = "賭ける"
+    sibling = _word("掛ける", 1, pos="動詞", surface="掛けた")
+    sibling.orth_base = "掛ける"
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(
+        [whitelisted, sibling],
+        None,
+        collections.Counter({"掛ける": 2}),
+    )
+    definitions = MagicMock()
+    definitions.offline_term_identities.return_value = {
+        ("賭ける", "かな"): {("jmdict", 1, "かける")},
+        ("掛ける", "かな"): {("jmdict", 2, "かける")},
+    }
+    anki = _make_anki_service()
+
+    _make_processor(
+        cfg,
+        subtitle_parser=sp,
+        anki_service=anki,
+        definition_service=definitions,
+        word_list_service=wls,
+    ).process_reading(_document([_unit(0), _unit(1)]))
+
+    assert [payload.word.mined_form for payload in anki.last_card_data] == ["賭ける"]
+
+
 def test_no_mineable_words_message_names_filters_on_reading_path(test_config):
     """Regression B (reading path): reading_min_occurrence can empty the list
     after words survive the known-vocab filter. The shared terminal helper must
