@@ -13,6 +13,7 @@ from anki_miner.utils import (
     generate_furigana,
     generate_reading,
     is_hiragana_only,
+    is_kana_only,
     is_katakana_only,
     wrap_target_furigana,
     wrap_target_plain,
@@ -77,6 +78,15 @@ class WordFilterService:
         lemma form — a known intentional consequence of switching to
         lemma-based mining for verbs; see CHANGELOG.
 
+        Kana-variant fold (``config.known_words_match_kana_variants``, default
+        on): a word whose ``mined_form`` is written entirely in kana ALSO
+        counts as known when its dictionary ``lemma`` is in
+        ``existing_vocabulary`` — a subtitle spelling うなずく (orthBase, kana)
+        must not re-mine an existing 頷く (lemma) card. The fold is one-way and
+        script-gated: a kanji ``mined_form`` never falls back to the lemma,
+        because unidic's canonical lemma collapses kanji-variant homographs
+        (殺る→遣る, Issue #19/#5) that a learner knows separately.
+
         Args:
             all_words: List of all discovered words.
             existing_vocabulary: Set of Expression-field values already in
@@ -85,7 +95,19 @@ class WordFilterService:
         Returns:
             List of unknown words (``mined_form`` not in existing vocabulary).
         """
-        return [word for word in all_words if word.mined_form not in existing_vocabulary]
+        fold_kana = self.config.known_words_match_kana_variants
+
+        def _is_known(word: TokenizedWord) -> bool:
+            if word.mined_form in existing_vocabulary:
+                return True
+            return (
+                fold_kana
+                and word.lemma != word.mined_form
+                and word.lemma in existing_vocabulary
+                and is_kana_only(word.mined_form)
+            )
+
+        return [word for word in all_words if not _is_known(word)]
 
     def filter_by_frequency(
         self,

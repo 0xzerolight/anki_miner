@@ -296,6 +296,12 @@ class AnkiMinerConfig:
     # Known word database
     known_words_db_path: Path = field(default_factory=lambda: ANKI_MINER_HOME / "known_words.db")
     use_known_words_db: bool = False
+    # When True (default), a word whose mined_form is written entirely in kana
+    # also counts as known when its dictionary lemma is in the known set — so a
+    # subtitle spelling うなずく doesn't re-mine an existing 頷く card. Kana-only
+    # gated on purpose: kanji-variant homographs that unidic's lemma collapses
+    # (殺る→遣る, Issue #19/#5) keep the exact mined_form match.
+    known_words_match_kana_variants: bool = True
     # When True, the known-words subtraction in Phase 2 is skipped so ALL
     # mineable words are mined regardless of Anki collection state. Used by
     # the Deck Builder's "include everything" mode. Default False preserves
