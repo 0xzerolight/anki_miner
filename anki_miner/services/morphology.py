@@ -383,10 +383,11 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
     wrapping, surface_start/end). Issue #20.
 
     Tokens whose surface is not find-able are dropped (defensive: should
-    not happen for unmodified MeCab surfaces, but a merged compound whose
-    components were whitespace-separated in the source concatenates to a
-    space-free surface that is NOT find-able in ``text``). This locator
-    is the single source of truth for that drop rule:
+    not happen for unmodified MeCab surfaces). A merged compound whose
+    components were whitespace-separated in the source is also dropped, but
+    its whitespace-stitched source run is consumed first; otherwise a later
+    identical contiguous surface could be stolen by ``str.find``. This locator
+    is the single source of truth for that drop-and-consume rule:
     ``parse_subtitle_file``, ``parse_subtitle_file_with_index`` AND
     ``count_lemmas`` must all route through it, or the count-vs-mine
     sets diverge and the Deck Builder preview over-promises (T-38).
@@ -394,11 +395,46 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
     cursor = 0
     for token in tokens:
         surface = token.surface
-        idx = text.find(surface, cursor)
+        if not surface or any(char.isspace() for char in surface):
+            idx = text.find(surface, cursor)
+            if idx == -1:
+                continue
+            tok_end = idx + len(surface)
+            cursor = tok_end
+            yield token, idx, tok_end
+            continue
+
+        idx = -1
+        tok_end = -1
+        stitched = False
+        search_from = cursor
+        while search_from < len(text):
+            candidate = text.find(surface[0], search_from)
+            if candidate == -1:
+                break
+            source_pos = candidate
+            surface_pos = 0
+            saw_whitespace = False
+            while source_pos < len(text) and surface_pos < len(surface):
+                if text[source_pos] == surface[surface_pos]:
+                    source_pos += 1
+                    surface_pos += 1
+                elif text[source_pos].isspace():
+                    source_pos += 1
+                    saw_whitespace = True
+                else:
+                    break
+            if surface_pos == len(surface):
+                idx = candidate
+                tok_end = source_pos
+                stitched = saw_whitespace
+                break
+            search_from = candidate + 1
         if idx == -1:
             continue
-        tok_end = idx + len(surface)
         cursor = tok_end
+        if stitched:
+            continue
         yield token, idx, tok_end
 
 
@@ -520,18 +556,23 @@ def replace_overridden_spans(text: str, raw_tokens: list, merged_tokens: list) -
     carrying the attested kana. This keeps unchanged readings such as 二級
     grouped like corrected readings such as 一級. The concatenated stream text
     is byte-identical, so downstream ``str.find`` cursoring and bold-offset math
-    stay valid — with one guard: a replacement is skipped when the merged
-    surface was stitched across source whitespace (MeCab drops it), because the
-    single-token surface would then not be locatable in the line text; the raw
-    run is kept instead (bail-keep). Any alignment mismatch returns
+    stay valid — with one guard: a replacement is skipped when its exact raw
+    occurrence was stitched across source whitespace (MeCab drops it), because
+    the single-token surface would then not be locatable at that occurrence;
+    the raw run is kept instead (bail-keep). Any alignment mismatch returns
     ``raw_tokens`` untouched.
     """
     if not any(isinstance(m, SyntheticToken) and getattr(m.feature, "kana_attested", False) for m in merged_tokens):
         return raw_tokens
     out: list = []
     ri, rn = 0, len(raw_tokens)
+    source_cursor = 0
     for m in merged_tokens:
         if ri < rn and raw_tokens[ri] is m:
+            idx = text.find(m.surface, source_cursor)
+            if idx == -1:
+                return raw_tokens
+            source_cursor = idx + len(m.surface)
             out.append(m)
             ri += 1
             continue
@@ -543,9 +584,18 @@ def replace_overridden_spans(text: str, raw_tokens: list, merged_tokens: list) -
             return raw_tokens
         run = raw_tokens[ri:j]
         ri = j
-        if getattr(m.feature, "kana_attested", False) and m.surface in text:
-            # ``m.surface in text`` = the whitespace-stitch guard: a merge
-            # across a source space is not locatable as one token in the line.
+        run_start = source_cursor
+        for index, raw in enumerate(run):
+            idx = text.find(raw.surface, source_cursor)
+            if idx == -1:
+                return raw_tokens
+            if index == 0:
+                run_start = idx
+            source_cursor = idx + len(raw.surface)
+        source_run = text[run_start:source_cursor]
+        if getattr(m.feature, "kana_attested", False) and source_run == m.surface:
+            # Exact-occurrence guard: a later contiguous duplicate cannot make
+            # an earlier whitespace-stitched run appear locatable.
             out.append(
                 SyntheticToken(
                     surface=m.surface,

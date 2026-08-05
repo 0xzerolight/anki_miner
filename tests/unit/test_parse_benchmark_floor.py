@@ -185,11 +185,13 @@ def test_anchor_meets_aux_keijoushi_floor() -> None:
 
 def test_counter_category_is_clean() -> None:
     results = _scored()
-    b_ct = results["b-lite-anchor"].by_category["counter"]
     # Number+counter chains die on the inherited 数詞 subtype exclusion whether
-    # the merge gate fires or not; only the real verb survives.
-    assert recall(b_ct) == 1.0, f"strategy (b) counter recall {recall(b_ct)} below 1.0"
-    assert junk_rate(b_ct) == 0.0, f"strategy (b) counter junk_rate {junk_rate(b_ct)} above 0.0"
+    # the merge gate fires or not. A whitespace-stitched chain must not consume
+    # a later contiguous lexical token with the same surface.
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["counter"]
+        assert recall(counts) == 1.0, f"{strategy} counter recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} counter junk_rate {junk_rate(counts)} above 0.0"
 
 
 def test_anchor_meets_long_compound_floor() -> None:

@@ -2936,6 +2936,32 @@ class TestKanaStylizedCueFilter:
 
 
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestWhitespaceStitchedDuplicateAlignment:
+    @staticmethod
+    def _line_state():
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            reading_lookup=lambda terms: {"一人": ["ひとり"]},
+        )
+        return service, service._build_line_state("一 人と一人", 0.0, 0.0)
+
+    def test_stitched_merge_does_not_steal_later_span(self):
+        service, (text, _raw, merged, *_rest) = self._line_state()
+
+        spans = [(token.surface, start, end) for token, start, end in service._iter_token_spans(text, merged)]
+
+        assert spans == [("と", 3, 4), ("一人", 4, 6)]
+
+    def test_attested_stitched_merge_keeps_exact_raw_run_for_display(self):
+        service, (text, raw, merged, *_rest) = self._line_state()
+        assert getattr(merged[0].feature, "kana_attested", False) is True
+
+        display = service._build_display_tokens(text, raw, merged)
+
+        assert [token.surface for token in display] == ["一", "人", "と", "一人"]
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
 class TestSurfaceOffsetsAndBolding:
     """Parser must emit char offsets for each mined morpheme and, when the
     bold_target_in_sentence flag is on, precompute the bolded sentence
