@@ -348,6 +348,11 @@ def test_pos_suffix_lemma_strip_folds_potential() -> None:
     # sole corpus witness.
     assert mine_lite_orthbase("引けいって") == {"引く"}
     assert mine_lite_anchor("引けいって") == {"引く"}
+    # S11a-007: pr05 covers the six remaining godan e-row fold pairs. Pin the
+    # dictionary-independent fold under both benchmark strategies.
+    godan_potentials = {"買う", "泳ぐ", "話す", "死ぬ", "遊ぶ", "読む"}
+    assert mine_lite_orthbase("買える 泳げる 話せる 死ねる 遊べる 読める") == godan_potentials
+    assert mine_lite_anchor("買える 泳げる 話せる 死ねる 遊べる 読める") == godan_potentials
 
 
 def test_form_identity_assertion_corpus() -> None:

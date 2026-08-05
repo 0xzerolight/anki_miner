@@ -2,3 +2,4 @@
 {"id":"pr02","sentence":"見れる","expected":["見る"],"category":"potential-ranuki","note":"ra-nuki folds to base by design (mining_base _FOLD_SUFFIX_PAIRS)"}
 {"id":"pr03","sentence":"保てる","expected":["保つ"],"category":"potential-ranuki","note":"potential folds to base by design"}
 {"id":"pr04","sentence":"引けいって","expected":["引く"],"category":"potential-ranuki","note":"引け lemma 引く-他動詞: stripping the fine-POS tail unblocks the ('ける','く') fold (V10)"}
+{"id":"pr05","sentence":"買える 泳げる 話せる 死ねる 遊べる 読める","expected":["買う","泳ぐ","話す","死ぬ","遊ぶ","読む"],"category":"potential-ranuki","note":"One record witnesses the six currently uncovered godan e-row fold pairs."}
