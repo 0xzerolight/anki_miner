@@ -13,6 +13,7 @@ from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.services.reading import aozora_source
 from anki_miner.services.reading.aozora_source import (
     _decode,
+    _extract_header,
     _gaiji_char,
     _resolve_gaiji,
     _strip_ruby,
@@ -105,6 +106,22 @@ def test_ruby_strip_with_bar_mixed_base():
 
 def test_ruby_strip_multiple_spans():
     assert _strip_ruby("峠《とうげ》と国境《くにざかい》") == "峠と国境"
+
+
+# --- header --------------------------------------------------------------
+
+
+def test_extract_header_skips_leading_blank_lines():
+    lines = ["題名", "著者", "", "本文。"]
+    expected = ("題名", ["本文。"])
+
+    assert _extract_header(["", *lines]) == expected
+    assert _extract_header(lines) == expected
+
+
+@pytest.mark.parametrize("lines", [[], ["", "  ", "\t"]])
+def test_extract_header_empty_content(lines):
+    assert _extract_header(lines) == ("", [])
 
 
 # --- full Aozora document (cp932) ---------------------------------------

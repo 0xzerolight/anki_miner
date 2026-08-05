@@ -237,8 +237,10 @@ def _is_aozora(text: str) -> bool:
 
 def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
     """Return (header title, body lines) for the Aozora path."""
-    title = _strip_ruby(_resolve_gaiji(lines[0])).strip() if lines else ""
     i = 0
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    title = _strip_ruby(_resolve_gaiji(lines[i])).strip() if i < len(lines) else ""
     while i < len(lines) and lines[i].strip():  # pre-blank block = header
         i += 1
     while i < len(lines) and not lines[i].strip():  # skip the blank gap
