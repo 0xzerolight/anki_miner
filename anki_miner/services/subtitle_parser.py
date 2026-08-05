@@ -1917,10 +1917,13 @@ class SubtitleParserService:
         a katakana-block char covering ー/ッ, but NOT the author-inserted separators
         ・/゠). Whitespace, ・, ゠ or any non-katakana between katakana does NOT
         continue a run — アイ ウォン stays two tokens, アイス・ベア keeps both halves,
-        スマホ|と|バッグ keeps バッグ. Deliberate precision-over-recall (plan-decided):
-        an attested word abutting an unbroken katakana run (アイス|ベア) is rejected,
-        and legit adjacent loanword bigrams whose full run is no headword lose both
-        halves — no independent-attestation carve-out.
+        スマホ|と|バッグ keeps バッグ. An all-katakana verb is exempt only when the
+        existing guarded front fold proves a non-katakana common headword
+        (ゲーム|ヤラれた → やる); a front that stays katakana gets no exemption.
+        Deliberate precision-over-recall (plan-decided): an attested katakana word
+        abutting an unbroken run (アイス|ベア) is rejected, and legit adjacent
+        loanword bigrams whose full run is no headword lose both halves — no
+        independent-attestation carve-out.
         """
         if self._compound_matcher is None:
             return False
@@ -1931,7 +1934,15 @@ class SubtitleParserService:
             return False
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
-        return _continues_katakana_run(left) or _continues_katakana_run(right)
+        if not (_continues_katakana_run(left) or _continues_katakana_run(right)):
+            return False
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) == "動詞":
+            orth_base = self._mining_base(word_token)
+            folded = self._fold_katakana_verb_front(orth_base)
+            if folded != orth_base and not _is_all_katakana(folded):
+                return False
+        return True
 
     def _is_ellipsis_truncation_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
         """Whether an accepted token is a word cut off mid-utterance at an ellipsis.

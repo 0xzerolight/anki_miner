@@ -5603,6 +5603,26 @@ class TestKatakanaVerbFrontFold:
         assert yaru.expression_reading == "やる"
         assert yaru.resolved_reading == "やる"
 
+    def test_adjacent_katakana_run_keeps_proven_hiragana_fold(self, tmp_path):
+        # ゲーム|ヤラ is one raw katakana run, but ヤラ is a verb whose orthBase
+        # folds to the attested common hiragana headword やる. That proof exempts
+        # only the verb; the neighboring noun fragment ゲーム remains rejected.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        words = self._mine(service, "ゲームヤラれた")
+        assert [w.mined_form for w in words] == ["やる"]
+
+    def test_adjacent_attested_katakana_front_still_rejected(self, tmp_path):
+        # Attested ヤル blocks the fold. The front stays katakana, so the ordinary
+        # positional fragment rule still rejects it beside ゲーム.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True), ("ヤル", "やる", False)])
+        assert self._mine(service, "ゲームヤラれた") == []
+
+    def test_adjacent_run_without_common_probe_still_rejected(self, tmp_path):
+        # Existence alone cannot prove the hiragana target common. With no
+        # commonness probe, the fold supplies no exemption and both pieces die.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        assert self._mine(service, "ゲームヤラれた", term_common=False) == []
+
     def test_degrade_no_common_probe_keeps_katakana(self, tmp_path):
         # Same fixture, commonness probe NOT wired: the fold cannot prove やる is
         # common, so it safe-degrades to the pre-fix ヤル (byte-identical degrade).

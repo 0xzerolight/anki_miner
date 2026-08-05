@@ -124,6 +124,16 @@ def test_anchor_does_not_regress_guard_categories() -> None:
         assert junk_rate(counts) == 0.0, f"strategy (b) introduced junk on {category}: {junk_rate(counts)}"
 
 
+def test_anchor_meets_katakana_fragment_floor() -> None:
+    results = _scored()
+    b_kf = results["b-lite-anchor"].by_category["katakana-fragment"]
+    assert junk_rate(b_kf) == 0.0, f"strategy (b) katakana-fragment junk_rate {junk_rate(b_kf)} above 0.0"
+    assert mine_lite_anchor("アイスベア") == set()
+    # No dictionary ⇒ no compound matcher ⇒ guard inactive: preserve both
+    # components as the byte-identical safe-degrade baseline.
+    assert mine_lite_orthbase("アイスベア") == {"アイス", "ベア"}
+
+
 def test_anchor_strictly_beats_orthbase_on_nominal_suffix() -> None:
     results = _scored()
     a_ns = f1(results["a-lite-orthbase"].by_category["nominal-suffix"])
