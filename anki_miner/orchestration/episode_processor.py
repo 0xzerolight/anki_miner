@@ -785,12 +785,55 @@ class EpisodeProcessor:
         # just the mineable ones.
         all_unknown_lemmas = {w.lemma for w in unknown_words}
 
+        # Offline definition existence filter. Drops words with no entry in any
+        # OFFLINE dictionary so the curation dialog never surfaces words that
+        # can never become cards (they would otherwise be silently skipped at
+        # Phase 5). Offline-only by design: matches the curator's no-network
+        # def-pane and the project's offline-first default (Jisho is off by
+        # default). Probes the union of mined_form + lemma per word — the same
+        # two keys Phase 4 can resolve (mined_form primary, lemma miss-only
+        # fallback) — and keeps a word when either hits. Runs before every lossy
+        # sentence selector so an undefined first word cannot erase a
+        # definition-backed sentence-mate. Gated on bypass_optional_filters so
+        # the Deck Builder preview-parity path is unaffected (Phase 5 stays the
+        # skip point there).
+        #
+        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
+        # looks definitions up over the FULL chain (get_definitions_batch, which
+        # includes Jisho when enabled). A user who turns Jisho on therefore has
+        # words with a Jisho-only definition dropped here before the curator —
+        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
+        # "fix" this by calling online providers here. (The probe also doesn't
+        # mirror Phase 4's kana-fold/deinflection miss fallback — pre-existing
+        # accepted asymmetry.)
+        if not self.config.bypass_optional_filters and unknown_words:
+            probe_terms = list({t for w in unknown_words for t in (w.mined_form, w.lemma) if t})
+            has_def = self.definition_service.has_offline_definitions(probe_terms)
+            kept_words = [w for w in unknown_words if has_def.get(w.mined_form) or has_def.get(w.lemma)]
+            dropped = [w.mined_form for w in unknown_words if not (has_def.get(w.mined_form) or has_def.get(w.lemma))]
+            unknown_words = kept_words
+            no_definition_rejects = len(dropped)
+            if dropped:
+                preview = ", ".join(dropped[:10])
+                more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
+                self.presenter.show_warning(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"
+                        ),
+                        len(dropped),
+                        preview,
+                        more,
+                    )
+                )
+
         # Whitelist force-include (partition-then-merge). A whitelisted lemma is
         # a true force-include: it bypasses every optional COVERAGE filter below
-        # (frequency, blacklist, script-type, name-wordsets, dedup,
-        # cross-episode-count, i+1, sentence-length). We split it out here and
-        # merge it back just before the integrity gates (offline-def existence
-        # and within-run duplicate collapse), which it stays subject to.
+        # (frequency, blacklist, script-type, name-wordsets, cross/reading
+        # occurrence counts, dedup, i+1, sentence-length). Definition viability
+        # already ran above, so force-included words remain subject to it. We
+        # split them out here and merge them back just before the within-run
+        # duplicate collapse.
         # Gated on bypass_optional_filters so the Deck Builder preview — which
         # already includes everything — is unchanged.
         forced_include: list[TokenizedWord] = []
@@ -930,6 +973,16 @@ class EpisodeProcessor:
                     )
                 )
 
+        # Reading-specific in-document occurrence floor. Runs BEFORE sentence
+        # dedup for the same reason as the cross-episode floor above: removing
+        # below-floor words first lets a qualifying sentence-mate survive.
+        # Force-included whitelist words were partitioned out above and merge
+        # back later, so they continue to bypass this coverage filter.
+        if occurrence_counts is not None:
+            before = len(unknown_words)
+            unknown_words = self.word_filter.filter_by_episode_count(unknown_words, occurrence_counts, min_occurrence)
+            episode_rejects += before - len(unknown_words)
+
         # Sentence deduplication. i+1 filter does its own sentence picking;
         # dedup would be a no-op (post-i+1 sentences are unique by construction).
         if (
@@ -1007,8 +1060,8 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Merge force-included whitelist words back in before the integrity
-        # gates. Prepend so a forced word wins its mined_form slot in the
+        # Merge force-included whitelist words back in before within-run
+        # duplicate collapse. Prepend so a forced word wins its mined_form slot in the
         # within-run duplicate collapse below (which keeps the first occurrence)
         # — this makes force-include hold even in the rare cross-lemma homograph
         # collision (a forced verb's orth_base equal to a distinct noun's
@@ -1025,46 +1078,6 @@ class EpisodeProcessor:
                     len(forced_include),
                 )
             )
-
-        # Offline definition existence filter. Drops words with no entry in any
-        # OFFLINE dictionary so the curation dialog never surfaces words that
-        # can never become cards (they would otherwise be silently skipped at
-        # Phase 5). Offline-only by design: matches the curator's no-network
-        # def-pane and the project's offline-first default (Jisho is off by
-        # default). Probes the union of mined_form + lemma per word — the same
-        # two keys Phase 4 can resolve (mined_form primary, lemma miss-only
-        # fallback) — and keeps a word when either hits. Gated on
-        # bypass_optional_filters so the Deck Builder preview-parity path is
-        # unaffected (Phase 5 stays the skip point there).
-        #
-        # Known, intentional asymmetry: this probe is offline-only, but Phase 5
-        # looks definitions up over the FULL chain (get_definitions_batch, which
-        # includes Jisho when enabled). A user who turns Jisho on therefore has
-        # words with a Jisho-only definition dropped here before the curator —
-        # accepted on purpose so Phase 2 never blocks on network I/O. Do not
-        # "fix" this by calling online providers here. (The probe also doesn't
-        # mirror Phase 4's kana-fold/deinflection miss fallback — pre-existing
-        # accepted asymmetry.)
-        if not self.config.bypass_optional_filters and unknown_words:
-            probe_terms = list({t for w in unknown_words for t in (w.mined_form, w.lemma) if t})
-            has_def = self.definition_service.has_offline_definitions(probe_terms)
-            kept_words = [w for w in unknown_words if has_def.get(w.mined_form) or has_def.get(w.lemma)]
-            dropped = [w.mined_form for w in unknown_words if not (has_def.get(w.mined_form) or has_def.get(w.lemma))]
-            unknown_words = kept_words
-            no_definition_rejects = len(dropped)
-            if dropped:
-                preview = ", ".join(dropped[:10])
-                more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
-                self.presenter.show_warning(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"
-                        ),
-                        len(dropped),
-                        preview,
-                        more,
-                    )
-                )
 
         # Within-run duplicate collapse. Exact mined_form collisions mirror
         # Anki's Expression-first-field dedup. Orthographic aliases need a
@@ -1132,18 +1145,6 @@ class EpisodeProcessor:
                     ctx.episode_name,
                     e,
                 )
-
-        # Reading-specific in-document occurrence floor. The reading path passes
-        # its parse Counter here so the floor remains part of Phase 2 and its
-        # rejects land in the one filter summary. Force-included whitelist words
-        # bypass this coverage filter, matching every optional filter above.
-        if occurrence_counts is not None:
-            forced = [word for word in unknown_words if word.lemma in ctx.forced_include_lemmas]
-            rest = [word for word in unknown_words if word.lemma not in ctx.forced_include_lemmas]
-            before = len(rest)
-            rest = self.word_filter.filter_by_episode_count(rest, occurrence_counts, min_occurrence)
-            episode_rejects += before - len(rest)
-            unknown_words = forced + rest
 
         ctx.new_words_found = len(unknown_words)
         log_summary(

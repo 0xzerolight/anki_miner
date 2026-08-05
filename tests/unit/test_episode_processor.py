@@ -16,6 +16,7 @@ from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
     MIN_EPISODE_APPEARANCES,
+    _EpisodeContext,
     sanitize_source_label,
 )
 from anki_miner.presenters import NullPresenter
@@ -4690,6 +4691,35 @@ class TestMinedFormsOnResult:
         locked = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
         assert locked.cards_created == 2
         assert locked.mined_forms == []
+
+
+def test_definition_filter_precedes_sentence_dedup(test_config):
+    config = replace(
+        test_config,
+        include_known_words=True,
+        deduplicate_sentences=True,
+    )
+    definition_service = MagicMock()
+    definition_service.has_offline_definitions.return_value = {
+        "学校": False,
+        "猫": True,
+    }
+    definition_service.offline_term_identities.return_value = {}
+    processor = build_processor(
+        config=config,
+        word_filter=WordFilterService(config),
+        definition_service=definition_service,
+    )
+    sentence = "学校で猫を見る。"
+    school = _make_word("学校", surface="学校", pos="名詞")
+    cat = _make_word("猫", surface="猫", pos="名詞", start_time=5.0)
+    school.sentence = sentence
+    cat.sentence = sentence
+    ctx = _EpisodeContext(0.0, "", "", "episode", "series", "")
+
+    result = processor._phase2_filter(ctx, [school, cat], None, None)
+
+    assert [word.mined_form for word in result] == ["猫"]
 
 
 class TestOfflineDefinitionPreFilter:
