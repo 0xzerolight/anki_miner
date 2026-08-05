@@ -189,6 +189,41 @@ _REGEX_ATOM = r"(?:\\.|\[(?:\\.|[^\]\\])*\]|[^()[\]\\])"
 _NESTED_UNBOUNDED_REPEAT_RE = re.compile(
     r"\(" + _REGEX_ATOM + r"*(?:[*+]|\{\d+,\})" + _REGEX_ATOM + r"*\)(?:[*+]|\{\d+,\})"
 )
+_REGEX_ALTERNATION_ATOM = r"(?:\\.|\[(?:\\.|[^\]\\])*\]|[^|()[\]\\])"
+_QUANTIFIED_ALTERNATION_RE = re.compile(
+    r"\((?:\?:)?(?P<body>"
+    + _REGEX_ALTERNATION_ATOM
+    + r"*(?:\|"
+    + _REGEX_ALTERNATION_ATOM
+    + r"*)+)\)(?:[*+]|\{\d+,\})(?!\+)"
+)
+
+
+def _has_overlapping_quantified_alternation(pattern: str) -> bool:
+    """Whether a simple quantified alternation has prefix-overlapping branches."""
+    for match in _QUANTIFIED_ALTERNATION_RE.finditer(pattern):
+        branches: list[str] = []
+        start = 0
+        escaped = False
+        in_class = False
+        body = match.group("body")
+        for index, char in enumerate(body):
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == "[":
+                in_class = True
+            elif char == "]":
+                in_class = False
+            elif char == "|" and not in_class:
+                branches.append(body[start:index])
+                start = index + 1
+        branches.append(body[start:])
+        for index, branch in enumerate(branches):
+            if any(branch.startswith(other) or other.startswith(branch) for other in branches[index + 1 :]):
+                return True
+    return False
 
 
 def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[str]:
@@ -204,8 +239,10 @@ def compile_subtitle_regex_filter(pattern: str, replacement: str) -> re.Pattern[
         raise ValueError(str(e)) from e
     if _NESTED_UNBOUNDED_REPEAT_RE.search(pattern):
         raise ValueError("nested unbounded repeats are not allowed")
-    # stdlib re has no wall-clock timeout. Size limits plus the obvious nested-
-    # repeat reject bound validation cost, but cannot prove every pattern safe.
+    if _has_overlapping_quantified_alternation(pattern):
+        raise ValueError("quantified groups with overlapping alternatives are not allowed")
+    # stdlib re has no wall-clock timeout. Size limits plus the nested-repeat and
+    # overlapping-alternation rejects cover common stalls, but cannot prove safety.
     return compiled
 
 

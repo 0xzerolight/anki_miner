@@ -11,7 +11,10 @@ from anki_miner.exceptions import SubtitleParseError
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
-from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.services.subtitle_parser import (
+    SubtitleParserService,
+    compile_subtitle_regex_filter,
+)
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.utils import generate_furigana, generate_reading
@@ -2839,6 +2842,44 @@ class TestSubtitleRegexFilter:
         assert service._filter_pattern is None
         assert entries[0][2] == "テスト"
         assert any("Invalid subtitle_regex_filter" in rec.message for rec in caplog.records)
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            r"^(a|aa)+$",
+            r"^(ab|abab)*$",
+            r"^(foo|foofoo){1,}$",
+            r"^(?:xy|xyxy)+$",
+        ],
+    )
+    def test_overlapping_quantified_alternation_is_rejected(self, pattern):
+        with pytest.raises(ValueError, match="overlapping alternatives"):
+            compile_subtitle_regex_filter(pattern, "")
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            r"^(a|b)+$",
+            r"^(ab|ac)+$",
+            r"^(?:cat|dog)*$",
+            r"^(foo|bar){1,}$",
+        ],
+    )
+    def test_safe_quantified_alternation_compiles(self, pattern):
+        assert compile_subtitle_regex_filter(pattern, "").pattern == pattern
+
+    def test_overlapping_quantified_alternation_disables_parser_filter(self, tmp_path):
+        config = AnkiMinerConfig(
+            media_temp_folder=tmp_path / "media",
+            subtitle_regex_filter=r"^(a|aa)+$",
+            subtitle_regex_replacement="",
+            use_subtitle_regex_filter=True,
+        )
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = self._build_raw_service(config)
+
+        assert service._filter_pattern is None
+        assert service._apply_text_filter("aaaa!") == "aaaa!"
 
     def test_mining_path_applies_same_filter(self, tmp_path):
         # parse_subtitle_file must honor the filter identically to parse_raw_entries:
