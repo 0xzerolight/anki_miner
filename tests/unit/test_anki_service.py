@@ -3444,6 +3444,45 @@ class TestVerifyCardTarget:
         assert "createDeck" not in actions
         assert "Available:" in str(exc_info.value)
 
+    def test_word_mapping_must_target_first_model_field(self, test_config):
+        """The mined word must map to the note type's ordered first field."""
+        from dataclasses import replace
+
+        mappings = dict.fromkeys(test_config.anki_fields, "")
+        mappings.update(word="Back", sentence="Front")
+        config = replace(test_config, anki_fields=mappings)
+        service = AnkiService(config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, ["Front", "Back"], [config.anki_deck_name]],
+            ),
+            pytest.raises(SetupError, match="first field.*Front"),
+        ):
+            service.verify_card_target()
+
+    def test_duplicate_nonempty_field_targets_raise_setup_error(self, test_config):
+        """Two miner fields cannot target the same Anki note field."""
+        from dataclasses import replace
+
+        mappings = dict.fromkeys(test_config.anki_fields, "")
+        mappings.update(word="Expression", sentence="Expression")
+        config = replace(test_config, anki_fields=mappings)
+        service = AnkiService(config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, ["Expression"], [config.anki_deck_name]],
+            ) as mock_pa,
+            pytest.raises(SetupError, match="Expression.*mapped more than once"),
+        ):
+            service.verify_card_target()
+
+        actions = [call[0][1] for call in mock_pa.call_args_list]
+        assert actions == ["modelNames"]
+
     def test_empty_string_field_mappings_ignored(self, test_config):
         """Fields mapped to '' (unmapped) should not be required in the model."""
         # test_config already has expression_reading='', sentence_reading='', source=''
