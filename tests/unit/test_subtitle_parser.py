@@ -12,6 +12,8 @@ from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.services.compound_matcher import CompoundSyntheticToken
 from anki_miner.services.subtitle_parser import SubtitleParserService
+from anki_miner.services.word_filter import WordFilterService
+from anki_miner.services.wordset_service import WordsetService
 from anki_miner.utils import generate_furigana, generate_reading
 from anki_miner.utils.text_utils import wrap_target_furigana
 
@@ -5287,6 +5289,36 @@ class TestVerbFrontCommonnessResolver:
         assert "呼ぶ" not in forms
 
 
+class TestMemoizedAttest:
+    def _service(self, term_lookup):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(AnkiMinerConfig(), term_lookup=term_lookup)
+
+    def test_cap_clear_preserves_precached_hit(self, monkeypatch):
+        service = self._service(lambda terms: {"猫"} & set(terms))
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+
+        assert service._memoized_attest(["猫"]) == {"猫"}
+        assert service._memoized_attest(["猫", "犬"]) == {"猫"}
+
+    def test_cap_clear_preserves_hit_for_compound_matcher(self, monkeypatch):
+        service = self._service(lambda terms: {"応急処置"} & set(terms))
+        service._memoized_attest(["応急処置"])
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        matcher = service._compound_matcher
+        assert matcher is not None
+        matcher._max_span = 2
+        tokens = [
+            _make_token("応急", "名詞", lemma="応急"),
+            _make_token("処置", "名詞", lemma="処置"),
+            _make_token("室", "名詞", lemma="室"),
+        ]
+
+        out = matcher.merge_line("応急処置室", tokens)
+
+        assert [token.surface for token in out] == ["応急処置", "室"]
+
+
 class TestMemoizedTermCommon:
     """``_memoized_term_common`` — the per-instance commonness cache used by the
     verb-front resolver. Verdicts are read from a local snapshot so a clear-on-cap
@@ -5650,6 +5682,43 @@ def _gate_term_lookup(dictionary):
     """Fake TermLookup: attests exactly the given headword set (subset semantics)."""
     wanted = set(dictionary)
     return lambda terms: {t for t in terms if t in wanted}
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+class TestNameMatcherPrecedence:
+    def test_bundled_exact_name_is_filtered_before_dictionary_normalization(self):
+        raw = "レッド・オクトーバーを追え"
+        dictionary_headword = "レッド・オクトーバーを追う"
+        wordsets = WordsetService(("org-product",))
+        wordsets.load()
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=_gate_term_lookup({dictionary_headword}),
+            name_lookup=wordsets.excluded_terms,
+        )
+
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=raw, index=0, location_label="probe")],
+            want_line_index=False,
+        )
+
+        assert [word.mined_form for word in words] == [raw]
+        assert WordFilterService(AnkiMinerConfig()).filter_by_wordsets(words, wordsets) == []
+
+    def test_no_name_lookup_keeps_dictionary_matching(self):
+        raw = "レッド・オクトーバーを追え"
+        dictionary_headword = "レッド・オクトーバーを追う"
+        service = SubtitleParserService(
+            AnkiMinerConfig(),
+            term_lookup=_gate_term_lookup({dictionary_headword}),
+        )
+
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=raw, index=0, location_label="probe")],
+            want_line_index=False,
+        )
+
+        assert [word.mined_form for word in words] == [dictionary_headword]
 
 
 @pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")

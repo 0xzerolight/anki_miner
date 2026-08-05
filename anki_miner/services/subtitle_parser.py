@@ -376,17 +376,18 @@ class SubtitleParserService:
         self._common_aware: bool | None = None
         # Dictionary-attested compound matching (see services/compound_matcher.py).
         # Built only when a term lookup is injected (COMPOUND_MATCHING is always
-        # on); the matcher reuses the inclusion rule so spans start only at
-        # mineable tokens, and the SAME memoized probe so a surface's existence is
-        # looked up once across the merge gate and the matcher.
+        # on); spans may start at any structurally contentful token (verb-headed
+        # nouns like 動く歩道) — the inclusion rule gates the COMPLETED synthetic,
+        # not the start token — and the matcher shares the SAME memoized probe so
+        # a surface's existence is looked up once across the merge gate and the
+        # matcher.
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if self._attest is not None and COMPOUND_MATCHING:
             self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
         # Name resources define raw-source boundaries independently of the
-        # ordinary dictionary. This pass runs after dictionary matching so a
-        # dictionary-attested vocabulary span keeps its established boundary;
-        # remaining raw-surface spans can still be reconstructed for the late
-        # exact name-wordset filter.
+        # ordinary dictionary. This pass runs before dictionary matching so an
+        # exact name remains available to the late exact name-wordset filter;
+        # the dictionary matcher then processes only the residual tokens.
         self._name_matcher: NameSpanMatcher | None = None
         if name_lookup is not None:
             self._name_matcher = NameSpanMatcher(name_lookup, self._inclusion_rule)
@@ -699,17 +700,18 @@ class SubtitleParserService:
 
         Returns ``(text, raw_tokens, merged_tokens, start, end, duration)``:
         ``raw_tokens`` is the direct ``self.tagger(text)`` output,
-        ``merged_tokens`` is that run through ``_merge_compound_suffixes`` and
-        the optional compound matcher, and ``duration`` is ``end - start``.
+        ``merged_tokens`` is that run through ``_merge_compound_suffixes``, the
+        optional name matcher, and the optional compound matcher; ``duration``
+        is ``end - start``.
         Shared by the subtitle path (``_iter_parsed_lines``) and the future
         text-unit path so per-line tokenization stays in one place.
         """
         raw_tokens = list(self.tagger(text))
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
-        if self._compound_matcher is not None:
-            merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
         if self._name_matcher is not None:
             merged_tokens = self._name_matcher.merge_line(text, merged_tokens)
+        if self._compound_matcher is not None:
+            merged_tokens = self._compound_matcher.merge_line(text, merged_tokens)
         # Dictionary reading attestation for merged compounds (audit F2): fixes
         # rendaku/junction kana on the synthetics; no-op (and no lookup) when
         # no reading_lookup is wired or the line produced no merges.
@@ -1450,18 +1452,22 @@ class SubtitleParserService:
         morphology compound-merge gate and the compound matcher. Clear-on-cap
         bounds the memo on whole-corpus Deck Builder runs (mirrors _front_cache /
         the matcher's existence cache). Only bound to ``self._attest`` when a
-        ``term_lookup`` exists; the ``None`` guard is defensive.
+        ``term_lookup`` exists; the ``None`` guard is defensive. The returned
+        subset comes from a per-call verdict snapshot so a cap clear cannot drop
+        a cached hit requested by the current batch.
         """
         if self._term_lookup is None:
             return set()
-        unknown = [s for s in dict.fromkeys(surfaces) if s not in self._exist_memo]
+        deduped = list(dict.fromkeys(surfaces))
+        unknown = [s for s in deduped if s not in self._exist_memo]
+        verdicts = {s: self._exist_memo[s] for s in deduped if s not in unknown}
         if unknown:
             if len(self._exist_memo) + len(unknown) > _FRONT_CACHE_CAP:
                 self._exist_memo.clear()
             hits = self._term_lookup(unknown)
             for s in unknown:
-                self._exist_memo[s] = s in hits
-        return {s for s in surfaces if self._exist_memo.get(s)}
+                verdicts[s] = self._exist_memo[s] = s in hits
+        return {s for s in surfaces if verdicts[s]}
 
     def _memoized_term_common(self, surfaces: list[str]) -> dict[str, bool] | None:
         """Per-instance memoized commonness probe (see _resolve_front).

@@ -67,6 +67,13 @@ def _kigashita():
     ]
 
 
+def _ugokuhodou():
+    return [
+        _tok("動く", "動詞", "一般", lemma="動く", kana="ウゴク"),
+        _tok("歩道", "名詞", "普通名詞", kana="ホドウ"),
+    ]
+
+
 class TestVerbVerbMerge:
     def test_hashiridasu_merged(self):
         m = _matcher({"走り出す"})
@@ -104,6 +111,26 @@ class TestNounNounMerge:
         assert merged.feature.pos2 == "普通名詞"
 
 
+class TestVerbHeadedNounMerge:
+    def test_kind_b_inherits_tail_noun_pos(self):
+        out = _matcher({"動く歩道"}).merge_line("動く歩道", _ugokuhodou())
+
+        assert [token.surface for token in out] == ["動く歩道"]
+        assert out[0].feature.pos1 == "名詞"
+        assert out[0].feature.pos2 == "普通名詞"
+
+    def test_kind_b_noun_merges_with_noun_only_rule(self):
+        noun_only = TokenInclusionRule(
+            allowed_pos=frozenset({"名詞"}),
+            excluded_subtypes=DEFAULT_EXCLUDED_SUBTYPES,
+        )
+
+        out = _matcher({"動く歩道"}, rule=noun_only).merge_line("動く歩道", _ugokuhodou())
+
+        assert [token.surface for token in out] == ["動く歩道"]
+        assert out[0].feature.pos1 == "名詞"
+
+
 class TestRawNameSpanMerge:
     @staticmethod
     def _getou_tokens():
@@ -139,6 +166,19 @@ class TestRawNameSpanMerge:
         out = _name_matcher({"夏油", "夏油傑"}).merge_line("夏油傑", self._getou_tokens())
 
         assert [token.surface for token in out] == ["夏油傑"]
+
+    def test_merges_longest_bundled_org_name_past_dictionary_char_cap(self):
+        name = "コンピュータエンターテインメントレーティング機構"
+        tokens = [
+            _tok("コンピュータ", "名詞", "普通名詞"),
+            _tok("エンターテインメント", "名詞", "普通名詞"),
+            _tok("レーティング", "名詞", "普通名詞"),
+            _tok("機構", "名詞", "普通名詞"),
+        ]
+
+        out = _name_matcher({name}).merge_line(name, tokens)
+
+        assert [token.surface for token in out] == [name]
 
     def test_inflectable_tail_uses_raw_surface_and_emits_noun(self):
         tokens = [
@@ -311,7 +351,7 @@ class TestSpanConstraints:
         out = _matcher({joined}).merge_line(joined, tokens)
         assert [t.surface for t in out] == [long_a, "術館"]
 
-    def test_span_never_starts_at_non_mineable_token(self):
+    def test_span_never_starts_at_non_content_token(self):
         tokens = [
             _tok("が", "助詞", "格助詞", kana="ガ"),
             _tok("水道", "名詞", "普通名詞", kana="スイドウ"),
@@ -347,7 +387,7 @@ class TestSpanConstraints:
             _tok("応急", "名詞", "普通名詞"),
             _tok("処置", "名詞", "普通名詞"),
         ]
-        # Start gate itself fails for 普通名詞-excluded heads → no merge at all.
+        # Final synthetic gate fails on excluded 普通名詞 → no merge at all.
         out = _matcher({"応急処置"}, rule=rule).merge_line("応急処置", tokens_b)
         assert [t.surface for t in out] == ["応急", "処置"]
         # Control case: with a permissive gate the same tokens DO merge
@@ -396,6 +436,18 @@ class TestLookupBatchingAndCache:
         # correctness preserved after the clear
         out = m.merge_line("走り出した", _hashiridashita())
         assert out[0].feature.lemma == "走り出す"
+
+    def test_cache_cap_clear_preserves_current_line_hit(self, monkeypatch):
+        monkeypatch.setattr("anki_miner.services.compound_matcher._EXIST_CACHE_CAP", 1)
+        m = _matcher({"応急処置"}, max_span_tokens=2)
+        assert [t.surface for t in m.merge_line("応急処置", [_tok("応急", "名詞"), _tok("処置", "名詞")])] == [
+            "応急処置"
+        ]
+
+        tokens = [_tok("応急", "名詞"), _tok("処置", "名詞"), _tok("室", "名詞")]
+        out = m.merge_line("応急処置室", tokens)
+
+        assert [t.surface for t in out] == ["応急処置", "室"]
 
 
 class TestInputPreservation:

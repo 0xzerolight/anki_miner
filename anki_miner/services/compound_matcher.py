@@ -9,9 +9,10 @@ positions come from MeCab tokens, and deinflection is delegated to MeCab (the
 span's tail token contributes its ``orthBase`` dictionary form).
 
 Runs AFTER ``morphology.merge_compound_suffixes``. For spans of adjacent
-tokens starting at a mineable token, the longest span whose candidate string
-is an exact offline-dictionary headword is merged into one synthetic token;
-consumed tokens are skipped (greedy left-to-right, like Yomitan's scan).
+tokens starting at a structurally contentful token, the longest span whose
+candidate string is an exact offline-dictionary headword is merged into one
+synthetic token; consumed tokens are skipped (greedy left-to-right, like
+Yomitan's scan).
 
 Lives outside ``morphology.py`` because the matcher is a stateful object — it
 holds a mutable existence cache and an injected lookup dependency — unlike
@@ -62,7 +63,10 @@ _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", 
 # char attested phrases/proverbs run >=6 tokens (お誕生日おめでとうございます is
 # 7) and die on the 5-token cap even when attested; inflected-phrase headwords
 # die on the end-on-content rule; everything else dies on attestation.
+# Exact name matching uses 24 chars, the longest current bundled name-wordset
+# entry; curated-resource membership is itself the boundary attestation.
 _MAX_SPAN_CHARS = 16
+_MAX_NAME_SPAN_CHARS = 24
 _MAX_SPAN_TOKENS = 5
 
 # Existence-cache bound (positive AND negative results). Clear-on-cap keeps
@@ -105,19 +109,24 @@ class CompoundDictionaryMatcher:
     """Greedy longest-match merger over one line's token stream.
 
     ``term_lookup`` is injected (no SQLite here); ``inclusion_rule`` is the
-    same gate the parser mines with, reused for span starts so spans never
-    begin at particles/aux/kana-only tokens.
+    same gate the parser mines with, applied to completed synthetic tokens.
+    Candidate boundaries use structural content checks instead.
     """
+
+    _default_max_span_chars = _MAX_SPAN_CHARS
 
     def __init__(
         self,
         term_lookup: TermLookup,
         inclusion_rule: TokenInclusionRule,
         max_span_tokens: int = _MAX_SPAN_TOKENS,  # parameterized for tests only
+        max_span_chars: int | None = None,
     ) -> None:
         self._lookup = term_lookup
         self._rule = inclusion_rule
         self._max_span = max(2, max_span_tokens)
+        char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
+        self._max_span_chars = max(2, char_bound)
         self._exist_cache: dict[str, bool] = {}
 
     def merge_line(self, text: str, tokens: list) -> list:
@@ -167,7 +176,7 @@ class CompoundDictionaryMatcher:
 
     def _can_start(self, token) -> bool:
         """Whether candidate spans may start at ``token``."""
-        return self._rule.should_include(token)
+        return self._can_end(token)
 
     @staticmethod
     def _can_end(token) -> bool:
@@ -215,7 +224,7 @@ class CompoundDictionaryMatcher:
                 if tail_span is None or tail_span[0] != source_end:
                     break
                 joined = prefix + tail.surface
-                if len(joined) > _MAX_SPAN_CHARS:
+                if len(joined) > self._max_span_chars:
                     break
                 # Span-end rule: non-content ends are not candidate endpoints,
                 # but the span may still extend past them (気に|する|な: the
@@ -236,12 +245,17 @@ class CompoundDictionaryMatcher:
 
     def _resolve(self, candidates: dict[tuple[int, int], tuple[str, str]]) -> None:
         """One batched lookup for all uncached candidate strings."""
-        unknown = {c for c, _kind in candidates.values() if c not in self._exist_cache}
+        current = {c for c, _kind in candidates.values()}
+        verdicts = {c: self._exist_cache[c] for c in current if c in self._exist_cache}
+        unknown = {c for c in current if c not in verdicts}
         if not unknown:
             return
         hits = self._lookup(sorted(unknown))
         if len(self._exist_cache) + len(unknown) > _EXIST_CACHE_CAP:
             self._exist_cache.clear()
+            # merge_line reads this cache after resolution; retain verdicts
+            # required by the current line across the clear.
+            self._exist_cache.update(verdicts)
         for candidate in unknown:
             self._exist_cache[candidate] = candidate in hits
 
@@ -258,11 +272,12 @@ class CompoundDictionaryMatcher:
         front is the headword; its pos2 is pinned to 一般 — the real tails
         carry pos2=非自立可能, and inheriting that would make the merge's
         survival depend on the user's ``excluded_subtypes`` (the 非自立 vs
-        非自立可能 trap) and silently drop compounds. Kind B (all-content
-        span, tail uninflected) keeps the head's nominal POS; surface equals
-        the headword there, so mined_form is right either way. No new POS
-        value is invented — a novel pos1 would silently break the
-        ``pos in ("動詞", "形容詞")`` checks in word/pitch code.
+        非自立可能 trap) and silently drop compounds. Kind B inherits the
+        uninflected tail's POS, which identifies the attested headword's type
+        even when the first token has a different POS (動く+歩道). Surface
+        equals the headword there, so mined_form is right either way. No new
+        POS value is invented — a novel pos1 would silently break the ``pos in
+        ("動詞", "形容詞")`` checks in word/pitch code.
         """
         surface = "".join(t.surface for t in span)
         kana = "".join(extract_reading(t) for t in span)
@@ -270,10 +285,19 @@ class CompoundDictionaryMatcher:
             pos1 = _pos1(span[-1]) or "動詞"
             pos2 = "一般"
         else:
-            head_pos1 = _pos1(span[0])
-            head_pos2 = _pos2(span[0])
-            pos1 = head_pos1 if head_pos1 else "名詞"
-            pos2 = head_pos2 if head_pos2 and head_pos2 != "*" else "普通名詞"
+            # Inherit the tail's POS only when the tail is itself a content
+            # word (動く歩道 → 歩道 keeps 名詞). A suffix tail (入院中, 可能性)
+            # would smuggle 接尾辞 onto the synthetic and the inclusion gate
+            # would reject the whole attested compound — those chains are
+            # lexicalized nouns, so they take the nominal default instead.
+            tail_pos1 = _pos1(span[-1])
+            tail_pos2 = _pos2(span[-1])
+            if tail_pos1 in ("名詞", "形状詞", "代名詞"):
+                pos1 = tail_pos1
+                pos2 = tail_pos2 if tail_pos2 and tail_pos2 != "*" else "普通名詞"
+            else:
+                pos1 = "名詞"
+                pos2 = "普通名詞"
         return CompoundSyntheticToken(
             surface=surface,
             pos1=pos1,
@@ -286,7 +310,7 @@ class CompoundDictionaryMatcher:
 class NameSpanMatcher(CompoundDictionaryMatcher):
     """Merge exact name-wordset spans without trusting UniDic word forms.
 
-    Reuses the dictionary matcher's bounded candidate generation, batched
+    Reuses the dictionary matcher's parameterized candidate generation, batched
     lookup cache, greedy longest-first selection, and synthetic tokens. Name
     candidates differ at one load-bearing seam: every token contributes its
     raw surface. Deinflecting an adjective-misclassified tail would turn
@@ -296,6 +320,8 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
     source spelling. Honorifics provide no special license; they merge only
     when the complete span itself exists in the injected name lookup.
     """
+
+    _default_max_span_chars = _MAX_NAME_SPAN_CHARS
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str) -> tuple[str, str]:
