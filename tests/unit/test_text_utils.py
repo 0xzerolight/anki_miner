@@ -119,6 +119,10 @@ class TestCleanSubtitleText:
         text = "<b>Bold</b> and <i>italic</i>"
         assert clean_subtitle_text(text) == "Bold and italic"
 
+    def test_decodes_html_entities_once(self):
+        assert clean_subtitle_text("猫 &amp; 犬") == "猫 & 犬"
+        assert clean_subtitle_text("猫 &amp;amp; 犬") == "猫 &amp; 犬"
+
     def test_normalizes_whitespace(self):
         """Should normalize multiple spaces to single space."""
         text = "Too   many    spaces"

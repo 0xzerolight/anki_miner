@@ -48,9 +48,9 @@ def strip_subtitle_markup(text: str) -> str:
 def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
-    Markup stripping runs first, then :func:`normalize_for_tokenization`
-    (halfwidth katakana → fullwidth, NFC combining-mark composition, CJK-compat
-    and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). When
+    Markup stripping runs first, then one ``html.unescape`` pass, then
+    :func:`normalize_for_tokenization` (halfwidth katakana → fullwidth, NFC combining-mark
+    composition, CJK-compat and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). When
     annotation stripping is enabled, physical lines stay separate through
     normalization and are stripped before whitespace is flattened. The returned
     string *is* the text MeCab tokenizes and the stored card sentence, so token
@@ -68,6 +68,7 @@ def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
         # strip_subtitle_markup normally flattens ASS/SSA \N and \n to spaces.
         text = re.sub(r"\\[nN]|\r\n?", "\n", text)
     text = strip_subtitle_markup(text)
+    text = html.unescape(text)
 
     # Preserve the pre-annotation behavior exactly when the opt-in is disabled.
     if not strip_annotations:
