@@ -352,6 +352,19 @@ def test_title_dir_embedded_cbz_beats_zip_same_stem(tmp_path):
     assert refs[0].path == title_dir / "Vol2.cbz"
 
 
+def test_title_dir_embedded_cbz_beats_uppercase_zip_same_stem(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    _write_archive(title_dir / "Vol2.cbz", {"Vol2.mokuro": _mokuro_bytes(volume="FromCbz")})
+    _write_archive(title_dir / "Vol2.ZIP", {"Vol2.mokuro": _mokuro_bytes(volume="FromZip")})
+
+    refs = detector.detect(title_dir)
+
+    assert len(refs) == 1
+    assert refs[0].volume == "FromCbz"
+    assert refs[0].path == title_dir / "Vol2.cbz"
+
+
 def test_title_dir_bad_archive_skipped_not_fatal(tmp_path):
     # One corrupt/ambiguous/OCR-less archive must not abort the folder scan.
     title_dir = tmp_path / "MyManga"

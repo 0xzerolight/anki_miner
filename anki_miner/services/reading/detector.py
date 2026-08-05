@@ -370,7 +370,11 @@ def _detect_directory(
             and not is_junk_path(child.name)
         ),
         # Same-stem .cbz/.zip pairs: keep the first per stem, .cbz preferred.
-        key=lambda child: (natural_sort_key(child.name), _ARCHIVE_EXTS.index(child.suffix.lower())),
+        key=lambda child: (
+            natural_sort_key(child.stem),
+            _ARCHIVE_EXTS.index(child.suffix.lower()),
+            natural_sort_key(child.name),
+        ),
     )
     seen_stems: set[str] = set()
     embedded_pairs: list[tuple[Path, ReadingSourceRef]] = []
