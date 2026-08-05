@@ -622,6 +622,67 @@ def test_title_falls_back_to_ref(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def test_load_validates_declared_archive_total(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    path = _build_epub(tmp_path, _two_chapter_files("本文です。", "続きです。"))
+
+    def _reject_declared_total(zf: zipfile.ZipFile, tmp_root: Path) -> None:
+        assert Path(zf.filename) == path
+        assert tmp_root == path.parent
+        raise SetupError("declared archive total rejected")
+
+    monkeypatch.setattr(epub_source, "validate_zip_safe", _reject_declared_total, raising=False)
+
+    with pytest.raises(SetupError, match="declared archive total rejected"):
+        load(_ref(path))
+
+
+def test_cumulative_member_budget_rejects_many_spine_documents(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    chapter_entries = [f"ch{i}.xhtml" for i in range(3)]
+    opf = _opf(
+        [(f"c{i}", entry, "application/xhtml+xml", "") for i, entry in enumerate(chapter_entries)],
+        [(f"c{i}", None) for i in range(3)],
+    )
+    chapters = {f"OEBPS/{entry}": _xhtml(f"<p>{i}章です。</p>") for i, entry in enumerate(chapter_entries)}
+    path = _build_epub(tmp_path, {"OEBPS/content.opf": opf, **chapters})
+    first_two = sum(len(chapters[f"OEBPS/{entry}"].encode("utf-8")) for entry in chapter_entries[:2])
+    budget = len(_CONTAINER.encode("utf-8")) + len(opf.encode("utf-8")) + first_two
+    monkeypatch.setattr(epub_source, "_MAX_TOTAL_MEMBER_BYTES", budget, raising=False)
+
+    with pytest.raises(SetupError, match="cumulative EPUB member data exceeds"):
+        load(_ref(path))
+
+
+def test_cumulative_member_budget_counts_repeated_spine_idrefs(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.services.reading import epub_source
+
+    opf = _opf(
+        [("c1", "chapter.xhtml", "application/xhtml+xml", "")],
+        [("c1", None), ("c1", None)],
+    )
+    chapter = _xhtml("<p>繰り返す章です。</p>")
+    path = _build_epub(tmp_path, {"OEBPS/content.opf": opf, "OEBPS/chapter.xhtml": chapter})
+    budget = len(_CONTAINER.encode("utf-8")) + len(opf.encode("utf-8")) + len(chapter.encode("utf-8"))
+    monkeypatch.setattr(epub_source, "_MAX_TOTAL_MEMBER_BYTES", budget, raising=False)
+    parse_calls = 0
+    real_parse_content = epub_source._parse_content
+
+    def _count_parse_calls(raw: bytes):
+        nonlocal parse_calls
+        parse_calls += 1
+        return real_parse_content(raw)
+
+    monkeypatch.setattr(epub_source, "_parse_content", _count_parse_calls)
+
+    with pytest.raises(SetupError, match="cumulative EPUB member data exceeds"):
+        load(_ref(path))
+
+    assert parse_calls == 1
+
+
 def _two_chapter_files(ch1_body: str, ch2_body: str) -> dict[str, bytes | str]:
     return {
         "OEBPS/content.opf": _opf(

@@ -32,6 +32,7 @@ import posixpath
 import re
 import zipfile
 import zlib
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -44,6 +45,7 @@ from anki_miner.models.reading import (
     ReadingSourceRef,
     ReadingUnit,
 )
+from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, validate_zip_safe
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
 
@@ -101,13 +103,15 @@ _CONTENT_EXTS = (".xhtml", ".html", ".htm")
 # CJK line-wraps with "" (no space) while leaving internal U+3000 untouched.
 _INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
 
-# Cap on any single decompressed member read out of the EPUB. Every member this
-# loader reads is text (container/OPF/encryption/spine XHTML/nav/NCX); real
-# chapters are well under 1 MiB, so 32 MiB is far above any legitimate book
-# while still bounding a highly-compressible zip-bomb member. This is the one
-# reading archive path without the importers' validate_zip_safe total-size
-# gate — the cover peek stays separately bomb-safe (fixed 16-byte read).
+# Cap on any single decompressed member read out of the EPUB. Every fully-read
+# member is text (container/OPF/encryption/spine XHTML/nav/NCX); real chapters
+# are well under 1 MiB, so 32 MiB is far above any legitimate book while still
+# bounding a highly-compressible zip-bomb member. ``validate_zip_safe`` screens
+# the declared archive total; the loader budget separately counts actual reads,
+# including repeated spine idrefs. The cover peek stays fixed at 16 bytes.
 _MAX_MEMBER_BYTES = 32 * 1024 * 1024
+_MAX_TOTAL_MEMBER_BYTES = MAX_UNCOMPRESSED_BYTES
+_AccountMember = Callable[[bytes], None]
 _OPTIONAL_MEMBER_ERRORS = (
     KeyError,
     zipfile.BadZipFile,
@@ -163,18 +167,30 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     except (zipfile.BadZipFile, OSError) as exc:
         raise SetupError(_invalid_epub_msg(epub_path, "the ZIP archive cannot be opened")) from exc
     with zf:
+        validate_zip_safe(zf, epub_path.parent)
+        total_member_bytes = 0
+
+        def account_member(raw: bytes) -> None:
+            nonlocal total_member_bytes
+            total_member_bytes += len(raw)
+            if total_member_bytes > _MAX_TOTAL_MEMBER_BYTES:
+                raise SetupError(
+                    f"'{epub_path.name}': cumulative EPUB member data exceeds the {_MAX_TOTAL_MEMBER_BYTES:,}-byte cap."
+                )
+
         names = set(zf.namelist())
-        opf_path = _find_opf_path(zf, names, epub_path)
+        opf_path = _find_opf_path(zf, names, epub_path, account_member)
         opf_dir = posixpath.dirname(opf_path)
         try:
             opf_raw = _read_member(zf, opf_path, epub_path)
         except _OPTIONAL_MEMBER_ERRORS as exc:
             raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable")) from exc
+        account_member(opf_raw)
         opf_root = _parse_xml(opf_raw)
         if opf_root is None:
             raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable"))
         manifest, spine_idrefs, spine_toc, cover_meta_id, title = _parse_opf(opf_root)
-        _check_encryption(zf, names, epub_path, manifest, opf_dir)
+        _check_encryption(zf, names, epub_path, manifest, opf_dir, account_member)
 
         doc_title = title or ref.title
         doc = ReadingDocument(title=doc_title, kind="book", series="Books", episode=doc_title)
@@ -183,7 +199,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         if cover_warning:
             doc.warnings.append(cover_warning)
 
-        chapter_map = _load_chapters(zf, names, manifest, spine_toc, opf_dir, doc.warnings)
+        chapter_map = _load_chapters(zf, names, manifest, spine_toc, opf_dir, doc.warnings, account_member)
 
         index = 0
         content_i = 0
@@ -209,6 +225,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             except _OPTIONAL_MEMBER_ERRORS:
                 _warn_once(doc.warnings, f"Skipped damaged spine document '{entry}'.")
                 continue
+            account_member(raw)
             body, is_cover = _parse_content(raw)
             if body is None or is_cover:
                 continue
@@ -291,6 +308,7 @@ def _check_encryption(
     epub_path: Path,
     manifest: dict[str, tuple[str, str | None, list[str]]],
     opf_dir: str,
+    account_member: _AccountMember,
 ) -> None:
     if _ENCRYPTION_PATH not in names:
         return
@@ -299,6 +317,7 @@ def _check_encryption(
         encryption_raw = _read_member(zf, _ENCRYPTION_PATH, epub_path)
     except _OPTIONAL_MEMBER_ERRORS as exc:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/encryption.xml is unreadable")) from exc
+    account_member(encryption_raw)
     try:
         root = etree.fromstring(encryption_raw, parser)
     except etree.XMLSyntaxError as exc:
@@ -368,13 +387,14 @@ def _reject_drm(epub_path: Path, reason: str) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> str:
+def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path, account_member: _AccountMember) -> str:
     if _CONTAINER_PATH not in names:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is missing"))
     try:
         container_raw = _read_member(zf, _CONTAINER_PATH, epub_path)
     except _OPTIONAL_MEMBER_ERRORS as exc:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is unreadable")) from exc
+    account_member(container_raw)
     root = _parse_xml(container_raw)
     fallback = None
     if root is not None:
@@ -601,6 +621,7 @@ def _load_chapters(
     spine_toc: str | None,
     opf_dir: str,
     warnings: list[str],
+    account_member: _AccountMember,
 ) -> dict[str, str]:
     entries: list[tuple[str, str]] = []
     nav_href = None
@@ -609,11 +630,11 @@ def _load_chapters(
             nav_href = href
             break
     if nav_href:
-        entries = _parse_nav(zf, names, opf_dir, nav_href, warnings)
+        entries = _parse_nav(zf, names, opf_dir, nav_href, warnings, account_member)
     if not entries and spine_toc:
         item = manifest.get(spine_toc)
         if item is not None:
-            entries = _parse_ncx(zf, names, opf_dir, item[0], warnings)
+            entries = _parse_ncx(zf, names, opf_dir, item[0], warnings, account_member)
 
     usable = [(t, lbl) for (t, lbl) in entries if lbl and lbl not in _BOILERPLATE_LABELS]
     if len(usable) < 2:
@@ -625,7 +646,12 @@ def _load_chapters(
 
 
 def _parse_nav(
-    zf: zipfile.ZipFile, names: set[str], opf_dir: str, nav_href: str, warnings: list[str]
+    zf: zipfile.ZipFile,
+    names: set[str],
+    opf_dir: str,
+    nav_href: str,
+    warnings: list[str],
+    account_member: _AccountMember,
 ) -> list[tuple[str, str]]:
     nav_entry = _resolve(opf_dir, nav_href)
     if nav_entry not in names:
@@ -635,6 +661,7 @@ def _parse_nav(
     except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
         _warn_once(warnings, f"Skipped damaged navigation document '{nav_entry}'.")
         return []  # oversized nav → chapter labels fall back to spine index
+    account_member(raw)
     root = _parse_xml(raw)
     if root is None:
         return []
@@ -660,7 +687,12 @@ def _parse_nav(
 
 
 def _parse_ncx(
-    zf: zipfile.ZipFile, names: set[str], opf_dir: str, ncx_href: str, warnings: list[str]
+    zf: zipfile.ZipFile,
+    names: set[str],
+    opf_dir: str,
+    ncx_href: str,
+    warnings: list[str],
+    account_member: _AccountMember,
 ) -> list[tuple[str, str]]:
     ncx_entry = _resolve(opf_dir, ncx_href)
     if ncx_entry not in names:
@@ -670,6 +702,7 @@ def _parse_ncx(
     except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
         _warn_once(warnings, f"Skipped damaged navigation document '{ncx_entry}'.")
         return []  # oversized NCX → chapter labels fall back to spine index
+    account_member(raw)
     root = _parse_xml(raw)
     if root is None:
         return []
