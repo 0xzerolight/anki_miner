@@ -68,8 +68,8 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     """Return the highest-priority sibling subtitle for *video_path*, or None.
 
     Looks in the same folder for a file whose stem matches *video_path*'s stem
-    and whose extension is one of *priority*.  Returns the first hit in priority
-    order, or None when no sibling exists.
+    and whose extension is one of *priority*.  Returns the best match in priority
+    order, preferring an exact stem, or None when no unambiguous sibling exists.
 
     Args:
         video_path: Video (or media) file whose sibling subtitle is sought.
@@ -81,7 +81,9 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     Matching is case-insensitive on both stem and extension, and NFC-normalized
     on the stem, so a ``.SRT`` (a differing-case stem, or an NFD-encoded stem) is
     still found on case-sensitive filesystems. Reads are non-destructive, so the
-    casefold here is unconditional (unlike the write-side resolver).
+    casefold here is unconditional (unlike the write-side resolver). Within one
+    extension, an exact stem wins; multiple normalization-only matches are
+    ambiguous and return ``None`` rather than depending on directory order.
     """
     exts = DEFAULT_SUBTITLE_PRIORITY if priority is None else tuple(priority)
     folder = video_path.parent
@@ -90,14 +92,20 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
         entries = [p for p in folder.iterdir() if p.is_file()]
     except OSError:
         return None
-    by_ext: dict[str, Path] = {}
+    by_ext: dict[str, list[Path]] = {}
     for p in entries:
         ext = p.suffix.lower()
         if ext in exts and _nfc(p.stem).casefold() == stem_cf:
-            by_ext.setdefault(ext, p)
+            by_ext.setdefault(ext, []).append(p)
     for ext in exts:
-        if ext in by_ext:
-            return by_ext[ext]
+        candidates = by_ext.get(ext, [])
+        exact = next((p for p in candidates if p.stem == video_path.stem), None)
+        if exact is not None:
+            return exact
+        if len(candidates) == 1:
+            return candidates[0]
+        if candidates:
+            return None
     return None
 
 

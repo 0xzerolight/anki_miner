@@ -311,6 +311,38 @@ def test_find_sibling_subtitle_matches_nfd_stem(tmp_path):
     assert find_sibling_subtitle(video) == sub
 
 
+class TestFindSiblingSubtitleIdentity:
+    def test_exact_stem_wins_over_earlier_casefold_match(self, monkeypatch):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/Ep.mkv")
+        entries = [Path("/d/ep.ass"), Path("/d/Ep.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) == Path("/d/Ep.ass")
+
+    def test_sole_casefold_match_is_returned(self, monkeypatch):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/Ep.mkv")
+        entries = [Path("/d/ep.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) == Path("/d/ep.ass")
+
+    def test_ambiguous_normalization_only_matches_return_none(self, monkeypatch):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/EP.mkv")
+        entries = [Path("/d/ep.ass"), Path("/d/Ep.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) is None
+
+
 class TestFindPairsMissingFolder:
     """A nonexistent or non-directory folder yields [] instead of aborting.
 
