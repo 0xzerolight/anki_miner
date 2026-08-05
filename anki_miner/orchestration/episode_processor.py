@@ -50,6 +50,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_text_field,
 )
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
+from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -629,22 +630,25 @@ class EpisodeProcessor:
             all_sources = self.frequency_service.lookup_all_many(pairs)
             # Whole-result miss-only lemma fallback (mirrors the JPod101
             # audio retry ladder): fires only when NO source attests the
-            # variant spelling, so a ranked breakdown is always uniformly
-            # keyed — all spelling-true or all lemma. Deliberately NOT
-            # per-source: a per-source cascade would re-inject the lemma
+            # spelling and the alternate differs by okurigana over the same
+            # kanji stem. A different-kanji UniDic lemma may be another
+            # homograph and must never supply this card's rank. Deliberately
+            # NOT per-source: a per-source cascade would re-inject the lemma
             # rank from any source lacking the per-spelling row, and since
             # frequency_rank = min_rank(sources) gates the top-N filter,
             # that low lemma rank would keep a rare variant above the
-            # max_frequency_rank cutoff it should now fall past. Known
-            # edge: a variant attested ONLY by a categorical source (JLPT
-            # band, CATEGORICAL_RANK sentinel) counts as attested and
-            # suppresses the numeric lemma fallback — accepted for
-            # breakdown uniformity; unreachable for per-spelling numeric
-            # sources.
+            # max_frequency_rank cutoff it should now fall past. Known edge:
+            # a spelling attested ONLY by a categorical source (JLPT band,
+            # CATEGORICAL_RANK sentinel) counts as attested and suppresses the
+            # numeric lemma fallback — accepted for breakdown uniformity;
+            # unreachable for per-spelling numeric sources.
             fallback_indexes = [
                 i
                 for i, (word, sources) in enumerate(zip(all_words, all_sources, strict=True))
-                if not sources and word.lemma and word.lemma != word.mined_form
+                if not sources
+                and word.lemma
+                and word.lemma != word.mined_form
+                and _differs_by_okurigana_only(word.mined_form, word.lemma)
             ]
             if fallback_indexes:
                 fallback_pairs: list[tuple[str, str | None]] = [
@@ -786,27 +790,68 @@ class EpisodeProcessor:
         # can never become cards (they would otherwise be silently skipped at
         # Phase 5). Offline-only by design: matches the curator's no-network
         # def-pane and the project's offline-first default (Jisho is off by
-        # default). Probes the union of mined_form + lemma per word — the same
-        # two keys Phase 4 can resolve (mined_form primary, lemma miss-only
-        # fallback) — and keeps a word when either hits. Runs before every lossy
-        # sentence selector so an undefined first word cannot erase a
-        # definition-backed sentence-mate. Gated on bypass_optional_filters so
-        # the Deck Builder preview-parity path is unaffected (Phase 5 stays the
-        # skip point there).
+        # default). Probes mined_form plus only same-kanji, okurigana-only lemma
+        # alternates; a different-kanji UniDic lemma may be another homograph.
+        # Exact misses also use the same rules-validated deinflection candidates
+        # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
+        # Runs before every lossy sentence selector so an undefined first word
+        # cannot erase a definition-backed sentence-mate. Gated on
+        # bypass_optional_filters so the Deck Builder preview-parity path is
+        # unaffected (Phase 5 stays the skip point there).
         #
         # Known, intentional asymmetry: this probe is offline-only, but Phase 5
         # looks definitions up over the FULL chain (get_definitions_batch, which
         # includes Jisho when enabled). A user who turns Jisho on therefore has
         # words with a Jisho-only definition dropped here before the curator —
         # accepted on purpose so Phase 2 never blocks on network I/O. Do not
-        # "fix" this by calling online providers here. (The probe also doesn't
-        # mirror Phase 4's kana-fold/deinflection miss fallback — pre-existing
-        # accepted asymmetry.)
+        # "fix" this by calling online providers here.
         if not self.config.bypass_optional_filters and unknown_words:
-            probe_terms = list({t for w in unknown_words for t in (w.mined_form, w.lemma) if t})
-            has_def = self.definition_service.has_offline_definitions(probe_terms)
-            kept_words = [w for w in unknown_words if has_def.get(w.mined_form) or has_def.get(w.lemma)]
-            dropped = [w.mined_form for w in unknown_words if not (has_def.get(w.mined_form) or has_def.get(w.lemma))]
+            safe_alternates = [
+                (
+                    w.lemma
+                    if w.lemma and (w.lemma == w.mined_form or _differs_by_okurigana_only(w.mined_form, w.lemma))
+                    else ""
+                )
+                for w in unknown_words
+            ]
+            probe_terms = list(
+                {
+                    term
+                    for w, alternate in zip(unknown_words, safe_alternates, strict=True)
+                    for term in (w.mined_form, alternate)
+                    if term
+                }
+            )
+            has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
+            fallback_candidates = [
+                (
+                    []
+                    if has_def.get(w.mined_form) or has_def.get(alternate)
+                    else DefinitionService._fallback_candidates(w.mined_form, alternate, None)
+                )
+                for w, alternate in zip(unknown_words, safe_alternates, strict=True)
+            ]
+            fallback_probe = list(
+                dict.fromkeys(candidate for candidates in fallback_candidates for candidate in candidates)
+            )
+            deinflection_hits = (
+                self.definition_service.offline_deinflection_terms_exist(fallback_probe) if fallback_probe else set()
+            ) or set()
+            viable = [
+                bool(
+                    has_def.get(w.mined_form)
+                    or has_def.get(alternate)
+                    or any(term in deinflection_hits for term, _conditions in candidates)
+                )
+                for w, alternate, candidates in zip(
+                    unknown_words,
+                    safe_alternates,
+                    fallback_candidates,
+                    strict=True,
+                )
+            ]
+            kept_words = [w for w, keep in zip(unknown_words, viable, strict=True) if keep]
+            dropped = [w.mined_form for w, keep in zip(unknown_words, viable, strict=True) if not keep]
             unknown_words = kept_words
             no_definition_rejects = len(dropped)
             if dropped:
@@ -1271,18 +1316,20 @@ class EpisodeProcessor:
             (w.mined_form, katakana_to_hiragana(w.expression_reading or w.lemma_reading or w.reading))
             for w in words_with_media
         ]
-        # Lookup-miss fallback context (5.2): mined_form → (lemma, cType). Only
-        # consulted for keys the whole chain misses, so a dictionary storing
-        # only the canonical lemma spelling (請う when the source wrote 乞う)
-        # still resolves. Set unconditionally: when lemma == mined_form the
-        # candidate builder skips the equal alternate but still emits the
-        # kana-fold + deinflection miss fallbacks. cType is unavailable on
-        # TokenizedWord post-parse, so the deinflection mask stays inert here
-        # and the rules-column POS check does the gating. First-seen lemma
-        # wins, mirroring the batch's dedup.
+        # Lookup-miss fallback context (5.2): mined_form → (safe lemma alternate,
+        # cType). A non-identical lemma is admitted only when it changes trailing
+        # okurigana over the same kanji stem; different-kanji canonicalization can
+        # name another homograph. Unsafe alternates become empty, but the
+        # candidate builder still emits kana-fold + deinflection hypotheses such
+        # as 帰れる→帰る. cType is unavailable on TokenizedWord post-parse, so the
+        # deinflection mask stays inert here and the rules-column POS check does
+        # the gating. First-seen alternate wins, mirroring the batch's dedup.
         fallback_context: dict[str, tuple[str, str | None]] = {}
         for w in words_with_media:
-            fallback_context.setdefault(w.mined_form, (w.lemma, None))
+            alternate = w.lemma
+            if alternate != w.mined_form and not _differs_by_okurigana_only(w.mined_form, alternate):
+                alternate = ""
+            fallback_context.setdefault(w.mined_form, (alternate, None))
         definitions = self.definition_service.get_definitions_batch(
             lookup_pairs,
             progress_callback,
@@ -1303,14 +1350,19 @@ class EpisodeProcessor:
                 lookup_pairs,
                 progress_callback,
             )
-            # get_glossaries_batch has no miss-fallback mechanism, so variant
-            # spellings absent from every dictionary retry once under the
-            # canonical lemma (miss-only, merge by index). Non-variant words
-            # and hits pay nothing; None progress avoids a second cycle.
+            # get_glossaries_batch has no miss-fallback mechanism, so a miss may
+            # retry once under a same-kanji, okurigana-only lemma alternate.
+            # Different-kanji UniDic lemmas may be another homograph and are
+            # excluded. Hits pay nothing; None progress avoids a second cycle.
             retry_idx = [
                 i
                 for i, g in enumerate(glossaries)
-                if not g and words_with_media[i].lemma != words_with_media[i].mined_form
+                if not g
+                and words_with_media[i].lemma != words_with_media[i].mined_form
+                and _differs_by_okurigana_only(
+                    words_with_media[i].mined_form,
+                    words_with_media[i].lemma,
+                )
             ]
             if retry_idx:
                 retry_pairs: list[tuple[str, str | None]] = [
@@ -1325,11 +1377,11 @@ class EpisodeProcessor:
                     glossaries[i] = g
 
         # Pitch follows the same identity ladder as definitions/audio: the card
-        # front and its selected reading first, canonical UniDic lemma only on a
-        # miss. Lemma-first is unsafe when lexical analysis collapses a different
-        # word (呪言/じゅごん → 言祝ぎ/ことほぎ). ``resolved_reading`` remains the
-        # lemma-fallback realignment for modern じる fronts over archaic ずる
-        # lemmas.
+        # front and its selected reading first, then only a same-kanji,
+        # okurigana-only UniDic lemma on a miss. Different-kanji canonicalization
+        # can name another word (呪言/じゅごん → 言祝ぎ/ことほぎ).
+        # ``resolved_reading`` remains the lemma-fallback realignment for modern
+        # じる fronts over archaic ずる lemmas.
         pitch_data: list[tuple[str | None, str | None]] = [(None, None)] * len(words_with_media)
         if self.pitch_accent_service and self.pitch_accent_service.is_available():
             primary_pitch_keys = [
@@ -1347,7 +1399,9 @@ class EpisodeProcessor:
             retry_idx = [
                 i
                 for i, ((position, _), word) in enumerate(zip(pitch_data, words_with_media, strict=True))
-                if not position and word.lemma != word.mined_form
+                if not position
+                and word.lemma != word.mined_form
+                and _differs_by_okurigana_only(word.mined_form, word.lemma)
             ]
             if retry_idx:
                 fallback_pitch_keys = [
@@ -1449,7 +1503,11 @@ class EpisodeProcessor:
                 if (want_graph or want_text) and self.pitch_accent_service:
                     reading = word.expression_reading or word.resolved_reading or word.lemma_reading or word.reading
                     entry = self.pitch_accent_service.lookup_entry(word.mined_form, reading)
-                    if entry is None and word.lemma != word.mined_form:
+                    if (
+                        entry is None
+                        and word.lemma != word.mined_form
+                        and _differs_by_okurigana_only(word.mined_form, word.lemma)
+                    ):
                         fallback_reading = word.resolved_reading or word.lemma_reading or word.reading
                         entry = self.pitch_accent_service.lookup_entry(word.lemma, fallback_reading)
                         if entry is not None:

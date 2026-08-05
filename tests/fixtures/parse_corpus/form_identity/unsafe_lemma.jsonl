@@ -1,0 +1,1 @@
+{"id":"fi01","sentence":"帰れる。","expected_fronts":["帰れる"],"assertions":["definition fallback must not resolve 返る","expression-audio candidates must not contain 返る/かえる"]}

@@ -224,26 +224,18 @@ class TestExpressionAudio:
         assert miss_media.expression_audio_path is None
         assert miss_media.expression_audio_filename is None
 
-    def test_miss_retries_with_lemma_for_variant_kanji_noun(self, test_config, mock_services, tmp_path):
-        """Surface-form miss ⇒ retry with the unidic lemma (canonical orthography).
-
-        Subtitle surface 噓 (variant kanji) is what JPod101 misses; the lemma
-        嘘 is what it indexes. mined_form == surface for nouns, so the retry
-        swaps the kanji while keeping the (unchanged) reading.
-        """
+    def test_unsafe_lemma_is_not_an_audio_candidate(self, test_config, mock_services, tmp_path):
         config = self._enabled_config(test_config)
-        word = _make_word(lemma="嘘", surface="噓", pos="名詞")
-        word.expression_reading = "うそ"
-        word.lemma_reading = "うそ"
-        media = _make_media("uso")
+        word = _make_word(lemma="返る", surface="帰れ", pos="動詞")
+        word.orth_base = "帰れる"
+        word.expression_reading = "かえれる"
+        word.lemma_reading = "かえる"
+        media = _make_media("kaereru")
         pairs = [(word, media)]
         _wire_pipeline(mock_services, pairs)
 
-        # Surface 噓 misses, lemma 嘘 hits — that selection is now internal to
-        # the fetcher; the processor only owns building the ladder.
-        audio_path = tmp_path / "jpod101_嘘_うそ.mp3"
         fetcher = MagicMock()
-        fetcher.fetch_candidates.return_value = audio_path
+        fetcher.fetch_candidates.return_value = None
 
         processor = build_processor(
             config=config,
@@ -256,9 +248,9 @@ class TestExpressionAudio:
         assert result.cards_created == 1
         assert fetcher.fetch_candidates.call_count == 1
         candidates = fetcher.fetch_candidates.call_args.args[0]
-        assert candidates == [("噓", "うそ"), ("嘘", "うそ")]  # surface then lemma
-        assert media.expression_audio_path == audio_path
-        assert media.expression_audio_filename == audio_path.name
+        assert candidates == [("帰れる", "かえれる")]
+        assert media.expression_audio_path is None
+        assert media.expression_audio_filename is None
 
     def test_katakana_loanword_retries_with_katakana_reading(self, test_config, mock_services, tmp_path):
         """Loanword hiragana-reading miss ⇒ retry with the katakana reading.

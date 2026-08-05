@@ -10,6 +10,7 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import ProgressCallback
+from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -162,10 +163,11 @@ class DefinitionService:
         a miss on the exact key is retried against spelling/kana variants and
         rule-driven deinflection hypotheses. Here:
 
-        * ``orth_base`` (source-orthography dictionary form, e.g. 乞う when the
-          canonical lemma is 請う) and the katakana/hiragana folds of ``word`` are
-          emitted with ``conditions=0`` — pure variants that pass the entry POS
-          check unconditionally.
+        * A non-identical ``orth_base`` alternate is emitted with
+          ``conditions=0`` only when it differs by trailing okurigana over the
+          same kanji stem. UniDic lemmas that change kanji can name a different
+          homograph and are skipped. Katakana/hiragana folds of ``word`` remain
+          unconditional pure variants.
         * Deinflection hypotheses come from the already-loaded Japanese
           deinflector; each carries the terminal ``conditions`` bitmask used for
           the entry's rules-column POS check. They are pre-filtered by the
@@ -192,7 +194,7 @@ class DefinitionService:
                 seen.add(text)
                 candidates.append((text, conditions))
 
-        if orth_base:
+        if orth_base and (orth_base == word or _differs_by_okurigana_only(word, orth_base)):
             _add(orth_base, 0)
         _add(katakana_to_hiragana(word), 0)
         _add(hiragana_to_katakana(word), 0)
@@ -257,9 +259,11 @@ class DefinitionService:
         Lookup-miss fallback (plan item 5.2): ``fallback_context`` maps a lookup
         word to its ``(orth_base, cType)``. For any word STILL unresolved after
         the whole chain, the deinflection/variant fallback is retried against
-        offline providers (miss-only, so the hot path pays nothing). Absent
-        (``None``) ⇒ no fallback, preserving pre-5.2 behavior for callers that
-        don't supply context.
+        offline providers (miss-only, so the hot path pays nothing). A
+        non-identical ``orth_base`` is intrinsically guarded to the same-kanji,
+        okurigana-only case; callers may pass an empty alternate while retaining
+        kana/deinflection fallback. Absent (``None``) ⇒ no fallback, preserving
+        pre-5.2 behavior for callers that don't supply context.
         """
         if progress_callback:
             progress_callback.on_start(

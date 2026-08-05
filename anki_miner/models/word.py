@@ -107,10 +107,10 @@ class TokenizedWord:
     lemma_reading: str = ""  # Plain kana reading of the lemma, for audio retry
     # Kana reading of the resolved card front when the JMdict verb-front resolver
     # overrode ``orth_base`` (感じた: front 感じる / reading かんじる) — see
-    # deinflection.resolve_dictionary_form. Empty when no override fired. Pitch
-    # is otherwise lemma-reading-keyed, but the じる/ずる override diverges the
-    # front's reading (かんじる) from the archaic lemma's own (感ずる→かんずる),
-    # so the pitch sites prefer this field over ``lemma_reading`` when it is set.
+    # deinflection.resolve_dictionary_form. Empty when no override fired. An
+    # identity-safe lemma pitch retry uses ``lemma_reading``, but the じる/ずる
+    # override diverges the front's reading (かんじる) from the archaic lemma's
+    # own (感ずる→かんずる), so that retry prefers this field when it is set.
     resolved_reading: str = ""
     sentence_furigana: str = ""  # Furigana for sentence, e.g. "日本語[にほんご]を食べる[たべる]。"
     sentence_reading: str = ""  # Plain kana reading of sentence, e.g. "にほんごをたべる。"
@@ -175,16 +175,17 @@ class TokenizedWord:
         sentence actually used. Yomitan behaves the same way — it
         deinflects the raw string and never normalizes to a canonical
         headword. ``lemma`` remains the fallback when ``orth_base`` is
-        empty. Definition and frequency lookups also key on ``mined_form``
-        (with a miss-only ``lemma`` fallback) so the fetched data matches
-        the spelling the card shows — 殺る must not get 遣る's "to do"
-        definition or 掛ける's rank; only pitch stays lemma-keyed
-        (variants share the reading, canonical orthography has the better
-        hit rate in reading-scoped pitch CSVs). The one exception: when the
-        JMdict verb-front resolver overrides ``orth_base`` (感じた: 感ずる →
-        感じる), the front's reading (かんじる) diverges from the archaic
-        lemma's own (感ずる→かんずる), so ``resolved_reading`` carries the
-        front reading and the pitch sites prefer it over ``lemma_reading``.
+        empty. Definition, frequency, glossary, pitch, and expression-audio
+        lookups key on ``mined_form``. A miss retries ``lemma`` only when the
+        spelling differs by trailing okurigana over the same kanji stem; a
+        different-kanji UniDic lemma may be another homograph. Thus fetched
+        data matches the spelling the card shows — 殺る must not get 遣る's
+        "to do" definition or 掛ける's rank. Definition fallback may still use
+        rules-validated deinflection of ``mined_form``. When the JMdict
+        verb-front resolver overrides ``orth_base`` (感じた: 感ずる → 感じる),
+        the front's reading (かんじる) diverges from the archaic lemma's own
+        (感ずる→かんずる), so ``resolved_reading`` carries the front reading and
+        the identity-safe pitch fallback prefers it over ``lemma_reading``.
         Kana-surface verbs never reach mining (TokenInclusionRule requires
         kanji or katakana), so orthBase-vs-lemma only ever differs on
         kanji-surface variant tokens. Verbs carded before this change

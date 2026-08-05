@@ -25,6 +25,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
+from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils import has_katakana, hiragana_to_katakana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -46,18 +47,18 @@ def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
       reading, but ``expression_reading`` is folded to hiragana for card
       display (チップ→ちっぷ → miss).  Each query whose kanji form contains
       katakana gets a katakana-reading variant (チップ→チップ → hit).
-    * **Surface-mined fallback.** Subtitle surface forms use variant kanji
-      (噓/頰/今さら) that JPod101 lacks; the unidic lemma is the canonical
-      orthography (嘘/頬/今更).  Surface-mined words fall back to the lemma with
-      the lemma's OWN reading (探す/さがす, not the surface 探す/さがし).
+    * **Surface-mined fallback.** A same-kanji, okurigana-only UniDic lemma is a
+      safe canonical alternate. Surface-mined words fall back to that lemma with
+      the lemma's OWN reading (探す/さがす, not the surface 探し/さがし).
 
     hiragana↔katakana is lossless and loanwords are unambiguous, so the katakana
-    variant carries no homograph risk (Issue #73).  Empty readings are dropped
-    (homograph guard) and duplicates are collapsed, so a verb whose
+    variant carries no homograph risk (Issue #73). Different-kanji lemmas are
+    excluded because UniDic canonicalization can name another homograph. Empty
+    readings are dropped and duplicates are collapsed, so a verb whose
     ``mined_form == lemma`` issues no redundant request.
     """
     pairs: list[tuple[str, str]] = [(word.mined_form, word.expression_reading)]
-    if word.lemma and word.lemma != word.mined_form:
+    if word.lemma and word.lemma != word.mined_form and _differs_by_okurigana_only(word.mined_form, word.lemma):
         pairs.append((word.lemma, word.lemma_reading))
 
     candidates: list[tuple[str, str]] = []
