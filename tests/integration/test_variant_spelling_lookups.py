@@ -73,18 +73,34 @@ class TestVariantSpellingDefinitions:
         if "to undertake" in definitions[0]:
             assert definitions[0].index("to do someone in") < definitions[0].index("to undertake")
 
-    def test_lemma_fallback_resolves_missing_variant(self, tmp_path: Path, test_config):
-        """A variant spelling absent from every dictionary falls back to the
-        canonical lemma entry instead of producing no card."""
-        # Dictionary knows only the canonical spelling.
+    def test_okurigana_only_lemma_fallback_resolves_missing_variant(self, tmp_path: Path, test_config):
+        """A variant differing from its lemma by trailing okurigana only still
+        falls back to the canonical entry (same kanji stem — safe)."""
+        banks = [[["表す", "あらわす", "v5s", "v5s", 0, ["to express"], 1, ""]]]
+        provider = _dict_provider(tmp_path, banks)
+        service = DefinitionService(test_config, providers=[provider])
+
+        definitions = service.get_definitions_batch(
+            [("表わす", "あらわす")], fallback_context={"表わす": ("表す", None)}
+        )
+
+        assert definitions[0] is not None
+        assert "to express" in definitions[0]
+
+    def test_different_kanji_lemma_fallback_is_blocked(self, tmp_path: Path, test_config):
+        """A lemma sharing no kanji stem with the mined form must NOT be
+        retried (X2-001): unidic's canonical lemma collapses distinct
+        homographs (殺る→遣る, 帰れる→返る), so a different-kanji retry can
+        attach the wrong homograph's definition. 乞う→請う is the same policy
+        applied to a benign pair — the safety guard is orthographic, not
+        semantic, and deliberately trades this recall for homograph safety."""
         banks = [[["請う", "こう", "v5u-s", "v5u-s", 0, ["to beg", "to request"], 1, ""]]]
         provider = _dict_provider(tmp_path, banks)
         service = DefinitionService(test_config, providers=[provider])
 
         definitions = service.get_definitions_batch([("乞う", "こう")], fallback_context={"乞う": ("請う", None)})
 
-        assert definitions[0] is not None
-        assert "to beg" in definitions[0]
+        assert definitions[0] is None
 
 
 class TestVariantSpellingFrequency:
