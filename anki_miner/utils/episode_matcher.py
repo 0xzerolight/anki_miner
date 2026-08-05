@@ -42,6 +42,10 @@ class EpisodeNumberExtractor:
         # separator class lets "Show.S02 E05" be read as season 2 / episode 5
         # instead of falling through to BARE_NUMBER and mining the season.
         (r"[Ss](\d+)[\s._-]*[Ee](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
+        # Fansub release slot: "Title - 01v2 [1080p]" or "Title - 01 - Name".
+        # The following delimiter is required so an internal title fragment such
+        # as "- 5 Centimeters" cannot steal the episode slot.
+        (r"\s+-\s+(\d{1,4})(?:[vV]\d+)?(?=\s*(?:-|[\[(]|$))", lambda m: (None, int(m.group(1)))),
         # 1x01, 1X01 (season x episode)
         (r"(\d+)[xX](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
         # Episode 01, Ep01, ep.01, episode_01 (no season)

@@ -1,10 +1,35 @@
 """Tests for episode_matcher module."""
 
+import pytest
+
 from anki_miner.utils.episode_matcher import EpisodeMatcher, EpisodeNumberExtractor
 
 
 class TestEpisodeNumberExtractor:
     """Tests for EpisodeNumberExtractor class."""
+
+    @pytest.mark.parametrize(
+        ("filename", "season", "episode"),
+        [
+            ("[SubsPlease] One Piece - 1120 (1080p).mkv", None, 1120),
+            ("[Group] Show - 01v2 [1080p].mkv", None, 1),
+            ("[Group] Show - 03 [1080p][HEVC][FLAC 2.0].mkv", None, 3),
+            ("[Group] Show - 03 [720p][x264-Hi10P].mkv", None, 3),
+            ("[Group] Show - 07 - 5 Centimeters per Second [1080p].mkv", None, 7),
+            ("3x3 Eyes - 01 [1080p].mkv", None, 1),
+            ("Anime_S01E05.mp4", 1, 5),
+            ("Show_1x05.mp4", 1, 5),
+            ("[Group] Special - 5 Centimeters per Second - 07 [1080p].mkv", None, 7),
+        ],
+    )
+    def test_prioritized_episode_patterns(self, tmp_path, filename, season, episode):
+        path = tmp_path / filename
+        path.touch()
+
+        result = EpisodeNumberExtractor.extract_episode_info(path)
+
+        assert result is not None
+        assert (result.season_number, result.episode_number) == (season, episode)
 
     class TestSeasonEpisodePatterns:
         """Tests for S01E01 style patterns."""
