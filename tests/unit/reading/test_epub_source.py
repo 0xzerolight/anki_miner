@@ -586,6 +586,21 @@ def test_missing_container_raises(tmp_path: Path) -> None:
         load(_ref(path))
 
 
+def test_non_zip_raises_setup_error(tmp_path: Path) -> None:
+    path = tmp_path / "broken.epub"
+    path.write_bytes(b"not a zip")
+
+    with pytest.raises(SetupError, match="not a valid EPUB"):
+        load(_ref(path))
+
+
+def test_missing_declared_opf_raises_setup_error(tmp_path: Path) -> None:
+    path = _build_epub(tmp_path, {})
+
+    with pytest.raises(SetupError, match="not a valid EPUB"):
+        load(_ref(path))
+
+
 def test_title_falls_back_to_ref(tmp_path: Path) -> None:
     files = {
         "OEBPS/content.opf": _opf(

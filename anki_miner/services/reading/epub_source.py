@@ -158,11 +158,19 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     epub_path = ref.path
-    with zipfile.ZipFile(epub_path) as zf:
+    try:
+        zf = zipfile.ZipFile(epub_path)
+    except (zipfile.BadZipFile, OSError) as exc:
+        raise SetupError(_invalid_epub_msg(epub_path, "the ZIP archive cannot be opened")) from exc
+    with zf:
         names = set(zf.namelist())
         opf_path = _find_opf_path(zf, names, epub_path)
         opf_dir = posixpath.dirname(opf_path)
-        opf_root = _parse_xml(_read_member(zf, opf_path, epub_path))
+        try:
+            opf_raw = _read_member(zf, opf_path, epub_path)
+        except _OPTIONAL_MEMBER_ERRORS as exc:
+            raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable")) from exc
+        opf_root = _parse_xml(opf_raw)
         if opf_root is None:
             raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable"))
         manifest, spine_idrefs, spine_toc, cover_meta_id, title = _parse_opf(opf_root)
@@ -288,7 +296,11 @@ def _check_encryption(
         return
     parser = etree.XMLParser(resolve_entities=False, load_dtd=False, no_network=True)
     try:
-        root = etree.fromstring(_read_member(zf, _ENCRYPTION_PATH, epub_path), parser)
+        encryption_raw = _read_member(zf, _ENCRYPTION_PATH, epub_path)
+    except _OPTIONAL_MEMBER_ERRORS as exc:
+        raise SetupError(_invalid_epub_msg(epub_path, "META-INF/encryption.xml is unreadable")) from exc
+    try:
+        root = etree.fromstring(encryption_raw, parser)
     except etree.XMLSyntaxError as exc:
         logger.debug(
             "EPUB encryption metadata parse failed: file=%s error=%s detail=%s",
@@ -359,7 +371,11 @@ def _reject_drm(epub_path: Path, reason: str) -> None:
 def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path) -> str:
     if _CONTAINER_PATH not in names:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is missing"))
-    root = _parse_xml(_read_member(zf, _CONTAINER_PATH, epub_path))
+    try:
+        container_raw = _read_member(zf, _CONTAINER_PATH, epub_path)
+    except _OPTIONAL_MEMBER_ERRORS as exc:
+        raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is unreadable")) from exc
+    root = _parse_xml(container_raw)
     fallback = None
     if root is not None:
         for el in root.iter():
