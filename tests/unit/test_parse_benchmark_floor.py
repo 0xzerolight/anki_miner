@@ -192,6 +192,18 @@ def test_anchor_meets_colloquial_floor() -> None:
     assert junk_rate(b_co) == 0.0, f"strategy (b) colloquial junk_rate {junk_rate(b_co)} above 0.0"
 
 
+def test_anchor_meets_lexicalized_window_floor() -> None:
+    results = _scored()
+    b_lw = results["b-lite-anchor"].by_category["lexicalized-window"]
+    assert junk_rate(b_lw) == 0.0, f"strategy (b) lexicalized-window junk_rate {junk_rate(b_lw)} above 0.0"
+    # The standalone recovery proves すむ is attested; the joined attestation is
+    # therefore the only reason strategy (b) suppresses it inside すみません.
+    assert mine_lite_anchor("すみます") == {"すむ"}
+    assert mine_lite_anchor("すみません") == set()
+    # No dictionary keeps the byte-identical safe-degrade baseline.
+    assert mine_lite_orthbase("すみません") == set()
+
+
 def test_anchor_meets_aux_context_floor() -> None:
     results = _scored()
     b_ac = results["b-lite-anchor"].by_category["aux-context"]
@@ -300,6 +312,27 @@ def test_both_strategies_meet_reading_override_floor() -> None:
         assert junk_rate(counts) == 0.0, f"{strategy} reading-override junk_rate {junk_rate(counts)} above 0.0"
 
 
+def test_both_strategies_meet_reading_overrides_front_floor() -> None:
+    results = _scored()
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["reading-overrides"]
+        assert recall(counts) == 1.0, f"{strategy} reading-overrides recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} reading-overrides junk_rate {junk_rate(counts)} above 0.0"
+
+
+def test_reading_override_details_match_mined_fronts() -> None:
+    record = next(rec for rec in load_corpus(DEFAULT_CORPUS_DIR) if rec["id"] == "ro01")
+    expected_readings = record["expected_readings"]
+    words, _index, _counts = _get_service().parse_text_units(
+        [ReadingUnit(text=record["sentence"], index=0, location_label="benchmark")],
+        want_line_index=False,
+    )
+    readings_by_front = {word.mined_form: word.expression_reading for word in words}
+
+    assert set(expected_readings) == set(record["expected"])
+    assert {front: readings_by_front[front] for front in expected_readings} == expected_readings
+
+
 def test_anchor_meets_katakana_verb_front_floor() -> None:
     assert mine_lite_orthbase("ヤラれた") == {"ヤル"}
     assert mine_lite_anchor("ヤラれた") == {"やる"}
@@ -336,6 +369,11 @@ def test_pos_suffix_lemma_strip_folds_potential() -> None:
     # sole corpus witness.
     assert mine_lite_orthbase("引けいって") == {"引く"}
     assert mine_lite_anchor("引けいって") == {"引く"}
+    # S11a-007: pr05 covers the six remaining godan e-row fold pairs. Pin the
+    # dictionary-independent fold under both benchmark strategies.
+    godan_potentials = {"買う", "泳ぐ", "話す", "死ぬ", "遊ぶ", "読む"}
+    assert mine_lite_orthbase("買える 泳げる 話せる 死ねる 遊べる 読める") == godan_potentials
+    assert mine_lite_anchor("買える 泳げる 話せる 死ねる 遊べる 読める") == godan_potentials
 
 
 def test_form_identity_assertion_corpus() -> None:

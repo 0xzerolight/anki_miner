@@ -151,8 +151,10 @@ _EXPECTED_CATEGORIES = {
     "katakana-pronoun",
     "katakana-fragment",
     "katakana-verb-front",
+    "lexicalized-window",
     "front-remap",
     "reading-override",
+    "reading-overrides",
     "verb-nominalizer",
 }
 

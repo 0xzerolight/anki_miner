@@ -308,6 +308,10 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     "やばい",
     "うまい",
     "わかる",
+    # lexicalized-window anchors: the standalone verb is recoverable, while the
+    # attested joined expression must suppress it inside すみません.
+    "すむ",
+    "すみません",
     # auxiliary verbs, DELIBERATELY attested: the aux-context category must fail
     # on attestation-PASS + pos2-reject, not on a fixture-dict miss — otherwise
     # the floor stays green even if the 非自立可能 reject is reverted (the same
@@ -328,13 +332,16 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # attested collocation for the long-compound swallow-by-design fixture
     "気がする",
     # long-compound (Task 6): the 2-token attested compounds the matcher must
-    # keep whole — 応急処置 (attestation-only) and the 13-char katakana compound
-    # the 16-char span cap exists for. The 14-char greeting is DELIBERATELY
-    # attested: it must still NOT merge (7 tokens > the 5-token cap) — the
-    # adversarial proof the token cap holds even for attested long phrases.
+    # keep whole — 走り出す pins inflected-tail kind-A deinflection, 応急処置 is
+    # attestation-only, and the 13-char katakana compound needs the 16-char span
+    # cap. The 18-char katakana string is DELIBERATELY attested: it must still NOT
+    # merge (over the 16-char cap). The 14-char greeting is also attested: it must
+    # still NOT merge (7 tokens > the 5-token cap).
+    "走り出す",
     "応急処置",
     "アプリケーションプログラム",
     "お誕生日おめでとうございます",
+    "インターナショナルコミュニケーション",
 )
 
 # Yomitan `ruleIdentifiers` per fixture headword. A real term bank ships these,
@@ -352,6 +359,8 @@ _ANCHOR_RULES: dict[str, str] = {
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
     **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),
     **dict.fromkeys(("サボる", "やる", "わかる", "ある"), "v5r"),
+    "走り出す": "v5s",
+    "すむ": "v5m",
     "おく": "v5k",
     # i-adjectives
     **dict.fromkeys(("すごい", "凄い", "かわいい", "可愛い", "あざとい", "しがない", "やばい", "うまい"), "adj-i"),
