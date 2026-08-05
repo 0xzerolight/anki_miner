@@ -9,7 +9,7 @@ fixture dictionary wired into the parser's offline ``term_lookup``, activating
 
 This test parses ~30 short corpus sentences through real fugashi/unidic (no
 network, no full UniDic, no user ``~/.anki_miner`` — the fixture index is built
-under a temp dir at import). It pins two things:
+under a temp dir at import). It pins three things:
 
 1. The load-bearing assertions: (b) jiru-zuru recall, (b) kana-written recall
    AND (b) nominal-suffix f1 are each STRICTLY GREATER than (a)'s. Equality
@@ -19,6 +19,8 @@ under a temp dir at import). It pins two things:
    kana-written recall floor, is perfect (recall 1.0 / junk 0.0) on the
    finalized nominal-suffix corpus, AND does not regress the guard categories
    that were already correct under (a).
+3. Exact post-resolver fronts: (b) exercises the commonness-gated katakana fold
+   and same-kanji remap, while (a) retains the observed dict-free fronts.
 
 Aux-context pins the 非自立可能 kana-recovery reject: its fixtures deliberately
 attest いる/ある/くれる/おく/しまう so the floor can only be green because the
@@ -109,8 +111,8 @@ def test_anchor_strictly_beats_orthbase_on_kana_written() -> None:
 def test_anchor_meets_kana_written_recall_floor() -> None:
     results = _scored()
     b_kw = recall(results["b-lite-anchor"].by_category["kana-written"])
-    # 5 kana-written records (きれい/すごい/かわいい/あざとい/しがない); allow one straggler.
-    assert b_kw >= 4 / 5, f"strategy (b) kana-written recall {b_kw} below floor 4/5"
+    # All 6 kana-written records must resolve, including archaic かんずる → かんじる.
+    assert b_kw == 1.0, f"strategy (b) kana-written recall {b_kw} below 1.0"
 
 
 def test_anchor_does_not_regress_guard_categories() -> None:
@@ -120,6 +122,16 @@ def test_anchor_does_not_regress_guard_categories() -> None:
         counts = b.by_category[category]
         assert recall(counts) == 1.0, f"strategy (b) regressed recall on {category}: {recall(counts)}"
         assert junk_rate(counts) == 0.0, f"strategy (b) introduced junk on {category}: {junk_rate(counts)}"
+
+
+def test_anchor_meets_katakana_fragment_floor() -> None:
+    results = _scored()
+    b_kf = results["b-lite-anchor"].by_category["katakana-fragment"]
+    assert junk_rate(b_kf) == 0.0, f"strategy (b) katakana-fragment junk_rate {junk_rate(b_kf)} above 0.0"
+    assert mine_lite_anchor("アイスベア") == set()
+    # No dictionary ⇒ no compound matcher ⇒ guard inactive: preserve both
+    # components as the byte-identical safe-degrade baseline.
+    assert mine_lite_orthbase("アイスベア") == {"アイス", "ベア"}
 
 
 def test_anchor_strictly_beats_orthbase_on_nominal_suffix() -> None:
@@ -161,7 +173,7 @@ def test_anchor_strictly_beats_orthbase_on_colloquial() -> None:
     results = _scored()
     a_co = recall(results["a-lite-orthbase"].by_category["colloquial"])
     b_co = recall(results["b-lite-anchor"].by_category["colloquial"])
-    # Load-bearing: すげえ/やべえ/うめえ/わかんない are pure-kana orthBases only
+    # Load-bearing: すげえ/すげー/やべえ/うめえ/わかんない are kana orthBases only
     # the attested kana recovery can mine; dict-free (a) gets 食う alone.
     assert b_co > a_co, f"strategy (b) colloquial recall {b_co} did not beat (a) {a_co}"
 
@@ -170,7 +182,7 @@ def test_anchor_meets_colloquial_floor() -> None:
     results = _scored()
     b_co = results["b-lite-anchor"].by_category["colloquial"]
     # Tripwire, not a fix: unidic-lite's orthBase is ALREADY modern for these
-    # (すげえ→すごい). Perfect score pins that; junk would mean a wrong form
+    # (すげえ/すげー→すごい). Perfect score pins that; junk would mean a wrong form
     # (e.g. the kanji lemma 凄い) or a reject regression (する from しちゃった).
     assert recall(b_co) == 1.0, f"strategy (b) colloquial recall {recall(b_co)} below 1.0"
     assert junk_rate(b_co) == 0.0, f"strategy (b) colloquial junk_rate {junk_rate(b_co)} above 0.0"
@@ -236,6 +248,7 @@ def test_anchor_meets_ellipsis_floor() -> None:
     # fixtures, not independent ground truth.
     assert junk_rate(b_el) == 0.0, f"strategy (b) ellipsis-truncation junk_rate {junk_rate(b_el)} above 0.0"
     assert recall(b_el) == 1.0, f"strategy (b) ellipsis-truncation recall {recall(b_el)} below 1.0"
+    assert mine_lite_orthbase("アプリケーションプログラム… アプリケーションプログラム…") == {"アプリケーション"}
 
 
 def test_anchor_meets_classical_adjective_floor() -> None:
@@ -282,6 +295,16 @@ def test_both_strategies_meet_reading_override_floor() -> None:
         assert junk_rate(counts) == 0.0, f"{strategy} reading-override junk_rate {junk_rate(counts)} above 0.0"
 
 
+def test_anchor_meets_katakana_verb_front_floor() -> None:
+    assert mine_lite_orthbase("ヤラれた") == {"ヤル"}
+    assert mine_lite_anchor("ヤラれた") == {"やる"}
+
+
+def test_anchor_meets_front_remap_floor() -> None:
+    assert mine_lite_orthbase("神を恐る") == {"神", "恐る"}
+    assert mine_lite_anchor("神を恐る") == {"神", "恐れる"}
+
+
 def test_orthbase_meets_kana_runs_floor() -> None:
     results = _scored()
     # V8 pins strategy (a), NOT (b): the merged-token junk (獅子+子 → シシシ, 3-run シ)
@@ -311,6 +334,6 @@ def test_pos_suffix_lemma_strip_folds_potential() -> None:
 
 
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
-# colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2) and
-# ellipsis-truncation (U8) floors are gated above; linebreak-split is
-# scoreboard-only.
+# colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2),
+# ellipsis-truncation (U8), katakana-verb-front and front-remap floors are gated
+# above; linebreak-split is scoreboard-only.

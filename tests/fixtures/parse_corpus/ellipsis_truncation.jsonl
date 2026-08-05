@@ -9,3 +9,5 @@
 {"id":"el09","sentence":"行こう…","expected":["行く"],"category":"ellipsis-truncation","note":"KEEP: 行こう(意志推量形) abuts … but 意志推量形 is not a cut form → survives"}
 {"id":"el10","sentence":"先ほど ようやく…","expected":["先ほど"],"category":"ellipsis-truncation","note":"KEEP: 副詞 ようやく (never mined) abuts …; 先ほど survives, no junk introduced"}
 {"id":"el11","sentence":"４年… ４年も…","expected":["年"],"category":"ellipsis-truncation","note":"KEEP: first 年 abuts … (rejected) but the second 年 is buffered by も → 年 stays mined"}
+{"id":"el-long-kata-01","sentence":"えっと… アプリケーションプログラム…","expected":["アプリケーションプログラム"],"category":"ellipsis-truncation","note":"A complete long katakana compound is not a short stutter fragment."}
+{"id":"el13","sentence":"アプリケーションプログラム… アプリケーションプログラム…","expected":["アプリケーションプログラム"],"category":"ellipsis-truncation","note":"KEEP with dictionary: a long attested katakana compound is not a short stutter fragment; dict-free output remains アプリケーション"}

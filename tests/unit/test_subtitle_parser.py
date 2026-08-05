@@ -1105,12 +1105,13 @@ def _attest_lookup(*attested):
 
 
 class TestKanaWordRecovery:
-    """Parser-seam recovery of pure-hiragana content words the script gate drops.
+    """Parser-seam recovery of hiragana content words the script gate drops.
 
     _should_include_word admits a token should_include rejects when ALL hold:
     POS ∈ {動詞,形容詞,形状詞} (never 名詞), content_gate_ok passes, the surface
-    is pure hiragana, and its mined-form card front is attested via the injected
-    term-OR-reading existence probe. No probe wired ⇒ today's behavior.
+    is hiragana after removing prolonged-sound marks, and its mined-form card
+    front is attested via the injected term-OR-reading existence probe. No probe
+    wired ⇒ today's behavior.
     """
 
     def _service(self, test_config, lookup):
@@ -1157,6 +1158,20 @@ class TestKanaWordRecovery:
         service = self._service(test_config, lookup)
         token = _make_token(surface, "形容詞", pos2="一般", lemma=lemma, orth_base=surface)
         assert service._should_include_word(token) is True
+
+    def test_recovers_hiragana_adjective_with_prolonged_sound_mark(self, test_config):
+        lookup = _attest_lookup("すごい")
+        service = self._service(test_config, lookup)
+        token = _make_token("すげー", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい")
+        assert service._should_include_word(token) is True
+        assert lookup.calls == [["すごい"]]
+
+    def test_does_not_recover_only_prolonged_sound_marks(self, test_config):
+        lookup = _attest_lookup("すごい")
+        service = self._service(test_config, lookup)
+        token = _make_token("ーー", "形容詞", pos2="一般", lemma="凄い", orth_base="すごい")
+        assert service._recover_kana_content_word(token) is False
+        assert lookup.calls == []
 
     @pytest.mark.parametrize(("surface", "lemma"), [("こと", "事"), ("もの", "物"), ("ため", "為")])
     def test_does_not_recover_formal_noun(self, test_config, surface, lemma):
@@ -1207,6 +1222,32 @@ class TestKanaWordRecovery:
         token = _make_token("わかっ", "動詞", pos2="一般", lemma="分かる", orth_base="わかる")
         assert service._should_include_word(token) is True
         assert lookup.calls == [["わかる"]]
+
+    def test_recovers_kana_written_jiru_with_resolved_front(self, test_config):
+        terms = {"かんじる"}
+        lookup = _attest_lookup(*terms)
+        service = SubtitleParserService(
+            test_config,
+            term_lookup=lambda candidates: set(candidates) & terms,
+            term_rules_lookup=lambda candidates: {text for text, _conditions in candidates if text in terms},
+            kana_attest_lookup=lookup,
+        )
+        unit = ReadingUnit(text="かんじた", index=0, location_label="t")
+
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+
+        assert [word.mined_form for word in words] == ["かんじる"]
+        assert lookup.calls == [["かんじる"], ["かんじた"]]
+
+    def test_kana_written_jiru_without_term_lookup_safe_degrades(self, test_config):
+        lookup = _attest_lookup("かんじる")
+        service = SubtitleParserService(test_config, kana_attest_lookup=lookup)
+        unit = ReadingUnit(text="かんじた", index=0, location_label="t")
+
+        words, _index, _counts = service.parse_text_units([unit], want_line_index=False)
+
+        assert words == []
+        assert lookup.calls == [["かんずる"]]
 
     def test_does_not_recover_non_attested_kana(self, test_config):
         # A pure-hiragana verb the dictionary does NOT attest stays dropped.
@@ -5562,6 +5603,26 @@ class TestKatakanaVerbFrontFold:
         assert yaru.expression_reading == "やる"
         assert yaru.resolved_reading == "やる"
 
+    def test_adjacent_katakana_run_keeps_proven_hiragana_fold(self, tmp_path):
+        # ゲーム|ヤラ is one raw katakana run, but ヤラ is a verb whose orthBase
+        # folds to the attested common hiragana headword やる. That proof exempts
+        # only the verb; the neighboring noun fragment ゲーム remains rejected.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        words = self._mine(service, "ゲームヤラれた")
+        assert [w.mined_form for w in words] == ["やる"]
+
+    def test_adjacent_attested_katakana_front_still_rejected(self, tmp_path):
+        # Attested ヤル blocks the fold. The front stays katakana, so the ordinary
+        # positional fragment rule still rejects it beside ゲーム.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True), ("ヤル", "やる", False)])
+        assert self._mine(service, "ゲームヤラれた") == []
+
+    def test_adjacent_run_without_common_probe_still_rejected(self, tmp_path):
+        # Existence alone cannot prove the hiragana target common. With no
+        # commonness probe, the fold supplies no exemption and both pieces die.
+        service = _build_fold_service(tmp_path, [("やる", "やる", True)])
+        assert self._mine(service, "ゲームヤラれた", term_common=False) == []
+
     def test_degrade_no_common_probe_keeps_katakana(self, tmp_path):
         # Same fixture, commonness probe NOT wired: the fold cannot prove やる is
         # common, so it safe-degrades to the pre-fix ヤル (byte-identical degrade).
@@ -6331,16 +6392,24 @@ class TestKatakanaFragmentGuard:
 class TestEllipsisTruncationGuard:
     """Dict-free reject of words cut off mid-utterance at an ellipsis (U8).
 
-    Real fugashi/unidic on live fansub-style lines. The three reject targets are
-    ATTESTED in a fixture dict (合わせ/欲する/イガ) so the test proves an
-    otherwise-mineable, dictionary-real word is dropped BY THIS guard, not by a
-    tokenizer miss: every reject case first asserts ``should_include`` accepts the
-    token, then that ``_is_ellipsis_truncation_fragment`` is what rejects it. The
-    keep-cases (buffered verbs, single-group nouns, 意志推量形, the line-initial
-    sentinel) prove the guard does not over-fire.
+    Real fugashi/unidic on live fansub-style lines. The three reject targets
+    (合わせ/欲する/イガ) and long keep target (アプリケーションプログラム) are ATTESTED in a
+    fixture dict, so every result exercises this guard rather than a dictionary
+    miss. Each reject case first asserts ``should_include`` accepts the token,
+    then that ``_is_ellipsis_truncation_fragment`` rejects it. The keep-cases
+    prove the guard does not over-fire.
     """
 
-    _ATTESTED = ("合わせ", "欲する", "イガ", "合", "夢", "声", "年")
+    _ATTESTED = (
+        "合わせ",
+        "欲する",
+        "イガ",
+        "アプリケーションプログラム",
+        "合",
+        "夢",
+        "声",
+        "年",
+    )
 
     def _service(self):
         return SubtitleParserService(
@@ -6415,6 +6484,30 @@ class TestEllipsisTruncationGuard:
         assert service._memoized_attest(["イガ"]) == {"イガ"}
         assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
         assert self._mine("タ… イガ… さん") == set()
+
+    def test_katakana_short_fragment_boundary_rejected(self):
+        service = self._service()
+        text, spans = self._spans(service, "プログラム… プログラム…")
+        tok, start, end = self._find(spans, "プログラム")
+        assert len(tok.surface) == 5
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is True
+        assert self._mine("プログラム… プログラム…") == set()
+
+    def test_katakana_over_short_fragment_boundary_survives(self):
+        service = self._service()
+        text, spans = self._spans(service, "データベース… データベース…")
+        tok, start, end = self._find(spans, "データベース")
+        assert len(tok.surface) == 6
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine("データベース… データベース…") == {"データベース"}
+
+    def test_long_katakana_word_survives_stutter_guard(self):
+        service = self._service()
+        sentence = "アプリケーションプログラム… アプリケーションプログラム…"
+        text, spans = self._spans(service, sentence)
+        tok, start, end = self._find(spans, "アプリケーションプログラム")
+        assert service._is_ellipsis_truncation_fragment(tok, text, start, end) is False
+        assert self._mine(sentence) == {"アプリケーションプログラム"}
 
     # --- Keep: a verb buffered from the ellipsis by 助詞/接尾辞 never abuts. ---
 

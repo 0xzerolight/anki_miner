@@ -176,12 +176,14 @@ _ELLIPSIS_CHARS: frozenset[str] = frozenset({"…", "‥"})
 # hyphenated values (連用形-一般, 連用形-促音便), so bare equality would never fire.
 _ELLIPSIS_CUT_POS1: frozenset[str] = frozenset({"動詞", "形容詞"})
 _ELLIPSIS_CUT_CFORM: frozenset[str] = frozenset({"連用形", "未然形", "語幹", "仮定形"})
-# (b) Short fragment (all-katakana or single-char surface) inside a STUTTER line
-# of ≥2 ellipsis GROUPS, where a group is a maximal ellipsis run: ``……`` (the
-# standard fansub double-marker) collapses to ONE group, so a lone trailing 夢……
-# survives while タ… イガ… stays two groups.
+# (b) Short fragment (≤5-char all-katakana or single-char surface) inside a
+# STUTTER line of ≥2 ellipsis GROUPS, where a group is a maximal ellipsis run:
+# ``……`` (the standard fansub double-marker) collapses to ONE group, so a lone
+# trailing 夢…… survives while タ… イガ… stays two groups. Five chars is the
+# smallest bound retaining the dict-free baseline's trailing プログラム fragment.
 _ELLIPSIS_GROUP_RE = re.compile(r"[…‥]+")
 _ELLIPSIS_STUTTER_MIN_GROUPS: int = 2
+_ELLIPSIS_KATAKANA_FRAGMENT_MAX_CHARS: int = 5
 
 _SUBTITLE_REGEX_MAX_PATTERN_CHARS = 512
 _SUBTITLE_REGEX_MAX_REPLACEMENT_CHARS = 512
@@ -1713,9 +1715,13 @@ class SubtitleParserService:
         own all-katakana orthBase (ヤル) whose lForm/kanaBase readings are equal
         (both ヤル), so ``mining_base`` and ``_attest_or_remap_front`` both keep
         it — the card front ships as ヤル, splitting definition/frequency/dedup/
-        audio from the やる card the learner already has. Reached only after
-        ``resolve_dictionary_form`` and ``_attest_or_remap_front`` both left
-        ``orth_base`` unchanged (a 動詞/形容詞 with a wired ``term_lookup``).
+        audio from the やる card the learner already has. Two call sites: the
+        mining path reaches it only after ``resolve_dictionary_form`` and
+        ``_attest_or_remap_front`` both left ``orth_base`` unchanged (a
+        動詞/形容詞 with a wired ``term_lookup``); ``_is_katakana_run_fragment``
+        (X3-004) probes it BEFORE those seams to prove a katakana verb token
+        folds to a non-katakana common front and must survive the run-fragment
+        guard.
 
         Folds ``orth_base`` → its hiragana reading iff ALL hold:
 
@@ -1786,10 +1792,12 @@ class SubtitleParserService:
           U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
           window reject never touches a morphology-accepted token.
         - ``should_include`` rejects → last-chance ``_recover_kana_content_word``
-          (pure-hiragana content word attested as its own front). On a recovery
-          acceptance, apply the U4 lexicalized-window reject
-          (``_rejected_by_lexicalized_window``). Recovery surfaces are pure
-          hiragana, so the katakana guard can never fire on this branch.
+          (hiragana content word — pure hiragana once prolonged-sound marks are
+          set aside for the script check, e.g. すげー — attested as its own
+          front). On a recovery acceptance, apply the U4 lexicalized-window
+          reject (``_rejected_by_lexicalized_window``). Recovery surfaces are
+          never all-katakana, so the katakana guard can never fire on this
+          branch.
 
         ``_should_include_word`` stays the token-only, span-free gate that unit
         tests and non-span callers use directly; this method reproduces its
@@ -1915,10 +1923,13 @@ class SubtitleParserService:
         a katakana-block char covering ー/ッ, but NOT the author-inserted separators
         ・/゠). Whitespace, ・, ゠ or any non-katakana between katakana does NOT
         continue a run — アイ ウォン stays two tokens, アイス・ベア keeps both halves,
-        スマホ|と|バッグ keeps バッグ. Deliberate precision-over-recall (plan-decided):
-        an attested word abutting an unbroken katakana run (アイス|ベア) is rejected,
-        and legit adjacent loanword bigrams whose full run is no headword lose both
-        halves — no independent-attestation carve-out.
+        スマホ|と|バッグ keeps バッグ. An all-katakana verb is exempt only when the
+        existing guarded front fold proves a non-katakana common headword
+        (ゲーム|ヤラれた → やる); a front that stays katakana gets no exemption.
+        Deliberate precision-over-recall (plan-decided): an attested katakana word
+        abutting an unbroken run (アイス|ベア) is rejected, and legit adjacent
+        loanword bigrams whose full run is no headword lose both halves — no
+        independent-attestation carve-out.
         """
         if self._compound_matcher is None:
             return False
@@ -1929,7 +1940,15 @@ class SubtitleParserService:
             return False
         left = text[tok_start - 1] if tok_start > 0 else ""
         right = text[tok_end] if tok_end < len(text) else ""
-        return _continues_katakana_run(left) or _continues_katakana_run(right)
+        if not (_continues_katakana_run(left) or _continues_katakana_run(right)):
+            return False
+        feature = getattr(word_token, "feature", None)
+        if getattr(feature, "pos1", None) == "動詞":
+            orth_base = self._mining_base(word_token)
+            folded = self._fold_katakana_verb_front(orth_base)
+            if folded != orth_base and not _is_all_katakana(folded):
+                return False
+        return True
 
     def _is_ellipsis_truncation_fragment(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
         """Whether an accepted token is a word cut off mid-utterance at an ellipsis.
@@ -1945,9 +1964,9 @@ class SubtitleParserService:
             buffered from the ellipsis by a 助詞/接尾辞 (待って…, 続いて…) never
             abuts, so it survives; 意志推量形 (行こう…) is not a cut form, so it
             survives too.
-        (b) a short fragment (all-katakana or single-char surface) in a STUTTER
-            line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one group, so a
-            single trailing 夢…… survives.
+        (b) a short fragment (≤5-char all-katakana or single-char surface) in a
+            STUTTER line of ≥2 ellipsis groups (合…/タ… イガ…). ``……`` is one
+            group, so a single trailing 夢…… survives.
 
         Adjacency is SET membership; the line-edge sentinel "" (a token at a line
         boundary) is not a member, so a boundary token is never falsely adjacent.
@@ -1969,12 +1988,15 @@ class SubtitleParserService:
         surface = getattr(word_token, "surface", None)
         return (
             isinstance(surface, str)
-            and (len(surface) == 1 or _is_all_katakana(surface))
+            and (
+                len(surface) == 1
+                or (len(surface) <= _ELLIPSIS_KATAKANA_FRAGMENT_MAX_CHARS and _is_all_katakana(surface))
+            )
             and len(_ELLIPSIS_GROUP_RE.findall(text)) >= _ELLIPSIS_STUTTER_MIN_GROUPS
         )
 
     def _recover_kana_content_word(self, word_token) -> bool:
-        """Whether an otherwise-rejected pure-hiragana content word is recoverable.
+        """Whether an otherwise-rejected hiragana content word is recoverable.
 
         Gate (ALL must hold; cheap checks first so the SQLite probe is the last
         resort and only distinct tokens ever reach it):
@@ -1986,8 +2008,10 @@ class SubtitleParserService:
            grammaticalized 形状詞 auxiliaries (よう/みたい in ようだ/みたいな) and
            auxiliary-capable verbs (いる/ある/くれる in ている/てくれる)
            content_gate_ok alone would let through.
-        3. The surface is pure hiragana — the only class the script gate dropped;
-           everything else was already decided by ``should_include``.
+        3. Removing ``ー`` leaves non-empty pure hiragana — the script gate also
+           drops colloquial hiragana words containing the prolonged-sound mark.
+           Removal is only for this check; cache/mining/attestation keep the
+           original surface.
         4. ``content_gate_ok`` passes and the mined-form card front is attested
            (memoized per ``(surface, pos1)`` — steps 4+ run once per distinct
            token, never per occurrence).
@@ -2003,7 +2027,7 @@ class SubtitleParserService:
             # grammar, not vocabulary. See constant for the full rationale.
             return False
         surface = word_token.surface
-        if not isinstance(surface, str) or not _is_pure_hiragana(surface):
+        if not isinstance(surface, str) or not _is_pure_hiragana(surface.replace("ー", "")):
             return False
         key = (surface, pos1)
         if key not in self._kana_recover_cache:
@@ -2016,10 +2040,10 @@ class SubtitleParserService:
         """content_gate_ok + term-OR-reading attestation of the mined-form front.
 
         The form probed is the exact card front ``_emit_word`` would mint
-        (``select_mined_form``): the surface for 形状詞 (きれい), the orthBase
-        dictionary form for 動詞/形容詞 (わかった's わかっ token → わかる, since
-        unidic's orthBase is already deinflected). Existence-gated only — the
-        probe never reads ``entries.score`` (uniformly 0 on the bundled dict).
+        (``_resolve_front`` then ``select_mined_form``): the surface for 形状詞
+        (きれい), the resolved orthBase dictionary form for 動詞/形容詞
+        (かんじた's かんじ token → かんじる). Existence-gated only — the probe
+        never reads ``entries.score`` (uniformly 0 on the bundled dict).
         """
         lookup = self._kana_attest_lookup
         if lookup is None:  # unreachable via _recover_kana_content_word; narrows for mypy
@@ -2027,8 +2051,9 @@ class SubtitleParserService:
         if not self._inclusion_rule.content_gate_ok(word_token):
             return False
         orth_base = self._mining_base(word_token)
+        resolved_front = self._resolve_front(word_token, orth_base, surface, 0, len(surface))
         lemma = self._extract_lemma(word_token)
-        form = select_mined_form(pos1, orth_base, lemma, surface)
+        form = select_mined_form(pos1, resolved_front, lemma, surface)
         if not form:
             return False
         return bool(lookup([form]).get(form))
