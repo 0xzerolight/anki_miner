@@ -376,9 +376,11 @@ class SubtitleParserService:
         self._common_aware: bool | None = None
         # Dictionary-attested compound matching (see services/compound_matcher.py).
         # Built only when a term lookup is injected (COMPOUND_MATCHING is always
-        # on); the matcher reuses the inclusion rule so spans start only at
-        # mineable tokens, and the SAME memoized probe so a surface's existence is
-        # looked up once across the merge gate and the matcher.
+        # on); spans may start at any structurally contentful token (verb-headed
+        # nouns like 動く歩道) — the inclusion rule gates the COMPLETED synthetic,
+        # not the start token — and the matcher shares the SAME memoized probe so
+        # a surface's existence is looked up once across the merge gate and the
+        # matcher.
         self._compound_matcher: CompoundDictionaryMatcher | None = None
         if self._attest is not None and COMPOUND_MATCHING:
             self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
