@@ -3444,6 +3444,85 @@ class TestVerifyCardTarget:
         assert "createDeck" not in actions
         assert "Available:" in str(exc_info.value)
 
+    def test_word_mapping_must_target_first_model_field(self, test_config):
+        """The mined word must map to the note type's ordered first field."""
+        from dataclasses import replace
+
+        mappings = dict.fromkeys(test_config.anki_fields, "")
+        mappings.update(word="Back", sentence="Front")
+        config = replace(test_config, anki_fields=mappings)
+        service = AnkiService(config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, ["Front", "Back"], [config.anki_deck_name]],
+            ),
+            pytest.raises(SetupError, match="first field.*Front"),
+        ):
+            service.verify_card_target()
+
+    def test_duplicate_nonempty_field_targets_raise_setup_error(self, test_config):
+        """Two miner fields cannot target the same Anki note field."""
+        from dataclasses import replace
+
+        mappings = dict.fromkeys(test_config.anki_fields, "")
+        mappings.update(word="Expression", sentence="Expression")
+        config = replace(test_config, anki_fields=mappings)
+        service = AnkiService(config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, ["Expression"], [config.anki_deck_name]],
+            ) as mock_pa,
+            pytest.raises(SetupError, match="Expression.*mapped more than once"),
+        ):
+            service.verify_card_target()
+
+        actions = [call[0][1] for call in mock_pa.call_args_list]
+        assert actions == ["modelNames"]
+
+    def test_active_card_type_marker_collision_raises_setup_error(self, test_config):
+        """The active card-type marker writes "x"; sharing a mapped target must fail preflight."""
+        from dataclasses import replace
+
+        word_target = test_config.anki_fields["word"]
+        config = replace(
+            test_config,
+            card_type="sentence",
+            card_type_marker_fields={"sentence": word_target},
+        )
+        service = AnkiService(config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, self._FIELDS, [config.anki_deck_name]],
+            ) as mock_pa,
+            pytest.raises(SetupError, match=f"{word_target}.*mapped more than once"),
+        ):
+            service.verify_card_target()
+
+        actions = [call[0][1] for call in mock_pa.call_args_list]
+        assert actions == ["modelNames"]
+
+    def test_inactive_card_type_marker_collision_allowed(self, test_config):
+        """Markers for inactive card types are never written and may collide."""
+        from dataclasses import replace
+
+        config = replace(
+            test_config,
+            card_type="",
+            card_type_marker_fields={"sentence": test_config.anki_fields["word"]},
+        )
+        service = AnkiService(config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, self._FIELDS, ["Default", config.anki_deck_name]],
+        ):
+            service.verify_card_target()  # must not raise
+
     def test_empty_string_field_mappings_ignored(self, test_config):
         """Fields mapped to '' (unmapped) should not be required in the model."""
         # test_config already has expression_reading='', sentence_reading='', source=''
@@ -3467,6 +3546,18 @@ class TestVerifyCardTarget:
                 side_effect=AnkiConnectionError("Anki is down"),
             ),
             pytest.raises(AnkiConnectionError, match="Anki is down"),
+        ):
+            service.verify_card_target()
+
+    def test_model_field_names_connection_error_propagates(self, test_config):
+        """A modelFieldNames failure must not become a field-mapping SetupError."""
+        service = AnkiService(test_config)
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, AnkiConnectionError("field lookup failed")],
+            ),
+            pytest.raises(AnkiConnectionError, match="field lookup failed"),
         ):
             service.verify_card_target()
 

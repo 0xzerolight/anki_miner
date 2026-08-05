@@ -273,19 +273,21 @@ class AnkiService:
 
     def note_type_field_names(self, note_type: str) -> set[str]:
         """Field names defined on ``note_type`` (AnkiConnect ``modelFieldNames``)."""
+        return set(self._ordered_note_type_field_names(note_type))
+
+    def _ordered_note_type_field_names(self, note_type: str) -> list[str]:
+        """Ordered field names defined on ``note_type``."""
         logger.debug("Anki note type field names: note_type=%s", note_type)
-        fields = set(
-            _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
-                    "modelFieldNames",
-                    params={"modelName": note_type},
-                    timeout=15,
-                )
-                or [],
+        fields = _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
                 "modelFieldNames",
-                elem_type=str,
+                params={"modelName": note_type},
+                timeout=15,
             )
+            or [],
+            "modelFieldNames",
+            elem_type=str,
         )
         logger.debug("Anki note type field names done: fields=%d", len(fields))
         return fields
@@ -302,8 +304,8 @@ class AnkiService:
         makes this check pass there (see deck_builder_worker.py).
 
         Raises:
-            SetupError: note type missing, a configured field absent from it,
-                or the configured deck absent from the collection.
+            SetupError: note type missing, field mapping invalid, or the
+                configured deck absent from the collection.
             AnkiConnectionError: AnkiConnect unreachable or errors.
         """
         logger.debug(
@@ -315,11 +317,37 @@ class AnkiService:
         if self.config.anki_note_type not in models:
             raise SetupError(missing_note_type_message(self.config.anki_note_type, models))
 
-        actual = self.note_type_field_names(self.config.anki_note_type)
+        targets = [target for target in self.config.anki_fields.values() if target]
+        # The active card-type marker is written too (build_note stamps "x" into
+        # it), so a marker sharing a target field would silently overwrite that
+        # field after preflight passed. Inactive markers are never written and
+        # may collide freely.
+        if self.config.card_type:
+            marker_target = self.config.card_type_marker_fields.get(self.config.card_type, "")
+            if marker_target:
+                targets.append(marker_target)
+        duplicate_targets = {target for target in targets if targets.count(target) > 1}
+        if duplicate_targets:
+            shown = ", ".join(sorted(duplicate_targets))
+            raise SetupError(
+                f"Field(s) {shown} mapped more than once. "
+                f"Map each Anki Miner field to a different field on note type '{self.config.anki_note_type}'."
+            )
+
+        ordered_actual = self._ordered_note_type_field_names(self.config.anki_note_type)
+        actual = set(ordered_actual)
         required = configured_target_field_names(self.config)
         missing = required - actual
         if missing:
             raise SetupError(missing_fields_message(self.config.anki_note_type, missing, actual))
+
+        word_target = self.config.anki_fields["word"]
+        if not ordered_actual or word_target != ordered_actual[0]:
+            first_field = ordered_actual[0] if ordered_actual else "(none)"
+            raise SetupError(
+                f"Word field '{word_target}' must map to the first field '{first_field}' "
+                f"on note type '{self.config.anki_note_type}'. Check Settings → Anki field mapping."
+            )
 
         decks = post_action(self.config.ankiconnect_url, "deckNames", timeout=15) or []
         if self.config.anki_deck_name not in decks:
@@ -834,9 +862,9 @@ class AnkiService:
         (``ext/js/background/backend.js``, upstream e2ed450). Anki dedups on the
         first field only, so shipping the rest — definition/glossary fields can
         carry megabytes of rendered HTML — just to ask "is this a duplicate?"
-        wastes bandwidth and AnkiConnect time. Field insertion order is
-        preserved by dicts, so the first key is the Expression by construction
-        (see ``anki_note_builder.build_note``).
+        wastes bandwidth and AnkiConnect time. ``verify_card_target`` requires
+        the word mapping to target the model's first field and rejects mapping
+        collisions; ``build_note`` emits that mined-form field first.
         """
         stripped = dict(note)
         fields = note.get("fields") or {}
