@@ -223,6 +223,8 @@ def _is_japanese(ch: str) -> bool:
         return True
     if 0x30A0 <= code <= 0x30FF:  # katakana (incl. ー)
         return True
+    if 0xFF66 <= code <= 0xFF9F:  # halfwidth katakana (incl. voiced marks)
+        return True
     if ch in _JAPANESE_MARKS:
         return True
     return is_cjk_ideograph(ch)

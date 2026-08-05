@@ -13,7 +13,11 @@ from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
 )
-from anki_miner.services.reading.mokuro_source import _BLOCK_SPLIT_THRESHOLD, load
+from anki_miner.services.reading.mokuro_source import (
+    _BLOCK_SPLIT_THRESHOLD,
+    _page_unit_entries,
+    load,
+)
 
 # ---------------------------------------------------------------------------
 # Fixture builders (dict -> json.dumps -> tmp_path). No real images are opened,
@@ -208,6 +212,10 @@ def test_junk_blocks_dropped(tmp_path):
     ]
     doc = load(_write_ref(tmp_path, _mokuro(pages), None))
     assert [u.text for u in doc.units] == ["まとも"]
+
+
+def test_halfwidth_katakana_block_is_mineable():
+    assert _page_unit_entries({"blocks": [{"lines": ["ｶﾅ"]}]}) == ([("ｶﾅ", None)], 0)
 
 
 def test_repeat_run_over_8_collapsed_boundary_of_8_kept(tmp_path):
