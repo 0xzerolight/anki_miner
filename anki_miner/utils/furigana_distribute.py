@@ -1,7 +1,10 @@
 """Per-kanji furigana distribution.
 
-Line-for-line Python port of Yomitan's furigana-distribution family from
+Python port of Yomitan's furigana-distribution family from
 ``ext/js/language/ja/japanese.js`` (upstream commit ``e2ed450``), GPL-3.0.
+The port follows upstream line-for-line except for two deliberate deviations
+described below: ambiguous splits and budget exhaustion return the whole-word
+fallback where upstream committed to its first consistent guess.
 The ported symbols are:
 
 ======================================  ============================
@@ -21,11 +24,12 @@ Python ``str`` is codepoint-indexed, so the upstream UTF-16 surrogate handling
 in ``getStemLength`` is dropped.
 
 ``distribute_furigana`` splits a term into maximal kana / non-kana codepoint
-groups and searches, via recursive backtracking, for the *unique* way to split
-the reading across the non-kana (kanji) groups. When more than one split is
-consistent it deliberately returns the whole-word fallback rather than guess —
-so 飼い犬/かいいぬ is *not* segmented, but 入り口/いりぐち becomes
-``入[い]``/``り``/``口[ぐち]`` (rendaku) and 取り引き/とりひき becomes per-kanji.
+groups and searches, via bounded recursive backtracking, for the *unique* way
+to split the reading across the non-kana (kanji) groups. When more than one
+split is consistent or the work budget is exhausted, it deliberately returns
+the whole-word fallback rather than guess — so 飼い犬/かいいぬ is *not* segmented,
+but 入り口/いりぐち becomes ``入[い]``/``り``/``口[ぐち]`` (rendaku) and
+取り引き/とりひき becomes per-kanji.
 
 The katakana→hiragana helper here is *prolonged-mark-aware* (ー resolves to the
 preceding vowel) and used only for alignment/normalization; it is intentionally
@@ -69,6 +73,7 @@ _KATAKANA_SMALL_KE_CODE_POINT = 0x30F6
 _KANA_PROLONGED_SOUND_MARK_CODE_POINT = 0x30FC
 _HIRAGANA_CONVERSION_RANGE = (0x3041, 0x3096)
 _KATAKANA_CONVERSION_RANGE = (0x30A1, 0x30F6)
+_MAX_FURIGANA_SPLIT_ATTEMPTS = 10_000
 
 # VOWEL_TO_KANA_MAPPING (japanese.js:121-128), inverted into KANA_TO_VOWEL_MAPPING.
 _VOWEL_TO_KANA_MAPPING = {
@@ -136,15 +141,17 @@ def _segmentize_furigana(
     reading_normalized: str,
     groups: list[_FuriganaGroup],
     groups_start: int,
-) -> list[FuriganaSegment] | None:
-    """Recursive backtracking split of ``reading`` across ``groups``.
+    work_budget: list[int],
+) -> tuple[list[FuriganaSegment] | None, bool, bool]:
+    """Bounded recursive backtracking split of ``reading`` across ``groups``.
 
-    Returns ``None`` when no split (or more than one) is consistent, so the
-    caller can fall back to whole-word bracketing.
+    Returns a candidate plus explicit ambiguity and exhaustion statuses, so
+    both remain distinct from an impossible branch. ``work_budget`` is shared
+    across all recursive branches and decremented for each split attempt.
     """
     group_count = len(groups) - groups_start
     if group_count <= 0:
-        return [] if len(reading) == 0 else None
+        return ([] if len(reading) == 0 else None), False, False
 
     group = groups[groups_start]
     is_kana = group.is_kana
@@ -153,39 +160,52 @@ def _segmentize_furigana(
     if is_kana:
         text_normalized = group.text_normalized
         if text_normalized is not None and reading_normalized.startswith(text_normalized):
-            segments = _segmentize_furigana(
+            segments, ambiguous, exhausted = _segmentize_furigana(
                 reading[text_length:],
                 reading_normalized[text_length:],
                 groups,
                 groups_start + 1,
+                work_budget,
             )
+            if exhausted:
+                return None, False, True
+            if ambiguous:
+                return None, True, False
             if segments is not None:
                 if reading.startswith(text):
                     segments.insert(0, FuriganaSegment(text, ""))
                 else:
                     segments[0:0] = _get_furigana_kana_segments(text, reading)
-                return segments
-        return None
+                return segments, False, False
+        return None, False, False
     else:
         result: list[FuriganaSegment] | None = None
         for i in range(len(reading), text_length - 1, -1):
-            segments = _segmentize_furigana(
+            if work_budget[0] <= 0:
+                return None, False, True
+            work_budget[0] -= 1
+            segments, ambiguous, exhausted = _segmentize_furigana(
                 reading[i:],
                 reading_normalized[i:],
                 groups,
                 groups_start + 1,
+                work_budget,
             )
+            if exhausted:
+                return None, False, True
+            if ambiguous:
+                return None, True, False
             if segments is not None:
                 if result is not None:
                     # More than one way to segmentize the tail; mark as ambiguous
-                    return None
+                    return None, True, False
                 segment_reading = reading[0:i]
                 segments.insert(0, FuriganaSegment(text, segment_reading))
                 result = segments
             # There is only one way to segmentize the last non-kana group
             if group_count == 1:
                 break
-        return result
+        return result, False, False
 
 
 def _get_furigana_kana_segments(text: str, reading: str) -> list[FuriganaSegment]:
@@ -219,7 +239,7 @@ def distribute_furigana(term: str, reading: str) -> list[FuriganaSegment]:
 
     Returns a list of :class:`FuriganaSegment`. Falls back to a single
     ``FuriganaSegment(term, reading)`` when the term is all-kana / equal to the
-    reading, or when the split is ambiguous.
+    reading, when the split is ambiguous, or when the work budget is exhausted.
     """
     if reading == term:
         # Same
@@ -242,8 +262,14 @@ def distribute_furigana(term: str, reading: str) -> list[FuriganaSegment]:
             group.text_normalized = _convert_katakana_to_hiragana(group.text)
 
     reading_normalized = _convert_katakana_to_hiragana(reading)
-    segments = _segmentize_furigana(reading, reading_normalized, groups, 0)
-    if segments is not None:
+    segments, ambiguous, exhausted = _segmentize_furigana(
+        reading,
+        reading_normalized,
+        groups,
+        0,
+        [_MAX_FURIGANA_SPLIT_ATTEMPTS],
+    )
+    if segments is not None and not ambiguous and not exhausted:
         return segments
 
     # Fallback

@@ -9,6 +9,7 @@ including the deliberate whole-word fallback on ambiguous splits.
 
 import pytest
 
+import anki_miner.utils.furigana_distribute as furigana_distribute
 from anki_miner.utils.furigana_distribute import (
     FuriganaSegment,
     distribute_furigana,
@@ -131,6 +132,22 @@ def test_distribute_furigana_returns_segment_objects():
     assert all(isinstance(s, FuriganaSegment) for s in segments)
     assert segments[0].text == "食"
     assert segments[0].reading == "た"
+
+
+def test_nested_ambiguity_returns_whole_word_fallback():
+    segments = distribute_furigana("漢あ漢い漢", "あああいいあ")
+
+    assert [(segment.text, segment.reading) for segment in segments] == [("漢あ漢い漢", "あああいいあ")]
+
+
+def test_work_budget_exhaustion_returns_whole_word_fallback(monkeypatch):
+    monkeypatch.setattr(furigana_distribute, "_MAX_FURIGANA_SPLIT_ATTEMPTS", 10, raising=False)
+    term = "漢あ" * 4 + "漢"
+    reading = "かあ" * 4 + "か"
+
+    segments = distribute_furigana(term, reading)
+
+    assert [(segment.text, segment.reading) for segment in segments] == [(term, reading)]
 
 
 class TestGetStemLength:
