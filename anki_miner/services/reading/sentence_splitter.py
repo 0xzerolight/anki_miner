@@ -14,7 +14,7 @@ suppress splitting. The unterminated tail is flushed.
 from __future__ import annotations
 
 # Terminators that always end a sentence at depth 0.
-_HARD_TERMINATORS = frozenset("。！？!?‼⁉⁇⁈")
+_HARD_TERMINATORS = frozenset("。｡！？!?‼⁉⁇⁈")
 # Full-width period: a lone one terminates, a run of 2+ is an ellipsis.
 _DOT = "．"
 # Pure ellipsis marks — never terminate on their own.
@@ -22,8 +22,8 @@ _ELLIPSIS = frozenset("…‥")
 _SENTENCE_PUNCT = _HARD_TERMINATORS | _ELLIPSIS | {_DOT}
 
 # Bracket/quote pairs; depth rises on an opener, falls on a matching closer.
-_OPENERS = frozenset("「『（〔［｛〈《【([{｟〝")
-_CLOSERS = frozenset("」』）〕］｝〉》】)]}｠〟")
+_OPENERS = frozenset("「｢『（〔［｛〈《【([{｟〝")
+_CLOSERS = frozenset("」｣』）〕］｝〉》】)]}｠〟")
 
 
 def _run_is_terminating(run: str) -> bool:
