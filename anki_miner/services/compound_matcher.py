@@ -63,7 +63,10 @@ _NON_CONTENT_POS1 = frozenset({"助詞", "助動詞", "記号", "補助記号", 
 # char attested phrases/proverbs run >=6 tokens (お誕生日おめでとうございます is
 # 7) and die on the 5-token cap even when attested; inflected-phrase headwords
 # die on the end-on-content rule; everything else dies on attestation.
+# Exact name matching uses 24 chars, the longest current bundled name-wordset
+# entry; curated-resource membership is itself the boundary attestation.
 _MAX_SPAN_CHARS = 16
+_MAX_NAME_SPAN_CHARS = 24
 _MAX_SPAN_TOKENS = 5
 
 # Existence-cache bound (positive AND negative results). Clear-on-cap keeps
@@ -110,15 +113,20 @@ class CompoundDictionaryMatcher:
     Candidate boundaries use structural content checks instead.
     """
 
+    _default_max_span_chars = _MAX_SPAN_CHARS
+
     def __init__(
         self,
         term_lookup: TermLookup,
         inclusion_rule: TokenInclusionRule,
         max_span_tokens: int = _MAX_SPAN_TOKENS,  # parameterized for tests only
+        max_span_chars: int | None = None,
     ) -> None:
         self._lookup = term_lookup
         self._rule = inclusion_rule
         self._max_span = max(2, max_span_tokens)
+        char_bound = self._default_max_span_chars if max_span_chars is None else max_span_chars
+        self._max_span_chars = max(2, char_bound)
         self._exist_cache: dict[str, bool] = {}
 
     def merge_line(self, text: str, tokens: list) -> list:
@@ -216,7 +224,7 @@ class CompoundDictionaryMatcher:
                 if tail_span is None or tail_span[0] != source_end:
                     break
                 joined = prefix + tail.surface
-                if len(joined) > _MAX_SPAN_CHARS:
+                if len(joined) > self._max_span_chars:
                     break
                 # Span-end rule: non-content ends are not candidate endpoints,
                 # but the span may still extend past them (気に|する|な: the
@@ -288,7 +296,7 @@ class CompoundDictionaryMatcher:
 class NameSpanMatcher(CompoundDictionaryMatcher):
     """Merge exact name-wordset spans without trusting UniDic word forms.
 
-    Reuses the dictionary matcher's bounded candidate generation, batched
+    Reuses the dictionary matcher's parameterized candidate generation, batched
     lookup cache, greedy longest-first selection, and synthetic tokens. Name
     candidates differ at one load-bearing seam: every token contributes its
     raw surface. Deinflecting an adjective-misclassified tail would turn
@@ -298,6 +306,8 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
     source spelling. Honorifics provide no special license; they merge only
     when the complete span itself exists in the injected name lookup.
     """
+
+    _default_max_span_chars = _MAX_NAME_SPAN_CHARS
 
     @staticmethod
     def _candidate_for_tail(prefix: str, tail, joined: str) -> tuple[str, str]:

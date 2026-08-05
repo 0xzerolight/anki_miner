@@ -167,6 +167,19 @@ class TestRawNameSpanMerge:
 
         assert [token.surface for token in out] == ["夏油傑"]
 
+    def test_merges_longest_bundled_org_name_past_dictionary_char_cap(self):
+        name = "コンピュータエンターテインメントレーティング機構"
+        tokens = [
+            _tok("コンピュータ", "名詞", "普通名詞"),
+            _tok("エンターテインメント", "名詞", "普通名詞"),
+            _tok("レーティング", "名詞", "普通名詞"),
+            _tok("機構", "名詞", "普通名詞"),
+        ]
+
+        out = _name_matcher({name}).merge_line(name, tokens)
+
+        assert [token.surface for token in out] == [name]
+
     def test_inflectable_tail_uses_raw_surface_and_emits_noun(self):
         tokens = [
             _tok("憂", "名詞", "普通名詞", lemma="憂い", kana="ウレイ"),
