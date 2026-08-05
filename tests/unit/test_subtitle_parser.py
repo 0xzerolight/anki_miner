@@ -3771,8 +3771,8 @@ class TestPerFileLineCache:
     """Tests for the per-file tokenization cache (Task 5).
 
     The cache must make a second parse of the SAME unchanged file skip MeCab,
-    while an mtime change forces a fresh re-tokenization. Output must remain
-    byte-identical to an uncached parse.
+    while a stat fingerprint change forces a fresh re-tokenization. Output must
+    remain byte-identical to an uncached parse.
     """
 
     @staticmethod
@@ -3891,6 +3891,55 @@ class TestPerFileLineCache:
         assert counts["猫"] == 1
         assert counts["犬"] == 1
         assert {w.lemma for w in words} == {"猫", "犬"}
+
+    def test_same_mtime_content_replacement_reloads_file(self, test_config, tmp_path):
+        """Replacing content with the same mtime must not replay cached tokens."""
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        replacement = tmp_path / "replacement.srt"
+        sub_file.write_text("猫", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+        original_stat = sub_file.stat()
+
+        by_text = {
+            "猫": _make_token("猫", "名詞", lemma="猫", kana="ネコ"),
+            "犬": _make_token("犬", "名詞", lemma="犬", kana="イヌ"),
+        }
+        mock_tagger = MagicMock(side_effect=lambda text: [by_text[text]])
+
+        def load_current_file(_path):
+            text = sub_file.read_text(encoding="utf-8")
+            return self._make_mock_subs([{"text": text, "start": 1000, "end": 3000}])
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                side_effect=load_current_file,
+            ) as mock_load,
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+            patch("anki_miner.services.subtitle_parser.generate_furigana", return_value="fg"),
+            patch("anki_miner.services.subtitle_parser.generate_reading", return_value="rd"),
+        ):
+            service = SubtitleParserService(test_config)
+            counts = service.count_lemmas(sub_file)
+
+            replacement.write_text("犬", encoding="utf-8")
+            os.utime(
+                replacement,
+                ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns),
+            )
+            os.replace(replacement, sub_file)
+            replaced_stat = sub_file.stat()
+
+            words = service.parse_subtitle_file(sub_file)
+
+        assert replaced_stat.st_mtime_ns == original_stat.st_mtime_ns
+        assert replaced_stat.st_ctime_ns != original_stat.st_ctime_ns
+        assert counts["猫"] == 1
+        assert [word.lemma for word in words] == ["犬"]
+        assert mock_load.call_count == 2
+        assert mock_tagger.call_count == 2
 
 
 class TestAbandonedGeneratorCacheNonCommit:

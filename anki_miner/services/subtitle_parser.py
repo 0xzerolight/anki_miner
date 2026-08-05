@@ -453,18 +453,21 @@ class SubtitleParserService:
         self._rd_cache: dict[str, str] = {}
         self._reset_caches()
         # Per-FILE tokenization cache (distinct lifetime from the per-parse memo
-        # caches above): resolved path -> (mtime, list of line-state tuples).
+        # caches above): resolved path -> (stat fingerprint, line-state tuples).
         # Filled on the first _iter_parsed_lines pass over a file and reused by
-        # any later pass over the SAME path+mtime (e.g. the Deck Builder's
-        # count_lemmas → parse_subtitle_file double-parse). Survives across
-        # parse_* calls; an mtime change invalidates the entry. _reset_caches()
-        # does NOT touch this — it is not a per-parse cache.
+        # any later pass over the SAME path+mtime_ns+ctime_ns+size (e.g. the
+        # Deck Builder's count_lemmas → parse_subtitle_file double-parse).
+        # Survives across parse_* calls; a fingerprint change invalidates the
+        # entry. _reset_caches() does NOT touch this — it is not a per-parse cache.
         #
         # Size-bounded: capped at _LINE_CACHE_MAX_FILES entries via LRU
         # eviction (pop the oldest key when full). Prevents unbounded growth during
         # large Deck Builder builds while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
-        self._line_cache: dict[Path, tuple[float, list[tuple[str, list, list, float, float, float]]]] = {}
+        self._line_cache: dict[
+            Path,
+            tuple[tuple[int, int, int], list[tuple[str, list, list, float, float, float]]],
+        ] = {}
         # Verb-front resolver memo (distinct lifetime from the per-parse memos,
         # like _line_cache): the deinflect + offline existence lookup is
         # deterministic per (inflected_surface, orth_base, cType), so it survives
@@ -660,30 +663,37 @@ class SubtitleParserService:
         (callers apply ``_should_include_word`` themselves so the index path and
         mining path share identical token selection logic).
 
-        Per-file cache: keyed by resolved path → (mtime, line-state list);
+        Per-file cache: keyed by resolved path → (stat fingerprint, line-state
+        list), where the fingerprint is ``(mtime_ns, ctime_ns, size)``;
         bounded to ``_LINE_CACHE_MAX_FILES`` entries via oldest-first eviction.
-        On a cache HIT for the same path+mtime the subtitle file is neither
+        On a cache HIT for the same path+fingerprint the subtitle file is neither
         reloaded nor re-tokenized — the stored line-state (the very tuples a
         fresh parse would yield, including ``_SyntheticToken``s) is replayed.
-        An mtime mismatch (file edited between passes) invalidates the entry and
-        forces a fresh load + tokenize. The multi-entry cache supports the Deck
-        Builder's Phase-1 (``count_lemmas``) → Phase-2 (``parse_subtitle_file``)
-        cross-file reuse pattern: every file visited in Phase 1 remains cached
-        for Phase 2, eliminating a second full MeCab pass over the corpus.
+        A fingerprint mismatch (file edited or replaced between passes)
+        invalidates the entry and forces a fresh load + tokenize. The multi-entry
+        cache supports the Deck Builder's Phase-1 (``count_lemmas``) → Phase-2
+        (``parse_subtitle_file``) cross-file reuse pattern: every file visited in
+        Phase 1 remains cached for Phase 2, eliminating a second full MeCab pass
+        over the corpus.
         Consumers MUST NOT mutate the yielded ``merged_tokens`` lists/tokens, as
         they are shared across passes; current consumers only read them.
         """
         key = subtitle_file.resolve()
         try:
-            mtime = subtitle_file.stat().st_mtime
+            stat_result = subtitle_file.stat()
+            fingerprint = (
+                stat_result.st_mtime_ns,
+                stat_result.st_ctime_ns,
+                stat_result.st_size,
+            )
         except OSError:
             # Can't stat (e.g. missing file): fall through to _load_subs, which
             # raises the normalized SubtitleParseError. Bypass the cache.
-            mtime = None
+            fingerprint = None
 
-        if mtime is not None:
+        if fingerprint is not None:
             cached = self._line_cache.get(key)
-            if cached is not None and cached[0] == mtime:
+            if cached is not None and cached[0] == fingerprint:
                 self._line_cache.pop(key)
                 self._line_cache[key] = cached
                 yield from cached[1]
@@ -719,16 +729,17 @@ class SubtitleParserService:
             line_states.append(line_state)
             yield line_state
 
-        # mtime is None only when stat() failed, in which case _load_subs above
-        # already raised, so this assignment is reachable only with a real mtime.
+        # fingerprint is None only when stat() failed, in which case _load_subs
+        # above already raised, so this assignment is reachable only with a real
+        # fingerprint.
         #
         # Evict the least-recently-used entry at capacity so growth stays bounded
         # (see _LINE_CACHE_MAX_FILES). dict preserves insertion order in Python
         # 3.7+, so next(iter(...)) yields the oldest key.
-        if mtime is not None:
+        if fingerprint is not None:
             if len(self._line_cache) >= _LINE_CACHE_MAX_FILES:
                 self._line_cache.pop(next(iter(self._line_cache)))
-            self._line_cache[key] = (mtime, line_states)
+            self._line_cache[key] = (fingerprint, line_states)
 
     def _build_line_state(
         self, text: str, start: float, end: float
