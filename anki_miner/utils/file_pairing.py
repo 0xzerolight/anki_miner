@@ -161,6 +161,15 @@ class FilePairMatcher:
         except OSError:
             return []
 
+        subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
+        subtitles.sort(
+            key=lambda subtitle: (
+                subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
+                subtitle.suffix.lower(),
+                _nfc(subtitle.name),
+            )
+        )
+
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
 

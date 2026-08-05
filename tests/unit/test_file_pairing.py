@@ -3,6 +3,9 @@
 import subprocess
 import sys
 import unicodedata
+from pathlib import Path
+
+import pytest
 
 from anki_miner.utils import file_pairing
 from anki_miner.utils.file_pairing import FilePair, FilePairMatcher, resolve_output_path
@@ -167,6 +170,45 @@ class TestFilePairMatcher:
             pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
 
             assert [p.video.name for p in pairs] == ["Show_01.mkv", "Show_02.mkv", "Show_03.mkv"]
+
+        @pytest.mark.parametrize(
+            ("subtitle_names", "subtitle_extensions", "expected"),
+            [
+                (("Show_01.srt", "Show_01.ssa", "Show_01.ass"), None, "Show_01.ass"),
+                (("Show_01.srt", "Show_01.ssa"), None, "Show_01.ssa"),
+                (("Show_01.vtt", "Show_01.srt"), frozenset({".vtt", ".srt"}), "Show_01.srt"),
+                (("Zulu_01.vtt", "Alpha_01.sub"), frozenset({".vtt", ".sub"}), "Alpha_01.sub"),
+                (("Zulu_01.vtt", "Alpha_01.vtt"), frozenset({".vtt"}), "Alpha_01.vtt"),
+            ],
+        )
+        def test_subtitle_priority_is_independent_of_directory_order(
+            self,
+            tmp_path,
+            monkeypatch,
+            subtitle_names,
+            subtitle_extensions,
+            expected,
+        ):
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            video = video_dir / "Show_01.mkv"
+            video.touch()
+            subtitles = [sub_dir / name for name in subtitle_names]
+            for subtitle in subtitles:
+                subtitle.touch()
+
+            entries = {video_dir: [video], sub_dir: subtitles}
+            monkeypatch.setattr(Path, "iterdir", lambda path: iter(entries[path]))
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(
+                video_dir,
+                sub_dir,
+                subtitle_extensions=subtitle_extensions,
+            )
+
+            assert [pair.subtitle.name for pair in pairs] == [expected]
 
 
 class TestResolveOutputPath:
