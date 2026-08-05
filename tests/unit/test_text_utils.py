@@ -20,6 +20,7 @@ from anki_miner.utils.text_utils import (
     katakana_to_hiragana,
     strip_inline_annotations,
     strip_subtitle_markup,
+    wrap_target_furigana_from_tokens,
 )
 
 _ANKI_FURIGANA_RE = re.compile(r" ?([^ >]+?)\[(.+?)\]")
@@ -40,11 +41,24 @@ class TestStripSubtitleMarkup:
     def test_removes_multiple_ass_tags(self):
         assert strip_subtitle_markup(r"{\fad(100,200)}{\b1}Bold text{\b0}") == "Bold text"
 
+    def test_preserves_literal_brace_groups(self):
+        assert strip_subtitle_markup("集合は{A}です") == "集合は{A}です"
+
     def test_converts_line_break_tags_to_spaces(self):
         assert strip_subtitle_markup(r"Line one\NLine two\nLine three") == "Line one Line two Line three"
 
     def test_removes_html_tags(self):
         assert strip_subtitle_markup("<b>Bold</b> and <i>italic</i>") == "Bold and italic"
+
+    def test_preserves_literal_angle_comparisons(self):
+        text = "3 < 5 だけど 7 > 4"
+
+        assert strip_subtitle_markup(text) == text
+
+    def test_removes_html_tags_with_quoted_angle_attributes(self):
+        text = "<span title=\"3 > 2\" data-note='1 < 2'>Text</span>"
+
+        assert strip_subtitle_markup(text) == "Text"
 
     def test_handles_empty_string(self):
         assert strip_subtitle_markup("") == ""
@@ -108,6 +122,10 @@ class TestCleanSubtitleText:
         """Should remove HTML tags."""
         text = "<b>Bold</b> and <i>italic</i>"
         assert clean_subtitle_text(text) == "Bold and italic"
+
+    def test_decodes_html_entities_once(self):
+        assert clean_subtitle_text("猫 &amp; 犬") == "猫 & 犬"
+        assert clean_subtitle_text("猫 &amp;amp; 犬") == "猫 &amp; 犬"
 
     def test_normalizes_whitespace(self):
         """Should normalize multiple spaces to single space."""
@@ -701,6 +719,30 @@ class TestTokenSeparatorSpaceRule:
             _make_mock_token("王国", kana="オウコク"),
         ]
         assert generate_furigana_from_tokens(tokens) == "は 王国[おうこく]"
+
+    def test_literal_open_bracket_gets_no_ruby_separator(self):
+        tokens = [
+            _make_mock_token("これは", kana="コレハ"),
+            _make_mock_token("[", kana=None),
+            _make_mock_token("重要", kana="ジュウヨウ"),
+            _make_mock_token("]です", kana=None),
+        ]
+
+        assert generate_furigana_from_tokens(tokens) == "これは[ 重要[じゅうよう]]です"
+
+    def test_literal_open_bracket_gets_no_ruby_separator_when_bold(self):
+        text = "これは[重要]です"
+        tokens = [
+            _make_mock_token("これは", kana="コレハ"),
+            _make_mock_token("[", kana=None),
+            _make_mock_token("重要", kana="ジュウヨウ"),
+            _make_mock_token("]です", kana=None),
+        ]
+        start = text.index("重要")
+
+        result = wrap_target_furigana_from_tokens(text, tokens, start, start + len("重要"))
+
+        assert result == "これは[<b> 重要[じゅうよう]</b>]です"
 
 
 class TestStripInlineAnnotations:

@@ -18,7 +18,7 @@ def strip_subtitle_markup(text: str) -> str:
 
     Removes the three tag families that :func:`clean_subtitle_text` handles:
     ASS/SSA override blocks (``{\\...}``), the ``\\N``/``\\n`` line-break markers
-    (each replaced by a space), and HTML tags (``<...>``). It deliberately does
+    (each replaced by a space), and HTML tags (``<tag ...>``). It deliberately does
     NOT run the MeCab-oriented Japanese normalization (halfwidth→fullwidth kana,
     NFKD folding, kanji-variant mapping) nor collapse whitespace, so the returned
     string is safe to display verbatim to the user (e.g. condensed subtitles).
@@ -29,14 +29,18 @@ def strip_subtitle_markup(text: str) -> str:
     Returns:
         Text with formatting markup removed; whitespace untouched.
     """
-    # Remove ASS/SSA style tags like {\pos(x,y)}, {\fad(100,200)}, etc.
-    text = re.sub(r"\{[^}]*\}", "", text)
+    # Remove backslash-led ASS/SSA override tags like {\pos(x,y)}, {\fad(100,200)}, etc.
+    text = re.sub(r"\{\\[^}]*\}", "", text)
 
     # Remove line break tags
     text = re.sub(r"\\[nN]", " ", text)
 
-    # Remove HTML tags if present
-    text = re.sub(r"<[^>]+>", "", text)
+    # Remove actual HTML tags while preserving literal angle comparisons.
+    text = re.sub(
+        r"""</?[A-Za-z][A-Za-z0-9:-]*(?:\s+(?:[^<>"']|"[^"]*"|'[^']*')*)?\s*/?>""",
+        "",
+        text,
+    )
 
     return text
 
@@ -44,9 +48,9 @@ def strip_subtitle_markup(text: str) -> str:
 def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
-    Markup stripping runs first, then :func:`normalize_for_tokenization`
-    (halfwidth katakana → fullwidth, NFC combining-mark composition, CJK-compat
-    and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). When
+    Markup stripping runs first, then one ``html.unescape`` pass, then
+    :func:`normalize_for_tokenization` (halfwidth katakana → fullwidth, NFC combining-mark
+    composition, CJK-compat and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). When
     annotation stripping is enabled, physical lines stay separate through
     normalization and are stripped before whitespace is flattened. The returned
     string *is* the text MeCab tokenizes and the stored card sentence, so token
@@ -64,6 +68,7 @@ def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
         # strip_subtitle_markup normally flattens ASS/SSA \N and \n to spaces.
         text = re.sub(r"\\[nN]|\r\n?", "\n", text)
     text = strip_subtitle_markup(text)
+    text = html.unescape(text)
 
     # Preserve the pre-annotation behavior exactly when the opt-in is disabled.
     if not strip_annotations:
@@ -361,19 +366,21 @@ def _format_furigana(surface: str, reading: str) -> str:
 
 
 def _leads_with_bracket(rendered: str) -> bool:
-    """True iff a ``_format_furigana`` render starts with a bracketed segment.
+    """True iff a ``_format_furigana`` render starts with a kanji ruby segment.
 
     Only then does a token-separator space serve its purpose (binding the
     leading ``[...]`` to this token's kanji instead of the previous run). A
     plain-leading render (``しっぽ 切[き]り``) must NOT get one — Anki's furigana
     filter only consumes a space directly before a ``X[...]`` group, so a space
     before plain kana renders literally on the card (audit F6: トカゲの しっぽ).
+    Literal ``[`` surfaces likewise have no kanji-bearing base and must not be
+    mistaken for a generated ruby group.
     """
     bracket = rendered.find("[")
     if bracket == -1:
         return False
     space = rendered.find(" ")
-    return space == -1 or bracket < space
+    return any(_is_kanji(char) for char in rendered[:bracket]) and (space == -1 or bracket < space)
 
 
 def _render_furigana_token(token: Any) -> str:
