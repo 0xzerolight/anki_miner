@@ -6336,8 +6336,8 @@ class TestCuratedReadingOverride:
     """
 
     @staticmethod
-    def _emit(test_config, text):
-        service = SubtitleParserService(test_config)
+    def _emit(test_config, text, reading_lookup=None):
+        service = SubtitleParserService(test_config, reading_lookup=reading_lookup)
         words, _idx, _counts = service.parse_text_units(
             [ReadingUnit(text=text, index=0, location_label="t")], want_line_index=False
         )
@@ -6357,6 +6357,26 @@ class TestCuratedReadingOverride:
         assert w.expression_reading == "ほとけ"  # pre-fix: ふつ
         assert w.expression_furigana == "仏[ほとけ]"  # pre-fix: 仏[ふつ]
         assert w.lemma_reading == "ほとけ"
+
+    def test_unique_dictionary_mismatch_cannot_override_hotoke(self, test_config):
+        def lookup(terms):
+            return {"仏": ["ふつ"]} if "仏" in terms else {}
+
+        w = self._emit(test_config, "仏を見た", reading_lookup=lookup)["仏"]
+
+        assert w.expression_reading == "ほとけ"
+        assert w.expression_furigana == "仏[ほとけ]"
+        assert w.sentence_reading == "ほとけをみた"
+        assert w.sentence_furigana == "仏[ほとけ]を 見[み]た"
+
+    def test_hotoke_propagates_to_sentence_and_word_reading(self, test_config):
+        w = self._emit(test_config, "仏を見た")["仏"]
+
+        assert w.expression_reading == "ほとけ"
+        assert w.sentence_reading == "ほとけをみた"
+        assert w.expression_furigana == "仏[ほとけ]"
+        assert w.sentence_furigana == "仏[ほとけ]を 見[み]た"
+        assert w.reading == "ホトケ"
 
     def test_mazui_standalone_hits_mined_surface_branch(self, test_config):
         # マズい (uninflected 形容詞): orthBase == surface → mined == surface, the

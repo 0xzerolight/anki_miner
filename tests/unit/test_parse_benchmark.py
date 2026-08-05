@@ -149,6 +149,7 @@ _EXPECTED_CATEGORIES = {
     "vowel-elongation",
     "kana-runs",
     "katakana-pronoun",
+    "reading-override",
     "verb-nominalizer",
 }
 

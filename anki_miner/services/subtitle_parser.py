@@ -786,7 +786,11 @@ class SubtitleParserService:
             if mined is None or mined != token.surface:
                 continue
             derived = katakana_to_hiragana(self._extract_reading(token))
-            derived = resolve_reading_override(mined, derived) or derived
+            override = resolve_reading_override(mined, derived)
+            if override is not None:
+                if override != derived:
+                    corrections[(tok_start, tok_end)] = override
+                continue
             resolution = resolve_attested_reading(derived, self._attested_readings(mined))
             if resolution.ambiguous:
                 self._ambiguous_readings.add(mined)
@@ -905,8 +909,8 @@ class SubtitleParserService:
             # here the MeCab token IS the trustworthy contextual source, so we
             # propagate it outward rather than re-derive. ``reading`` here
             # equals extract_reading(word_token)
-            # (the compound branch above, excluded by the guard, is the only
-            # thing that overrides it). Compound synthetics carry wrong
+            # (only the compound branch above — excluded by the guard — and the
+            # curated override just below replace it). Compound synthetics carry wrong
             # concatenated component kana, so they take the else branch and keep
             # the headword-regenerated reading.
             expression_reading = katakana_to_hiragana(reading)
@@ -916,9 +920,10 @@ class SubtitleParserService:
                 # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
                 # regenerate ruby from it — a stale per-token furigana would
                 # contradict the corrected reading field (and the corrected value
-                # flows on to lemma_reading/resolved_reading below).
+                # flows on to the word reading and lemma_reading below).
                 expression_reading = override
                 expression_furigana = _format_furigana(mined, override)
+                reading = hiragana_to_katakana(override)
                 reading_overridden = True
             else:
                 expression_furigana = generate_furigana_from_tokens([word_token])
@@ -973,13 +978,13 @@ class SubtitleParserService:
             else:
                 expression_furigana = self._furigana(mined)
 
-        # A real token's contextual reading is trusted when the exact card-front
-        # headword attests it. On mismatch, one dictionary reading is
-        # authoritative; several are unresolved and recorded for review. This
-        # deliberately diverges from Yomitan's interactive headword selection:
-        # bulk mining has no user-selected row, so it must not guess among
-        # homographs by score order or edit distance.
-        if not isinstance(word_token, SyntheticToken):
+        # Without a curated override, a real token's contextual reading is
+        # trusted when the exact card-front headword attests it. On mismatch,
+        # one dictionary reading is authoritative; several are unresolved and
+        # recorded for review. This deliberately diverges from Yomitan's
+        # interactive headword selection: bulk mining has no user-selected row,
+        # so it must not guess among homographs by score order or edit distance.
+        if not reading_overridden and not isinstance(word_token, SyntheticToken):
             resolution = resolve_attested_reading(
                 expression_reading,
                 self._attested_readings(mined),
