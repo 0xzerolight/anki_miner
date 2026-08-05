@@ -91,6 +91,15 @@ class TestEpisodeNumberExtractor:
             assert result is not None
             assert result.episode_number == 5
 
+        def test_does_not_extract_ep_inside_step(self, tmp_path):
+            path = tmp_path / "[Group] Show_01_Step 3 [1080p].mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == 1
+
         def test_extracts_standalone_number(self, tmp_path):
             """Should extract standalone numbers."""
             path = tmp_path / "Anime_01.mp4"

@@ -49,7 +49,10 @@ class EpisodeNumberExtractor:
         # 1x01, 1X01 (season x episode)
         (r"(\d+)[xX](\d+)", lambda m: (int(m.group(1)), int(m.group(2)))),
         # Episode 01, Ep01, ep.01, episode_01 (no season)
-        (r"[Ee][Pp](?:isode)?[\s._-]*(\d+)", lambda m: (None, int(m.group(1)))),
+        (
+            r"(?<![0-9A-Za-z])[Ee][Pp](?:isode)?[\s._-]*(\d+)(?![0-9A-Za-z])",
+            lambda m: (None, int(m.group(1))),
+        ),
     ]
 
     @classmethod
@@ -93,6 +96,15 @@ class EpisodeNumberExtractor:
             if match:
                 season, episode = extractor(match)
                 return EpisodeInfo(file_path, episode, season)
+
+        # A number attached to an embedded "ep" token belongs to the ordinary
+        # word, not the episode marker (for example, "Step 3"). Do not let it
+        # re-enter as the winning candidate through the bare-number fallback.
+        filename = re.sub(
+            r"(?<=[0-9A-Za-z])[Ee][Pp](?:isode)?[\s._-]*\d+(?![0-9A-Za-z])",
+            "",
+            filename,
+        )
 
         # Last resort: bare number. Take the LAST 1-3 digit run, not the first —
         # numeric show titles ("86 - 03", "Mob Psycho 100 - 05") put the title
