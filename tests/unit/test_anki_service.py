@@ -3483,6 +3483,46 @@ class TestVerifyCardTarget:
         actions = [call[0][1] for call in mock_pa.call_args_list]
         assert actions == ["modelNames"]
 
+    def test_active_card_type_marker_collision_raises_setup_error(self, test_config):
+        """The active card-type marker writes "x"; sharing a mapped target must fail preflight."""
+        from dataclasses import replace
+
+        word_target = test_config.anki_fields["word"]
+        config = replace(
+            test_config,
+            card_type="sentence",
+            card_type_marker_fields={"sentence": word_target},
+        )
+        service = AnkiService(config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[self._MODELS, self._FIELDS, [config.anki_deck_name]],
+            ) as mock_pa,
+            pytest.raises(SetupError, match=f"{word_target}.*mapped more than once"),
+        ):
+            service.verify_card_target()
+
+        actions = [call[0][1] for call in mock_pa.call_args_list]
+        assert actions == ["modelNames"]
+
+    def test_inactive_card_type_marker_collision_allowed(self, test_config):
+        """Markers for inactive card types are never written and may collide."""
+        from dataclasses import replace
+
+        config = replace(
+            test_config,
+            card_type="",
+            card_type_marker_fields={"sentence": test_config.anki_fields["word"]},
+        )
+        service = AnkiService(config)
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[self._MODELS, self._FIELDS, ["Default", config.anki_deck_name]],
+        ):
+            service.verify_card_target()  # must not raise
+
     def test_empty_string_field_mappings_ignored(self, test_config):
         """Fields mapped to '' (unmapped) should not be required in the model."""
         # test_config already has expression_reading='', sentence_reading='', source=''

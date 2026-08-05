@@ -318,6 +318,14 @@ class AnkiService:
             raise SetupError(missing_note_type_message(self.config.anki_note_type, models))
 
         targets = [target for target in self.config.anki_fields.values() if target]
+        # The active card-type marker is written too (build_note stamps "x" into
+        # it), so a marker sharing a target field would silently overwrite that
+        # field after preflight passed. Inactive markers are never written and
+        # may collide freely.
+        if self.config.card_type:
+            marker_target = self.config.card_type_marker_fields.get(self.config.card_type, "")
+            if marker_target:
+                targets.append(marker_target)
         duplicate_targets = {target for target in targets if targets.count(target) > 1}
         if duplicate_targets:
             shown = ", ".join(sorted(duplicate_targets))
