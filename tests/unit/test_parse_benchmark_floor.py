@@ -312,6 +312,27 @@ def test_both_strategies_meet_reading_override_floor() -> None:
         assert junk_rate(counts) == 0.0, f"{strategy} reading-override junk_rate {junk_rate(counts)} above 0.0"
 
 
+def test_both_strategies_meet_reading_overrides_front_floor() -> None:
+    results = _scored()
+    for strategy in ("a-lite-orthbase", "b-lite-anchor"):
+        counts = results[strategy].by_category["reading-overrides"]
+        assert recall(counts) == 1.0, f"{strategy} reading-overrides recall {recall(counts)} below 1.0"
+        assert junk_rate(counts) == 0.0, f"{strategy} reading-overrides junk_rate {junk_rate(counts)} above 0.0"
+
+
+def test_reading_override_details_match_mined_fronts() -> None:
+    record = next(rec for rec in load_corpus(DEFAULT_CORPUS_DIR) if rec["id"] == "ro01")
+    expected_readings = record["expected_readings"]
+    words, _index, _counts = _get_service().parse_text_units(
+        [ReadingUnit(text=record["sentence"], index=0, location_label="benchmark")],
+        want_line_index=False,
+    )
+    readings_by_front = {word.mined_form: word.expression_reading for word in words}
+
+    assert set(expected_readings) == set(record["expected"])
+    assert {front: readings_by_front[front] for front in expected_readings} == expected_readings
+
+
 def test_anchor_meets_katakana_verb_front_floor() -> None:
     assert mine_lite_orthbase("ヤラれた") == {"ヤル"}
     assert mine_lite_anchor("ヤラれた") == {"やる"}

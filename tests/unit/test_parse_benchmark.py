@@ -154,6 +154,7 @@ _EXPECTED_CATEGORIES = {
     "lexicalized-window",
     "front-remap",
     "reading-override",
+    "reading-overrides",
     "verb-nominalizer",
 }
 
