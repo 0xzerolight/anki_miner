@@ -4365,14 +4365,6 @@ Add %3 word(s) to your known list?</source>
       <translation>Der Community auf Discord beitreten</translation>
     </message>
     <message>
-      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
-      <translation>Anki Miner wurde beim Starten der Videovorschau unerwartet beendet, daher ist die Vorschau jetzt deaktiviert. Alles andere funktioniert; Sie können sie in den Einstellungen wieder aktivieren.</translation>
-    </message>
-    <message>
-      <source>Open settings</source>
-      <translation>Einstellungen öffnen</translation>
-    </message>
-    <message>
       <source>The desktop shortcut could not be created.</source>
       <translation>Die Desktop-Verknüpfung konnte nicht erstellt werden.</translation>
     </message>
@@ -7044,10 +7036,6 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
       <translation>Die Videovorschau ist durch %1 deaktiviert. Audio wird weiterhin wiedergegeben.</translation>
     </message>
     <message>
-      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
-      <translation>Die Videovorschau ist deaktiviert. Audio wird weiterhin wiedergegeben. Aktivieren Sie sie wieder unter Einstellungen → Oberfläche.</translation>
-    </message>
-    <message>
       <source>playback failed</source>
       <translation>Wiedergabe fehlgeschlagen</translation>
     </message>
@@ -7796,14 +7784,6 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Die systemeigenen Dateiauswahldialoge verwenden. Deaktivieren Sie dies, um stattdessen die integrierte Auswahl der App zu verwenden, die dem App-Design folgt und auf jeder Plattform gleich aussieht.</translation>
-    </message>
-    <message>
-      <source>Show video preview in the word curator</source>
-      <translation>Videovorschau im Wort-Kurator anzeigen</translation>
-    </message>
-    <message>
-      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
-      <translation>Videoplayer im Wort-Kurator und im Untertitel-Viewer anzeigen. Deaktivieren Sie dies, wenn die App beim Erreichen des Wort-Kurators während eines Mining-Vorgangs unerwartet beendet wird — Audio wird auch ohne diese Option weiterhin wiedergegeben.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

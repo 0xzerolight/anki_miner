@@ -4353,14 +4353,6 @@ Add %3 word(s) to your known list?</source>
       <translation>Discord でコミュニティに参加する</translation>
     </message>
     <message>
-      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
-      <translation>動画プレビューの開始中に Anki Miner が予期せず終了したため、プレビューは現在オフになっています。他の機能は正常に動作します。設定から再度オンにできます。</translation>
-    </message>
-    <message>
-      <source>Open settings</source>
-      <translation>設定を開く</translation>
-    </message>
-    <message>
       <source>The desktop shortcut could not be created.</source>
       <translation>デスクトップショートカットを作成できませんでした。</translation>
     </message>
@@ -7030,10 +7022,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation>動画プレビューは %1 によってオフになっています。音声は引き続き再生されます。</translation>
     </message>
     <message>
-      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
-      <translation>動画プレビューはオフになっています。音声は引き続き再生されます。設定 → インターフェースから再度オンにできます。</translation>
-    </message>
-    <message>
       <source>playback failed</source>
       <translation>再生に失敗しました</translation>
     </message>
@@ -7782,14 +7770,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>オペレーティングシステム標準のファイル選択画面を使用します。オフにすると、アプリのテーマに従い、すべてのプラットフォームで同じ見た目の内蔵選択画面を使用します。</translation>
-    </message>
-    <message>
-      <source>Show video preview in the word curator</source>
-      <translation>単語キュレーターで動画プレビューを表示</translation>
-    </message>
-    <message>
-      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
-      <translation>単語キュレーターと字幕ビューアーで動画プレイヤーを表示します。マイニングがキュレーターに到達した時点でアプリが予期せず終了する場合は、これをオフにしてください。オフでも音声は再生されます。</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

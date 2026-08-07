@@ -4323,14 +4323,6 @@ Add %3 word(s) to your known list?</source>
       <translation type="unfinished" />
     </message>
     <message>
-      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source>Open settings</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
       <source>The desktop shortcut could not be created.</source>
       <translation type="unfinished" />
     </message>
@@ -6987,10 +6979,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation type="unfinished" />
     </message>
     <message>
-      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
       <source>playback failed</source>
       <translation type="unfinished" />
     </message>
@@ -7738,14 +7726,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source>Show video preview in the word curator</source>
-      <translation type="unfinished" />
-    </message>
-    <message>
-      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
       <translation type="unfinished" />
     </message>
     <message>
