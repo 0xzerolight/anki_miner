@@ -3046,6 +3046,10 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation>Đã bỏ qua %1 từ không tìm thấy định nghĩa: %2%3</translation>
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation>Bộ lọc tần suất: đã loại bỏ %1 từ ngoài top %2</translation>
     </message>
@@ -3086,10 +3090,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
       <translation>
         <numerusform>Danh sách trắng: đã buộc bao gồm %n từ</numerusform>
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>Đã bỏ qua %1 từ không tìm thấy định nghĩa: %2%3</translation>
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3419,6 +3419,14 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
       <source>Use Local Known Words Database</source>
       <translation>Dùng CSDL từ đã biết cục bộ</translation>
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation>Coi cách viết kana của từ đã biết là đã biết</translation>
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+      <translation>Khi phụ đề viết một từ bằng kana (ví dụ: うなずく) và dạng từ điển bằng kanji (頷く) đã có trong bộ sưu tập hoặc danh sách từ đã biết, bỏ qua từ đó thay vì tạo thêm thẻ thứ hai. Cách viết kanji không bao giờ được gộp theo cách này.</translation>
     </message>
     <message>
       <source>Rebuild Known Words DB</source>
@@ -4343,6 +4351,14 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
       <source>Join the community on Discord</source>
       <translation>Tham gia cộng đồng trên Discord</translation>
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation>Anki Miner đã đóng đột ngột khi khởi động xem trước video, vì vậy chức năng xem trước hiện đã tắt. Mọi thứ khác vẫn hoạt động bình thường; có thể bật lại trong Cài đặt.</translation>
+    </message>
+    <message>
+      <source>Open settings</source>
+      <translation>Mở cài đặt</translation>
     </message>
     <message>
       <source>The desktop shortcut could not be created.</source>
@@ -7010,6 +7026,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
       <translation>Xem trước video cần mpv (libmpv). Các bản dựng đóng gói đã bao gồm sẵn; trên Linux hãy cài đặt từ trình quản lý gói (ví dụ libmpv2), trên macOS thì qua Homebrew (brew install mpv).</translation>
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation>Xem trước video đã bị tắt bởi %1. Âm thanh vẫn phát.</translation>
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation>Xem trước video đã bị tắt. Âm thanh vẫn phát. Bật lại trong Cài đặt → Giao diện.</translation>
+    </message>
+    <message>
       <source>playback failed</source>
       <translation>phát lại thất bại</translation>
     </message>
@@ -7758,6 +7782,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Dùng trình chọn tệp gốc của hệ điều hành. Tắt tùy chọn này để thay bằng trình chọn tích hợp của ứng dụng, theo chủ đề ứng dụng và có cùng diện mạo trên mọi nền tảng.</translation>
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation>Hiển thị xem trước video trong trình quản lý từ</translation>
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
+      <translation>Hiển thị trình phát video trong trình quản lý từ và trình xem phụ đề. Tắt tùy chọn này nếu ứng dụng đóng đột ngột khi phiên khai thác đến bước quản lý từ — âm thanh vẫn phát dù không có video.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

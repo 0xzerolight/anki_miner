@@ -3054,6 +3054,10 @@ Files on disk will be left untouched because the folder could not be proven to b
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation>Пропущено %1 слов без найденного определения: %2%3</translation>
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation>Фильтр частотности: удалено %1 слов за пределами топ-%2</translation>
     </message>
@@ -3096,10 +3100,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <numerusform>Белый список: принудительно включено %n слова</numerusform>
         <numerusform>Белый список: принудительно включено %n слов</numerusform>
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>Пропущено %1 слов без найденного определения: %2%3</translation>
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3443,6 +3443,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
       <source>Use Local Known Words Database</source>
       <translation>Использовать локальную базу данных известных слов</translation>
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation>Считать кана-написания известных слов известными</translation>
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+      <translation>Если субтитры записывают слово каной (например, うなずく), а словарная форма с иероглифами (頷く) уже есть в вашей коллекции или списке известных слов, слово будет пропущено вместо создания второй карточки. Написания с иероглифами таким образом никогда не объединяются.</translation>
     </message>
     <message>
       <source>Rebuild Known Words DB</source>
@@ -4367,6 +4375,14 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>Join the community on Discord</source>
       <translation>Присоединиться к сообществу в Discord</translation>
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation>Anki Miner неожиданно закрылся при запуске предпросмотра видео, поэтому предпросмотр теперь отключён. Всё остальное работает; вы можете снова включить его в Настройках.</translation>
+    </message>
+    <message>
+      <source>Open settings</source>
+      <translation>Открыть настройки</translation>
     </message>
     <message>
       <source>The desktop shortcut could not be created.</source>
@@ -7038,6 +7054,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation>Для предпросмотра видео требуется mpv (libmpv). В сборках с комплектацией он уже включён; в Linux установите его через менеджер пакетов (например, libmpv2), в macOS через Homebrew (brew install mpv).</translation>
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation>Предпросмотр видео отключён: %1. Звук по-прежнему воспроизводится.</translation>
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation>Предпросмотр видео отключён. Звук всё равно воспроизводится. Включите его снова в Настройки → Интерфейс.</translation>
+    </message>
+    <message>
       <source>playback failed</source>
       <translation>воспроизведение не удалось</translation>
     </message>
@@ -7786,6 +7810,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Использовать системные диалоги выбора файлов. Выключите, чтобы использовать встроенный диалог приложения, который следует теме приложения и выглядит одинаково на всех платформах.</translation>
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation>Показывать предпросмотр видео в кураторе слов</translation>
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
+      <translation>Показывать видеоплеер в кураторе слов и окне просмотра субтитров. Отключите, если приложение неожиданно закрывается при переходе к куратору во время майнинга — звук при этом всё равно будет воспроизводиться.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

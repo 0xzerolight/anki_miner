@@ -3025,6 +3025,10 @@ Files on disk will be left untouched because the folder could not be proven to b
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation type="unfinished" />
     </message>
@@ -3065,10 +3069,6 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation type="unfinished">
         <numerusform />
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation type="unfinished" />
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3396,6 +3396,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
       <source>Use Local Known Words Database</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
       <translation type="unfinished" />
     </message>
     <message>
@@ -4312,6 +4320,14 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
       <source>Join the community on Discord</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Open settings</source>
       <translation type="unfinished" />
     </message>
     <message>
@@ -6967,6 +6983,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation type="unfinished" />
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
       <source>playback failed</source>
       <translation type="unfinished" />
     </message>
@@ -7714,6 +7738,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation type="unfinished" />
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
       <translation type="unfinished" />
     </message>
     <message>

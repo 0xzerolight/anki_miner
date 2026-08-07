@@ -3046,6 +3046,10 @@ Files on disk will be left untouched because the folder could not be proven to b
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation>已略過 %1 個找不到釋義的單字：%2%3</translation>
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation>頻率篩選器：已移除 %1 個排名在前 %2 名之外的單字</translation>
     </message>
@@ -3086,10 +3090,6 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation>
         <numerusform>白名單：已強制納入 %n 個單字</numerusform>
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>已略過 %1 個找不到釋義的單字：%2%3</translation>
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3419,6 +3419,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
       <source>Use Local Known Words Database</source>
       <translation>使用本機已知單字資料庫</translation>
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation>將已知單字的假名拼寫視為已知</translation>
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+      <translation>當字幕以假名拼寫單字（例如 うなずく），而該單字的漢字字典形（頷く）已在您的收藏或已知單字清單中時，則略過該單字，而不建立第二張卡片。漢字拼寫絕不會以此方式合併。</translation>
     </message>
     <message>
       <source>Rebuild Known Words DB</source>
@@ -4343,6 +4351,14 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>Join the community on Discord</source>
       <translation>在 Discord 上加入社群</translation>
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation>Anki Miner 在啟動影片預覽時意外關閉，因此預覽功能現已停用。其他功能均正常運作，您可在設定中重新開啟預覽。</translation>
+    </message>
+    <message>
+      <source>Open settings</source>
+      <translation>開啟設定</translation>
     </message>
     <message>
       <source>The desktop shortcut could not be created.</source>
@@ -7010,6 +7026,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation>影片預覽需要 mpv (libmpv)。內建版本已包含；在 Linux 上請透過套件管理員安裝（例如 libmpv2），在 macOS 上請透過 Homebrew 安裝（brew install mpv）。</translation>
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation>影片預覽已由 %1 關閉。音訊仍會播放。</translation>
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation>影片預覽已關閉。音訊仍會播放。可在「設定 → 介面」中重新開啟。</translation>
+    </message>
+    <message>
       <source>playback failed</source>
       <translation>播放失敗</translation>
     </message>
@@ -7758,6 +7782,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>使用作業系統的原生檔案選擇器。關閉此選項可改用應用程式內建選擇器，它會遵循應用程式主題，且在每個平台上外觀一致。</translation>
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation>在單字整理工具中顯示影片預覽</translation>
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
+      <translation>在單字整理工具與字幕檢視器中顯示影片播放器。若採集流程進入整理工具時應用程式意外關閉，請關閉此選項——關閉後音訊仍會播放。</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
