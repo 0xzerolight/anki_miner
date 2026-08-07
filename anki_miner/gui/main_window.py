@@ -1,6 +1,5 @@
 """Main window for Anki Miner GUI."""
 
-import json
 import logging
 import sys
 from collections import Counter
@@ -53,7 +52,7 @@ from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state, video_preview
+from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -239,13 +238,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self._run_optional_boot_step(
                 "legacy pitch migration",
                 self._maybe_migrate_legacy_pitch,
-            )
-            # Must run before any curator can open, and it commits config, so it
-            # sits with the other one-time durable-state steps rather than in the
-            # deferred post-setup batch.
-            self._run_optional_boot_step(
-                "video preview crash recovery",
-                self._maybe_auto_disable_video_preview,
             )
             self._run_optional_boot_step("environment snapshot", self._start_environment_snapshot)
 
@@ -600,44 +592,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             yield True
         finally:
             panel.release(token)
-
-    def _maybe_auto_disable_video_preview(self) -> None:
-        """Turn the video preview off when the last session died constructing it.
-
-        A GL-driver abort cannot be caught in-process, so the previous run left
-        a sentinel behind instead (armed before ``QOpenGLWidget.__init__``,
-        cleared on first paint). Finding one means the process died in between,
-        and since the curator is on the mandatory path for every video mine, the
-        user would otherwise hit it again on the very next run.
-
-        The remedy is a config write, not a hidden suppressor: the Settings
-        checkbox is then the single way back on, and there is no "config says
-        yes, something else says no" state to reason about.
-        """
-        marker = video_preview.consume_crash_marker()
-        if marker is None:
-            return
-        logger.warning("Previous session died while constructing the video surface: %s", marker)
-        if not self.config.video_preview_enabled:
-            # Already off (env override, or the user turned it off themselves).
-            # The marker still had to be consumed; saying it twice would not.
-            return
-        self.update_config(replace(self.config, video_preview_enabled=False))
-        self.show_screen_issue(
-            ScreenIssue(
-                summary=self.tr(
-                    "Anki Miner closed unexpectedly while starting the video preview, so the "
-                    "preview is now off. Everything else works; you can turn it back on in Settings."
-                ),
-                details=json.dumps(marker, ensure_ascii=False, sort_keys=True),
-                action_id="video_preview.reenable",
-                action_text=self.tr("Open settings"),
-            ),
-            # "ui." prefix: UISettingsPanel namespaces its anchors, and
-            # reveal_setting silently ignores an id it cannot resolve — so a
-            # bare "video_preview" here would give the user a dead button.
-            action=lambda: self.reveal_setting("ui.video_preview"),
-        )
 
     def _report_shortcut_failure(self, details: str) -> None:
         """One place for the desktop-shortcut failure sentence (D24)."""
@@ -1725,9 +1679,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             # Re-seed the app-wide file-dialog mode so a toggled setting applies to
             # the very next dialog without restart (Issue #100).
             file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
-            # Same reason for the video surface: a user who just turned the
-            # preview back on should get it in the very next curator.
-            video_preview.seed_from_config(committed_config)
             # Rebuild config-bound services so AnkiConnect URL/port edits take
             # effect: validation and the undo-delete AnkiService were frozen to the
             # startup config and would otherwise keep hitting the old endpoint.

@@ -516,20 +516,7 @@ class ProfileController:
             # The version re-stamp keeps a profile snapshotted before an app
             # upgrade from re-arming commit_boot's "Anki Miner updated" dialog.
             # It carves no field out of the stored file, which keeps its own.
-            #
-            # video_preview_enabled is held back from the incoming profile for a
-            # different reason: it describes THIS host's GL driver, and building
-            # the video surface on a host that cannot is a hard process abort.
-            # A profile written on a working machine would otherwise silently
-            # undo the auto-disable that rescued the user here, and the next
-            # video mine would kill the app again.
-            window.update_config(
-                replace(
-                    incoming,
-                    last_known_version=__version__,
-                    video_preview_enabled=window.config.video_preview_enabled,
-                )
-            )
+            window.update_config(replace(incoming, last_known_version=__version__))
             persisted = True
         except ConfigCommitError as error:
             commit_error = error

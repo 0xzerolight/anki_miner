@@ -474,13 +474,12 @@ def _reset_theme_state():
 
 @pytest.fixture(autouse=True)
 def _reset_video_preview_state():
-    """Drop video_preview's process-lifetime caches between tests.
+    """Drop video_preview's once-per-process env decision between tests.
 
-    Three pieces of module state, all of which bleed on an xdist worker: the
-    seeded enabled flag, the once-resolved env decision, and the armed-once
-    crash-marker flag (which would otherwise let the FIRST test that builds a
-    player suppress every later test's marker write). Same guarded-lookup shape
-    as the Theme reset above, for the same import-cost reason.
+    It bleeds on an xdist worker: a test that sets ANKI_MINER_NO_VIDEO_PREVIEW
+    would otherwise decide the answer for every test after it. Same
+    guarded-lookup shape as the Theme reset above, for the same import-cost
+    reason.
     """
     module = sys.modules.get("anki_miner.gui.utils.video_preview")
     if module is not None:

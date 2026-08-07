@@ -645,7 +645,7 @@ class TestSubtitleStrip:
 
 
 class TestPreviewSuppressed:
-    """The preview turned off — by setting or by env.
+    """The preview turned off by ``ANKI_MINER_NO_VIDEO_PREVIEW``.
 
     Distinct from libmpv-absent (``TestMpvUnavailable``): libmpv loaded fine
     here, and audio is expected to keep working. Only the GL surface is gone.
@@ -655,8 +655,8 @@ class TestPreviewSuppressed:
     def _off(self, monkeypatch):
         from anki_miner.gui.utils import video_preview
 
+        monkeypatch.setenv(video_preview.ENV_VAR, "1")
         video_preview._reset_for_tests()
-        monkeypatch.setattr(video_preview, "_enabled", False)
         yield
         video_preview._reset_for_tests()
 
@@ -675,26 +675,19 @@ class TestPreviewSuppressed:
         widget = _widget(qtbot)
         assert widget.backend_available
 
-    def test_notice_is_the_preview_text_not_the_install_advice(self, qtbot, fake_mpv):
+    def test_notice_names_the_variable_not_the_install_advice(self, qtbot, fake_mpv):
         """Telling someone to install libmpv when libmpv is already loaded and
-        they simply switched the preview off sends them in circles."""
+        they simply set the env var sends them in circles. There is deliberately
+        no Settings checkbox, so the notice must name the one thing that works."""
+        from anki_miner.gui.utils import video_preview
+
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES, 0.0)
         text = widget._backend_notice_label.text()
         assert widget._backend_notice_label.isVisibleTo(widget)
-        assert "Settings" in text
+        assert video_preview.ENV_VAR in text
         assert "libmpv" not in text
-
-    def test_env_suppression_names_the_variable(self, qtbot, fake_mpv, monkeypatch):
-        """Someone running with the env var set has no Settings checkbox that
-        would explain what they are seeing."""
-        from anki_miner.gui.utils import video_preview
-
-        monkeypatch.setenv(video_preview.ENV_VAR, "1")
-        video_preview._reset_for_tests()
-        widget = _widget(qtbot)
-        widget.set_source(VIDEO, ENTRIES, 0.0)
-        assert video_preview.ENV_VAR in widget._backend_notice_label.text()
+        assert "Settings" not in text
 
     def test_player_is_built_audio_only(self, qtbot, fake_mpv):
         """A vo=libmpv core with no render context to attach logs

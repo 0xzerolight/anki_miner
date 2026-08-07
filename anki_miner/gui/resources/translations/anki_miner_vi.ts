@@ -4353,14 +4353,6 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
       <translation>Tham gia cộng đồng trên Discord</translation>
     </message>
     <message>
-      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
-      <translation>Anki Miner đã đóng đột ngột khi khởi động xem trước video, vì vậy chức năng xem trước hiện đã tắt. Mọi thứ khác vẫn hoạt động bình thường; có thể bật lại trong Cài đặt.</translation>
-    </message>
-    <message>
-      <source>Open settings</source>
-      <translation>Mở cài đặt</translation>
-    </message>
-    <message>
       <source>The desktop shortcut could not be created.</source>
       <translation>Không thể tạo lối tắt trên màn hình.</translation>
     </message>
@@ -7030,10 +7022,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
       <translation>Xem trước video đã bị tắt bởi %1. Âm thanh vẫn phát.</translation>
     </message>
     <message>
-      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
-      <translation>Xem trước video đã bị tắt. Âm thanh vẫn phát. Bật lại trong Cài đặt → Giao diện.</translation>
-    </message>
-    <message>
       <source>playback failed</source>
       <translation>phát lại thất bại</translation>
     </message>
@@ -7782,14 +7770,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Dùng trình chọn tệp gốc của hệ điều hành. Tắt tùy chọn này để thay bằng trình chọn tích hợp của ứng dụng, theo chủ đề ứng dụng và có cùng diện mạo trên mọi nền tảng.</translation>
-    </message>
-    <message>
-      <source>Show video preview in the word curator</source>
-      <translation>Hiển thị xem trước video trong trình quản lý từ</translation>
-    </message>
-    <message>
-      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
-      <translation>Hiển thị trình phát video trong trình quản lý từ và trình xem phụ đề. Tắt tùy chọn này nếu ứng dụng đóng đột ngột khi phiên khai thác đến bước quản lý từ — âm thanh vẫn phát dù không có video.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

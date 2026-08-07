@@ -516,17 +516,6 @@ class AnkiMinerConfig:
     # switches to Qt's built-in dialog, which also follows the app's QSS theme.
     # Consumed via gui/utils/file_dialogs.set_use_native.
     use_native_file_dialogs: bool = True
-    # The word curator and the subtitle viewer embed a QOpenGLWidget that libmpv
-    # renders into. Constructing it brings up a real GL context, and on a host
-    # whose GL driver cannot load cleanly that ABORTS the process — no Python
-    # traceback, nothing catchable (a field report died inside
-    # QOpenGLWidget.__init__ on every video mining run). False skips the GL
-    # surface entirely; audio still plays through a vo=null core, so the player
-    # degrades rather than disappears. Machine-specific: it describes this
-    # host's GL driver, so it must not travel in a profile or a settings export.
-    # Consumed via gui/utils/video_preview; ANKI_MINER_NO_VIDEO_PREVIEW=1
-    # overrides it for anyone whose app dies before Settings is reachable.
-    video_preview_enabled: bool = True
 
     # Monotonic identity for committed GUI settings. Not user-editable.
     config_version: int = 0

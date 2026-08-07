@@ -117,7 +117,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
     native_dialogs_changed = pyqtSignal(bool)
-    video_preview_changed = pyqtSignal(bool)
 
     def __init__(
         self,
@@ -126,7 +125,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         ui_language: str = "en",
         use_native_file_dialogs: bool = True,
         ui_font_scale: float = 1.0,
-        video_preview_enabled: bool = True,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the panel.
@@ -146,8 +144,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
                 config value is what the combo shows — never the running
                 ``Theme.get_font_scale()``, which stays on the boot value for
                 the life of the process.
-            video_preview_enabled: Seeds the "Show video preview in the word
-                curator" checkbox (the preview is on by default).
             parent: Optional parent widget.
         """
         super().__init__(parent)
@@ -155,7 +151,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._ui_zoom = ui_zoom
         self._ui_font_scale = ui_font_scale
         self._use_native_file_dialogs = use_native_file_dialogs
-        self._video_preview_enabled = video_preview_enabled
         # Construction-time values = what Qt is actually running with: the panel
         # is built once at app boot from the boot config, and language, zoom and
         # text size only take effect at startup. ``load_from_config`` compares
@@ -334,27 +329,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             "native_file_dialogs",
             self.native_dialogs_checkbox,
             lambda: (self.native_dialogs_checkbox.text(), self.native_dialogs_checkbox.toolTip()),
-        )
-
-        # Video surface. On a host whose GL driver cannot load cleanly, building
-        # the curator's preview aborts the process outright — so this has to be
-        # switchable, and the crash sentinel turns it off automatically after a
-        # death (see gui/utils/video_preview).
-        self.video_preview_checkbox = QCheckBox(self.tr("Show video preview in the word curator"))
-        self.video_preview_checkbox.setToolTip(
-            self.tr(
-                "Show the video player in the word curator and the subtitle viewer. Turn this off "
-                "if the app closes unexpectedly when a mining run reaches the curator — audio "
-                "still plays without it."
-            )
-        )
-        self.video_preview_checkbox.setChecked(self._video_preview_enabled)
-        self.video_preview_checkbox.toggled.connect(self._on_video_preview_toggled)
-        layout.addWidget(self.video_preview_checkbox)
-        self.register_setting(
-            "video_preview",
-            self.video_preview_checkbox,
-            lambda: (self.video_preview_checkbox.text(), self.video_preview_checkbox.toolTip()),
         )
 
         # Theme selection. Same position in the panel as the list it replaces;
@@ -650,11 +624,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._use_native_file_dialogs = checked
         self.native_dialogs_changed.emit(checked)
 
-    def _on_video_preview_toggled(self, checked: bool) -> None:
-        """Persist the video-surface choice (applies to the next curator)."""
-        self._video_preview_enabled = checked
-        self.video_preview_changed.emit(checked)
-
     def _on_font_scale_selected(self, index: int) -> None:
         """Persist the preset the user picked and reveal the restart note.
 
@@ -782,13 +751,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.native_dialogs_checkbox.setChecked(config.use_native_file_dialogs)
         finally:
             self.native_dialogs_checkbox.blockSignals(False)
-
-        self._video_preview_enabled = config.video_preview_enabled
-        self.video_preview_checkbox.blockSignals(True)
-        try:
-            self.video_preview_checkbox.setChecked(config.video_preview_enabled)
-        finally:
-            self.video_preview_checkbox.blockSignals(False)
 
         # The themes folder button and its tooltip must name the config's root;
         # left alone it would open (and create) the PREVIOUS config's directory.

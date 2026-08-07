@@ -4353,14 +4353,6 @@ Add %3 word(s) to your known list?</source>
       <translation>在 Discord 上加入社群</translation>
     </message>
     <message>
-      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
-      <translation>Anki Miner 在啟動影片預覽時意外關閉，因此預覽功能現已停用。其他功能均正常運作，您可在設定中重新開啟預覽。</translation>
-    </message>
-    <message>
-      <source>Open settings</source>
-      <translation>開啟設定</translation>
-    </message>
-    <message>
       <source>The desktop shortcut could not be created.</source>
       <translation>無法建立桌面捷徑。</translation>
     </message>
@@ -7030,10 +7022,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation>影片預覽已由 %1 關閉。音訊仍會播放。</translation>
     </message>
     <message>
-      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
-      <translation>影片預覽已關閉。音訊仍會播放。可在「設定 → 介面」中重新開啟。</translation>
-    </message>
-    <message>
       <source>playback failed</source>
       <translation>播放失敗</translation>
     </message>
@@ -7782,14 +7770,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>使用作業系統的原生檔案選擇器。關閉此選項可改用應用程式內建選擇器，它會遵循應用程式主題，且在每個平台上外觀一致。</translation>
-    </message>
-    <message>
-      <source>Show video preview in the word curator</source>
-      <translation>在單字整理工具中顯示影片預覽</translation>
-    </message>
-    <message>
-      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
-      <translation>在單字整理工具與字幕檢視器中顯示影片播放器。若採集流程進入整理工具時應用程式意外關閉，請關閉此選項——關閉後音訊仍會播放。</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

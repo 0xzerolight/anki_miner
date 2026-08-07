@@ -4365,14 +4365,6 @@ Add %3 word(s) to your known list?</source>
       <translation>Únase a la comunidad en Discord</translation>
     </message>
     <message>
-      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
-      <translation>Anki Miner se cerró inesperadamente al iniciar la vista previa del video, así que la vista previa ahora está desactivada. Todo lo demás funciona; puede volver a activarla en Configuración.</translation>
-    </message>
-    <message>
-      <source>Open settings</source>
-      <translation>Abrir configuración</translation>
-    </message>
-    <message>
       <source>The desktop shortcut could not be created.</source>
       <translation>No se pudo crear el acceso directo de escritorio.</translation>
     </message>
@@ -7044,10 +7036,6 @@ Sus diccionarios instalados, audio, listas de frecuencia y tema se conservan.</t
       <translation>La vista previa del video está desactivada por %1. El audio sigue reproduciéndose.</translation>
     </message>
     <message>
-      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
-      <translation>La vista previa del video está desactivada. El audio sigue reproduciéndose. Actívela de nuevo en Configuración → Interfaz.</translation>
-    </message>
-    <message>
       <source>playback failed</source>
       <translation>error de reproducción</translation>
     </message>
@@ -7796,14 +7784,6 @@ Sus diccionarios instalados, audio, listas de frecuencia y tema se conservan.</t
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Use los selectores de archivos nativos del sistema operativo. Desactive esta opción para usar en su lugar el selector integrado de la aplicación, que sigue el tema de la aplicación y se ve igual en todas las plataformas.</translation>
-    </message>
-    <message>
-      <source>Show video preview in the word curator</source>
-      <translation>Mostrar vista previa del video en el curador de palabras</translation>
-    </message>
-    <message>
-      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
-      <translation>Muestra el reproductor de video en el curador de palabras y el visor de subtítulos. Desactive esto si la aplicación se cierra inesperadamente al llegar al curador durante una minería — el audio sigue funcionando sin él.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
