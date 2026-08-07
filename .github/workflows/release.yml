@@ -1045,6 +1045,16 @@ jobs:
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
+      # packaging/linux-launcher.sh became the AppImage's AppRun and the .deb's
+      # /usr/bin entrypoint. The bundled smoke above execs dist/AnkiMiner
+      # DIRECTLY, so it proves nothing about the shim — and a bug there does not
+      # degrade anything, it bricks the artifact. Runs before the AppImage build
+      # so a broken shim fails the matrix instead of shipping.
+      - name: Launcher shim smoke (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: scripts/launcher_smoke.sh dist/AnkiMiner
+
       - name: Install Inno Setup (pinned)
         if: runner.os == 'Windows'
         shell: pwsh

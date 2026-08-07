@@ -66,6 +66,36 @@ class TestArm:
         video_preview.arm_crash_marker()  # must not raise
 
 
+class TestNeverRaises:
+    """The contract is NEVER RAISES, not "never raises OSError".
+
+    All three entry points resolve the marker path through a lazy import of
+    runtime_state, which drags in the config manager. arm and clear are the sharp
+    ones: arm runs inside ``MpvVideoWidget.__init__`` before ``super()``, and
+    clear runs inside ``paintGL`` — an exception from either breaks the curator
+    for everybody in order to protect a diagnostic.
+    """
+
+    @pytest.fixture
+    def broken_path(self, monkeypatch):
+        def boom() -> None:
+            raise ImportError("runtime_state unavailable")
+
+        monkeypatch.setattr(video_preview, "_marker_path", boom)
+
+    def test_arm_swallows_a_non_oserror(self, broken_path):
+        video_preview.arm_crash_marker()
+
+    def test_clear_swallows_a_non_oserror(self, broken_path):
+        video_preview.clear_crash_marker()
+
+    def test_consume_reports_no_crash_when_the_path_is_unresolvable(self, broken_path):
+        """A boot step that cannot answer "did we crash?" must answer "no" —
+        auto-disabling the preview on a bookkeeping failure would be worse than
+        the crash it is guessing at."""
+        assert video_preview.consume_crash_marker() is None
+
+
 class TestPathPlacement:
     def test_not_inside_the_recovery_discard_roots(self, marker):
         """recovery_controller's Discard deletes everything is_within the

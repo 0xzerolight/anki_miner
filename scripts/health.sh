@@ -59,7 +59,10 @@ run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr and not e2e
 # addopts' -m "not e2e").
 run_hard     "pytest-asr" "${BIN}pytest" -m "asr and not e2e"
 run_tolerant "vulture"    "vulture" "${BIN}vulture"
-run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh packaging/linux-launcher.sh scripts/bundle_smoke.sh scripts/release_preflight.sh scripts/release_dryrun.sh
+run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh packaging/linux-launcher.sh scripts/bundle_smoke.sh scripts/launcher_smoke.sh scripts/release_preflight.sh scripts/release_dryrun.sh
+# The Linux entrypoint shim. Tolerant here (release.yml runs it as a hard gate
+# against the real bundle); local runs still surface a broken AppRun early.
+run_tolerant "launcher"   "bash" scripts/launcher_smoke.sh
 
 echo "================ SUMMARY ================"
 [ ${#skipped[@]} -gt 0 ] && echo "skipped: ${skipped[*]}"

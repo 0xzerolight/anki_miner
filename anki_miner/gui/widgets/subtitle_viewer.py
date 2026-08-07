@@ -423,9 +423,14 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
 
     def _show_loading_state(self) -> None:
         """Say that the picture is on its way — or say nothing, honestly."""
-        if not self.player_widget.backend_available:
+        if not self.player_widget.video_surface_available:
             # The player widget already explains why there is no picture, in
             # platform-aware words. Don't narrate it twice.
+            #
+            # The NARROWER property on purpose: backend_available stays True when
+            # only the GL surface is suppressed (preview off by setting or env),
+            # so gating on it promised "Loading video…" over a pane that had just
+            # said the preview was turned off.
             self.status_label.setText("")
             return
         self.status_label.setText(self.tr("Loading video…"))
