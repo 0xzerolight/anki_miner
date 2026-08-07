@@ -45,7 +45,7 @@ from anki_miner.gui.launch import get_effective_log_path
 from anki_miner.gui.presenters import GUIPresenter
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
+from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state, video_preview
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -1671,6 +1671,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             # Re-seed the app-wide file-dialog mode so a toggled setting applies to
             # the very next dialog without restart (Issue #100).
             file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
+            # Same reason for the video surface: a user who just turned the
+            # preview back on should get it in the very next curator.
+            video_preview.seed_from_config(committed_config)
             # Rebuild config-bound services so AnkiConnect URL/port edits take
             # effect: validation and the undo-delete AnkiService were frozen to the
             # startup config and would otherwise keep hitting the old endpoint.

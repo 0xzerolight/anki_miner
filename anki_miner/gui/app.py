@@ -50,7 +50,7 @@ from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, video_preview
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
@@ -623,6 +623,19 @@ def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
     if config is None:
         return
     file_dialogs.set_use_native(config.use_native_file_dialogs)
+
+
+def _seed_video_preview_mode(config: AnkiMinerConfig | None) -> None:
+    """Seed the app-wide video-surface gate from config.
+
+    Must run before ``QApplication`` so no widget can be constructed ahead of
+    the decision. A failed config load (``None``) keeps the default (enabled);
+    the ``ANKI_MINER_NO_VIDEO_PREVIEW`` override still applies on top, which is
+    what makes the env var usable when the config itself is what won't load.
+    """
+    if config is None:
+        return
+    video_preview.seed_from_config(config)
 
 
 @runtime_checkable
@@ -1504,6 +1517,7 @@ def main():
 
     # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
     _seed_file_dialog_mode(_early_config)
+    _seed_video_preview_mode(_early_config)
 
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
