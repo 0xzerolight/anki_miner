@@ -1,5 +1,6 @@
 """Main window for Anki Miner GUI."""
 
+import json
 import logging
 import sys
 from collections import Counter
@@ -231,6 +232,13 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self._run_optional_boot_step(
                 "legacy pitch migration",
                 self._maybe_migrate_legacy_pitch,
+            )
+            # Must run before any curator can open, and it commits config, so it
+            # sits with the other one-time durable-state steps rather than in the
+            # deferred post-setup batch.
+            self._run_optional_boot_step(
+                "video preview crash recovery",
+                self._maybe_auto_disable_video_preview,
             )
             self._run_optional_boot_step("environment snapshot", self._start_environment_snapshot)
 
@@ -585,6 +593,41 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             yield True
         finally:
             panel.release(token)
+
+    def _maybe_auto_disable_video_preview(self) -> None:
+        """Turn the video preview off when the last session died constructing it.
+
+        A GL-driver abort cannot be caught in-process, so the previous run left
+        a sentinel behind instead (armed before ``QOpenGLWidget.__init__``,
+        cleared on first paint). Finding one means the process died in between,
+        and since the curator is on the mandatory path for every video mine, the
+        user would otherwise hit it again on the very next run.
+
+        The remedy is a config write, not a hidden suppressor: the Settings
+        checkbox is then the single way back on, and there is no "config says
+        yes, something else says no" state to reason about.
+        """
+        marker = video_preview.consume_crash_marker()
+        if marker is None:
+            return
+        logger.warning("Previous session died while constructing the video surface: %s", marker)
+        if not self.config.video_preview_enabled:
+            # Already off (env override, or the user turned it off themselves).
+            # The marker still had to be consumed; saying it twice would not.
+            return
+        self.update_config(replace(self.config, video_preview_enabled=False))
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr(
+                    "Anki Miner closed unexpectedly while starting the video preview, so the "
+                    "preview is now off. Everything else works; you can turn it back on in Settings."
+                ),
+                details=json.dumps(marker, ensure_ascii=False, sort_keys=True),
+                action_id="video_preview.reenable",
+                action_text=self.tr("Open settings"),
+            ),
+            action=lambda: self.reveal_setting("video_preview"),
+        )
 
     def _report_shortcut_failure(self, details: str) -> None:
         """One place for the desktop-shortcut failure sentence (D24)."""

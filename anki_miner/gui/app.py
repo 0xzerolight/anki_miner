@@ -1647,6 +1647,10 @@ def main():
     # sys.exit so a requested restart (D39b-A) can start the replacement only
     # after the loop has returned and this process is done with its stores.
     exit_code = app.exec()
+    # A clean exit is proof the video surface did not kill us, even if the
+    # window was never painted (constructed, then quit). Without this second
+    # clear that case would look identical to a crash at the next launch.
+    video_preview.clear_crash_marker()
     _relaunch_if_requested(app)
     sys.exit(exit_code)
 

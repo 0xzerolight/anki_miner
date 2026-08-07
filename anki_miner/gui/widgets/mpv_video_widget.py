@@ -26,12 +26,14 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 from typing import Any
 
 from PyQt6.QtCore import QByteArray, pyqtSignal
 from PyQt6.QtGui import QGuiApplication, QOpenGLContext, QSurfaceFormat
 from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 
+from anki_miner.gui.utils import video_preview
 from anki_miner.utils.mpv_loader import MpvUnavailableError, load_mpv
 
 logger = logging.getLogger(__name__)
@@ -126,7 +128,28 @@ class MpvVideoWidget(QOpenGLWidget):
     _mpv_frame_update = pyqtSignal()
 
     def __init__(self, parent=None) -> None:
+        # ARM BEFORE super(). Everything below this line runs after Qt has
+        # created the widget, and creating it is what can abort the process on a
+        # host whose GL driver will not load — a field report died exactly here,
+        # inside QOpenGLWidget's constructor, with no Python traceback to catch.
+        #
+        # The sentinel is the only way to learn that happened: it is written
+        # durably now and removed in paintGL, so a file still on disk at the next
+        # launch means the process died in between and the boot step turns the
+        # preview off for the user. Statements before super().__init__ are legal
+        # and this is the one point no call site can bypass.
+        video_preview.arm_crash_marker(
+            platform_name=QGuiApplication.platformName(),
+            qt_qpa_platform=os.environ.get("QT_QPA_PLATFORM", ""),
+            xdg_session_type=os.environ.get("XDG_SESSION_TYPE", ""),
+        )
+        logger.info(
+            "video surface: constructing QOpenGLWidget platform=%s session=%s",
+            QGuiApplication.platformName(),
+            os.environ.get("XDG_SESSION_TYPE", "-"),
+        )
         super().__init__(parent)
+        self._painted_once = False
         # The widget declared no size at all, so a splitter could squeeze the
         # frame to nothing and the word curator did exactly that. A 16:9 box is
         # the smallest thing that still reads as video.
@@ -198,6 +221,15 @@ class MpvVideoWidget(QOpenGLWidget):
             self._create_render_context()
 
     def paintGL(self) -> None:
+        # Reaching paintGL proves Qt created the GL context, made it current,
+        # and the driver survived all three — so the crash the sentinel watches
+        # for did not happen. Cleared HERE and not on render_ready:
+        # _create_render_context returns silently (emitting neither signal) when
+        # libmpv is unavailable, and is never called at all with no player
+        # attached, so a perfectly healthy widget can fail to emit render_ready.
+        if not self._painted_once:
+            self._painted_once = True
+            video_preview.clear_crash_marker()
         if self._render_ctx is None:
             return
         ratio = self.devicePixelRatioF()
