@@ -459,3 +459,20 @@ class TestPreviewSuppressedInViewer:
         viewer = _viewer(qtbot, offset=0.0)
         viewer.nudge_offset(NUDGE_SECONDS)
         assert viewer.offset_overlay.text() == "Offset +0.10 s"
+
+    def test_does_not_promise_a_picture_that_is_not_coming(self, qtbot, fake_mpv):
+        """The status line must gate on video_surface_available, not on
+        backend_available — the latter stays True here, so it said "Loading
+        video…" directly above a pane saying the preview was turned off."""
+        viewer = _viewer(qtbot)
+        viewer._show_loading_state()
+        assert viewer.status_label.text() == ""
+
+
+class TestLoadingStateWithAPicture:
+    def test_says_loading_when_a_surface_exists(self, qtbot, fake_mpv):
+        """The other half of the gate: don't silence the status line for
+        everyone while fixing the suppressed case."""
+        viewer = _viewer(qtbot)
+        viewer._show_loading_state()
+        assert viewer.status_label.text() == "Loading video…"
