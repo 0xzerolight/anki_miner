@@ -4,22 +4,28 @@ Yomitan dictionary, frequency, AND pitch-accent zips are user-supplied
 (downloaded from third parties) and contain arbitrary file paths. We validate
 every entry name before extraction and cap the total uncompressed size to
 neutralize the standard path-traversal + zip-bomb attack surface. All three
-importers route through :func:`validate_zip_safe` before calling
-``ZipFile.extractall``.
+importers route through :func:`validate_zip_safe` and then :func:`extract_members`.
 """
 
 from __future__ import annotations
 
+import logging
 import zipfile
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import NoReturn
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
+
+logger = logging.getLogger(__name__)
 
 MAX_UNCOMPRESSED_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB
 
 INDEX_FILE_NAME = "index.json"
+
+# CPython's zipfile verifies each member against the crc-32 recorded in the
+# central directory and raises BadZipFile with this text on a mismatch.
+_BAD_CRC_MARKER = "Bad CRC-32"
 
 
 def find_redundant_index_dir(member_names: Iterable[str]) -> str | None:
@@ -97,3 +103,96 @@ def validate_zip_safe(zf: zipfile.ZipFile, tmp_root: Path) -> None:
     total = sum(info.file_size for info in zf.infolist())
     if total > MAX_UNCOMPRESSED_BYTES:
         raise SetupError(f"Zip uncompressed size exceeds limit ({total:,} > {MAX_UNCOMPRESSED_BYTES:,} bytes)")
+
+
+def extract_members(
+    zf: zipfile.ZipFile,
+    dest: Path,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> list[str]:
+    """Extract every member into ``dest``; return the names whose crc-32 lied.
+
+    Yomitan dictionaries are published with wrong checksums often enough to
+    matter, and nothing else in that ecosystem notices: Yomitan reads its zips
+    through JSZip, which defaults to ``checkCRC32: false``. CPython does check,
+    so an archive that imports fine everywhere else used to die here on
+    "Corrupt zip file: Bad CRC-32 for file 'term_meta_bank_1.json'" with no way
+    forward for the user.
+
+    So: strict read first, and *only* on a checksum mismatch re-extract that one
+    member with verification off. Everything else — a truncated archive, a bad
+    header, an unsupported compression method — still raises. Giving up the
+    checksum is affordable because it is not what protects the import: the JSON
+    parse, the ``format`` gate, and the per-entry schema checks all still run,
+    and they reject damage a checksum would only have flagged.
+
+    Raises:
+        OperationCancelled: If ``cancel_check`` returns True between members.
+        zipfile.BadZipFile: On any structural problem (callers map this to a
+            ``SetupError``).
+    """
+    mismatched: list[str] = []
+    for member in zf.infolist():
+        if cancel_check is not None and cancel_check():
+            raise OperationCancelled("Import cancelled")
+        try:
+            zf.extract(member, dest)
+        except zipfile.BadZipFile as exc:
+            if _BAD_CRC_MARKER not in str(exc):
+                raise
+            _extract_unverified(zf, member, dest)
+            mismatched.append(member.filename)
+    log_checksum_mismatches(mismatched)
+    return mismatched
+
+
+def read_member(zf: zipfile.ZipFile, name: str, *, limit: int) -> bytes:
+    """Read at most ``limit`` bytes of ``name``, tolerating a wrong crc-32.
+
+    Bounded counterpart to :func:`extract_members` for the metadata-only probes
+    that read ``index.json`` without extracting the archive. Reads ``limit + 1``
+    bytes so the caller can still detect an under-declared size.
+    """
+    info = zf.getinfo(name)
+    try:
+        with zf.open(info) as fp:
+            return fp.read(limit + 1)
+    except zipfile.BadZipFile as exc:
+        if _BAD_CRC_MARKER not in str(exc):
+            raise
+    log_checksum_mismatches([name])
+    original_crc = info.CRC
+    info.CRC = None  # type: ignore[assignment]  # ZipExtFile skips verification when unset
+    try:
+        with zf.open(info) as fp:
+            return fp.read(limit + 1)
+    finally:
+        info.CRC = original_crc
+
+
+def log_checksum_mismatches(names: list[str]) -> None:
+    """Warn once about members that were extracted despite a bad crc-32."""
+    if not names:
+        return
+    logger.warning(
+        "Zip checksum mismatch: count=%d members=%s — extracted anyway (contents may be stale or altered)",
+        len(names),
+        ", ".join(names[:5]) + (", …" if len(names) > 5 else ""),
+    )
+
+
+def _extract_unverified(zf: zipfile.ZipFile, member: zipfile.ZipInfo, dest: Path) -> None:
+    """Extract ``member`` with crc-32 verification suppressed.
+
+    ``ZipExtFile`` reads the expected checksum off the ``ZipInfo`` it is handed
+    and skips the comparison entirely when it is ``None``. Blanking the field
+    for the duration of one extract is the only seam CPython offers; it is
+    restored so nothing downstream sees a doctored entry.
+    """
+    original_crc = member.CRC
+    member.CRC = None  # type: ignore[assignment]
+    try:
+        zf.extract(member, dest)
+    finally:
+        member.CRC = original_crc
