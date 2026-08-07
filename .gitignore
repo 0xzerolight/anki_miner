@@ -101,3 +101,5 @@ logo_drafts/
 sdd/
 # uv lockfile — project uses pip+venv (see CLAUDE.md), not uv; stray artifact
 uv.lock
+# git worktrees for isolated feature work (superpowers:using-git-worktrees)
+.worktrees/
