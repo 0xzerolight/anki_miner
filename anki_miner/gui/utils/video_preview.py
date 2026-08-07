@@ -117,9 +117,12 @@ def arm_crash_marker(**fields: Any) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         _fsync_dir(path.parent)
-    except OSError:
+    except Exception:
         # A sentinel we cannot write is a lost diagnostic, never a reason to
-        # block the widget the user asked for.
+        # block the widget the user asked for. Broader than OSError on purpose:
+        # this runs INSIDE MpvVideoWidget.__init__, before super(), so anything
+        # escaping here breaks the curator for everybody to protect a
+        # diagnostic — and _marker_path's lazy import can raise ImportError.
         logger.debug("could not arm the video-preview crash marker", exc_info=True)
 
 
@@ -138,7 +141,9 @@ def clear_crash_marker() -> None:
     """Remove the sentinel. Idempotent; never raises."""
     try:
         _marker_path().unlink(missing_ok=True)
-    except OSError:
+    except Exception:
+        # Same never-raises contract as arm_crash_marker: this one is called
+        # from paintGL, where an exception reaches Qt's paint machinery.
         logger.debug("could not clear the video-preview crash marker", exc_info=True)
 
 
@@ -149,7 +154,13 @@ def consume_crash_marker() -> dict[str, Any] | None:
     *existence* is the signal; its JSON is only the detail line. Returning it
     twice, or wedging boot on a truncated write, would both be worse.
     """
-    path = _marker_path()
+    try:
+        path = _marker_path()
+    except Exception:
+        # Resolving the path is not free (it imports the config manager), and a
+        # boot step that cannot answer "did we crash?" must answer "no".
+        logger.debug("could not resolve the video-preview crash marker", exc_info=True)
+        return None
     try:
         raw = path.read_text(encoding="utf-8")
     except OSError:
