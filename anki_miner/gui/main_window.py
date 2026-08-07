@@ -633,7 +633,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 action_id="video_preview.reenable",
                 action_text=self.tr("Open settings"),
             ),
-            action=lambda: self.reveal_setting("video_preview"),
+            # "ui." prefix: UISettingsPanel namespaces its anchors, and
+            # reveal_setting silently ignores an id it cannot resolve — so a
+            # bare "video_preview" here would give the user a dead button.
+            action=lambda: self.reveal_setting("ui.video_preview"),
         )
 
     def _report_shortcut_failure(self, details: str) -> None:

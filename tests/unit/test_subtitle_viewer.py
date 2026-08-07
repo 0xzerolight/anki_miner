@@ -431,3 +431,31 @@ class TestSubtitleViewerReleases:
         viewer = _viewer(qtbot, entries=[])
         viewer.align_button.click()
         fake_mpv["player"].terminate.assert_called_once()
+
+
+class TestPreviewSuppressedInViewer:
+    """The viewer is an audio-alignment tool, so losing the picture must not
+    lose the tool. Same gate as the curator, second consumer."""
+
+    @pytest.fixture(autouse=True)
+    def _off(self, monkeypatch):
+        from anki_miner.gui.utils import video_preview
+
+        video_preview._reset_for_tests()
+        monkeypatch.setattr(video_preview, "_enabled", False)
+        yield
+        video_preview._reset_for_tests()
+
+    def test_no_gl_widget(self, qtbot, fake_mpv):
+        from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+
+        viewer = _viewer(qtbot)
+        assert viewer.player_widget.video_widget is None
+        assert viewer.findChildren(QOpenGLWidget) == []
+
+    def test_the_alignment_controls_still_work(self, qtbot, fake_mpv):
+        """Offset nudging is the whole point of this screen and is driven by
+        audio; it must survive with no picture."""
+        viewer = _viewer(qtbot, offset=0.0)
+        viewer.nudge_offset(NUDGE_SECONDS)
+        assert viewer.offset_overlay.text() == "Offset +0.10 s"

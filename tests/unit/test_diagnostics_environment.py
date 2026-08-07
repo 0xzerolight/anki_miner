@@ -6,7 +6,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.diagnostics.environment import (
     EnvironmentSnapshot,
     collect_environment,
@@ -107,3 +107,78 @@ def test_importing_diagnostics_does_not_import_pyqt6() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+class TestDisplayAndGlFields:
+    """The fields added after a field report the bundle could not explain.
+
+    An AppImage aborted inside QOpenGLWidget's constructor on every video mine
+    and the bundle named neither the driver, nor the session type, nor what the
+    loader was searching — so the cause stayed a hypothesis.
+    """
+
+    def test_platform_name_is_passed_in_not_probed(self):
+        """QGuiApplication.platformName() is GUI-thread only and this runs on a
+        worker, so it is captured at the call site and handed over."""
+        snapshot = collect_environment(create_default_config(), platform_name="wayland")
+        assert snapshot.platform_name == "wayland"
+
+    def test_platform_name_defaults_without_a_qapplication(self):
+        assert collect_environment(create_default_config()).platform_name == "-"
+
+    def test_session_and_qt_env_read_the_environment(self, monkeypatch):
+        monkeypatch.setenv("XDG_SESSION_TYPE", "wayland")
+        monkeypatch.setenv("QT_QPA_PLATFORM", "xcb")
+        snapshot = collect_environment(create_default_config())
+        assert "XDG_SESSION_TYPE=wayland" in snapshot.session_type
+        assert "QT_QPA_PLATFORM=xcb" in snapshot.qt_env
+
+    def test_unset_env_renders_as_a_dash_not_an_empty_string(self, monkeypatch):
+        for name in ("XDG_SESSION_TYPE", "WAYLAND_DISPLAY", "DISPLAY"):
+            monkeypatch.delenv(name, raising=False)
+        assert collect_environment(create_default_config()).session_type == "-"
+
+    def test_gpu_drivers_never_lists_connectors(self):
+        """/sys/class/drm/card[0-9]* also matches card0-DP-1 and friends, which
+        have no driver and would bury the two lines that matter."""
+        value = collect_environment(create_default_config()).gpu_drivers
+        assert "-DP-" not in value
+        assert "-HDMI-" not in value
+
+    def test_every_new_field_is_rendered(self):
+        lines = format_environment_lines(collect_environment(create_default_config()))
+        rendered = {line.split(":", 1)[0] for line in lines}
+        assert {
+            "platform_name",
+            "session_type",
+            "qt_env",
+            "gpu_drivers",
+            "ld_library_path",
+            "bundled_cxx_runtime",
+            "libmpv_source",
+            "video_preview",
+        } <= rendered
+
+    def test_libmpv_is_reported_but_never_loaded(self, monkeypatch):
+        """A diagnostics probe that dlopened libmpv would change program state
+        and risk the very abort it is trying to describe."""
+        from anki_miner.utils import mpv_loader
+
+        def explode():
+            raise AssertionError("collect_environment must not load libmpv")
+
+        monkeypatch.setattr(mpv_loader, "load_mpv", explode)
+        snapshot = collect_environment(create_default_config())
+        assert "resolved=" in snapshot.libmpv_source
+
+    def test_still_never_raises_when_every_new_probe_fails(self, monkeypatch):
+        from anki_miner.diagnostics import environment as env_module
+
+        for name in ("_session_type", "_gpu_drivers", "_bundled_cxx_runtime", "_libmpv_source"):
+            monkeypatch.setattr(env_module, name, _boom)
+        snapshot = collect_environment(create_default_config())
+        assert snapshot.gpu_drivers.startswith("<unavailable:")
+
+
+def _boom():
+    raise RuntimeError("probe failed")

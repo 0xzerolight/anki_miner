@@ -642,3 +642,93 @@ class TestSubtitleStrip:
         widget._update_subtitle(1.5)
         block = widget.subtitle_strip.document().firstBlock()
         assert block.blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent
+
+
+class TestPreviewSuppressed:
+    """The preview turned off — by setting or by env.
+
+    Distinct from libmpv-absent (``TestMpvUnavailable``): libmpv loaded fine
+    here, and audio is expected to keep working. Only the GL surface is gone.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _off(self, monkeypatch):
+        from anki_miner.gui.utils import video_preview
+
+        video_preview._reset_for_tests()
+        monkeypatch.setattr(video_preview, "_enabled", False)
+        yield
+        video_preview._reset_for_tests()
+
+    def test_the_gl_widget_is_never_constructed(self, qtbot, fake_mpv):
+        """THE load-bearing assertion of this whole change. Building the
+        QOpenGLWidget is what aborts the process on an affected host, so a test
+        that only checked visibility would pass while the app still died."""
+        with patch(f"{MODULE}.MpvVideoWidget", side_effect=AssertionError("GL widget constructed")):
+            widget = _widget(qtbot)
+        assert widget.video_widget is None
+        assert not widget.video_surface_available
+
+    def test_backend_is_still_available(self, qtbot, fake_mpv):
+        """libmpv loaded; only the surface is suppressed. Consumers that gate on
+        backend_available must not treat this as "no player at all"."""
+        widget = _widget(qtbot)
+        assert widget.backend_available
+
+    def test_notice_is_the_preview_text_not_the_install_advice(self, qtbot, fake_mpv):
+        """Telling someone to install libmpv when libmpv is already loaded and
+        they simply switched the preview off sends them in circles."""
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, 0.0)
+        text = widget._backend_notice_label.text()
+        assert widget._backend_notice_label.isVisibleTo(widget)
+        assert "Settings" in text
+        assert "libmpv" not in text
+
+    def test_env_suppression_names_the_variable(self, qtbot, fake_mpv, monkeypatch):
+        """Someone running with the env var set has no Settings checkbox that
+        would explain what they are seeing."""
+        from anki_miner.gui.utils import video_preview
+
+        monkeypatch.setenv(video_preview.ENV_VAR, "1")
+        video_preview._reset_for_tests()
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, 0.0)
+        assert video_preview.ENV_VAR in widget._backend_notice_label.text()
+
+    def test_player_is_built_audio_only(self, qtbot, fake_mpv):
+        """A vo=libmpv core with no render context to attach logs
+        'No render context set.' instead of playing, so video must be declined
+        up front rather than left to fail."""
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, 0.0)
+        assert fake_mpv["factory"].call_args.kwargs["video"] is False
+
+    def test_loadfile_is_immediate_not_deferred(self, qtbot, fake_mpv_no_ctx):
+        """With no surface no render context will ever exist, so the deferred
+        path would park the load forever and play nothing."""
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, 0.0)
+        assert widget._pending_load is None
+        fake_mpv_no_ctx["player"].loadfile.assert_called_once_with(str(VIDEO))
+
+    def test_teardown_still_terminates_the_core(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, 0.0)
+        with patch(f"{MODULE}.terminate_mpv_player") as terminate:
+            widget._teardown_player()
+        terminate.assert_called_once()
+        assert widget.player is None
+
+
+class TestMpvUnavailableSkipsGlWidget:
+    def test_no_gl_widget_when_libmpv_is_absent(self, qtbot):
+        """Pins the second half of the gate: the libmpv-absent path used to
+        build a QOpenGLWidget purely to draw a text notice over it, sharing the
+        GL-abort blast radius for no benefit."""
+        with (
+            patch(f"{MODULE}.mpv_available", return_value=False),
+            patch(f"{MODULE}.MpvVideoWidget", side_effect=AssertionError("GL widget constructed")),
+        ):
+            widget = _widget(qtbot)
+        assert widget.video_widget is None

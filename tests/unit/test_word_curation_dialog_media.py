@@ -777,3 +777,40 @@ class TestLookupIsAsynchronous:
         on_error("boom")
 
         assert "No offline dictionary entry" in dlg.definition_view.toHtml()
+
+
+class TestPreviewSuppressedInCurator:
+    """The curator with the video preview turned off.
+
+    The pane STAYS (so ``_side_key`` and every saved splitter layout stay too);
+    only the GL surface inside it is gone.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _off(self, monkeypatch):
+        from anki_miner.gui.utils import video_preview
+
+        video_preview._reset_for_tests()
+        monkeypatch.setattr(video_preview, "_enabled", False)
+        yield
+        video_preview._reset_for_tests()
+
+    def test_no_qopenglwidget_anywhere_in_the_dialog(self, qtbot, words, existing_video):
+        """The curator is the mandatory path for every video mine, so this is
+        the assertion that says that path no longer touches GL."""
+        from PyQt6.QtOpenGLWidgets import QOpenGLWidget
+
+        ctx = _make_media_context(video_file=existing_video)
+        dlg = WordCurationDialog(words, media_context=ctx, lookup_fn=lambda _term: [])
+        qtbot.addWidget(dlg)
+        assert dlg.findChildren(QOpenGLWidget) == []
+
+    def test_player_pane_and_side_key_are_unchanged(self, qtbot, words, existing_video):
+        """Gating the pane itself would change _side_key and orphan every saved
+        side-split blob. Gating the child does not."""
+        ctx = _make_media_context(video_file=existing_video)
+        dlg = WordCurationDialog(words, media_context=ctx, lookup_fn=lambda _term: [])
+        qtbot.addWidget(dlg)
+        assert dlg._show_player
+        assert "player" in dlg._side_key
+        assert hasattr(dlg, "player_widget")

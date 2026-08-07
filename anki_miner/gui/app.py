@@ -378,7 +378,7 @@ def _enable_faulthandler(crash_path: Path) -> None:
         # leave the handler writing into a recycled descriptor.
         _crash_stream = open(crash_path, "a", buffering=1, encoding="utf-8", errors="replace")  # noqa: SIM115
         faulthandler.enable(file=_crash_stream, all_threads=True)
-    except Exception:  # noqa: BLE001 - a diagnostic must never block startup
+    except Exception:  # noqa: BLE001 — bucket A: boot continues without native-crash capture.
         _crash_stream = None
         logger.debug("could not enable faulthandler", exc_info=True)
 
@@ -398,6 +398,8 @@ def _fold_previous_crash(crash_path: Path) -> None:
     if not previous:
         return
     logger.error("Previous session ended in a native crash:\n%s", previous)
+    # The stack is already logged above; a failed rotate only risks re-reporting
+    # it next launch, never losing it. (bucket A)
     with contextlib.suppress(OSError):
         crash_path.replace(crash_path.with_suffix(crash_path.suffix + ".1"))
 

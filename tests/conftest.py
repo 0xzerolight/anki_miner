@@ -473,6 +473,25 @@ def _reset_theme_state():
 
 
 @pytest.fixture(autouse=True)
+def _reset_video_preview_state():
+    """Drop video_preview's process-lifetime caches between tests.
+
+    Three pieces of module state, all of which bleed on an xdist worker: the
+    seeded enabled flag, the once-resolved env decision, and the armed-once
+    crash-marker flag (which would otherwise let the FIRST test that builds a
+    player suppress every later test's marker write). Same guarded-lookup shape
+    as the Theme reset above, for the same import-cost reason.
+    """
+    module = sys.modules.get("anki_miner.gui.utils.video_preview")
+    if module is not None:
+        module._reset_for_tests()
+    yield
+    module = sys.modules.get("anki_miner.gui.utils.video_preview")
+    if module is not None:
+        module._reset_for_tests()
+
+
+@pytest.fixture(autouse=True)
 def _no_real_ytdlp_autoupdate(monkeypatch):
     """Stop real-MainWindow tests spawning the live yt-dlp self-update thread.
 
