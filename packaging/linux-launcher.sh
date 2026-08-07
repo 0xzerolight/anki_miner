@@ -37,13 +37,44 @@ _max_glibcxx() {
     LC_ALL=C grep -ao 'GLIBCXX_3\.4\.[0-9]\+' "$1" 2>/dev/null | sort -u -V | tail -1
 }
 
+# Absolute path to ldconfig, or "" if it cannot be found. NOT assumed to be on
+# PATH: Debian's /etc/profile leaves the sbin directories off a NON-ROOT user's
+# PATH, so a bare `ldconfig -p` fails for exactly the .deb audience and the whole
+# shim would silently no-op. Ubuntu keeps them, which is why this only shows up
+# on some hosts.
+_ldconfig_bin() {
+    local candidate
+    if candidate=$(command -v ldconfig 2>/dev/null) && [ -n "$candidate" ]; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+    for candidate in /sbin/ldconfig /usr/sbin/ldconfig; do
+        if [ -x "$candidate" ]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+}
+
+# Path to the host's 64-bit copy of a soname, or "" when it cannot be resolved.
+# The match stops after the arch tag rather than requiring a closing paren:
+# ldconfig can append an ABI note — "(libc6,x86-64, OS ABI: Linux 3.2.0)" — and
+# an over-anchored pattern would miss those hosts and no-op instead.
+_host_lib() {
+    local ldconfig
+    ldconfig=$(_ldconfig_bin)
+    [ -n "$ldconfig" ] || return 0
+    "$ldconfig" -p 2>/dev/null |
+        awk -v soname="$1" 'index($0, soname " (libc6,x86-64") {print $NF; exit}'
+}
+
 _prefer_host_cxx_runtime() {
     local bundled="$_internal/libstdc++.so.6"
     # Nothing bundled means nothing to shadow the host with. Done.
     [ -e "$bundled" ] || return 0
 
     local host
-    host=$(ldconfig -p 2>/dev/null | awk '/libstdc\+\+\.so\.6 \(libc6,x86-64\)/ {print $NF; exit}')
+    host=$(_host_lib libstdc++.so.6)
     [ -n "$host" ] && [ -r "$host" ] || return 0
 
     local host_ver bundled_ver newest
@@ -60,7 +91,7 @@ _prefer_host_cxx_runtime() {
     # libgcc_s travels with libstdc++; mixing a host libstdc++ with a bundled
     # libgcc_s is its own ABI hazard, so move them together or not at all.
     local host_gcc
-    host_gcc=$(ldconfig -p 2>/dev/null | awk '/libgcc_s\.so\.1 \(libc6,x86-64\)/ {print $NF; exit}')
+    host_gcc=$(_host_lib libgcc_s.so.1)
     if [ -n "$host_gcc" ] && [ -r "$host_gcc" ]; then
         preload="$preload:$host_gcc"
     fi
