@@ -11,6 +11,7 @@ import logging
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtOpenGLWidgets import QOpenGLWidget
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
@@ -197,6 +198,75 @@ class TestRenderReady:
             widget._create_render_context()
         assert ready == []
         assert widget.has_render_context is False
+
+
+class TestCrashSentinel:
+    """The two lines that make a native abort survivable.
+
+    Constructing this widget is what kills the process on a host whose GL driver
+    will not load — no Python traceback, nothing catchable. The sentinel is the
+    only way the next launch learns it happened, and it is exactly two calls:
+    armed before ``super().__init__``, cleared on the first real paint. Neither
+    was pinned, so a refactor could quietly move or drop either one.
+    """
+
+    @pytest.fixture
+    def sentinel(self):
+        with (
+            patch(f"{MODULE}.video_preview.arm_crash_marker") as arm,
+            patch(f"{MODULE}.video_preview.clear_crash_marker") as clear,
+        ):
+            yield {"arm": arm, "clear": clear}
+
+    def test_construction_arms_the_marker(self, qtbot, sentinel):
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        sentinel["arm"].assert_called_once()
+        fields = sentinel["arm"].call_args.kwargs
+        # The display stack is the whole diagnostic value of the payload: which
+        # platform plugin and session type were in play when the driver died.
+        assert set(fields) == {"platform_name", "qt_qpa_platform", "xdg_session_type"}
+        sentinel["clear"].assert_not_called()
+
+    def test_arming_precedes_the_qt_constructor(self, sentinel):
+        """Ordering IS the feature. The abort happens inside QOpenGLWidget's
+        constructor, so a marker armed after it would never be written on the
+        one host that needs it. Standing in a raise for the abort is the closest
+        a test gets: a real SIGABRT would take the runner with it.
+
+        No qtbot registration — the patched constructor means no C++ object was
+        ever created, so there is nothing to tear down.
+        """
+        with (
+            patch.object(QOpenGLWidget, "__init__", side_effect=RuntimeError("simulated GL abort")),
+            pytest.raises(RuntimeError),
+        ):
+            MpvVideoWidget()
+        sentinel["arm"].assert_called_once()
+
+    def test_first_paint_clears_it_once(self, qtbot, sentinel):
+        """Reaching paintGL proves Qt made a context, made it current, and the
+        driver survived all three."""
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        widget.paintGL()
+        widget.paintGL()
+        sentinel["clear"].assert_called_once()
+
+    def test_render_ready_does_not_clear_it(self, qtbot, sentinel):
+        """The trap this replaced. _create_render_context returns silently with
+        libmpv absent and is never called at all with no player attached, so a
+        perfectly healthy widget can fail to emit render_ready — clearing there
+        would disable the preview for people whose GL is fine."""
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        widget._player = MagicMock()
+        ready = []
+        widget.render_ready.connect(lambda: ready.append(True))
+        with patch(f"{MODULE}.load_mpv", return_value=MagicMock()):
+            widget._create_render_context()
+        assert ready == [True]
+        sentinel["clear"].assert_not_called()
 
 
 class TestGlProbe:
