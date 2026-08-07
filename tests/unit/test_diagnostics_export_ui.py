@@ -156,7 +156,9 @@ def test_success_sets_status_without_showing_a_banner(main_window, monkeypatch, 
         "pick_save_file",
         lambda *_args, on_done, **_kwargs: on_done(str(target)),
     )
-    monkeypatch.setattr(main_window_module, "collect_environment", lambda _config: _snapshot(tmp_path), raising=False)
+    monkeypatch.setattr(
+        main_window_module, "collect_environment", lambda _config, **_kwargs: _snapshot(tmp_path), raising=False
+    )
     monkeypatch.setattr(
         main_window_module,
         "write_diagnostics_bundle",
@@ -187,7 +189,9 @@ def test_failure_shows_retry_issue_without_a_modal(main_window, monkeypatch, tmp
         raise OSError("disk full")
 
     monkeypatch.setattr(main_window_module.file_dialogs, "pick_save_file", pick_save_file)
-    monkeypatch.setattr(main_window_module, "collect_environment", lambda _config: _snapshot(tmp_path), raising=False)
+    monkeypatch.setattr(
+        main_window_module, "collect_environment", lambda _config, **_kwargs: _snapshot(tmp_path), raising=False
+    )
     monkeypatch.setattr(main_window_module, "write_diagnostics_bundle", fail_write, raising=False)
     _install_immediate_runner(monkeypatch, main_window_module)
     for method in ("information", "warning", "critical", "question", "about"):
@@ -286,8 +290,11 @@ def test_environment_snapshot_is_dispatched_before_collection(main_window, monke
         captured.update(work=work, on_done=on_done)
         return object()
 
-    def collect(config):
+    def collect(config, **kwargs):
         collections.append(config)
+        # platformName() is read on the GUI thread and handed to the worker;
+        # the worker itself must never touch Qt.
+        assert "platform_name" in kwargs
         return snapshot
 
     monkeypatch.setattr(main_window_module, "run_off_thread", hold_runner)

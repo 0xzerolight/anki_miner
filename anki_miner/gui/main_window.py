@@ -12,7 +12,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QIcon, QKeySequence, QShortcut, QShowEvent, QWindowStateChangeEvent
+from PyQt6.QtGui import (
+    QGuiApplication,
+    QIcon,
+    QKeySequence,
+    QShortcut,
+    QShowEvent,
+    QWindowStateChangeEvent,
+)
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -1039,9 +1046,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         target = Path(path_str)
         config = self.config
         health_report = self._health_report
+        platform_name = QGuiApplication.platformName()
 
         def work() -> BundleResult:
-            snapshot = collect_environment(config)
+            snapshot = collect_environment(config, platform_name=platform_name)
             rows = []
             for key in HEALTH_KEYS:
                 check = health_report.get(key)
@@ -1976,9 +1984,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
     def _start_environment_snapshot(self) -> None:
         """Dispatch the blocking environment probes to a worker."""
+        # platformName() is GUI-thread only, so it is read HERE and passed in —
+        # collect_environment itself stays Qt-free and worker-safe.
+        platform_name = QGuiApplication.platformName()
         run_off_thread(
             self,
-            lambda: collect_environment(self.config),
+            lambda: collect_environment(self.config, platform_name=platform_name),
             self._on_environment_snapshot,
         )
 

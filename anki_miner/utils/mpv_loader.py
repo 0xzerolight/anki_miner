@@ -49,6 +49,7 @@ __all__ = [
     "load_mpv",
     "mpv_available",
     "mpv_probe_main",
+    "resolved_source",
     "terminate_mpv_player",
 ]
 
@@ -242,6 +243,16 @@ def _load_mpv_uncached() -> Any:
         raise MpvUnavailableError(f"libmpv not available via system search: {exc}") from exc
     _RESOLVED_SOURCE = "system"
     return mpv_module
+
+
+def resolved_source() -> str | None:
+    """Return which libmpv this process resolved (``env:``/``bundled:``/``system``).
+
+    Reports only what a real load already decided — it never triggers one. A
+    diagnostics probe that dlopened libmpv would both change program state and
+    risk the failure it is trying to describe.
+    """
+    return _RESOLVED_SOURCE
 
 
 def mpv_available() -> bool:
