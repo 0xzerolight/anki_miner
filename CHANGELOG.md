@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 
 ### Removed
+- **The word curator's video-preview switch**, along with the crash marker that turned it off by itself. The abort it guarded was a packaging fault — the Linux bundle's C++ runtime shadowing the host graphics driver — and that is fixed at the source, so the switch was a permanent setting standing in for a bug that no longer exists. `ANKI_MINER_NO_VIDEO_PREVIEW=1` still turns the preview off for anyone who needs it, and the notice on the pane names it.
 
 ## [2.9.2] - 2026-08-07
 
