@@ -30,7 +30,11 @@ from anki_miner.services.dictionary.schema_validation import (
     ensure_bank_array,
     is_valid_meta_bank_entry,
 )
-from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
+from anki_miner.services.dictionary.zip_safety import (
+    extract_members,
+    raise_if_index_nested,
+    validate_zip_safe,
+)
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.logging_ext import log_summary
 
@@ -166,7 +170,7 @@ def open_yomitan_meta_banks(
         try:
             with zipfile.ZipFile(zip_path, "r") as zf:
                 validate_zip_safe(zf, tmp_path)
-                zf.extractall(tmp_path)
+                extract_members(zf, tmp_path)
         except zipfile.BadZipFile as e:
             logger.warning(
                 "Yomitan meta import failed: stage=extract exc=%s",

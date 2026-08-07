@@ -36,7 +36,12 @@ from anki_miner.services.dictionary.yomitan_renderer import (
     dict_media_safe_basename,
     render_glossary_entry,
 )
-from anki_miner.services.dictionary.zip_safety import raise_if_index_nested, validate_zip_safe
+from anki_miner.services.dictionary.zip_safety import (
+    extract_members,
+    raise_if_index_nested,
+    read_member,
+    validate_zip_safe,
+)
 from anki_miner.utils.slug import slugify
 
 ProgressFn = Callable[[int, int, str], None]
@@ -118,9 +123,7 @@ def import_yomitan_zip(
                 validate_zip_safe(zf, tmp_path)
                 if progress:
                     progress(0, 0, "Extracting archive")
-                for member in zf.infolist():
-                    _raise_if_cancelled(cancel_check)
-                    zf.extract(member, tmp_path)
+                extract_members(zf, tmp_path, cancel_check=cancel_check)
         except zipfile.BadZipFile as e:
             raise SetupError(f"Corrupt zip file: {e}") from e
 
@@ -610,10 +613,9 @@ def _peek_zip_title_revision(zip_path: Path) -> tuple[str, str]:
                 raise SetupError(
                     f"index.json is implausibly large ({info.file_size:,} > {MAX_INDEX_JSON_BYTES:,} bytes)"
                 )
-            with zf.open("index.json") as fp:
-                # Bounded read (+1 to detect overflow past the cap) so a zip that
-                # under-declares its size still cannot balloon memory.
-                raw_bytes = fp.read(MAX_INDEX_JSON_BYTES + 1)
+            # Bounded read (+1 to detect overflow past the cap) so a zip that
+            # under-declares its size still cannot balloon memory.
+            raw_bytes = read_member(zf, "index.json", limit=MAX_INDEX_JSON_BYTES)
             if len(raw_bytes) > MAX_INDEX_JSON_BYTES:
                 raise SetupError(f"index.json exceeds the {MAX_INDEX_JSON_BYTES:,}-byte cap")
             raw = raw_bytes.decode("utf-8")
