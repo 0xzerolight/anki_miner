@@ -9,6 +9,8 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
   marker before exiting.
 """
 
+import contextlib
+import faulthandler
 import locale
 import logging
 import os
@@ -20,7 +22,7 @@ from dataclasses import dataclass
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from PyQt6.QtCore import (
     PYQT_VERSION_STR,
@@ -50,7 +52,7 @@ from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils import file_dialogs, video_preview
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
@@ -331,6 +333,75 @@ class _OwnerOnlyRotatingFileHandler(RotatingFileHandler):
         if os.name == "posix":
             os.chmod(self.baseFilename, 0o600)
         return super()._open()
+
+
+#: Native-crash sink. Separate from ``anki_miner.log`` on purpose — see
+#: :func:`_enable_faulthandler`. Collected into the diagnostics bundle.
+CRASH_LOG_NAME = "anki_miner.crash"
+
+#: Kept for the life of the process: faulthandler holds the raw fd, so letting
+#: the stream be garbage-collected would leave it writing into a closed
+#: descriptor (or, worse, whichever file later claims that number).
+_crash_stream: Any = None
+
+
+def crash_stream() -> Any:
+    """Return the open native-crash stream, or None if it could not be opened."""
+    return _crash_stream
+
+
+def _enable_faulthandler(crash_path: Path) -> None:
+    """Route native crashes (SIGSEGV/SIGABRT/SIGBUS/SIGILL/SIGFPE) to a file.
+
+    Python's own traceback machinery never runs for these: the process is simply
+    gone, which is exactly how a GL-driver abort inside ``QOpenGLWidget``
+    presented in the field — eight identical deaths and not one line in the log
+    explaining any of them.
+
+    A DEDICATED file, never the rotating log stream: ``RotatingFileHandler``
+    closes and reopens its file on rollover while ``faulthandler`` keeps the raw
+    fd, so after the first rollover the handler would write into whatever now
+    owns that descriptor.
+
+    Any previous contents are folded into the normal log first (see
+    :func:`_fold_previous_crash`), so a user who sends only ``anki_miner.log``
+    still ships the native stack.
+    """
+    global _crash_stream
+    if _crash_stream is not None:
+        return
+    try:
+        crash_path.parent.mkdir(parents=True, exist_ok=True)
+        _fold_previous_crash(crash_path)
+        # noqa SIM115: deliberately never closed. faulthandler holds the raw fd
+        # for the life of the process — a context manager would close it and
+        # leave the handler writing into a recycled descriptor.
+        _crash_stream = open(crash_path, "a", buffering=1, encoding="utf-8", errors="replace")  # noqa: SIM115
+        faulthandler.enable(file=_crash_stream, all_threads=True)
+    except Exception:  # noqa: BLE001 — bucket A: boot continues without native-crash capture.
+        _crash_stream = None
+        logger.debug("could not enable faulthandler", exc_info=True)
+
+
+def _fold_previous_crash(crash_path: Path) -> None:
+    """Log a previous session's native stack, then rotate the crash file.
+
+    The crash file is written by a process that is already dying, so nothing
+    reports it at the time. Folding it into ``anki_miner.log`` at the next start
+    is what puts it in front of whoever reads the log — and in the diagnostics
+    bundle, which is usually all a maintainer gets.
+    """
+    try:
+        previous = crash_path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return
+    if not previous:
+        return
+    logger.error("Previous session ended in a native crash:\n%s", previous)
+    # The stack is already logged above; a failed rotate only risks re-reporting
+    # it next launch, never losing it. (bucket A)
+    with contextlib.suppress(OSError):
+        crash_path.replace(crash_path.with_suffix(crash_path.suffix + ".1"))
 
 
 def _configure_logging(log_path: Path) -> None:
@@ -623,6 +694,19 @@ def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
     if config is None:
         return
     file_dialogs.set_use_native(config.use_native_file_dialogs)
+
+
+def _seed_video_preview_mode(config: AnkiMinerConfig | None) -> None:
+    """Seed the app-wide video-surface gate from config.
+
+    Must run before ``QApplication`` so no widget can be constructed ahead of
+    the decision. A failed config load (``None``) keeps the default (enabled);
+    the ``ANKI_MINER_NO_VIDEO_PREVIEW`` override still applies on top, which is
+    what makes the env var usable when the config itself is what won't load.
+    """
+    if config is None:
+        return
+    video_preview.seed_from_config(config)
 
 
 @runtime_checkable
@@ -1476,6 +1560,7 @@ def main():
         _configure_logging(_default_log_path)
     except Exception:  # noqa: BLE001 — bucket A: boot continues with stderr logging.
         logger.exception("Failed to configure startup log; continuing with stderr logging")
+    _enable_faulthandler(ANKI_MINER_HOME / CRASH_LOG_NAME)
     try:
         _early_config, _allow_store_collection = GUIConfigManager.load_config_with_provenance()
         _log_path = _early_config.log_path
@@ -1504,6 +1589,7 @@ def main():
 
     # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
     _seed_file_dialog_mode(_early_config)
+    _seed_video_preview_mode(_early_config)
 
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
@@ -1633,6 +1719,10 @@ def main():
     # sys.exit so a requested restart (D39b-A) can start the replacement only
     # after the loop has returned and this process is done with its stores.
     exit_code = app.exec()
+    # A clean exit is proof the video surface did not kill us, even if the
+    # window was never painted (constructed, then quit). Without this second
+    # clear that case would look identical to a crash at the next launch.
+    video_preview.clear_crash_marker()
     _relaunch_if_requested(app)
     sys.exit(exit_code)
 

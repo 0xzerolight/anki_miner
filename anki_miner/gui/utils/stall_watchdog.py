@@ -273,15 +273,21 @@ class StallWatchdog:
     def _format_main_stack(self) -> str:
         """Return the GUI thread's current stack as text, best-effort.
 
-        Falls back to dumping all tracebacks to stderr when the frame for the
-        main thread cannot be resolved.
+        Falls back to dumping all tracebacks to the crash file when the frame
+        for the main thread cannot be resolved.
         """
         frame = sys._current_frames().get(self._main_thread_id)
         if frame is not None:
             return "".join(traceback.format_stack(frame))
-        # Frame unavailable — dump everything to stderr as a backstop.
-        faulthandler.dump_traceback(file=sys.stderr)
-        return "(main-thread frame unavailable; traceback dumped to stderr)"
+        # Frame unavailable — dump everything as a backstop. To the crash file
+        # rather than stderr: a frozen build has no stderr to read, so that
+        # backstop used to discard the only evidence it had.
+        from anki_miner.gui.app import crash_stream
+
+        sink = crash_stream() or sys.stderr
+        with contextlib.suppress(Exception):
+            faulthandler.dump_traceback(file=sink)
+        return "(main-thread frame unavailable; traceback dumped to the crash log)"
 
 
 def install_stall_watchdog(window: QObject) -> StallWatchdog:

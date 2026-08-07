@@ -114,6 +114,13 @@ def collect_log_members() -> tuple[list[tuple[str, bytes]], list[str]]:
     early_path = _early_crash_path()
     if early_path != active_path:
         collect("early-crash.log", early_path, handlers_by_path.get(early_path))
+
+    # Native crashes (SIGSEGV/SIGABRT/...) never reach the logging module, so
+    # faulthandler writes them here instead. Plain reads: no logging handler
+    # owns this file. See gui/app.py:_enable_faulthandler.
+    crash_path = paths.ANKI_MINER_HOME / "anki_miner.crash"
+    collect("anki_miner.crash", crash_path, None)
+    collect("anki_miner.crash.1", crash_path.with_suffix(".crash.1"), None)
     return members, missing
 
 

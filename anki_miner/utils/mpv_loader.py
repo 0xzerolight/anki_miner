@@ -49,6 +49,7 @@ __all__ = [
     "load_mpv",
     "mpv_available",
     "mpv_probe_main",
+    "resolved_source",
     "terminate_mpv_player",
 ]
 
@@ -244,6 +245,16 @@ def _load_mpv_uncached() -> Any:
     return mpv_module
 
 
+def resolved_source() -> str | None:
+    """Return which libmpv this process resolved (``env:``/``bundled:``/``system``).
+
+    Reports only what a real load already decided — it never triggers one. A
+    diagnostics probe that dlopened libmpv would both change program state and
+    risk the failure it is trying to describe.
+    """
+    return _RESOLVED_SOURCE
+
+
 def mpv_available() -> bool:
     """Return True iff python-mpv AND libmpv are importable. Never raises."""
     try:
@@ -262,7 +273,11 @@ def _ensure_c_numeric() -> None:
     locale.setlocale(locale.LC_NUMERIC, "C")
 
 
-def create_mpv_player(log_handler: Callable[[str, str, str], None] | None = None) -> mpv.MPV:
+def create_mpv_player(
+    log_handler: Callable[[str, str, str], None] | None = None,
+    *,
+    video: bool = True,
+) -> mpv.MPV:
     """Build a libmpv handle configured for the embedded preview widget.
 
     - ``vo="libmpv"``: required by the render API (MpvRenderContext).
@@ -273,11 +288,19 @@ def create_mpv_player(log_handler: Callable[[str, str, str], None] | None = None
     - ``pause=True``: present the first frame without starting playback.
     - ``sid="no"``: the widget's own subtitle overlay is the only subtitle
       surface; mpv must not render embedded subtitle tracks.
+
+    ``video=False`` builds an AUDIO-ONLY core for the case where no GL surface
+    exists — the preview turned off by setting or by
+    ``ANKI_MINER_NO_VIDEO_PREVIEW``. It is not a starved video core: asking for
+    ``vo="libmpv"`` with no render context ever attached makes libmpv log
+    "vo/libmpv: No render context set." instead of playing, so the video path
+    has to be declined up front rather than left to fail.
     """
     mpv_module = load_mpv()
     _ensure_c_numeric()
     return mpv_module.MPV(
-        vo="libmpv",
+        vo="libmpv" if video else "null",
+        video="auto" if video else "no",
         keep_open="yes",
         hwdec="no",
         pause=True,

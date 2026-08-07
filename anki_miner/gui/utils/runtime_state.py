@@ -18,6 +18,7 @@ Layout::
       runtime_state/         # NEITHER of the above
         downloads/           # <key>.part + <key>.json resume manifests
         queues/              # <key>.json queue snapshots
+        video_preview.crash  # armed before GL bring-up, cleared on first paint
 
 Every path is derived from ``GUIConfigManager.CONFIG_FILE`` **at call time** and
 never snapshotted at import: ``tests/_home_isolation.py`` retargets that class
@@ -61,6 +62,17 @@ def download_resume_root() -> Path:
 def queue_state_root() -> Path:
     """Return the directory holding persisted queue snapshots."""
     return runtime_state_root() / _QUEUES_DIRNAME
+
+
+def video_preview_marker_path() -> Path:
+    """Return the sentinel armed before the curator's GL surface is constructed.
+
+    Deliberately at the runtime-state *root* rather than under ``downloads/`` or
+    ``queues/``: recovery Discard deletes only paths :func:`is_within` those two
+    subdirectories, so the marker cannot be swept away by a user who discards a
+    restore prompt — the one moment it is most likely to be sitting on disk.
+    """
+    return runtime_state_root() / "video_preview.crash"
 
 
 def is_within(path: Path, root: Path) -> bool:

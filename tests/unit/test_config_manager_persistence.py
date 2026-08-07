@@ -879,3 +879,35 @@ class TestNativeFileDialogsMigration:
         result = GUIConfigManager.import_config(source, create_default_config())
 
         assert result.config.use_native_file_dialogs is False
+
+
+class TestVideoPreviewIsMachineSpecific:
+    """The flag describes THIS host's GL driver, so it must not travel.
+
+    Travelling, it would re-enable the video surface on the very machine whose
+    driver aborts the process when that surface is built — undoing the
+    auto-disable that rescued the user, on their next import or profile switch.
+    """
+
+    def test_declared_machine_specific(self):
+        assert "video_preview_enabled" in GUIConfigManager.machine_specific_fields()
+
+    def test_round_trips_locally(self, tmp_config: Path):
+        GUIConfigManager.save_config(replace(create_default_config(), video_preview_enabled=False))
+        assert GUIConfigManager.load_config().video_preview_enabled is False
+
+    def test_absent_from_an_export(self, tmp_path: Path):
+        target = tmp_path / "settings.json"
+        GUIConfigManager.export_config(replace(create_default_config(), video_preview_enabled=False), target)
+        payload = json.loads(target.read_text(encoding="utf-8"))
+        assert "video_preview_enabled" not in payload["settings"]
+
+    def test_an_import_cannot_re_enable_it(self, tmp_path: Path):
+        """The rescue has to survive someone importing a friend's settings."""
+        rescued = replace(create_default_config(), video_preview_enabled=False)
+        source = tmp_path / "settings.json"
+        GUIConfigManager.export_config(replace(create_default_config(), video_preview_enabled=True), source)
+
+        result = GUIConfigManager.import_config(source, rescued)
+
+        assert result.config.video_preview_enabled is False

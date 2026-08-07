@@ -513,6 +513,11 @@ class GUIConfigManager:
             "pitch_chain",
             "youtube_cookies_from_browser",
             "asr_device",
+            # Describes THIS host's GL driver. Travelling, it would re-enable
+            # the video surface on the very machine whose driver aborts the
+            # process when it is constructed — undoing the auto-disable that
+            # rescued the user, on their next profile switch or import.
+            "video_preview_enabled",
             "config_version",
         }
 

@@ -527,3 +527,19 @@ class TestNativeFileDialogsMigration:
         )
 
         assert ProfileStore.read_profile("qt-dialogs").use_native_file_dialogs is False
+
+
+class TestVideoPreviewIsCarriedInTheFileButNotApplied:
+    """Profiles snapshot every field, this one included — the guard lives on the
+    APPLY side (``ProfileController.switch_to``), which holds the running value
+    back. Pinned here so a future reader knows the file content is not the
+    protection and does not "fix" it by loosening the controller."""
+
+    def test_the_snapshot_round_trips_the_field(self):
+        ProfileStore.write_profile(
+            "friend",
+            replace(create_default_config(), video_preview_enabled=True),
+            name="Friend",
+        )
+
+        assert ProfileStore.read_profile("friend").video_preview_enabled is True
