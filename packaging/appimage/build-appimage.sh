@@ -32,8 +32,14 @@ cp "$REPO_ROOT/anki_miner/gui/resources/icons/anki_miner.svg" "$APPDIR/anki-mine
 cp "$REPO_ROOT/anki_miner/gui/resources/icons/anki_miner.svg" \
    "$APPDIR/usr/share/icons/hicolor/scalable/apps/anki-miner.svg"
 
-# Create AppRun symlink
-ln -sf usr/bin/AnkiMiner "$APPDIR/AppRun"
+# AppRun. A script, not a symlink to the binary: the host Mesa driver is
+# dlopened into this process during GL bring-up and resolves libstdc++ from the
+# LD_LIBRARY_PATH that PyInstaller's bootloader points at our _internal/. When
+# the host driver is newer than the bundled C++ runtime that aborts the process
+# during QOpenGLWidget construction. See packaging/linux-launcher.sh.
+install -m 0755 "$REPO_ROOT/packaging/linux-launcher.sh" "$APPDIR/usr/bin/anki-miner-launcher"
+rm -f "$APPDIR/AppRun"
+ln -sf usr/bin/anki-miner-launcher "$APPDIR/AppRun"
 
 # Download appimagetool if not present, then verify its SHA256 (fail-closed:
 # a checksum mismatch blocks the build rather than packaging an unverified tool).

@@ -36,8 +36,17 @@ contents:
     dst: /opt/anki-miner/
     type: tree
 
-  # Symlink the executable into PATH
-  - src: /opt/anki-miner/AnkiMiner
+  # Launcher shim, then PATH symlink pointing at IT rather than at the binary.
+  # The shim prefers the host C++ runtime when it is newer than the bundled one:
+  # the host Mesa driver is dlopened during GL bring-up and resolves libstdc++
+  # from the bundle, and a mismatch there aborts the process. Same exposure as
+  # the AppImage — same fix. See packaging/linux-launcher.sh.
+  - src: packaging/linux-launcher.sh
+    dst: /opt/anki-miner/anki-miner-launcher
+    file_info:
+      mode: 0755
+
+  - src: /opt/anki-miner/anki-miner-launcher
     dst: /usr/bin/anki-miner
     type: symlink
 

@@ -59,7 +59,7 @@ run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr and not e2e
 # addopts' -m "not e2e").
 run_hard     "pytest-asr" "${BIN}pytest" -m "asr and not e2e"
 run_tolerant "vulture"    "vulture" "${BIN}vulture"
-run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh scripts/bundle_smoke.sh scripts/release_preflight.sh scripts/release_dryrun.sh
+run_tolerant "shellcheck" "shellcheck" shellcheck packaging/appimage/build-appimage.sh packaging/linux-launcher.sh scripts/bundle_smoke.sh scripts/release_preflight.sh scripts/release_dryrun.sh
 
 echo "================ SUMMARY ================"
 [ ${#skipped[@]} -gt 0 ] && echo "skipped: ${skipped[*]}"
