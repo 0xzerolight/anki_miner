@@ -142,7 +142,11 @@ class TestMpvUnavailable:
         assert widget.player is None
         assert widget._backend_notice_label.isVisibleTo(widget)
         assert "mpv" in widget._backend_notice_label.text()
-        assert not widget.video_widget.isVisibleTo(widget)
+        # The GL widget is not merely hidden — it is never constructed. Building
+        # a QOpenGLWidget just to render a text notice over it is what made the
+        # libmpv-absent path share the GL-abort blast radius.
+        assert widget.video_widget is None
+        assert not widget.video_surface_available
         # State for the overlay-driven consumers is still stored.
         assert widget.subtitle_entries == ENTRIES
         assert widget._offset == 0.25

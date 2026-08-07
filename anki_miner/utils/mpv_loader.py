@@ -262,7 +262,11 @@ def _ensure_c_numeric() -> None:
     locale.setlocale(locale.LC_NUMERIC, "C")
 
 
-def create_mpv_player(log_handler: Callable[[str, str, str], None] | None = None) -> mpv.MPV:
+def create_mpv_player(
+    log_handler: Callable[[str, str, str], None] | None = None,
+    *,
+    video: bool = True,
+) -> mpv.MPV:
     """Build a libmpv handle configured for the embedded preview widget.
 
     - ``vo="libmpv"``: required by the render API (MpvRenderContext).
@@ -273,11 +277,19 @@ def create_mpv_player(log_handler: Callable[[str, str, str], None] | None = None
     - ``pause=True``: present the first frame without starting playback.
     - ``sid="no"``: the widget's own subtitle overlay is the only subtitle
       surface; mpv must not render embedded subtitle tracks.
+
+    ``video=False`` builds an AUDIO-ONLY core for the case where no GL surface
+    exists — the preview turned off by setting or by
+    ``ANKI_MINER_NO_VIDEO_PREVIEW``. It is not a starved video core: asking for
+    ``vo="libmpv"`` with no render context ever attached makes libmpv log
+    "vo/libmpv: No render context set." instead of playing, so the video path
+    has to be declined up front rather than left to fail.
     """
     mpv_module = load_mpv()
     _ensure_c_numeric()
     return mpv_module.MPV(
-        vo="libmpv",
+        vo="libmpv" if video else "null",
+        video="auto" if video else "no",
         keep_open="yes",
         hwdec="no",
         pause=True,

@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils import video_preview
 from anki_miner.gui.utils.fonts import (
     JAPANESE_FEATURE,
     apply_japanese_block_format,
@@ -153,11 +154,28 @@ class SubtitlePlayerWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
 
-        # Video widget (render-API view; owns only the mpv render context)
-        self.video_widget = MpvVideoWidget()
-        self.video_widget.render_ready.connect(self._on_render_ready)
-        self.video_widget.render_failed.connect(self._on_render_failed)
-        layout.addWidget(self.video_widget, 1)
+        # Video widget (render-API view; owns only the mpv render context).
+        #
+        # THE ONE CONSTRUCTION SITE, and the only gate protecting it. Building a
+        # QOpenGLWidget brings up a real GL context, and on a host whose GL
+        # driver cannot load cleanly that ABORTS the process — no Python
+        # traceback, nothing catchable. A field report on Arch + AppImage died
+        # inside QOpenGLWidget.__init__ on every video mining run, because the
+        # curator is on the mandatory path for all of them.
+        #
+        # Gating HERE rather than at WordCurationDialog._show_player is
+        # deliberate: it covers both consumers (curator and subtitle viewer) and
+        # leaves _side_key alone, so every saved splitter layout still restores.
+        #
+        # It also subsumes the old libmpv-absent path, which used to build the
+        # GL widget anyway just to render a text notice over it.
+        self._video_surface = video_preview.preview_enabled() and self._mpv_available
+        self.video_widget: MpvVideoWidget | None = None
+        if self._video_surface:
+            self.video_widget = MpvVideoWidget()
+            self.video_widget.render_ready.connect(self._on_render_ready)
+            self.video_widget.render_failed.connect(self._on_render_failed)
+            layout.addWidget(self.video_widget, 1)
 
         # Backend-degradation notice — hidden by default. Two texts share it:
         # libmpv absent entirely (set_source shows it and no player is built),
@@ -262,16 +280,27 @@ class SubtitlePlayerWidget(QWidget):
             # platform-aware — see _backend_unavailable_text.
             self._backend_notice_label.setText(self._backend_unavailable_text())
             self._backend_notice_label.setVisible(True)
-            self.video_widget.setVisible(False)
             return
 
-        self._backend_notice_label.setVisible(False)
-        self.video_widget.setVisible(True)
+        if self.video_widget is None:
+            # Preview suppressed, but libmpv loaded: keep AUDIO. The abort this
+            # guards against is in GL bring-up, not in libmpv, so a vo=null core
+            # still plays the line — which is the whole point of the subtitle
+            # viewer and half the point of the curator's Space shortcut.
+            self._backend_notice_label.setText(self._preview_suppressed_text())
+            self._backend_notice_label.setVisible(True)
+        else:
+            self._backend_notice_label.setVisible(False)
+            self.video_widget.setVisible(True)
 
         if self.player is None:
-            self.player = create_mpv_player(log_handler=self._on_mpv_log)
+            self.player = create_mpv_player(
+                log_handler=self._on_mpv_log,
+                video=self.video_widget is not None,
+            )
             self._register_mpv_callbacks(self.player)
-            self.video_widget.attach(self.player)
+            if self.video_widget is not None:
+                self.video_widget.attach(self.player)
 
         # Re-source parity with the old backend: a new source always starts
         # paused at 0 (the factory sets pause=True only at construction).
@@ -305,6 +334,17 @@ class SubtitlePlayerWidget(QWidget):
             "on macOS via Homebrew (brew install mpv)."
         )
 
+    def _preview_suppressed_text(self) -> str:
+        """Return the notice for a preview that was turned off, not one that broke.
+
+        Names the env var when that is what suppressed it: someone running with
+        ``ANKI_MINER_NO_VIDEO_PREVIEW`` set has no matching Settings checkbox to
+        find, and pointing them at one would send them in circles.
+        """
+        if video_preview.suppressed_reason() == "env":
+            return self.tr("Video preview is turned off by %1. Audio still plays.").replace("%1", video_preview.ENV_VAR)
+        return self.tr("Video preview is turned off. Audio still plays. " "Turn it back on in Settings → Interface.")
+
     def _load_or_defer(self, path: str) -> None:
         """Issue loadfile now, or queue it until the render context exists.
 
@@ -315,7 +355,9 @@ class SubtitlePlayerWidget(QWidget):
         the normal first-load path is the deferred one; render_ready (or
         render_failed, where audio-only is the promised degradation) flushes it.
         """
-        if self.video_widget.has_render_context:
+        # No video surface means no render context will ever exist, so deferring
+        # would park the load forever — load immediately for the audio-only path.
+        if self.video_widget is None or self.video_widget.has_render_context:
             self.player.loadfile(path)
         else:
             self._pending_load = path
@@ -374,7 +416,8 @@ class SubtitlePlayerWidget(QWidget):
         self._file_loaded = False
         self._pending_seek_ms = None
         self._pending_load = None
-        self.video_widget.detach()
+        if self.video_widget is not None:
+            self.video_widget.detach()
         terminate_mpv_player(player)
 
     def closeEvent(self, event) -> None:
@@ -404,6 +447,16 @@ class SubtitlePlayerWidget(QWidget):
         its own notice, so a consumer must not narrate it a second time.
         """
         return self._mpv_available
+
+    @property
+    def video_surface_available(self) -> bool:
+        """True when a GL video surface exists, i.e. a picture is possible.
+
+        Strictly narrower than :attr:`backend_available`: audio-only is a
+        supported state (preview turned off by setting or env), and a consumer
+        that conflates the two would hide controls that still work.
+        """
+        return self.video_widget is not None
 
     def seek_seconds(self, seconds: float) -> None:
         """Seek to an absolute position.
@@ -571,7 +624,8 @@ class SubtitlePlayerWidget(QWidget):
             self.tr("Video preview is unavailable on this display. Audio and subtitles still play.")
         )
         self._backend_notice_label.setVisible(True)
-        self.video_widget.setVisible(False)
+        if self.video_widget is not None:
+            self.video_widget.setVisible(False)
         # Honour the "audio still plays" promise: a source queued behind the
         # (failed) render context still loads — audio + overlay work without it.
         self._flush_pending_load()

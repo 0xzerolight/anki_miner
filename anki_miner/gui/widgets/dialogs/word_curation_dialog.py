@@ -651,8 +651,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if self._show_player:
             self.player_widget = self._create_player_widget()
             # Stretch 3: the frame is the reason this column exists, and its
-            # own 16:9 floor keeps it honest when the window is short.
-            panes.append(("player", self.player_widget, 3, 0))
+            # own 16:9 floor keeps it honest when the window is short. With no
+            # video surface (preview off) the pane is transport controls and a
+            # one-line notice, so it must not keep hogging the column — but the
+            # pane STAYS, and so does _side_key, which is what lets every saved
+            # splitter layout restore unchanged either way.
+            # getattr: tests substitute a bare QWidget for the player, and a
+            # stub with no surface to report should keep the normal layout.
+            stretch = 3 if getattr(self.player_widget, "video_surface_available", True) else 1
+            panes.append(("player", self.player_widget, stretch, 0))
 
         if self._show_image:
             # Mutually exclusive with the player in practice (manga has no
