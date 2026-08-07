@@ -185,6 +185,17 @@ def test_old_config_without_reading_tts_keys_gets_defaults(tmp_config: Path):
     assert loaded.reading_tts_papago_enabled is True
 
 
+def test_obsolete_video_preview_enabled_key_is_dropped(tmp_config: Path):
+    """Every v2.9.2 config carries this key. Dropping the field must not make
+    their config unloadable on the next launch."""
+    tmp_config.write_text(json.dumps({"anki_deck_name": "MyDeck", "video_preview_enabled": False}))
+
+    loaded = GUIConfigManager.load_config()
+
+    assert loaded.anki_deck_name == "MyDeck"
+    assert not hasattr(loaded, "video_preview_enabled")
+
+
 def test_obsolete_expression_audio_enabled_key_is_dropped(tmp_config: Path):
     """A legacy config carrying the removed expression_audio_enabled flag must
     load cleanly (the unknown key is dropped, not fatal), and a non-empty

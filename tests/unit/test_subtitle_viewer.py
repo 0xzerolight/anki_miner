@@ -441,8 +441,8 @@ class TestPreviewSuppressedInViewer:
     def _off(self, monkeypatch):
         from anki_miner.gui.utils import video_preview
 
+        monkeypatch.setenv(video_preview.ENV_VAR, "1")
         video_preview._reset_for_tests()
-        monkeypatch.setattr(video_preview, "_enabled", False)
         yield
         video_preview._reset_for_tests()
 
