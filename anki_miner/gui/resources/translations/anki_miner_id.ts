@@ -3046,6 +3046,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation>Melewati %1 kata tanpa definisi ditemukan: %2%3</translation>
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation>Filter frekuensi: menghapus %1 kata di luar %2 teratas</translation>
     </message>
@@ -3086,10 +3090,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
       <translation>
         <numerusform>Daftar putih: %n kata dipaksa disertakan</numerusform>
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>Melewati %1 kata tanpa definisi ditemukan: %2%3</translation>
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3419,6 +3419,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
       <source>Use Local Known Words Database</source>
       <translation>Gunakan Basis Data Kata yang Dikenal Lokal</translation>
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation>Anggap Ejaan Kana dari Kata yang Dikenal sebagai Dikenal</translation>
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+      <translation>Ketika subtitel mengeja kata dalam kana (misalnya うなずく) dan bentuk kamus kanji-nya (頷く) sudah ada di koleksi Anda atau daftar kata yang dikenal, kata tersebut dilewati alih-alih dibuatkan kartu kedua. Ejaan kanji tidak pernah digabungkan dengan cara ini.</translation>
     </message>
     <message>
       <source>Rebuild Known Words DB</source>
@@ -4343,6 +4351,14 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <message>
       <source>Join the community on Discord</source>
       <translation>Gabung komunitas di Discord</translation>
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation>Anki Miner tertutup secara tidak terduga saat memulai pratinjau video, sehingga pratinjau kini dimatikan. Semua yang lain tetap berfungsi; Anda dapat mengaktifkannya kembali di Pengaturan.</translation>
+    </message>
+    <message>
+      <source>Open settings</source>
+      <translation>Buka pengaturan</translation>
     </message>
     <message>
       <source>The desktop shortcut could not be created.</source>
@@ -7010,6 +7026,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
       <translation>Pratinjau video memerlukan mpv (libmpv). Build bawaan sudah menyertakannya; di Linux instal melalui pengelola paket Anda (mis. libmpv2), di macOS melalui Homebrew (brew install mpv).</translation>
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation>Pratinjau video dimatikan oleh %1. Audio tetap diputar.</translation>
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation>Pratinjau video dimatikan. Audio tetap diputar. Aktifkan kembali di Pengaturan → Antarmuka.</translation>
+    </message>
+    <message>
       <source>playback failed</source>
       <translation>pemutaran gagal</translation>
     </message>
@@ -7758,6 +7782,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Gunakan pemilih berkas bawaan sistem operasi. Nonaktifkan ini untuk menggunakan pemilih bawaan aplikasi, yang mengikuti tema aplikasi dan tampak sama pada setiap platform.</translation>
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation>Tampilkan pratinjau video di kurator kata</translation>
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
+      <translation>Tampilkan pemutar video di kurator kata dan penampil subtitel. Matikan ini jika aplikasi tertutup secara tidak terduga saat proses mining mencapai kurator — audio tetap diputar tanpanya.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

@@ -3050,6 +3050,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation>Saltate %1 parole senza definizione trovata: %2%3</translation>
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation>Filtro di frequenza: rimosse %1 parole fuori dalle prime %2</translation>
     </message>
@@ -3091,10 +3095,6 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <numerusform>Elenco consentito: %n parola forzata all'inclusione</numerusform>
         <numerusform>Elenco consentito: %n parole forzate all'inclusione</numerusform>
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>Saltate %1 parole senza definizione trovata: %2%3</translation>
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3431,6 +3431,14 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     <message>
       <source>Use Local Known Words Database</source>
       <translation>Usa il DB locale delle parole conosciute</translation>
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation>Considera come conosciute le grafie in kana delle parole conosciute</translation>
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+      <translation>Se un sottotitolo scrive una parola in kana (es. うなずく) e la forma con kanji del dizionario (頷く) è già presente nella collezione o nell'elenco delle parole conosciute, la parola viene saltata invece di creare una seconda carta. Le grafie in kanji non vengono mai unite in questo modo.</translation>
     </message>
     <message>
       <source>Rebuild Known Words DB</source>
@@ -4355,6 +4363,14 @@ Aggiungere %3 parola/e all'elenco delle parole conosciute?</translation>
     <message>
       <source>Join the community on Discord</source>
       <translation>Unisciti alla community su Discord</translation>
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation>Anki Miner si è chiuso in modo imprevisto durante l'avvio dell'anteprima video, quindi l'anteprima è stata disattivata. Il resto funziona normalmente; è possibile riattivarla in Impostazioni.</translation>
+    </message>
+    <message>
+      <source>Open settings</source>
+      <translation>Apri impostazioni</translation>
     </message>
     <message>
       <source>The desktop shortcut could not be created.</source>
@@ -7024,6 +7040,14 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
       <translation>L'anteprima video richiede mpv (libmpv). Le build integrate lo includono; su Linux installalo dal gestore di pacchetti (es. libmpv2), su macOS tramite Homebrew (brew install mpv).</translation>
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation>L'anteprima video è disattivata da %1. L'audio continua a essere riprodotto.</translation>
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation>L'anteprima video è disattivata. L'audio continua a essere riprodotto. Riattivarla in Impostazioni → Interfaccia.</translation>
+    </message>
+    <message>
       <source>playback failed</source>
       <translation>riproduzione non riuscita</translation>
     </message>
@@ -7772,6 +7796,14 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>Usare i selettori di file nativi del sistema operativo. Disattivare questa opzione per usare invece il selettore integrato dell'app, che segue il tema dell'app e appare uguale su ogni piattaforma.</translation>
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation>Mostra l'anteprima video nel Curatore di parole</translation>
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
+      <translation>Mostra il lettore video nel Curatore di parole e nel visualizzatore di sottotitoli. Disattivare questa opzione se l'app si chiude in modo imprevisto quando un'estrazione raggiunge il curatore — l'audio continua comunque a essere riprodotto.</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>

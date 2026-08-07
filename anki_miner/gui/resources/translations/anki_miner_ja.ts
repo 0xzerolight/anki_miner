@@ -3046,6 +3046,10 @@ Files on disk will be left untouched because the folder could not be proven to b
       </translation>
     </message>
     <message>
+      <source>Skipped %1 words with no definition found: %2%3</source>
+      <translation>語義が見つからなかった %1 単語をスキップしました: %2%3</translation>
+    </message>
+    <message>
       <source>Frequency filter: removed %1 words outside top %2</source>
       <translation>頻度フィルター: 上位 %2 圏外の %1 単語を除去</translation>
     </message>
@@ -3086,10 +3090,6 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation>
         <numerusform>ホワイトリスト: %n 個の単語を強制的に含めました</numerusform>
       </translation>
-    </message>
-    <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>語義が見つからなかった %1 単語をスキップしました: %2%3</translation>
     </message>
     <message>
       <source>Collapsed %1 duplicate-expression word(s)</source>
@@ -3419,6 +3419,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
       <source>Use Local Known Words Database</source>
       <translation>ローカルの既知単語データベースを使用</translation>
+    </message>
+    <message>
+      <source>Treat Kana Spellings of Known Words as Known</source>
+      <translation>既知単語のかな表記を既知として扱う</translation>
+    </message>
+    <message>
+      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+      <translation>字幕が単語をかなで表記していて（例：うなずく）、その漢字の辞書形（頷く）がすでにコレクションまたは既知単語リストにある場合、2枚目のカードを作成せずにスキップします。漢字表記がこの方法で統合されることはありません。</translation>
     </message>
     <message>
       <source>Rebuild Known Words DB</source>
@@ -4343,6 +4351,14 @@ Add %3 word(s) to your known list?</source>
     <message>
       <source>Join the community on Discord</source>
       <translation>Discord でコミュニティに参加する</translation>
+    </message>
+    <message>
+      <source>Anki Miner closed unexpectedly while starting the video preview, so the preview is now off. Everything else works; you can turn it back on in Settings.</source>
+      <translation>動画プレビューの開始中に Anki Miner が予期せず終了したため、プレビューは現在オフになっています。他の機能は正常に動作します。設定から再度オンにできます。</translation>
+    </message>
+    <message>
+      <source>Open settings</source>
+      <translation>設定を開く</translation>
     </message>
     <message>
       <source>The desktop shortcut could not be created.</source>
@@ -7010,6 +7026,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
       <translation>動画プレビューには mpv （libmpv）が必要です。バンドル版には含まれています。Linux ではパッケージマネージャーからインストールし（例： libmpv2）、macOS では Homebrew を使用してください（brew install mpv）。</translation>
     </message>
     <message>
+      <source>Video preview is turned off by %1. Audio still plays.</source>
+      <translation>動画プレビューは %1 によってオフになっています。音声は引き続き再生されます。</translation>
+    </message>
+    <message>
+      <source>Video preview is turned off. Audio still plays. Turn it back on in Settings → Interface.</source>
+      <translation>動画プレビューはオフになっています。音声は引き続き再生されます。設定 → インターフェースから再度オンにできます。</translation>
+    </message>
+    <message>
       <source>playback failed</source>
       <translation>再生に失敗しました</translation>
     </message>
@@ -7758,6 +7782,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
       <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
       <translation>オペレーティングシステム標準のファイル選択画面を使用します。オフにすると、アプリのテーマに従い、すべてのプラットフォームで同じ見た目の内蔵選択画面を使用します。</translation>
+    </message>
+    <message>
+      <source>Show video preview in the word curator</source>
+      <translation>単語キュレーターで動画プレビューを表示</translation>
+    </message>
+    <message>
+      <source>Show the video player in the word curator and the subtitle viewer. Turn this off if the app closes unexpectedly when a mining run reaches the curator — audio still plays without it.</source>
+      <translation>単語キュレーターと字幕ビューアーで動画プレイヤーを表示します。マイニングがキュレーターに到達した時点でアプリが予期せず終了する場合は、これをオフにしてください。オフでも音声は再生されます。</translation>
     </message>
     <message>
       <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
