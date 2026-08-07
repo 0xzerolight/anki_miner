@@ -307,7 +307,11 @@ def _tool_selectors():
 @pytest.mark.parametrize(("build", "attribute", "good", "wrong"), _tool_selectors())
 class TestTheToolScreensValidateAtTheField:
     def test_the_right_kind_lands(self, qtbot, test_config, tmp_path, build, attribute, good, wrong):
-        selector = getattr(build(qtbot, test_config), attribute)
+        # The screen must stay bound: qtbot tracks widgets by weakref, so an
+        # unreferenced parent is destroyed by the next cyclic collection and
+        # the selector's C++ children go with it.
+        screen = build(qtbot, test_config)
+        selector = getattr(screen, attribute)
         accepted = tmp_path / f"ep01{good}"
         accepted.touch()
 
@@ -316,7 +320,8 @@ class TestTheToolScreensValidateAtTheField:
         assert selector.get_path() == str(accepted)
 
     def test_the_wrong_kind_is_refused_with_a_reason(self, qtbot, test_config, tmp_path, build, attribute, good, wrong):
-        selector = getattr(build(qtbot, test_config), attribute)
+        screen = build(qtbot, test_config)
+        selector = getattr(screen, attribute)
         rejected = tmp_path / f"ep01{wrong}"
         rejected.touch()
 
@@ -326,7 +331,8 @@ class TestTheToolScreensValidateAtTheField:
         assert "takes a" in selector.status_label.text()
 
     def test_a_valid_drag_lights_the_field(self, qtbot, test_config, tmp_path, build, attribute, good, wrong):
-        selector = getattr(build(qtbot, test_config), attribute)
+        screen = build(qtbot, test_config)
+        selector = getattr(screen, attribute)
         accepted = tmp_path / f"ep01{good}"
         accepted.touch()
 
