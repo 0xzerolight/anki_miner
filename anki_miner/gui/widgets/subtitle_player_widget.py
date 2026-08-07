@@ -337,13 +337,11 @@ class SubtitlePlayerWidget(QWidget):
     def _preview_suppressed_text(self) -> str:
         """Return the notice for a preview that was turned off, not one that broke.
 
-        Names the env var when that is what suppressed it: someone running with
-        ``ANKI_MINER_NO_VIDEO_PREVIEW`` set has no matching Settings checkbox to
-        find, and pointing them at one would send them in circles.
+        Names the env var, which is the only thing that can suppress it: there
+        is deliberately no Settings checkbox, so pointing at one would send the
+        user in circles.
         """
-        if video_preview.suppressed_reason() == "env":
-            return self.tr("Video preview is turned off by %1. Audio still plays.").replace("%1", video_preview.ENV_VAR)
-        return self.tr("Video preview is turned off. Audio still plays. " "Turn it back on in Settings → Interface.")
+        return self.tr("Video preview is turned off by %1. Audio still plays.").replace("%1", video_preview.ENV_VAR)
 
     def _load_or_defer(self, path: str) -> None:
         """Issue loadfile now, or queue it until the render context exists.

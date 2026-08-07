@@ -214,7 +214,7 @@ def _libmpv_source() -> str:
 def _video_preview_state() -> str:
     from anki_miner.gui.utils import video_preview  # noqa: PLC0415
 
-    return f"enabled={video_preview.preview_enabled()} suppressed_by={video_preview.suppressed_reason() or '-'}"
+    return f"enabled={video_preview.preview_enabled()}"
 
 
 def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapshot:
