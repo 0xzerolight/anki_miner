@@ -225,6 +225,16 @@ def test_a_stored_inverted_band_loads_without_being_rewritten(qtbot):
     assert panel.get_max_frequency_rank() == 1000
 
 
+def test_both_ends_of_the_band_are_the_same_width(qtbot):
+    """Unmatched widths read as two unrelated boxes; 'No minimum' is the longer
+    special value and would otherwise size only its own spinbox."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    assert panel.min_frequency_spinbox.minimumWidth() == panel.max_frequency_spinbox.minimumWidth()
+    assert panel.min_frequency_spinbox.minimumWidth() > 0
+
+
 def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
     from dataclasses import replace
 

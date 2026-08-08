@@ -103,6 +103,14 @@ class FilteringSettingsPanel(FormPanel):
         self.max_frequency_spinbox.setSpecialValueText(self.tr("No limit"))
         self.max_frequency_spinbox.setToolTip(self.tr("Skip words rarer than this rank."))
 
+        # Match the two widths. Left to themselves they size to their own longest
+        # special-value text ("No minimum" vs "No limit") and the row renders as
+        # two mismatched boxes. A minimum (not a fixed width) so both still grow
+        # with the user's text scale.
+        band_width = max(self.min_frequency_spinbox.sizeHint().width(), self.max_frequency_spinbox.sizeHint().width())
+        self.min_frequency_spinbox.setMinimumWidth(band_width)
+        self.max_frequency_spinbox.setMinimumWidth(band_width)
+
         self.min_frequency_spinbox.valueChanged.connect(self._on_min_frequency_changed)
         self.max_frequency_spinbox.valueChanged.connect(self._on_max_frequency_changed)
 
