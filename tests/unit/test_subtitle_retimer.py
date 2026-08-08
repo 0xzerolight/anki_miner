@@ -17,7 +17,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
+from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.services.subtitle_retimer import retime_subtitle
+from anki_miner.utils.audio_track_detector import SubtitleStream
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
 
 # ---------------------------------------------------------------------------
@@ -158,6 +160,32 @@ def stub_extractor():
     with patch("anki_miner.services.media_extractor.MediaExtractorService") as mock_cls:
         mock_cls.return_value.extract_full_audio.return_value = False
         yield mock_cls
+
+
+@pytest.fixture(autouse=True)
+def stub_condenser():
+    """Stub AudioCondenserService so embedded-subtitle extraction never runs ffmpeg.
+
+    Reference resolution reuses the condenser's ``extract_embedded_subtitle``;
+    it is lazily imported, so the patch lands on the defining module.
+    """
+    with patch("anki_miner.services.audio_condenser.AudioCondenserService") as mock_cls:
+        mock_cls.return_value.extract_embedded_subtitle.return_value = None
+        yield mock_cls
+
+
+@pytest.fixture(autouse=True)
+def no_embedded_subtitles():
+    """Report zero embedded subtitle tracks so reference resolution reaches audio.
+
+    Reference selection now probes the video for an embedded subtitle track
+    first. These tests are about the alass invocation, not the reference
+    choice, so the probe is stubbed empty — combined with ``stub_extractor``
+    returning False, every test here runs the "hand alass the raw video" path
+    it was written against. The sub-to-sub path has its own class below.
+    """
+    with patch("anki_miner.services.retime_reference.list_subtitle_streams", return_value=[]):
+        yield
 
 
 @pytest.fixture(autouse=True)
@@ -418,7 +446,9 @@ class TestLogCallback:
         ):
             retime_subtitle(cfg, video, in_sub, out_sub, log_cb=received.append)
 
-        assert received == lines
+        # Reference selection narrates its decision through the same callback
+        # before alass starts, so the alass lines are the tail, not the whole.
+        assert received[-len(lines) :] == lines
 
     def test_lines_with_trailing_newline_stripped(
         self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock
@@ -440,7 +470,7 @@ class TestLogCallback:
         ):
             retime_subtitle(cfg, video, in_sub, out_sub, log_cb=received.append)
 
-        assert received == ["hello", "world"]
+        assert received[-2:] == ["hello", "world"]
 
 
 # ---------------------------------------------------------------------------
@@ -669,7 +699,13 @@ class TestAudioReference:
             patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
             patch(_POPEN, side_effect=_factory),
         ):
-            result = retime_subtitle(cfg, video, in_sub, out_sub, audio_track_override=2)
+            result = retime_subtitle(
+                cfg,
+                video,
+                in_sub,
+                out_sub,
+                reference_override=ReferenceOverride(kind="audio", index=2),
+            )
 
         assert result is True
         cmd = captured[0]
@@ -704,6 +740,170 @@ class TestAudioReference:
 
         assert result is True
         assert captured[0][-3] == str(video)
+
+
+class TestSubtitleReference:
+    """The sub-to-sub path: an embedded track wins over audio, with tuned flags."""
+
+    @staticmethod
+    def _stream() -> SubtitleStream:
+        return SubtitleStream(
+            index=2,
+            sub_index=0,
+            codec_name="ass",
+            language_tag="eng",
+            title="Dialogue",
+            is_text=True,
+        )
+
+    def _run(
+        self,
+        tmp_dir: Path,
+        video: Path,
+        in_sub: Path,
+        out_sub: Path,
+        cfg: MagicMock,
+        stub_extractor: MagicMock,
+        stub_condenser: MagicMock,
+    ) -> list[str]:
+        """Retime with one usable embedded track; return the alass argv."""
+        cleaned_source = tmp_dir / "embedded.srt"
+        cleaned_source.write_text(
+            "".join(f"{i}\n00:00:{i:02d},000 --> 00:00:{i:02d},500\nline {i}\n\n" for i in range(1, 41)),
+            encoding="utf-8",
+        )
+        # Embedded-subtitle extraction is reused from the condenser, so that is
+        # the seam to stub — stub_extractor only covers the audio path.
+        stub_condenser.return_value.extract_embedded_subtitle.return_value = cleaned_source
+
+        captured: list[list[str]] = []
+
+        def _factory(cmd: list[str], **_: Any) -> _FakePopen:
+            captured.append(cmd)
+            Path(cmd[-1]).touch()
+            return _FakePopen([], returncode=0)
+
+        with (
+            patch(
+                "anki_miner.services.retime_reference.list_subtitle_streams",
+                return_value=[self._stream()],
+            ),
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_POPEN, side_effect=_factory),
+        ):
+            assert retime_subtitle(cfg, video, in_sub, out_sub) is True
+
+        return captured[0]
+
+    def test_embedded_track_beats_audio(
+        self,
+        tmp_dir: Path,
+        video: Path,
+        in_sub: Path,
+        out_sub: Path,
+        cfg: MagicMock,
+        stub_extractor: MagicMock,
+        stub_condenser: MagicMock,
+    ) -> None:
+        """A usable embedded track is the reference and no audio is extracted."""
+        cmd = self._run(tmp_dir, video, in_sub, out_sub, cfg, stub_extractor, stub_condenser)
+
+        reference = cmd[-3]
+        assert reference != str(video)
+        assert reference.endswith(".clean.srt")
+        stub_extractor.return_value.extract_full_audio.assert_not_called()
+        # The cleaned temp file is removed after the run.
+        assert not Path(reference).exists()
+
+    def test_accuracy_flags_only_on_the_subtitle_path(
+        self,
+        tmp_dir: Path,
+        video: Path,
+        in_sub: Path,
+        out_sub: Path,
+        cfg: MagicMock,
+        stub_extractor: MagicMock,
+        stub_condenser: MagicMock,
+    ) -> None:
+        """Speed optimization is off and both encodings are declared."""
+        in_sub.write_text("1\n00:00:01,000 --> 00:00:02,000\nこんにちは\n\n", encoding="utf-8")
+        cmd = self._run(tmp_dir, video, in_sub, out_sub, cfg, stub_extractor, stub_condenser)
+
+        assert cmd[cmd.index("--speed-optimization") + 1] == "0"
+        assert cmd[cmd.index("--encoding-ref") + 1] == "utf-8"
+        assert cmd[cmd.index("--encoding-inc") + 1] == "utf-8"
+
+    def test_cp932_input_declared_as_shift_jis(
+        self,
+        tmp_dir: Path,
+        video: Path,
+        in_sub: Path,
+        out_sub: Path,
+        cfg: MagicMock,
+        stub_extractor: MagicMock,
+        stub_condenser: MagicMock,
+    ) -> None:
+        """A Shift-JIS input is named with alass's label, not Python's codec name.
+
+        alass panics on ``cp932``; passing the Python name would abort the run.
+        """
+        in_sub.write_bytes("1\n00:00:01,000 --> 00:00:02,000\nこんにちは\n\n".encode("cp932"))
+        cmd = self._run(tmp_dir, video, in_sub, out_sub, cfg, stub_extractor, stub_condenser)
+
+        assert cmd[cmd.index("--encoding-inc") + 1] == "shift_jis"
+
+    def test_audio_path_keeps_alass_speed_default(
+        self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock, stub_extractor: MagicMock
+    ) -> None:
+        """Aligning against audio must not pay for --speed-optimization 0."""
+        stub_extractor.return_value.extract_full_audio.return_value = True
+        captured: list[list[str]] = []
+
+        def _factory(cmd: list[str], **_: Any) -> _FakePopen:
+            captured.append(cmd)
+            Path(cmd[-1]).touch()
+            return _FakePopen([], returncode=0)
+
+        with (
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_POPEN, side_effect=_factory),
+        ):
+            assert retime_subtitle(cfg, video, in_sub, out_sub) is True
+
+        assert "--speed-optimization" not in captured[0]
+        assert "--encoding-ref" not in captured[0]
+
+    def test_audio_path_still_declares_the_input_encoding(
+        self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock, stub_extractor: MagicMock
+    ) -> None:
+        """The input's encoding does not depend on what it is aligned against.
+
+        Regression: gating --encoding-inc on the subtitle path left every cp932
+        input failing against audio with "error while decoding subtitle from
+        bytes to string".
+        """
+        stub_extractor.return_value.extract_full_audio.return_value = True
+        in_sub.write_bytes("1\n00:00:01,000 --> 00:00:02,000\nこんにちは\n\n".encode("cp932"))
+        captured: list[list[str]] = []
+
+        def _factory(cmd: list[str], **_: Any) -> _FakePopen:
+            captured.append(cmd)
+            Path(cmd[-1]).touch()
+            return _FakePopen([], returncode=0)
+
+        with (
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_POPEN, side_effect=_factory),
+        ):
+            assert retime_subtitle(cfg, video, in_sub, out_sub) is True
+
+        assert captured[0][captured[0].index("--encoding-inc") + 1] == "shift_jis"
 
 
 class TestAlassNotFoundError:
