@@ -70,11 +70,17 @@ class TestSettingsTransfer:
 
 
 class TestTrackProbes:
-    @pytest.mark.parametrize("module", [single_episode_tab, subtitle_retime_tab, condense_tab])
+    @pytest.mark.parametrize("module", [single_episode_tab, condense_tab])
     def test_audio_track_failure_stops_blaming_ffprobe(self, module):
         """The user cannot verify an ffprobe install from a dialog; the repair button can."""
         source = _source(module)
         assert "Audio tracks could not be read." in source
+        assert "Failed to detect audio tracks. Check that ffprobe is installed." not in source
+
+    def test_retime_track_failure_covers_both_kinds(self):
+        """Retiming probes subtitle and audio tracks together, so the copy says 'Tracks'."""
+        source = _source(subtitle_retime_tab)
+        assert "Tracks could not be read." in source
         assert "Failed to detect audio tracks. Check that ffprobe is installed." not in source
 
     def test_subtitle_track_failure_stops_blaming_ffprobe(self):

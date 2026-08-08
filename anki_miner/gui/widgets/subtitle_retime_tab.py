@@ -1,11 +1,17 @@
 """Subtitle Retime tab — retime subtitle files to video using alass.
 
 Composes four :class:`~anki_miner.gui.widgets.enhanced.FileSelector` instances
-(single-file / folder mode toggle — video + subtitle selectors per mode), an
-output-location row, an Overwrite checkbox, a Split penalty spinbox, a Retime
-button, a :class:`~anki_miner.gui.widgets.progress_widget.ProgressWidget` for
-overall queue progress, and a :class:`~anki_miner.gui.widgets.log_widget.LogWidget`
-for per-pair pass/fail lines.
+(single-file / folder mode toggle — video + subtitle selectors per mode), a
+reference row, an output-location row, an Overwrite checkbox, a Retime button, a
+:class:`~anki_miner.gui.widgets.progress_widget.ProgressWidget` for overall queue
+progress, and a :class:`~anki_miner.gui.widgets.log_widget.LogWidget` for
+per-pair pass/fail lines.
+
+The alass alignment knobs (split penalty, framerate correction, single-offset)
+deliberately do **not** live here. Their defaults are right for nearly every
+run, they are preferences rather than per-run choices, and keeping them off this
+screen leaves one decision on it: which files. They are in
+Settings → Transcription & Alignment, reachable from the link in the Output card.
 
 Guard contract:
 - alass not found → Retime disabled, notice visible.
@@ -27,7 +33,6 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -45,25 +50,21 @@ from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
-from anki_miner.gui.widgets.dialogs import AudioTracksDialog
+from anki_miner.gui.widgets.dialogs import RetimeReferenceDialog, build_reference_choices
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
+from anki_miner.services.retime_reference import list_reference_subtitle_streams
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.alass_resolver import resolve_alass
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
-    from anki_miner.utils.audio_track_detector import AudioStream
+    from anki_miner.gui.widgets.dialogs import ReferenceChoice
+    from anki_miner.services.retime_reference import ReferenceOverride
 
 logger = logging.getLogger(__name__)
-
-_SPLIT_PENALTY_DEFAULT = 7.0
-_SPLIT_PENALTY_MIN = 0.0
-_SPLIT_PENALTY_MAX = 1000.0
-_SPLIT_PENALTY_STEP = 1.0
 
 
 class SubtitleRetimeTab(_ToolTabBase):
@@ -102,9 +103,9 @@ class SubtitleRetimeTab(_ToolTabBase):
         self._custom_output_dir: Path | None = None
         self._total_pairs: int = 0
         self._cancelled: bool = False
-        # Per-run audio-track selection for single-file mode (audio-stream index,
-        # or None for Japanese auto-detect). Reset when the video changes.
-        self._audio_track_override: int | None = None
+        # Per-run reference selection for single-file mode (an embedded subtitle
+        # or audio track), or None for auto. Reset when the video changes.
+        self._reference_override: ReferenceOverride | None = None
         # alass availability is cached per-config: probing it (resolve_alass +
         # shutil.which / Path.exists) is a PATH scan we must not repeat on every
         # _alass_available() read. Recomputed only here and in update_config().
@@ -246,22 +247,24 @@ class SubtitleRetimeTab(_ToolTabBase):
         )
         layout.addWidget(self.subtitle_file_selector)
 
-        # Reset the audio-track override whenever the video changes (selection is
+        # Reset the reference override whenever the video changes (selection is
         # per-run and must not silently carry over to a different file).
         self.video_file_selector.path_changed.connect(self._on_video_path_changed)
 
-        # Single-mode audio-track override row. alass has no track flag, so the
-        # chosen track is pre-extracted and handed to alass as the reference.
+        # Single-mode reference override row. One row for both kinds of
+        # reference: alass takes an embedded subtitle track or audio, and which
+        # of the two is used is an implementation detail the user only overrides
+        # when auto-selection picks badly.
         self.track_row_widget = QWidget()
         track_row = QHBoxLayout(self.track_row_widget)
         track_row.setContentsMargins(0, 0, 0, 0)
         track_row.setSpacing(SPACING.xs)
-        track_row.addWidget(QLabel(self.tr("Audio track:")))
-        self.audio_track_label = QLabel(self.tr("Japanese (auto-detect)"))
-        self.audio_track_label.setObjectName("output-location-value")
-        track_row.addWidget(self.audio_track_label, 1)
-        self.tracks_button = ModernButton(self.tr("Tracks…"), variant="secondary")
-        self.tracks_button.setToolTip(self.tr("Choose which audio track to align the subtitle against."))
+        track_row.addWidget(QLabel(self.tr("Align against:")))
+        self.reference_label = QLabel(self._auto_reference_text())
+        self.reference_label.setObjectName("output-location-value")
+        track_row.addWidget(self.reference_label, 1)
+        self.tracks_button = ModernButton(self.tr("Change…"), variant="secondary")
+        self.tracks_button.setToolTip(self.tr("Choose which embedded track to align the subtitle against."))
         self.tracks_button.clicked.connect(self._on_tracks_clicked)
         track_row.addWidget(self.tracks_button)
         layout.addWidget(self.track_row_widget)
@@ -322,47 +325,19 @@ class SubtitleRetimeTab(_ToolTabBase):
         )
         layout.addWidget(self.overwrite_checkbox)
 
-        # Frame-rate correction toggle. Default OFF: resyncing a sub to its own
-        # video needs no framerate change, and alass's FPS guessing otherwise
-        # stretches an already-good sub and breaks the timing. Enable only for a
-        # sub sourced from a different-framerate release.
-        self.fps_correction_checkbox = QCheckBox(self.tr("Correct frame-rate differences"))
-        self.fps_correction_checkbox.setChecked(False)
-        self.fps_correction_checkbox.setToolTip(
-            self.tr("Enable only for subtitles from a different-framerate release.")
-        )
-        layout.addWidget(self.fps_correction_checkbox)
-
-        # Single-offset toggle: shift the whole subtitle by one constant amount
-        # instead of cutting it into independently-aligned segments.
-        self.no_split_checkbox = QCheckBox(self.tr("Single offset only (no split)"))
-        self.no_split_checkbox.setChecked(False)
-        self.no_split_checkbox.setToolTip(
-            self.tr("Shift the entire subtitle by one offset; never cut it into separately-timed segments.")
-        )
-        layout.addWidget(self.no_split_checkbox)
-
-        # Split penalty row
-        penalty_row = QHBoxLayout()
-        penalty_row.setSpacing(SPACING.xs)
-        penalty_label = QLabel(self.tr("Split penalty:"))
-        penalty_row.addWidget(penalty_label)
-
-        self.split_penalty_spinbox = QDoubleSpinBox()
-        self.split_penalty_spinbox.setRange(_SPLIT_PENALTY_MIN, _SPLIT_PENALTY_MAX)
-        self.split_penalty_spinbox.setValue(_SPLIT_PENALTY_DEFAULT)
-        self.split_penalty_spinbox.setSingleStep(_SPLIT_PENALTY_STEP)
-        penalty_row.addWidget(self.split_penalty_spinbox)
-        penalty_row.addStretch()
-        layout.addLayout(penalty_row)
-
-        # Split penalty inline explanation
-        self.split_penalty_helper = QLabel(
-            self.tr("Lower values create more cut points for ad breaks. Useful range 1–20; default 7.")
-        )
-        self.split_penalty_helper.setObjectName("helper-text")
-        self.split_penalty_helper.setWordWrap(True)
-        layout.addWidget(self.split_penalty_helper)
+        # Pointer to the alignment knobs, which live in Settings (see the module
+        # docstring). Without this the controls that used to be here would just
+        # look deleted.
+        options_row = QHBoxLayout()
+        options_row.setSpacing(SPACING.xs)
+        options_hint = QLabel(self.tr("Split penalty, frame-rate correction and single-offset mode:"))
+        options_hint.setObjectName("helper-text")
+        options_hint.setWordWrap(True)
+        options_row.addWidget(options_hint, 1)
+        self.alignment_settings_button = ModernButton(self.tr("Alignment Settings"), variant="secondary")
+        self.alignment_settings_button.clicked.connect(lambda: reveal_settings(self, "subtitles"))
+        options_row.addWidget(self.alignment_settings_button)
+        layout.addLayout(options_row)
 
         group.setLayout(layout)
         return group
@@ -449,7 +424,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         """
         self._on_file_mode()
         # set_path goes through the field, so path_changed fires and the
-        # per-run audio-track pick is dropped with the video it belonged to.
+        # per-run reference pick is dropped with the video it belonged to.
         self.video_file_selector.set_path(str(video_path))
         self.subtitle_file_selector.set_path(str(subtitle_path))
 
@@ -458,22 +433,26 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.file_mode_button.setChecked(False)
         self.video_file_selector.hide()
         self.subtitle_file_selector.hide()
-        # Folder mode auto-detects the Japanese track per video; no per-file pick.
+        # Folder mode resolves the reference per video; no per-file pick.
         self.track_row_widget.hide()
         self.video_folder_selector.show()
         self.subtitle_folder_selector.show()
 
     # ------------------------------------------------------------------
-    # Audio track selection (single-file mode)
+    # Reference selection (single-file mode)
     # ------------------------------------------------------------------
 
+    def _auto_reference_text(self) -> str:
+        """Label for the default, un-overridden reference."""
+        return self.tr("Auto - embedded subtitles, or audio")
+
     def _on_video_path_changed(self, new_path: str) -> None:
-        """Reset the audio-track override when the video file changes."""
-        self._audio_track_override = None
-        self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
+        """Reset the reference override when the video file changes."""
+        self._reference_override = None
+        self.reference_label.setText(self._auto_reference_text())
 
     def _on_tracks_clicked(self) -> None:
-        """Open AudioTracksDialog to pick which audio track alass aligns against."""
+        """Open RetimeReferenceDialog to pick what alass aligns against."""
         video_path = self.video_file_selector.path_or_none()
         if video_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
@@ -485,7 +464,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             )
             return
 
-        ffprobe_cmd = resolve_ffprobe(self.config)
+        config = self.config
 
         # Probe off the GUI thread — ffprobe on a large file can block long
         # enough to freeze the UI. Disable the button so a second click can't
@@ -493,9 +472,14 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.tracks_button.setEnabled(False)
 
         def _probe() -> object:
-            return list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
+            # Subtitle streams come back in reference-preference order, so the
+            # list the user reads matches the order auto-selection would try.
+            return build_reference_choices(
+                list_reference_subtitle_streams(config, video_file),
+                list_audio_streams(video_file, ffprobe_cmd=resolve_ffprobe(config)),
+            )
 
-        def _on_streams(result: object) -> None:
+        def _on_choices(result: object) -> None:
             try:
                 self.tracks_button.setEnabled(True)
             except RuntimeError:
@@ -504,34 +488,42 @@ class SubtitleRetimeTab(_ToolTabBase):
                 return
             if self.video_file_selector.path_or_none() != video_path:
                 return
-            streams = cast("list[AudioStream]", result)
-            if not streams:
+            choices = cast("list[ReferenceChoice]", result)
+            if not choices:
                 QMessageBox.information(
                     self,
-                    self.tr("No Audio Tracks"),
-                    self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+                    self.tr("No Tracks"),
+                    self.tr("No audio or subtitle tracks detected. Check that ffprobe is installed."),
                 )
                 return
 
-            auto_stream = next((s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES), None)
-
-            dialog = AudioTracksDialog(
-                streams=streams,
-                current_override=self._audio_track_override,
-                auto_detected=auto_stream,
+            dialog = RetimeReferenceDialog(
+                streams=choices,
+                current_override=self._position_of(choices, self._reference_override),
+                auto_detected=None,
                 parent=self,
             )
-            if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
-                if self.video_file_selector.path_or_none() != video_path:
-                    return
-                self._audio_track_override = dialog.selected_override()
-                if self._audio_track_override is None:
-                    self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
-                else:
-                    self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
+            if dialog.exec() != RetimeReferenceDialog.DialogCode.Accepted:
+                return
+            if self.video_file_selector.path_or_none() != video_path:
+                return
+
+            position = dialog.selected_override()
+            if position is None:
+                self._reference_override = None
+                self.reference_label.setText(self._auto_reference_text())
+                return
+            picked = choices[position]
+            self._reference_override = picked.to_override()
+            self.reference_label.setText(
+                tr_format(
+                    self.tr("Subtitle track %1") if picked.kind == "subtitle" else self.tr("Audio track %1"),
+                    str(picked.stream_index + 1),
+                )
+            )
 
         def _on_probe_error(msg: str) -> None:
-            logger.error("Failed to probe audio tracks: %s", msg)
+            logger.error("Failed to probe reference tracks: %s", msg)
             try:
                 self.tracks_button.setEnabled(True)
             except RuntimeError:
@@ -539,7 +531,7 @@ class SubtitleRetimeTab(_ToolTabBase):
                 return
             self.show_screen_issue(
                 ScreenIssue(
-                    summary=self.tr("Audio tracks could not be read."),
+                    summary=self.tr("Tracks could not be read."),
                     details=msg,
                     action_id="settings.media",
                     action_text=self.tr("Open Media Settings"),
@@ -547,7 +539,22 @@ class SubtitleRetimeTab(_ToolTabBase):
                 action=lambda: reveal_settings(self, "media"),
             )
 
-        run_off_thread(self, _probe, _on_streams, _on_probe_error)
+        run_off_thread(self, _probe, _on_choices, _on_probe_error)
+
+    @staticmethod
+    def _position_of(choices: list[ReferenceChoice], override: ReferenceOverride | None) -> int | None:
+        """Return the row *override* corresponds to, or None for Auto.
+
+        The picker round-trips a row position, but the override we hold names a
+        stream, so a re-opened dialog has to map back. A stale override (the
+        track vanished) yields None, which the picker preselects as Auto.
+        """
+        if override is None:
+            return None
+        return next(
+            (c.position for c in choices if c.kind == override.kind and c.stream_index == override.index),
+            None,
+        )
 
     # ------------------------------------------------------------------
     # Retime
@@ -592,18 +599,16 @@ class SubtitleRetimeTab(_ToolTabBase):
         self._begin_tool_run(len(pairs))
         self._total_pairs = len(pairs)
 
-        # Single-file mode honors the per-file track pick; folder mode auto-detects.
-        track_override = self._audio_track_override if not self.video_file_selector.isHidden() else None
+        # Single-file mode honors the per-file reference pick; a folder's videos
+        # each get their own auto-resolution, so one override cannot apply.
+        reference_override = self._reference_override if not self.video_file_selector.isHidden() else None
 
         worker = SubtitleRetimeWorker(
             self.config,
             pairs,
             output_dir=out_dir,
             overwrite=self.overwrite_checkbox.isChecked(),
-            split_penalty=self.split_penalty_spinbox.value(),
-            disable_fps_guessing=not self.fps_correction_checkbox.isChecked(),
-            no_split=self.no_split_checkbox.isChecked(),
-            audio_track_override=track_override,
+            reference_override=reference_override,
         )
         self.worker_thread = worker
 

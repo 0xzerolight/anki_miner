@@ -4,6 +4,7 @@ success/failure, AlassNotFoundError queue-stop, cancel, and log_cb forwarding.""
 from __future__ import annotations
 
 import unicodedata
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -14,6 +15,7 @@ pytest.importorskip("PyQt6.QtCore")
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
+from anki_miner.services.retime_reference import ReferenceOverride
 
 # A dakuten kana stem that genuinely decomposes under NFD (common kana like ねこ
 # are byte-identical NFC/NFD and would be a false-green for the dedup tests).
@@ -43,17 +45,18 @@ def _make_worker(
     *,
     output_dir: Path | None = None,
     overwrite: bool = False,
-    split_penalty: float = 7,
+    split_penalty: float | None = None,
     retimer=None,
 ) -> SubtitleRetimeWorker:
     if config is None:
         config = _make_config()
+    if split_penalty is not None:
+        config = replace(config, retime_split_penalty=split_penalty)
     return SubtitleRetimeWorker(
         config,
         pairs,
         output_dir=output_dir,
         overwrite=overwrite,
-        split_penalty=split_penalty,
         retimer=retimer,
     )
 
@@ -90,8 +93,8 @@ def _fake_retimer_failure(*args, cancel_event=None, log_cb=None, **kwargs):
 # ---------------------------------------------------------------------------
 
 
-def test_forwards_alass_options_to_retimer(qapp, tmp_path):
-    """Worker forwards disable_fps_guessing / no_split / audio_track_override."""
+def test_alass_options_come_from_config(qapp, tmp_path):
+    """The three alignment knobs are read from config, not constructor kwargs."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     for p in (v, s):
@@ -103,13 +106,16 @@ def test_forwards_alass_options_to_retimer(qapp, tmp_path):
         captured.append(kwargs)
         return True
 
-    worker = SubtitleRetimeWorker(
+    config = replace(
         _make_config(),
+        retime_split_penalty=12.0,
+        retime_correct_framerate=True,
+        retime_single_offset=True,
+    )
+    worker = SubtitleRetimeWorker(
+        config,
         [(v, s)],
-        split_penalty=12.0,
-        disable_fps_guessing=False,
-        no_split=True,
-        audio_track_override=3,
+        reference_override=ReferenceOverride(kind="audio", index=3),
         retimer=_recording_retimer,
     )
     worker.run()
@@ -117,13 +123,14 @@ def test_forwards_alass_options_to_retimer(qapp, tmp_path):
     assert len(captured) == 1
     kw = captured[0]
     assert kw["split_penalty"] == 12.0
+    # `retime_correct_framerate` is the inverse of the alass flag.
     assert kw["disable_fps_guessing"] is False
     assert kw["no_split"] is True
-    assert kw["audio_track_override"] == 3
+    assert kw["reference_override"] == ReferenceOverride(kind="audio", index=3)
 
 
 def test_default_alass_options_forwarded(qapp, tmp_path):
-    """Defaults: fps-guessing disabled, no split, auto-detect track (None)."""
+    """Defaults: fps-guessing disabled, no split, auto reference (None)."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     for p in (v, s):
@@ -139,9 +146,10 @@ def test_default_alass_options_forwarded(qapp, tmp_path):
     worker.run()
 
     kw = captured[0]
+    assert kw["split_penalty"] == 7.0
     assert kw["disable_fps_guessing"] is True
     assert kw["no_split"] is False
-    assert kw["audio_track_override"] is None
+    assert kw["reference_override"] is None
 
 
 def test_signal_contract_two_pairs(qapp, tmp_path):

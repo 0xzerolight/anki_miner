@@ -317,6 +317,32 @@ def test_reading_min_occurrence_default_and_replace():
     assert cfg2.reading_min_occurrence == 3
 
 
+class TestRetimeOptions:
+    """The alass alignment knobs, persisted in config since they left the tab."""
+
+    def test_defaults_match_alass(self):
+        cfg = AnkiMinerConfig()
+        assert cfg.retime_split_penalty == 7.0
+        assert cfg.retime_correct_framerate is False
+        assert cfg.retime_single_offset is False
+
+    @pytest.mark.parametrize(
+        ("given", "expected"),
+        [(-5.0, 0.0), (0.0, 0.0), (7.0, 7.0), (1000.0, 1000.0), (5000.0, 1000.0)],
+    )
+    def test_split_penalty_clamped_to_the_alass_range(self, given, expected):
+        """alass rejects values outside 0-1000; a stale config must not break every run."""
+        from dataclasses import replace
+
+        assert replace(AnkiMinerConfig(), retime_split_penalty=given).retime_split_penalty == expected
+
+    def test_non_numeric_split_penalty_falls_back_to_the_default(self):
+        """A hand-edited config with a string must not reach the alass argv."""
+        from dataclasses import replace
+
+        assert replace(AnkiMinerConfig(), retime_split_penalty="banana").retime_split_penalty == 7.0
+
+
 class TestAudioSourceEntry:
     """Tests for the AudioSourceEntry frozen dataclass."""
 

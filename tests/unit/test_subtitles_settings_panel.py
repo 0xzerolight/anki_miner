@@ -123,6 +123,43 @@ def test_contribute_with_path_set_returns_config_with_alass_location(qtbot, tmp_
     assert new_config.alass_location == alass_path
 
 
+def test_retime_options_round_trip(qtbot, tmp_path):
+    """The three alignment knobs load from and contribute back to config.
+
+    They moved off the Retime tab, where they reset on every launch; the point
+    of the move is that they now persist.
+    """
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(
+        AnkiMinerConfig(
+            retime_split_penalty=13.5,
+            retime_correct_framerate=True,
+            retime_single_offset=True,
+        )
+    )
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.retime_split_penalty_spinbox.value() == 13.5
+    assert panel.retime_correct_framerate_checkbox.isChecked()
+    assert panel.retime_single_offset_checkbox.isChecked()
+
+    new_config = panel.contribute(AnkiMinerConfig())
+    assert new_config.retime_split_penalty == 13.5
+    assert new_config.retime_correct_framerate is True
+    assert new_config.retime_single_offset is True
+
+
+def test_retime_defaults_match_alass(qtbot):
+    """An untouched panel offers alass's own defaults."""
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.retime_split_penalty_spinbox.value() == 7.0
+    assert not panel.retime_correct_framerate_checkbox.isChecked()
+    assert not panel.retime_single_offset_checkbox.isChecked()
+
+
 def test_contribute_with_empty_selector_returns_none(qtbot):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)

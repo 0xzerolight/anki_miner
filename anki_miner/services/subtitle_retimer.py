@@ -1,14 +1,25 @@
 """Subtitle retiming via the external ``alass`` binary.
 
-alass aligns an off-timed subtitle file to a reference video by analysing the
-audio track.  This module wraps the subprocess interaction, wires up
-cancellation, and streams progress lines to an optional callback.
+alass aligns an off-timed subtitle file to a reference.  This module wraps the
+subprocess interaction, wires up cancellation, and streams progress lines to an
+optional callback.  Choosing and preparing the reference — an embedded subtitle
+track where one exists, extracted audio otherwise — lives in
+:mod:`anki_miner.services.retime_reference`.
 
 alass CLI (v2.0.0) notes
 ------------------------
 * Usage: ``alass [OPTIONS] <reference> <incorrect-sub> <output>``.
   Options come **before** the three positional paths.
+* The reference may be a **video or a subtitle file**; sub-to-sub alignment is
+  both more accurate and far faster than aligning against audio.
 * ``--split-penalty <float>``  (0–1000, default 7) goes before the positionals.
+* ``--speed-optimization`` defaults to 1 and, per ``--help``, "(greatly) speeds
+  up synchronization by sacrificing some accuracy".  0 disables it.
+* ``--encoding-inc`` / ``--encoding-ref`` take **WHATWG labels** and alass
+  *panics* on any label it does not know (``cp932`` panics, ``shift_jis``
+  works), so only vetted labels may be passed — see
+  :func:`~anki_miner.utils.subtitle_encoding.detect_subtitle_encoding`.
+* The v2 flag is ``--no-split``, singular; the README's ``--no-splits`` is stale.
 * Output format is inferred from the output file's extension.
 * All output (progress, errors) goes to **stdout**; stderr is empty.
   Merge stderr → stdout via ``stderr=subprocess.STDOUT``.
@@ -22,15 +33,16 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
-import tempfile
 import threading
 from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
+from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
+from anki_miner.utils.subtitle_encoding import detect_subtitle_encoding
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +65,7 @@ def retime_subtitle(
     split_penalty: float = 7,
     disable_fps_guessing: bool = True,
     no_split: bool = False,
-    audio_track_override: int | None = None,
+    reference_override: ReferenceOverride | None = None,
     cancel_event: threading.Event | None = None,
     log_cb: Callable[[str], None] | None = None,
 ) -> bool:
@@ -64,19 +76,15 @@ def retime_subtitle(
     so the ``in_sub == out_sub`` aliasing case is handled safely (alass reads
     *in_sub*, writes the distinct temp path, then we replace).
 
-    Audio reference: rather than letting alass pick an audio stream internally
-    (it has no CLI flag for this, so on dual-audio anime it may align against the
-    English dub and mangle a Japanese sub), this pre-extracts the chosen audio
-    track to a temp 16 kHz mono WAV via
-    :meth:`MediaExtractorService.extract_full_audio` (which auto-detects the
-    Japanese track when *audio_track_override* is None, falling back to the first
-    track) and hands alass that WAV as the reference. If extraction fails for any
-    reason it falls back to passing *video* directly, so a probe/ffmpeg hiccup
-    never blocks retiming.
+    The reference comes from
+    :func:`~anki_miner.services.retime_reference.resolve_reference`: a cleaned
+    copy of an embedded subtitle track when *video* has a usable one, otherwise
+    a pre-extracted audio WAV. If both fail, *video* itself is passed and alass
+    does its own audio extraction, so nothing ever blocks a run.
 
     Args:
         config: Application config (used to resolve alass/ffmpeg/ffprobe paths).
-        video:  Reference video that alass analyses for audio timing.
+        video:  The video the subtitle should be matched against.
         in_sub: The off-timed subtitle file to correct.
         out_sub: Destination path for the corrected subtitle.
         split_penalty: alass ``--split-penalty`` value (0–1000, default 7).
@@ -88,10 +96,11 @@ def retime_subtitle(
             False only for subs from a different-framerate release.
         no_split: When True, pass ``--no-split`` so alass applies a single global
             offset instead of cutting the sub into independently-shifted segments.
-        audio_track_override: Audio-stream index (0-indexed among audio streams)
-            to align against; None auto-detects the Japanese track.
+        reference_override: Explicit user pick of the reference track; None
+            auto-selects (embedded subtitle preferred, audio fallback).
         cancel_event: When set, kills the alass process group and returns False.
-        log_cb: Called with each stripped stdout line from alass as it arrives.
+        log_cb: Called with each stripped stdout line from alass as it arrives,
+            and with the reference-selection decisions made before it starts.
 
     Returns:
         True on success (alass exited 0 and output was written); False on any
@@ -107,71 +116,33 @@ def retime_subtitle(
     # os.replace is atomic (same filesystem) and alass infers the right format.
     tmp_out = out_sub.parent / (out_sub.stem + ".retime-tmp" + out_sub.suffix)
 
-    # Pre-extract the chosen audio track to a temp WAV and feed alass that file
-    # as the reference (see docstring). On extraction failure / cancel, fall back
-    # to the raw video so retiming still proceeds.
-    reference: Path = video
-    ref_wav = _extract_reference_audio(config, video, audio_track_override, cancel_event)
-    if ref_wav is not None:
-        reference = ref_wav
+    reference = resolve_reference(
+        config,
+        video,
+        override=reference_override,
+        cancel_event=cancel_event,
+        log_cb=log_cb,
+    )
 
     try:
         return _run_alass(
             alass_bin,
             config,
-            reference,
+            reference.path if reference is not None else video,
             in_sub,
             tmp_out,
             out_sub,
             split_penalty=split_penalty,
             disable_fps_guessing=disable_fps_guessing,
             no_split=no_split,
+            sub_reference=reference is not None and reference.kind == "subtitle",
             cancel_event=cancel_event,
             log_cb=log_cb,
         )
     finally:
-        if ref_wav is not None:
+        if reference is not None and reference.temp is not None:
             with contextlib.suppress(OSError):
-                ref_wav.unlink()
-
-
-def _extract_reference_audio(
-    config,
-    video: Path,
-    audio_track_override: int | None,
-    cancel_event: threading.Event | None,
-) -> Path | None:
-    """Extract the chosen audio track to a temp 16 kHz mono WAV for alass.
-
-    Returns the WAV path on success, or None when extraction fails / is
-    cancelled (callers then fall back to the raw video). Never raises.
-    """
-    if cancel_event is not None and cancel_event.is_set():
-        return None
-
-    # Lazy import keeps the heavy media-extractor module off this module's import
-    # path and avoids any import cycle.
-    from anki_miner.services.media_extractor import MediaExtractorService
-
-    fd, tmp_name = tempfile.mkstemp(suffix=".retime-ref.wav")
-    os.close(fd)
-    tmp_wav = Path(tmp_name)
-    try:
-        ok = MediaExtractorService(config).extract_full_audio(
-            video,
-            tmp_wav,
-            track_override=audio_track_override,
-            cancel_event=cancel_event,
-        )
-    except Exception:  # noqa: BLE001 — extraction is best-effort; fall back to video
-        logger.warning("retime: audio pre-extraction raised; using raw video", exc_info=True)
-        ok = False
-
-    if not ok:
-        with contextlib.suppress(OSError):
-            tmp_wav.unlink()
-        return None
-    return tmp_wav
+                reference.temp.unlink()
 
 
 def _run_alass(
@@ -185,6 +156,7 @@ def _run_alass(
     split_penalty: float,
     disable_fps_guessing: bool,
     no_split: bool,
+    sub_reference: bool,
     cancel_event: threading.Event | None,
     log_cb: Callable[[str], None] | None,
 ) -> bool:
@@ -194,6 +166,23 @@ def _run_alass(
         flags.append("--disable-fps-guessing")
     if no_split:
         flags.append("--no-split")
+
+    # The input subtitle's encoding is independent of what it is aligned
+    # against, so this is declared on both paths. alass's own detection fails
+    # outright on cp932 ("error while decoding subtitle from bytes to string"),
+    # which is the routine encoding for Japanese subtitle downloads.
+    incoming = detect_subtitle_encoding(in_sub)
+    if incoming is not None:
+        flags += ["--encoding-inc", incoming]
+
+    if sub_reference:
+        # Sub-to-sub alignment finishes in well under a second, so alass's
+        # accuracy-for-speed tradeoff buys nothing and is turned off. The audio
+        # path keeps the default: there it can cost minutes on a full episode.
+        flags += ["--speed-optimization", "0"]
+        # _clean_reference always writes UTF-8, so the reference encoding is
+        # known exactly rather than guessed.
+        flags += ["--encoding-ref", "utf-8"]
 
     cmd = [
         alass_bin,
