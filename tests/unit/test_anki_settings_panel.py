@@ -735,3 +735,24 @@ def test_apply_fills_an_empty_note_type_but_never_overwrites_one(qtbot):
     panel.set_note_type("Lapis-modified")
     panel.apply_note_type_preset(preset_by_id("kiku"))
     assert panel.get_note_type() == "Lapis-modified"
+
+
+def test_auto_map_matches_the_plural_names_the_real_note_types_use():
+    """The keyword pass is the fallback for FORKS of Lapis / Kiku / Senren."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields
+
+    mapped = auto_map_fields(["PitchCategories", "MiscInfo", "pitchPositions", "frequencies", "pitchAccents"])
+
+    assert mapped["pitch_category"] == "PitchCategories"
+    assert mapped["source"] == "MiscInfo"
+    assert mapped["pitch_position"] == "pitchPositions"
+    assert mapped["frequency"] == "frequencies"
+    assert mapped["pitch_text"] == "pitchAccents"
+
+
+def test_auto_map_still_prefers_the_singular_when_both_exist():
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields
+
+    mapped = auto_map_fields(["PitchPosition", "pitchPositions"])
+
+    assert mapped["pitch_position"] == "PitchPosition"

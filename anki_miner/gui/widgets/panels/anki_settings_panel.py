@@ -44,13 +44,16 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
     "expression_reading": ["expressionreading", "wordreading", "reading"],
     "sentence_furigana": ["sentencefurigana", "contextfurigana"],
     "sentence_reading": ["sentencereading", "contextreading"],
-    "pitch_position": ["pitchposition", "pitchaccent", "pitch"],
-    "pitch_category": ["pitchcategory", "accenttype", "accentcategory"],
+    # The plurals are the names Lapis / Kiku / Senren actually ship. Those three
+    # are matched exactly by note_presets; this table is what a FORK of one of
+    # them falls back to, so it has to know the same spellings.
+    "pitch_position": ["pitchposition", "pitchpositions", "pitchaccent", "pitch"],
+    "pitch_category": ["pitchcategory", "pitchcategories", "accenttype", "accentcategory"],
     "pitch_graph": ["pitchgraph", "pitchsvg"],
-    "pitch_text": ["pitchtext"],
-    "frequency": ["frequency", "freq", "rank", "frequencyrank"],
+    "pitch_text": ["pitchtext", "pitchaccents"],
+    "frequency": ["frequency", "frequencies", "freq", "rank", "frequencyrank"],
     "frequency_sort": ["freqsort", "frequencysort"],
-    "source": ["source", "origin"],
+    "source": ["source", "origin", "miscinfo"],
 }
 
 # JP Mining Note card-type marker ids → default field names. Mirrors the
