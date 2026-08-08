@@ -179,6 +179,15 @@ class TokenizedWord:
     # the curator shows no sentence picker. Each entry is a leaf: its own
     # sentence_candidates stays empty (no recursion).
     sentence_candidates: list["TokenizedWord"] = field(default_factory=list)
+    # User-edited audio clip window: absolute (in, out) seconds on the source
+    # video's own timeline, set in the word curator's audio clip strip. None
+    # (the default, and every non-interactive path) means the padded default
+    # window — start_time - audio_padding .. end_time + audio_padding — so an
+    # untouched word extracts exactly as it did before this field existed.
+    # One tuple rather than two optional floats: a half-set window has no
+    # meaning. Consumed by media_extractor.resolve_audio_window, which is the
+    # only place either bound is read.
+    clip_override: tuple[float, float] | None = None
 
     @property
     def bold_end(self) -> int:
