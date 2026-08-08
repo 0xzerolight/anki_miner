@@ -285,7 +285,19 @@ class AnkiMinerConfig:
     # Activation is resource-driven (see the frequency_active property): the
     # frequency service loads iff at least one enabled source is in the chain.
     # There is no separate on/off flag — adding a source is the switch.
+    #
+    # The two ranks are the ends of ONE band. Lower rank = more common, so the
+    # minimum drops the common end (words already known from sheer exposure) and
+    # the maximum drops the rare end. 0 leaves that end open; both 0 = no filter.
+    min_frequency_rank: int = 0  # 0 = no minimum; e.g. 500 = skip the top 500
     max_frequency_rank: int = 0  # 0 = no filtering; e.g. 10000 = only top 10k words
+    # What happens to words carrying NO rank (missing from every loaded source).
+    # False (default) is the Issue #34 rule: opting into a band means an unindexed
+    # word cannot be shown to fall inside it, so it is dropped. True keeps them —
+    # what a min-only band usually wants, since an unranked word is not shown to
+    # be super-common either. Surfaced as a checkbox rather than inferred from
+    # which end is set, because the honest answer differs per end.
+    frequency_keep_unranked: bool = False
 
     # Additive multi-source frequency chain. Each enabled FreqEntry references a
     # per-source index under ~/.anki_miner/freqs/<source_id>/. Empty by default;

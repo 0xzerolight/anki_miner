@@ -276,6 +276,66 @@ class TestWordFilterService:
             result = service.filter_by_frequency([], max_rank=5000)
             assert result == []
 
+        def test_min_rank_drops_the_most_common_words(self, test_config):
+            """The minimum drops the common end: rank 5 goes, rank 3000 stays."""
+            service = WordFilterService(test_config)
+            common = self._word_with_freq("の", 5)
+            mid = self._word_with_freq("猫", 3000)
+
+            result = service.filter_by_frequency([common, mid], min_rank=1000)
+
+            assert result == [mid]
+
+        def test_min_rank_is_inclusive(self, test_config):
+            """A word sitting exactly on the minimum is inside the band."""
+            service = WordFilterService(test_config)
+            edge = self._word_with_freq("猫", 1000)
+
+            assert service.filter_by_frequency([edge], min_rank=1000) == [edge]
+
+        def test_min_and_max_keep_only_the_band(self, test_config):
+            """Both ends set: only the words between them survive."""
+            service = WordFilterService(test_config)
+            common = self._word_with_freq("の", 5)
+            mid = self._word_with_freq("猫", 3000)
+            rare = self._word_with_freq("稀な単語", 90000)
+
+            result = service.filter_by_frequency([common, mid, rare], 10000, min_rank=1000)
+
+            assert result == [mid]
+
+        def test_unranked_words_are_dropped_by_default(self, test_config):
+            """Issue #34 default holds for either end of the band."""
+            service = WordFilterService(test_config)
+            unranked = self._word_with_freq("稀な単語", None)
+
+            assert service.filter_by_frequency([unranked], min_rank=1000) == []
+            assert service.filter_by_frequency([unranked], 10000) == []
+
+        def test_keep_unranked_keeps_words_with_no_rank(self, test_config):
+            """The opt-in keeps unranked words without weakening the bounds."""
+            service = WordFilterService(test_config)
+            unranked = self._word_with_freq("稀な単語", None)
+            common = self._word_with_freq("の", 5)
+
+            result = service.filter_by_frequency([unranked, common], min_rank=1000, keep_unranked=True)
+
+            assert result == [unranked]
+
+        def test_keep_unranked_is_inert_when_no_bound_is_set(self, test_config):
+            """No band at all short-circuits before the unranked question."""
+            service = WordFilterService(test_config)
+            words = [self._word_with_freq("稀な単語", None)]
+
+            assert service.filter_by_frequency(words, 0, min_rank=0, keep_unranked=False) == words
+
+        def test_an_inverted_band_keeps_nothing(self, test_config):
+            """min > max is prevented in the UI; the filter must not invert on it."""
+            service = WordFilterService(test_config)
+            words = [self._word_with_freq("猫", 3000)]
+
+            assert service.filter_by_frequency(words, 1000, min_rank=5000) == []
+
     class TestFilterByWordLists:
         """Tests for filter_by_word_lists method."""
 
