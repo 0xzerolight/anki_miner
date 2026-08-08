@@ -1793,3 +1793,112 @@ def test_warn_missing_fields_latest_check_wins(qtbot, wiz_config):
     release_first.set()
     qtbot.wait(500)
     assert page.warning_label.text() == "LATEST"
+
+
+# ---------------------------------------------------------------------------
+# NoteTypePage — note-type presets
+# ---------------------------------------------------------------------------
+
+_LAPIS_FIELDS = [
+    "Expression",
+    "ExpressionFurigana",
+    "ExpressionReading",
+    "ExpressionAudio",
+    "SelectionText",
+    "MainDefinition",
+    "DefinitionPicture",
+    "Sentence",
+    "SentenceFurigana",
+    "SentenceAudio",
+    "Picture",
+    "Glossary",
+    "Hint",
+    "IsWordAndSentenceCard",
+    "IsClickCard",
+    "IsSentenceCard",
+    "IsAudioCard",
+    "PitchPosition",
+    "PitchCategories",
+    "Frequency",
+    "FreqSort",
+    "MiscInfo",
+]
+_SENREN_FIELDS = [
+    "word",
+    "reading",
+    "sentence",
+    "sentenceFurigana",
+    "sentenceTranslation",
+    "sentenceCard",
+    "audioCard",
+    "notes",
+    "selectionText",
+    "definition",
+    "wordAudio",
+    "sentenceAudio",
+    "picture",
+    "glossary",
+    "hint",
+    "pitchAccents",
+    "pitchPositions",
+    "pitchCategories",
+    "frequencies",
+    "freqSort",
+    "miscInfo",
+    "dictionaryPreference",
+]
+
+
+def test_notetype_page_applies_a_recognized_preset_on_fetch(qtbot, wiz_config):
+    """A Lapis field list maps itself — no Auto-Map press, and no field check."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Lapis"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    _set_notetype_page_state(page, selected="Lapis", models=["Lapis"], field_names=None)
+
+    page._on_fields_fetched("Lapis", _LAPIS_FIELDS)
+
+    config = wiz.working_config()
+    assert config.anki_fields["word"] == "Expression"
+    assert config.anki_fields["pitch_category"] == "PitchCategories"
+    assert config.anki_fields["source"] == "MiscInfo"
+    assert config.pitch_category_format == "romaji"
+    assert "Lapis" in page.mapping_summary.text()
+    assert page.isComplete()
+
+
+def test_notetype_page_preset_clears_an_unsupported_card_type(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    cfg = replace(wiz_config, anki_note_type="Senren", card_type="click")
+    wiz = SetupWizard(cfg)
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    _set_notetype_page_state(page, selected="Senren", models=["Senren"], field_names=None)
+
+    page._on_fields_fetched("Senren", _SENREN_FIELDS)
+
+    config = wiz.working_config()
+    # Senren has no click card, so the staged selection cannot survive.
+    assert config.card_type == ""
+    assert config.card_type_marker_fields["sentence"] == "sentenceCard"
+    assert config.card_type_marker_fields["click"] == ""
+    assert config.anki_fields["pitch_text"] == "pitchAccents"
+
+
+def test_notetype_page_leaves_an_unknown_note_type_to_the_keyword_map(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="MyNoteType"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    _set_notetype_page_state(page, selected="MyNoteType", models=["MyNoteType"], field_names=None)
+
+    page._on_fields_fetched("MyNoteType", ["Word", "Sentence", "Picture"])
+
+    config = wiz.working_config()
+    # No preset matched, so nothing outside the field map was touched.
+    assert config.pitch_category_format == "jp"
+    assert config.anki_fields["pitch_category"] == ""

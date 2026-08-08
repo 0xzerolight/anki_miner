@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QComboBox
 
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
+from anki_miner.services.note_presets import preset_by_id
 
 
 def test_deck_and_notetype_are_strict_combos(qtbot):
@@ -615,3 +616,150 @@ def test_load_from_config_clears_a_status_from_the_previous_selection(qtbot, tes
 
     assert panel.deck_status.text() == ""
     assert panel.notetype_status.text() == ""
+
+
+# ---------------------------------------------------------------------------
+# Note-type preset row
+# ---------------------------------------------------------------------------
+
+
+def test_preset_row_is_a_strict_combo_with_the_three_note_types(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    assert isinstance(panel.preset_combo, QComboBox)
+    assert not panel.preset_combo.isEditable()
+    ids = [panel.preset_combo.itemData(index) for index in range(panel.preset_combo.count())]
+    assert ids == ["lapis", "kiku", "senren"]
+    # Nothing preselected: applying is a deliberate act.
+    assert panel.preset_combo.currentIndex() == -1
+    # The shared combo+button row defaults its button to "Refresh"; this one
+    # applies a preset and must not inherit the wrong verb.
+    assert panel.preset_apply_button.text() == "Apply"
+    assert panel.deck_sync_button.text() == "Refresh"
+    assert panel.notetype_sync_button.text() == "Refresh"
+    assert panel.preset_apply_button.toolTip().strip()
+    # One column: a narrower verb must not stagger the row beside it.
+    widths = {b.minimumWidth() for b in (panel.deck_sync_button, panel.notetype_sync_button, panel.preset_apply_button)}
+    assert len(widths) == 1, widths
+
+
+def test_applying_lapis_fills_the_mapping_and_the_pitch_format(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_pitch_category_format("jp")
+
+    panel.apply_note_type_preset(preset_by_id("lapis"))
+
+    fields = panel.get_card_fields()
+    assert fields["word"] == "Expression"
+    assert fields["pitch_category"] == "PitchCategories"
+    assert fields["source"] == "MiscInfo"
+    assert fields["frequency_sort"] == "FreqSort"
+    assert fields["sentence_reading"] == ""
+    assert panel.get_pitch_category_format() == "romaji"
+    assert panel.get_card_type_marker_fields()["sentence"] == "IsSentenceCard"
+    assert panel.preset_status.text().strip()
+
+
+def test_applying_senren_rewrites_the_markers_and_drops_an_unsupported_card_type(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_type("click")
+
+    panel.apply_note_type_preset(preset_by_id("senren"))
+
+    markers = panel.get_card_type_marker_fields()
+    assert markers["sentence"] == "sentenceCard"
+    assert markers["audio"] == "audioCard"
+    assert markers["click"] == ""
+    # Senren has no click card, so the selection cannot survive.
+    assert panel.get_card_type() == ""
+    assert panel.get_card_fields()["pitch_text"] == "pitchAccents"
+
+
+def test_applying_a_preset_keeps_a_supported_card_type(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_type("sentence")
+
+    panel.apply_note_type_preset(preset_by_id("senren"))
+
+    assert panel.get_card_type() == "sentence"
+
+
+def test_applying_a_preset_preserves_keys_the_panel_does_not_own(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields({"word": "Expression", "future_key": "Whatever"})
+
+    panel.apply_note_type_preset(preset_by_id("lapis"))
+
+    assert panel.get_card_fields()["future_key"] == "Whatever"
+
+
+def test_apply_with_nothing_selected_reports_and_changes_nothing(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields({"word": "MyWord"})
+    panel.preset_combo.setCurrentIndex(-1)
+
+    panel.preset_apply_button.click()
+
+    assert panel.get_card_fields()["word"] == "MyWord"
+    assert panel.preset_status.text().strip()
+    assert panel.preset_status.property("status") == "error"
+
+
+def test_choosing_a_known_note_type_preselects_its_preset(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_available_note_types(["Lapis", "Senren", "Basic"])
+
+    panel.set_note_type("Senren")
+
+    assert panel.preset_combo.currentData() == "senren"
+
+
+def test_an_unknown_note_type_leaves_the_preset_selection_alone(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_available_note_types(["Lapis", "Lapis-modified"])
+
+    panel.set_note_type("Lapis")
+    panel.set_note_type("Lapis-modified")
+
+    assert panel.preset_combo.currentData() == "lapis"
+
+
+def test_apply_fills_an_empty_note_type_but_never_overwrites_one(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_note_type("")
+
+    panel.apply_note_type_preset(preset_by_id("kiku"))
+    assert panel.get_note_type() == "Kiku"
+
+    panel.set_note_type("Lapis-modified")
+    panel.apply_note_type_preset(preset_by_id("kiku"))
+    assert panel.get_note_type() == "Lapis-modified"
+
+
+def test_auto_map_matches_the_plural_names_the_real_note_types_use():
+    """The keyword pass is the fallback for FORKS of Lapis / Kiku / Senren."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields
+
+    mapped = auto_map_fields(["PitchCategories", "MiscInfo", "pitchPositions", "frequencies", "pitchAccents"])
+
+    assert mapped["pitch_category"] == "PitchCategories"
+    assert mapped["source"] == "MiscInfo"
+    assert mapped["pitch_position"] == "pitchPositions"
+    assert mapped["frequency"] == "frequencies"
+    assert mapped["pitch_text"] == "pitchAccents"
+
+
+def test_auto_map_still_prefers_the_singular_when_both_exist():
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields
+
+    mapped = auto_map_fields(["PitchPosition", "pitchPositions"])
+
+    assert mapped["pitch_position"] == "PitchPosition"
