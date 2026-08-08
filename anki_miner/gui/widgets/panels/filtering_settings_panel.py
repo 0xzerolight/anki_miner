@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import configure_data_view, data_row_height, install_copy_rows
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
@@ -79,19 +80,68 @@ class FilteringSettingsPanel(FormPanel):
         # a dictionary); only the max-rank threshold — a filter — stays here.
         self.add_section(self.tr("Word Frequency"))
 
-        # Max frequency rank
+        # The minimum and maximum are two ends of ONE filter, so they share one
+        # row: as two stacked fields they read as unrelated settings and the
+        # min<=max relationship stays invisible until the user trips over it.
+        range_container = QWidget()
+        range_row = QHBoxLayout(range_container)
+        range_row.setContentsMargins(0, 0, 0, 0)
+        range_row.setSpacing(SPACING.xs)
+
+        self.min_frequency_spinbox = QSpinBox()
+        self.min_frequency_spinbox.setRange(0, 100000)
+        self.min_frequency_spinbox.setSpecialValueText(self.tr("No minimum"))
+        # Tooltips sit on the spinboxes, not the row: add_field puts the helper on
+        # the container, which these widgets cover with zero margins, and Qt
+        # tooltips don't propagate to children (same fix as anki_settings_panel).
+        self.min_frequency_spinbox.setToolTip(
+            self.tr("Skip words more common than this rank - the ones already learned from exposure.")
+        )
+
         self.max_frequency_spinbox = QSpinBox()
         self.max_frequency_spinbox.setRange(0, 100000)
         self.max_frequency_spinbox.setSpecialValueText(self.tr("No limit"))
+        self.max_frequency_spinbox.setToolTip(self.tr("Skip words rarer than this rank."))
+
+        self.min_frequency_spinbox.valueChanged.connect(self._on_min_frequency_changed)
+        self.max_frequency_spinbox.valueChanged.connect(self._on_max_frequency_changed)
+
+        range_row.addWidget(self.min_frequency_spinbox)
+        range_row.addWidget(QLabel(self.tr("to")))
+        range_row.addWidget(self.max_frequency_spinbox)
+        range_row.addStretch()
+
         self.add_field(
-            self.tr("Max Frequency Rank"),
-            self.max_frequency_spinbox,
-            helper=self.tr("Words missing from the frequency list are excluded"),
+            self.tr("Frequency Rank Range"),
+            range_container,
+            helper=self.tr("Mine only words ranked inside this band. Rank 1 is the most common word."),
+            anchor="frequency_rank_range",
+            anchor_focus=self.min_frequency_spinbox,
+            # Untranslated on purpose, like settings_search.LEGACY_DESTINATION_TERMS:
+            # this is vocabulary users type, not text the app displays. The row was
+            # labelled "Max Frequency Rank" until the minimum joined it.
+            anchor_text=lambda: ("Min Frequency Rank", "Max Frequency Rank"),
         )
-        # Shown by load_from_config only when a cutoff is set but no frequency
+
+        # Unranked-word handling, explicit rather than inferred from which end is
+        # set: dropping them is right for a maximum (they are not provably in the
+        # top N) and wrong for a minimum (they are not provably common either),
+        # so the user decides instead of the code guessing per end.
+        self.keep_unranked_checkbox = QCheckBox(self.tr("Include Words Missing from the Frequency List"))
+        self.keep_unranked_checkbox.setToolTip(
+            self.tr(
+                "Keep words that no loaded frequency source ranks. Off by default: a "
+                "word with no rank cannot be shown to fall inside the band."
+            )
+        )
+        self.add_field("", self.keep_unranked_checkbox)
+
+        # Shown by load_from_config only when a band is set but no frequency
         # source is enabled. In that state the pipeline gates the cutoff off (it
         # would otherwise drop every word and create zero cards), so warn here
-        # instead of letting the spinbox look active.
+        # instead of letting the spinboxes look active. Text unchanged from when
+        # this was a lone cutoff: it reads correctly for a band and its existing
+        # translations still apply.
         self.max_frequency_warning = QLabel(
             self.tr(
                 "No frequency source is loaded — this cutoff is ignored. "
@@ -526,7 +576,7 @@ class FilteringSettingsPanel(FormPanel):
         for set_id, cb in self.wordset_checkboxes.items():
             cb.setChecked(set_id in wanted)
 
-    # --- Max frequency rank ---
+    # --- Frequency rank band ---
 
     def get_max_frequency_rank(self) -> int:
         """Return the max frequency rank value."""
@@ -535,6 +585,46 @@ class FilteringSettingsPanel(FormPanel):
     def set_max_frequency_rank(self, value: int) -> None:
         """Set the max frequency rank spinbox."""
         self.max_frequency_spinbox.setValue(value)
+
+    def get_min_frequency_rank(self) -> int:
+        """Return the most-common rank kept (0 = open end)."""
+        return self.min_frequency_spinbox.value()
+
+    def set_min_frequency_rank(self, value: int) -> None:
+        """Set the min frequency rank spinbox."""
+        self.min_frequency_spinbox.setValue(value)
+
+    def get_frequency_keep_unranked(self) -> bool:
+        """Return whether words with no frequency rank survive the band."""
+        return self.keep_unranked_checkbox.isChecked()
+
+    def set_frequency_keep_unranked(self, value: bool) -> None:
+        """Set the unranked-words checkbox."""
+        self.keep_unranked_checkbox.setChecked(value)
+
+    def _on_min_frequency_changed(self, value: int) -> None:
+        """Keep the band ordered: pushing the minimum past the maximum raises it.
+
+        0 means "open end", not rank zero, so an open end is never dragged along.
+        The sibling ``setValue`` re-enters the other handler exactly once, and
+        that pass finds the band already ordered — it converges, it can't loop.
+        """
+        high = self.max_frequency_spinbox.value()
+        if value > 0 and high > 0 and value > high:
+            self.max_frequency_spinbox.setValue(value)
+        self._sync_frequency_range_state()
+
+    def _on_max_frequency_changed(self, value: int) -> None:
+        """Keep the band ordered: pulling the maximum below the minimum lowers it."""
+        low = self.min_frequency_spinbox.value()
+        if value > 0 and low > 0 and value < low:
+            self.min_frequency_spinbox.setValue(value)
+        self._sync_frequency_range_state()
+
+    def _sync_frequency_range_state(self) -> None:
+        """Unranked-word handling only means anything while a bound is set."""
+        band_set = self.min_frequency_spinbox.value() > 0 or self.max_frequency_spinbox.value() > 0
+        self.keep_unranked_checkbox.setEnabled(band_set)
 
     # --- Known words DB ---
 
@@ -733,17 +823,31 @@ class FilteringSettingsPanel(FormPanel):
         Word-list selectors always set the value (including '' when the path is
         None) so Reset-to-Defaults clears a previously visible path (T-11).
         """
-        self.set_max_frequency_rank(config.max_frequency_rank)
-        # A cutoff with no enabled frequency source is inert (the pipeline skips
+        # Signals blocked while loading: a stored band with min > max (reachable
+        # only by hand-editing gui_config.json) would otherwise have the clamp
+        # silently rewrite the other end during a plain load.
+        self.min_frequency_spinbox.blockSignals(True)
+        self.max_frequency_spinbox.blockSignals(True)
+        try:
+            self.set_min_frequency_rank(config.min_frequency_rank)
+            self.set_max_frequency_rank(config.max_frequency_rank)
+        finally:
+            self.min_frequency_spinbox.blockSignals(False)
+            self.max_frequency_spinbox.blockSignals(False)
+        self.set_frequency_keep_unranked(config.frequency_keep_unranked)
+        self._sync_frequency_range_state()
+        # A band with no enabled frequency source is inert (the pipeline skips
         # it). Surface that here so the setting doesn't look active. frequency_active
         # is derived from the enabled sources in the chain (Dictionaries tab).
-        self.max_frequency_warning.setVisible(config.max_frequency_rank > 0 and not config.frequency_active)
-        if config.max_frequency_rank > 0 and not config.frequency_active:
+        band_set = config.min_frequency_rank > 0 or config.max_frequency_rank > 0
+        self.max_frequency_warning.setVisible(band_set and not config.frequency_active)
+        if band_set and not config.frequency_active:
             log_summary(
                 logger,
                 "Filtering config degraded",
                 level=logging.WARNING,
                 reason="frequency_source_missing",
+                min_frequency_rank=config.min_frequency_rank,
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
@@ -785,7 +889,9 @@ class FilteringSettingsPanel(FormPanel):
         """
         return replace(
             config,
+            min_frequency_rank=self.get_min_frequency_rank(),
             max_frequency_rank=self.get_max_frequency_rank(),
+            frequency_keep_unranked=self.get_frequency_keep_unranked(),
             use_known_words_db=self.get_use_known_words_db(),
             known_words_match_kana_variants=self.get_match_kana_variants(),
             excluded_decks=self.get_excluded_decks(),

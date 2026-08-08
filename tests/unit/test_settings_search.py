@@ -97,9 +97,9 @@ class TestIndex:
             assert entry.page_key in tab._subtab_index
 
     def test_a_result_names_the_setting_and_its_group_and_panel(self, entries):
-        entry = _by_id(entries, "filtering.max_frequency_spinbox")
+        entry = _by_id(entries, "filtering.frequency_rank_range")
 
-        assert entry.title == "Max Frequency Rank"
+        assert entry.title == "Frequency Rank Range"
         assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Filtering"
 
     def test_a_tab_level_setting_belongs_to_no_page(self, entries):
@@ -135,7 +135,14 @@ class TestMatching:
         assert "filtering.excluded_decks" in results
 
     def test_matching_ignores_case(self, entries):
-        assert _ids(search(entries, "MAX FREQUENCY RANK"))[0] == "filtering.max_frequency_spinbox"
+        """Doubles as the net for the legacy label: the row was "Max Frequency
+        Rank" before the minimum joined it, and that term is carried forward in
+        the row's anchor_text."""
+        assert _ids(search(entries, "MAX FREQUENCY RANK"))[0] == "filtering.frequency_rank_range"
+
+    def test_either_end_of_the_band_is_searchable_by_name(self, entries):
+        """Neither end has a label of its own, so both names live in anchor_text."""
+        assert _ids(search(entries, "Min Frequency Rank"))[0] == "filtering.frequency_rank_range"
 
 
 class TestRenamedDestinations:
@@ -161,7 +168,7 @@ class TestTranslatedIndex:
     """The index must be built from what the translator produced, not literals."""
 
     _JA = {
-        "Max Frequency Rank": "最大頻度ランク",
+        "Frequency Rank Range": "頻度ランク範囲",
         "Mining": "採掘",
         "Filtering": "フィルタリング",
     }
@@ -184,19 +191,19 @@ class TestTranslatedIndex:
             app.removeTranslator(stub)
 
     def test_the_translated_label_finds_the_setting(self, translated_tab):
-        results = search(translated_tab.setting_search_entries(), "最大頻度ランク")
+        results = search(translated_tab.setting_search_entries(), "頻度ランク範囲")
 
-        assert _ids(results)[0] == "filtering.max_frequency_spinbox"
+        assert _ids(results)[0] == "filtering.frequency_rank_range"
 
     def test_the_english_source_string_does_not(self, translated_tab):
-        results = search(translated_tab.setting_search_entries(), "Max Frequency Rank")
+        results = search(translated_tab.setting_search_entries(), "Frequency Rank Range")
 
-        assert "filtering.max_frequency_spinbox" not in _ids(results)
+        assert "filtering.frequency_rank_range" not in _ids(results)
 
     def test_the_breadcrumb_is_translated_too(self, translated_tab):
-        entry = _by_id(translated_tab.setting_search_entries(), "filtering.max_frequency_spinbox")
+        entry = _by_id(translated_tab.setting_search_entries(), "filtering.frequency_rank_range")
 
-        assert entry.title == "最大頻度ランク"
+        assert entry.title == "頻度ランク範囲"
         assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}フィルタリング"
 
 
@@ -205,13 +212,13 @@ class TestSearchBox:
         assert not tab.search_box.results.isVisibleTo(tab.search_box)
 
     def test_a_row_carries_the_setting_and_the_breadcrumb(self, tab):
-        tab.search_box.input.setText("Max Frequency Rank")
+        tab.search_box.input.setText("Frequency Rank Range")
 
         item = tab.search_box.results.item(0)
         assert item is not None
-        assert "Max Frequency Rank" in item.text()
+        assert "Frequency Rank Range" in item.text()
         assert f"Mining{BREADCRUMB_SEPARATOR}Filtering" in item.text()
-        assert item.data(Qt.ItemDataRole.UserRole) == "filtering.max_frequency_spinbox"
+        assert item.data(Qt.ItemDataRole.UserRole) == "filtering.frequency_rank_range"
 
     def test_a_query_with_no_match_lists_no_jumpable_row(self, tab):
         tab.search_box.input.setText("zzz-nothing-matches-this")
@@ -306,7 +313,7 @@ class TestJump:
     def test_enter_opens_the_panel_and_focuses_the_control(self, tab, qtbot):
         tab.open_subtab("anki")
 
-        anchor = self._jump(tab, qtbot, "filtering.max_frequency_spinbox", "Max Frequency Rank")
+        anchor = self._jump(tab, qtbot, "filtering.frequency_rank_range", "Frequency Rank Range")
 
         assert tab.pages.currentIndex() == tab._subtab_index["filtering"]
         assert tab.nav_list.currentItem().data(Qt.ItemDataRole.UserRole) == "filtering"
@@ -318,12 +325,12 @@ class TestJump:
         seen: list[object] = []
         monkeypatch.setattr(page, "ensureWidgetVisible", lambda w, *a, **k: seen.append(w))
 
-        anchor = self._jump(tab, qtbot, "filtering.max_frequency_spinbox", "Max Frequency Rank")
+        anchor = self._jump(tab, qtbot, "filtering.frequency_rank_range", "Frequency Rank Range")
 
         assert seen == [anchor.scroll_widget]
 
     def test_the_control_is_briefly_marked_then_unmarked(self, tab, qtbot):
-        anchor = self._jump(tab, qtbot, "filtering.max_frequency_spinbox", "Max Frequency Rank")
+        anchor = self._jump(tab, qtbot, "filtering.frequency_rank_range", "Frequency Rank Range")
         target = anchor.highlight_widget
 
         # Zero-duration seam: the mark is set, then cleared on the next turn.
@@ -331,7 +338,7 @@ class TestJump:
         assert target.property(SEARCH_HIT_PROPERTY) in (False, None)
 
     def test_the_query_is_cleared_so_the_list_gets_out_of_the_way(self, tab, qtbot):
-        self._jump(tab, qtbot, "filtering.max_frequency_spinbox", "Max Frequency Rank")
+        self._jump(tab, qtbot, "filtering.frequency_rank_range", "Frequency Rank Range")
 
         assert tab.search_box.input.text() == ""
         assert not tab.search_box.results.isVisibleTo(tab.search_box)
@@ -351,7 +358,7 @@ class TestJump:
     def test_searching_changes_no_setting(self, tab, qtbot):
         before = tab.config
 
-        self._jump(tab, qtbot, "filtering.max_frequency_spinbox", "Max Frequency Rank")
+        self._jump(tab, qtbot, "filtering.frequency_rank_range", "Frequency Rank Range")
 
         assert tab.config == before
         assert tab._settings_dirty is False

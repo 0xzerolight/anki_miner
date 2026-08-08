@@ -47,6 +47,8 @@ class TestMachineSpecificFields:
         fields = GUIConfigManager.machine_specific_fields()
         assert "anki_deck_name" not in fields
         assert "max_frequency_rank" not in fields
+        assert "min_frequency_rank" not in fields
+        assert "frequency_keep_unranked" not in fields
         assert "theme" not in fields
         assert "max_parallel_workers" not in fields
 
