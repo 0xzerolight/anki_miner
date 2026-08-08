@@ -11,7 +11,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+
+### Removed
+
+## [2.9.3] - 2026-08-08
+
+A crash fix and a filter fix. On Windows the word curator killed the app the moment a line played — the crash capture added in 2.9.2 was treating mpv's own routine internal exceptions as fatal, and the dump it took to record them is what actually ended the process. The kana exclusions also missed the words most people tick them for.
+
+### Fixed
 - **The word curator no longer takes the app down on Windows when a line plays.** The video core was loading mpv's builtin Lua scripts — a statistics overlay, a console, a few menus, none of which this player uses — and LuaJIT raises Windows exceptions as ordinary, caught control flow. The native-crash capture added in 2.9.2 treats every one of them as fatal and dumps all threads, and taking that dump while the player thread is running is what actually killed the process. The scripts are switched off now, each by its own option, so the crash reporter fires only on real crashes and stops filling `anki_miner.crash` with harmless dumps.
+- **The kana exclusions skip the words they promise.** `ー` is filed in the katakana Unicode block, so a hiragana word carrying one — すごーい, ずーっと, きれー — counted as neither hiragana-only nor katakana-only and slipped past both switches; katakana stems with hiragana okurigana (サボる, ヤバい, ググる) matched neither either. Kana marks are script-neutral now, and ticking both boxes means a kanji-only deck, so the mixed-kana loanwords go too. Either box on its own still mines them.
 
 ### Removed
 - **The word curator's video-preview switch**, along with the crash marker that turned it off by itself. The abort it guarded was a packaging fault — the Linux bundle's C++ runtime shadowing the host graphics driver — and that is fixed at the source, so the switch was a permanent setting standing in for a bug that no longer exists. `ANKI_MINER_NO_VIDEO_PREVIEW=1` still turns the preview off for anyone who needs it, and the notice on the pane names it.
