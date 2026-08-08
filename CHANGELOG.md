@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Frequency filtering takes a range, not just a ceiling.** Settings -> Filtering now carries one "Frequency Rank Range" row with both ends: a minimum drops the words that are everywhere and already known from exposure, the maximum keeps working as before. Either end can be left open, and the row keeps the band ordered as it is edited.
+- **A switch for words no frequency list ranks.** "Include Words Missing from the Frequency List" decides what happens to a word carrying no rank. It is off by default, which is what a rank ceiling has always done; turning it on is what a minimum-only range usually wants, since an unranked word is no more likely to be a common one.
 
 ### Changed
 
