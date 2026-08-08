@@ -39,6 +39,7 @@ from anki_miner.gui.workers.fetch_workers import (
     FetchNotetypesWorker,
 )
 from anki_miner.services.anki_note_builder import configured_target_field_names
+from anki_miner.services.note_presets import NotePreset, preset_for_field_names
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -636,6 +637,15 @@ class NoteTypePage(_LiveCheckPage):
             return
         self._sanitize_field_mappings(note_type, names)
         self.auto_map_button.setEnabled(True)
+        # A note type we can name maps itself: the preset carries the exact
+        # field names plus the pitch/marker settings the keyword pass below
+        # cannot know about, so there is nothing left for the user to press.
+        preset = preset_for_field_names(names)
+        if preset is not None:
+            self.guidance_label.setVisible(False)
+            self.guidance_label.setText("")
+            self._apply_preset(preset)
+            return
         if not self._has_mining_shape(names):
             self._show_guidance(
                 tr_format(
@@ -692,11 +702,46 @@ class NoteTypePage(_LiveCheckPage):
 
     # --- auto-map ---
 
+    def _apply_preset(self, preset: NotePreset) -> None:
+        """Stage ``preset``'s whole answer onto the wizard's working config.
+
+        Deliberately does NOT call ``_warn_missing_fields``: the preset matched
+        because every field it ships is on this note type, and every name it
+        maps is inside that set, so the check has nothing to find and would
+        spend an AnkiConnect round trip saying so.
+        """
+        config = self._wizard.working_config()
+        merged = dict(config.anki_fields)
+        merged.update(preset.fields)
+        updated = replace(
+            config,
+            anki_fields=merged,
+            pitch_category_format=preset.pitch_category_format,
+            card_type_marker_fields=dict(preset.card_type_marker_fields),
+            card_type=config.card_type if config.card_type in preset.supported_card_types else "",
+        )
+        if updated != config:
+            self._wizard.update_working_config(updated)
+        mapped = sum(1 for value in preset.fields.values() if value)
+        self.mapping_summary.setText(
+            tr_format(
+                self.tr("Recognized %1 — mapped %2 fields. You can fine-tune these later in Settings → Anki."),
+                preset.name,
+                str(mapped),
+            )
+        )
+        self.warning_label.setText("")
+        self.completeChanged.emit()
+
     def _on_auto_map_clicked(self) -> None:
         note_type = self.notetype_combo.currentText().strip()
         if not self._field_names or self._field_names_note_type != note_type:
             return
         self._sanitize_field_mappings(note_type, self._field_names)
+        preset = preset_for_field_names(self._field_names)
+        if preset is not None:
+            self._apply_preset(preset)
+            return
         mapped = auto_map_fields(self._field_names)
         config = self._wizard.working_config()
         merged = dict(config.anki_fields)
