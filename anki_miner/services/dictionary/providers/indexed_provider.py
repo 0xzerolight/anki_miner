@@ -34,6 +34,9 @@ from anki_miner.services.dictionary.storage import (
     lookup_with_rules as storage_lookup_with_rules,
 )
 from anki_miner.services.dictionary.storage import (
+    sequence_terms as storage_sequence_terms,
+)
+from anki_miner.services.dictionary.storage import (
     terms_exist as storage_terms_exist,
 )
 from anki_miner.services.dictionary.storage import (
@@ -290,6 +293,28 @@ class IndexedDictProvider:
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during exact_term_sequences; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return {}
+
+    def sequence_terms(
+        self,
+        identities: list[tuple[int, str]],
+    ) -> dict[tuple[int, str], set[str]]:
+        """Batch ``(sequence, reading)`` -> alias-spelling expansion.
+
+        The reverse of :meth:`exact_term_sequences`. Unavailable or corrupt
+        indexes degrade to an empty map.
+        """
+        if self._conn is None:
+            return {}
+        try:
+            return storage_sequence_terms(self._conn, identities)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during sequence_terms; treating as all-miss: %s",
                 self.dict_id,
                 self._db_path,
                 e,
