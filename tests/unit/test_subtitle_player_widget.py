@@ -333,6 +333,78 @@ class TestPlayPauseStop:
         assert fake_mpv["player"].pause is True
 
 
+class TestPlayRange:
+    """Bounded clip preview — the word curator's audio clip strip drives this."""
+
+    def _loaded(self, qtbot, fake_mpv) -> SubtitlePlayerWidget:
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_file_loaded()
+        fake_mpv["player"].command.reset_mock()
+        return widget
+
+    def test_seeks_to_start_and_plays(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(4.0, 9.5)
+        fake_mpv["player"].command.assert_called_once_with("seek", 4.0, "absolute+exact")
+        assert fake_mpv["player"].pause is False
+        assert widget._range_end == 9.5
+
+    def test_pauses_at_the_end_once(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(4.0, 9.5)
+        with qtbot.waitSignal(widget.range_finished, timeout=100):
+            widget._on_time_pos(9.5)
+        assert fake_mpv["player"].pause is True
+        assert widget._range_end is None
+        # A later tick must not re-pause: the range is spent, and the user may
+        # have started playing again.
+        fake_mpv["player"].pause = False
+        widget._on_time_pos(12.0)
+        assert fake_mpv["player"].pause is False
+
+    def test_does_not_stop_before_the_end(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(4.0, 9.5)
+        widget._on_time_pos(8.0)
+        assert fake_mpv["player"].pause is False
+        assert widget._range_end == 9.5
+
+    @pytest.mark.parametrize("action", ["play", "pause", "stop", "toggle_play_pause"])
+    def test_transport_action_cancels_the_range(self, qtbot, fake_mpv, action):
+        """A user taking over playback is never yanked to a stale boundary."""
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(4.0, 9.5)
+
+        with qtbot.waitSignal(widget.range_finished, timeout=100):
+            getattr(widget, action)()
+
+        assert widget._range_end is None
+        fake_mpv["player"].pause = False
+        widget._on_time_pos(9.5)
+        assert fake_mpv["player"].pause is False
+
+    def test_seek_elsewhere_cancels_the_range(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(4.0, 9.5)
+        widget.seek_seconds(30.0)
+        assert widget._range_end is None
+
+    def test_cancel_is_idempotent_and_quiet(self, qtbot, fake_mpv):
+        """No range in effect means no signal — consumers must not see a phantom stop."""
+        widget = self._loaded(qtbot, fake_mpv)
+        received = []
+        widget.range_finished.connect(lambda: received.append(True))
+        widget.cancel_range()
+        widget.cancel_range()
+        assert received == []
+
+    def test_no_player_is_a_noop(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)  # set_source never called
+        widget.play_range(1.0, 2.0)
+        assert widget._range_end is None
+
+
 class TestObserverSlots:
     def test_time_pos_none_is_ignored(self, qtbot, fake_mpv):
         widget = _widget(qtbot)

@@ -86,6 +86,11 @@ class SubtitlePlayerWidget(QWidget):
     #: widget: that one still plays audio, this one plays nothing.
     playback_failed = pyqtSignal(str)
 
+    #: Emitted on the GUI thread when a :meth:`play_range` preview stops being
+    #: in effect — it reached its end, or any other transport action cancelled
+    #: it. Consumers use it to put a "playing" button back to its idle glyph.
+    range_finished = pyqtSignal()
+
     # Marshalling signals: emitted from python-mpv's event thread, delivered
     # queued on the GUI thread. object-typed on purpose — mpv properties are
     # nullable (see module docstring).
@@ -138,6 +143,11 @@ class SubtitlePlayerWidget(QWidget):
         # both consumer dialogs call set_source in __init__, before the widget
         # is shown and GL exists.
         self._pending_load: str | None = None
+        # End of an in-progress play_range, in seconds; None when playback is
+        # not bounded. Cleared by cancel_range, which EVERY other transport
+        # entry point calls — a manual Play or a seek elsewhere must not be
+        # yanked to a stop at a boundary the user has already left behind.
+        self._range_end: float | None = None
 
         self._mpv_time_pos.connect(self._on_time_pos)
         self._mpv_duration.connect(self._on_duration)
@@ -467,6 +477,7 @@ class SubtitlePlayerWidget(QWidget):
         Args:
             seconds: Target position in seconds (clamped to >= 0).
         """
+        self.cancel_range()
         target_ms = max(0, int(seconds * 1000))
         if self.player is None or not self._file_loaded:
             self._pending_seek_ms = target_ms
@@ -492,6 +503,7 @@ class SubtitlePlayerWidget(QWidget):
         a bare unpause is a no-op — seek to 0 first so Play replays from the
         start (QMediaPlayer end-of-media parity).
         """
+        self.cancel_range()
         if self.player is None:
             return
         if self._at_eof and self._file_loaded:
@@ -500,9 +512,37 @@ class SubtitlePlayerWidget(QWidget):
 
     def pause(self) -> None:
         """Pause playback (no-op if no source has been loaded)."""
+        self.cancel_range()
         if self.player is None:
             return
         self.player.pause = True
+
+    def play_range(self, start: float, end: float) -> None:
+        """Play ``start`` → ``end`` (seconds), then pause at ``end``.
+
+        Backs the word curator's audio clip preview: the user hears exactly the
+        window the card will get. The stop is driven by the ``time_pos``
+        observer, so it lands within one tick (~40 ms) of ``end`` — inaudible
+        for a preview, and far cheaper than decoding the clip for real.
+
+        Any subsequent transport action — Play, Pause, Stop, a seek, the Space
+        shortcut — cancels the pending stop, so a user who takes over playback
+        is never yanked to a halt at a boundary they have moved past. That is
+        also why ``_range_end`` is assigned LAST: the seek and play below both
+        route through :meth:`cancel_range`.
+        """
+        if self.player is None:
+            return
+        self.seek_seconds(start)
+        self.play()
+        self._range_end = end
+
+    def cancel_range(self) -> None:
+        """Drop any pending :meth:`play_range` stop (idempotent)."""
+        if self._range_end is None:
+            return
+        self._range_end = None
+        self.range_finished.emit()
 
     def stop(self) -> None:
         """Stop playback: paused at position 0, media kept loaded.
@@ -577,6 +617,11 @@ class SubtitlePlayerWidget(QWidget):
         """Playback position observer (seconds float; None while idle)."""
         if value is None or self.player is None:
             return
+        # End of a bounded clip preview. pause() clears the range and emits
+        # range_finished, so the stop happens exactly once; the rest of this
+        # slot still runs so the strip paints the final position.
+        if self._range_end is not None and float(value) >= self._range_end:  # type: ignore[arg-type]
+            self.pause()
         position_ms = int(float(value) * 1000)  # type: ignore[arg-type]
         # Don't fight the user mid-drag: while the handle is held down, a
         # playback-driven setValue yanks it back and the scrub tugs-of-war.
