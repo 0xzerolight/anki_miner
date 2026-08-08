@@ -632,8 +632,15 @@ def test_preset_row_is_a_strict_combo_with_the_three_note_types(qtbot):
     assert ids == ["lapis", "kiku", "senren"]
     # Nothing preselected: applying is a deliberate act.
     assert panel.preset_combo.currentIndex() == -1
-    assert panel.preset_apply_button.text().strip()
+    # The shared combo+button row defaults its button to "Refresh"; this one
+    # applies a preset and must not inherit the wrong verb.
+    assert panel.preset_apply_button.text() == "Apply"
+    assert panel.deck_sync_button.text() == "Refresh"
+    assert panel.notetype_sync_button.text() == "Refresh"
     assert panel.preset_apply_button.toolTip().strip()
+    # One column: a narrower verb must not stagger the row beside it.
+    widths = {b.minimumWidth() for b in (panel.deck_sync_button, panel.notetype_sync_button, panel.preset_apply_button)}
+    assert len(widths) == 1, widths
 
 
 def test_applying_lapis_fills_the_mapping_and_the_pitch_format(qtbot):

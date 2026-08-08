@@ -264,6 +264,7 @@ class AnkiSettingsPanel(FormPanel):
             placeholder=self.tr("Select a preset…"),
             tooltip="",
             button_name="preset_apply_button",
+            button_text=self.tr("Apply"),
             button_tooltip=self.tr("Fill every mapping below from this note type's published field names"),
             button_callback=self._on_apply_preset,
             helper_text=self.tr(
@@ -287,6 +288,12 @@ class AnkiSettingsPanel(FormPanel):
         )
         self.fetch_fields_button.clicked.connect(self._on_fetch_fields)
         self.add_widget(self.fetch_fields_button)
+
+        # The three combo+button rows are read as one column. Their labels are
+        # different words ("Refresh", "Refresh", "Apply") and so are their
+        # natural widths, which would stagger both the button edges and the
+        # combos beside them. Widen them all to the widest.
+        self._align_row_buttons(self.deck_sync_button, self.notetype_sync_button, self.preset_apply_button)
 
         # Card Field Mappings section
         self.add_section(self.tr("Card Field Mappings"))
@@ -533,6 +540,7 @@ class AnkiSettingsPanel(FormPanel):
         helper_text: str = "",
         *,
         anchor: str,
+        button_text: str = "",
     ) -> None:
         """Add a labeled dropdown + inline refresh button as one compact form row.
 
@@ -552,6 +560,9 @@ class AnkiSettingsPanel(FormPanel):
             button_tooltip: Tooltip for button
             button_callback: Callback for button click
             helper_text: Optional helper text shown as a tooltip on the field
+            button_text: Button label, defaulting to "Refresh". The row was
+                built for the two combos that reload a list from Anki; a row
+                whose button does something else has to say so.
         """
         # Container for input + button
         container = QWidget()
@@ -587,7 +598,7 @@ class AnkiSettingsPanel(FormPanel):
         # closed, start Anki, and there is nothing to click — showEvent's fetch
         # is one-shot). Wording and variant match the wizard's deck/note-type
         # Refresh so the two surfaces read the same.
-        sync_button = ModernButton(self.tr("Refresh"), variant="secondary")
+        sync_button = ModernButton(button_text or self.tr("Refresh"), variant="secondary")
         sync_button.clicked.connect(button_callback)
         sync_button.setToolTip(button_tooltip)
         row.addWidget(sync_button)
@@ -600,6 +611,13 @@ class AnkiSettingsPanel(FormPanel):
             anchor=anchor,
             anchor_focus=input_widget,
         )
+
+    @staticmethod
+    def _align_row_buttons(*buttons: ModernButton) -> None:
+        """Give every combo-row button the width of the widest one."""
+        widest = max(button.sizeHint().width() for button in buttons)
+        for button in buttons:
+            button.setMinimumWidth(widest)
 
     def _on_deck_sync(self) -> None:
         """Handle deck refresh button click.
