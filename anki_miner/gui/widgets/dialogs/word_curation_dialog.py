@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import dataclasses
 import html
 import logging
 from collections import OrderedDict
@@ -59,6 +60,7 @@ from anki_miner.gui.utils.qt_helpers import (
     update_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
+from anki_miner.gui.widgets.audio_clip_editor import AudioClipEditor
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.gui.widgets.base.sizing import metric_row_height
@@ -100,6 +102,12 @@ class CurationMediaContext:
     offset: float = 0.0
     audio_track_override: int | None = None
     page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
+    #: ``config.audio_padding`` — what the default clip window widens the
+    #: subtitle line by on each side. Carried here rather than handed to the
+    #: dialog separately: this is already the frozen carrier for media facts,
+    #: built where the config is in scope. The audio clip strip needs it to
+    #: show the user the window that would be cut without an edit.
+    audio_padding: float = 0.3
 
 
 class WordCurationDialog(ScreenIssueHost, QDialog):
@@ -168,6 +176,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # original word when the user never picks an alternative.
         self._has_candidates = any(len(w.sentence_candidates) > 1 for w in words)
         self._chosen: dict[int, TokenizedWord] = {}
+        # Per-word audio clip windows the user edited, keyed by original word
+        # index exactly like _chosen. Applied in get_selected_words; empty for
+        # every run where nobody touched the strip, which is the common case.
+        self._clip_overrides: dict[int, tuple[float, float]] = {}
+        # The word the audio clip strip is currently showing, so an edit lands
+        # on the right index no matter how the table has been sorted.
+        self._clip_index: int | None = None
         # Context for the candidate list while a row is focused: the focused
         # word's index + its candidate variants. Guards programmatic
         # repopulation from being mistaken for a user pick.
@@ -659,7 +674,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # getattr: tests substitute a bare QWidget for the player, and a
             # stub with no surface to report should keep the normal layout.
             stretch = 3 if getattr(self.player_widget, "video_surface_available", True) else 1
-            panes.append(("player", self.player_widget, stretch, 0))
+            # The audio clip strip rides WITH the player rather than beside it:
+            # it edits the clip the player previews, and a splitter pane of its
+            # own would give a collapsed one-line disclosure a draggable handle
+            # and a share of the column. Wrapping also keeps the pane named
+            # "player", so every side-split layout saved before this feature
+            # existed still restores (see _side_key below).
+            panes.append(("player", self._build_player_pane(), stretch, 0))
 
         if self._show_image:
             # Mutually exclusive with the player in practice (manga has no
@@ -731,6 +752,80 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 for index, stretch in enumerate(self._side_stretch)
             ]
         )
+
+    def _build_player_pane(self) -> QWidget:
+        """Build the player pane: the video frame plus the audio clip strip.
+
+        The strip is a thin collapsed disclosure by default — editing a clip
+        window is a repair for the occasional cut-off line, not part of the
+        normal read-and-pick loop, so it costs one line until asked for.
+        """
+        self.player_widget = self._create_player_widget()
+        self.clip_editor = AudioClipEditor()
+        # Restored before the signal is connected, so re-opening the strip is
+        # not re-saved once per queue item.
+        self.clip_editor.set_expanded(session_state.load_curator_clip_expanded())
+        self.clip_editor.expanded_changed.connect(session_state.save_curator_clip_expanded)
+        self.clip_editor.clip_changed.connect(self._on_clip_changed)
+        self.clip_editor.clip_reset.connect(self._on_clip_reset)
+        self.clip_editor.play_requested.connect(self._on_clip_play_requested)
+        self.clip_editor.stop_requested.connect(self._on_clip_stop_requested)
+        # The player owns the stop: it fires range_finished when the clip ends
+        # AND when anything else takes playback over, so the button cannot be
+        # left showing "playing" after a Space press moved the user elsewhere.
+        # getattr for the same reason the stretch factor above uses it: tests
+        # substitute a bare QWidget for the player.
+        range_finished = getattr(self.player_widget, "range_finished", None)
+        if range_finished is not None:
+            range_finished.connect(lambda: self.clip_editor.set_playing(False))
+        # Nothing focused yet; the first row-focus seeds it.
+        self.clip_editor.clear_word()
+
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 0)
+        vbox.setSpacing(SPACING.xs)
+        vbox.addWidget(self.player_widget, 1)
+        vbox.addWidget(self.clip_editor)
+        return container
+
+    # ------------------------------------------------------------------
+    # Audio clip strip
+    # ------------------------------------------------------------------
+
+    def _seed_clip_editor(self, word: TokenizedWord | None, idx: int | None) -> None:
+        """Point the audio clip strip at ``word`` (or nothing when None)."""
+        if not hasattr(self, "clip_editor"):
+            return
+        self._clip_index = idx
+        if word is None or idx is None:
+            self.clip_editor.clear_word()
+            return
+        assert self._media_context is not None  # the strip exists only with one
+        self.clip_editor.set_word(
+            word.start_time,
+            word.end_time,
+            self._media_context.audio_padding,
+            self._clip_overrides.get(idx),
+        )
+
+    def _on_clip_changed(self, start: float, end: float) -> None:
+        if self._clip_index is not None:
+            self._clip_overrides[self._clip_index] = (start, end)
+
+    def _on_clip_reset(self) -> None:
+        if self._clip_index is not None:
+            self._clip_overrides.pop(self._clip_index, None)
+
+    def _on_clip_play_requested(self, start: float, end: float) -> None:
+        if not self._show_player or not hasattr(self, "player_widget"):
+            return
+        self.clip_editor.set_playing(True)
+        self.player_widget.play_range(start, end)
+
+    def _on_clip_stop_requested(self) -> None:
+        if self._show_player and hasattr(self, "player_widget"):
+            self.player_widget.pause()  # cancels the range, which resets the button
 
     def _build_sentence_pane(self) -> QWidget:
         """Build the "Sentences" picker pane (label + candidate list).
@@ -1110,6 +1205,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # so the seek can be issued directly — see _on_candidate_chosen.
         self._preview_scene(chosen.start_time)
 
+        # Audio clip strip: the CHOSEN variant's window, for the same reason the
+        # dictionary follows the pick — the strip edits the clip this row will
+        # actually mine.
+        self._seed_clip_editor(chosen, idx)
+
         # Dictionary pane: the CHOSEN variant, not the primary — for surface-mined
         # POS (nouns) the pick moves mined_form, so a word-keyed pane showed the
         # first occurrence's entry after the user picked another (Issue #108).
@@ -1296,6 +1396,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             return
         chosen = self._candidate_list_words[list_row]
         self._chosen[idx] = chosen
+
+        # A clip window was measured against the OLD line's timings, so the pick
+        # invalidates it: dropping the override and reseeding from the new
+        # variant's default is the only reading that cannot mine a window
+        # belonging to a different scene.
+        self._clip_overrides.pop(idx, None)
+        self._seed_clip_editor(chosen, idx)
 
         # Everything that describes the occurrence follows the pick, not just the
         # sentence: the mined word, the form in the subtitle, what a row copy
@@ -1860,6 +1967,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         Falls back to the original word when no alternative sentence was chosen
         (the common case — single-occurrence words, or untouched multi-occurrence
         words keep their default pick).
+
+        A word whose audio clip window was edited is returned as a COPY carrying
+        that window. The copy matters: variants come from the shared
+        ``sentence_candidates`` list, and stamping an override onto one in place
+        would attach this run's edit to an object the filter service still owns.
         """
         selected = []
         for row in range(self.table.rowCount()):
@@ -1867,5 +1979,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if item and item.checkState() == Qt.CheckState.Checked:
                 original_index = item.data(Qt.ItemDataRole.UserRole)
                 if original_index is not None and 0 <= original_index < len(self._words):
-                    selected.append(self._chosen.get(original_index, self._words[original_index]))
+                    word = self._chosen.get(original_index, self._words[original_index])
+                    override = self._clip_overrides.get(original_index)
+                    if override is not None:
+                        word = dataclasses.replace(word, clip_override=override)
+                    selected.append(word)
         return selected
