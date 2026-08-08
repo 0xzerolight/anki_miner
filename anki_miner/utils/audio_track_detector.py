@@ -44,6 +44,10 @@ class SubtitleStream:
     suitable for ffmpeg `-map 0:s:N`.
     `is_text` is False for image-based codecs (:data:`BITMAP_SUBTITLE_CODECS`),
     whose bitmaps cannot be extracted as text.
+    `is_forced` / `is_default` mirror the ffprobe disposition flags. Forced
+    tracks carry only foreign-dialogue lines, which makes them useless as a
+    retiming reference (see ``services/retime_reference.py``); they default to
+    False so callers constructing a stream by hand stay unaffected.
     """
 
     index: int
@@ -52,6 +56,8 @@ class SubtitleStream:
     language_tag: str | None
     title: str | None
     is_text: bool
+    is_forced: bool = False
+    is_default: bool = False
 
 
 def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -> dict | None:
@@ -209,6 +215,8 @@ def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> lis
         codec_name = stream.get("codec_name") or None
         is_text = codec_name not in BITMAP_SUBTITLE_CODECS
 
+        disposition = stream.get("disposition") or {}
+
         result.append(
             SubtitleStream(
                 index=index,
@@ -217,6 +225,8 @@ def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> lis
                 language_tag=language_tag,
                 title=title,
                 is_text=is_text,
+                is_forced=disposition.get("forced") == 1,
+                is_default=disposition.get("default") == 1,
             )
         )
 

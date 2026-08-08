@@ -463,6 +463,8 @@ def _subtitle_ffprobe_json(streams: list[dict]) -> str:
             entry["tags"]["language"] = s["language"]
         if "title" in s:
             entry["tags"]["title"] = s["title"]
+        if "disposition" in s:
+            entry["disposition"] = s["disposition"]
         out.append(entry)
     return json.dumps({"streams": out})
 
@@ -486,6 +488,21 @@ class TestListSubtitleStreams:
         assert s.language_tag == "jpn"
         assert s.title == "Full"
         assert s.is_text is True
+        assert s.is_forced is False
+        assert s.is_default is False
+
+    def test_disposition_flags_parsed(self, video_file):
+        """Retiming reference selection rejects forced tracks off this flag."""
+        stdout = _subtitle_ffprobe_json(
+            [
+                {"index": 0, "codec_name": "subrip", "disposition": {"forced": 1, "default": 0}},
+                {"index": 1, "codec_name": "subrip", "disposition": {"forced": 0, "default": 1}},
+            ]
+        )
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = list_subtitle_streams(video_file)
+        assert (result[0].is_forced, result[0].is_default) == (True, False)
+        assert (result[1].is_forced, result[1].is_default) == (False, True)
 
     @pytest.mark.parametrize("codec", sorted(BITMAP_SUBTITLE_CODECS))
     def test_bitmap_codecs_classified_not_text(self, video_file, codec):
