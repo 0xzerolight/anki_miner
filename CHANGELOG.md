@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **The word curator no longer takes the app down on Windows when a line plays.** The video core was loading mpv's builtin Lua scripts — a statistics overlay, a console, a few menus, none of which this player uses — and LuaJIT raises Windows exceptions as ordinary, caught control flow. The native-crash capture added in 2.9.2 treats every one of them as fatal and dumps all threads, and taking that dump while the player thread is running is what actually killed the process. The scripts are switched off now, each by its own option, so the crash reporter fires only on real crashes and stops filling `anki_miner.crash` with harmless dumps.
 
 ### Removed
 - **The word curator's video-preview switch**, along with the crash marker that turned it off by itself. The abort it guarded was a packaging fault — the Linux bundle's C++ runtime shadowing the host graphics driver — and that is fixed at the source, so the switch was a permanent setting standing in for a bug that no longer exists. `ANKI_MINER_NO_VIDEO_PREVIEW=1` still turns the preview off for anyone who needs it, and the notice on the pane names it.

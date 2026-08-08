@@ -68,13 +68,33 @@ _CACHED: tuple[Any, ImportError | None] | None = None
 _RESOLVED_SOURCE: str | None = None
 _MPV_TERMINATE_TIMEOUT_S = 2.0
 
+# mpv options that switch off its builtin Lua scripts, newest-named first within
+# a rename pair. Every one of these is a script this player has no use for, and
+# together they are what keeps LuaJIT out of the process (Issue #112, see
+# create_mpv_player). NOT all of them exist in every libmpv — see
+# _builtin_script_options.
+_BUILTIN_SCRIPT_OPTIONS: tuple[str, ...] = (
+    "osc",
+    "ytdl",
+    "load-stats-overlay",
+    "load-console",  # mpv 0.40+ name
+    "load-osd-console",  # pre-0.40 name; a deprecated alias on 0.40+
+    "load-auto-profiles",
+    "load-select",
+    "load-positioning",
+    "load-commands",
+)
+# Probed once per process: {kwarg_name: False} for the options this libmpv knows.
+_SCRIPT_OPTIONS: dict[str, bool] | None = None
+
 
 def _clear_cache() -> None:
     """Reset the module-level import cache (test helper)."""
-    global _CACHED, _RESOLVED_SOURCE
+    global _CACHED, _RESOLVED_SOURCE, _SCRIPT_OPTIONS
     with _LOCK:
         _CACHED = None
         _RESOLVED_SOURCE = None
+        _SCRIPT_OPTIONS = None
 
 
 class MpvUnavailableError(ImportError):
@@ -273,6 +293,80 @@ def _ensure_c_numeric() -> None:
     locale.setlocale(locale.LC_NUMERIC, "C")
 
 
+def _builtin_script_options(mpv_module: Any) -> dict[str, bool]:
+    """Return the script-disabling kwargs *this* libmpv accepts, probed once.
+
+    The names in :data:`_BUILTIN_SCRIPT_OPTIONS` came in over several mpv
+    releases (``load-select``/``load-positioning``/``load-commands`` and the
+    ``load-osd-console`` → ``load-console`` rename are 0.40), and python-mpv
+    raises ``AttributeError('mpv option does not exist', -5, ...)`` out of
+    ``MPV.__init__`` for an unknown one — passing the full set blind would take
+    the video preview away from everyone on an older system libmpv (Debian 12
+    ships 0.35, Ubuntu 24.04 0.37) to fix a Windows crash. An absent option
+    means that script does not exist in that build either, so dropping it is
+    exactly right.
+
+    The probe sets the options on a bare ``mpv_create`` handle that is NEVER
+    initialized: no core comes up, so no script — and no LuaJIT — is loaded by
+    the probe itself. python-mpv's version floor is open (``mpv>=1.0.8``), so a
+    missing private degrades to "disable nothing" plus a warning rather than
+    breaking construction; ``test_python_mpv_exposes_probe_internals`` is what
+    keeps that branch from going live unnoticed.
+    """
+    global _SCRIPT_OPTIONS
+    with _LOCK:
+        if _SCRIPT_OPTIONS is not None:
+            return dict(_SCRIPT_OPTIONS)
+
+        supported: dict[str, bool] = {}
+        try:
+            handle = mpv_module._mpv_create()
+            try:
+                for name in _BUILTIN_SCRIPT_OPTIONS:
+                    try:
+                        mpv_module._mpv_set_option_string(handle, name.encode("utf-8"), b"no")
+                    except Exception:  # noqa: BLE001 - unknown option on this libmpv
+                        continue
+                    supported[name.replace("-", "_")] = False
+            finally:
+                mpv_module._mpv_terminate_destroy(handle)
+        except Exception:  # noqa: BLE001 - probe failure must not cost the preview
+            logger.warning("could not probe libmpv script options; builtin scripts stay enabled", exc_info=True)
+            supported = {}
+
+        # Only the deprecated spelling of the console option survives on <0.40;
+        # setting both on a newer build just earns a deprecation warning.
+        if "load_console" in supported:
+            supported.pop("load_osd_console", None)
+
+        _SCRIPT_OPTIONS = supported
+        return dict(supported)
+
+
+def _player_options(mpv_module: Any, *, video: bool) -> dict[str, Any]:
+    """Return the libmpv options shared by the preview player and the probe.
+
+    One builder, two callers, so the bundle smoke (:func:`mpv_probe_main`)
+    constructs a core from the very option set the preview uses — an option the
+    shipped libmpv rejects fails the smoke instead of the user's first play.
+    """
+    options: dict[str, Any] = {
+        "vo": "libmpv" if video else "null",
+        "video": "auto" if video else "no",
+        "keep_open": "yes",
+        "hwdec": "no",
+        "pause": True,
+        "input_default_bindings": False,
+        "input_vo_keyboard": False,
+        "load_scripts": False,
+        "audio_display": "no",
+        "sid": "no",
+        "loglevel": "warn",
+    }
+    options.update(_builtin_script_options(mpv_module))
+    return options
+
+
 def create_mpv_player(
     log_handler: Callable[[str, str, str], None] | None = None,
     *,
@@ -288,16 +382,23 @@ def create_mpv_player(
     - ``pause=True``: present the first frame without starting playback.
     - ``sid="no"``: the widget's own subtitle overlay is the only subtitle
       surface; mpv must not render embedded subtitle tracks.
-    - ``load_scripts=False``: the embedded player uses none of mpv's Lua
-      scripting (bindings are off, controls and subtitles are ours, sources are
-      local files), and letting the builtin scripts load initializes LuaJIT,
-      whose *normal, always-caught* internal unwinding raises first-chance SEH
-      exceptions (code 0xE24C4A02) on Windows. CPython's faulthandler — enabled
-      for native-crash capture since 2.9.2 — dumps every thread on any SEH code
-      it doesn't whitelist, and that GIL-less dump races the frame stacks of
-      running threads (the python-mpv event thread churns hardest during
-      playback): the dump itself dies with an access violation and takes the
-      process with it. Word Curator crash, Issue #112.
+    - **No Lua, at all**: the embedded player uses none of mpv's scripting
+      (bindings are off, controls and subtitles are ours, sources are local
+      files), and any script that loads initializes LuaJIT, whose *normal,
+      always-caught* internal unwinding raises first-chance SEH exceptions (code
+      0xE24C4A02) on Windows. CPython's faulthandler — enabled for native-crash
+      capture since 2.9.2 — dumps every thread on any SEH code it doesn't
+      whitelist, and that GIL-less dump races the frame stacks of running
+      threads (the python-mpv event thread churns hardest during playback): the
+      dump itself dies with an access violation and takes the process with it.
+      Word Curator crash, Issue #112.
+
+      ``load_scripts=False`` is only half of it and was, alone, no fix at all:
+      ``--load-scripts`` gates the *user* scripts directory, and mpv loads its
+      builtin scripts (stats, console, select, positioning, commands, …) from
+      ``mp_load_builtin_scripts`` on the option-change callback, which that flag
+      never reaches. Each builtin is switched off by its own option — see
+      :data:`_BUILTIN_SCRIPT_OPTIONS` and :func:`_builtin_script_options`.
 
     ``video=False`` builds an AUDIO-ONLY core for the case where no GL surface
     exists — the preview turned off by setting or by
@@ -308,20 +409,7 @@ def create_mpv_player(
     """
     mpv_module = load_mpv()
     _ensure_c_numeric()
-    return mpv_module.MPV(
-        vo="libmpv" if video else "null",
-        video="auto" if video else "no",
-        keep_open="yes",
-        hwdec="no",
-        pause=True,
-        input_default_bindings=False,
-        input_vo_keyboard=False,
-        load_scripts=False,
-        audio_display="no",
-        sid="no",
-        loglevel="warn",
-        log_handler=log_handler,
-    )
+    return mpv_module.MPV(**_player_options(mpv_module, video=video), log_handler=log_handler)
 
 
 def terminate_mpv_player(player: Any, *, timeout_s: float = _MPV_TERMINATE_TIMEOUT_S) -> bool:
@@ -351,13 +439,16 @@ def mpv_probe_main() -> int:
     """Headless bundle-smoke probe (``ANKI_MINER_MPV_PROBE=1``).
 
     Loads libmpv through the normal resolution order and constructs a
-    display-free core (``vo=null ao=null`` — no GL, offscreen-safe). Prints a
+    display-free core (the audio-only preview options plus ``ao=null`` — no GL,
+    no audio device, offscreen-safe). Building it from :func:`_player_options`
+    rather than a bare handle is deliberate: the smoke then proves the *shipped*
+    libmpv accepts the exact option set the preview passes it. Prints a
     grep-able marker either way; exit code feeds bundle_smoke.sh.
     """
     try:
         mpv_module = load_mpv()
         _ensure_c_numeric()
-        player = mpv_module.MPV(vo="null", ao="null")
+        player = mpv_module.MPV(**_player_options(mpv_module, video=False), ao="null")
         version = player.mpv_version
         api = getattr(mpv_module, "MPV_VERSION", None)
         if not terminate_mpv_player(player):

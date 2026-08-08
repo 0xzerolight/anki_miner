@@ -43,9 +43,38 @@ def _clean_loader_state(monkeypatch):
         sys.modules.pop("mpv", None)
 
 
-def _fake_mpv_module(events: list | None = None) -> types.ModuleType:
+def _fake_mpv_module(events: list | None = None, *, unknown_options: set[str] | None = None) -> types.ModuleType:
+    """Fake python-mpv.
+
+    ``unknown_options`` models an older libmpv: those option names raise from
+    ``_mpv_set_option_string`` exactly as python-mpv does for an option the
+    loaded library has never heard of.
+    """
     module = types.ModuleType("mpv")
     module.MPV_VERSION = (2, 5)
+    rejected = unknown_options or set()
+
+    class FakeHandle:
+        def __init__(self):
+            self.destroyed = False
+
+    def _mpv_create():
+        handle = FakeHandle()
+        if events is not None:
+            events.append(("create_handle", handle))
+        return handle
+
+    def _mpv_set_option_string(handle, name, value):
+        assert not handle.destroyed
+        if name.decode() in rejected:
+            raise AttributeError("mpv option does not exist", -5, (handle, name, value))
+
+    def _mpv_terminate_destroy(handle):
+        handle.destroyed = True
+
+    module._mpv_create = _mpv_create
+    module._mpv_set_option_string = _mpv_set_option_string
+    module._mpv_terminate_destroy = _mpv_terminate_destroy
 
     class FakeMPV:
         def __init__(self, **kwargs):
@@ -222,14 +251,84 @@ class TestFactoryOptions:
         assert player.kwargs["input_vo_keyboard"] is False
         assert player.kwargs["load_scripts"] is False
 
-    def test_factory_disables_scripts_for_audio_only_core(self, monkeypatch):
-        # Issue #112: LuaJIT (loaded only for mpv's builtin Lua scripts) raises
+    @pytest.mark.parametrize("video", [True, False])
+    def test_factory_disables_every_builtin_script(self, monkeypatch, video):
+        # Issue #112: LuaJIT (loaded only for mpv's Lua scripts) raises
         # first-chance SEH 0xE24C4A02 on Windows; faulthandler's all-thread dump
         # of those benign exceptions races running threads and kills the app.
-        # Both cores must stay script-free.
+        # load_scripts=False covers only the USER scripts dir — mpv loads its
+        # builtins regardless — so every builtin needs its own option, on both
+        # cores.
         monkeypatch.setitem(sys.modules, "mpv", _fake_mpv_module())
-        player = mpv_loader.create_mpv_player(video=False)
+        player = mpv_loader.create_mpv_player(video=video)
+        for option in ("osc", "ytdl", "load_stats_overlay", "load_console", "load_auto_profiles"):
+            assert player.kwargs[option] is False, option
+        for option in ("load_select", "load_positioning", "load_commands"):
+            assert player.kwargs[option] is False, option
+        # Deprecated pre-0.40 spelling: dropped when the current name works.
+        assert "load_osd_console" not in player.kwargs
+
+    def test_factory_drops_options_this_libmpv_rejects(self, monkeypatch):
+        """An older libmpv lacks the 0.40 options; passing them raises out of
+        MPV.__init__ and would cost every such user the preview entirely."""
+        pre_040 = {"load-console", "load-select", "load-positioning", "load-commands"}
+        monkeypatch.setitem(sys.modules, "mpv", _fake_mpv_module(unknown_options=pre_040))
+        player = mpv_loader.create_mpv_player()
+        for option in ("load_console", "load_select", "load_positioning", "load_commands"):
+            assert option not in player.kwargs, option
+        assert player.kwargs["load_osd_console"] is False  # the spelling that build knows
+        assert player.kwargs["load_stats_overlay"] is False
+
+    def test_option_probe_never_initializes_a_core_and_destroys_its_handle(self, monkeypatch):
+        """The probe must not bring a core up: an initialized handle loads the
+        very scripts it is there to switch off."""
+        events: list = []
+        fake = _fake_mpv_module(events)
+        monkeypatch.setitem(sys.modules, "mpv", fake)
+        mpv_loader.create_mpv_player()
+        handles = [handle for name, handle in events if name == "create_handle"]
+        assert len(handles) == 1
+        assert handles[0].destroyed
+
+    def test_option_probe_runs_once_per_process(self, monkeypatch):
+        events: list = []
+        monkeypatch.setitem(sys.modules, "mpv", _fake_mpv_module(events))
+        mpv_loader.create_mpv_player()
+        mpv_loader.create_mpv_player(video=False)
+        assert sum(1 for name, _ in events if name == "create_handle") == 1
+
+    def test_probe_failure_leaves_the_player_constructible(self, monkeypatch, caplog):
+        """python-mpv's floor is open (mpv>=1.0.8): if its internals move, the
+        preview must degrade to script-enabled, not fail to construct."""
+        fake = _fake_mpv_module()
+        del fake._mpv_create
+        monkeypatch.setitem(sys.modules, "mpv", fake)
+        with caplog.at_level(logging.WARNING):
+            player = mpv_loader.create_mpv_player()
         assert player.kwargs["load_scripts"] is False
+        assert "load_select" not in player.kwargs
+        assert "could not probe libmpv script options" in caplog.text
+
+    def test_probe_core_uses_the_same_options_as_the_player(self, monkeypatch, capsys):
+        """mpv_probe_main is the only place a REAL libmpv sees these options in
+        CI, so it must build from the shared builder (plus ao=null)."""
+        constructed: list[dict] = []
+        fake = _fake_mpv_module()
+        original = fake.MPV
+
+        class RecordingMPV(original):
+            def __init__(self, **kwargs):
+                constructed.append(kwargs)
+                super().__init__(**kwargs)
+
+        fake.MPV = RecordingMPV
+        monkeypatch.setitem(sys.modules, "mpv", fake)
+        assert mpv_loader.mpv_probe_main() == 0
+        kwargs = constructed[-1]
+        assert kwargs["ao"] == "null"
+        assert kwargs["vo"] == "null"
+        assert kwargs["load_select"] is False
+        assert kwargs["load_scripts"] is False
 
     def test_factory_forwards_log_handler(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "mpv", _fake_mpv_module())
