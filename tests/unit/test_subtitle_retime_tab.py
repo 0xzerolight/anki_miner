@@ -26,6 +26,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import FilePair
 
 # ---------------------------------------------------------------------------
@@ -459,21 +460,26 @@ def test_clear_output_resets_label(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Split penalty
+# Alignment options live in Settings, not on this screen
 # ---------------------------------------------------------------------------
 
 
-def test_split_penalty_default_is_seven(qtbot, tmp_path):
-    """Split penalty spinbox defaults to 7."""
+def test_alignment_knobs_are_not_on_the_tab(qtbot, tmp_path):
+    """Split penalty / frame rate / single offset moved to Settings.
+
+    They are persisted preferences, not per-run choices; leaving a duplicate
+    control here would let the two disagree.
+    """
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.split_penalty_spinbox.value() == 7.0
+    assert not hasattr(tab, "split_penalty_spinbox")
+    assert not hasattr(tab, "fps_correction_checkbox")
+    assert not hasattr(tab, "no_split_checkbox")
 
 
-def test_split_penalty_has_visible_helper(qtbot, tmp_path):
-    """An inline helper label explains the split-penalty control (not tooltip-only)."""
+def test_tab_links_to_alignment_settings(qtbot, tmp_path):
+    """A button points at where those controls went."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.split_penalty_helper.text().strip()
-    assert tab.split_penalty_helper.objectName() == "helper-text"
+    assert tab.alignment_settings_button.text().strip()
 
 
 # ---------------------------------------------------------------------------
@@ -500,8 +506,8 @@ def test_overwrite_checkbox_has_tooltip(qtbot, tmp_path):
     assert tab.overwrite_checkbox.toolTip().strip()
 
 
-def test_split_penalty_passed_to_worker(qtbot, tmp_path):
-    """The spinbox value is forwarded to the worker as split_penalty."""
+def test_reference_override_passed_to_worker(qtbot, tmp_path):
+    """The per-run reference pick is forwarded to the worker."""
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     sub = tmp_path / "episode.srt"
@@ -512,7 +518,7 @@ def test_split_penalty_passed_to_worker(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.video_file_selector.set_path(str(video))
     tab.subtitle_file_selector.set_path(str(sub))
-    tab.split_penalty_spinbox.setValue(12.0)
+    tab._reference_override = ReferenceOverride(kind="subtitle", index=1)
 
     with (
         patch(_AVAILABLE, return_value=True),
@@ -522,7 +528,7 @@ def test_split_penalty_passed_to_worker(qtbot, tmp_path):
         tab.retime_button.click()
 
     assert worker_cls.call_count == 1
-    assert worker_cls.call_args.kwargs["split_penalty"] == 12.0
+    assert worker_cls.call_args.kwargs["reference_override"] == ReferenceOverride(kind="subtitle", index=1)
 
 
 # ---------------------------------------------------------------------------
@@ -908,11 +914,21 @@ def test_on_retime_uses_cached_availability_without_reprobe(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Audio-track probing (Tracks button) — must run OFF the GUI thread
+# Reference probing (Change… button) — must run OFF the GUI thread
 # ---------------------------------------------------------------------------
 
 _LIST_STREAMS = "anki_miner.gui.widgets.subtitle_retime_tab.list_audio_streams"
-_TRACKS_DIALOG = "anki_miner.gui.widgets.subtitle_retime_tab.AudioTracksDialog"
+_LIST_SUB_STREAMS = "anki_miner.gui.widgets.subtitle_retime_tab.list_reference_subtitle_streams"
+_TRACKS_DIALOG = "anki_miner.gui.widgets.subtitle_retime_tab.RetimeReferenceDialog"
+
+
+def _no_subtitle_streams():
+    """Patch the embedded-subtitle probe away so only audio rows are offered.
+
+    The probe shells out to ffprobe; every test in this section is about the
+    picker's plumbing, not about which tracks a real file has.
+    """
+    return patch(_LIST_SUB_STREAMS, return_value=[])
 
 
 def _audio_stream():
@@ -933,7 +949,7 @@ def test_tracks_clicked_warns_when_no_video(qtbot, tmp_path):
     """No video selected -> warning, ffprobe never runs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.video_file_selector.set_path("")
-    with patch(_LIST_STREAMS) as mock_list:
+    with patch(_LIST_STREAMS) as mock_list, _no_subtitle_streams():
         tab._on_tracks_clicked()
     assert tab.issue_banner().current_issue() is not None
     mock_list.assert_not_called()
@@ -943,7 +959,7 @@ def test_tracks_clicked_warns_when_video_missing(qtbot, tmp_path):
     """Selected video path that is not a file -> warning, ffprobe never runs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.video_file_selector.set_path(str(tmp_path / "nope.mkv"))
-    with patch(_LIST_STREAMS) as mock_list:
+    with patch(_LIST_STREAMS) as mock_list, _no_subtitle_streams():
         tab._on_tracks_clicked()
     assert tab.issue_banner().current_issue() is not None
     mock_list.assert_not_called()
@@ -976,7 +992,7 @@ def test_late_track_probe_does_not_override_after_source_change(qtbot, tmp_path)
     dialog_cls = MagicMock(return_value=dialog)
     dialog_cls.DialogCode = QDialog.DialogCode
 
-    with patch(_LIST_STREAMS, side_effect=_probe), patch(_TRACKS_DIALOG, dialog_cls):
+    with patch(_LIST_STREAMS, side_effect=_probe), patch(_TRACKS_DIALOG, dialog_cls), _no_subtitle_streams():
         before = set(getattr(tab, "_off_thread_workers", set()))
         tab._on_tracks_clicked()
         assert entered.wait(3)
@@ -987,7 +1003,7 @@ def test_late_track_probe_does_not_override_after_source_change(qtbot, tmp_path)
         qtbot.waitUntil(tab.tracks_button.isEnabled, timeout=3000)
 
     dialog_cls.assert_not_called()
-    assert tab._audio_track_override is None
+    assert tab._reference_override is None
 
 
 def test_tracks_probe_runs_off_gui_thread(qtbot, tmp_path):
@@ -1015,6 +1031,7 @@ def test_tracks_probe_runs_off_gui_thread(qtbot, tmp_path):
     with (
         patch(_LIST_STREAMS, side_effect=_record),
         patch(_TRACKS_DIALOG, mock_class),
+        _no_subtitle_streams(),
     ):
         tab._on_tracks_clicked()
         # Button disabled while the probe runs off-thread.
@@ -1026,7 +1043,7 @@ def test_tracks_probe_runs_off_gui_thread(qtbot, tmp_path):
 
 
 def test_tracks_probe_empty_shows_info(qtbot, tmp_path):
-    """No audio tracks detected -> info box, no dialog, button re-enabled."""
+    """No tracks at all -> info box, no dialog, button re-enabled."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     video = tmp_path / "ep01.mkv"
     video.touch()
@@ -1036,6 +1053,7 @@ def test_tracks_probe_empty_shows_info(qtbot, tmp_path):
     with (
         patch(_LIST_STREAMS, return_value=[]),
         patch(_TRACKS_DIALOG, mock_class),
+        _no_subtitle_streams(),
         patch("anki_miner.gui.widgets.subtitle_retime_tab.QMessageBox.information") as mock_info,
     ):
         tab._on_tracks_clicked()
@@ -1045,8 +1063,8 @@ def test_tracks_probe_empty_shows_info(qtbot, tmp_path):
     assert tab.tracks_button.isEnabled()
 
 
-def test_tracks_probe_applies_override_on_accept(qtbot, tmp_path):
-    """Accepting the dialog applies the override and updates the label."""
+def test_tracks_probe_applies_audio_override_on_accept(qtbot, tmp_path):
+    """Accepting an audio row applies the override and updates the label."""
     from PyQt6.QtWidgets import QDialog
 
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -1056,20 +1074,59 @@ def test_tracks_probe_applies_override_on_accept(qtbot, tmp_path):
 
     mock_dialog = MagicMock()
     mock_dialog.exec.return_value = QDialog.DialogCode.Accepted
-    mock_dialog.selected_override.return_value = 2
+    # Row 0: the only audio stream, since the subtitle probe is stubbed empty.
+    mock_dialog.selected_override.return_value = 0
     mock_class = MagicMock(return_value=mock_dialog)
     mock_class.DialogCode = QDialog.DialogCode
 
     with (
         patch(_LIST_STREAMS, return_value=[_audio_stream()]),
         patch(_TRACKS_DIALOG, mock_class),
+        _no_subtitle_streams(),
     ):
         tab._on_tracks_clicked()
         qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
 
-    assert tab._audio_track_override == 2
-    assert "3" in tab.audio_track_label.text()  # Track index + 1
+    assert tab._reference_override == ReferenceOverride(kind="audio", index=0)
+    assert "1" in tab.reference_label.text()  # Track index + 1
     assert tab.tracks_button.isEnabled()
+
+
+def test_tracks_probe_applies_subtitle_override_on_accept(qtbot, tmp_path):
+    """A subtitle row maps back to a subtitle override, not an audio one."""
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.utils.audio_track_detector import SubtitleStream
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video = tmp_path / "ep01.mkv"
+    video.touch()
+    tab.video_file_selector.set_path(str(video))
+
+    sub_stream = SubtitleStream(
+        index=2,
+        sub_index=1,
+        codec_name="ass",
+        language_tag="eng",
+        title="Dialogue",
+        is_text=True,
+    )
+
+    mock_dialog = MagicMock()
+    mock_dialog.exec.return_value = QDialog.DialogCode.Accepted
+    mock_dialog.selected_override.return_value = 0  # subtitle rows come first
+    mock_class = MagicMock(return_value=mock_dialog)
+    mock_class.DialogCode = QDialog.DialogCode
+
+    with (
+        patch(_LIST_STREAMS, return_value=[_audio_stream()]),
+        patch(_LIST_SUB_STREAMS, return_value=[sub_stream]),
+        patch(_TRACKS_DIALOG, mock_class),
+    ):
+        tab._on_tracks_clicked()
+        qtbot.waitUntil(lambda: mock_class.called, timeout=3000)
+
+    assert tab._reference_override == ReferenceOverride(kind="subtitle", index=1)
 
 
 def test_tracks_probe_error_is_handled(qtbot, tmp_path):
@@ -1082,6 +1139,7 @@ def test_tracks_probe_error_is_handled(qtbot, tmp_path):
     with (
         patch(_LIST_STREAMS, side_effect=RuntimeError("ffprobe boom")),
         patch(_TRACKS_DIALOG) as mock_class,
+        _no_subtitle_streams(),
     ):
         tab._on_tracks_clicked()
         qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
@@ -1119,11 +1177,11 @@ def test_set_single_inputs_forces_single_file_mode(qtbot, tmp_path):
     assert tab.video_folder_selector.isHidden()
 
 
-def test_set_single_inputs_resets_the_audio_track_override(qtbot, tmp_path):
-    """A new video means the previous per-run track pick no longer applies."""
+def test_set_single_inputs_resets_the_reference_override(qtbot, tmp_path):
+    """A new video means the previous per-run reference pick no longer applies."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    tab._audio_track_override = 2
+    tab._reference_override = ReferenceOverride(kind="subtitle", index=2)
 
     tab.set_single_inputs(tmp_path / "other.mkv", tmp_path / "other.ass")
 
-    assert tab._audio_track_override is None
+    assert tab._reference_override is None

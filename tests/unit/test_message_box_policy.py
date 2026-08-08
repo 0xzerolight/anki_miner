@@ -101,7 +101,7 @@ LEDGER: dict[str, str] = {
     "gui/widgets/settings_tab.py::SettingsTab._on_retry_missing_audio_done": "notice",
     "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_timing_clicked._on_parsed": "notice",
     "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_tracks_clicked._on_streams": "notice",
-    "gui/widgets/subtitle_retime_tab.py::SubtitleRetimeTab._on_tracks_clicked._on_streams": "notice",
+    "gui/widgets/subtitle_retime_tab.py::SubtitleRetimeTab._on_tracks_clicked._on_choices": "notice",
     # --- Owned by another workstream's surface ------------------------------
     "gui/widgets/dialogs/resource_download_dialog.py::ResourceDownloadSession.start": "w1-download",
     "gui/widgets/dialogs/results_dialog.py::ResultsDialog._on_undo_error": "w5-queue",
