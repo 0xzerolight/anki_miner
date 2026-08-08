@@ -220,6 +220,16 @@ class TestFactoryOptions:
         assert player.kwargs["sid"] == "no"
         assert player.kwargs["input_default_bindings"] is False
         assert player.kwargs["input_vo_keyboard"] is False
+        assert player.kwargs["load_scripts"] is False
+
+    def test_factory_disables_scripts_for_audio_only_core(self, monkeypatch):
+        # Issue #112: LuaJIT (loaded only for mpv's builtin Lua scripts) raises
+        # first-chance SEH 0xE24C4A02 on Windows; faulthandler's all-thread dump
+        # of those benign exceptions races running threads and kills the app.
+        # Both cores must stay script-free.
+        monkeypatch.setitem(sys.modules, "mpv", _fake_mpv_module())
+        player = mpv_loader.create_mpv_player(video=False)
+        assert player.kwargs["load_scripts"] is False
 
     def test_factory_forwards_log_handler(self, monkeypatch):
         monkeypatch.setitem(sys.modules, "mpv", _fake_mpv_module())

@@ -288,6 +288,16 @@ def create_mpv_player(
     - ``pause=True``: present the first frame without starting playback.
     - ``sid="no"``: the widget's own subtitle overlay is the only subtitle
       surface; mpv must not render embedded subtitle tracks.
+    - ``load_scripts=False``: the embedded player uses none of mpv's Lua
+      scripting (bindings are off, controls and subtitles are ours, sources are
+      local files), and letting the builtin scripts load initializes LuaJIT,
+      whose *normal, always-caught* internal unwinding raises first-chance SEH
+      exceptions (code 0xE24C4A02) on Windows. CPython's faulthandler — enabled
+      for native-crash capture since 2.9.2 — dumps every thread on any SEH code
+      it doesn't whitelist, and that GIL-less dump races the frame stacks of
+      running threads (the python-mpv event thread churns hardest during
+      playback): the dump itself dies with an access violation and takes the
+      process with it. Word Curator crash, Issue #112.
 
     ``video=False`` builds an AUDIO-ONLY core for the case where no GL surface
     exists — the preview turned off by setting or by
@@ -306,6 +316,7 @@ def create_mpv_player(
         pause=True,
         input_default_bindings=False,
         input_vo_keyboard=False,
+        load_scripts=False,
         audio_display="no",
         sid="no",
         loglevel="warn",
