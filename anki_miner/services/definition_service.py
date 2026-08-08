@@ -610,6 +610,48 @@ class DefinitionService:
 
         return found
 
+    def offline_identity_terms(
+        self,
+        identities: set[tuple[str, int, str]],
+    ) -> dict[tuple[str, int, str], set[str]]:
+        """Every alias spelling attested for each ``(dict_id, sequence, reading)``.
+
+        The reverse of :meth:`offline_term_identities`, used to ask whether a
+        candidate's lexeme is already carded under a different orthography.
+        Identities are routed back to the dictionary that issued them — a
+        sequence number is only meaningful within its own dictionary. Providers
+        without the optional probe, online providers, and failures contribute
+        nothing.
+        """
+        self.ensure_loaded()
+
+        by_dict: dict[str, list[tuple[int, str]]] = {}
+        for owner_id, sequence, reading in identities:
+            by_dict.setdefault(owner_id, []).append((sequence, reading))
+
+        found: dict[tuple[str, int, str], set[str]] = {}
+        for provider in self._available_offline_providers():
+            dict_id = getattr(provider, "dict_id", None)
+            sequence_terms_fn = getattr(provider, "sequence_terms", None)
+            if not isinstance(dict_id, str) or not callable(sequence_terms_fn):
+                continue
+            wanted = by_dict.get(dict_id)
+            if not wanted:
+                continue
+            try:
+                hits = sequence_terms_fn(wanted)
+            except Exception as e:
+                logger.warning(
+                    "Provider '%s' raised during sequence_terms; skipping: %s",
+                    provider.name,
+                    e,
+                )
+                continue
+            for (sequence, reading), terms in hits.items():
+                found.setdefault((dict_id, sequence, reading), set()).update(terms)
+
+        return found
+
     def _available_offline_providers(self) -> list[DictionaryProvider]:
         """Available, offline providers in chain order (commonness/quality probes)."""
         return [p for p in self._providers if not p.is_online and p.is_available()]

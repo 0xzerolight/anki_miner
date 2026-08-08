@@ -602,6 +602,7 @@ class EpisodeProcessor:
         whitelist_force_includes = 0
         no_definition_rejects = 0
         duplicate_expression_rejects = 0
+        alias_known_rejects = 0
 
         # Attach frequency data if available (mutates words in-place). Each word
         # gets the per-source breakdown (frequency_sources) for the card display,
@@ -682,6 +683,10 @@ class EpisodeProcessor:
             2,
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
+        # The vocabulary already carded, kept in scope for the cross-run
+        # orthographic-alias check further down. Must be initialized here: the
+        # include_known_words branch never binds `known_words`/`user_words`.
+        existing_vocab: set[str] = set()
         if self.config.include_known_words:
             # Deck Builder "include everything" mode: skip known-words subtraction
             # entirely — including the Issue #42 user ignore list — and mine all
@@ -743,7 +748,8 @@ class EpisodeProcessor:
             else:
                 known_words = self.anki_service.get_existing_vocabulary()
 
-            unknown_words = self.word_filter.filter_unknown(all_words, known_words | user_words)
+            existing_vocab = known_words | user_words
+            unknown_words = self.word_filter.filter_unknown(all_words, existing_vocab)
             known_hits = len(all_words) - len(unknown_words)
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "%n new word(s) to mine", "", len(unknown_words))
@@ -1118,12 +1124,22 @@ class EpisodeProcessor:
                 )
             )
 
-        # Within-run duplicate collapse. Exact mined_form collisions mirror
-        # Anki's Expression-first-field dedup. Orthographic aliases need a
-        # dictionary identity instead: exact-term sequence + contextual reading,
-        # scoped by dictionary. Never use the normal term-OR-reading lookup here;
-        # it would falsely give reading-only junk such as いでる the identity of
-        # 出でる. Keep the first source occurrence (stable order).
+        # Duplicate collapse on dictionary identity, in two directions.
+        #
+        # WITHIN-RUN: exact mined_form collisions mirror Anki's
+        # Expression-first-field dedup. Orthographic aliases need a dictionary
+        # identity instead: exact-term sequence + contextual reading, scoped by
+        # dictionary. Never use the normal term-OR-reading lookup here; it would
+        # falsely give reading-only junk such as いでる the identity of 出でる.
+        # Keep the first source occurrence (stable order).
+        #
+        # CROSS-RUN: the same blindness applies to the collection. filter_unknown
+        # compares exact strings (plus a one-way kana-only -> lemma fold), so
+        # mining 余所見 while よそ見 is already a card shipped a duplicate that
+        # neither we nor Anki's own first-field checksum could see. Expanding each
+        # identity back to its alias spellings and testing those against the
+        # existing vocabulary closes it. Cost is bounded by the candidate count,
+        # never by collection size.
         #
         # Gated on allow_duplicate_cards: the Deck Builder sets it True (and
         # bypass_optional_filters True) to intentionally re-card duplicates, in
@@ -1138,24 +1154,49 @@ class EpisodeProcessor:
                 for word in unknown_words
             ]
             identities_by_pair = self.definition_service.offline_term_identities(identity_pairs)
+            all_identities: set[tuple[str, int, str]] = set()
+            for word_identities in identities_by_pair.values():
+                all_identities |= word_identities
+            alias_terms: dict[tuple[str, int, str], set[str]] = (
+                self.definition_service.offline_identity_terms(all_identities)
+                if all_identities and existing_vocab
+                else {}
+            )
             seen: set[str] = set()
             seen_identities: set[tuple[str, int, str]] = set()
             collapsed: list[TokenizedWord] = []
+            already_carded = 0
             for word, pair in zip(unknown_words, identity_pairs, strict=True):
                 identities = identities_by_pair.get(pair, set())
                 if word.mined_form in seen or not seen_identities.isdisjoint(identities):
                     continue
+                if any(existing_vocab & alias_terms.get(identity, frozenset()) for identity in identities):
+                    # Already carded under a different spelling. Deliberately not
+                    # added to seen/seen_identities: this word is not being mined,
+                    # so it claims no slot a later candidate could collide with.
+                    already_carded += 1
+                    continue
                 seen.add(word.mined_form)
                 seen_identities.update(identities)
                 collapsed.append(word)
-            removed = len(unknown_words) - len(collapsed)
+            removed = len(unknown_words) - len(collapsed) - already_carded
             unknown_words = collapsed
             duplicate_expression_rejects = removed
+            alias_known_rejects = already_carded
             if removed:
                 self.presenter.show_info(
                     tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Collapsed %1 duplicate-expression word(s)"),
                         removed,
+                    )
+                )
+            if already_carded:
+                self.presenter.show_info(
+                    tr_format(
+                        QCoreApplication.translate(
+                            "EpisodeProcessor", "Skipped %1 word(s) already carded under another spelling"
+                        ),
+                        already_carded,
                     )
                 )
 
@@ -1208,6 +1249,7 @@ class EpisodeProcessor:
                 "whitelist_force_includes": whitelist_force_includes,
                 "no_definition_rejects": no_definition_rejects,
                 "duplicate_expression_rejects": duplicate_expression_rejects,
+                "alias_known_rejects": alias_known_rejects,
             },
         )
         return unknown_words
