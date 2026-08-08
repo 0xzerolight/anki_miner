@@ -8,7 +8,9 @@ Subtitles main tab:
   the panel says so plainly and shows the exact pip command instead of letting
   the download silently fail.
 - **Alignment (alass)** — optional binary-path override plus an in-app
-  "Download alass" button on the platforms that ship a binary (Linux/Windows).
+  "Download alass" button on the platforms that ship a binary (Linux/Windows),
+  and the three retiming knobs (split penalty, frame-rate correction,
+  single-offset) that used to be per-run controls on the Retime screen.
   macOS has no upstream binary, so it shows Homebrew guidance instead.
 """
 
@@ -22,7 +24,9 @@ from typing import cast
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -85,6 +89,12 @@ _ASR_INSTALL_COMMAND = 'pip install "anki-miner[asr]"'
 
 # Homebrew command for alass on macOS, where no upstream binary is published.
 _ALASS_BREW_COMMAND = "brew install alass"
+
+# alass --split-penalty accepts 0-1000 and defaults to 7; the config clamps to
+# the same range, so the spinbox cannot produce a value alass would reject.
+_SPLIT_PENALTY_MIN = 0.0
+_SPLIT_PENALTY_MAX = 1000.0
+_SPLIT_PENALTY_DEFAULT = 7.0
 
 
 @dataclass(frozen=True)
@@ -479,6 +489,45 @@ class SubtitlesSettingsPanel(FormPanel):
                 _ALASS_BREW_COMMAND,
             )
             self.add_field("", guidance, anchor_ignore="platform install instructions, not a setting")
+
+        self._setup_retime_options()
+
+    def _setup_retime_options(self) -> None:
+        """The three alass alignment knobs, moved off the Retime screen.
+
+        They live here rather than on the tool tab because their defaults suit
+        almost every run and because they are preferences that should survive a
+        restart — the tab used to reset them on every launch.
+        """
+        self.retime_split_penalty_spinbox = QDoubleSpinBox()
+        self.retime_split_penalty_spinbox.setRange(_SPLIT_PENALTY_MIN, _SPLIT_PENALTY_MAX)
+        self.retime_split_penalty_spinbox.setSingleStep(1.0)
+        self.retime_split_penalty_spinbox.setValue(_SPLIT_PENALTY_DEFAULT)
+        self.add_field(
+            self.tr("Split penalty"),
+            self.retime_split_penalty_spinbox,
+            helper=self.tr(
+                "How reluctant alignment is to cut a subtitle into separately-timed segments. "
+                "Lower values create more cut points for ad breaks. Useful range 1-20; default 7."
+            ),
+        )
+
+        self.retime_correct_framerate_checkbox = QCheckBox(self.tr("Correct frame-rate differences"))
+        self.add_field(
+            self.tr("Frame rate"),
+            self.retime_correct_framerate_checkbox,
+            helper=self.tr(
+                "Enable only for subtitles from a different-framerate release. "
+                "On a subtitle that is merely offset this stretches the timing and makes it worse."
+            ),
+        )
+
+        self.retime_single_offset_checkbox = QCheckBox(self.tr("Shift by a single offset only"))
+        self.add_field(
+            self.tr("Single offset"),
+            self.retime_single_offset_checkbox,
+            helper=self.tr("Shift the entire subtitle by one amount; never cut it into separately-timed segments."),
+        )
 
     def _build_engine_guidance(self) -> QWidget:
         """Build the (initially hidden) 'install the ASR engine' guidance block."""
@@ -1141,6 +1190,9 @@ class SubtitlesSettingsPanel(FormPanel):
         self.set_device(config.asr_device if config.asr_device in available_devices else "auto")
         # alass
         self.alass_selector.set_path(str(config.alass_location) if config.alass_location else "")
+        self.retime_split_penalty_spinbox.setValue(config.retime_split_penalty)
+        self.retime_correct_framerate_checkbox.setChecked(config.retime_correct_framerate)
+        self.retime_single_offset_checkbox.setChecked(config.retime_single_offset)
         self._bin_root = config.bin_root
         self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
@@ -1163,4 +1215,7 @@ class SubtitlesSettingsPanel(FormPanel):
             asr_model=self.get_model(),
             asr_device=self.get_device(),
             alass_location=Path(path) if path is not None else None,
+            retime_split_penalty=self.retime_split_penalty_spinbox.value(),
+            retime_correct_framerate=self.retime_correct_framerate_checkbox.isChecked(),
+            retime_single_offset=self.retime_single_offset_checkbox.isChecked(),
         )
