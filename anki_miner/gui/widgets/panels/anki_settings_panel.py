@@ -19,6 +19,13 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.services.note_presets import (
+    NOTE_PRESETS,
+    NotePreset,
+    preset_by_id,
+    preset_for_note_type_name,
+)
+from anki_miner.utils.i18n import tr_format
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
 # Each key is a card data type; the list is lowercase/stripped patterns that
@@ -151,8 +158,10 @@ class AnkiSettingsPanel(FormPanel):
     # Dynamically created by _add_labeled_field_with_button via setattr
     deck_combo: QComboBox
     notetype_combo: QComboBox
+    preset_combo: QComboBox
     deck_sync_button: ModernButton
     notetype_sync_button: ModernButton
+    preset_apply_button: ModernButton
 
     def __init__(self, parent=None):
         """Initialize the Anki settings panel."""
@@ -238,6 +247,35 @@ class AnkiSettingsPanel(FormPanel):
         self.notetype_status = QLabel()
         self.notetype_status.setObjectName("validation-status")
         self.add_widget(self.notetype_status)
+
+        # Note-type preset. Lapis / Kiku / Senren publish fixed field names, so
+        # their mapping is knowable without asking Anki — and it carries three
+        # things auto-map cannot: the names the keyword table misses
+        # (PitchCategories, MiscInfo), romaji pitch categories, and Senren's own
+        # marker field names. Same combo + button row as Deck / Note Type above,
+        # so the panel gains a row, not a new kind of control.
+        self._add_labeled_field_with_button(
+            anchor="note_type_preset",
+            label_text=self.tr("Preset"),
+            input_widget_name="preset_combo",
+            placeholder=self.tr("Select a preset…"),
+            tooltip="",
+            button_name="preset_apply_button",
+            button_tooltip=self.tr("Fill every mapping below from this note type's published field names"),
+            button_callback=self._on_apply_preset,
+            helper_text=self.tr(
+                "Lapis, Kiku and Senren ship fixed field names. Applying overwrites the mappings below."
+            ),
+        )
+        for preset in NOTE_PRESETS:
+            self.preset_combo.addItem(preset.name, preset.id)
+        self.preset_combo.setCurrentIndex(-1)
+
+        # Preset status
+        self.preset_status = QLabel()
+        self.preset_status.setObjectName("validation-status")
+        self.preset_status.setWordWrap(True)
+        self.add_widget(self.preset_status)
 
         # Auto-Map Fields button — prominent, immediately below the Note Type row
         self.fetch_fields_button = ModernButton(self.tr("Auto-Map Fields from Note Type"), variant="primary")
@@ -642,6 +680,70 @@ class AnkiSettingsPanel(FormPanel):
         """Handle fetch fields button click."""
         self.fetch_fields_requested.emit()
 
+    # === Note-type preset ===
+
+    def _on_apply_preset(self) -> None:
+        """Apply the selected preset, or say why nothing happened."""
+        preset = preset_by_id(self.preset_combo.currentData())
+        if preset is None:
+            self._set_preset_status(False, self.tr("Pick a preset first."))
+            return
+        self.apply_note_type_preset(preset)
+
+    def apply_note_type_preset(self, preset: NotePreset) -> None:
+        """Overwrite every mapping this panel owns with ``preset``'s names.
+
+        Writes more than the field rows on purpose: all three presets read
+        pitch categories as romaji (the config default is Japanese), and Senren
+        names its markers sentenceCard / audioCard. A card type the preset has
+        no marker for is reset to None, because an empty marker would silently
+        stop stamping and a wrong one would fail the pre-run field check.
+
+        The note type name is filled only when nothing is selected. A user on
+        "Lapis-modified" who applies the Lapis preset wants the field names, not
+        to be moved onto a different note type.
+        """
+        merged = dict(self._loaded_fields)
+        merged.update(preset.fields)
+        self.set_card_fields(merged)
+        self.set_pitch_category_format(preset.pitch_category_format)
+        self.set_card_type_marker_fields(preset.card_type_marker_fields)
+        if self.get_card_type() not in preset.supported_card_types:
+            self.set_card_type("")
+        if not self.get_note_type():
+            self.set_note_type(preset.name)
+        mapped = sum(1 for value in preset.fields.values() if value)
+        self._set_preset_status(
+            True,
+            tr_format(
+                self.tr("Applied %1 — %2 field mappings, romaji pitch categories."),
+                preset.name,
+                str(mapped),
+            ),
+        )
+
+    def _set_preset_status(self, ok: bool, message: str) -> None:
+        """Write the preset row's status line and repolish its colour."""
+        self.preset_status.setText(message)
+        self.preset_status.setProperty("status", "success" if ok else "error")
+        if style := self.preset_status.style():
+            style.unpolish(self.preset_status)
+            style.polish(self.preset_status)
+
+    def _sync_preset_to_note_type(self) -> None:
+        """Preselect the preset whose note type is the one now chosen.
+
+        Only ever selects — never clears. Landing on "Lapis-modified" after
+        "Lapis" leaves the Lapis preset picked, which is the useful default for
+        a fork.
+        """
+        preset = preset_for_note_type_name(self.get_note_type())
+        if preset is None:
+            return
+        index = self.preset_combo.findData(preset.id)
+        if index >= 0:
+            self.preset_combo.setCurrentIndex(index)
+
     def populate_from_field_list(self, field_names: list[str]) -> None:
         """Auto-map fetched field names to the card field inputs.
 
@@ -795,6 +897,7 @@ class AnkiSettingsPanel(FormPanel):
     def set_note_type(self, value: str) -> None:
         """Select ``value``; insert it when Anki hasn't listed it, "" clears."""
         select_or_insert(self.notetype_combo, value, known=False)
+        self._sync_preset_to_note_type()
 
     def set_available_decks(self, names: list[str]) -> None:
         """Repopulate the deck list, preserving the current selection.
@@ -827,6 +930,7 @@ class AnkiSettingsPanel(FormPanel):
         index = self.notetype_combo.currentIndex()
         if index >= 0 and not self.notetype_combo.itemData(index, Qt.ItemDataRole.ToolTipRole):
             self._clear_status(self.notetype_status)
+        self._sync_preset_to_note_type()
 
     @staticmethod
     def _clear_status(label: QLabel) -> None:
@@ -891,6 +995,7 @@ class AnkiSettingsPanel(FormPanel):
         """
         self._clear_status(self.deck_status)
         self._clear_status(self.notetype_status)
+        self._clear_status(self.preset_status)
         self.set_deck_name(config.anki_deck_name)
         self.set_note_type(config.anki_note_type)
         self.set_ankiconnect_url(config.ankiconnect_url)
