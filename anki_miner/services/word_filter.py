@@ -115,25 +115,52 @@ class WordFilterService:
         self,
         words: list[TokenizedWord],
         max_rank: int | None = None,
+        *,
+        min_rank: int | None = None,
+        keep_unranked: bool = False,
     ) -> list[TokenizedWord]:
-        """Filter words by frequency rank (keep only top-N most common words).
+        """Filter words to a frequency rank band (lower rank = more common).
 
-        Words without a frequency rank are excluded: if the user opts into a
-        frequency cutoff, unindexed words are by definition not in the top N.
-        Fixes Issue #34.
+        ``min_rank`` drops the common end of the band, ``max_rank`` the rare end.
+        Either may be 0/None to leave that end open; with both open the list is
+        returned untouched.
+
+        Words without a frequency rank are excluded unless ``keep_unranked`` is
+        True: if the user opts into a band, unindexed words are by definition not
+        in the top N (Issue #34). ``keep_unranked`` exists because that reasoning
+        only runs one way — an unranked word is not shown to be super-common
+        either, so a min-only band usually wants to keep them. The choice is a
+        checkbox next to the band in Settings, not something inferred here.
 
         Args:
             words: List of words to filter.
-            max_rank: Maximum frequency rank to include (e.g., 10000 means
-                      only words ranked 1-10000 are kept). None or 0 means no filtering.
+            max_rank: Rarest rank to keep (e.g. 10000 keeps ranks 1-10000).
+                      None or 0 leaves the rare end open.
+            min_rank: Most common rank to keep (e.g. 500 skips ranks 1-499).
+                      None or 0 leaves the common end open.
+            keep_unranked: Keep words whose ``frequency_rank`` is None.
 
         Returns:
             Filtered list of words.
         """
-        if not max_rank or max_rank <= 0:
+        low = min_rank if min_rank and min_rank > 0 else None
+        high = max_rank if max_rank and max_rank > 0 else None
+        if low is None and high is None:
             return words
 
-        return [word for word in words if word.frequency_rank is not None and word.frequency_rank <= max_rank]
+        kept: list[TokenizedWord] = []
+        for word in words:
+            rank = word.frequency_rank
+            if rank is None:
+                if keep_unranked:
+                    kept.append(word)
+                continue
+            if low is not None and rank < low:
+                continue
+            if high is not None and rank > high:
+                continue
+            kept.append(word)
+        return kept
 
     def filter_by_word_lists(
         self,

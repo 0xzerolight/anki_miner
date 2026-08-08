@@ -85,7 +85,9 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         screenshot_animated_height=480,
         screenshot_animated_quality=60,
         # --- FilteringSettingsPanel ---
+        min_frequency_rank=500,
         max_frequency_rank=5000,
+        frequency_keep_unranked=True,
         use_known_words_db=True,
         known_words_match_kana_variants=False,  # default is True
         excluded_decks=("Deck A", "Deck B"),
@@ -143,7 +145,9 @@ _SAVE_PATH_FIELDS = frozenset(
         "screenshot_animated_height",
         "screenshot_animated_quality",
         # FilteringSettingsPanel
+        "min_frequency_rank",
         "max_frequency_rank",
+        "frequency_keep_unranked",
         "use_known_words_db",
         "known_words_match_kana_variants",
         "excluded_decks",
@@ -284,7 +288,9 @@ class TestSavePathRoundTrip:
         result = panel.contribute(AnkiMinerConfig())
 
         for field_name in (
+            "min_frequency_rank",
             "max_frequency_rank",
+            "frequency_keep_unranked",
             "use_known_words_db",
             "known_words_match_kana_variants",
             "excluded_decks",

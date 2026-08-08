@@ -153,3 +153,103 @@ def test_max_frequency_warning_shown_only_when_cutoff_without_source(qtbot):
     # No cutoff (0) → warning hidden regardless of sources.
     panel.load_from_config(replace(AnkiMinerConfig(), max_frequency_rank=0))
     assert panel.max_frequency_warning.isHidden()
+
+    # A minimum alone is also a band, so it is inert the same way and warns too.
+    panel.load_from_config(replace(AnkiMinerConfig(), min_frequency_rank=500))
+    assert not panel.max_frequency_warning.isHidden()
+
+
+def test_the_frequency_band_round_trips_through_the_panel(qtbot):
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(
+        replace(AnkiMinerConfig(), min_frequency_rank=500, max_frequency_rank=15000, frequency_keep_unranked=True)
+    )
+    result = panel.contribute(AnkiMinerConfig())
+
+    assert result.min_frequency_rank == 500
+    assert result.max_frequency_rank == 15000
+    assert result.frequency_keep_unranked is True
+
+
+def test_raising_the_minimum_past_the_maximum_pushes_the_maximum_up(qtbot):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_max_frequency_rank(1000)
+    panel.set_min_frequency_rank(5000)
+
+    assert panel.get_max_frequency_rank() == 5000
+    assert panel.get_min_frequency_rank() == 5000
+
+
+def test_lowering_the_maximum_below_the_minimum_pulls_the_minimum_down(qtbot):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_min_frequency_rank(5000)
+    panel.set_max_frequency_rank(1000)
+
+    assert panel.get_min_frequency_rank() == 1000
+    assert panel.get_max_frequency_rank() == 1000
+
+
+def test_an_open_end_never_clamps_the_other(qtbot):
+    """0 means 'open end', not 'rank zero' — it must not drag the other end to 0."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_min_frequency_rank(5000)
+    panel.set_max_frequency_rank(0)
+
+    assert panel.get_min_frequency_rank() == 5000
+
+
+def test_a_stored_inverted_band_loads_without_being_rewritten(qtbot):
+    """Load must not fire the clamp: a hand-edited config is shown as it is."""
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(replace(AnkiMinerConfig(), min_frequency_rank=5000, max_frequency_rank=1000))
+
+    assert panel.get_min_frequency_rank() == 5000
+    assert panel.get_max_frequency_rank() == 1000
+
+
+def test_both_ends_of_the_band_are_the_same_width(qtbot):
+    """Unmatched widths read as two unrelated boxes; 'No minimum' is the longer
+    special value and would otherwise size only its own spinbox."""
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    assert panel.min_frequency_spinbox.minimumWidth() == panel.max_frequency_spinbox.minimumWidth()
+    assert panel.min_frequency_spinbox.minimumWidth() > 0
+
+
+def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(AnkiMinerConfig())
+    assert not panel.keep_unranked_checkbox.isEnabled()
+
+    panel.load_from_config(replace(AnkiMinerConfig(), min_frequency_rank=500))
+    assert panel.keep_unranked_checkbox.isEnabled()
+
+    # And typing a bound in enables it without a reload.
+    panel.load_from_config(AnkiMinerConfig())
+    panel.set_max_frequency_rank(15000)
+    assert panel.keep_unranked_checkbox.isEnabled()

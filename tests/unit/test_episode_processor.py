@@ -907,7 +907,76 @@ class TestOptionalServices:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         # Verify filter_by_frequency was called with the max_rank
-        mock_services["word_filter"].filter_by_frequency.assert_called_once_with([word1, word2], 1000)
+        mock_services["word_filter"].filter_by_frequency.assert_called_once_with(
+            [word1, word2], 1000, min_rank=0, keep_unranked=False
+        )
+
+    def test_a_minimum_alone_activates_the_frequency_filter(self, test_config, mock_services, tmp_path):
+        """A min-only band must reach the filter; the gate used to read max only."""
+        config = replace(test_config, min_frequency_rank=1000)
+
+        word1 = _make_word("食べる")
+        word1.frequency_rank = 500
+        word2 = _make_word("走る", 5.0)
+        word2.frequency_rank = 5000
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all_many.return_value = [[("BCCWJ", 500, None)], [("BCCWJ", 5000, None)]]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
+        # The minimum keeps the rarer word: rank 500 is inside the top 1000.
+        mock_services["word_filter"].filter_by_frequency.return_value = [word2]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word2, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to run"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_frequency.assert_called_once_with(
+            [word1, word2], 0, min_rank=1000, keep_unranked=False
+        )
+
+    def test_keep_unranked_is_passed_through(self, test_config, mock_services, tmp_path):
+        """The unranked-words checkbox has to reach the filter, not just the config."""
+        config = replace(test_config, max_frequency_rank=1000, frequency_keep_unranked=True)
+
+        word1 = _make_word("食べる")
+        word1.frequency_rank = 500
+
+        mock_frequency = MagicMock()
+        mock_frequency.is_available.return_value = True
+        mock_frequency.lookup_all_many.return_value = [[("BCCWJ", 500, None)]]
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word1]
+        mock_services["word_filter"].filter_by_frequency.return_value = [word1]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            frequency_service=mock_frequency,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_frequency.assert_called_once_with(
+            [word1], 1000, min_rank=0, keep_unranked=True
+        )
 
     def test_bypass_optional_filters_skips_frequency(self, test_config, mock_services, tmp_path):
         """Deck Builder: bypass_optional_filters=True skips the frequency cutoff."""
@@ -969,6 +1038,37 @@ class TestOptionalServices:
         # this was never called — the list was empty).
         mock_services["anki_service"].create_cards_batch.assert_called_once()
         # And the user is told the cutoff is inert instead of silently getting 0.
+        assert any(
+            "frequency source" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
+        ), presenter.show_warning.call_args_list
+
+    def test_freq_band_skipped_when_only_a_minimum_is_set(self, test_config, mock_services, tmp_path):
+        """Same inert-band path as the max-only cutoff above, driven by the minimum.
+
+        Also a REAL WordFilterService: a min-only band with no source would drop
+        every None-ranked word just as the max-only one did.
+        """
+        config = replace(test_config, min_frequency_rank=500, deduplicate_sentences=False)
+        word = _make_word("食べる")
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        presenter = MagicMock(spec=NullPresenter())
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=presenter,
+            frequency_service=None,
+            **services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["anki_service"].create_cards_batch.assert_called_once()
         assert any(
             "frequency source" in str(c.args[0]).lower() for c in presenter.show_warning.call_args_list
         ), presenter.show_warning.call_args_list
