@@ -889,8 +889,8 @@ class EpisodeProcessor:
             )
             whitelist_force_includes = len(forced_include)
 
-        # Frequency rank cutoff. Gate on an actually-loaded NUMERIC frequency
-        # source — NOT just max_frequency_rank > 0, and NOT is_available(). With
+        # Frequency rank band. Gate on an actually-loaded NUMERIC frequency
+        # source — NOT just a configured bound, and NOT is_available(). With
         # no source (or only a categorical one, e.g. a JLPT-band dict whose rows
         # all carry CATEGORICAL_RANK), no word gets a numeric rank, so every word
         # keeps frequency_rank=None and filter_by_frequency drops every None-ranked
@@ -898,28 +898,27 @@ class EpisodeProcessor:
         # of words and produce zero cards. has_numeric_source() is True only when a
         # non-categorical source is loaded, which is the sole case the cutoff can
         # meaningfully apply.
+        freq_low = self.config.min_frequency_rank
+        freq_high = self.config.max_frequency_rank
         if (
-            self.config.max_frequency_rank > 0
+            (freq_low > 0 or freq_high > 0)
             and self.frequency_service
             and self.frequency_service.has_numeric_source()
             and not self.config.bypass_optional_filters
         ):
             before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_frequency(unknown_words, self.config.max_frequency_rank)
+            unknown_words = self.word_filter.filter_by_frequency(
+                unknown_words,
+                freq_high,
+                min_rank=freq_low,
+                keep_unranked=self.config.frequency_keep_unranked,
+            )
             filtered_out = before - len(unknown_words)
             frequency_rejects = filtered_out
             if filtered_out > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor", "Frequency filter: removed %1 words outside top %2"
-                        ),
-                        filtered_out,
-                        self.config.max_frequency_rank,
-                    )
-                )
-        elif self.config.max_frequency_rank > 0 and not self.config.bypass_optional_filters:
-            # Cutoff configured but no frequency source is loaded: skip it (it
+                self.presenter.show_info(self._frequency_filter_notice(filtered_out, freq_low, freq_high))
+        elif (freq_low > 0 or freq_high > 0) and not self.config.bypass_optional_filters:
+            # Band configured but no frequency source is loaded: skip it (it
             # would drop every word) and tell the user it is inert, so they add a
             # source instead of silently getting zero cards.
             self.presenter.show_warning(
@@ -1212,6 +1211,36 @@ class EpisodeProcessor:
             },
         )
         return unknown_words
+
+    @staticmethod
+    def _frequency_filter_notice(removed: int, low: int, high: int) -> str:
+        """Word the frequency-band report for whichever ends are actually set.
+
+        The max-only string is kept verbatim so its existing translations survive;
+        the band and min-only wordings are the only new strings here.
+        """
+        if low > 0 and high > 0:
+            return tr_format(
+                QCoreApplication.translate(
+                    "EpisodeProcessor", "Frequency filter: removed %1 words outside ranks %2-%3"
+                ),
+                removed,
+                low,
+                high,
+            )
+        if low > 0:
+            return tr_format(
+                QCoreApplication.translate(
+                    "EpisodeProcessor", "Frequency filter: removed %1 words more common than rank %2"
+                ),
+                removed,
+                low,
+            )
+        return tr_format(
+            QCoreApplication.translate("EpisodeProcessor", "Frequency filter: removed %1 words outside top %2"),
+            removed,
+            high,
+        )
 
     def _phase3_extract(
         self,
