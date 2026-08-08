@@ -3613,16 +3613,16 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
       <translation>Excluir Palavras Só em Hiragana</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
-      <translation>Ignora palavras escritas inteiramente em hiragana (ex.: する, これ). Concentra o baralho em vocabulário com kanji.</translation>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+      <translation>Ignorar palavras escritas inteiramente em hiragana (ex.: する, これ), incluindo grafias com vogal longa como すごーい. Concentra o baralho em vocabulário com kanji.</translation>
     </message>
     <message>
       <source>Exclude Katakana-Only Words</source>
       <translation>Excluir Palavras Só em Katakana</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-      <translation>Pular palavras escritas inteiramente em katakana (ex.: コーヒー).</translation>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+      <translation>Ignorar palavras escritas inteiramente em katakana (ex.: コーヒー). Marque as duas caixas para ignorar também palavras que misturam os dois silabários kana (サボる, ヤバい).</translation>
     </message>
     <message>
       <source>i+1 Sentence Filter</source>

@@ -16,6 +16,7 @@ from anki_miner.utils import (
     is_hiragana_only,
     is_kana_only,
     is_katakana_only,
+    is_mixed_kana_only,
     wrap_target_furigana,
     wrap_target_plain,
 )
@@ -218,6 +219,14 @@ class WordFilterService:
         katakana loanwords like コーヒー are excluded when ``exclude_katakana_only``
         is set. Mixed kana+kanji forms are never matched and are kept.
 
+        Script-neutral kana marks (ー ・ ゝゞヽヾ) do not decide a word's script,
+        so the colloquial long-vowel spellings すごーい / ずーっと count as
+        hiragana-only. Words mixing BOTH kana scripts — the loanword verbs and
+        adjectives ``morphology.should_include`` admits on purpose (サボる, ググる,
+        ヤバい) — belong to neither script, so they are dropped only when both
+        exclusions are on, which is the "kanji-only deck" request. Either flag
+        alone leaves them mined.
+
         Args:
             words: Words to filter.
             exclude_hiragana_only: Drop words whose mined form is all hiragana.
@@ -226,12 +235,15 @@ class WordFilterService:
         Returns:
             Filtered list of words.
         """
+        exclude_mixed_kana = exclude_hiragana_only and exclude_katakana_only
         result = []
         for word in words:
             form = word.mined_form
             if exclude_hiragana_only and is_hiragana_only(form):
                 continue
             if exclude_katakana_only and is_katakana_only(form):
+                continue
+            if exclude_mixed_kana and is_mixed_kana_only(form):
                 continue
             result.append(word)
         return result

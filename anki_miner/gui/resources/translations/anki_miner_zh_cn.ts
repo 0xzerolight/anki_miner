@@ -3601,16 +3601,16 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation>排除纯平假名单词</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
-      <translation>跳过完全由平假名书写的单词（例如 する、これ）。使牌组聚焦于汉字词汇。</translation>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+      <translation>跳过完全用平假名书写的词（如 する、これ），包括 すごーい 这类长音写法。让牌组集中于含汉字的词汇。</translation>
     </message>
     <message>
       <source>Exclude Katakana-Only Words</source>
       <translation>排除纯片假名单词</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-      <translation>跳过完全由片假名书写的单词（例如コーヒー）。</translation>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+      <translation>跳过完全用片假名书写的词（如 コーヒー）。同时勾选两项，也会跳过混用两种假名的词（サボる、ヤバい）。</translation>
     </message>
     <message>
       <source>i+1 Sentence Filter</source>

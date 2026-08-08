@@ -17,6 +17,7 @@ from anki_miner.utils.text_utils import (
     hiragana_to_katakana,
     is_hiragana_only,
     is_katakana_only,
+    is_mixed_kana_only,
     katakana_to_hiragana,
     strip_inline_annotations,
     strip_subtitle_markup,
@@ -553,6 +554,41 @@ class TestIsHiraganaOnly:
 
     def test_empty_string_false(self):
         assert is_hiragana_only("") is False
+
+    def test_prolonged_mark_is_script_neutral(self):
+        # ー (U+30FC) is filed in the katakana block but carries no script, so a
+        # colloquial long-vowel hiragana spelling is still hiragana-only.
+        assert is_hiragana_only("すごーい") is True
+        assert is_hiragana_only("ずーっと") is True
+        assert is_hiragana_only("きれー") is True
+
+    def test_bare_mark_is_not_a_word(self):
+        assert is_hiragana_only("ー") is False
+        assert is_hiragana_only("・") is False
+
+    def test_mixed_kana_scripts_is_false(self):
+        assert is_hiragana_only("サボる") is False
+
+
+class TestIsMixedKanaOnly:
+    """Tests for is_mixed_kana_only (Issue #57 follow-up)."""
+
+    def test_katakana_stem_with_hiragana_okurigana(self):
+        assert is_mixed_kana_only("サボる") is True
+        assert is_mixed_kana_only("ヤバい") is True
+        assert is_mixed_kana_only("ググる") is True
+
+    def test_single_script_is_false(self):
+        assert is_mixed_kana_only("これ") is False
+        assert is_mixed_kana_only("コーヒー") is False
+        assert is_mixed_kana_only("すごーい") is False
+
+    def test_kanji_is_false(self):
+        assert is_mixed_kana_only("お茶") is False
+        assert is_mixed_kana_only("漢字") is False
+
+    def test_empty_string_false(self):
+        assert is_mixed_kana_only("") is False
 
 
 class TestIsKatakanaOnly:

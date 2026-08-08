@@ -669,33 +669,96 @@ def wrap_target_furigana(text: str, tagger, start: int, end: int) -> str:
     return wrap_target_furigana_from_tokens(text, tagger(text), start, end)
 
 
+# Kana marks that carry no script of their own: the prolonged sound mark ー
+# (U+30FC) and its halfwidth twin ｰ (U+FF70), the middle dot ・, the double
+# hyphen ゠, the iteration marks ゝゞヽヾ, and the standalone/combining voiced
+# and semi-voiced marks. Unicode files ー and ・ in the KATAKANA block, but a
+# hiragana word writes them just as happily (すごーい, ずーっと) — classifying
+# them as katakana is what let such words escape BOTH script-type filters, since
+# they were neither all-hiragana nor all-katakana (Issue #57 follow-up).
+_KANA_NEUTRAL_MARKS = frozenset("ー・゠ゝゞヽヾ゛゜゙゚ｰﾞﾟ")
+
+
+def _is_hiragana_letter(char: str) -> bool:
+    """True iff ``char`` is a hiragana letter (not a script-neutral mark).
+
+    U+3041–U+3096 (ぁ–ゖ) plus the ゟ digraph. Deliberately excludes U+309B–
+    U+309E, which live in the hiragana block but are marks — see
+    :data:`_KANA_NEUTRAL_MARKS`.
+    """
+    return "ぁ" <= char <= "ゖ" or char == "ゟ"
+
+
+def _is_katakana_letter(char: str) -> bool:
+    """True iff ``char`` is a katakana letter (not a script-neutral mark).
+
+    Fullwidth U+30A1–U+30FA (ァ–ヺ) plus the ヿ digraph, and halfwidth
+    U+FF66–U+FF9D minus the halfwidth prolonged mark ｰ, so a loanword typed in
+    halfwidth such as ｺｰﾋﾞｰ still counts as katakana (Issue #57 review).
+    """
+    if "ァ" <= char <= "ヺ" or char == "ヿ":
+        return True
+    return "ｦ" <= char <= "ﾝ" and char != "ｰ"
+
+
+def _classify_kana(text: str) -> str | None:
+    """Script of a kana-only ``text``: hiragana / katakana / mixed, else None.
+
+    ``None`` unless every character is a kana letter or a script-neutral mark
+    (so anything holding a kanji, romaji, digit or punctuation is not kana-only
+    and is kept by the script-type filter). Marks alone are not a word: ``ー``
+    on its own classifies as ``None`` because no letter is present.
+
+    Single source of truth for :func:`is_hiragana_only`,
+    :func:`is_katakana_only` and :func:`is_mixed_kana_only` so the two script
+    sides can never drift apart on a mark again.
+    """
+    has_hiragana = False
+    has_katakana = False
+    for char in text:
+        if _is_hiragana_letter(char):
+            has_hiragana = True
+        elif _is_katakana_letter(char):
+            has_katakana = True
+        elif char not in _KANA_NEUTRAL_MARKS:
+            return None
+    if has_hiragana and has_katakana:
+        return "mixed"
+    if has_hiragana:
+        return "hiragana"
+    if has_katakana:
+        return "katakana"
+    return None
+
+
 def is_hiragana_only(text: str) -> bool:
-    """Return True iff ``text`` is non-empty and every character is hiragana.
+    """Return True iff ``text`` is hiragana letters plus script-neutral marks.
 
-    Hiragana block is U+3040–U+309F. Empty strings and any text containing a
-    kanji, katakana, digit, romaji, or punctuation character return False (so
-    such words are kept by the script-type filter).
+    ``すごーい`` and ``ずーっと`` qualify: the prolonged sound mark carries no
+    script. Empty strings, marks with no letter, and any text containing a
+    kanji, katakana letter, digit, romaji or punctuation character return False
+    (so such words are kept by the script-type filter).
     """
-    return bool(text) and all("぀" <= char <= "ゟ" for char in text)
-
-
-def _is_katakana_char(char: str) -> bool:
-    """True iff ``char`` is fullwidth or halfwidth katakana.
-
-    Fullwidth block U+30A0–U+30FF includes the prolonged sound mark ー (U+30FC)
-    and middle dot ・ (U+30FB). Halfwidth block U+FF66–U+FF9F covers the
-    halfwidth katakana letters, the halfwidth prolonged mark ｰ (U+FF70) and the
-    halfwidth voiced/semi-voiced sound marks ﾞ ﾟ (U+FF9E–U+FF9F), so a loanword
-    typed in halfwidth such as ｺｰﾋﾞｰ counts as katakana too (Issue #57 review).
-    """
-    return "゠" <= char <= "ヿ" or "ｦ" <= char <= "ﾟ"
+    return _classify_kana(text) == "hiragana"
 
 
 def is_katakana_only(text: str) -> bool:
-    """Return True iff ``text`` is non-empty and every character is katakana.
+    """Return True iff ``text`` is katakana letters plus script-neutral marks.
 
-    Counts both fullwidth (U+30A0–U+30FF) and halfwidth (U+FF66–U+FF9F)
-    katakana, so コーヒー, ロボット・X and the halfwidth ｺｰﾋﾞｰ all qualify.
-    Empty strings or any non-katakana character return False.
+    Counts both fullwidth (U+30A1–U+30FA) and halfwidth (U+FF66–U+FF9D)
+    letters, so コーヒー, コーヒーｺｰﾋｰ and the halfwidth ｺｰﾋﾞｰ all qualify.
+    Empty strings, marks with no letter (bare ー), and any non-kana character
+    return False.
     """
-    return bool(text) and all(_is_katakana_char(char) for char in text)
+    return _classify_kana(text) == "katakana"
+
+
+def is_mixed_kana_only(text: str) -> bool:
+    """Return True iff ``text`` is kana-only and mixes both scripts.
+
+    The katakana-stem/hiragana-okurigana loanword verbs and adjectives
+    ``morphology.should_include`` admits on purpose — サボる, ググる, ヤバい.
+    They are neither hiragana-only nor katakana-only, so the script-type filter
+    drops them only when BOTH exclusions are on ("kanji-only deck").
+    """
+    return _classify_kana(text) == "mixed"

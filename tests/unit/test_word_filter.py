@@ -479,6 +479,57 @@ class TestWordFilterService:
 
             assert result == []
 
+        def test_excludes_hiragana_with_prolonged_mark(self, test_config):
+            """すごーい is hiragana-only: ー carries no script of its own.
+
+            Regression: ー (U+30FC) sits in the katakana Unicode block, so the
+            old all-in-one-block predicates called such words neither
+            hiragana-only nor katakana-only and let them past BOTH flags.
+            """
+            service = WordFilterService(test_config)
+            words = [
+                create_word("すごーい", pos="形容詞", orth_base="すごーい"),
+                create_word("ずーっと", pos="副詞"),
+                create_word("漢字"),
+            ]
+
+            result = service.filter_by_script_type(words, exclude_hiragana_only=True)
+
+            assert [w.lemma for w in result] == ["漢字"]
+
+        def test_halfwidth_katakana_dropped_through_filter(self, test_config):
+            """Halfwidth loanwords are katakana-only at the filter, not just the util."""
+            service = WordFilterService(test_config)
+            words = [create_word("ｺｰﾋﾞｰ"), create_word("漢字")]
+
+            result = service.filter_by_script_type(words, exclude_katakana_only=True)
+
+            assert [w.lemma for w in result] == ["漢字"]
+
+        def test_mixed_kana_survives_either_flag_alone(self, test_config):
+            """サボる/ヤバい belong to neither script, so one flag never drops them."""
+            service = WordFilterService(test_config)
+            words = [
+                create_word("サボる", pos="動詞", orth_base="サボる"),
+                create_word("ヤバい", pos="形容詞", orth_base="ヤバい"),
+            ]
+
+            assert len(service.filter_by_script_type(words, exclude_hiragana_only=True)) == 2
+            assert len(service.filter_by_script_type(words, exclude_katakana_only=True)) == 2
+
+        def test_mixed_kana_dropped_when_both_flags_set(self, test_config):
+            """Both flags on means "kanji-only deck" — mixed-kana loanwords go too."""
+            service = WordFilterService(test_config)
+            words = [
+                create_word("サボる", pos="動詞", orth_base="サボる"),
+                create_word("ヤバい", pos="形容詞", orth_base="ヤバい"),
+                create_word("お茶"),
+            ]
+
+            result = service.filter_by_script_type(words, exclude_hiragana_only=True, exclude_katakana_only=True)
+
+            assert [w.lemma for w in result] == ["お茶"]
+
         def test_empty_list(self, test_config):
             """Empty input yields empty output."""
             service = WordFilterService(test_config)
@@ -1402,3 +1453,49 @@ class TestOverriddenVerbLemmaCorrelation:
         word = self._overridden_word()
         kept = service.filter_by_episode_count([word], {"感ずる": 2}, min_appearances=2)
         assert kept == [word]
+
+
+class TestScriptTypeFilterAgainstRealParser:
+    """End-to-end guard for the Issue #57 follow-up leak.
+
+    Pins the reproduction: with both exclusions on, no card front the real
+    tokenizer produces may be kana-only. The unit tests above cover the
+    predicates; this one proves the words that actually leaked in the field
+    (サボる/ヤバい/ダブる/ハモる via mixed script, すごーい via the prolonged
+    sound mark) are gone, and that genuine kanji vocabulary survives.
+    """
+
+    LINES = [
+        "サボる人が多い。",
+        "ヤバい状況だ。",
+        "彼はダブる予定。",
+        "コーヒーを飲む。",
+        "すごーい話だね。",
+        "ハモる二人。",
+        "ロボットが動く。",
+    ]
+
+    def test_no_kana_only_front_survives_both_exclusions(self, test_config):
+        import dataclasses
+
+        from anki_miner.models.reading import ReadingUnit
+        from anki_miner.services.subtitle_parser import SubtitleParserService
+        from anki_miner.utils import is_kana_only
+
+        config = dataclasses.replace(
+            test_config,
+            exclude_hiragana_only_words=True,
+            exclude_katakana_only_words=True,
+        )
+        parser = SubtitleParserService(config)
+        units = [ReadingUnit(text=t, index=i, location_label=f"p.{i}") for i, t in enumerate(self.LINES)]
+        words, _index, _counts = parser.parse_text_units(units, want_line_index=False)
+        assert words, "parser produced no words — fixture text or POS gate changed"
+
+        service = WordFilterService(config, tagger=parser.tagger)
+        kept = service.filter_by_script_type(words, exclude_hiragana_only=True, exclude_katakana_only=True)
+
+        leaked = sorted({w.mined_form for w in kept if is_kana_only(w.mined_form)})
+        assert leaked == []
+        # The filter must not have simply eaten everything.
+        assert "人" in {w.mined_form for w in kept}

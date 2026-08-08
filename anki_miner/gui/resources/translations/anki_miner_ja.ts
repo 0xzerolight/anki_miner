@@ -3601,16 +3601,16 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation>ひらがなのみの単語を除外</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
-      <translation>すべてひらがなで書かれた単語（例: する、これ）をスキップします。デッキを漢字語彙に絞り込みます。</translation>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+      <translation>ひらがなだけで書かれた語（する、これ など）をスキップします。すごーい のような長音表記も含みます。デッキを漢字語彙に集中させます。</translation>
     </message>
     <message>
       <source>Exclude Katakana-Only Words</source>
       <translation>カタカナのみの単語を除外</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-      <translation>カタカナのみで書かれた単語をスキップします（例: コーヒー）。</translation>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+      <translation>カタカナだけで書かれた語（コーヒー など）をスキップします。両方にチェックすると、2つの仮名が混ざった語（サボる、ヤバい）もスキップします。</translation>
     </message>
     <message>
       <source>i+1 Sentence Filter</source>

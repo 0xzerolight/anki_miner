@@ -3601,16 +3601,16 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
       <translation>Kecualikan Kata Hanya-Hiragana</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
-      <translation>Lewati kata yang ditulis sepenuhnya dalam hiragana (mis. する, これ). Memfokuskan dek pada kosakata kanji.</translation>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+      <translation>Lewati kata yang ditulis sepenuhnya dengan hiragana (mis. する, これ), termasuk ejaan vokal panjang seperti すごーい. Memfokuskan dek pada kosakata berkanji.</translation>
     </message>
     <message>
       <source>Exclude Katakana-Only Words</source>
       <translation>Kecualikan Kata Hanya-Katakana</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-      <translation>Lewati kata yang seluruhnya ditulis dalam katakana (mis. コーヒー).</translation>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+      <translation>Lewati kata yang ditulis sepenuhnya dengan katakana (mis. コーヒー). Centang kedua kotak untuk melewati juga kata yang mencampur kedua aksara kana (サボる, ヤバい).</translation>
     </message>
     <message>
       <source>i+1 Sentence Filter</source>

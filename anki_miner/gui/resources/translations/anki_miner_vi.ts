@@ -3601,16 +3601,16 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
       <translation>Loại trừ từ chỉ có hiragana</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
-      <translation>Bỏ qua các từ viết hoàn toàn bằng hiragana (ví dụ する, これ). Tập trung bộ thẻ vào từ vựng kanji.</translation>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+      <translation>Bỏ qua các từ viết hoàn toàn bằng hiragana (ví dụ する, これ), kể cả cách viết trường âm như すごーい. Giúp bộ thẻ tập trung vào từ vựng có kanji.</translation>
     </message>
     <message>
       <source>Exclude Katakana-Only Words</source>
       <translation>Loại trừ từ chỉ có katakana</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-      <translation>Bỏ qua các từ viết hoàn toàn bằng katakana (ví dụ: コーヒー).</translation>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+      <translation>Bỏ qua các từ viết hoàn toàn bằng katakana (ví dụ コーヒー). Đánh dấu cả hai ô để bỏ qua cả những từ pha trộn hai bảng kana (サボる, ヤバい).</translation>
     </message>
     <message>
       <source>i+1 Sentence Filter</source>

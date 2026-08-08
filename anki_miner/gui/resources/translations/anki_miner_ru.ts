@@ -3625,16 +3625,16 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation>Исключить слова только из хираганы</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
-      <translation>Пропускать слова, написанные полностью хираганой (например, する, これ). Фокусирует колоду на лексике с кандзи.</translation>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+      <translation>Пропускать слова, записанные полностью хираганой (например, する, これ), включая написания с долгим гласным вроде すごーい. Сосредоточивает колоду на лексике с кандзи.</translation>
     </message>
     <message>
       <source>Exclude Katakana-Only Words</source>
       <translation>Исключить слова только из катаканы</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
-      <translation>Пропускать слова, записанные полностью катаканой (например, コーヒー).</translation>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+      <translation>Пропускать слова, записанные полностью катаканой (например, コーヒー). Отметьте оба флажка, чтобы пропускать и слова, смешивающие обе слоговые азбуки (サボる, ヤバい).</translation>
     </message>
     <message>
       <source>i+1 Sentence Filter</source>

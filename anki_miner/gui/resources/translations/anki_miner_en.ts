@@ -3579,7 +3579,7 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation type="unfinished" />
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary.</source>
+      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
       <translation type="unfinished" />
     </message>
     <message>
@@ -3587,7 +3587,7 @@ Files on disk will be left untouched because the folder could not be proven to b
       <translation type="unfinished" />
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー).</source>
+      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
       <translation type="unfinished" />
     </message>
     <message>

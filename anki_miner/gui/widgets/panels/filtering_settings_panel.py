@@ -347,7 +347,8 @@ class FilteringSettingsPanel(FormPanel):
             "",
             self.exclude_hiragana_only_checkbox,
             helper=self.tr(
-                "Skip words written entirely in hiragana (e.g. する, これ). Focuses the deck on kanji vocabulary."
+                "Skip words written entirely in hiragana (e.g. する, これ), including "
+                "long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary."
             ),
         )
 
@@ -355,7 +356,10 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "",
             self.exclude_katakana_only_checkbox,
-            helper=self.tr("Skip words written entirely in katakana (e.g. コーヒー)."),
+            helper=self.tr(
+                "Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes "
+                "to also skip words mixing the two kana scripts (サボる, ヤバい)."
+            ),
         )
 
         # i+1 Sentence Filter section
