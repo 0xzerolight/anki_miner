@@ -11,7 +11,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.models import MediaData
-from anki_miner.services.media_extractor import MediaExtractorService
+from anki_miner.services.media_extractor import (
+    MIN_CLIP_SECONDS,
+    MediaExtractorService,
+    resolve_audio_window,
+)
 
 MODULE = "anki_miner.services.media_extractor"
 DETECTOR_MODULE = "anki_miner.utils.audio_track_detector"
@@ -166,6 +170,19 @@ class TestExtractMedia:
         mock_audio.assert_not_called()
         assert result.screenshot_path is not None
         assert result.audio_path is None
+
+    def test_threads_the_edited_window_into_the_audio_encode(self, service, video_file, make_tokenized_word):
+        """A curator edit must reach ffmpeg, not just the model."""
+        word = make_tokenized_word(start_time=5.0, end_time=7.0, duration=2.0)
+        word.clip_override = (4.0, 9.5)
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True),
+            patch.object(service, "_extract_audio", return_value=True) as mock_audio,
+        ):
+            service.extract_media(video_file, word)
+
+        assert mock_audio.call_args[0][1:3] == (4.0, 5.5)
 
     def test_correct_filename_generation(self, service, video_file, make_tokenized_word):
         """Should generate filenames as {safe_lemma}_{timestamp_ms}_{seq}.ext."""
@@ -492,6 +509,58 @@ class TestAnimatedScreenshot:
         cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-t") + 1] == str(5.6)
 
+    def test_match_audio_follows_an_edited_window(self, animated_avif_service, video_file, tmp_path):
+        """ "Match audio" means match it — including a per-word curator edit."""
+        cfg = dataclasses.replace(
+            animated_avif_service.config,
+            screenshot_animated_match_audio=True,
+            audio_padding=0.3,
+        )
+        animated_avif_service.config = cfg
+        output_path = tmp_path / "clip.avif"
+        mock_proc = _popen_mock()
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file,
+                start_time=5.0,
+                duration=2.0,
+                output_path=output_path,
+                audio_window=(4.0, 5.5),
+            )
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-ss") + 1] == str(4.0)
+        assert cmd[cmd.index("-t") + 1] == str(5.5)
+
+    def test_edited_window_ignored_when_not_matching_audio(self, animated_avif_service, video_file, tmp_path):
+        """With match_audio off the clip keeps its own configured length."""
+        cfg = dataclasses.replace(
+            animated_avif_service.config,
+            screenshot_animated_match_audio=False,
+            screenshot_animated_clip_duration=2.0,
+        )
+        animated_avif_service.config = cfg
+        output_path = tmp_path / "clip.avif"
+        mock_proc = _popen_mock()
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            animated_avif_service._extract_animated_screenshot(
+                video_file,
+                start_time=5.0,
+                duration=5.0,
+                output_path=output_path,
+                audio_window=(4.0, 5.5),
+            )
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-ss") + 1] == str(5.0)
+        assert cmd[cmd.index("-t") + 1] == str(2.0)
+
     def test_avif_command_shape(self, animated_avif_service, video_file, tmp_path):
         """AVIF ffmpeg command must include libsvtav1, CRF, loop, scale filter."""
         output_path = tmp_path / "clip.avif"
@@ -761,11 +830,57 @@ class TestRunFfmpeg:
         assert mock_popen.call_args.kwargs["stdin"] == subprocess.DEVNULL
 
 
+class TestResolveAudioWindow:
+    """Tests for resolve_audio_window — the one place the clip window is decided."""
+
+    def test_pads_both_sides_without_an_override(self, make_tokenized_word):
+        """start = start - 0.3, duration = dur + 0.6 (pre-override behaviour)."""
+        word = make_tokenized_word(start_time=5.0, end_time=7.0, duration=2.0)
+
+        assert resolve_audio_window(word, 0.3) == (4.7, 2.6)
+
+    def test_start_clamped_to_zero(self, make_tokenized_word):
+        """A line that starts inside the padding cannot seek before the file."""
+        word = make_tokenized_word(start_time=0.1, end_time=2.1, duration=2.0)
+
+        start, _ = resolve_audio_window(word, 0.3)
+
+        assert start == 0
+
+    def test_override_is_used_verbatim(self, make_tokenized_word):
+        """The user typed the window they want; no padding is added on top."""
+        word = make_tokenized_word(start_time=5.0, end_time=7.0, duration=2.0)
+        word.clip_override = (4.0, 9.5)
+
+        assert resolve_audio_window(word, 0.3) == (4.0, 5.5)
+
+    def test_override_start_clamped_to_zero(self, make_tokenized_word):
+        word = make_tokenized_word(start_time=1.0, end_time=3.0, duration=2.0)
+        word.clip_override = (-2.0, 1.0)
+
+        start, _ = resolve_audio_window(word, 0.3)
+
+        assert start == 0
+
+    def test_inverted_override_floors_at_min_clip(self, make_tokenized_word):
+        """A window whose out precedes its in must not reach ffmpeg as -t <= 0."""
+        word = make_tokenized_word(start_time=1.0, end_time=3.0, duration=2.0)
+        word.clip_override = (5.0, 4.0)
+
+        _, duration = resolve_audio_window(word, 0.3)
+
+        assert duration == MIN_CLIP_SECONDS
+
+
 class TestExtractAudio:
     """Tests for _extract_audio method."""
 
-    def test_padding_calculation(self, service, video_file, tmp_path):
-        """Should apply audio padding: start = start - 0.3, duration = dur + 0.6."""
+    def test_encodes_the_window_it_is_given(self, service, video_file, tmp_path):
+        """Should pass its window straight to ffmpeg, doing no timing math.
+
+        Padding (and any per-word edit) is resolved by ``resolve_audio_window``
+        in the caller; see TestResolveAudioWindow.
+        """
         output_path = tmp_path / "output.mp3"
         output_path.write_bytes(b"\xff\xfbfake-mp3")
 
@@ -775,30 +890,11 @@ class TestExtractAudio:
             patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
             patch.object(service, "_get_japanese_audio_stream", return_value=None),
         ):
-            service._extract_audio(video_file, 5.0, 2.0, output_path)
+            service._extract_audio(video_file, 4.7, 2.6, output_path)
 
         cmd = mock_popen.call_args[0][0]
-        # audio_start = max(0, 5.0 - 0.3) = 4.7
         assert cmd[cmd.index("-ss") + 1] == str(4.7)
-        # audio_duration = 2.0 + (0.3 * 2) = 2.6
         assert cmd[cmd.index("-t") + 1] == str(2.6)
-
-    def test_start_clamped_to_zero(self, service, video_file, tmp_path):
-        """Should clamp audio start to 0 when start_time - padding < 0."""
-        output_path = tmp_path / "output.mp3"
-        output_path.write_bytes(b"\xff\xfbfake-mp3")
-
-        mock_proc = _popen_mock()
-
-        with (
-            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
-            patch.object(service, "_get_japanese_audio_stream", return_value=None),
-        ):
-            service._extract_audio(video_file, 0.1, 2.0, output_path)
-
-        cmd = mock_popen.call_args[0][0]
-        # audio_start = max(0, 0.1 - 0.3) = max(0, -0.2) = 0
-        assert cmd[cmd.index("-ss") + 1] == str(0)
 
     def test_maps_japanese_audio_stream(self, service, video_file, tmp_path):
         """Should use -map 0:{stream_index} when Japanese audio detected."""
