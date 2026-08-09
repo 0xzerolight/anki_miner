@@ -11,7 +11,8 @@ The widget owns no media and no config. It is told a word's window
 what to do with them and the player performs the preview.
 """
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import QRectF, Qt, pyqtSignal
+from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPalette
 from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QHBoxLayout,
@@ -36,6 +37,197 @@ MAX_CLIP_SECONDS = 30.0
 
 #: Step for one arrow-key press or wheel notch, in seconds.
 _STEP_SECONDS = 0.1
+
+#: Painted metrics, in device-independent pixels.
+_HANDLE_WIDTH = 8
+_GROOVE_HEIGHT = 8
+_WIDGET_HEIGHT = 22
+
+
+class ClipRangeSlider(QWidget):
+    """A two-handle range control that draws its own length readout.
+
+    Self-painted rather than a QSlider subclass: QStyle draws exactly one
+    handle, and the app ships no QSS for QSlider at all. Colours come from the
+    palette because a theme routes the whole QApplication palette, so this
+    control follows all of them without a stylesheet rule.
+
+    Everything here is in integer ticks. Seconds, defaults and clip-length
+    limits belong to the host.
+    """
+
+    #: The user moved a handle. Payload is ``(in, out)`` in ticks.
+    values_changed = pyqtSignal(int, int)
+
+    #: The user double-clicked, asking for the default window back.
+    reset_requested = pyqtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._lo = 0
+        self._hi = 0
+        self._in = 0
+        self._out = 0
+        self._text = ""
+        # Which handle the next drag or arrow key moves. Sticky after a drag so
+        # the keyboard keeps nudging the end the user was just working on.
+        self._active_out = False
+        self._dragging = False
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setMinimumHeight(_WIDGET_HEIGHT)
+        self.setMinimumWidth(80)
+
+    # ------------------------------------------------------------------
+    # Host API
+    # ------------------------------------------------------------------
+
+    def set_span(self, lo: int, hi: int) -> None:
+        """Set the travel both handles move within, pulling the values inside it."""
+        self._lo, self._hi = lo, max(lo, hi)
+        self.set_values(self._in, self._out)
+
+    def set_values(self, in_ticks: int, out_ticks: int) -> None:
+        """Place the handles. Never emits — the host writes back mid-drag."""
+        self._in = min(max(in_ticks, self._lo), self._hi)
+        self._out = min(max(out_ticks, self._in), self._hi)
+        self.update()
+
+    def values(self) -> tuple[int, int]:
+        """The handle positions, in ticks."""
+        return self._in, self._out
+
+    def set_text(self, text: str) -> None:
+        """Set the readout drawn on the selected span."""
+        self._text = text
+        self.update()
+
+    # ------------------------------------------------------------------
+    # Geometry
+    # ------------------------------------------------------------------
+
+    def _groove_rect(self) -> QRectF:
+        """The bar the handles travel along, inset so a handle never clips out."""
+        inset = _HANDLE_WIDTH / 2
+        top = (self.height() - _GROOVE_HEIGHT) / 2
+        return QRectF(inset, top, max(0.0, self.width() - _HANDLE_WIDTH), _GROOVE_HEIGHT)
+
+    def _pos_for(self, ticks: int) -> float:
+        """The x centre, in pixels, for a tick value."""
+        groove = self._groove_rect()
+        if self._hi == self._lo:
+            return groove.left()
+        fraction = (ticks - self._lo) / (self._hi - self._lo)
+        return groove.left() + fraction * groove.width()
+
+    def _ticks_for(self, x: float) -> int:
+        """The tick value for an x in pixels, clamped to the span."""
+        groove = self._groove_rect()
+        if self._hi == self._lo or groove.width() <= 0:
+            return self._lo
+        fraction = (x - groove.left()) / groove.width()
+        ticks = self._lo + round(fraction * (self._hi - self._lo))
+        return min(max(ticks, self._lo), self._hi)
+
+    def _handle_rect(self, ticks: int) -> QRectF:
+        centre = self._pos_for(ticks)
+        return QRectF(centre - _HANDLE_WIDTH / 2, 0.0, float(_HANDLE_WIDTH), float(self.height()))
+
+    # ------------------------------------------------------------------
+    # Input
+    # ------------------------------------------------------------------
+
+    def _move_active(self, ticks: int) -> None:
+        """Move the active handle, stopping it at the other one."""
+        if self._active_out:
+            self._out = min(max(ticks, self._in), self._hi)
+        else:
+            self._in = min(max(ticks, self._lo), self._out)
+        self.update()
+        self.values_changed.emit(self._in, self._out)
+
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802 - Qt override
+        if event is None or not self.isEnabled() or event.button() != Qt.MouseButton.LeftButton:
+            super().mousePressEvent(event)
+            return
+        x = event.position().x()
+        # Whichever end is nearer, so the whole bar is a drag target rather
+        # than two eight-pixel ones.
+        self._active_out = abs(x - self._pos_for(self._out)) < abs(x - self._pos_for(self._in))
+        self._dragging = True
+        self._move_active(self._ticks_for(x))
+
+    def mouseMoveEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802 - Qt override
+        if event is None or not self._dragging:
+            super().mouseMoveEvent(event)
+            return
+        self._move_active(self._ticks_for(event.position().x()))
+
+    def mouseReleaseEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802 - Qt override
+        self._dragging = False
+        super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent | None) -> None:  # noqa: N802 - Qt override
+        if event is None or not self.isEnabled() or event.button() != Qt.MouseButton.LeftButton:
+            super().mouseDoubleClickEvent(event)
+            return
+        # The only way back to the default window, now that the strip has no
+        # reset button. The tooltip is where the user is told so.
+        self._dragging = False
+        self.reset_requested.emit()
+
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:  # noqa: N802 - Qt override
+        if event is None:
+            super().keyPressEvent(event)
+            return
+        step = {
+            Qt.Key.Key_Left: -1,
+            Qt.Key.Key_Right: 1,
+            Qt.Key.Key_Down: -1,
+            Qt.Key.Key_Up: 1,
+            Qt.Key.Key_PageDown: -5,
+            Qt.Key.Key_PageUp: 5,
+        }.get(Qt.Key(event.key()))
+        if step is None or not self.isEnabled():
+            super().keyPressEvent(event)
+            return
+        current = self._out if self._active_out else self._in
+        self._move_active(current + step)
+
+    # ------------------------------------------------------------------
+    # Painting
+    # ------------------------------------------------------------------
+
+    def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802 - Qt override
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        palette = self.palette()
+        enabled = self.isEnabled()
+        groove = self._groove_rect()
+        radius = groove.height() / 2
+        painter.setPen(Qt.PenStyle.NoPen)
+
+        painter.setBrush(palette.color(QPalette.ColorRole.Mid))
+        painter.drawRoundedRect(groove, radius, radius)
+
+        accent = palette.color(QPalette.ColorRole.Highlight if enabled else QPalette.ColorRole.Mid)
+        span = QRectF(groove)
+        span.setLeft(self._pos_for(self._in))
+        span.setRight(self._pos_for(self._out))
+        painter.setBrush(accent)
+        painter.drawRoundedRect(span, radius, radius)
+        for ticks in (self._in, self._out):
+            painter.drawRoundedRect(self._handle_rect(ticks), radius, radius)
+
+        if self._text:
+            # On the span when it fits, otherwise centred on the widget: a
+            # short clip's span is narrower than "2.6 s".
+            metrics = painter.fontMetrics()
+            fits = span.width() >= metrics.horizontalAdvance(self._text) + _HANDLE_WIDTH * 2
+            target = span if fits else QRectF(self.rect())
+            role = QPalette.ColorRole.HighlightedText if fits else QPalette.ColorRole.Text
+            painter.setPen(palette.color(role))
+            painter.drawText(target, Qt.AlignmentFlag.AlignCenter, self._text)
 
 
 class AudioClipEditor(QWidget):
