@@ -1,42 +1,86 @@
 """Per-word audio clip window editor for the word curator.
 
-A single collapsed strip that expands into two timestamps, a length readout, a
-playback button and a reset. It is deliberately small: editing a clip window is
-a niche repair for a line that got cut off or ran into the next speaker, and it
-must not compete for space with the word table, sentence picker or dictionary
-it sits beside. Collapsed is the default, and the expanded body is one row.
+One always-visible row: a two-handle slider for the clip window, with the
+length drawn inside it, and a button that plays just that clip. Dragging rather
+than typing timestamps because this is never a precise edit — it is a nudge for
+a line that got cut off or ran into the next speaker — and the row is small
+enough that hiding it behind a disclosure only cost a click and made it
+undiscoverable.
 
 The widget owns no media and no config. It is told a word's window
 (:meth:`set_word`) and reports edits back through signals; the dialog decides
 what to do with them and the player performs the preview.
+
+Windows are absolute seconds on the source video's own timeline, the same units
+the player seeks in and ffmpeg cuts with, so nothing is converted between what
+the user sees and what the card gets. Internally everything is integer *ticks*
+of :data:`TICK_SECONDS`, because the slider is an integer control.
 """
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPalette
 from PyQt6.QtWidgets import (
-    QDoubleSpinBox,
     QHBoxLayout,
-    QLabel,
     QSizePolicy,
     QToolButton,
-    QVBoxLayout,
     QWidget,
 )
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.utils.i18n import tr_format
 
-#: Shortest window the spinboxes will produce. Matches
+#: Shortest window the slider will produce. Matches
 #: ``media_extractor.MIN_CLIP_SECONDS`` — the two ends of the same contract.
 MIN_CLIP_SECONDS = 0.2
 
-#: Longest window the spinboxes will produce. A slipped decimal point in a
-#: timestamp is the realistic way to ask for a twenty-minute mp3 by accident,
-#: and no vocabulary card wants a clip longer than this.
+#: Longest window the slider will produce. No vocabulary card wants a clip
+#: longer than this, and a long line plus its slack could otherwise reach it.
 MAX_CLIP_SECONDS = 30.0
 
-#: Step for one arrow-key press or wheel notch, in seconds.
-_STEP_SECONDS = 0.1
+#: Resolution of one keyboard step, in seconds. Also the readout's precision.
+TICK_SECONDS = 0.1
+
+#: How far past the seeded window the handles can travel, in seconds. Fixed per
+#: word: travel must not move under the pointer mid-drag, which is exactly what
+#: the two interlocked spinboxes this replaced used to do.
+MARGIN_SECONDS = 3.0
+
+_MIN_TICKS = round(MIN_CLIP_SECONDS / TICK_SECONDS)
+_MAX_TICKS = round(MAX_CLIP_SECONDS / TICK_SECONDS)
+_MARGIN_TICKS = round(MARGIN_SECONDS / TICK_SECONDS)
+
+
+def to_ticks(seconds: float) -> int:
+    """Quantise seconds onto the slider's integer grid."""
+    return round(seconds / TICK_SECONDS)
+
+
+def to_seconds(ticks: int) -> float:
+    """Return a tick count as seconds, at the grid's own precision."""
+    return round(ticks * TICK_SECONDS, 1)
+
+
+def coerce(in_ticks: int, out_ticks: int, lo: int, hi: int, *, moved_in: bool) -> tuple[int, int]:
+    """Return a legal ``(in, out)`` after the user moved one handle.
+
+    The handle the user moved keeps its position wherever possible and the
+    other one is pushed, rather than the moved handle being snapped back: a
+    handle that refuses to follow the pointer reads as broken. ``lo``/``hi``
+    bound both; the length stays within MIN/MAX.
+    """
+    if moved_in:
+        in_ticks = max(lo, min(in_ticks, hi - _MIN_TICKS))
+        out_ticks = min(hi, max(out_ticks, in_ticks + _MIN_TICKS))
+        out_ticks = min(out_ticks, in_ticks + _MAX_TICKS)
+        # The hi clamp may have shortened the push below MAX; pull in back.
+        in_ticks = max(in_ticks, out_ticks - _MAX_TICKS)
+    else:
+        out_ticks = min(hi, max(out_ticks, lo + _MIN_TICKS))
+        in_ticks = max(lo, min(in_ticks, out_ticks - _MIN_TICKS))
+        in_ticks = max(in_ticks, out_ticks - _MAX_TICKS)
+        out_ticks = min(out_ticks, in_ticks + _MAX_TICKS)
+    return in_ticks, out_ticks
+
 
 #: Painted metrics, in device-independent pixels.
 _HANDLE_WIDTH = 8
@@ -231,12 +275,7 @@ class ClipRangeSlider(QWidget):
 
 
 class AudioClipEditor(QWidget):
-    """Collapsible editor for one word's audio clip window.
-
-    Timestamps are absolute seconds on the source video's own timeline, the
-    same units the player seeks in and ffmpeg cuts with, so nothing is
-    converted between what the user reads here and what the card gets.
-    """
+    """Always-visible editor for one word's audio clip window."""
 
     #: A window was edited. Payload is the absolute ``(in, out)`` in seconds.
     clip_changed = pyqtSignal(float, float)
@@ -250,102 +289,62 @@ class AudioClipEditor(QWidget):
     #: Preview should stop (the play button was pressed while playing).
     stop_requested = pyqtSignal()
 
-    #: The strip was expanded (True) or collapsed (False). Persisted by the host.
-    expanded_changed = pyqtSignal(bool)
-
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        # The word's untouched window, kept so Reset can restore it and so an
-        # edit can be recognised as one. None before the first set_word.
-        self._default: tuple[float, float] | None = None
-        # Suppresses clip_changed while set_word writes the spinboxes: seeding
-        # a control is not the user editing it, and a spurious signal would
+        # The word's untouched window in ticks, kept so a reset can restore it
+        # and so an edit can be recognised as one. Ticks, not seconds: a line
+        # starting at 5.03 s quantises to 5.0, and comparing that against the
+        # unquantised default would report an override the user never made.
+        # None before the first set_word.
+        self._default: tuple[int, int] | None = None
+        # The last window this class put on the slider, in ticks. It is the
+        # before-picture ``_on_slider_moved`` compares against.
+        self._last: tuple[int, int] = (0, 0)
+        # Suppresses clip_changed while set_word moves the handles: seeding a
+        # control is not the user editing it, and a spurious signal would
         # record an override for every word the user merely scrolled past.
         self._seeding = False
         self._playing = False
         self._setup_ui()
-        self._set_expanded(False)
 
     # ------------------------------------------------------------------
     # UI construction
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(SPACING.xxs)
-
-        self.toggle_button = QToolButton()
-        self.toggle_button.setCheckable(True)
-        self.toggle_button.setAutoRaise(True)
-        self.toggle_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.toggle_button.setArrowType(Qt.ArrowType.RightArrow)
-        self.toggle_button.setToolTip(
-            self.tr("Trim this word's audio clip. Only this word is affected; every other card keeps the default.")
-        )
-        self.toggle_button.toggled.connect(self._set_expanded)
-        outer.addWidget(self.toggle_button, 0, Qt.AlignmentFlag.AlignLeft)
-
-        self.body = QWidget()
-        row = QHBoxLayout(self.body)
-        row.setContentsMargins(SPACING.md, 0, 0, 0)
+        row = QHBoxLayout(self)
+        row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(SPACING.xs)
 
-        self.in_label = QLabel(self.tr("In"))
-        row.addWidget(self.in_label)
-        self.in_spin = self._make_spin()
-        self.in_spin.valueChanged.connect(self._on_in_changed)
-        row.addWidget(self.in_spin)
-
-        self.out_label = QLabel(self.tr("Out"))
-        row.addWidget(self.out_label)
-        self.out_spin = self._make_spin()
-        self.out_spin.valueChanged.connect(self._on_out_changed)
-        row.addWidget(self.out_spin)
-
-        self.length_label = QLabel()
-        self.length_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
-        row.addWidget(self.length_label)
+        self.slider = ClipRangeSlider()
+        self.slider.setToolTip(
+            self.tr(
+                "Drag either end to trim this word's audio clip; double-click to restore the default. "
+                "Only this word is affected."
+            )
+        )
+        self.slider.values_changed.connect(self._on_slider_moved)
+        self.slider.reset_requested.connect(self._on_reset)
+        row.addWidget(self.slider, 1)
 
         # The clip preview lives next to the window it plays, deliberately
         # separate from the player's own transport below the video: that one
         # plays the scene, this one plays the card's audio.
         self.play_button = QToolButton()
         self.play_button.setAutoRaise(True)
+        self.play_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.play_button.clicked.connect(self._on_play_clicked)
         row.addWidget(self.play_button)
 
-        self.reset_button = QToolButton()
-        self.reset_button.setAutoRaise(True)
-        self.reset_button.setText("↺")
-        self.reset_button.setToolTip(self.tr("Restore the default clip length for this word"))
-        self.reset_button.clicked.connect(self._on_reset_clicked)
-        row.addWidget(self.reset_button)
-
-        row.addStretch()
-        outer.addWidget(self.body)
-
         self._refresh_play_button()
-        self._refresh_labels()
-
-    def _make_spin(self) -> QDoubleSpinBox:
-        """A seconds spinbox: one decimal, arrow/wheel nudge, no thousands sep."""
-        spin = QDoubleSpinBox()
-        spin.setDecimals(1)
-        spin.setSingleStep(_STEP_SECONDS)
-        spin.setSuffix(self.tr(" s"))
-        spin.setGroupSeparatorShown(False)
-        spin.setKeyboardTracking(False)
-        spin.setMinimum(0.0)
-        spin.setMaximum(0.0)
-        return spin
+        self._refresh_readout()
 
     # ------------------------------------------------------------------
     # Host API
     # ------------------------------------------------------------------
 
     def set_word(self, start: float, end: float, padding: float, override: tuple[float, float] | None) -> None:
-        """Show the window for a word, seeding the fields with what will be cut.
+        """Show the window for a word, seeding the handles with what will be cut.
 
         Args:
             start: Subtitle line start, in seconds.
@@ -353,90 +352,77 @@ class AudioClipEditor(QWidget):
             padding: ``config.audio_padding`` — what the default window widens by.
             override: The user's window for this word, or None for the default.
 
-        The fields always state the window ffmpeg would produce right now, so a
-        user who expands the strip sees the real numbers rather than zeroes to
-        interpret. Seeding never emits ``clip_changed``.
+        The slider always states the window ffmpeg would produce right now.
+        Seeding never emits ``clip_changed`` and never applies MIN/MAX: an
+        over-long default belongs to the line, not to an edit the user made.
         """
-        default = (max(0.0, start - padding), end + padding)
+        default = (to_ticks(max(0.0, start - padding)), to_ticks(end + padding))
         self._default = default
-        current = override if override is not None else default
+        current = (to_ticks(override[0]), to_ticks(override[1])) if override is not None else default
         self.setEnabled(True)
 
         self._seeding = True
         try:
-            # Bounds first, then values: a value outside the current bounds
-            # would be silently clamped on the way in.
-            self._apply_bounds(current)
-            self.in_spin.setValue(current[0])
-            self.out_spin.setValue(current[1])
+            self._seat(current)
         finally:
             self._seeding = False
-        self._refresh_labels()
+        self._refresh_readout()
 
     def clear_word(self) -> None:
         """Show the strip as having nothing to edit (no word focused)."""
         self._default = None
         self._seeding = True
         try:
-            self.in_spin.setValue(0.0)
-            self.out_spin.setValue(0.0)
+            self.slider.set_span(0, 0)
+            self._write(0, 0)
         finally:
             self._seeding = False
         self.setEnabled(False)
-        self._refresh_labels()
+        self._refresh_readout()
 
     def set_playing(self, playing: bool) -> None:
         """Reflect whether the clip preview is currently running."""
         self._playing = playing
         self._refresh_play_button()
 
-    @property
-    def expanded(self) -> bool:
-        """Whether the body is showing."""
-        return self.toggle_button.isChecked()
-
-    def set_expanded(self, expanded: bool) -> None:
-        """Expand or collapse the strip (restores a remembered state)."""
-        self.toggle_button.setChecked(expanded)
-
     def current_window(self) -> tuple[float, float]:
-        """The window the fields currently state, in seconds."""
-        return self.in_spin.value(), self.out_spin.value()
+        """The window the handles currently state, in seconds."""
+        in_ticks, out_ticks = self.slider.values()
+        return to_seconds(in_ticks), to_seconds(out_ticks)
 
     def has_override(self) -> bool:
         """Whether the current window differs from the word's default."""
         if self._default is None:
             return False
-        return self.current_window() != self._default
+        return self.slider.values() != self._default
 
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
 
-    def _apply_bounds(self, window: tuple[float, float]) -> None:
-        """Constrain each spinbox against the other and the length limits.
+    def _seat(self, window: tuple[int, int]) -> None:
+        """Give the slider its per-word travel and put the handles on it."""
+        lo = max(0, window[0] - _MARGIN_TICKS)
+        hi = window[1] + _MARGIN_TICKS
+        self.slider.set_span(lo, hi)
+        self._write(*window)
 
-        Enforced as spinbox ranges rather than after-the-fact correction: the
-        user can never see, or commit, a window with the out before the in.
-        """
-        in_value, out_value = window
-        self.in_spin.setMinimum(max(0.0, out_value - MAX_CLIP_SECONDS))
-        self.in_spin.setMaximum(max(0.0, out_value - MIN_CLIP_SECONDS))
-        self.out_spin.setMinimum(in_value + MIN_CLIP_SECONDS)
-        self.out_spin.setMaximum(in_value + MAX_CLIP_SECONDS)
+    def _write(self, in_ticks: int, out_ticks: int) -> None:
+        """Place the handles and remember where, for the next move's comparison."""
+        self.slider.set_values(in_ticks, out_ticks)
+        self._last = self.slider.values()
 
-    def _on_in_changed(self, value: float) -> None:
-        self._on_edited((value, self.out_spin.value()))
-
-    def _on_out_changed(self, value: float) -> None:
-        self._on_edited((self.in_spin.value(), value))
-
-    def _on_edited(self, window: tuple[float, float]) -> None:
-        if self._seeding:
+    def _on_slider_moved(self, in_ticks: int, out_ticks: int) -> None:
+        if self._seeding or self._default is None:
             return
-        self._apply_bounds(window)
-        self._refresh_labels()
-        self.clip_changed.emit(*window)
+        # Which handle moved is read against the last window *this* class wrote,
+        # not against the slider: the slider has already moved itself by the
+        # time it emits, so its own values no longer hold the before-picture.
+        moved_in = in_ticks != self._last[0]
+        in_ticks, out_ticks = coerce(in_ticks, out_ticks, self.slider._lo, self.slider._hi, moved_in=moved_in)
+        self._write(in_ticks, out_ticks)
+        self._refresh_readout()
+        self.clip_changed.emit(*self.current_window())
 
     def _on_play_clicked(self) -> None:
         if self._playing:
@@ -444,23 +430,16 @@ class AudioClipEditor(QWidget):
             return
         self.play_requested.emit(*self.current_window())
 
-    def _on_reset_clicked(self) -> None:
+    def _on_reset(self) -> None:
         if self._default is None:
             return
         self._seeding = True
         try:
-            self._apply_bounds(self._default)
-            self.in_spin.setValue(self._default[0])
-            self.out_spin.setValue(self._default[1])
+            self._seat(self._default)
         finally:
             self._seeding = False
-        self._refresh_labels()
+        self._refresh_readout()
         self.clip_reset.emit()
-
-    def _set_expanded(self, expanded: bool) -> None:
-        self.toggle_button.setArrowType(Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow)
-        self.body.setVisible(expanded)
-        self.expanded_changed.emit(expanded)
 
     def _refresh_play_button(self) -> None:
         self.play_button.setText("■" if self._playing else "▶")
@@ -468,13 +447,10 @@ class AudioClipEditor(QWidget):
             self.tr("Stop the clip preview") if self._playing else self.tr("Play just this clip")
         )
 
-    def _refresh_labels(self) -> None:
-        """Repaint the header and the length readout from the current window."""
-        edited = self.has_override()
-        self.toggle_button.setText(self.tr("Audio clip · edited") if edited else self.tr("Audio clip"))
-        self.reset_button.setEnabled(edited)
+    def _refresh_readout(self) -> None:
+        """Draw the clip length on the slider, or nothing when no word is focused."""
         if self._default is None:
-            self.length_label.clear()
+            self.slider.set_text("")
             return
         in_value, out_value = self.current_window()
-        self.length_label.setText(tr_format(self.tr("%1 s"), f"{out_value - in_value:.1f}"))
+        self.slider.set_text(tr_format(self.tr("%1 s"), f"{out_value - in_value:.1f}"))

@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt
 
+from anki_miner.gui.widgets.audio_clip_editor import to_ticks
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
     WordCurationDialog,
@@ -74,6 +75,11 @@ def _focus(dialog: WordCurationDialog, row: int) -> None:
     dialog._on_focus_timer_fired()
 
 
+def _drag(dialog: WordCurationDialog, in_seconds: float, out_seconds: float) -> None:
+    """Emit what the clip slider emits when the user moves a handle there."""
+    dialog.clip_editor.slider.values_changed.emit(to_ticks(in_seconds), to_ticks(out_seconds))
+
+
 def _check_all(dialog: WordCurationDialog) -> None:
     for row in range(dialog.table.rowCount()):
         item = dialog.table.item(row, 0)
@@ -130,7 +136,7 @@ class TestSeeding:
     def test_returning_to_a_row_shows_its_edit(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         _focus(dlg, 1)
         _focus(dlg, 0)
         assert dlg.clip_editor.current_window() == (4.0, 7.3)
@@ -140,14 +146,14 @@ class TestOverrideRecording:
     def test_edit_records_against_the_focused_index(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video)
         _focus(dlg, 1)
-        dlg.clip_editor.out_spin.setValue(23.0)
+        _drag(dlg, 19.7, 23.0)
         assert dlg._clip_overrides == {1: (19.7, 23.0)}
 
     def test_reset_drops_the_override(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
-        dlg.clip_editor.reset_button.click()
+        _drag(dlg, 4.0, 7.3)
+        dlg.clip_editor.slider.reset_requested.emit()
         assert dlg._clip_overrides == {}
 
 
@@ -160,7 +166,7 @@ class TestSelection:
     def test_edited_word_carries_its_window(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         _check_all(dlg)
 
         selected = dlg.get_selected_words()
@@ -172,7 +178,7 @@ class TestSelection:
         """Variants are shared with the filter service; the edit rides a copy."""
         dlg, _ = _dialog(qtbot, words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         _check_all(dlg)
 
         dlg.get_selected_words()
@@ -183,7 +189,7 @@ class TestSelection:
         """Editing a clip is not including the word; the checkbox still rules."""
         dlg, _ = _dialog(qtbot, words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         dlg.table.item(0, 0).setCheckState(Qt.CheckState.Unchecked)
 
         selected = dlg.get_selected_words()
@@ -205,7 +211,7 @@ class TestSentencePick:
     def test_pick_drops_the_override(self, qtbot, picker_words, existing_video):
         dlg, _ = _dialog(qtbot, picker_words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         assert dlg._clip_overrides == {0: (4.0, 7.3)}
 
         dlg._on_candidate_chosen(1)
@@ -215,7 +221,7 @@ class TestSentencePick:
     def test_pick_reseeds_from_the_new_scene(self, qtbot, picker_words, existing_video):
         dlg, _ = _dialog(qtbot, picker_words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
 
         dlg._on_candidate_chosen(1)
 
@@ -224,7 +230,7 @@ class TestSentencePick:
     def test_pick_selects_the_new_variant_without_an_override(self, qtbot, picker_words, existing_video):
         dlg, _ = _dialog(qtbot, picker_words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         dlg._on_candidate_chosen(1)
         _check_all(dlg)
 
@@ -258,6 +264,6 @@ class TestPlayback:
     def test_play_uses_the_edited_window(self, qtbot, words, existing_video):
         dlg, player = _dialog(qtbot, words, existing_video)
         _focus(dlg, 0)
-        dlg.clip_editor.in_spin.setValue(4.0)
+        _drag(dlg, 4.0, 7.3)
         dlg.clip_editor.play_button.click()
         player.play_range.assert_called_once_with(4.0, 7.3)

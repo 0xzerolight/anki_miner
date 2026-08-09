@@ -41,7 +41,6 @@ _GEOMETRY_KEY = "window/geometry"
 _CURATOR_GEOMETRY_KEY = "curator/geometry"
 _CURATOR_SPLIT_KEY = "curator/split_main"
 _CURATOR_SIDE_GROUP = "curator/split_side"
-_CURATOR_CLIP_EXPANDED_KEY = "curator/clip_expanded"
 _MAIN_TAB_KEY = "navigation/main_tab"
 _SUBTAB_GROUP = "navigation/subtab"
 _DIRECTORY_GROUP = "directories"
@@ -128,36 +127,6 @@ def save_geometry(blob: QByteArray) -> None:
 # ---------------------------------------------------------------------------
 # Word curator layout
 # ---------------------------------------------------------------------------
-
-
-def load_curator_clip_expanded() -> bool:
-    """Whether the curator's audio clip strip was left expanded.
-
-    Its own key rather than a fourth element of the layout tuple: the strip is
-    not a splitter position and does not vary with the pane composition the
-    layout blobs are keyed by. Defaults to collapsed — the strip is a niche
-    repair, so a user who has never opened it never sees it.
-    """
-    settings = _open()
-    if settings is None:
-        return False
-    try:
-        return bool(settings.value(_CURATOR_CLIP_EXPANDED_KEY, False, type=bool))
-    except Exception:
-        logger.warning("Could not read the curator audio clip state", exc_info=True)
-        return False
-
-
-def save_curator_clip_expanded(expanded: bool) -> None:
-    """Remember whether the curator's audio clip strip is expanded."""
-    settings = _open(for_write=True)
-    if settings is None:
-        return
-    try:
-        settings.setValue(_CURATOR_CLIP_EXPANDED_KEY, expanded)
-        _commit(settings)
-    except Exception:
-        logger.warning("Could not save the curator audio clip state", exc_info=True)
 
 
 def load_curator_layout(side_key: str) -> tuple[QByteArray | None, QByteArray | None, QByteArray | None]:
