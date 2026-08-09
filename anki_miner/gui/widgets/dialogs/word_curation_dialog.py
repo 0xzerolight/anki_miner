@@ -664,7 +664,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         row = metric_row_height(self)
 
         if self._show_player:
-            self.player_widget = self._create_player_widget()
+            # The audio clip strip rides WITH the player rather than beside it:
+            # it edits the clip the player previews, and a splitter pane of its
+            # own would give a collapsed one-line disclosure a draggable handle
+            # and a share of the column. Wrapping also keeps the pane named
+            # "player", so every side-split layout saved before this feature
+            # existed still restores (see _side_key below).
+            #
+            # _build_player_pane is the SOLE construction site and is what sets
+            # self.player_widget — hence pane first, stretch read off it after.
+            # Building a player here too left a second one parented to the
+            # dialog with no layout: Qt painted it at (0, 0) over the header and
+            # _stop_player, which releases only self.player_widget, left its mpv
+            # core decoding after the dialog was gone.
+            pane = self._build_player_pane()
             # Stretch 3: the frame is the reason this column exists, and its
             # own 16:9 floor keeps it honest when the window is short. With no
             # video surface (preview off) the pane is transport controls and a
@@ -674,13 +687,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # getattr: tests substitute a bare QWidget for the player, and a
             # stub with no surface to report should keep the normal layout.
             stretch = 3 if getattr(self.player_widget, "video_surface_available", True) else 1
-            # The audio clip strip rides WITH the player rather than beside it:
-            # it edits the clip the player previews, and a splitter pane of its
-            # own would give a collapsed one-line disclosure a draggable handle
-            # and a share of the column. Wrapping also keeps the pane named
-            # "player", so every side-split layout saved before this feature
-            # existed still restores (see _side_key below).
-            panes.append(("player", self._build_player_pane(), stretch, 0))
+            panes.append(("player", pane, stretch, 0))
 
         if self._show_image:
             # Mutually exclusive with the player in practice (manga has no

@@ -577,6 +577,66 @@ class TestStopOnClose:
 
 
 # ---------------------------------------------------------------------------
+# 6b. Exactly one player is built
+# ---------------------------------------------------------------------------
+
+
+class TestSinglePlayerInstance:
+    """The curator must build exactly ONE player.
+
+    A second one is not a harmless duplicate: it stays parented to the dialog
+    with no layout, so Qt paints it at (0, 0) over the header, and
+    ``_stop_player`` releases only ``self.player_widget`` — so its mpv core
+    keeps decoding and its observers fire into a deleted C++ object once the
+    dialog is destroyed.
+    """
+
+    def test_create_player_widget_called_once(self, qtbot, words, existing_video):
+        from PyQt6.QtWidgets import QWidget
+
+        ctx = _make_media_context(video_file=existing_video)
+        stubs: list[QWidget] = []
+
+        def make_stub() -> QWidget:
+            stubs.append(QWidget())
+            return stubs[-1]
+
+        with patch.object(
+            WordCurationDialog,
+            "_create_player_widget",
+            side_effect=make_stub,
+        ) as create:
+            dlg = WordCurationDialog(words, media_context=ctx)
+        qtbot.addWidget(dlg)
+
+        assert create.call_count == 1
+        assert dlg.player_widget is stubs[0]
+
+    def test_only_one_mpv_core_and_one_player_child(self, qtbot, words, existing_video, monkeypatch):
+        """End-to-end with real widgets: one SubtitlePlayerWidget, one mpv core."""
+        from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
+        from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
+
+        player_module = "anki_miner.gui.widgets.subtitle_player_widget"
+        player = MagicMock(name="mpv.MPV")
+        player.pause = True
+        player.track_list = []
+        player.event_callback.return_value = lambda fn: fn
+        monkeypatch.setattr(MpvVideoWidget, "has_render_context", property(lambda self: True))
+
+        ctx = _make_media_context(video_file=existing_video)
+        with (
+            patch(f"{player_module}.mpv_available", return_value=True),
+            patch(f"{player_module}.create_mpv_player", return_value=player) as factory,
+        ):
+            dlg = WordCurationDialog(words, media_context=ctx)
+            qtbot.addWidget(dlg)
+
+            assert len(dlg.findChildren(SubtitlePlayerWidget)) == 1
+            assert factory.call_count == 1
+
+
+# ---------------------------------------------------------------------------
 # 7. Debounce coalesces rapid row-focus changes
 # ---------------------------------------------------------------------------
 
