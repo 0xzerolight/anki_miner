@@ -763,16 +763,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _build_player_pane(self) -> QWidget:
         """Build the player pane: the video frame plus the audio clip strip.
 
-        The strip is a thin collapsed disclosure by default — editing a clip
-        window is a repair for the occasional cut-off line, not part of the
-        normal read-and-pick loop, so it costs one line until asked for.
+        The strip is one row — a slider and a play button — and stays open: it
+        is small enough that a disclosure only cost a click and hid it.
         """
         self.player_widget = self._create_player_widget()
         self.clip_editor = AudioClipEditor()
-        # Restored before the signal is connected, so re-opening the strip is
-        # not re-saved once per queue item.
-        self.clip_editor.set_expanded(session_state.load_curator_clip_expanded())
-        self.clip_editor.expanded_changed.connect(session_state.save_curator_clip_expanded)
         self.clip_editor.clip_changed.connect(self._on_clip_changed)
         self.clip_editor.clip_reset.connect(self._on_clip_reset)
         self.clip_editor.play_requested.connect(self._on_clip_play_requested)

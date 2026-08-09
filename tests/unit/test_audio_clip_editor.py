@@ -8,6 +8,7 @@ from anki_miner.gui.widgets.audio_clip_editor import (
     MAX_CLIP_SECONDS,
     MIN_CLIP_SECONDS,
     AudioClipEditor,
+    to_ticks,
 )
 
 PADDING = 0.3
@@ -27,16 +28,27 @@ def _seed(editor: AudioClipEditor, override: tuple[float, float] | None = None) 
     editor.set_word(WORD[0], WORD[1], PADDING, override)
 
 
+def _drag(editor: AudioClipEditor, in_seconds: float, out_seconds: float) -> None:
+    """Emit what the slider emits when the user moves a handle there."""
+    editor.slider.values_changed.emit(to_ticks(in_seconds), to_ticks(out_seconds))
+
+
 class TestSeeding:
-    def test_starts_collapsed(self, editor):
-        """Niche feature: invisible until asked for."""
-        assert editor.expanded is False
-        assert not editor.body.isVisibleTo(editor)
+    def test_the_strip_is_always_visible(self, editor):
+        """No disclosure: one slider and a play button are small enough to stay open."""
+        assert editor.slider.isVisibleTo(editor)
+        assert not hasattr(editor, "toggle_button")
+        assert not hasattr(editor, "set_expanded")
 
     def test_seeds_the_padded_default(self, editor):
-        """The fields state what ffmpeg would cut right now, not zeroes."""
+        """The slider states what ffmpeg would cut right now, not zeroes."""
         _seed(editor)
         assert editor.current_window() == DEFAULT
+        assert editor.has_override() is False
+
+    def test_off_grid_default_is_not_an_override(self, editor):
+        """Quantising a 5.03 s line start must not mark the word edited."""
+        editor.set_word(5.03, 7.04, PADDING, None)
         assert editor.has_override() is False
 
     def test_default_start_clamped_to_zero(self, editor):
@@ -47,6 +59,12 @@ class TestSeeding:
         _seed(editor, override=(4.0, 9.5))
         assert editor.current_window() == (4.0, 9.5)
         assert editor.has_override() is True
+
+    def test_travel_is_the_window_widened_both_ways(self, editor):
+        """Three seconds of slack each side, fixed while a handle moves."""
+        _seed(editor)
+        assert editor.slider._lo == to_ticks(1.7)
+        assert editor.slider._hi == to_ticks(10.3)
 
     def test_seeding_emits_nothing(self, editor):
         """Scrolling the word list must not record an override per row."""
@@ -61,7 +79,6 @@ class TestSeeding:
         editor.clear_word()
         assert editor.isEnabled() is False
         assert editor.has_override() is False
-        assert editor.length_label.text() == ""
 
     def test_set_word_re_enables_after_clear(self, editor):
         _seed(editor)
@@ -71,66 +88,63 @@ class TestSeeding:
 
 
 class TestEditing:
-    def test_edit_emits_the_window(self, editor):
+    def test_a_drag_emits_the_window(self, editor):
         _seed(editor)
         changes: list[tuple[float, float]] = []
         editor.clip_changed.connect(lambda a, b: changes.append((a, b)))
-        editor.in_spin.setValue(4.0)
+        _drag(editor, 4.0, 7.3)
         assert changes == [(4.0, 7.3)]
+        assert editor.current_window() == (4.0, 7.3)
+        assert editor.has_override() is True
 
-    def test_edit_marks_the_header(self, editor):
+    def test_readout_tracks_the_window(self, editor):
         _seed(editor)
-        editor.in_spin.setValue(4.0)
-        assert "edited" in editor.toggle_button.text()
-        assert editor.reset_button.isEnabled() is True
-
-    def test_untouched_header_is_plain(self, editor):
-        _seed(editor)
-        assert "edited" not in editor.toggle_button.text()
-        assert editor.reset_button.isEnabled() is False
-
-    def test_length_readout_tracks_the_window(self, editor):
-        _seed(editor)
-        assert editor.length_label.text().startswith("2.6")
-        editor.out_spin.setValue(9.7)  # 9.7 - 4.7
-        assert editor.length_label.text().startswith("5.0")
-
-    def test_step_is_a_tenth_of_a_second(self, editor):
-        _seed(editor)
-        editor.in_spin.stepBy(1)
-        assert editor.current_window()[0] == pytest.approx(4.8)
+        assert editor.slider._text.startswith("2.6")
+        _drag(editor, 4.7, 9.7)
+        assert editor.slider._text.startswith("5.0")
 
 
 class TestBounds:
-    def test_out_cannot_precede_in(self, editor):
+    def test_dragging_in_past_out_pushes_out(self, editor):
         _seed(editor)
-        editor.out_spin.setValue(1.0)
+        _drag(editor, 7.3, 7.3)
         in_value, out_value = editor.current_window()
-        assert out_value == pytest.approx(in_value + MIN_CLIP_SECONDS)
+        assert out_value - in_value == pytest.approx(MIN_CLIP_SECONDS)
 
-    def test_in_cannot_pass_out(self, editor):
+    def test_dragging_out_past_in_pushes_in(self, editor):
         _seed(editor)
-        editor.in_spin.setValue(99.0)
+        _drag(editor, 4.7, 4.7)
         in_value, out_value = editor.current_window()
-        assert in_value == pytest.approx(out_value - MIN_CLIP_SECONDS)
+        assert out_value - in_value == pytest.approx(MIN_CLIP_SECONDS)
+
+    def test_in_stops_at_the_end_of_its_travel(self, editor):
+        _seed(editor)
+        _drag(editor, 999.0, 7.3)
+        assert editor.current_window() == (10.1, 10.3)
 
     def test_in_never_goes_negative(self, editor):
         editor.set_word(0.1, 2.0, PADDING, None)
-        editor.in_spin.setValue(-5.0)
+        _drag(editor, -50.0, 2.3)
         assert editor.current_window()[0] == 0.0
 
     def test_length_capped(self, editor):
-        """A slipped decimal must not ask for a multi-minute clip."""
-        _seed(editor)
-        editor.out_spin.setValue(900.0)
+        """A very long line must not be draggable into a multi-minute clip."""
+        editor.set_word(0.0, 40.0, 0.0, None)
+        _drag(editor, 0.0, 43.0)
         in_value, out_value = editor.current_window()
         assert out_value - in_value == pytest.approx(MAX_CLIP_SECONDS)
 
+    def test_seeding_does_not_cap(self, editor):
+        """An over-long default is shown as-is, not silently marked edited."""
+        editor.set_word(0.0, 40.0, 0.0, None)
+        assert editor.current_window() == (0.0, 40.0)
+        assert editor.has_override() is False
+
 
 class TestReset:
-    def test_restores_the_default(self, editor):
+    def test_double_click_restores_the_default(self, editor):
         _seed(editor, override=(4.0, 9.5))
-        editor.reset_button.click()
+        editor.slider.reset_requested.emit()
         assert editor.current_window() == DEFAULT
         assert editor.has_override() is False
 
@@ -140,14 +154,14 @@ class TestReset:
         changes: list[tuple[float, float]] = []
         editor.clip_reset.connect(lambda: resets.append(True))
         editor.clip_changed.connect(lambda a, b: changes.append((a, b)))
-        editor.reset_button.click()
+        editor.slider.reset_requested.emit()
         assert resets == [True]
         assert changes == []
 
     def test_noop_without_a_word(self, editor):
         resets: list[bool] = []
         editor.clip_reset.connect(lambda: resets.append(True))
-        editor.reset_button.click()
+        editor.slider.reset_requested.emit()
         assert resets == []
 
 
@@ -178,17 +192,3 @@ class TestPlayback:
         assert editor.play_button.text() != idle
         editor.set_playing(False)
         assert editor.play_button.text() == idle
-
-
-class TestExpansion:
-    def test_toggle_shows_the_body(self, editor):
-        editor.set_expanded(True)
-        assert editor.expanded is True
-        assert editor.body.isVisibleTo(editor)
-
-    def test_toggle_reports_state(self, editor):
-        states: list[bool] = []
-        editor.expanded_changed.connect(states.append)
-        editor.set_expanded(True)
-        editor.set_expanded(False)
-        assert states == [True, False]
