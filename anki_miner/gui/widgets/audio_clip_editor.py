@@ -18,7 +18,7 @@ of :data:`TICK_SECONDS`, because the slider is an integer control.
 """
 
 from PyQt6.QtCore import QRectF, Qt, pyqtSignal
-from PyQt6.QtGui import QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPalette
+from PyQt6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPaintEvent, QPalette
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QSizePolicy,
@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.utils.i18n import tr_format
 
 #: Shortest window the slider will produce. Matches
@@ -84,8 +85,12 @@ def coerce(in_ticks: int, out_ticks: int, lo: int, hi: int, *, moved_in: bool) -
 
 #: Painted metrics, in device-independent pixels.
 _HANDLE_WIDTH = 8
-_GROOVE_HEIGHT = 8
-_WIDGET_HEIGHT = 22
+
+#: Padding above and below the readout inside the bar. The bar is sized from
+#: the font rather than fixed: the length is drawn *on* it, and a bar shorter
+#: than the text spills the glyphs onto the page behind, where they vanish
+#: against a light theme's background.
+_GROOVE_PADDING = 4
 
 
 class ClipRangeSlider(QWidget):
@@ -93,8 +98,8 @@ class ClipRangeSlider(QWidget):
 
     Self-painted rather than a QSlider subclass: QStyle draws exactly one
     handle, and the app ships no QSS for QSlider at all. Colours come from the
-    palette because a theme routes the whole QApplication palette, so this
-    control follows all of them without a stylesheet rule.
+    active theme's own variables, so this control follows every theme without
+    a stylesheet rule — the QApplication palette is only the fallback.
 
     Everything here is in integer ticks. Seconds, defaults and clip-length
     limits belong to the host.
@@ -119,7 +124,7 @@ class ClipRangeSlider(QWidget):
         self._dragging = False
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setMinimumHeight(_WIDGET_HEIGHT)
+        self.setMinimumHeight(self._bar_height() + _GROOVE_PADDING)
         self.setMinimumWidth(80)
 
     # ------------------------------------------------------------------
@@ -150,11 +155,16 @@ class ClipRangeSlider(QWidget):
     # Geometry
     # ------------------------------------------------------------------
 
+    def _bar_height(self) -> int:
+        """The bar's thickness: whatever it takes to hold the readout."""
+        return self.fontMetrics().height() + _GROOVE_PADDING
+
     def _groove_rect(self) -> QRectF:
         """The bar the handles travel along, inset so a handle never clips out."""
         inset = _HANDLE_WIDTH / 2
-        top = (self.height() - _GROOVE_HEIGHT) / 2
-        return QRectF(inset, top, max(0.0, self.width() - _HANDLE_WIDTH), _GROOVE_HEIGHT)
+        height = min(self._bar_height(), self.height())
+        top = (self.height() - height) / 2
+        return QRectF(inset, top, max(0.0, self.width() - _HANDLE_WIDTH), height)
 
     def _pos_for(self, ticks: int) -> float:
         """The x centre, in pixels, for a tick value."""
@@ -242,35 +252,62 @@ class ClipRangeSlider(QWidget):
     # Painting
     # ------------------------------------------------------------------
 
+    def _themed(self, key: str, role: QPalette.ColorRole) -> QColor:
+        """The theme's colour for ``key``, falling back to a palette role.
+
+        The palette's own Highlight is the *selection* colour, which in the
+        light themes is a pale wash — legible behind text, invisible as a
+        filled bar. The accent has to come from the same ``primary`` the rest
+        of the app draws with.
+        """
+        colour = QColor(Theme.get_colors().get(key, ""))
+        return colour if colour.isValid() else self.palette().color(role)
+
     def paintEvent(self, event: QPaintEvent | None) -> None:  # noqa: N802 - Qt override
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        palette = self.palette()
         enabled = self.isEnabled()
         groove = self._groove_rect()
         radius = groove.height() / 2
         painter.setPen(Qt.PenStyle.NoPen)
 
-        painter.setBrush(palette.color(QPalette.ColorRole.Mid))
+        painter.setBrush(self._themed("border", QPalette.ColorRole.Mid))
         painter.drawRoundedRect(groove, radius, radius)
 
-        accent = palette.color(QPalette.ColorRole.Highlight if enabled else QPalette.ColorRole.Mid)
+        accent = (
+            self._themed("primary", QPalette.ColorRole.Highlight)
+            if enabled
+            else self._themed("disabled", QPalette.ColorRole.Mid)
+        )
         span = QRectF(groove)
         span.setLeft(self._pos_for(self._in))
         span.setRight(self._pos_for(self._out))
         painter.setBrush(accent)
         painter.drawRoundedRect(span, radius, radius)
+
+        # A darker shade, not the accent again: a grip the same colour as the
+        # bar it sits on is not a grip, and the ends are what the user aims at.
+        painter.setBrush(
+            self._themed("primary-pressed", QPalette.ColorRole.Shadow)
+            if enabled
+            else self._themed("disabled", QPalette.ColorRole.Mid)
+        )
         for ticks in (self._in, self._out):
-            painter.drawRoundedRect(self._handle_rect(ticks), radius, radius)
+            painter.drawRoundedRect(self._handle_rect(ticks), _HANDLE_WIDTH / 2, _HANDLE_WIDTH / 2)
 
         if self._text:
-            # On the span when it fits, otherwise centred on the widget: a
-            # short clip's span is narrower than "2.6 s".
+            # Centred on the filled span when the span is wide enough to hold
+            # it, on the whole widget otherwise — a short clip's span is
+            # narrower than "2.6 s", and text half-on the bar would have its
+            # overhang disappear against a light theme's background.
             metrics = painter.fontMetrics()
             fits = span.width() >= metrics.horizontalAdvance(self._text) + _HANDLE_WIDTH * 2
             target = span if fits else QRectF(self.rect())
-            role = QPalette.ColorRole.HighlightedText if fits else QPalette.ColorRole.Text
-            painter.setPen(palette.color(role))
+            painter.setPen(
+                self._themed("text-on-primary", QPalette.ColorRole.HighlightedText)
+                if fits
+                else self._themed("text", QPalette.ColorRole.Text)
+            )
             painter.drawText(target, Qt.AlignmentFlag.AlignCenter, self._text)
 
 

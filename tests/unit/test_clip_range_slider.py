@@ -32,6 +32,12 @@ class TestGeometry:
         assert slider._ticks_for(-500.0) == 0
         assert slider._ticks_for(5000.0) == 100
 
+    def test_the_bar_can_hold_the_readout(self, slider):
+        """Text drawn on a bar shorter than itself spills onto the page behind,
+        where a light theme's background swallows it."""
+        slider.set_text("2.6 s")
+        assert slider._groove_rect().height() >= slider.fontMetrics().height()
+
     def test_degenerate_span_does_not_divide_by_zero(self, slider):
         slider.set_span(7, 7)
         assert slider._ticks_for(50.0) == 7
