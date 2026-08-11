@@ -184,6 +184,7 @@ class AudioStage:
         self._is_cancelled = cancelled
         self.expression_audio_fetcher = expression_audio_fetcher
         self.sentence_audio_fetcher = sentence_audio_fetcher
+        self._started_diagnostic_stages: set[str] = set()
 
     @property
     def expression_audio_active(self) -> bool:
@@ -252,6 +253,14 @@ class AudioStage:
         summary are emitted here only after a completed loop.
         """
         words = len(media_results)
+        if stage in self._started_diagnostic_stages:
+            failure_counts_before = self._failure_counts(fetcher)
+        else:
+            # Fetchers are fresh when AudioStage is built, so the first
+            # generation starts from zero. This also keeps simple duck-typed
+            # test fetchers free to expose only their post-run tally.
+            failure_counts_before = {}
+            self._started_diagnostic_stages.add(stage)
         log_summary(
             logger,
             "Audio stage",
@@ -282,7 +291,13 @@ class AudioStage:
             if progress_callback is not None:
                 progress_callback.on_complete()
 
-            failure_counts = self._diagnose(fetcher, diagnose_fn, attempts, stage)
+            failure_counts = self._diagnose(
+                fetcher,
+                diagnose_fn,
+                attempts,
+                stage,
+                failure_counts_before,
+            )
             log_summary(
                 logger,
                 "Audio stage done",
@@ -295,40 +310,46 @@ class AudioStage:
             )
         return True, attempts, hits, misses
 
+    @staticmethod
+    def _failure_counts(fetcher: object) -> dict[str, int]:
+        stats_fn = getattr(fetcher, "stats", None)
+        if not callable(stats_fn):
+            return {}
+        counts = stats_fn()
+        if not isinstance(counts, dict):
+            return {}
+        return {key: value for key, value in counts.items() if isinstance(key, str) and isinstance(value, int)}
+
     def _diagnose(
         self,
         fetcher: object,
         diagnose_fn: Callable[[dict[str, int], int], str | None],
         attempts: int,
         stage: str,
+        counts_before: dict[str, int],
     ) -> dict[str, int]:
         """Warn when transient failures dominate, so a systemic cause reads as
         actionable rather than an indistinguishable low "X/Y available".
 
         ``stats()`` is duck-typed (like ``close()``); the local-pack fetcher
         omits it, so a chain without a network source simply has nothing to
-        report. The isinstance guard ignores a duck-typed fetcher (or test
-        MagicMock) that does not return a real counts dict — never crashing the
-        run over a diagnostic. The returned dict is the same object passed to
-        the diagnosis helper, so the stage summary never re-reads or recomputes
-        failure counts.
+        report. Counts are lifetime-cumulative, so only deltas since this stage
+        started may be compared with its per-stage attempt count. Counter resets
+        clamp to zero. Invalid stats never break a run.
         """
-        stats_fn = getattr(fetcher, "stats", None)
-        if callable(stats_fn):
-            counts = stats_fn()
-            if isinstance(counts, dict):
-                diagnosis = diagnose_fn(counts, attempts)
-                if diagnosis is not None:
-                    log_summary(
-                        logger,
-                        "Audio stage diagnosis",
-                        level=logging.WARNING,
-                        stage=stage,
-                        diagnosis=diagnosis,
-                    )
-                    self.presenter.show_warning(diagnosis)
-                return counts
-        return {}
+        current = self._failure_counts(fetcher)
+        counts = {key: max(0, value - counts_before.get(key, 0)) for key, value in current.items()}
+        diagnosis = diagnose_fn(counts, attempts)
+        if diagnosis is not None:
+            log_summary(
+                logger,
+                "Audio stage diagnosis",
+                level=logging.WARNING,
+                stage=stage,
+                diagnosis=diagnosis,
+            )
+            self.presenter.show_warning(diagnosis)
+        return counts
 
     def fetch_expression_audio(
         self,

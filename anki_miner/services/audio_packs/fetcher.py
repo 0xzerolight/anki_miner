@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
+import contextlib
+import hashlib
 import logging
 import os
 import shutil
 import sqlite3
+import tempfile
+import uuid
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,9 +24,32 @@ from anki_miner.services.audio_fetch_common import (
 )
 from anki_miner.services.audio_packs import storage
 from anki_miner.utils.file_utils import safe_filename
+from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.text_utils import hiragana_to_katakana, is_kana_only, katakana_to_hiragana
 
 logger = logging.getLogger(__name__)
+
+
+def _pack_cache_dir(cache_dir: Path, pack_id: str) -> Path:
+    """Return the cache directory owned exclusively by ``pack_id``."""
+    owner_key = hashlib.sha256(pack_id.encode("utf-8")).hexdigest()
+    return cache_dir / owner_key
+
+
+def purge_pack_cache(cache_dir: Path, pack_id: str) -> int:
+    """Delete positive cache entries owned by ``pack_id``."""
+    owned_dir = _pack_cache_dir(cache_dir, pack_id)
+    invalidated = owned_dir.with_name(f".{owned_dir.name}.purge-{uuid.uuid4().hex}")
+    try:
+        os.replace(owned_dir, invalidated)
+    except FileNotFoundError:
+        return 0
+    try:
+        removed = sum(1 for path in invalidated.iterdir() if not path.name.endswith(".part") and path.is_file())
+    except OSError:
+        removed = 0
+    robust_rmtree(invalidated, mode="outcome")
+    return removed
 
 
 class LocalAudioPackFetcher:
@@ -31,8 +58,9 @@ class LocalAudioPackFetcher:
     Conforms to the :class:`~anki_miner.interfaces.ExpressionAudioFetcher`
     Protocol structurally (never raises; returns Path or None).
 
-    Cache strategy: successful hits are copied into *cache_dir* under a
-    pack-prefixed name so Anki media filenames remain globally unique.
+    Cache strategy: successful hits are copied into a pack-owned subdirectory
+    of *cache_dir*, under a pack-prefixed name so Anki media filenames remain
+    globally unique.
     Misses are NOT cached (no .miss markers) because local SQLite lookups are
     cheap — re-querying on every call avoids stale negatives after re-import.
 
@@ -52,7 +80,7 @@ class LocalAudioPackFetcher:
         self._db_path = db_path
         self._pack_dir = pack_dir.resolve()
         self._pack_id = pack_id
-        self._cache_dir = cache_dir
+        self._cache_dir = _pack_cache_dir(cache_dir, pack_id)
 
     @property
     def pack_id(self) -> str:
@@ -158,9 +186,14 @@ class LocalAudioPackFetcher:
             cache_path = self._cache_dir / f"{stem}{orig_suffix}"
             try:
                 self._cache_dir.mkdir(parents=True, exist_ok=True)
-                part_path = cache_path.with_suffix(orig_suffix + ".part")
-                shutil.copy2(candidate, part_path)
-                os.replace(part_path, cache_path)
+                with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
+                    part_path = Path(tmp_fd.name)
+                try:
+                    shutil.copy2(candidate, part_path)
+                    os.replace(part_path, cache_path)
+                finally:
+                    with contextlib.suppress(FileNotFoundError):
+                        part_path.unlink()
                 _record_cached_path(self._cache_dir, cache_path)
             except OSError as exc:
                 logger.debug("LocalAudioPackFetcher: copy failed for %s: %s", candidate, exc)

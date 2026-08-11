@@ -295,6 +295,26 @@ class TestPapagoSentenceTtsFetcher:
         session.post.assert_called_once()
         session.get.assert_not_called()
 
+    def test_cancelled_between_audio_chunks_does_not_cache(self, tmp_path):
+        fetcher = PapagoSentenceTtsFetcher(cache_dir=tmp_path, delay=0)
+        post_resp, get_resp = _papago_responses()
+        cancelled = False
+
+        def chunks(chunk_size=8192):
+            nonlocal cancelled
+            yield b"ID3audio"
+            cancelled = True
+            yield b"more-audio"
+
+        get_resp.iter_content.side_effect = chunks
+        _wire_session(fetcher, post_resp, get_resp)
+
+        result = fetcher.fetch(_SENTENCE, cancelled_check=lambda: cancelled)
+
+        assert result is None
+        assert not list(tmp_path.iterdir())
+        get_resp.close.assert_called_once_with()
+
     def test_empty_and_over_cap_sentences_skip_network(self, tmp_path):
         fetcher = PapagoSentenceTtsFetcher(cache_dir=tmp_path, delay=0)
         session = MagicMock()

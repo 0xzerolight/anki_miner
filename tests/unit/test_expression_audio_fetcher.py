@@ -543,6 +543,51 @@ class TestJPod101AudioFetcher:
             if r.levelno == logging.DEBUG
         ), f"No debug log emitted; records: {caplog.records}"
 
+    def test_failure_log_uses_identity_digest_without_term_or_exception_text(self, tmp_path, caplog):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        mined_form = "個人語彙"
+        reading = "こじんごい"
+        exception_text = "private transport detail"
+        identity = hashlib.sha256(f"{mined_form}\0{reading}".encode()).hexdigest()[:12]
+
+        with (
+            caplog.at_level(logging.DEBUG, logger="anki_miner.services.expression_audio_fetcher"),
+            patch(
+                "requests.Session.get",
+                side_effect=requests.exceptions.ConnectionError(exception_text),
+            ),
+        ):
+            assert fetcher.fetch(mined_form, reading) is None
+
+        log_text = "\n".join(record.getMessage() for record in caplog.records)
+        assert identity in log_text
+        assert "ConnectionError" in log_text
+        assert mined_form not in log_text
+        assert reading not in log_text
+        assert exception_text not in log_text
+
+    def test_cancelled_between_response_chunks_does_not_cache(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        cancelled = False
+        response = _response()
+
+        def _chunks(chunk_size=8192):
+            nonlocal cancelled
+            yield b"ID3audio"
+            cancelled = True
+            yield b"more-audio"
+
+        response.iter_content.side_effect = _chunks
+
+        with patch("requests.Session.get", return_value=response):
+            result = fetcher.fetch("食べる", "たべる", cancelled_check=lambda: cancelled)
+
+        assert result is None
+        assert not list(tmp_path.glob("*.mp3"))
+        assert not list(tmp_path.glob("*.miss"))
+        assert not list(tmp_path.glob("*.part"))
+        response.close.assert_called_once_with()
+
     # ------------------------------------------------------------------
     # Unique temp staging + stale .part sweep (Task 3)
     # ------------------------------------------------------------------

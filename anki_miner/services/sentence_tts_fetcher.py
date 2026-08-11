@@ -237,6 +237,7 @@ class PapagoSentenceTtsFetcher:
                 self._cache_dir,
                 stem,
                 failure_counts=self._failure_counts,
+                cancelled_check=cancelled_check,
             )
         except (requests.RequestException, OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
             self._failure_counts[_classify_request_exception(exc)] += 1

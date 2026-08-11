@@ -9,9 +9,11 @@ from unittest.mock import patch
 
 import pytest
 
+from anki_miner.config import paths as config_paths
 from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.audio_packs import importer as audio_pack_importer
+from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.importer import (
     AudioPackImportResult,
     derive_pack_id,
@@ -411,6 +413,106 @@ class TestExplicitRepair:
         registry = AudioPackRegistry(dest)
         registry.load()
         assert set(registry.packs) == {"pack"}
+
+    def test_success_purges_only_repaired_pack_cache(self, tmp_path: Path, monkeypatch):
+        home = tmp_path / "home"
+        monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
+        dest = home / "audio_packs"
+        old_pack = _make_ajt_pack(tmp_path / "old")
+        alternate_pack = _make_ajt_pack(tmp_path / "alternate")
+        (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
+        (alternate_pack / "media" / "word_0.mp3").write_bytes(b"KEEP")
+        result = import_audio_pack(old_pack, dest, pack_id="jpod")
+        alternate = import_audio_pack(alternate_pack, dest, pack_id="jpod_alternate")
+        cache = home / "audio_cache" / "local_packs"
+        stale = LocalAudioPackFetcher(
+            dest / result.pack_id / "index.sqlite",
+            old_pack,
+            result.pack_id,
+            cache,
+        ).fetch("食べる", "reading_0")
+        sibling = LocalAudioPackFetcher(
+            dest / alternate.pack_id / "index.sqlite",
+            alternate_pack,
+            alternate.pack_id,
+            cache,
+        ).fetch("食べる", "reading_0")
+        assert stale is not None
+        assert sibling is not None
+        replacement = _make_ajt_pack(tmp_path / "replacement", n_entries=3)
+
+        repaired = repair_audio_pack(replacement, dest, pack_id=result.pack_id)
+
+        assert repaired.pack_id == "jpod"
+        assert not stale.exists()
+        assert sibling.read_bytes() == b"KEEP"
+
+    def test_failed_repair_preserves_pack_cache(self, tmp_path: Path, monkeypatch):
+        home = tmp_path / "home"
+        monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
+        dest = home / "audio_packs"
+        old_pack = _make_ajt_pack(tmp_path / "old")
+        (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
+        result = import_audio_pack(old_pack, dest, pack_id="pack")
+        cache = home / "audio_cache" / "local_packs"
+        cached = LocalAudioPackFetcher(
+            dest / result.pack_id / "index.sqlite",
+            old_pack,
+            result.pack_id,
+            cache,
+        ).fetch("食べる", "reading_0")
+        assert cached is not None
+        invalid_replacement = tmp_path / "invalid"
+        invalid_replacement.mkdir()
+
+        with pytest.raises(SetupError, match="Not a recognised audio pack"):
+            repair_audio_pack(invalid_replacement, dest, pack_id="pack")
+
+        assert cached.read_bytes() == b"OLD"
+
+    def test_cache_enumeration_failure_after_promotion_does_not_serve_stale_bytes(
+        self,
+        tmp_path: Path,
+        monkeypatch,
+    ):
+        home = tmp_path / "home"
+        monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
+        dest = home / "audio_packs"
+        old_pack = _make_ajt_pack(tmp_path / "old")
+        replacement = _make_ajt_pack(tmp_path / "replacement")
+        (old_pack / "media" / "word_0.mp3").write_bytes(b"OLD")
+        (replacement / "media" / "word_0.mp3").write_bytes(b"NEW")
+        result = import_audio_pack(old_pack, dest, pack_id="pack")
+        cache = home / "audio_cache" / "local_packs"
+        stale = LocalAudioPackFetcher(
+            dest / result.pack_id / "index.sqlite",
+            old_pack,
+            result.pack_id,
+            cache,
+        ).fetch("食べる", "reading_0")
+        assert stale is not None
+        owned_cache_dir = stale.parent
+        real_iterdir = Path.iterdir
+
+        def fail_owned_cache_enumeration(path: Path):
+            if path == owned_cache_dir:
+                raise PermissionError("cache locked")
+            return real_iterdir(path)
+
+        monkeypatch.setattr(Path, "iterdir", fail_owned_cache_enumeration)
+
+        repaired = repair_audio_pack(replacement, dest, pack_id=result.pack_id)
+
+        assert repaired.pack_id == "pack"
+        assert not stale.exists()
+        fresh = LocalAudioPackFetcher(
+            dest / repaired.pack_id / "index.sqlite",
+            replacement,
+            repaired.pack_id,
+            cache,
+        ).fetch("食べる", "reading_0")
+        assert fresh is not None
+        assert fresh.read_bytes() == b"NEW"
 
 
 # ---------------------------------------------------------------------------

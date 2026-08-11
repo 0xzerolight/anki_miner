@@ -219,6 +219,7 @@ def download_audio_to_cache(
     *,
     timeout: int = 10,
     failure_counts: dict[str, int] | None = None,
+    cancelled_check: Callable[[], bool] | None = None,
 ) -> Path | None:
     """GET *url*, validate it is audio, and atomically cache it as ``<stem><ext>``.
 
@@ -252,6 +253,8 @@ def download_audio_to_cache(
             chunks: list[bytes] = []
             total = 0
             for chunk in response.iter_content(chunk_size=8192):
+                if cancelled_check is not None and cancelled_check():
+                    return None
                 total += len(chunk)
                 if total > MAX_AUDIO_BYTES:
                     _bump("non_audio")
@@ -266,6 +269,9 @@ def download_audio_to_cache(
             ext = audio_extension_for_media_type(response.headers.get("Content-Type"))
             if ext is None and is_mp3(body):
                 ext = ".mp3"
+            if ext == ".mp3" and not is_mp3(body):
+                _bump("non_audio")
+                return None
             if ext is None:
                 # Not recognizable audio (HTML error page, unknown type) —
                 # transient; retried next run since no marker is written.
