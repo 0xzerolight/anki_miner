@@ -196,7 +196,7 @@ class CustomAudioFetcher:
             # ValueError covers json.JSONDecodeError (non-JSON body).
             self._failure_counts["non_audio"] += 1
             logger.debug(
-                "custom_json fetch failed for %s: %s: %s",
+                "custom_json fetch failed (%s): %s: %s",
                 _redact_url_for_log(url),
                 type(exc).__name__,
                 _redact_url_for_log(str(exc)),
@@ -205,7 +205,7 @@ class CustomAudioFetcher:
         except (requests.RequestException, OSError) as exc:
             self._failure_counts[_classify_request_exception(exc)] += 1
             logger.debug(
-                "custom_json fetch failed for %s: %s: %s",
+                "custom_json fetch failed (%s): %s: %s",
                 _redact_url_for_log(url),
                 type(exc).__name__,
                 _redact_url_for_log(str(exc)),

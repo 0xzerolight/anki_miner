@@ -17,7 +17,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
@@ -72,9 +72,11 @@ def record_cached_path(cache_dir: Path, path: Path) -> None:
 
 
 def redact_url_for_log(url: str) -> str:
-    """Return a URL safe to persist: scheme, host, port, and path only."""
+    """Keep scheme, host, port, and path; fail closed when userinfo exists."""
     try:
         parts = urlsplit(url)
+        if parts.username is not None or "@" in unquote(parts.netloc):
+            return "<redacted-url>"
         hostname = parts.hostname
         port = parts.port
     except ValueError:
@@ -301,7 +303,7 @@ def download_audio_to_cache(
     except (requests.RequestException, OSError) as exc:
         _bump(classify_request_exception(exc))
         logger.debug(
-            "audio download failed for %s: %s: %s",
+            "audio download failed (%s): %s: %s",
             redact_url_for_log(url),
             type(exc).__name__,
             redact_url_for_log(str(exc)),
