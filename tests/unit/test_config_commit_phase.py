@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 
+from anki_miner.config import AudioSourceEntry
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
@@ -99,3 +100,38 @@ def test_settings_tab_preserves_remove_commit_phase(
                 worker.wait(3000)
 
     assert actual is expected
+
+
+@pytest.mark.parametrize("persisted", [False, True])
+def test_settings_tab_audio_remove_adopts_only_persisted_chain(
+    qtbot,
+    test_config,
+    persisted: bool,
+) -> None:
+    entry = AudioSourceEntry(kind="custom", url="http://h/?t={term}")
+    config = replace(test_config, expression_audio_chain=(entry,))
+    expected = (
+        ConfigCommitResult.post_save_failure(RuntimeError("refresh failed"))
+        if persisted
+        else ConfigCommitResult.pre_save_failure(OSError("disk full"))
+    )
+
+    def fail_commit(_config) -> None:
+        raise ConfigCommitError(expected)
+
+    tab = SettingsTab(
+        config,
+        commit_config=fail_commit,
+        suppress_optional_startup=True,
+    )
+    qtbot.addWidget(tab)
+    try:
+        actual = tab._commit_audio_removal(())
+    finally:
+        tab.shutdown()
+        for worker in tab.iter_close_workers():
+            if worker is not None:
+                worker.wait(3000)
+
+    assert actual is expected
+    assert tab.config.expression_audio_chain == (() if persisted else (entry,))

@@ -126,6 +126,13 @@ class TestUpdateConfigGuard:
         tab.update_config(new_config)
         assert tab.anki_panel.get_deck_name() == tab.config.anki_deck_name
 
+    def test_external_zoom_change_still_reloads_panel_widgets(self, tab):
+        tab.anki_panel.anki_tags_input.setText("UNSAVED")
+
+        tab.update_config(replace(tab.config, ui_zoom=1.25))
+
+        assert tab.anki_panel.get_anki_tags() == tab.config.anki_tags
+
     def test_update_config_always_stores_new_config(self, tab):
         """self.config is always updated regardless of whether _load_config runs."""
         new_config = replace(tab.config, theme="dark")

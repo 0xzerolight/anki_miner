@@ -1,11 +1,47 @@
 """Tests for config module."""
 
+import json
 import types
 from pathlib import Path
 
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.config_manager import GUIConfigManager
+
+
+class TestMaxParallelWorkers:
+    @pytest.mark.parametrize("workers", [0, 21])
+    def test_construction_rejects_values_outside_ui_range(self, workers):
+        with pytest.raises(ValueError, match="max_parallel_workers"):
+            AnkiMinerConfig(max_parallel_workers=workers)
+
+    @pytest.mark.parametrize("workers", [0, 21])
+    def test_load_rejects_values_outside_ui_range(self, workers, tmp_path, monkeypatch):
+        config_path = tmp_path / "gui_config.json"
+        config_path.write_text(
+            json.dumps(
+                {
+                    "config_schema_version": GUIConfigManager.CONFIG_SCHEMA_VERSION,
+                    "max_parallel_workers": workers,
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
+
+        config, loaded_from_disk = GUIConfigManager.load_config_with_provenance()
+
+        assert config.max_parallel_workers == AnkiMinerConfig().max_parallel_workers
+        assert loaded_from_disk is False
+
+    @pytest.mark.parametrize("workers", [0, 21])
+    def test_import_rejects_values_outside_ui_range(self, workers, tmp_path):
+        source = tmp_path / "settings.json"
+        source.write_text(json.dumps({"max_parallel_workers": workers}), encoding="utf-8")
+
+        with pytest.raises(ValueError, match="max_parallel_workers"):
+            GUIConfigManager.import_config(source, AnkiMinerConfig())
 
 
 class TestIPlusOneFilter:

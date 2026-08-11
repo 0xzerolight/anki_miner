@@ -333,6 +333,11 @@ class QueuePanel(QFrame):
             subtitle_selector.set_path(str(current_subtitle))
         layout.addWidget(subtitle_selector)
 
+        folder_error = QLabel(self.tr("Choose existing video and subtitle folders."))
+        folder_error.setWordWrap(True)
+        folder_error.hide()
+        layout.addWidget(folder_error)
+
         offset_layout = QHBoxLayout()
         offset_label = QLabel(self.tr("Subtitle Offset:"))
         offset_label.setObjectName("field-label")
@@ -349,7 +354,27 @@ class QueuePanel(QFrame):
         layout.addLayout(offset_layout)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(dialog.accept)
+
+        def selected_folders() -> tuple[Path, Path] | None:
+            video_path = video_selector.path_or_none()
+            subtitle_path = subtitle_selector.path_or_none()
+            if (
+                video_path is None
+                or subtitle_path is None
+                or not video_selector.is_valid()
+                or not subtitle_selector.is_valid()
+            ):
+                return None
+            return Path(video_path), Path(subtitle_path)
+
+        def accept_if_valid() -> None:
+            if selected_folders() is None:
+                folder_error.show()
+                return
+            folder_error.hide()
+            dialog.accept()
+
+        button_box.accepted.connect(accept_if_valid)
         button_box.rejected.connect(dialog.reject)
         layout.addWidget(button_box)
 
@@ -357,22 +382,23 @@ class QueuePanel(QFrame):
         # This dialog owns two path fields and a spin box, so Return must stay
         # available for text entry rather than confirming the dialog (D49).
         disown_default_buttons(dialog)
-        primary_action_shortcut(dialog, dialog.accept)
+        primary_action_shortcut(dialog, accept_if_valid)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            video_path = video_selector.get_path()
-            subtitle_path = subtitle_selector.get_path()
+            folders = selected_folders()
+            if folders is None:
+                return
+            video_folder, subtitle_folder = folders
 
-            if video_path and subtitle_path:
-                widget.set_folders(Path(video_path), Path(subtitle_path))
+            widget.set_folders(video_folder, subtitle_folder)
 
-                from anki_miner.utils.file_pairing import FilePairMatcher
+            from anki_miner.utils.file_pairing import FilePairMatcher
 
-                try:
-                    pairs = FilePairMatcher.find_pairs_by_episode_number(Path(video_path), Path(subtitle_path))
-                    widget.set_episode_count(len(pairs))
-                except Exception as e:
-                    logger.warning("Failed to count episodes for %s: %s", widget.display_name, e)
+            try:
+                pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
+                widget.set_episode_count(len(pairs))
+            except Exception as e:
+                logger.warning("Failed to count episodes for %s: %s", widget.display_name, e)
 
             widget.subtitle_offset = offset_spinbox.value()
             self._bind_widget(widget)

@@ -11,6 +11,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QMessageBox
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.widgets.panels import audio_pack_settings_panel as asp_mod
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.services.audio_packs.registry import AudioPackMeta
@@ -1278,6 +1279,82 @@ def test_remove_custom_json_source_allowed(qapp, qtbot, tmp_path):
     )
     panel.remove(1)
     assert [e.kind for e in panel.get_chain()] == ["jpod101"]
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        ConfigCommitResult.pre_save_failure(OSError("disk full")),
+        ConfigCommitResult.post_save_failure(RuntimeError("refresh failed")),
+    ],
+    ids=["pre-save", "post-save"],
+)
+def test_remove_custom_source_follows_transaction_outcome(qapp, qtbot, tmp_path, result):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    entry = AudioSourceEntry(kind="custom", url="http://h/?t={term}", enabled=True)
+    panel.set_chain((entry,))
+    commit_calls: list[tuple[AudioSourceEntry, ...]] = []
+    persisted_chain: list[tuple[AudioSourceEntry, ...]] = [(entry,)]
+
+    def commit(chain):
+        commit_calls.append(chain)
+        if result.persisted:
+            persisted_chain[0] = chain
+        return result
+
+    panel.set_remove_chain_commit(commit)
+
+    panel.remove(0)
+
+    assert commit_calls == [()]
+    expected_chain = () if result.persisted else (entry,)
+    assert panel.get_chain() == expected_chain
+    assert persisted_chain[0] == expected_chain
+    qtbot.waitUntil(lambda: panel.issue_banner().current_issue() is not None, timeout=3000)
+
+
+def test_remove_custom_source_removes_only_selected_equal_row(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    entry = AudioSourceEntry(kind="custom", url="http://h/?t={term}", enabled=True)
+    panel.set_chain((entry, entry))
+    committed_chains: list[tuple[AudioSourceEntry, ...]] = []
+    panel.set_remove_chain_commit(lambda chain: committed_chains.append(chain) or ConfigCommitResult.committed())
+
+    panel.remove(0)
+
+    assert committed_chains == [(entry,)]
+    assert panel.get_chain() == (entry,)
+
+
+def test_remove_custom_source_pre_save_failure_reports_unchanged_without_scan(qapp, qtbot, tmp_path, monkeypatch):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    entry = AudioSourceEntry(kind="custom", url="http://h/?t={term}", enabled=True)
+    panel.set_chain((entry,))
+    commit_calls: list[tuple[AudioSourceEntry, ...]] = []
+    panel.set_remove_chain_commit(
+        lambda chain: commit_calls.append(chain) or ConfigCommitResult.pre_save_failure(OSError("disk full"))
+    )
+    scan_starts: list[bool] = []
+
+    def record_scan() -> None:
+        scan_starts.append(True)
+        panel._run_after_scan_callbacks()
+
+    monkeypatch.setattr(panel, "_scan_and_render_async", record_scan)
+
+    panel.remove(0)
+
+    issue = panel.issue_banner().current_issue()
+    assert issue is not None
+    assert panel.get_chain() == (entry,)
+    assert commit_calls == [()]
+    assert (issue.summary, scan_starts) == (
+        "Removal of Custom URL: http://h/?t={term} was not saved. The source is unchanged — try again.",
+        [],
+    )
 
 
 def test_remove_builtin_jpod101_blocked(qapp, qtbot, tmp_path):
