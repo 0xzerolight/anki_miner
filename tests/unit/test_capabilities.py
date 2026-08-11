@@ -20,6 +20,11 @@ def test_ids_are_unique() -> None:
     assert len(ids) == len(set(ids)), "duplicate capability id(s)"
 
 
+def test_dead_cross_episode_filter_is_not_advertised() -> None:
+    assert all(cap.id != "cross-episode-count" for cap in CAPABILITIES)
+    assert search("recurring") == []
+
+
 def test_registry_is_non_trivial() -> None:
     # Guards against an accidental truncation of the catalogue.
     assert len(CAPABILITIES) >= 30

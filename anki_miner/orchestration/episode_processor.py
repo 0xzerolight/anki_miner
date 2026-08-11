@@ -104,13 +104,6 @@ def _format_timestamp(seconds: float) -> str:
 # never touched.
 _ARR_METADATA_RE = re.compile(r"\s*(?:\[[^\]]*\]\s*)+(?:-\S+)?\s*$")
 
-# Cross-episode frequency floor: a word must appear in at least this many
-# episodes to be mined (only active when cross-episode counts are supplied to
-# process_episode). Was the hidden `config.min_episode_appearances` knob
-# (ARC-004: inlined, never surfaced in any panel). > 1 keeps the filter live;
-# Bug-F5 ordering (filter before dedup) is unchanged.
-MIN_EPISODE_APPEARANCES = 2
-
 _OFFLINE_DICTIONARY_REQUIRED_MESSAGE = (
     "No usable offline dictionary is installed. Use Tools → Download Recommended Resources or Settings → Dictionaries."
 )
@@ -167,6 +160,8 @@ class _EpisodeContext:
     # apart from "removed by active filters" (survivors, then filtered out).
     candidate_words_found: int = 0
     comprehension_percentage: float = 0.0
+    difficulty_total_words: int = 0
+    difficulty_unknown_words: int = 0
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
         """Construct a ProcessingResult from accumulated state.
@@ -577,7 +572,6 @@ class EpisodeProcessor:
         ctx: _EpisodeContext,
         all_words: list[TokenizedWord],
         line_index: list[LineLemmas] | None,
-        cross_episode_counts: dict[str, int] | None,
         progress_callback: ProgressCallback | None = None,
         occurrence_counts: dict[str, int] | None = None,
         min_occurrence: int = 1,
@@ -585,7 +579,7 @@ class EpisodeProcessor:
         """Phase 2: attach frequency data, filter against known vocab, apply optional filters.
 
         Mutates ``ctx.new_words_found`` and ``ctx.comprehension_percentage``.
-        Records difficulty stats if a stats service is available.
+        Stages difficulty stats for a successful terminal result.
         """
         frequency_ranked = 0
         known_hits = 0
@@ -876,7 +870,7 @@ class EpisodeProcessor:
 
         # Whitelist force-include (partition-then-merge). A whitelisted lemma is
         # a true force-include: it bypasses every optional COVERAGE filter below
-        # (frequency, blacklist, script-type, name-wordsets, cross/reading
+        # (frequency, blacklist, script-type, name-wordsets, reading
         # occurrence counts, dedup, i+1, sentence-length). Definition viability
         # already ran above, so force-included words remain subject to it. We
         # split them out here and merge them back just before the within-run
@@ -991,36 +985,9 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Cross-episode frequency filter. Runs BEFORE sentence dedup: dedup keeps
-        # the first word per sentence, so if a below-floor word sorts ahead of a
-        # sentence-mate that would pass the floor, dedup-first would keep the loser
-        # and the floor would then drop it — the sentence yields no card even though
-        # its mate qualified (Bug F5). Filtering by episode count first removes the
-        # losers so dedup picks a survivor.
-        if cross_episode_counts is not None and MIN_EPISODE_APPEARANCES > 1 and not self.config.bypass_optional_filters:
-            before = len(unknown_words)
-            unknown_words = self.word_filter.filter_by_episode_count(
-                unknown_words,
-                cross_episode_counts,
-                MIN_EPISODE_APPEARANCES,
-            )
-            filtered_out = before - len(unknown_words)
-            episode_rejects += filtered_out
-            if filtered_out > 0:
-                self.presenter.show_info(
-                    tr_format(
-                        QCoreApplication.translate(
-                            "EpisodeProcessor",
-                            "Cross-episode filter: removed %1 words appearing in fewer than %2 episodes",
-                        ),
-                        filtered_out,
-                        MIN_EPISODE_APPEARANCES,
-                    )
-                )
-
         # Reading-specific in-document occurrence floor. Runs BEFORE sentence
-        # dedup for the same reason as the cross-episode floor above: removing
-        # below-floor words first lets a qualifying sentence-mate survive.
+        # dedup: removing below-floor words first lets a qualifying sentence-mate
+        # survive instead of losing the whole sentence to a below-floor first word.
         # Force-included whitelist words were partitioned out above and merge
         # back later, so they continue to bypass this coverage filter.
         if occurrence_counts is not None:
@@ -1200,33 +1167,10 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Record difficulty data if a stats service is configured.
-        # OVH-024: use the pre-filter comprehension-unknown count
-        # (ctx.candidate_words_found), NOT the post-filter mineable count
-        # (unknown_words). difficulty_score measures how hard the episode is to
-        # comprehend; i+1/frequency filters can collapse unknown_words to a handful,
-        # making a hard episode appear near-zero difficulty.
-        #
-        # A locked stats.db (Anki or a parallel run) raises OperationalError here.
-        # Do NOT let it bubble into process_episode's generic except — that would
-        # report cards_created=0 with no note IDs, turning a successful run into an
-        # apparent failure. Dropping one difficulty row is safe; warn and continue.
-        if self.stats_service:
-            try:
-                self.stats_service.record_difficulty(
-                    series_name=ctx.series_name,
-                    episode_name=ctx.episode_name,
-                    total_words=len(all_words),
-                    unknown_words=ctx.candidate_words_found,
-                    unique_words=len(all_words),
-                )
-            except (sqlite3.Error, OSError) as e:
-                logger.warning(
-                    "Could not record difficulty for %s in stats.db (%s); the run will continue.",
-                    ctx.episode_name,
-                    e,
-                )
-
+        # Stage the pre-filter comprehension counts. ``_run_pipeline`` commits
+        # them only after the body returns a successful terminal result.
+        ctx.difficulty_total_words = len(all_words)
+        ctx.difficulty_unknown_words = ctx.candidate_words_found
         ctx.new_words_found = len(unknown_words)
         log_summary(
             logger,
@@ -1739,6 +1683,11 @@ class EpisodeProcessor:
         )
         return cards_created, created_note_ids, mined_forms_for_undo
 
+    def _reset_run_write_state(self) -> None:
+        """Clear Anki write provenance before any preflight for a new run."""
+        self.anki_service.last_created_note_ids = []
+        self.anki_service.anki_write_state = AnkiWriteState.NO_NOTE_WRITE
+
     def _run_pipeline(
         self,
         ctx: _EpisodeContext,
@@ -1772,9 +1721,8 @@ class EpisodeProcessor:
         #   during THIS run (OVH-008).
         # * anki_write_state: nothing has been submitted yet, so the honest
         #   answer is NO_NOTE_WRITE. create_cards_batch escalates it from here
-        #   and never resets it, so this line is the single run boundary (D30).
-        self.anki_service.last_created_note_ids = []
-        self.anki_service.anki_write_state = AnkiWriteState.NO_NOTE_WRITE
+        #   and never resets it, so this reset is the mining-pipeline boundary (D30).
+        self._reset_run_write_state()
 
         self.check_dictionary_staleness()
         self._preflight_card_target()
@@ -1791,7 +1739,10 @@ class EpisodeProcessor:
         if cancel_event is not None:
             self._external_cancel = cancel_event.is_set
         try:
-            return self._stamp_write_provenance(body(run_temp_folder))
+            result = body(run_temp_folder)
+            if result.success:
+                self._record_difficulty(ctx)
+            return self._stamp_write_provenance(result)
         except AnkiMinerException as e:
             logger.warning("%s: %s", "EpisodeProcessor", e)
             ctx.errors.append(str(e))
@@ -1871,7 +1822,6 @@ class EpisodeProcessor:
         subtitle_file: Path,
         progress_callback: ProgressCallback | None = None,
         curation_callback: Callable[[list], list | None] | None = None,
-        cross_episode_counts: dict[str, int] | None = None,
         episode_name_override: str | None = None,
         series_name_override: str | None = None,
         audio_track_override: int | None = None,
@@ -1897,7 +1847,6 @@ class EpisodeProcessor:
                 means "confirmed with nothing selected" → a completed run with
                 zero new cards), or ``None`` if the user cancelled/rejected the
                 dialog → a cancelled result.
-            cross_episode_counts: Optional cross-episode word frequency counts.
             episode_name_override: Optional override for the episode identity
                 passed to stats_service. When ``None`` (default) the identity
                 is derived from ``video_file.stem`` (preserves current file-based
@@ -1958,21 +1907,21 @@ class EpisodeProcessor:
                 all_words, line_index = self._phase1_parse(
                     ctx, subtitle_file, progress_callback, want_line_index=want_line_index
                 )
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
             if not all_words:
                 self.presenter.show_warning(
                     QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
                 )
                 return ctx.build_result()
-            if self.cancelled:
-                return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("filter", logger):
-                unknown_words = self._phase2_filter(ctx, all_words, line_index, cross_episode_counts, progress_callback)
+                unknown_words = self._phase2_filter(ctx, all_words, line_index, progress_callback)
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
-            if self.cancelled:
-                return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None:
                 # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
@@ -2063,8 +2012,6 @@ class EpisodeProcessor:
                 )
             )
         return ctx.build_result(
-            total_words_found=0,
-            new_words_found=0,
             cards_created=len(partial_ids),
             card_ids=partial_ids,
         )
@@ -2346,29 +2293,28 @@ class EpisodeProcessor:
                 QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
             )
             ctx.total_words_found = len(all_words)
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
             if not all_words:
                 self.presenter.show_warning(
                     QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
                 )
                 return ctx.build_result()
-            if self.cancelled:
-                return self._cancelled_result_from_ctx(ctx)
 
             with timed_phase("filter", logger):
                 unknown_words = self._phase2_filter(
                     ctx,
                     all_words,
                     line_index,
-                    None,
                     progress_callback,
                     occurrence_counts=counts,
                     min_occurrence=self.config.reading_min_occurrence,
                 )
+            if self.cancelled:
+                return self._cancelled_result_from_ctx(ctx)
             if not unknown_words:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
-            if self.cancelled:
-                return self._cancelled_result_from_ctx(ctx)
 
             if curation_callback is not None:
                 outcome = self._run_curation(ctx, unknown_words, line_index, counts, curation_callback)
@@ -2401,6 +2347,24 @@ class EpisodeProcessor:
             return result
 
         return self._run_pipeline(ctx, cancel_event, _body)
+
+    def _record_difficulty(self, ctx: _EpisodeContext) -> None:
+        """Commit staged difficulty counts after a successful terminal result."""
+        if not self.stats_service or ctx.difficulty_total_words == 0:
+            return
+        try:
+            self.stats_service.record_difficulty(
+                series_name=ctx.series_name,
+                episode_name=ctx.episode_name,
+                total_words=ctx.difficulty_total_words,
+                unknown_words=ctx.difficulty_unknown_words,
+            )
+        except (sqlite3.Error, OSError) as e:
+            logger.warning(
+                "Could not record difficulty for %s in stats.db (%s); the run will continue.",
+                ctx.episode_name,
+                e,
+            )
 
     def _record_session(self, ctx: _EpisodeContext, result: ProcessingResult) -> None:
         """Record a mining session in the stats service if one is configured."""
@@ -2535,6 +2499,7 @@ class EpisodeProcessor:
         if self._youtube_fetcher is None:
             raise RuntimeError("YouTubeFetcherService not injected — check service_factory")
 
+        self._reset_run_write_state()
         start_time = time.time()
         if cancel_event.is_set():
             return self._make_cancelled_result(start_time)

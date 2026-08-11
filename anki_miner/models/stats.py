@@ -45,7 +45,6 @@ class DifficultyEntry:
     series_name: str = ""
     total_words: int = 0
     unknown_words: int = 0
-    unique_words: int = 0
     difficulty_score: float = 0.0  # 0.0 (easy) to 1.0 (hard)
     recorded_at: datetime = field(default_factory=datetime.now)
 

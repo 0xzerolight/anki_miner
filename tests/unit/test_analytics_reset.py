@@ -36,7 +36,6 @@ def _difficulty() -> DifficultyEntry:
         series_name="Show",
         total_words=100,
         unknown_words=10,
-        unique_words=80,
         difficulty_score=0.1,
     )
 

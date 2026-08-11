@@ -316,16 +316,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("blacklist", "whitelist", "word list", "allow list", "block list", "ignore list"),
     ),
     Capability(
-        id="cross-episode-count",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Only words seen across N episodes"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "In batch and deck builds, mine only words that appear in at least N episodes."
-        ),
-        category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
-        keywords=("min appearances", "recurring", "multiple episodes", "repeated", "cross episode"),
-    ),
-    Capability(
         id="pos-filter",
         title=QT_TRANSLATE_NOOP("Capabilities", "Filter by part of speech"),
         description=QT_TRANSLATE_NOOP(

@@ -1,5 +1,6 @@
 """Tests for episode_processor module."""
 
+import inspect
 import re
 import sqlite3
 import threading
@@ -13,9 +14,9 @@ import requests
 from anki_miner.config import ChainEntry
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
 from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData, TokenizedWord
+from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
-    MIN_EPISODE_APPEARANCES,
     EpisodeProcessor,
     _EpisodeContext,
     sanitize_source_label,
@@ -234,6 +235,43 @@ class TestProcessEpisode:
         assert result.total_words_found == 0
         assert result.cards_created == 0
         mock_services["anki_service"].get_existing_vocabulary.assert_not_called()
+
+    def test_empty_parse_after_cancel_is_cancelled(self, processor, mock_services, tmp_path):
+        cancel_event = threading.Event()
+
+        def _parse_then_cancel(_subtitle_file):
+            cancel_event.set()
+            return []
+
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = _parse_then_cancel
+
+        result = processor.process_episode(
+            tmp_path / "v.mkv",
+            tmp_path / "s.ass",
+            cancel_event=cancel_event,
+        )
+
+        assert result.errors == ["Processing cancelled by user"]
+
+    def test_empty_filter_after_cancel_is_cancelled(self, processor, mock_services, tmp_path):
+        cancel_event = threading.Event()
+        word = _make_word()
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+
+        def _filter_then_cancel(_words, _existing):
+            cancel_event.set()
+            return []
+
+        mock_services["word_filter"].filter_unknown.side_effect = _filter_then_cancel
+
+        result = processor.process_episode(
+            tmp_path / "v.mkv",
+            tmp_path / "s.ass",
+            cancel_event=cancel_event,
+        )
+
+        assert result.errors == ["Processing cancelled by user"]
 
     def test_ambiguous_reading_count_is_reported(self, test_config, mock_services, tmp_path):
         presenter = MagicMock(spec=NullPresenter())
@@ -585,6 +623,8 @@ class TestProcessEpisode:
 
         assert result.card_ids == batch1_ids
         assert result.cards_created == len(batch1_ids)
+        assert result.total_words_found == 1
+        assert result.new_words_found == 1
         assert result.success is False
         assert any("3 card" in e for e in result.errors)
 
@@ -2321,105 +2361,8 @@ class TestWhitelistForceInclude:
         mock_services["anki_service"].create_cards_batch.assert_not_called()
 
 
-class TestCrossEpisodeFiltering:
-    """Tests for cross-episode frequency filtering."""
-
-    @pytest.fixture
-    def mock_services(self):
-        subtitle_parser = MagicMock()
-        word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
-        media_extractor = MagicMock()
-        definition_service = MagicMock()
-        anki_service = MagicMock()
-        return {
-            "subtitle_parser": subtitle_parser,
-            "word_filter": word_filter,
-            "media_extractor": media_extractor,
-            "definition_service": definition_service,
-            "anki_service": anki_service,
-        }
-
-    def test_cross_episode_counts_filters_words(self, test_config, mock_services, tmp_path):
-        """Words below MIN_EPISODE_APPEARANCES should be filtered out."""
-        word1 = _make_word("食べる")
-        word2 = _make_word("走る", start_time=5.0)
-        media = _make_media()
-
-        cross_counts = {"食べる": 5, "走る": 1}  # word2 appears in only 1 episode
-
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word1, word2]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["word_filter"].filter_unknown.return_value = [word1, word2]
-        # filter_by_episode_count removes word2
-        mock_services["word_filter"].filter_by_episode_count.return_value = [word1]
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word1, media)]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1]
-
-        processor = build_processor(
-            config=test_config,
-            presenter=NullPresenter(),
-            **mock_services,
-        )
-
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
-
-        mock_services["word_filter"].filter_by_episode_count.assert_called_once_with(
-            [word1, word2], cross_counts, MIN_EPISODE_APPEARANCES
-        )
-        assert result.cards_created == 1
-
-    def test_episode_count_runs_before_dedup_so_mate_can_win(self, test_config, mock_services, tmp_path):
-        """Bug F5: the cross-episode floor must run BEFORE sentence dedup. Two words
-        share a sentence — A (1 episode) sorted first, B (3 episodes). Pre-fix dedup
-        kept A (first-per-sentence) then the floor dropped A → the sentence yielded no
-        card even though its mate B would have passed. Correct order: the floor drops
-        A first, then dedup keeps B. Uses a REAL WordFilterService so the ordering
-        actually executes."""
-        shared_sentence = "共有された例文"
-        word_a = TokenizedWord(
-            surface="食べた",
-            lemma="食べる",
-            reading="タベル",
-            sentence=shared_sentence,
-            start_time=1.0,
-            end_time=3.0,
-            duration=2.0,
-            pos="動詞",
-        )
-        word_b = TokenizedWord(
-            surface="走った",
-            lemma="走る",
-            reading="ハシル",
-            sentence=shared_sentence,
-            start_time=1.0,
-            end_time=3.0,
-            duration=2.0,
-            pos="動詞",
-        )
-        cross_counts = {"食べる": 1, "走る": 3}
-        config = replace(
-            test_config,
-            deduplicate_sentences=True,
-            use_i_plus_one_filter=False,
-        )
-
-        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word_a, word_b]
-        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
-        mock_services["media_extractor"].extract_media_batch.return_value = [(word_b, _make_media())]
-        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to run"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1]
-
-        services = {**mock_services, "word_filter": WordFilterService(config)}
-        processor = build_processor(config=config, presenter=NullPresenter(), **services)
-
-        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cross_episode_counts=cross_counts)
-
-        # B (the 3-episode mate) survives and is carded; the sentence is not lost.
-        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
-        assert [c.word.lemma for c in card_data] == ["走る"]
-        assert result.cards_created == 1
+def test_process_episode_does_not_expose_dead_cross_episode_input():
+    assert "cross_episode_counts" not in inspect.signature(EpisodeProcessor.process_episode).parameters
 
 
 class TestDefinitionSkipping:
@@ -2520,6 +2463,82 @@ class TestStatsServiceIntegration:
 
         mock_stats.record_session.assert_called_once()
         mock_stats.record_difficulty.assert_called_once()
+
+    def test_difficulty_is_committed_after_card_creation(self, test_config, mock_services, tmp_path):
+        events = []
+        mock_stats = MagicMock()
+        mock_stats.record_difficulty.side_effect = lambda **_kwargs: events.append("difficulty")
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+
+        def _create_cards(_card_data, _progress_callback=None):
+            events.append("cards")
+            return [1]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_cards
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is True
+        assert events == ["cards", "difficulty"]
+
+    def test_failed_media_run_does_not_record_difficulty(self, test_config, mock_services, tmp_path):
+        mock_stats = MagicMock()
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = []
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is False
+        mock_stats.record_difficulty.assert_not_called()
+
+    def test_cancelled_filter_run_does_not_record_difficulty(self, test_config, mock_services, tmp_path):
+        cancel_event = threading.Event()
+        mock_stats = MagicMock()
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["definition_service"].has_offline_definitions.return_value = {word.mined_form: True}
+
+        def _filter_then_cancel(_words, _existing):
+            cancel_event.set()
+            return [word]
+
+        mock_services["word_filter"].filter_unknown.side_effect = _filter_then_cancel
+        processor = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            stats_service=mock_stats,
+            **mock_services,
+        )
+
+        result = processor.process_episode(
+            tmp_path / "v.mkv",
+            tmp_path / "s.ass",
+            cancel_event=cancel_event,
+        )
+
+        assert result.errors == ["Processing cancelled by user"]
+        mock_stats.record_difficulty.assert_not_called()
 
     def test_first_writes_reach_uninitialized_stats_service(self, test_config, mock_services, tmp_path):
         """Caller guards must not bypass StatsService's first-write initialization."""
@@ -2782,6 +2801,60 @@ class TestStatsServiceIntegration:
         assert result.cards_created == 1
         assert result.card_ids == [12345]
         assert not result.errors
+
+
+class TestReadingTerminalCancellation:
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+
+    @staticmethod
+    def _document() -> ReadingDocument:
+        return ReadingDocument(title="Book", kind="book", series="Books", episode="Book")
+
+    def test_empty_parse_after_cancel_is_cancelled(self, test_config, mock_services):
+        cancel_event = threading.Event()
+
+        def _parse_then_cancel(*_args, **_kwargs):
+            cancel_event.set()
+            return [], None, {}
+
+        mock_services["subtitle_parser"].parse_text_units.side_effect = _parse_then_cancel
+        processor = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        result = processor.process_reading(self._document(), cancel_event=cancel_event)
+
+        assert result.errors == ["Processing cancelled by user"]
+
+    def test_empty_filter_after_cancel_is_cancelled(self, test_config, mock_services):
+        cancel_event = threading.Event()
+        word = _make_word()
+        mock_services["subtitle_parser"].parse_text_units.return_value = (
+            [word],
+            None,
+            {word.mined_form: 1},
+        )
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+
+        def _filter_then_cancel(_words, _existing):
+            cancel_event.set()
+            return []
+
+        mock_services["word_filter"].filter_unknown.side_effect = _filter_then_cancel
+        processor = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        result = processor.process_reading(self._document(), cancel_event=cancel_event)
+
+        assert result.errors == ["Processing cancelled by user"]
 
 
 class TestPerRunTempFolder:
@@ -4369,6 +4442,30 @@ class TestPreflightCardTarget:
 
         mock_fetcher.fetch_video.assert_not_called()
 
+    def test_youtube_preflight_resets_prior_write_state(self, test_config, mock_services, tmp_path):
+        observed_states = []
+        mock_services["anki_service"].anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+        def _fail_preflight():
+            observed_states.append(mock_services["anki_service"].anki_write_state)
+            raise AnkiConnectionError("unreachable")
+
+        mock_services["anki_service"].verify_card_target.side_effect = _fail_preflight
+        mock_fetcher = MagicMock()
+        processor = self._make_youtube_processor(test_config, mock_services, mock_fetcher)
+
+        with pytest.raises(AnkiConnectionError):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc",
+                video_id="abc",
+                workspace=tmp_path,
+                sub_mode="manual_only",
+                cancel_event=threading.Event(),
+            )
+
+        assert observed_states == [AnkiWriteState.NO_NOTE_WRITE]
+        mock_fetcher.fetch_video.assert_not_called()
+
     def test_jisho_only_chain_aborts_before_youtube_fetch(self, test_config, mock_services, tmp_path):
         config = replace(
             test_config,
@@ -4704,7 +4801,7 @@ class TestPhase2FilterOrdering:
 
 
 class TestRecordDifficultyGuard:
-    """A locked stats.db during _phase2_filter must not abort process_episode (OVH-023/038)."""
+    """A locked stats.db during terminal commit must not abort process_episode (OVH-023/038)."""
 
     @pytest.fixture
     def mock_services(self):
@@ -4730,7 +4827,7 @@ class TestRecordDifficultyGuard:
         return svc
 
     def test_locked_stats_db_does_not_abort_run(self, test_config, mock_services, tmp_path):
-        """record_difficulty raising OperationalError must be caught in _phase2_filter;
+        """record_difficulty raising OperationalError must be caught during commit;
         process_episode still returns a valid result instead of raising."""
         import sqlite3
 
