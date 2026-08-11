@@ -9,6 +9,7 @@ import tempfile
 import zipfile
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any, Callable
 
@@ -54,6 +55,28 @@ ProgressFn = Callable[[int, int, str], None]
 # cap before extraction; this guards the peek path that bypasses it. 8 MiB is
 # orders of magnitude beyond any legitimate index.json.
 MAX_INDEX_JSON_BYTES = 8 * 1024 * 1024
+
+
+class _RenderedGlossaryProbe(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.has_content = False
+
+    def handle_data(self, data: str) -> None:
+        if data.strip():
+            self.has_content = True
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "img" and any(name == "src" and value and value.strip() for name, value in attrs):
+            self.has_content = True
+
+
+def _has_rendered_glossary_content(content: str) -> bool:
+    if not content:
+        return False
+    probe = _RenderedGlossaryProbe()
+    probe.feed(content)
+    return probe.has_content
 
 
 def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
@@ -247,6 +270,8 @@ def import_yomitan_zip(
                         dict_id=dict_id,
                         media_collector=media_paths,
                     )
+                    if not _has_rendered_glossary_content(content):
+                        continue
                     total_entries += 1
                     yield DictRow(
                         term=term,

@@ -5,13 +5,16 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import read_ownership_marker
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.importers.jmdict_importer import (
     JMDICT_DICT_ID,
     JMdictImportResult,
     import_jmdict_xml,
 )
+from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, open_readonly, read_meta
 
 MINI_JMDICT_XML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -157,6 +160,111 @@ class TestImportJmdictXmlEdgeCases:
             assert f"def{MAX_SENSES + 1}" not in content
         finally:
             conn.close()
+
+    def test_sense_restrictions_apply_before_row_sense_cap(self, tmp_path: Path):
+        from anki_miner.services.dictionary.importers.jmdict_importer import MAX_SENSES
+
+        open_senses = "".join(
+            f"<sense><stagk>開く</stagk><stagr>ひらく</stagr><gloss>open sense {i}</gloss></sense>"
+            for i in range(MAX_SENSES)
+        )
+        xml_text = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<JMdict><entry><ent_seq>3000002</ent_seq>"
+            "<k_ele><keb>開く</keb></k_ele>"
+            "<k_ele><keb>空く</keb></k_ele>"
+            "<r_ele><reb>ひらく</reb></r_ele>"
+            "<r_ele><reb>あく</reb></r_ele>"
+            f"{open_senses}"
+            "<sense><stagk>開く</stagk><stagr>あく</stagr><gloss>open reading aku</gloss></sense>"
+            "<sense><stagk>空く</stagk><stagr>ひらく</stagr><gloss>empty reading hiraku</gloss></sense>"
+            "<sense><stagk>空く</stagk><stagr>あく</stagr><gloss>to become empty</gloss></sense>"
+            "</entry></JMdict>"
+        )
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(xml_text, encoding="utf-8")
+
+        import_jmdict_xml(xml, tmp_path / "dicts")
+
+        db = tmp_path / "dicts" / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db)
+        try:
+            opened = conn.execute(
+                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                ("開く", "ひらく"),
+            ).fetchone()[0]
+            emptied = conn.execute(
+                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                ("空く", "あく"),
+            ).fetchone()[0]
+            opened_as_aku = conn.execute(
+                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                ("開く", "あく"),
+            ).fetchone()[0]
+            emptied_as_hiraku = conn.execute(
+                "SELECT content FROM entries WHERE term = ? AND reading = ?",
+                ("空く", "ひらく"),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+
+        assert opened.count("<li>") == MAX_SENSES
+        assert "to become empty" not in opened
+        assert "to become empty" in emptied
+        assert "open sense" not in emptied
+        assert opened_as_aku == "<ol><li>open reading aku</li></ol>"
+        assert emptied_as_hiraku == "<ol><li>empty reading hiraku</li></ol>"
+
+    def test_rows_without_applicable_senses_cannot_mask_lower_provider(self, tmp_path: Path):
+        xml_text = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            "<JMdict><entry><ent_seq>3000003</ent_seq>"
+            "<k_ele><keb>甲</keb></k_ele>"
+            "<k_ele><keb>乙</keb></k_ele>"
+            "<r_ele><reb>こう</reb></r_ele>"
+            "<r_ele><reb>おつ</reb></r_ele>"
+            "<r_ele><reb>きのえ</reb></r_ele>"
+            "<sense><stagk>甲</stagk><stagr>こう</stagr><gloss>first marker</gloss></sense>"
+            "<sense><stagk>乙</stagk><stagr>おつ</stagr><gloss>second marker</gloss></sense>"
+            "</entry></JMdict>"
+        )
+        xml = tmp_path / "JMdict_e"
+        xml.write_text(xml_text, encoding="utf-8")
+        dest_root = tmp_path / "dicts"
+
+        result = import_jmdict_xml(xml, dest_root)
+
+        db_path = dest_root / JMDICT_DICT_ID / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            rows = conn.execute("SELECT term, reading, content FROM entries ORDER BY term").fetchall()
+        finally:
+            conn.close()
+
+        class LowerProvider:
+            name = "lower"
+            is_online = False
+
+            def load(self) -> bool:
+                return True
+
+            def is_available(self) -> bool:
+                return True
+
+            def lookup(self, word: str) -> str | None:
+                return "LOWER"
+
+        top = IndexedDictProvider(JMDICT_DICT_ID, db_path)
+        definitions = DefinitionService(AnkiMinerConfig(), [top, LowerProvider()]).get_definitions_batch(
+            [("甲", "こう"), ("こう", "こう"), ("きのえ", "きのえ")]
+        )
+        top.close()
+
+        assert result.entry_count == 2
+        assert [(term, reading) for term, reading, _ in rows] == [("乙", "おつ"), ("甲", "こう")]
+        assert "first marker" in definitions[0]
+        assert "first marker" in definitions[1]
+        assert definitions[2] == "LOWER"
 
     def test_kanji_row_attests_every_unrestricted_reading(self, tmp_path: Path):
         """A kanji headword with multiple readings (no re_restr) yields one
