@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import contextlib
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QFont
@@ -43,9 +43,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
@@ -59,10 +61,12 @@ from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading_queue import ReadingQueueItem
+from anki_miner.services.reading import detector
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.workers.base_worker import SingleCallWorker
     from anki_miner.interfaces.presenter import PresenterProtocol
     from anki_miner.models.reading import ReadingSourceRef
     from anki_miner.orchestration import EpisodeProcessor
@@ -99,9 +103,9 @@ class ReadingMangaTab(_ReadingMiningTabBase):
 
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
-    mining the volume(s) a pick resolves to. Button state is purely derived
-    from the worker handle by :meth:`_recompute_buttons`: idle shows both
-    Mine buttons, a run swaps them for the shared Cancel.
+    mining the volume(s) a pick resolves to. Button state is derived from the
+    detection and worker handles by :meth:`_recompute_buttons`: pending
+    detection disables both Mine buttons; a run swaps them for shared Cancel.
 
     Manga curation shows page images (D8 amended): this tab overrides
     ``_build_curation_context`` to hand the dialog the in-flight volume's
@@ -141,6 +145,10 @@ class ReadingMangaTab(_ReadingMiningTabBase):
                 processor rebuilds so reading mining sessions land in analytics.
         """
         super().__init__(config, processor, presenter, parent, stats_service)
+        self._detection_pending = False
+        self._detection_worker: SingleCallWorker | None = None
+        self._detection_generation = 0
+        self._detection_shutdown = False
 
         self._setup_ui()
         self._setup_drag_drop()
@@ -233,8 +241,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         )
         self.volume_file_selector.setToolTip(
             self.tr(
-                "A .mokuro volume, or a .cbz/.zip archive with its .mokuro "
-                "beside or inside it. No extraction needed."
+                "A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed."
             )
         )
         card_layout.addWidget(self.volume_file_selector)
@@ -356,7 +363,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
 
     def _on_mine_clicked(self) -> None:
         """Mine — validate the picked volume file, classify it, and mine it."""
-        if self.worker_thread is not None:
+        if self.worker_thread is not None or self._detection_pending:
             return
         raw = self.volume_file_selector.path_or_none()
         if raw is None:
@@ -367,14 +374,72 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             self.log_widget.append_warning(self.tr("Select a .mokuro, .cbz, or .zip volume first."))
             return
 
-        self._launch_detected(self._detect_or_report(path))
+        self._detect_and_launch(path)
 
     def _on_folder_mine_clicked(self) -> None:
         """Mine Folder — classify the folder and mine its volume(s) sequentially."""
-        if self.worker_thread is not None:
+        if self.worker_thread is not None or self._detection_pending:
             return
-        refs = self._detected_refs()
+        raw = self.volume_folder_selector.path_or_none()
+        if raw is None:
+            self.log_widget.append_warning(self.tr("Select a manga folder first."))
+            return
+        self._detect_and_launch(Path(raw))
+
+    def _detect_and_launch(self, path: Path) -> None:
+        """Classify ``path`` off-thread, then launch survivors on the GUI thread."""
+        if self._detection_shutdown:
+            return
+        self._detection_generation += 1
+        generation = self._detection_generation
+        self._detection_pending = True
+        self._recompute_buttons()
+
+        def _detect() -> tuple[list[ReadingSourceRef], list[tuple[Path, str]]]:
+            diagnostics: list[tuple[Path, str]] = []
+            try:
+                refs = detector.detect(path, diagnostics=diagnostics)
+            except SetupError:
+                raise
+            except Exception as exc:
+                message = tr_format(self.tr("Could not process %1: %2"), path.name, exc)
+                raise RuntimeError(message) from exc
+            return refs, diagnostics
+
+        self._detection_worker = run_off_thread(
+            self,
+            _detect,
+            lambda result: self._on_detection_done(generation, result),
+            lambda message: self._on_detection_error(generation, message),
+            on_finished=lambda: self._on_detection_finished(generation),
+        )
+
+    def _is_current_detection(self, generation: int) -> bool:
+        """Return whether a detection callback still owns this tab."""
+        return not self._detection_shutdown and generation == self._detection_generation
+
+    def _on_detection_done(self, generation: int, result: object) -> None:
+        """Report skipped archives once, then launch every valid volume."""
+        if not self._is_current_detection(generation):
+            return
+        refs, diagnostics = cast(tuple[list, list[tuple[Path, str]]], result)
+        if diagnostics:
+            details = "; ".join(f"{path.name}: {reason}" for path, reason in diagnostics)
+            self.log_widget.append_warning(tr_format(self.tr("Skipped unreadable manga volume(s): %1"), details))
         self._launch_detected(refs)
+
+    def _on_detection_error(self, generation: int, message: str) -> None:
+        """Report a detection failure only while its generation is current."""
+        if self._is_current_detection(generation):
+            self.log_widget.append_error(message)
+
+    def _on_detection_finished(self, generation: int) -> None:
+        """Restore start actions after detection succeeds or fails."""
+        if not self._is_current_detection(generation):
+            return
+        self._detection_worker = None
+        self._detection_pending = False
+        self._recompute_buttons()
 
     def _launch_detected(self, refs: list | None) -> None:
         """Launch one ephemeral item per detected volume (shared by both cards)."""
@@ -384,19 +449,6 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         if self._launch_run(items):
             self._begin_progress(len(items))
             self._recompute_buttons()
-
-    def _detected_refs(self) -> list | None:
-        """Read the folder path and classify it, or ``None`` on empty/failure.
-
-        Warns (and returns ``None``) when no folder is selected; otherwise
-        delegates to the shared :meth:`_detect_or_report`, which surfaces any
-        detector error verbatim in the log.
-        """
-        raw = self.volume_folder_selector.path_or_none()
-        if raw is None:
-            self.log_widget.append_warning(self.tr("Select a manga folder first."))
-            return None
-        return self._detect_or_report(Path(raw))
 
     def _begin_progress(self, total: int) -> None:
         """Reset the whole-run bar and seed the composition counters."""
@@ -422,6 +474,18 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self.cancel_button.setEnabled(False)
         self.cancel_button.setText(self.tr("Cancelling…"))
         self._freeze_run_bar(self.overall_progress_widget)
+
+    def shutdown(self) -> None:
+        """Invalidate pending detection before stopping the mining worker."""
+        self._detection_shutdown = True
+        self._detection_generation = getattr(self, "_detection_generation", 0) + 1
+        detection_worker = getattr(self, "_detection_worker", None)
+        self._detection_worker = None
+        self._detection_pending = False
+        if detection_worker is not None:
+            with contextlib.suppress(RuntimeError):
+                detection_worker.cancel()
+        super().shutdown()
 
     # ------------------------------------------------------------------
     # Curation context (D8 amended: manga shows page images)
@@ -555,14 +619,15 @@ class ReadingMangaTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
 
     def _recompute_buttons(self) -> None:
-        """Refresh button state from the worker handle.
+        """Refresh button state from the detection and worker handles.
 
-        Pure derived state: a live run hides Mine and shows Cancel; idle
-        shows Mine and hides Cancel.
+        Pending detection disables Mine; a live run hides Mine and shows
+        Cancel; idle shows Mine and hides Cancel.
         """
         run_active = self.worker_thread is not None
+        start_enabled = not run_active and not self._detection_pending
         self.mine_button.setVisible(not run_active)
-        self.mine_button.setEnabled(not run_active)
+        self.mine_button.setEnabled(start_enabled)
         self.folder_mine_button.setVisible(not run_active)
-        self.folder_mine_button.setEnabled(not run_active)
+        self.folder_mine_button.setEnabled(start_enabled)
         self.cancel_button.setVisible(run_active)

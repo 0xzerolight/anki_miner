@@ -22,10 +22,11 @@ MicroDVD ``.sub`` is unsupported: it is frame-based and pysubs2 raises
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 import pysubs2
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
@@ -51,7 +52,17 @@ def _format_cue_time(seconds: float) -> str:
     return f"{minutes}:{secs:02d}"
 
 
-def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDocument:
+def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
+    if cancel_check is not None and cancel_check():
+        raise OperationCancelled("Reading load cancelled")
+
+
+def load(
+    ref: ReadingSourceRef,
+    *,
+    strip_annotations: bool = False,
+    cancel_check: Callable[[], bool] | None = None,
+) -> ReadingDocument:
     """Load a subtitle file into a per-cue :class:`ReadingDocument`.
 
     Identity mirrors the video path: series = parent folder name,
@@ -60,6 +71,7 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
     Raises:
         SetupError: unreadable file or unparseable subtitle content.
     """
+    _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     path = ref.path
@@ -71,6 +83,7 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
             )
         with path.open("rb") as f:
             raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
+        _raise_if_cancelled(cancel_check)
         if len(raw) > _MAX_TEXT_FILE_BYTES:
             raise SetupError(
                 f"subtitle file '{path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
@@ -86,12 +99,15 @@ def load(ref: ReadingSourceRef, *, strip_annotations: bool = False) -> ReadingDo
         format_ = pysubs2.formats.get_format_identifier(path.suffix.lower())
         subs = pysubs2.SSAFile.from_string(text, format_=format_)
     except Exception as e:  # pysubs2 raises format-specific parse errors
+        _raise_if_cancelled(cancel_check)
         # Parser exceptions can contain cue text; retain type, never message.
         logger.debug("Subtitle parse failed: file=%s error=%s", path, type(e).__name__)
         raise SetupError(f"Cannot parse subtitle file '{path.name}': {e}") from e
+    _raise_if_cancelled(cancel_check)
 
     units: list[ReadingUnit] = []
     for event in subs:
+        _raise_if_cancelled(cancel_check)
         # Skip ASS/SSA Comment events (same guard as parse_raw_entries).
         if getattr(event, "is_comment", None) is True:
             continue

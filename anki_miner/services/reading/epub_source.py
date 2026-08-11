@@ -38,7 +38,7 @@ from urllib.parse import unquote, urlsplit
 
 from lxml import etree, html  # type: ignore[import-untyped]
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
@@ -119,6 +119,7 @@ _INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
 _MAX_MEMBER_BYTES = 32 * 1024 * 1024
 _MAX_TOTAL_MEMBER_BYTES = MAX_UNCOMPRESSED_BYTES
 _AccountMember = Callable[[bytes], None]
+_CancelCheck = Callable[[], bool]
 _OPTIONAL_MEMBER_ERRORS = (
     KeyError,
     zipfile.BadZipFile,
@@ -134,6 +135,11 @@ _OPTIONAL_MEMBER_ERRORS = (
 def _warn_once(warnings: list[str], warning: str) -> None:
     if warning not in warnings:
         warnings.append(warning)
+
+
+def _raise_if_cancelled(cancel_check: _CancelCheck | None) -> None:
+    if cancel_check is not None and cancel_check():
+        raise OperationCancelled("Reading load cancelled")
 
 
 def _read_member(zf: zipfile.ZipFile, entry: str, epub_path: Path) -> bytes:
@@ -159,7 +165,24 @@ def _read_member(zf: zipfile.ZipFile, entry: str, epub_path: Path) -> bytes:
     return data
 
 
-def load(ref: ReadingSourceRef) -> ReadingDocument:
+def _read_member_cancellable(
+    zf: zipfile.ZipFile,
+    entry: str,
+    epub_path: Path,
+    cancel_check: _CancelCheck | None,
+) -> bytes:
+    """Read one member with cancellation checks on both sides of the I/O."""
+    _raise_if_cancelled(cancel_check)
+    data = _read_member(zf, entry, epub_path)
+    _raise_if_cancelled(cancel_check)
+    return data
+
+
+def load(
+    ref: ReadingSourceRef,
+    *,
+    cancel_check: _CancelCheck | None = None,
+) -> ReadingDocument:
     """Load ``ref.path`` (an ``.epub``) into a book :class:`ReadingDocument`.
 
     Raises :class:`SetupError` for DRM-protected or structurally invalid files;
@@ -167,6 +190,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     book still mines.
     """
     # Per-kind ref contract: file-backed kinds always carry a path.
+    _raise_if_cancelled(cancel_check)
     assert ref.path is not None
     epub_path = ref.path
     try:
@@ -174,11 +198,14 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     except (zipfile.BadZipFile, OSError) as exc:
         raise SetupError(_invalid_epub_msg(epub_path, "the ZIP archive cannot be opened")) from exc
     with zf:
+        _raise_if_cancelled(cancel_check)
         validate_zip_safe(zf, epub_path.parent)
+        _raise_if_cancelled(cancel_check)
         total_member_bytes = 0
 
         def account_member(raw: bytes) -> None:
             nonlocal total_member_bytes
+            _raise_if_cancelled(cancel_check)
             total_member_bytes += len(raw)
             if total_member_bytes > _MAX_TOTAL_MEMBER_BYTES:
                 raise SetupError(
@@ -186,32 +213,54 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
                 )
 
         names = set(zf.namelist())
-        opf_path = _find_opf_path(zf, names, epub_path, account_member)
+        _raise_if_cancelled(cancel_check)
+        opf_path = _find_opf_path(zf, names, epub_path, account_member, cancel_check)
         opf_dir = posixpath.dirname(opf_path)
         try:
-            opf_raw = _read_member(zf, opf_path, epub_path)
+            opf_raw = _read_member_cancellable(zf, opf_path, epub_path, cancel_check)
         except _OPTIONAL_MEMBER_ERRORS as exc:
             raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable")) from exc
         account_member(opf_raw)
         opf_root = _parse_xml(opf_raw)
         if opf_root is None:
             raise SetupError(_invalid_epub_msg(epub_path, "the OPF package is unreadable"))
-        manifest, spine_idrefs, spine_toc, cover_meta_id, title = _parse_opf(opf_root)
-        _check_encryption(zf, names, epub_path, manifest, opf_dir, account_member)
+        manifest, spine_idrefs, spine_toc, cover_meta_id, title = _parse_opf(
+            opf_root,
+            cancel_check=cancel_check,
+        )
+        _check_encryption(zf, names, epub_path, manifest, opf_dir, account_member, cancel_check)
 
         doc_title = title or ref.title
         doc = ReadingDocument(title=doc_title, kind="book", series="Books", episode=doc_title)
 
-        cover_ref, cover_warning = _find_cover(zf, names, manifest, cover_meta_id, opf_dir, epub_path)
+        cover_ref, cover_warning = _find_cover(
+            zf,
+            names,
+            manifest,
+            cover_meta_id,
+            opf_dir,
+            epub_path,
+            cancel_check,
+        )
         if cover_warning:
             doc.warnings.append(cover_warning)
 
-        chapter_map = _load_chapters(zf, names, manifest, spine_toc, opf_dir, doc.warnings, account_member)
+        chapter_map = _load_chapters(
+            zf,
+            names,
+            manifest,
+            spine_toc,
+            opf_dir,
+            doc.warnings,
+            account_member,
+            cancel_check,
+        )
 
         index = 0
         content_i = 0
         gaiji_total = 0
         for idref in spine_idrefs:
+            _raise_if_cancelled(cancel_check)
             item = manifest.get(idref)
             if item is None:
                 continue
@@ -222,7 +271,9 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             if entry not in names or _is_boilerplate_name(entry):
                 continue
             try:
-                raw = _read_member(zf, entry, epub_path)
+                raw = _read_member_cancellable(zf, entry, epub_path, cancel_check)
+            except OperationCancelled:
+                raise
             except SetupError:
                 # Mine-what-you-can: one oversized chapter degrades to a
                 # warning, unlike the structural members (container/OPF/
@@ -236,12 +287,14 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             body, is_cover = _parse_content(raw)
             if body is None or is_cover:
                 continue
-            paragraphs, gaiji = _walk_body(body)
+            paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check)
             gaiji_total += gaiji
             label = chapter_map.get(entry, f"ch.{content_i}")
             content_i += 1
             for para in paragraphs:
+                _raise_if_cancelled(cancel_check)
                 for sentence in split_sentences(para):
+                    _raise_if_cancelled(cancel_check)
                     doc.units.append(
                         ReadingUnit(
                             text=sentence,
@@ -316,12 +369,13 @@ def _check_encryption(
     manifest: dict[str, tuple[str, str | None, list[str]]],
     opf_dir: str,
     account_member: _AccountMember,
+    cancel_check: _CancelCheck | None,
 ) -> None:
     if _ENCRYPTION_PATH not in names:
         return
     parser = etree.XMLParser(resolve_entities=False, load_dtd=False, no_network=True)
     try:
-        encryption_raw = _read_member(zf, _ENCRYPTION_PATH, epub_path)
+        encryption_raw = _read_member_cancellable(zf, _ENCRYPTION_PATH, epub_path, cancel_check)
     except _OPTIONAL_MEMBER_ERRORS as exc:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/encryption.xml is unreadable")) from exc
     account_member(encryption_raw)
@@ -337,6 +391,7 @@ def _check_encryption(
         _reject_drm(epub_path, "malformed_encryption_metadata")
     found_encrypted_data = False
     for enc in root.iter():
+        _raise_if_cancelled(cancel_check)
         if _local(enc) != "encrypteddata":
             continue
         found_encrypted_data = True
@@ -348,7 +403,17 @@ def _check_encryption(
                 algorithm = sub.get("Algorithm")
             elif name == "cipherreference" and uri is None:
                 uri = sub.get("URI")
-        if algorithm in _FONT_OBFUSCATION_ALGS and uri and _is_manifest_font(uri, names, manifest, opf_dir):
+        if (
+            algorithm in _FONT_OBFUSCATION_ALGS
+            and uri
+            and _is_manifest_font(
+                uri,
+                names,
+                manifest,
+                opf_dir,
+                cancel_check,
+            )
+        ):
             continue
         _reject_drm(epub_path, "unsupported_encryption")
     if not found_encrypted_data:
@@ -360,6 +425,7 @@ def _is_manifest_font(
     names: set[str],
     manifest: dict[str, tuple[str, str | None, list[str]]],
     opf_dir: str,
+    cancel_check: _CancelCheck | None,
 ) -> bool:
     try:
         parsed = urlsplit(uri)
@@ -370,7 +436,11 @@ def _is_manifest_font(
     target = _resolve("", parsed.path)
     if target not in names:
         return False
-    matches = [item for item in manifest.values() if _resolve(opf_dir, item[0]) == target]
+    matches: list[tuple[str, str | None, list[str]]] = []
+    for item in manifest.values():
+        _raise_if_cancelled(cancel_check)
+        if _resolve(opf_dir, item[0]) == target:
+            matches.append(item)
     if len(matches) != 1:
         return False
     media_type = matches[0][1]
@@ -394,11 +464,17 @@ def _reject_drm(epub_path: Path, reason: str) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path, account_member: _AccountMember) -> str:
+def _find_opf_path(
+    zf: zipfile.ZipFile,
+    names: set[str],
+    epub_path: Path,
+    account_member: _AccountMember,
+    cancel_check: _CancelCheck | None,
+) -> str:
     if _CONTAINER_PATH not in names:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is missing"))
     try:
-        container_raw = _read_member(zf, _CONTAINER_PATH, epub_path)
+        container_raw = _read_member_cancellable(zf, _CONTAINER_PATH, epub_path, cancel_check)
     except _OPTIONAL_MEMBER_ERRORS as exc:
         raise SetupError(_invalid_epub_msg(epub_path, "META-INF/container.xml is unreadable")) from exc
     account_member(container_raw)
@@ -406,6 +482,7 @@ def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path, accoun
     fallback = None
     if root is not None:
         for el in root.iter():
+            _raise_if_cancelled(cancel_check)
             if _local(el) != "rootfile":
                 continue
             full_path = el.get("full-path")
@@ -427,6 +504,8 @@ def _find_opf_path(zf: zipfile.ZipFile, names: set[str], epub_path: Path, accoun
 
 def _parse_opf(
     root,
+    *,
+    cancel_check: _CancelCheck | None = None,
 ) -> tuple[dict[str, tuple[str, str | None, list[str]]], list[str], str | None, str | None, str | None]:
     manifest: dict[str, tuple[str, str | None, list[str]]] = {}
     spine_idrefs: list[str] = []
@@ -435,6 +514,7 @@ def _parse_opf(
     title: str | None = None
 
     for el in root.iter():
+        _raise_if_cancelled(cancel_check)
         name = _local(el)
         if name == "item":
             item_id = el.get("id")
@@ -471,9 +551,11 @@ def _find_cover(
     cover_meta_id: str | None,
     opf_dir: str,
     epub_path: Path,
+    cancel_check: _CancelCheck | None,
 ) -> tuple[ImageRef | None, str | None]:
     cover_href = None
     for href, _mt, props in manifest.values():
+        _raise_if_cancelled(cancel_check)
         if "cover-image" in props:
             cover_href = href
             break
@@ -488,8 +570,10 @@ def _find_cover(
     header = b""
     if entry in names:
         try:
+            _raise_if_cancelled(cancel_check)
             with zf.open(entry) as fp:
                 header = fp.read(16)  # fixed-size peek: bomb-safe, never decoded
+            _raise_if_cancelled(cancel_check)
         except _OPTIONAL_MEMBER_ERRORS:
             header = b""
     if _is_image_magic(header):
@@ -572,7 +656,11 @@ def _parse_content(raw: bytes):
     return body, _is_cover_typed(root, body)
 
 
-def _walk_body(body) -> tuple[list[str], int]:
+def _walk_body(
+    body,
+    *,
+    cancel_check: _CancelCheck | None = None,
+) -> tuple[list[str], int]:
     """Depth-first text walk → (paragraphs, gaiji-image count).
 
     Ruby/script/style subtrees are skipped; ``<img>`` counts toward gaiji and
@@ -593,6 +681,7 @@ def _walk_body(body) -> tuple[list[str], int]:
 
     def visit(el) -> None:
         nonlocal gaiji
+        _raise_if_cancelled(cancel_check)
         name = _local(el)
         if not name or name in _SKIP_TAGS:
             return  # comment/PI or skipped subtree — tail handled by the caller
@@ -629,19 +718,29 @@ def _load_chapters(
     opf_dir: str,
     warnings: list[str],
     account_member: _AccountMember,
+    cancel_check: _CancelCheck | None,
 ) -> dict[str, str]:
     entries: list[tuple[str, str]] = []
     nav_href = None
     for href, _mt, props in manifest.values():
+        _raise_if_cancelled(cancel_check)
         if "nav" in props:
             nav_href = href
             break
     if nav_href:
-        entries = _parse_nav(zf, names, opf_dir, nav_href, warnings, account_member)
+        entries = _parse_nav(zf, names, opf_dir, nav_href, warnings, account_member, cancel_check)
     if not entries and spine_toc:
         item = manifest.get(spine_toc)
         if item is not None:
-            entries = _parse_ncx(zf, names, opf_dir, item[0], warnings, account_member)
+            entries = _parse_ncx(
+                zf,
+                names,
+                opf_dir,
+                item[0],
+                warnings,
+                account_member,
+                cancel_check,
+            )
 
     usable = [(t, lbl) for (t, lbl) in entries if lbl and lbl not in _BOILERPLATE_LABELS]
     if len(usable) < 2:
@@ -659,12 +758,15 @@ def _parse_nav(
     nav_href: str,
     warnings: list[str],
     account_member: _AccountMember,
+    cancel_check: _CancelCheck | None,
 ) -> list[tuple[str, str]]:
     nav_entry = _resolve(opf_dir, nav_href)
     if nav_entry not in names:
         return []
     try:
-        raw = _read_member(zf, nav_entry, Path(nav_entry))
+        raw = _read_member_cancellable(zf, nav_entry, Path(nav_entry), cancel_check)
+    except OperationCancelled:
+        raise
     except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
         _warn_once(warnings, f"Skipped damaged navigation document '{nav_entry}'.")
         return []  # oversized nav → chapter labels fall back to spine index
@@ -683,6 +785,7 @@ def _parse_nav(
         return []
     out: list[tuple[str, str]] = []
     for a in chosen.iter():
+        _raise_if_cancelled(cancel_check)
         if _local(a) != "a":
             continue
         href = a.get("href")
@@ -700,12 +803,15 @@ def _parse_ncx(
     ncx_href: str,
     warnings: list[str],
     account_member: _AccountMember,
+    cancel_check: _CancelCheck | None,
 ) -> list[tuple[str, str]]:
     ncx_entry = _resolve(opf_dir, ncx_href)
     if ncx_entry not in names:
         return []
     try:
-        raw = _read_member(zf, ncx_entry, Path(ncx_entry))
+        raw = _read_member_cancellable(zf, ncx_entry, Path(ncx_entry), cancel_check)
+    except OperationCancelled:
+        raise
     except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
         _warn_once(warnings, f"Skipped damaged navigation document '{ncx_entry}'.")
         return []  # oversized NCX → chapter labels fall back to spine index
@@ -716,6 +822,7 @@ def _parse_ncx(
     ncx_dir = posixpath.dirname(ncx_entry)
     out: list[tuple[str, str]] = []
     for point in root.iter():
+        _raise_if_cancelled(cancel_check)
         if _local(point) != "navpoint":
             continue
         label = None

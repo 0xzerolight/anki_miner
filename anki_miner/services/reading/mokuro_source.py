@@ -15,10 +15,11 @@ import logging
 import re
 import unicodedata
 import zipfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
     ImageRef,
     ReadingDocument,
@@ -62,7 +63,7 @@ _REPEAT_RUN_RE = re.compile(r"(.)\1{8,}")
 
 @dataclass(frozen=True)
 class _ImageRecord:
-    """One listed page image, pre-normalized for the three matching tiers."""
+    """One listed page image, indexed for the three named matching tiers."""
 
     raw_key: str  # natural-sort identity (relative posix path / archive entry)
     norm_full: str  # NFC-folded, lowercased, /-normalized full relative path
@@ -70,8 +71,18 @@ class _ImageRecord:
     ref: ImageRef
 
 
-def load(ref: ReadingSourceRef) -> ReadingDocument:
+def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
+    if cancel_check is not None and cancel_check():
+        raise OperationCancelled("Reading load cancelled")
+
+
+def load(
+    ref: ReadingSourceRef,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> ReadingDocument:
     """Load one mokuro volume into a ``ReadingDocument``. See module docstring."""
+    _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     # Size-capped even though the detector normally gates first: load() trusts
@@ -82,6 +93,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         raw = read_zip_member_text_capped(ref.path, ref.ocr_entry, MAX_MOKURO_JSON_BYTES, ".mokuro member")
     else:
         raw = read_text_capped(ref.path, MAX_MOKURO_JSON_BYTES, ".mokuro file")
+    _raise_if_cancelled(cancel_check)
     ocr_name = ref.ocr_entry or ref.path.name
     data = json.loads(raw)
     if not isinstance(data, dict) or not isinstance(data.get("pages"), list):
@@ -96,13 +108,23 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
     )
 
     image_root = ref.image_root
-    records = _list_images(image_root)
-    exact_index = {r.norm_full: r for r in records}
-    stem_index = _unique_stem_index(records)
+    records = _list_images(image_root, cancel_check=cancel_check)
+    raw_index, _ = _unique_image_index(
+        records,
+        lambda record: record.raw_key,
+        cancel_check=cancel_check,
+    )
+    exact_index, ambiguous_full = _unique_image_index(
+        records,
+        lambda record: record.norm_full,
+        cancel_check=cancel_check,
+    )
+    stem_index, ambiguous_stems = _unique_stem_index(records, cancel_check=cancel_check)
     valid_pages: list[tuple[int, dict]] = []
     positional_pages: list[dict | None] = []
     skipped_malformed = 0
     for page_num, page in enumerate(pages, start=1):
+        _raise_if_cancelled(cancel_check)
         if not isinstance(page, dict):
             positional_pages.append(None)
             skipped_malformed += 1
@@ -113,23 +135,42 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             continue
         valid_pages.append((page_num, page))
         positional_pages.append(page)
-    positional = _positional_pairs(positional_pages, records)
+    positional = _positional_pairs(
+        positional_pages,
+        records,
+        raw_index,
+        exact_index,
+        ambiguous_full,
+        stem_index,
+        ambiguous_stems,
+        cancel_check=cancel_check,
+    )
 
     if image_root is None:
         doc.warnings.append("text-only volume: pages have no paired images")
 
     index = 0
     for page_num, page in valid_pages:
+        _raise_if_cancelled(cancel_check)
         image_ref: ImageRef | None = None
         if image_root is not None:
             img_path = str(page.get("img_path") or "")
-            record = _match_page(img_path, page_num - 1, exact_index, stem_index, positional)
+            record = _match_page(
+                img_path,
+                page_num - 1,
+                raw_index,
+                exact_index,
+                ambiguous_full,
+                stem_index,
+                ambiguous_stems,
+                positional,
+            )
             if record is None:
                 doc.warnings.append(f"page {page_num}: no image matched {img_path!r}")
             else:
                 image_ref = record.ref
         label = f"p.{page_num}"
-        entries, skipped = _page_unit_entries(page)
+        entries, skipped = _page_unit_entries(page, cancel_check=cancel_check)
         skipped_malformed += skipped
         for text, box in entries:
             doc.units.append(
@@ -154,7 +195,11 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
 # --------------------------------------------------------------------------- #
 # Text assembly
 # --------------------------------------------------------------------------- #
-def _page_unit_entries(page: dict) -> tuple[list[tuple[str, tuple[int, int, int, int] | None]], int]:
+def _page_unit_entries(
+    page: dict,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> tuple[list[tuple[str, tuple[int, int, int, int] | None]], int]:
     """Mineable (text, block_box) pairs for one page, in block order.
 
     Split units are expanded; every sentence piece of one oversized block
@@ -163,6 +208,7 @@ def _page_unit_entries(page: dict) -> tuple[list[tuple[str, tuple[int, int, int,
     entries: list[tuple[str, tuple[int, int, int, int] | None]] = []
     skipped = 0
     for block in page.get("blocks", []):
+        _raise_if_cancelled(cancel_check)
         if not isinstance(block, dict):
             skipped += 1
             continue
@@ -233,18 +279,28 @@ def _is_japanese(ch: str) -> bool:
 # --------------------------------------------------------------------------- #
 # Image listing + pairing
 # --------------------------------------------------------------------------- #
-def _list_images(image_root: Path | None) -> list[_ImageRecord]:
+def _list_images(
+    image_root: Path | None,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> list[_ImageRecord]:
     """List page images from a directory or archive; empty for text-only."""
+    _raise_if_cancelled(cancel_check)
     if image_root is None:
         return []
     if image_root.is_dir():
-        return _list_dir_images(image_root)
-    return _list_archive_images(image_root)
+        return _list_dir_images(image_root, cancel_check=cancel_check)
+    return _list_archive_images(image_root, cancel_check=cancel_check)
 
 
-def _list_dir_images(root: Path) -> list[_ImageRecord]:
+def _list_dir_images(
+    root: Path,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> list[_ImageRecord]:
     records: list[_ImageRecord] = []
     for path in root.rglob("*"):
+        _raise_if_cancelled(cancel_check)
         if not path.is_file():
             continue
         rel = path.relative_to(root).as_posix()
@@ -254,11 +310,17 @@ def _list_dir_images(root: Path) -> list[_ImageRecord]:
     return records
 
 
-def _list_archive_images(archive: Path) -> list[_ImageRecord]:
+def _list_archive_images(
+    archive: Path,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> list[_ImageRecord]:
     records: list[_ImageRecord] = []
+    _raise_if_cancelled(cancel_check)
     with zipfile.ZipFile(archive) as zf:
         names = zf.namelist()  # listing only — never reads or extracts members
     for name in names:
+        _raise_if_cancelled(cancel_check)
         if name.endswith("/") or is_junk_path(name) or not _is_image_name(name):
             continue
         records.append(_make_record(name, ImageRef(archive, name)))
@@ -270,53 +332,134 @@ def _make_record(rel_posix: str, ref: ImageRef) -> _ImageRecord:
     return _ImageRecord(raw_key=rel_posix, norm_full=norm, norm_stem=_stem_of(norm), ref=ref)
 
 
-def _unique_stem_index(records: list[_ImageRecord]) -> dict[str, _ImageRecord]:
-    """Stem -> record, keeping only stems owned by exactly one image."""
+def _unique_stem_index(
+    records: list[_ImageRecord],
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> tuple[dict[str, _ImageRecord], set[str]]:
+    """Index unique stems and report every collided stem."""
+    return _unique_image_index(
+        records,
+        lambda record: record.norm_stem,
+        cancel_check=cancel_check,
+    )
+
+
+def _unique_image_index(
+    records: list[_ImageRecord],
+    key_fn: Callable[[_ImageRecord], str],
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> tuple[dict[str, _ImageRecord], set[str]]:
+    """Index records by ``key_fn``, excluding every collided key."""
     seen: dict[str, _ImageRecord | None] = {}
     for record in records:
-        seen[record.norm_stem] = None if record.norm_stem in seen else record
-    return {stem: rec for stem, rec in seen.items() if rec is not None}
+        _raise_if_cancelled(cancel_check)
+        key = key_fn(record)
+        seen[key] = None if key in seen else record
+    unique: dict[str, _ImageRecord] = {}
+    ambiguous: set[str] = set()
+    for key, indexed_record in seen.items():
+        _raise_if_cancelled(cancel_check)
+        if indexed_record is None:
+            ambiguous.add(key)
+        else:
+            unique[key] = indexed_record
+    return unique, ambiguous
 
 
-def _positional_pairs(pages: list[dict | None], records: list[_ImageRecord]) -> dict[int, _ImageRecord]:
-    """Tier-3 fallback: natural-sort pairs when counts match and names give no partial signal."""
+def _positional_pairs(
+    pages: list[dict | None],
+    records: list[_ImageRecord],
+    raw_index: dict[str, _ImageRecord],
+    exact_index: dict[str, _ImageRecord],
+    ambiguous_full: set[str],
+    stem_index: dict[str, _ImageRecord],
+    ambiguous_stems: set[str],
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> dict[int, _ImageRecord]:
+    """Tier-4 fallback: natural-sort pairs when counts match and names give no partial signal."""
+    _raise_if_cancelled(cancel_check)
     if not records or len(pages) != len(records):
         return {}
-    exact_keys = {record.norm_full for record in records}
-    stem_index = _unique_stem_index(records)
-    named_matches: list[bool] = []
+    named_count = 0
+    matched_count = 0
+    has_missing_page = False
     for page in pages:
+        _raise_if_cancelled(cancel_check)
         if page is None:
+            has_missing_page = True
             continue
-        norm = _norm_key(str(page.get("img_path") or ""))
-        named_matches.append(norm in exact_keys or _stem_of(norm) in stem_index)
-    if any(named_matches) and not all(named_matches):
+        raw = str(page.get("img_path") or "")
+        norm = _norm_key(raw)
+        named_count += 1
+        if (
+            raw in raw_index
+            or norm in exact_index
+            or norm in ambiguous_full
+            or _stem_of(norm) in stem_index
+            or _stem_of(norm) in ambiguous_stems
+        ):
+            matched_count += 1
+    if 0 < matched_count < named_count:
         return {}
-    ordered = sorted(records, key=lambda r: natural_sort_key(r.raw_key))
-    if any(page is None for page in pages):
-        return {i: ordered[i] for i, page in enumerate(pages) if page is not None}
+
+    def _record_sort_key(record: _ImageRecord):
+        _raise_if_cancelled(cancel_check)
+        return natural_sort_key(record.raw_key)
+
+    ordered = sorted(records, key=_record_sort_key)
+    _raise_if_cancelled(cancel_check)
+    if has_missing_page:
+        pairs: dict[int, _ImageRecord] = {}
+        for i, page in enumerate(pages):
+            _raise_if_cancelled(cancel_check)
+            if page is not None:
+                pairs[i] = ordered[i]
+        return pairs
+
+    def _page_sort_key(i: int):
+        _raise_if_cancelled(cancel_check)
+        return natural_sort_key(str((pages[i] or {}).get("img_path") or ""))
+
     order = sorted(
         range(len(pages)),
-        key=lambda i: natural_sort_key(str((pages[i] or {}).get("img_path") or "")),
+        key=_page_sort_key,
     )
-    return {page_idx: ordered[pos] for pos, page_idx in enumerate(order)}
+    pairs = {}
+    for pos, page_idx in enumerate(order):
+        _raise_if_cancelled(cancel_check)
+        pairs[page_idx] = ordered[pos]
+    return pairs
 
 
 def _match_page(
     img_path: str,
     page_idx: int,
+    raw_index: dict[str, _ImageRecord],
     exact_index: dict[str, _ImageRecord],
+    ambiguous_full: set[str],
     stem_index: dict[str, _ImageRecord],
+    ambiguous_stems: set[str],
     positional: dict[int, _ImageRecord],
 ) -> _ImageRecord | None:
+    record = raw_index.get(img_path)  # tier 1: raw full-path identity
+    if record is not None:
+        return record
     norm = _norm_key(img_path)
-    record = exact_index.get(norm)  # tier 1: exact, NFC-folded, case/-normalized
+    record = exact_index.get(norm)  # tier 2: unique NFC/case/slash-normalized full path
     if record is not None:
         return record
-    record = stem_index.get(_stem_of(norm))  # tier 2: unique stem
+    if norm in ambiguous_full:
+        return None
+    stem = _stem_of(norm)
+    record = stem_index.get(stem)  # tier 3: unique stem
     if record is not None:
         return record
-    return positional.get(page_idx)  # tier 3: safe positional fallback
+    if stem in ambiguous_stems:
+        return None
+    return positional.get(page_idx)  # tier 4: safe positional fallback
 
 
 def _norm_key(path: str) -> str:

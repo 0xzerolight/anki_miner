@@ -10,6 +10,8 @@ signals and the mutated item state.
 
 from __future__ import annotations
 
+import json
+import zipfile
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,8 +22,9 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.reading_queue_worker import ReadingQueueWorker
 from anki_miner.models.mining_queue import ReadyItemStatus
-from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.models.reading import ImageRef, ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
+from anki_miner.services.reading.detector import load as _load_reading_document
 from tests.unit._queue_worker_harness import (
     connect_all as _connect_all,
 )
@@ -169,10 +172,25 @@ def test_process_reading_receives_loaded_document(make_worker, mock_processor, f
 def test_load_receives_annotation_opt_out(make_worker, test_config, fake_load):
     config = replace(test_config, strip_subtitle_annotations=False)
     item = _make_item("ep01", kind="subtitle")
+    worker = make_worker(items=[item], config=config)
 
-    make_worker(items=[item], config=config).run()
+    worker.run()
 
-    fake_load.assert_called_once_with(item.source, strip_subtitle_annotations=False)
+    fake_load.assert_called_once_with(
+        item.source,
+        strip_subtitle_annotations=False,
+        cancel_check=worker.check_cancelled,
+    )
+
+
+def test_load_receives_worker_cancel_check(make_worker, fake_load):
+    worker = make_worker(items=[_make_item()])
+
+    worker.run()
+
+    cancel_check = fake_load.call_args.kwargs["cancel_check"]
+    assert cancel_check.__self__ is worker
+    assert cancel_check() is False
 
 
 # ---------------------------------------------------------------------------
@@ -331,6 +349,320 @@ def test_worker_cancel_event_passed_to_process_reading(make_worker, mock_process
     kwargs = mock_processor.process_reading.call_args.kwargs
     assert kwargs["cancel_event"] is worker._cancel_event
     mock_processor.cancel.assert_not_called()
+
+
+def test_cancel_during_mokuro_image_iteration_stops_before_next_member(
+    make_worker,
+    mock_processor,
+    fake_load,
+    monkeypatch,
+    tmp_path,
+):
+    from anki_miner.services.reading import mokuro_source
+
+    archive = tmp_path / "vol.cbz"
+    payload = {
+        "version": "1",
+        "title": "Series",
+        "title_uuid": "t",
+        "volume": "1",
+        "volume_uuid": "v",
+        "pages": [
+            {"img_path": "001.jpg", "blocks": [{"lines": ["一ページ"]}]},
+            {"img_path": "002.jpg", "blocks": [{"lines": ["二ページ"]}]},
+        ],
+    }
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("vol.mokuro", json.dumps(payload, ensure_ascii=False))
+        zf.writestr("001.jpg", b"one")
+        zf.writestr("002.jpg", b"two")
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=archive,
+        image_root=archive,
+        title="Series",
+        volume="1",
+        ocr_entry="vol.mokuro",
+    )
+    item = ReadingQueueItem(source=ref, title="Series — 1", kind="mokuro")
+    seen: list[str] = []
+    worker_box: dict[str, ReadingQueueWorker] = {}
+    original_make_record = mokuro_source._make_record
+
+    def _make_record(name, image_ref):
+        seen.append(name)
+        record = original_make_record(name, image_ref)
+        if name == "001.jpg":
+            worker_box["worker"].cancel()
+        return record
+
+    monkeypatch.setattr(mokuro_source, "_make_record", _make_record)
+    fake_load.side_effect = _load_reading_document
+    worker = make_worker(items=[item])
+    worker_box["worker"] = worker
+
+    worker.run()
+
+    assert seen == ["001.jpg"]
+    assert item.status is ReadyItemStatus.READY
+    mock_processor.process_reading.assert_not_called()
+
+
+def test_cancel_during_epub_chapter_iteration_stops_before_next_member(
+    make_worker,
+    mock_processor,
+    fake_load,
+    monkeypatch,
+    tmp_path,
+):
+    from anki_miner.services.reading import epub_source
+
+    epub = tmp_path / "book.epub"
+    container = """<?xml version="1.0"?>
+    <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+      <rootfiles><rootfile full-path="OEBPS/content.opf"
+        media-type="application/oebps-package+xml"/></rootfiles>
+    </container>"""
+    opf = """<?xml version="1.0"?>
+    <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+      <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Book</dc:title></metadata>
+      <manifest>
+        <item id="c1" href="ch1.xhtml" media-type="application/xhtml+xml"/>
+        <item id="c2" href="ch2.xhtml" media-type="application/xhtml+xml"/>
+      </manifest>
+      <spine><itemref idref="c1"/><itemref idref="c2"/></spine>
+    </package>"""
+    chapter = '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>本文です。</p></body></html>'
+    with zipfile.ZipFile(epub, "w") as zf:
+        zf.writestr("META-INF/container.xml", container)
+        zf.writestr("OEBPS/content.opf", opf)
+        zf.writestr("OEBPS/ch1.xhtml", chapter)
+        zf.writestr("OEBPS/ch2.xhtml", chapter)
+    ref = ReadingSourceRef(kind="epub", path=epub, image_root=None, title="Book", volume=None)
+    item = ReadingQueueItem(source=ref, title="Book", kind="epub")
+    seen: list[str] = []
+    worker_box: dict[str, ReadingQueueWorker] = {}
+    original_read_member = epub_source._read_member
+
+    def _read_member(*args, **kwargs):
+        raw = original_read_member(*args, **kwargs)
+        entry = args[1]
+        seen.append(entry)
+        if entry == "OEBPS/ch1.xhtml":
+            worker_box["worker"].cancel()
+        return raw
+
+    monkeypatch.setattr(epub_source, "_read_member", _read_member)
+    fake_load.side_effect = _load_reading_document
+    worker = make_worker(items=[item])
+    worker_box["worker"] = worker
+
+    worker.run()
+
+    assert "OEBPS/ch1.xhtml" in seen
+    assert "OEBPS/ch2.xhtml" not in seen
+    assert item.status is ReadyItemStatus.READY
+    mock_processor.process_reading.assert_not_called()
+
+
+def test_cancel_during_epub_opf_scan_stops_before_later_elements(
+    make_worker,
+    mock_processor,
+    fake_load,
+    monkeypatch,
+    tmp_path,
+):
+    from anki_miner.services.reading import epub_source
+
+    epub = tmp_path / "book.epub"
+    container = """<?xml version="1.0"?>
+    <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+      <rootfiles><rootfile full-path="OEBPS/content.opf"
+        media-type="application/oebps-package+xml"/></rootfiles>
+    </container>"""
+    manifest_items = "".join(
+        f'<item id="i{i:04d}" href="ch{i:04d}.xhtml" media-type="application/xhtml+xml"/>' for i in range(5000)
+    )
+    opf = f"""<?xml version="1.0"?>
+    <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+      <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Book</dc:title></metadata>
+      <manifest>{manifest_items}</manifest>
+      <spine/>
+    </package>"""
+    with zipfile.ZipFile(epub, "w") as zf:
+        zf.writestr("META-INF/container.xml", container)
+        zf.writestr("OEBPS/content.opf", opf)
+    ref = ReadingSourceRef(kind="epub", path=epub, image_root=None, title="Book", volume=None)
+    item = ReadingQueueItem(source=ref, title="Book", kind="epub")
+    elements_after_cancel: list[str] = []
+    worker_box: dict[str, ReadingQueueWorker] = {}
+    original_local = epub_source._local
+
+    def _local(element):
+        item_id = element.get("id")
+        if isinstance(item_id, str) and item_id.startswith("i"):
+            if worker_box["worker"].check_cancelled():
+                elements_after_cancel.append(item_id)
+            if item_id == "i0010":
+                worker_box["worker"].cancel()
+        return original_local(element)
+
+    monkeypatch.setattr(epub_source, "_local", _local)
+    fake_load.side_effect = _load_reading_document
+    worker = make_worker(items=[item])
+    worker_box["worker"] = worker
+
+    worker.run()
+
+    assert worker.check_cancelled()
+    assert elements_after_cancel == []
+    assert item.status is ReadyItemStatus.READY
+    mock_processor.process_reading.assert_not_called()
+
+
+def test_cancel_during_mokuro_image_index_stops_before_later_records(
+    make_worker,
+    mock_processor,
+    fake_load,
+    monkeypatch,
+    tmp_path,
+):
+    from anki_miner.services.reading import mokuro_source
+
+    source = tmp_path / "vol.mokuro"
+    source.write_text(
+        json.dumps(
+            {"pages": [{"img_path": "page.jpg", "blocks": [{"lines": ["本文"]}]}]},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=source,
+        image_root=tmp_path,
+        title="Series",
+        volume="1",
+    )
+    item = ReadingQueueItem(source=ref, title="Series — 1", kind="mokuro")
+    stem_visits: list[int] = []
+    worker_box: dict[str, ReadingQueueWorker] = {}
+
+    class _Record:
+        def __init__(self, index: int) -> None:
+            self.index = index
+            self.raw_key = f"raw-{index}.jpg"
+            self.norm_full = f"full-{index}.jpg"
+            self.ref = ImageRef(tmp_path / f"image-{index}.jpg")
+
+        @property
+        def norm_stem(self) -> str:
+            stem_visits.append(self.index)
+            if self.index == 0:
+                worker_box["worker"].cancel()
+            return f"stem-{self.index}"
+
+    records = [_Record(i) for i in range(5000)]
+    monkeypatch.setattr(mokuro_source, "_list_images", lambda *_args, **_kwargs: records)
+    fake_load.side_effect = _load_reading_document
+    worker = make_worker(items=[item])
+    worker_box["worker"] = worker
+
+    worker.run()
+
+    assert stem_visits == [0]
+    assert item.status is ReadyItemStatus.READY
+    mock_processor.process_reading.assert_not_called()
+
+
+def test_cancel_during_mokuro_positional_pairing_stops_before_later_pages(
+    make_worker,
+    mock_processor,
+    fake_load,
+    monkeypatch,
+    tmp_path,
+):
+    from anki_miner.services.reading import mokuro_source
+
+    pages = [{"img_path": f"page-{i:04d}.jpg", "blocks": [{"lines": ["本文"]}]} for i in range(5000)]
+    source = tmp_path / "vol.mokuro"
+    source.write_text(json.dumps({"pages": pages}, ensure_ascii=False), encoding="utf-8")
+    ref = ReadingSourceRef(
+        kind="mokuro",
+        path=source,
+        image_root=tmp_path,
+        title="Series",
+        volume="1",
+    )
+    item = ReadingQueueItem(source=ref, title="Series — 1", kind="mokuro")
+    records = [
+        mokuro_source._ImageRecord(
+            raw_key=f"page-{i:04d}.jpg",
+            norm_full=f"page-{i:04d}.jpg",
+            norm_stem=f"page-{i:04d}",
+            ref=ImageRef(tmp_path / f"page-{i:04d}.jpg"),
+        )
+        for i in range(5000)
+    ]
+    page_visits: list[str] = []
+    worker_box: dict[str, ReadingQueueWorker] = {}
+    original_norm_key = mokuro_source._norm_key
+
+    def _norm_key(path: str) -> str:
+        if path.startswith("page-"):
+            page_visits.append(path)
+            if len(page_visits) == 1:
+                worker_box["worker"].cancel()
+        return original_norm_key(path)
+
+    monkeypatch.setattr(mokuro_source, "_list_images", lambda *_args, **_kwargs: records)
+    monkeypatch.setattr(mokuro_source, "_norm_key", _norm_key)
+    fake_load.side_effect = _load_reading_document
+    worker = make_worker(items=[item])
+    worker_box["worker"] = worker
+
+    worker.run()
+
+    assert page_visits == ["page-0000.jpg"]
+    assert item.status is ReadyItemStatus.READY
+    mock_processor.process_reading.assert_not_called()
+
+
+def test_cancel_during_subtitle_parse_wins_over_empty_cue_error(
+    make_worker,
+    mock_processor,
+    fake_load,
+    monkeypatch,
+    tmp_path,
+):
+    from anki_miner.services.reading import subtitle_source
+
+    subtitle = tmp_path / "episode.srt"
+    subtitle.write_text("not a cue", encoding="utf-8")
+    ref = ReadingSourceRef(
+        kind="subtitle",
+        path=subtitle,
+        image_root=None,
+        title="episode",
+        volume=None,
+    )
+    item = ReadingQueueItem(source=ref, title="episode", kind="subtitle")
+    worker_box: dict[str, ReadingQueueWorker] = {}
+
+    def _parse(_text: str, *, format_: str):
+        worker_box["worker"].cancel()
+        return []
+
+    monkeypatch.setattr(subtitle_source.pysubs2.SSAFile, "from_string", _parse)
+    fake_load.side_effect = _load_reading_document
+    worker = make_worker(items=[item])
+    worker_box["worker"] = worker
+
+    worker.run()
+
+    assert item.status is ReadyItemStatus.READY
+    assert item.error_message is None
+    mock_processor.process_reading.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

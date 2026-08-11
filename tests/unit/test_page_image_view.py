@@ -84,6 +84,23 @@ class TestClampedBox:
         rect = _PageCanvas.clamped_box((900, 900, 950, 950), 800, 800)
         assert rect.isEmpty()
 
+    def test_extreme_coordinates_are_bounded_before_qrect_construction(self):
+        huge = 10**100
+        rect = _PageCanvas.clamped_box((-huge, -huge, huge, huge), 800, 1200)
+        assert (rect.x(), rect.y(), rect.width(), rect.height()) == (0, 0, 800, 1200)
+
+    @pytest.mark.parametrize(
+        "box",
+        [
+            (60, 20, 10, 90),
+            (10, 90, 60, 20),
+            (10, 20, 10, 90),
+            (10, 20, 60, 20),
+        ],
+    )
+    def test_reversed_or_empty_box_is_ignored(self, box):
+        assert _PageCanvas.clamped_box(box, 100, 100).isEmpty()
+
 
 # ---------------------------------------------------------------------------
 # Widget state machine
@@ -133,6 +150,15 @@ class TestPageImageView:
             else:
                 view.clear()
             view._canvas.grab()  # forces a real paintEvent pass
+
+    def test_paints_extreme_and_reversed_boxes_without_error(self, qtbot):
+        view = PageImageView()
+        qtbot.addWidget(view)
+        view.resize(300, 400)
+        huge = 10**100
+        for box in ((-huge, -huge, huge, huge), (90, 90, 10, 10)):
+            view.show_page(_pixmap(), box, "p.1")
+            view._canvas.grab()
 
 
 # ---------------------------------------------------------------------------
