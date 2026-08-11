@@ -7,7 +7,9 @@ under test:
 * Add: validates both paths exist, creates a READY item, renders a row,
   clears both file pickers; rejections log an error and leave the pickers.
 * Auto-fill: picking an audio file fills the subtitle picker with the
-  same-stem subtitle next to it — only when the subtitle field is empty.
+  same-stem subtitle next to it. An empty field is filled, and a value the
+  previous auto-fill put there is replaced; a subtitle the user chose is
+  never overwritten.
 * Buttons: Mine enabled iff ≥1 READY item and no run; Clear iff the
   queue is non-empty; Stop visible only during a run.
 * Mine instantiates :class:`AudiobookQueueWorker` over a READY-items
@@ -214,6 +216,38 @@ class TestAutoFill:
         tab.audio_selector.set_path(str(audio))
 
         assert tab.subtitle_selector.get_path() == str(other)
+
+    def test_audio_change_replaces_previous_autofill(self, tab, tmp_path):
+        audio_a, subtitle_a = _make_pair(tmp_path, "a")
+        audio_b, subtitle_b = _make_pair(tmp_path, "b")
+
+        tab.audio_selector.set_path(str(audio_a))
+        assert tab.subtitle_selector.get_path() == str(subtitle_a)
+
+        tab.audio_selector.set_path(str(audio_b))
+
+        assert tab.subtitle_selector.get_path() == str(subtitle_b)
+        tab._on_add_clicked()
+        item = tab._queue.all_items()[0]
+        assert item.audio_file == audio_b
+        assert item.subtitle_file == subtitle_b
+
+    def test_audio_change_preserves_user_subtitle_for_worker(self, tab, tmp_path):
+        audio_a, _ = _make_pair(tmp_path, "a")
+        audio_b, _ = _make_pair(tmp_path, "b")
+        chosen_subtitle = tmp_path / "narrator-edited.srt"
+        chosen_subtitle.touch()
+
+        tab.audio_selector.set_path(str(audio_a))
+        tab.subtitle_selector.set_path(str(chosen_subtitle))
+        tab.audio_selector.set_path(str(audio_b))
+
+        assert tab.subtitle_selector.get_path() == str(chosen_subtitle)
+        tab._on_add_clicked()
+        tab._on_mine_clicked()
+        item = tab._queue_worker_cls.call_args.kwargs["items"][0]
+        assert item.audio_file == audio_b
+        assert item.subtitle_file == chosen_subtitle
 
     def test_no_autofill_when_no_match(self, tab, tmp_path):
         audio = tmp_path / "lonely.m4b"

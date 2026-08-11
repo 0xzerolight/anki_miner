@@ -151,6 +151,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self._queue: AudiobookQueue = AudiobookQueue()
         self._row_widgets: dict[AudiobookQueueItem, AudiobookQueueItemWidget] = {}
         self._list_items: dict[AudiobookQueueItem, QListWidgetItem] = {}
+        self._last_auto_filled_subtitle: str | None = None
 
         # Launch-banner + queue-list strings, kept in this tab's tr-context (see
         # the i18n note in _queue_mining_tab_base). Built once at construction
@@ -342,19 +343,32 @@ class AudiobookTab(_ListQueueMiningTabBase):
     def _on_audio_path_changed(self, text: str) -> None:
         """Auto-fill the subtitle picker with the same-stem subtitle next to the audio file.
 
-        Fills ONLY when the subtitle field is currently empty — a user-chosen
-        subtitle is never overwritten.
+        Replaces this tab's prior auto-fill when the audio changes. A
+        user-chosen subtitle is never overwritten.
         """
-        if self.subtitle_selector.get_path().strip():
+        current_subtitle = self.subtitle_selector.path_or_none()
+        owns_subtitle = (
+            self._last_auto_filled_subtitle is not None and current_subtitle == self._last_auto_filled_subtitle
+        )
+        if current_subtitle is not None and not owns_subtitle:
+            self._last_auto_filled_subtitle = None
             return
+
+        self._last_auto_filled_subtitle = None
         audio = Path(text) if text.strip() else None
         if audio is None or not audio.is_file():
+            if owns_subtitle:
+                self.subtitle_selector.clear()
             return
         for ext in _SUBTITLE_EXTS:
             candidate = audio.with_suffix(ext)
             if candidate.is_file():
-                self.subtitle_selector.set_path(str(candidate))
+                subtitle_path = str(candidate)
+                self._last_auto_filled_subtitle = subtitle_path
+                self.subtitle_selector.set_path(subtitle_path)
                 return
+        if owns_subtitle:
+            self.subtitle_selector.clear()
 
     def _on_add_clicked(self) -> None:
         """Validate the picked pair and append it to the queue as a READY item."""
@@ -391,9 +405,8 @@ class AudiobookTab(_ListQueueMiningTabBase):
 
         item = self._queue.add(Path(audio_text), Path(sub_text))
         self._render_new_item(item)
-        # Clearing is order-independent: _on_audio_path_changed bails on empty
-        # text, so the pickers can be cleared in any order without the auto-fill
-        # re-triggering.
+        # Clearing audio removes only a subtitle still owned by auto-fill;
+        # explicit subtitle clearing handles a user-chosen value.
         self.audio_selector.clear()
         self.subtitle_selector.clear()
         self._recompute_buttons()
