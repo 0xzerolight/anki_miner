@@ -38,6 +38,8 @@ import stat
 from pathlib import Path, PureWindowsPath
 from typing import Callable, Literal, TypeVar
 
+from anki_miner.utils.slug import is_windows_device_basename
+
 logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
@@ -69,6 +71,7 @@ def validate_store_id(store_id: str) -> None:
         or "\x00" in store_id
         or Path(store_id).is_absolute()
         or bool(PureWindowsPath(store_id).drive)
+        or is_windows_device_basename(store_id)
     ):
         raise ValueError(f"Invalid managed store id: {store_id!r}")
 

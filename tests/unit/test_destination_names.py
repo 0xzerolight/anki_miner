@@ -20,13 +20,31 @@ from PyQt6.QtWidgets import QMenuBar
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.gui.capabilities import MAIN_TABS, SETTINGS_SUBTABS, SUBTAB_KEYS
+from anki_miner.gui.utils.profile_store import MAX_PROFILES, ProfileStore
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.workers import condense_worker
 from anki_miner.gui.workers.condense_worker import CondenseItem
 from anki_miner.utils import file_pairing
+from anki_miner.utils.slug import slugify
+
+WINDOWS_DEVICE_BASENAMES = (
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{index}" for index in range(1, 10)),
+    *(f"LPT{index}" for index in range(1, 10)),
+    "COM¹",
+    "COM²",
+    "COM³",
+    "LPT¹",
+    "LPT²",
+    "LPT³",
+)
+WINDOWS_DEVICE_BASENAMES_CASEFOLDED = frozenset(name.casefold() for name in WINDOWS_DEVICE_BASENAMES)
 
 
 @pytest.fixture
@@ -171,3 +189,52 @@ def test_bulk_output_resolution_keeps_posix_case_distinct_plans(tmp_path, monkey
         tmp_path / "Episode_condensed.mp3",
         tmp_path / "episode_condensed.mp3",
     ]
+
+
+def test_long_cjk_profile_ids_fit_the_filesystem_component_limit():
+    profile = ProfileStore.create("設定" * 22, create_default_config())
+
+    assert len(f"{profile.id}.json".encode()) <= 255
+
+
+def test_distinct_truncated_profile_ids_keep_distinct_hashes():
+    prefix = "設定" * 22
+
+    first = ProfileStore.create(f"{prefix}甲", create_default_config())
+    second = ProfileStore.create(f"{prefix}乙", create_default_config())
+    first_tail = first.id.rsplit("-", 1)[-1]
+    second_tail = second.id.rsplit("-", 1)[-1]
+
+    assert len(first_tail) == len(second_tail) == 8
+    assert all(ch in "0123456789abcdef" for ch in first_tail + second_tail)
+    assert first_tail != second_tail
+    assert len(f"{first.id}.json".encode()) <= 255
+    assert len(f"{second.id}.json".encode()) <= 255
+
+    ProfileStore.delete(first.id)
+    ProfileStore.delete(second.id)
+    recreated_second = ProfileStore.create(f"{prefix}乙", create_default_config())
+    recreated_first = ProfileStore.create(f"{prefix}甲", create_default_config())
+
+    assert recreated_first.id == first.id
+    assert recreated_second.id == second.id
+
+
+def test_truncated_profile_id_collisions_leave_room_for_the_suffix():
+    prefix = "設定" * 22
+    config = create_default_config()
+
+    first = ProfileStore.create(f"{prefix}!", config)
+    for suffix in range(2, MAX_PROFILES):
+        ProfileStore.write_profile(f"{first.id}-{suffix}", config, name=f"Occupied {suffix}")
+    last = ProfileStore.create(f"{prefix}?", config)
+
+    assert last.id == f"{first.id}-{MAX_PROFILES}"
+    assert len(f"{last.id}.json".encode()) <= 255
+
+
+@pytest.mark.parametrize("name", WINDOWS_DEVICE_BASENAMES)
+def test_windows_device_basenames_get_safe_slugs(name: str):
+    slug = slugify(name, fallback="profile")
+
+    assert slug.casefold() not in WINDOWS_DEVICE_BASENAMES_CASEFOLDED

@@ -203,6 +203,22 @@ class TestProfileIdTraversal:
         "",
     ]
 
+    WINDOWS_DEVICE_IDS = [
+        "CON",
+        "prn",
+        "Aux",
+        "nul",
+        *(f"com{index}" for index in range(1, 10)),
+        *(f"lpt{index}" for index in range(1, 10)),
+        "COM¹",
+        "com²",
+        "Com³",
+        "LPT¹",
+        "lpt²",
+        "Lpt³",
+        "con.backup",
+    ]
+
     @staticmethod
     def _seed_live_config() -> Path:
         live = GUIConfigManager.CONFIG_FILE
@@ -268,6 +284,11 @@ class TestProfileIdTraversal:
 
         assert ProfileStore.list_profiles() == ()
         assert not (ProfileStore.profiles_dir() / f"{profile_id}.json").exists()
+
+    @pytest.mark.parametrize("profile_id", WINDOWS_DEVICE_IDS)
+    def test_an_external_windows_device_id_is_rejected(self, profile_id: str):
+        with pytest.raises(ValueError, match="Invalid profile id"):
+            ProfileStore.read_profile(profile_id)
 
 
 class TestRoundTrip:
@@ -415,6 +436,17 @@ class TestCreate:
 
         assert not (ProfileStore.profiles_dir() / "one-too-many.json").exists()
 
+    def test_failed_directory_scan_prevents_creation(self, monkeypatch):
+        existing = _write_raw("anime", {"profile_name": "Anime"})
+        before = existing.read_bytes()
+        _break_scandir(monkeypatch)
+
+        with pytest.raises(OSError, match="enumerate"):
+            ProfileStore.create("Novels", create_default_config())
+
+        assert existing.read_bytes() == before
+        assert not (ProfileStore.profiles_dir() / "novels.json").exists()
+
 
 class TestRename:
     def test_rename_changes_only_the_display_name(self):
@@ -471,6 +503,16 @@ class TestRename:
 
         with pytest.raises(ValueError):
             ProfileStore.rename("anime", "Anime Deux")
+
+    def test_failed_directory_scan_prevents_rename(self, monkeypatch):
+        path = _write_raw("anime", {"profile_name": "Anime"})
+        before = path.read_bytes()
+        _break_scandir(monkeypatch)
+
+        with pytest.raises(OSError, match="enumerate"):
+            ProfileStore.rename("anime", "Anime Deux")
+
+        assert path.read_bytes() == before
 
 
 class TestDelete:
