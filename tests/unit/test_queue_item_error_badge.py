@@ -31,6 +31,19 @@ def test_error_status_renders_error_badge(qapp, qtbot):
     assert widget.status_badge.text() != "Pending"
 
 
+def test_complete_zero_card_row_never_says_ready(qapp, qtbot):
+    widget = QueueItemWidget("Series")
+    qtbot.addWidget(widget)
+
+    widget.set_episode_count(2)
+    widget.set_status("complete")
+    widget.set_cards_created(0)
+
+    assert widget.status_badge.text() == "Complete"
+    assert widget.stats_label.text() == "2 episodes • 0 cards created"
+    assert "Ready" not in widget.stats_label.text()
+
+
 def test_on_item_failed_sets_error_status(qapp, qtbot, test_config):
     """_on_item_failed marks the failed row with the 'error' status."""
     tab = BatchProcessingTab(

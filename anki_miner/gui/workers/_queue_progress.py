@@ -38,9 +38,11 @@ class QueueMiningProgressAdapter:
         self,
         idx: int,
         emit: Callable[[int, str], None],
+        warning: Callable[[int, str, str], None] | None = None,
     ) -> None:
         self._idx = idx
         self._emit = emit
+        self._warning = warning
         self._position = ""
         self._name = ""
         self._total = 0
@@ -105,8 +107,15 @@ class QueueMiningProgressAdapter:
         return
 
     def on_error(self, item_description: str, error_message: str) -> None:
-        # No-op. Per-item mining failures surface as exceptions that the
-        # queue worker's except clause routes to ``item_finished``.
-        # Emitting progress here would re-trigger a busy animation after
-        # mining already failed.
-        return
+        # This callback also carries nonfatal media losses: the pipeline can
+        # still create other cards, so the item may later finish successfully.
+        # Keep it out of the progress label while preserving it for Activity.
+        if self._warning is not None:
+            self._warning(self._idx, item_description, error_message)
+            return
+        # Existing queue-worker adapter call sites pass only the text emitter.
+        # The worker owns the run context, so it supplies the warning channel
+        # without making all three concrete workers duplicate this plumbing.
+        from anki_miner.gui.workers._queue_worker_base import _emit_active_queue_warning
+
+        _emit_active_queue_warning(self._idx, item_description, error_message)

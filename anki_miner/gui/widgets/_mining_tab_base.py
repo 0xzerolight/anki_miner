@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from PyQt6.QtCore import QThread
 
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
@@ -99,6 +100,15 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     # ------------------------------------------------------------------
     # Progress callback wiring
     # ------------------------------------------------------------------
+
+    def bind_task_registry(self, registry: TaskRegistry) -> None:
+        """Bind both global task views and this screen's elapsed display."""
+        super().bind_task_registry(registry)
+        progress = getattr(self, "progress_widget", None)
+        if progress is None:
+            progress = getattr(self, "overall_progress_widget", None)
+        if progress is not None:
+            progress.bind_task(registry, self.TASK_ID)
 
     def _wire_progress_callback(self, callback: GUIProgressCallback) -> None:
         """Connect the five progress signals to the matching ``_on_progress_*`` slots.

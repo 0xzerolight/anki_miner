@@ -55,6 +55,7 @@ from anki_miner.models import TerminalOutcome
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
+    from anki_miner.gui.controllers.task_registry import TaskRegistry
     from anki_miner.gui.workers.base_worker import CancellableWorker
 
 
@@ -108,6 +109,11 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     #: ``"tools.condense.output"``. Left empty by a subclass that does not want
     #: its output folder remembered; the chooser then behaves as it always did.
     OUTPUT_HISTORY_KEY: str = ""
+
+    def bind_task_registry(self, registry: TaskRegistry) -> None:
+        """Bind both global task views and this screen's elapsed display."""
+        super().bind_task_registry(registry)
+        self.progress_widget.bind_task(registry, self.TASK_ID)
 
     def _run_availability_scan(
         self,
@@ -288,6 +294,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         total = self._item_total()
         if total:
             self.progress_widget.set_percent(int((idx + 1) / total * 100))
+        self._publish_task_count(current=idx + 1, total=total or None, detail="")
         path_label = str(out_path) if out_path else ""
         self.log_widget.append_info(
             self._strings.skipped_prefix + Path(path_label).name if path_label else self._strings.skipped

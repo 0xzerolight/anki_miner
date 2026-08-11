@@ -9,11 +9,17 @@ NOT change the bar's maximum to ``maximum`` (the item count), otherwise
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSpec
+from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 
 
 @pytest.fixture
@@ -203,6 +209,105 @@ def test_show_completion_pins_100_and_freezes_stats(widget):
 def test_stats_line_has_no_rate_display(widget):
     widget.set_percent(50, "working")
     assert "/sec" not in widget.stats_label.text()
+
+
+def test_registry_clock_includes_time_before_and_between_progress_signals(widget):
+    registry = TaskRegistry()
+    qt_task = "test.progress.clock"
+    assert hasattr(widget, "bind_task")
+    widget.bind_task(registry, qt_task)
+    registry.start(
+        TaskSpec(
+            task_id=qt_task,
+            title="Clock test",
+            owner=CapabilityTarget("video", "youtube"),
+        ),
+        now=10.0,
+    )
+
+    # The first minute belongs to the run even though no positive progress has
+    # arrived yet.
+    registry.tick(now=70.0)
+    assert widget.stats_label.text() == "01:00"
+
+    widget.set_percent(25, "First item finished")
+    before_silence = widget.stats_label.text()
+
+    # No worker signal arrives during the next minute. The registry's existing
+    # monotonic tick still advances both elapsed time and ETA.
+    registry.tick(now=130.0)
+    assert before_silence == "01:00 | ETA ~03:00"
+    assert widget.stats_label.text() == "02:00 | ETA ~06:00"
+    registry.shutdown()
+
+
+def _assert_tab_binds_its_progress_clock(tab, progress_widget, qtbot):
+    qtbot.addWidget(tab)
+    registry = TaskRegistry()
+    try:
+        tab.bind_task_registry(registry)
+        assert tab.TASK_OWNER is not None
+        registry.start(
+            TaskSpec(
+                task_id=tab.TASK_ID,
+                title="Clock test",
+                owner=tab.TASK_OWNER,
+            ),
+            now=10.0,
+        )
+
+        registry.tick(now=70.0)
+
+        assert progress_widget.stats_label.text() == "01:00"
+    finally:
+        registry.shutdown()
+
+
+def test_single_episode_production_binding_updates_its_elapsed_clock(qtbot, test_config):
+    tab = SingleEpisodeTab(
+        config=test_config,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+
+    _assert_tab_binds_its_progress_clock(tab, tab.progress_widget, qtbot)
+
+
+def test_single_episode_completion_keeps_terminal_elapsed_without_eta(qtbot, test_config, monkeypatch):
+    tab = SingleEpisodeTab(
+        config=test_config,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+    qtbot.addWidget(tab)
+    registry = TaskRegistry()
+    clock = [10.0]
+    monkeypatch.setattr(registry, "_now", lambda supplied: clock[0] if supplied is None else supplied)
+    try:
+        tab.bind_task_registry(registry)
+        tab._publish_task_start("Single episode")
+        tab.progress_widget.set_percent(80, "Creating cards")
+        registry.tick(now=610.0)
+
+        tab.progress_widget.show_completion("Complete — 1 card created")
+        assert tab.progress_widget.stats_label.text() == "10:00"
+
+        clock[0] = 610.0
+        tab._on_run_thread_finished()
+
+        assert tab.progress_widget.stats_label.text() == "10:00"
+    finally:
+        registry.shutdown()
+
+
+def test_batch_production_binding_updates_its_elapsed_clock(qtbot, test_config):
+    tab = BatchProcessingTab(
+        config=test_config,
+        presenter=MagicMock(name="Presenter"),
+        progress_callback=MagicMock(name="ProgressCallback"),
+    )
+
+    _assert_tab_binds_its_progress_clock(tab, tab.overall_progress_widget, qtbot)
 
 
 class TestClockTypeface:

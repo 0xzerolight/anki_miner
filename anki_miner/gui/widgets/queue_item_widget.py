@@ -312,7 +312,7 @@ class QueueItemWidget(QueueSelectionMixin, QFrame):
             sign = "+" if self._subtitle_offset > 0 else ""
             offset_str = tr_format(self.tr(" • Offset: %1"), f"{sign}{self._subtitle_offset:.1f}s")
 
-        if self._status == "complete" and self._cards_created > 0:
+        if self._status == "complete":
             stats_text = (
                 tr_format(
                     self.tr("%1 episodes • %2 cards created"),
