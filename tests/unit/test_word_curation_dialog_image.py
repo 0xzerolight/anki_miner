@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtGui import QColor, QImage
+from PyQt6.QtGui import QColor, QImage, QPixmap
 
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
@@ -232,6 +232,35 @@ class TestPlaceholders:
 
 
 class TestCache:
+    def test_revisit_reuses_cached_pixmap_and_byte_accounting(self, qtbot, sync_off_thread, monkeypatch):
+        conversions = MagicMock(side_effect=QPixmap.fromImage)
+        pixmap_api = MagicMock()
+        pixmap_api.fromImage = conversions
+        monkeypatch.setattr(wcd, "QPixmap", pixmap_api)
+        units = _make_units((0, "001.png", "p.1"), (1, "002.png", "p.2"))
+        dlg = WordCurationDialog(
+            [_make_word("word0", 0), _make_word("word1", 1)],
+            media_context=_image_context(units),
+        )
+        qtbot.addWidget(dlg)
+
+        dlg._request_page_image(0)
+        first_pixmap = dlg.page_image_view.current_pixmap
+        dlg._request_page_image(1)
+        dlg._request_page_image(0)
+
+        assert conversions.call_count == 2
+        assert dlg.page_image_view.current_pixmap is first_pixmap
+        first_ref = units[0].image_ref
+        second_ref = units[1].image_ref
+        assert list(dlg._page_cache) == [second_ref, first_ref]
+        cached_pixmap, byte_count = dlg._page_cache[first_ref]
+        assert cached_pixmap is first_pixmap
+        assert byte_count == conversions.call_args_list[0].args[0].sizeInBytes()
+        assert sum(entry[1] for entry in dlg._page_cache.values()) == sum(
+            call.args[0].sizeInBytes() for call in conversions.call_args_list
+        )
+
     def test_same_page_second_word_hits_cache(self, qtbot, sync_off_thread):
         units = _make_units((0, "001.png", "p.1"), (1, "001.png", "p.1"))
         words = [_make_word("食べる", 0), _make_word("走る", 1)]

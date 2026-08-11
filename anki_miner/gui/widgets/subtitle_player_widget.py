@@ -650,6 +650,8 @@ class SubtitlePlayerWidget(QWidget):
     def _on_eof(self, value: object) -> None:
         """eof-reached observer (bool; None while idle)."""
         self._at_eof = bool(value)
+        if self._at_eof:
+            self.cancel_range()
 
     def _on_playback_error(self, message: str) -> None:
         """Surface a playback error in the subtitle strip (old-backend parity)."""
