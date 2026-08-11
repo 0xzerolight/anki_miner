@@ -21,6 +21,17 @@ def test_atomic_write_path_fault_preserves_existing_file(tmp_path: Path) -> None
     assert sorted(child.name for child in tmp_path.iterdir()) == [dest.name]
 
 
+def test_atomic_write_path_supports_near_limit_destination_name(tmp_path: Path) -> None:
+    dest = tmp_path / ("x" * 250 + ".txt")
+    dest.write_bytes(b"old")
+
+    with atomic_write_path(dest) as staged:
+        staged.write_bytes(b"new")
+
+    assert dest.read_bytes() == b"new"
+    assert sorted(child.name for child in tmp_path.iterdir()) == [dest.name]
+
+
 def test_atomic_replace_dir_fault_restores_old_target(tmp_path: Path, monkeypatch) -> None:
     dest = tmp_path / "resource"
     dest.mkdir()

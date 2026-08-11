@@ -17,7 +17,7 @@ from anki_miner.utils.robust_fs import robust_rmtree
 @contextmanager
 def atomic_write_path(dest: Path) -> Iterator[Path]:
     """Yield a unique sibling temp path, then atomically replace *dest*."""
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{dest.stem}-", suffix=dest.suffix, dir=dest.parent)
+    fd, tmp_name = tempfile.mkstemp(prefix=".anki-miner-", suffix=dest.suffix, dir=dest.parent)
     os.close(fd)
     tmp = Path(tmp_name)
     try:

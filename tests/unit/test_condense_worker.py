@@ -11,6 +11,7 @@ faked. No real ffmpeg or ffprobe is invoked.
 
 from __future__ import annotations
 
+import unicodedata
 from pathlib import Path
 
 import pysubs2
@@ -20,7 +21,11 @@ pytest.importorskip("PyQt6.QtCore")
 
 import anki_miner.services.audio_condenser as ac
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
+from anki_miner.gui.workers.condense_worker import (
+    CondenseItem,
+    CondenseOutputCollisionError,
+    CondenseWorker,
+)
 from anki_miner.services.audio_condenser import EncoderUnavailableError, FfmpegStepFailure
 from anki_miner.utils.audio_track_detector import SubtitleStream
 
@@ -220,6 +225,174 @@ def test_output_dir_used_and_created(qapp, tmp_path):
 
     assert out_dir.exists()
     assert cap["finished"][0][1] == out_dir / "ep01_condensed.mp3"
+
+
+def test_near_limit_media_stem_uses_bounded_output_name(qapp, tmp_path):
+    config = _make_config(tmp_path)
+    media = tmp_path / ("v" * 245 + ".mkv")
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "dialogue.srt", [(1000, 2000, "hi")])
+
+    service = _FakeService()
+    worker = _make_worker([CondenseItem(media, sub)], config, service=service)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    _idx, out, err = cap["finished"][0]
+    assert err is None
+    assert out is not None
+    assert len(out.name.encode("utf-8")) <= 255
+    assert out.name.endswith("_condensed.mp3")
+    assert out.exists()
+
+
+@pytest.mark.parametrize("supply_output_paths", [False, True], ids=["worker-planned", "caller-supplied"])
+def test_duplicate_output_plan_is_rejected_before_condense_work(qapp, tmp_path, supply_output_paths):
+    config = _make_config(tmp_path)
+    media_mkv = tmp_path / "episode.mkv"
+    media_mp4 = tmp_path / "episode.mp4"
+    media_mkv.write_bytes(b"")
+    media_mp4.write_bytes(b"")
+    sub = _write_srt(tmp_path / "episode.srt", [(1000, 2000, "hi")])
+    output = tmp_path / "episode_condensed.mp3"
+    kwargs = {"output_paths": [output, output]} if supply_output_paths else {}
+
+    service = _FakeService()
+    try:
+        worker = _make_worker(
+            [CondenseItem(media_mkv, sub), CondenseItem(media_mp4, sub)],
+            config,
+            service=service,
+            **kwargs,
+        )
+    except ValueError as exc:
+        assert type(exc).__name__ == "CondenseOutputCollisionError"
+    else:
+        worker.run()
+        worker.wait(2000)
+
+    assert service.condense_calls == []
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("alias_kind", ["dotdot", "symlink"])
+def test_worker_planner_rejects_output_directory_aliases_and_scans_once(qapp, tmp_path, monkeypatch, alias_kind):
+    real = tmp_path / "real"
+    real.mkdir()
+    alias = real / ".." / "real"
+    if alias_kind == "symlink":
+        alias = tmp_path / "alias"
+        try:
+            alias.symlink_to(real, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"directory symlinks unavailable: {exc}")
+
+    media_mkv = real / "episode.mkv"
+    media_mp4 = real / "episode.mp4"
+    media_mkv.write_bytes(b"")
+    media_mp4.write_bytes(b"")
+    items = [CondenseItem(media_mkv), CondenseItem(alias / media_mp4.name)]
+    scans: list[Path] = []
+    real_iterdir = Path.iterdir
+
+    def counted_iterdir(path: Path):
+        scans.append(path)
+        return real_iterdir(path)
+
+    monkeypatch.setattr(Path, "iterdir", counted_iterdir)
+    service = _FakeService()
+
+    with pytest.raises(CondenseOutputCollisionError):
+        _make_worker(items, _make_config(tmp_path), service=service)
+
+    assert scans == [real.resolve()]
+    assert service.condense_calls == []
+
+
+@pytest.mark.parametrize("alias_kind", ["dotdot", "symlink"])
+def test_worker_rejects_caller_supplied_output_directory_aliases(qapp, tmp_path, alias_kind):
+    real = tmp_path / "real"
+    real.mkdir()
+    alias = real / ".." / "real"
+    if alias_kind == "symlink":
+        alias = tmp_path / "alias"
+        try:
+            alias.symlink_to(real, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"directory symlinks unavailable: {exc}")
+
+    items = [CondenseItem(tmp_path / "one.mkv"), CondenseItem(tmp_path / "two.mkv")]
+    output_paths = [real / "episode_condensed.mp3", alias / "episode_condensed.mp3"]
+    service = _FakeService()
+
+    with pytest.raises(CondenseOutputCollisionError):
+        _make_worker(
+            items,
+            _make_config(tmp_path),
+            service=service,
+            output_paths=output_paths,
+        )
+
+    assert service.condense_calls == []
+
+
+@pytest.mark.parametrize("supply_output_paths", [False, True], ids=["worker-planned", "caller-supplied"])
+def test_worker_rejects_clean_nfc_nfd_output_plan(qapp, tmp_path, supply_output_paths):
+    decomposing_stem = "が01"
+    nfc_stem = unicodedata.normalize("NFC", decomposing_stem)
+    nfd_stem = unicodedata.normalize("NFD", decomposing_stem)
+    assert nfc_stem.encode("utf-8") != nfd_stem.encode("utf-8")
+
+    items = [
+        CondenseItem(tmp_path / f"{nfc_stem}.mkv"),
+        CondenseItem(tmp_path / f"{nfd_stem}.mp4"),
+    ]
+    kwargs = (
+        {
+            "output_paths": [
+                tmp_path / f"{nfc_stem}_condensed.mp3",
+                tmp_path / f"{nfd_stem}_condensed.mp3",
+            ]
+        }
+        if supply_output_paths
+        else {}
+    )
+    service = _FakeService()
+
+    with pytest.raises(CondenseOutputCollisionError):
+        _make_worker(items, _make_config(tmp_path), service=service, **kwargs)
+
+    assert service.condense_calls == []
+
+
+@pytest.mark.parametrize("supply_output_paths", [False, True], ids=["worker-planned", "caller-supplied"])
+def test_worker_keeps_existing_exact_nfc_nfd_output_twins(qapp, tmp_path, supply_output_paths):
+    decomposing_stem = "が01"
+    nfc_stem = unicodedata.normalize("NFC", decomposing_stem)
+    nfd_stem = unicodedata.normalize("NFD", decomposing_stem)
+    assert nfc_stem.encode("utf-8") != nfd_stem.encode("utf-8")
+    items = [
+        CondenseItem(tmp_path / f"{nfc_stem}.mkv"),
+        CondenseItem(tmp_path / f"{nfd_stem}.mp4"),
+    ]
+    output_paths = [
+        tmp_path / f"{nfc_stem}_condensed.mp3",
+        tmp_path / f"{nfd_stem}_condensed.mp3",
+    ]
+    output_paths[0].write_bytes(b"nfc")
+    output_paths[1].write_bytes(b"nfd")
+    kwargs = {"output_paths": output_paths} if supply_output_paths else {}
+    service = _FakeService()
+
+    worker = _make_worker(items, _make_config(tmp_path), service=service, **kwargs)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert cap["skipped"] == [(0, output_paths[0]), (1, output_paths[1])]
+    assert cap["finished"] == []
+    assert service.condense_calls == []
 
 
 # ---------------------------------------------------------------------------
