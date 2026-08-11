@@ -92,12 +92,16 @@ class BackgroundTaskController(QObject):
     MainWindow):
         validation_result: ValidationResult from a finished validation worker.
         validation_error: error message from a failed validation worker.
+        validation_result_for_endpoint: tested endpoint and ValidationResult.
+        validation_error_for_endpoint: tested endpoint and error message.
         update_check_result: UpdateInfo | None from the update check worker.
         jmdict_migration_finished: ``(dict_id, meta)`` from the migration worker.
     """
 
     validation_result = pyqtSignal(object)  # ValidationResult
     validation_error = pyqtSignal(str)
+    validation_result_for_endpoint = pyqtSignal(str, object)  # endpoint, ValidationResult
+    validation_error_for_endpoint = pyqtSignal(str, str)  # endpoint, error message
     update_check_result = pyqtSignal(object)  # UpdateInfo | None
     ytdlp_update_result = pyqtSignal(object)  # YtdlpUpdateResult
     jmdict_migration_finished = pyqtSignal(str, dict)  # (dict_id, meta)
@@ -117,6 +121,7 @@ class BackgroundTaskController(QObject):
         # The window-level worker handles. Held here so the QThreads
         # aren't GC'd mid-run and so shutdown() can join them.
         self.validation_worker: ValidationWorkerThread | None = None
+        self._validation_endpoints: dict[QObject, str] = {}
         self.update_worker: UpdateWorkerThread | None = None
         self.ytdlp_update_worker: YtdlpUpdateWorker | None = None
         self.jmdict_migration_worker: ImportWorker | None = None
@@ -167,12 +172,25 @@ class BackgroundTaskController(QObject):
         if still_running(self.validation_worker):
             return False
         worker = ValidationWorkerThread(service, self)
+        self._validation_endpoints[worker] = service.config.ankiconnect_url
         self.validation_worker = worker
         worker.result_ready.connect(self.validation_result)
         worker.error.connect(self.validation_error)
+        worker.result_ready.connect(self._forward_validation_result_for_endpoint)
+        worker.error.connect(self._forward_validation_error_for_endpoint)
         worker.finished.connect(lambda w=worker: self._release_worker("validation_worker", w))
         worker.start()
         return True
+
+    def _forward_validation_result_for_endpoint(self, result: object) -> None:
+        sender = self.sender()
+        endpoint = self._validation_endpoints.get(sender, "") if sender is not None else ""
+        self.validation_result_for_endpoint.emit(endpoint, result)
+
+    def _forward_validation_error_for_endpoint(self, error_message: str) -> None:
+        sender = self.sender()
+        endpoint = self._validation_endpoints.get(sender, "") if sender is not None else ""
+        self.validation_error_for_endpoint.emit(endpoint, error_message)
 
     def check_for_updates(self) -> None:
         """Start the update check worker unless one is already running."""
@@ -550,6 +568,7 @@ class BackgroundTaskController(QObject):
         """
         if getattr(self, attr, None) is worker:
             setattr(self, attr, None)
+        self._validation_endpoints.pop(worker, None)
         worker.deleteLater()
 
     # --- Shutdown join policy ------------------------------------------------

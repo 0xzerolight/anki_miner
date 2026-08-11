@@ -13,6 +13,15 @@ from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.services.note_presets import preset_by_id
 
 
+def test_ankiconnect_url_getter_strips_surrounding_whitespace(qtbot, test_config):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_ankiconnect_url("  http://127.0.0.1:9999  ")
+
+    assert panel.get_ankiconnect_url() == "http://127.0.0.1:9999"
+    assert panel.contribute(test_config).ankiconnect_url == "http://127.0.0.1:9999"
+
+
 def test_deck_and_notetype_are_strict_combos(qtbot):
     panel = AnkiSettingsPanel()
     qtbot.addWidget(panel)

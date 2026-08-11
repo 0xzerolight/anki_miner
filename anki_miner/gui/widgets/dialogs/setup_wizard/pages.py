@@ -216,6 +216,7 @@ class AnkiConnectPage(QWizardPage):
         self._wizard = wizard
         self._reachable = False
         self._worker: SingleCallWorker | None = None
+        self._active_recheck_url: str | None = None
 
         self.setTitle(self.tr("Connect to Anki"))
         self.setSubTitle(self.tr("Anki Miner talks to Anki through the AnkiConnect add-on."))
@@ -253,6 +254,7 @@ class AnkiConnectPage(QWizardPage):
         self.result_label = QLabel("")
         self.result_label.setWordWrap(True)
         layout.addWidget(self.result_label)
+        self.url_input.textChanged.connect(self._on_url_changed)
 
     def initializePage(self) -> None:
         """Fire one auto recheck so the happy path is zero clicks."""
@@ -262,10 +264,20 @@ class AnkiConnectPage(QWizardPage):
     def isComplete(self) -> bool:
         return self._reachable
 
+    def _on_url_changed(self, _text: str) -> None:
+        self._reachable = False
+        self.badge.set_status("pending")
+        self.badge.setToolTip("")
+        self.result_label.clear()
+        self.completeChanged.emit()
+
+    def _normalized_url(self) -> str:
+        return self.url_input.text().strip()
+
     def _write_url_to_config(self) -> None:
         """Stage the URL field into the working config."""
-        url = self.url_input.text().strip()
-        if url and url != self._wizard.working_config().ankiconnect_url:
+        url = self._normalized_url()
+        if url != self._wizard.working_config().ankiconnect_url:
             self._wizard.update_working_config(replace(self._wizard.working_config(), ankiconnect_url=url))
 
     def stage_current_edits(self) -> None:
@@ -284,6 +296,14 @@ class AnkiConnectPage(QWizardPage):
         if self._worker is not None and self._worker.isRunning():
             return
         self._write_url_to_config()
+        url = self._normalized_url()
+        if not url:
+            self._reachable = False
+            self.badge.set_status("error", self.tr("Enter an AnkiConnect URL."))
+            self.result_label.setText(self.tr("Enter an AnkiConnect URL."))
+            self.completeChanged.emit()
+            return
+        self._active_recheck_url = url
         self.badge.set_status("checking", self.tr("Checking connection..."))
         self.result_label.setText(self.tr("Checking connection..."))
         self.recheck_button.setEnabled(False)
@@ -299,6 +319,8 @@ class AnkiConnectPage(QWizardPage):
         """Main-thread slot: update the badge + reachability from the check result."""
         ok, message = result if isinstance(result, tuple) else (False, str(result))
         self.recheck_button.setEnabled(True)
+        if self._active_recheck_url is not None and self._active_recheck_url != self._normalized_url():
+            return
         self._reachable = bool(ok)
         self.badge.set_status("success" if ok else "error", message)
         self.result_label.setText(message)
@@ -306,6 +328,8 @@ class AnkiConnectPage(QWizardPage):
 
     def _on_recheck_error(self, message: str) -> None:
         self.recheck_button.setEnabled(True)
+        if self._active_recheck_url is not None and self._active_recheck_url != self._normalized_url():
+            return
         self._reachable = False
         self.badge.set_status("error", message)
         self.result_label.setText(message)

@@ -18,7 +18,7 @@ import platform
 import sys
 import uuid
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import wraps
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -69,6 +69,7 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
+from anki_miner.services.validation_service import ValidationService
 from anki_miner.utils import alass_resolver
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.file_utils import ensure_directory
@@ -774,7 +775,59 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     Extracted from ``main()`` so the connection is unit-testable without
     standing up the whole app.
     """
-    settings_tab.validation_requested.connect(window._run_validation)
+
+    queued_service: ValidationService | None = None
+    queued_worker: Any | None = None
+
+    def run_validation(service: ValidationService) -> None:
+        committed_service = window.validation_service
+        window.validation_service = service
+        try:
+            window._run_validation()
+        finally:
+            window.validation_service = committed_service
+
+    def start_queued_validation() -> None:
+        nonlocal queued_service, queued_worker
+        service = queued_service
+        queued_service = None
+        queued_worker = None
+        if service is not None:
+            run_validation(service)
+
+    def forward_validation_result(endpoint: str, result: Any) -> None:
+        if endpoint == settings_tab.anki_panel.get_ankiconnect_url():
+            window._on_validation_finished(result)
+
+    def forward_validation_error(endpoint: str, error_message: str) -> None:
+        if endpoint == settings_tab.anki_panel.get_ankiconnect_url():
+            window._on_validation_error(error_message)
+
+    window.background_tasks.validation_result.disconnect(window._on_validation_finished)
+    window.background_tasks.validation_error.disconnect(window._on_validation_error)
+    window.background_tasks.validation_result_for_endpoint.connect(forward_validation_result)
+    window.background_tasks.validation_error_for_endpoint.connect(forward_validation_error)
+
+    def run_live_validation() -> None:
+        nonlocal queued_service, queued_worker
+        probe_config = replace(
+            window.get_config(),
+            ankiconnect_url=settings_tab.anki_panel.get_ankiconnect_url(),
+        )
+        service = ValidationService(probe_config)
+        worker = window.background_tasks.validation_worker
+        if worker is not None:
+            queued_service = service
+            if worker is not queued_worker:
+                queued_worker = worker
+                worker.finished.connect(start_queued_validation)
+            if still_running(worker):
+                return
+            start_queued_validation()
+            return
+        run_validation(service)
+
+    settings_tab.validation_requested.connect(run_live_validation)
 
 
 def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_tab: AnalyticsTab) -> None:
