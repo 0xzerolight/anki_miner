@@ -13,6 +13,7 @@
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
 #   3. ffmpeg    bundled ffmpeg has the required encoders   -> encoders present
 set -euo pipefail
+export LC_ALL=C
 
 DIST="${1:?Usage: bundle_smoke.sh <dist_dir> (e.g. dist/AnkiMiner)}"
 if [ ! -d "$DIST" ]; then
