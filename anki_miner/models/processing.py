@@ -180,6 +180,7 @@ class ValidationResult:
     ffmpeg_ok: bool
     deck_exists: bool
     note_type_exists: bool
+    field_mapping_ok: bool
     issues: list[ValidationIssue] = field(default_factory=list)
     ffprobe_ok: bool = True
     #: Per-tool success text ("<version> [tier]") for tools that passed, keyed by
@@ -199,6 +200,7 @@ class ValidationResult:
                 self.ffprobe_ok,
                 self.deck_exists,
                 self.note_type_exists,
+                self.field_mapping_ok,
             ]
         )
 

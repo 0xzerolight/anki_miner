@@ -55,6 +55,7 @@ def _result(*, ankiconnect_ok: bool, issues=None) -> ValidationResult:
         ffmpeg_ok=True,
         deck_exists=True,
         note_type_exists=True,
+        field_mapping_ok=True,
         issues=issues or [],
     )
 

@@ -79,6 +79,7 @@ def _healthy_report() -> HealthReport:
         ffmpeg_ok=True,
         deck_exists=True,
         note_type_exists=True,
+        field_mapping_ok=True,
         issues=[],
         tool_versions={},
     )

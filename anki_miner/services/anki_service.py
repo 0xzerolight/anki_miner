@@ -282,7 +282,11 @@ class AnkiService:
 
     def note_type_field_names(self, note_type: str) -> set[str]:
         """Field names defined on ``note_type`` (AnkiConnect ``modelFieldNames``)."""
-        return set(self._ordered_note_type_field_names(note_type))
+        return set(self.ordered_note_type_field_names(note_type))
+
+    def ordered_note_type_field_names(self, note_type: str) -> list[str]:
+        """Field names defined on ``note_type``, preserving Anki's order."""
+        return self._ordered_note_type_field_names(note_type)
 
     def _ordered_note_type_field_names(self, note_type: str) -> list[str]:
         """Ordered field names defined on ``note_type``."""
@@ -343,7 +347,7 @@ class AnkiService:
                 f"Map each Anki Miner field to a different field on note type '{self.config.anki_note_type}'."
             )
 
-        ordered_actual = self._ordered_note_type_field_names(self.config.anki_note_type)
+        ordered_actual = self.ordered_note_type_field_names(self.config.anki_note_type)
         actual = set(ordered_actual)
         required = configured_target_field_names(self.config)
         missing = required - actual
