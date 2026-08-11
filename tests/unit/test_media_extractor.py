@@ -464,7 +464,7 @@ class TestAnimatedScreenshot:
 
         cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-ss") + 1] == str(4.7)
-        assert cmd[cmd.index("-t") + 1] == str(1.6)
+        assert float(cmd[cmd.index("-t") + 1]) == pytest.approx(1.6)
 
     def test_match_audio_clamps_start_to_zero(self, animated_avif_service, video_file, tmp_path):
         """match_audio=True must not produce a negative -ss when padding exceeds start_time."""
@@ -486,6 +486,7 @@ class TestAnimatedScreenshot:
 
         cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-ss") + 1] == str(0.0)
+        assert float(cmd[cmd.index("-t") + 1]) == pytest.approx(1.4)
 
     def test_match_audio_overrides_configured_duration(self, animated_avif_service, video_file, tmp_path):
         """match_audio=True bypasses the configured clip_duration cap."""
@@ -507,7 +508,7 @@ class TestAnimatedScreenshot:
             )
 
         cmd = mock_popen.call_args[0][0]
-        assert cmd[cmd.index("-t") + 1] == str(5.6)
+        assert float(cmd[cmd.index("-t") + 1]) == pytest.approx(5.6)
 
     def test_match_audio_follows_an_edited_window(self, animated_avif_service, video_file, tmp_path):
         """ "Match audio" means match it — including a per-word curator edit."""
@@ -846,6 +847,13 @@ class TestResolveAudioWindow:
         start, _ = resolve_audio_window(word, 0.3)
 
         assert start == 0
+
+    def test_clamped_start_keeps_the_padded_end(self, make_tokenized_word):
+        word = make_tokenized_word(start_time=0.1, end_time=1.1, duration=1.0)
+
+        start, duration = resolve_audio_window(word, 0.3)
+
+        assert (start, start + duration) == pytest.approx((0.0, 1.4))
 
     def test_override_is_used_verbatim(self, make_tokenized_word):
         """The user typed the window they want; no padding is added on top."""
@@ -1554,6 +1562,65 @@ class TestAudioOnlyMode:
         for _, media in result:
             assert media.screenshot_path == cover
             assert media.screenshot_filename == cover.name
+
+    def test_picture_only_batch_keeps_words_without_cover(self, service, audiobook_file, make_tokenized_word):
+        words = [
+            make_tokenized_word(lemma="食べる", start_time=1.0),
+            make_tokenized_word(lemma="飲む", start_time=3.0),
+        ]
+
+        def fake_extract(_video_file, word, temp_folder=None, **kwargs):
+            return MediaData(audio_filename=f"{word.lemma}.mp3")
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=None),
+            patch.object(service, "extract_media", side_effect=fake_extract),
+        ):
+            result = service.extract_media_batch(
+                audiobook_file,
+                words,
+                audio_only=True,
+                include_screenshot=True,
+                include_audio=False,
+            )
+
+        media_by_lemma = {word.lemma: media for word, media in result}
+        assert {lemma: media.audio_filename for lemma, media in media_by_lemma.items()} == {
+            word.lemma: f"{word.lemma}.mp3" for word in words
+        }
+        assert all(media.screenshot_path is None for media in media_by_lemma.values())
+
+    def test_picture_only_batch_shares_cover_with_every_word(
+        self, service, audiobook_file, make_tokenized_word, tmp_path
+    ):
+        words = [
+            make_tokenized_word(lemma="食べる", start_time=1.0),
+            make_tokenized_word(lemma="飲む", start_time=3.0),
+        ]
+        cover = tmp_path / "audiobook_cover_abc123def456.jpg"
+        cover.write_bytes(b"\xff\xd8fake-jpeg")
+
+        def fake_extract(_video_file, word, temp_folder=None, **kwargs):
+            return MediaData(audio_filename=f"{word.lemma}.mp3")
+
+        with (
+            patch.object(service, "extract_cover_art", return_value=cover),
+            patch.object(service, "extract_media", side_effect=fake_extract),
+        ):
+            result = service.extract_media_batch(
+                audiobook_file,
+                words,
+                audio_only=True,
+                include_screenshot=True,
+                include_audio=False,
+            )
+
+        media_by_lemma = {word.lemma: media for word, media in result}
+        assert {lemma: media.audio_filename for lemma, media in media_by_lemma.items()} == {
+            word.lemma: f"{word.lemma}.mp3" for word in words
+        }
+        assert all(media.screenshot_path == cover for media in media_by_lemma.values())
+        assert all(media.screenshot_filename == cover.name for media in media_by_lemma.values())
 
     def test_batch_filter_keeps_has_audio_drops_audio_failed(
         self, service, audiobook_file, make_tokenized_word, tmp_path

@@ -10,6 +10,7 @@ from anki_miner.gui.widgets.audio_clip_editor import (
     AudioClipEditor,
     to_ticks,
 )
+from anki_miner.services.media_extractor import resolve_audio_window
 
 PADDING = 0.3
 # A line running 5.0 -> 7.0 with 0.3 padding: the default window is 4.7 -> 7.3.
@@ -54,6 +55,15 @@ class TestSeeding:
     def test_default_start_clamped_to_zero(self, editor):
         editor.set_word(0.1, 2.0, PADDING, None)
         assert editor.current_window()[0] == 0.0
+
+    def test_near_zero_bounds_match_the_extractor(self, editor, make_tokenized_word):
+        word = make_tokenized_word(start_time=0.1, end_time=1.1, duration=1.0)
+
+        editor.set_word(word.start_time, word.end_time, PADDING, None)
+        start, duration = resolve_audio_window(word, PADDING)
+
+        assert editor.current_window() == pytest.approx((start, start + duration))
+        assert editor.current_window() == pytest.approx((0.0, 1.4))
 
     def test_seeds_an_existing_override(self, editor):
         _seed(editor, override=(4.0, 9.5))

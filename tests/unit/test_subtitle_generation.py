@@ -8,6 +8,7 @@ ASR): the extractor is a stand-in and ``wav_to_float32`` / ``transcribe`` /
 from __future__ import annotations
 
 import threading
+import wave
 from pathlib import Path
 
 import pytest
@@ -22,6 +23,59 @@ from anki_miner.services.asr.subtitle_generation import (
 pytestmark = pytest.mark.asr
 
 _FAKE_SEGMENTS = [(0.0, 1.0, "こんにちは"), (1.0, 2.0, "世界")]
+
+
+def test_wav_normalization_reuses_the_owned_float_buffer(tmp_path, monkeypatch):
+    np = pytest.importorskip("numpy")
+
+    from anki_miner.services.media_extractor import wav_to_float32
+
+    pcm = np.array([-32768, -16384, 0, 16384, 32767], dtype=np.int16)
+    expected = pcm.astype(np.float32)
+    expected /= 32768.0
+    wav_path = tmp_path / "samples.wav"
+    with wave.open(str(wav_path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(16000)
+        wav_file.writeframes(pcm.tobytes())
+
+    float_buffer_addresses: list[int] = []
+
+    class TrackingArray(np.ndarray):
+        def astype(self, dtype, *args, **kwargs):
+            result = super().astype(dtype, *args, **kwargs)
+            if result.dtype == np.float32:
+                float_buffer_addresses.append(result.ctypes.data)
+            return result
+
+        def __truediv__(self, value):
+            result = super().__truediv__(value)
+            if result.dtype == np.float32:
+                float_buffer_addresses.append(result.ctypes.data)
+            return result
+
+        def __itruediv__(self, value):
+            result = super().__itruediv__(value)
+            if result.dtype == np.float32:
+                float_buffer_addresses.append(result.ctypes.data)
+            return result
+
+    real_frombuffer = np.frombuffer
+
+    def tracking_frombuffer(*args, **kwargs):
+        return real_frombuffer(*args, **kwargs).view(TrackingArray)
+
+    with monkeypatch.context() as context:
+        context.setattr(np, "frombuffer", tracking_frombuffer)
+        samples, sample_rate, duration = wav_to_float32(wav_path)
+
+    np.testing.assert_array_equal(samples, expected)
+    assert samples.dtype == np.float32
+    assert sample_rate == 16000
+    assert duration == pytest.approx(len(pcm) / 16000)
+    assert len(set(float_buffer_addresses)) == 1
+    assert samples.ctypes.data == float_buffer_addresses[0]
 
 
 def _make_config(tmp_path: Path) -> AnkiMinerConfig:
