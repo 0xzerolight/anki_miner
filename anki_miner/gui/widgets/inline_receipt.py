@@ -20,7 +20,7 @@ numbers and none of the words.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QWidget
@@ -37,6 +37,8 @@ if TYPE_CHECKING:
 
 class InlineReceipt(QWidget):
     """One run's durable result, with the three things a user can do about it."""
+
+    _details_origin: ClassVar[InlineReceipt | None] = None
 
     #: The user asked to see the run in full. The owning screen opens the
     #: details/undo surface; this widget knows nothing about dialogs.
@@ -69,6 +71,11 @@ class InlineReceipt(QWidget):
     def receipt(self) -> RunReceipt | None:
         """The receipt currently shown, or None once dismissed or cleared."""
         return self._receipt
+
+    @classmethod
+    def current_details_origin(cls) -> InlineReceipt | None:
+        """Receipt whose synchronous details request is being handled."""
+        return cls._details_origin
 
     def show_receipt(self, receipt: RunReceipt, *, item_noun: str = "") -> None:
         """Display ``receipt`` and keep it until dismissed or replaced.
@@ -125,6 +132,15 @@ class InlineReceipt(QWidget):
             return
         clipboard.setText(self._summary)
 
+    def _on_details_clicked(self) -> None:
+        """Emit the request while its owning receipt can be consumed."""
+        previous = InlineReceipt._details_origin
+        InlineReceipt._details_origin = self
+        try:
+            self.details_requested.emit()
+        finally:
+            InlineReceipt._details_origin = previous
+
     def _on_dismiss_clicked(self) -> None:
         """Hide the receipt and say that the user did it."""
         self.clear()
@@ -147,7 +163,7 @@ class InlineReceipt(QWidget):
         # All three are quiet: the run is over, so none of them is the task
         # action of the screen (D41).
         self.details_button = ModernButton(self.tr("View details"), variant="secondary")
-        self.details_button.clicked.connect(self.details_requested)
+        self.details_button.clicked.connect(self._on_details_clicked)
         layout.addWidget(self.details_button)
 
         self.copy_button = ModernButton(self.tr("Copy summary"), variant="secondary")

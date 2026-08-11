@@ -1282,6 +1282,23 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self.status_bar.set_operation(tr_format(self.tr("Restyling mined cards… %1/%2"), scanned, total), "info")
 
         def on_result(result: RestyleResult) -> None:
+            if result.failed:
+                self.status_bar.set_operation(self.tr("Restyle incomplete"), "error")
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=tr_format(
+                            self.tr("%1 note update(s) were not confirmed; run Restyle again."),
+                            result.failed,
+                        ),
+                        details=tr_format(
+                            self.tr("Restyled %1 card(s). (%2 scanned; %3 already up to date.)"),
+                            result.restyled,
+                            result.scanned,
+                            result.skipped_styled,
+                        ),
+                    )
+                )
+                return
             self.status_bar.set_operation(self.tr("Restyle complete"), "success")
             QMessageBox.information(
                 self,
@@ -1607,6 +1624,25 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             result: The whole run, aggregated into one result by its receipt.
         """
 
+        from anki_miner.gui.widgets.inline_receipt import InlineReceipt
+
+        originating_receipt = InlineReceipt.current_details_origin()
+        originating_run_receipt = originating_receipt.receipt if originating_receipt is not None else None
+        # known_words rows have no run identity. The modal dialog blocks new
+        # starts; this gate covers mining tasks that were already running.
+        # Deck Builder owns its workers directly and does not publish to the
+        # task registry, so every current or retained QThread is authoritative.
+        deck_builder_index = self._main_tab_index("deckbuilder")
+        deck_builder_workers = []
+        if deck_builder_index >= 0:
+            deck_builder_tab = self.tabs.widget(deck_builder_index)
+            deck_builder_workers.append(getattr(deck_builder_tab, "worker_thread", None))
+            deck_builder_workers.extend(worker for worker, _processor in getattr(deck_builder_tab, "_leaked_runs", ()))
+        mining_task_active = any(still_running(worker) for worker in deck_builder_workers) or any(
+            snapshot.owner.main_tab in {"video", "deckbuilder", "audiobook", "reading"}
+            for snapshot in self.task_registry.running()
+        )
+
         # Create undo callback. This is the BLOCKING work handed to
         # ResultsDialog, which runs it off the GUI thread (a slow AnkiConnect
         # delete must not freeze the modal dialog) — so it must not touch Qt
@@ -1640,11 +1676,20 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Show results dialog with undo support. The dialog runs undo_callback
         # off-thread; on_undo_committed decrements the session counter on the
         # GUI thread once the delete succeeds.
+        def on_undo_committed(deleted: int) -> None:
+            self.status_bar.increment_cards_created(-deleted)
+            if (
+                originating_receipt is not None
+                and widget_alive(originating_receipt)
+                and originating_receipt.receipt is originating_run_receipt
+            ):
+                originating_receipt.clear()
+
         dialog = ResultsDialog(
             result,
             self,
-            undo_callback=undo_callback,
-            on_undo_committed=lambda deleted: self.status_bar.increment_cards_created(-deleted),
+            undo_callback=None if mining_task_active else undo_callback,
+            on_undo_committed=on_undo_committed,
         )
         dialog.exec()
 
@@ -2086,7 +2131,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         Args:
             info: An :class:`~anki_miner.services.update_checker.UpdateInfo`
                 when a newer release is available, or ``None`` when there is
-                no update / the check failed.
+                no update. Checker failures arrive as exceptions.
         """
         from anki_miner.gui.widgets.update_banner import UpdateBanner
         from anki_miner.services.update_checker import UpdateInfo
@@ -2098,9 +2143,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if isinstance(info, UpdateInfo):
             state = HEALTH_WARN
             detail = tr_format(self.tr("Version %1 is available."), info.version)
-        else:
+        elif info is None:
             state = HEALTH_OK
             detail = tr_format(self.tr("Running %1. No newer release was reported."), __version__)
+        elif isinstance(info, BaseException):
+            state = HEALTH_UNKNOWN
+            detail = self.tr("The update check failed; try again later.")
+        else:
+            return
         self._publish_health(
             self._health_report.with_update_check(state=state, detail=detail, checked_at=datetime.now())
         )

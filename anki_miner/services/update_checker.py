@@ -10,6 +10,8 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
+from packaging.version import InvalidVersion, Version
+
 from anki_miner.utils.version_compare import is_newer
 
 logger = logging.getLogger(__name__)
@@ -151,16 +153,18 @@ class UpdateChecker:
             current_version: Current application version string (e.g. "2.0.4")
         """
         self.current_version = current_version
+        self.last_error: BaseException | None = None
 
     def check_for_update(self) -> UpdateInfo | None:
         """Check GitHub for the latest release.
 
         Returns:
             :class:`UpdateInfo` with ``asset_url`` populated for the user's
-            install method when an update is available; ``None`` if the check
-            fails (network error, invalid response, etc.) or if the installed
-            version is already up to date.
+            install method when an update is available; ``None`` otherwise.
+            :attr:`last_error` distinguishes a failed check from a verified
+            up-to-date result for the worker boundary.
         """
+        self.last_error = None
         try:
             request = urllib.request.Request(
                 self.GITHUB_API_URL,
@@ -168,9 +172,7 @@ class UpdateChecker:
                     "Accept": "application/vnd.github.v3+json",
                     # GitHub requires a User-Agent header for abuse triage; omitting
                     # it occasionally yields 403 from anonymous unauthenticated calls.
-                    "User-Agent": (
-                        f"anki-miner/{self.current_version} " "(+https://github.com/0xzerolight/anki_miner)"
-                    ),
+                    "User-Agent": (f"anki-miner/{self.current_version} (+https://github.com/0xzerolight/anki_miner)"),
                 },
             )
             with urllib.request.urlopen(request, timeout=5) as response:
@@ -189,6 +191,12 @@ class UpdateChecker:
             # Strip leading 'v' if present (e.g. "v2.1.0" -> "2.1.0")
             latest_version = tag_name.lstrip("v")
 
+            try:
+                Version(latest_version)
+                Version(self.current_version)
+            except (InvalidVersion, TypeError) as exc:
+                raise ValueError("Invalid version in update response") from exc
+
             if not self._is_newer(latest_version, self.current_version):
                 return None
 
@@ -202,7 +210,8 @@ class UpdateChecker:
                 release_notes=release_notes,
             )
 
-        except Exception:
+        except Exception as exc:
+            self.last_error = exc
             logger.debug("Failed to check for updates", exc_info=True)
             return None
 

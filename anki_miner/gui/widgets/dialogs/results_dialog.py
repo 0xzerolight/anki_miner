@@ -3,7 +3,7 @@
 import logging
 from typing import Callable, cast
 
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QCloseEvent, QFont
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QMessageBox, QTextEdit, QVBoxLayout
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
@@ -56,6 +56,7 @@ class ResultsDialog(EnhancedDialog):
         self._undo_callback = undo_callback
         self._on_undo_committed = on_undo_committed
         self.undo_completed = False
+        self._undo_in_progress = False
         self._setup_content()
 
     def _setup_content(self) -> None:
@@ -160,7 +161,7 @@ class ResultsDialog(EnhancedDialog):
             )
 
         # Add close button using EnhancedDialog method
-        self.add_close_button(self.tr("Close"))
+        self._close_button = self.add_close_button(self.tr("Close"))
 
     def _on_undo_clicked(self) -> None:
         """Confirm, then run the card delete OFF the GUI thread.
@@ -187,8 +188,10 @@ class ResultsDialog(EnhancedDialog):
 
         undo_callback = self._undo_callback
         card_ids = self.processing_result.card_ids
+        self._undo_in_progress = True
         self._undo_button.setEnabled(False)
         self._undo_button.setText(self.tr("Undoing…"))
+        self._close_button.setEnabled(False)
         run_off_thread(
             self,
             lambda: undo_callback(card_ids),
@@ -199,6 +202,8 @@ class ResultsDialog(EnhancedDialog):
     def _on_undo_done(self, result: object) -> None:
         """GUI-thread continuation after the off-thread delete succeeds."""
         deleted = cast(int, result)
+        self._undo_in_progress = False
+        self._close_button.setEnabled(True)
         self._undo_button.setText(tr_format(self.tr("Undone (%1 notes deleted)"), deleted))
         self.undo_completed = True
         if self._on_undo_committed is not None:
@@ -206,9 +211,25 @@ class ResultsDialog(EnhancedDialog):
 
     def _on_undo_error(self, message: str) -> None:
         """GUI-thread continuation after the off-thread delete fails."""
+        self._undo_in_progress = False
+        self._close_button.setEnabled(True)
         self._undo_button.setEnabled(True)
         self._undo_button.setText(tr_format(self.tr("Undo (%1 notes)"), len(self.processing_result.card_ids)))
         logger.error("Undo failed: %s", message)
         QMessageBox.critical(
             self, self.tr("Undo Failed"), self.tr("Failed to delete notes. Check that Anki is running.")
         )
+
+    def reject(self) -> None:
+        """Ignore Escape while Undo still owns run state."""
+        if self._undo_in_progress:
+            return
+        super().reject()
+
+    def closeEvent(self, event: QCloseEvent | None) -> None:  # noqa: N802 - Qt override
+        """Keep the modal barrier active until Undo reaches a terminal callback."""
+        if self._undo_in_progress:
+            if event is not None:
+                event.ignore()
+            return
+        super().closeEvent(event)

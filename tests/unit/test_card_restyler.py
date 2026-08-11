@@ -607,3 +607,34 @@ class TestLegacyEnvelopeStamping:
         stamped = '<li data-dictionary="X" data-has-styles="">x</li>'
         out = card_restyler._stamp_styled_envelopes(stamped, '.yomitan-glossary [data-dictionary="X"] li {color: red}')
         assert out == stamped
+
+
+def test_rejected_updates_reach_main_window_as_non_success(qtbot, patch_heavy_init, test_config, monkeypatch):
+    from PyQt6.QtWidgets import QMessageBox
+
+    patch_heavy_init(test_config)
+    from anki_miner.gui.main_window import MainWindow
+
+    window = MainWindow()
+    qtbot.addWidget(window)
+    start_restyle = MagicMock()
+    window.background_tasks.start_restyle_cards = start_restyle
+    show_issue = MagicMock()
+    monkeypatch.setattr(window, "show_screen_issue", show_issue)
+    information = MagicMock()
+    monkeypatch.setattr(QMessageBox, "information", information)
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        MagicMock(return_value=QMessageBox.StandardButton.Yes),
+    )
+
+    window._restyle_mined_cards()
+    on_result = start_restyle.call_args.args[3]
+    on_result(RestyleResult(scanned=2, restyled=1, skipped_styled=0, skipped_no_markup=0, failed=1))
+
+    assert window.status_bar.operation_label.property("level") == "error"
+    information.assert_not_called()
+    issue = show_issue.call_args.args[0]
+    assert "1" in issue.summary
+    assert "1" in issue.details
