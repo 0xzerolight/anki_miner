@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 import pytest
+from PyQt6.QtCore import QCoreApplication, QTranslator
 from PyQt6.QtWidgets import QPushButton
 
 from anki_miner.gui.capabilities import CAPABILITIES, CapabilityTarget
@@ -31,6 +32,28 @@ def test_typing_filters_to_matches(dialog):
     shown = {c.id for c in dialog._current}
     assert "i-plus-one" in shown
     assert "youtube-mining" not in shown
+
+
+def test_typing_displayed_localized_title_finds_capability(qapp, qtbot):
+    class _SpanishTranslator(QTranslator):
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            if context == "Capabilities" and source == "Mine a single episode":
+                return "Minar un solo episodio"
+            return source
+
+    translator = _SpanishTranslator()
+    qapp.installTranslator(translator)
+    try:
+        dlg = CapabilityBrowser()
+        qtbot.addWidget(dlg)
+        displayed_title = QCoreApplication.translate("Capabilities", "Mine a single episode")
+
+        dlg.search_box.setText(displayed_title)
+
+        assert displayed_title == "Minar un solo episodio"
+        assert [cap.id for cap in dlg._current] == ["episode-mining"]
+    finally:
+        qapp.removeTranslator(translator)
 
 
 def test_open_buttons_match_visible_rows(dialog):

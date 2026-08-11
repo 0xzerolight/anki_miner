@@ -451,7 +451,7 @@ class NoteTypePage(_LiveCheckPage):
         self.guidance_label = QLabel("")
         self.guidance_label.setWordWrap(True)
         self.guidance_label.setOpenExternalLinks(False)
-        self.guidance_label.linkActivated.connect(lambda _u: _open_url(NOTE_TYPE_HELP_URL))
+        self.guidance_label.linkActivated.connect(self._on_guidance_link_activated)
         self.guidance_label.setVisible(False)
         layout.addWidget(self.guidance_label)
 
@@ -647,14 +647,19 @@ class NoteTypePage(_LiveCheckPage):
             self._apply_preset(preset)
             return
         if not self._has_mining_shape(names):
+            guidance = tr_format(
+                self.tr(
+                    "This note type does not look set up for Japanese mining (no obvious word/"
+                    "sentence fields). Import a recommended mining note type in Anki, then "
+                    '<a href="%1">recheck</a>. See: <a href="%1">recommended note type</a>.'
+                ),
+                NOTE_TYPE_HELP_URL,
+            )
             self._show_guidance(
-                tr_format(
-                    self.tr(
-                        "This note type does not look set up for Japanese mining (no obvious word/"
-                        "sentence fields). Import a recommended mining note type in Anki, then "
-                        '<a href="%1">recheck</a>. See: <a href="%1">recommended note type</a>.'
-                    ),
-                    NOTE_TYPE_HELP_URL,
+                guidance.replace(
+                    f'href="{NOTE_TYPE_HELP_URL}"',
+                    'href="recheck"',
+                    1,
                 )
             )
         else:
@@ -677,6 +682,12 @@ class NoteTypePage(_LiveCheckPage):
     def _show_guidance(self, html: str) -> None:
         self.guidance_label.setText(html)
         self.guidance_label.setVisible(True)
+
+    def _on_guidance_link_activated(self, url: str) -> None:
+        if url == "recheck":
+            self._on_refresh_clicked()
+        elif url == NOTE_TYPE_HELP_URL:
+            _open_url(NOTE_TYPE_HELP_URL)
 
     def _sanitize_field_mappings(self, note_type: str, field_names: list[str]) -> None:
         config = self._wizard.working_config()
@@ -1027,13 +1038,27 @@ class DonePage(_LiveCheckPage):
         self.summary_label.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(self.summary_label)
 
+        self.recheck_button = ModernButton(self.tr("Recheck"), variant="secondary")
+        self.recheck_button.clicked.connect(self._start_sweep)
+        layout.addWidget(self.recheck_button)
+
     def isComplete(self) -> bool:
         return all(self._results.get(name, False) for name in _FINAL_CHECKS)
 
     def initializePage(self) -> None:
         """Run one fresh readiness sweep; render it when it lands."""
+        previous_check = self._live_check
+        if previous_check is not None and previous_check.isRunning():
+            previous_check.cancel()
+        self._live_check = None
+        self._start_sweep()
+
+    def _start_sweep(self) -> None:
+        if self._live_check is not None and self._live_check.isRunning():
+            return
         self._results = {}
         self.summary_label.setText(self.tr("Checking your setup..."))
+        self.recheck_button.setEnabled(False)
         self.completeChanged.emit()
 
         self._start_live_check(
@@ -1048,6 +1073,7 @@ class DonePage(_LiveCheckPage):
             return
         self._results = dict(result) if isinstance(result, dict) else {}
         self.summary_label.setText(self._summary_html())
+        self.recheck_button.setEnabled(True)
         self.completeChanged.emit()
 
     def _on_sweep_error(self, message: str) -> None:
@@ -1055,6 +1081,7 @@ class DonePage(_LiveCheckPage):
             return
         self._results = {}
         self.summary_label.setText(message)
+        self.recheck_button.setEnabled(True)
         self.completeChanged.emit()
 
     def _summary_html(self) -> str:

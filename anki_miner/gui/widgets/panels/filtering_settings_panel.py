@@ -19,7 +19,12 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.qt_helpers import configure_data_view, data_row_height, install_copy_rows
+from anki_miner.gui.utils.qt_helpers import (
+    configure_data_view,
+    data_row_height,
+    install_copy_rows,
+    reveal_settings,
+)
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.services.wordset_service import load_wordset_catalog
@@ -75,9 +80,8 @@ class FilteringSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
-        # Word Frequency section. The frequency *file selector + enable toggle*
-        # now live in the Dictionaries tab (users think of the frequency list as
-        # a dictionary); only the max-rank threshold — a filter — stays here.
+        # Word Frequency section. Frequency-source management lives on its own
+        # settings page; only the rank band — a filter — stays here.
         self.add_section(self.tr("Word Frequency"))
 
         # The minimum and maximum are two ends of ONE filter, so they share one
@@ -147,19 +151,19 @@ class FilteringSettingsPanel(FormPanel):
         # Shown by load_from_config only when a band is set but no frequency
         # source is enabled. In that state the pipeline gates the cutoff off (it
         # would otherwise drop every word and create zero cards), so warn here
-        # instead of letting the spinboxes look active. Text unchanged from when
-        # this was a lone cutoff: it reads correctly for a band and its existing
-        # translations still apply.
-        self.max_frequency_warning = QLabel(
-            self.tr(
-                "No frequency source is loaded — this cutoff is ignored. "
-                "Add a frequency source in the Dictionaries tab."
-            )
-        )
+        # instead of letting the spinboxes look active, and link to the panel
+        # that owns the frequency source chain.
+        warning_row = QHBoxLayout()
+        self.max_frequency_warning = QLabel(self.tr("No frequency source is loaded, so this range is ignored."))
         self.max_frequency_warning.setObjectName("helper-text")
         self.max_frequency_warning.setWordWrap(True)
         self.max_frequency_warning.setVisible(False)
-        self.add_widget(self.max_frequency_warning)
+        warning_row.addWidget(self.max_frequency_warning, 1)
+        self.max_frequency_warning_action = QPushButton(self.tr("Open Frequency settings"))
+        self.max_frequency_warning_action.clicked.connect(self._open_frequency_settings)
+        self.max_frequency_warning_action.setVisible(False)
+        warning_row.addWidget(self.max_frequency_warning_action)
+        self.add_layout(warning_row)
 
         # Known Words Database section
         self.add_section(self.tr("Known Words Database"))
@@ -586,6 +590,9 @@ class FilteringSettingsPanel(FormPanel):
 
     # --- Frequency rank band ---
 
+    def _open_frequency_settings(self) -> None:
+        reveal_settings(self, "frequency")
+
     def get_max_frequency_rank(self) -> int:
         """Return the max frequency rank value."""
         return self.max_frequency_spinbox.value()
@@ -846,10 +853,12 @@ class FilteringSettingsPanel(FormPanel):
         self._sync_frequency_range_state()
         # A band with no enabled frequency source is inert (the pipeline skips
         # it). Surface that here so the setting doesn't look active. frequency_active
-        # is derived from the enabled sources in the chain (Dictionaries tab).
+        # is derived from the enabled sources in the chain (Frequency panel).
         band_set = config.min_frequency_rank > 0 or config.max_frequency_rank > 0
-        self.max_frequency_warning.setVisible(band_set and not config.frequency_active)
-        if band_set and not config.frequency_active:
+        show_frequency_warning = band_set and not config.frequency_active
+        self.max_frequency_warning.setVisible(show_frequency_warning)
+        self.max_frequency_warning_action.setVisible(show_frequency_warning)
+        if show_frequency_warning:
             log_summary(
                 logger,
                 "Filtering config degraded",

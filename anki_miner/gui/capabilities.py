@@ -15,15 +15,15 @@ User-visible strings (``title``, ``description``, ``category``) are wrapped in
 ``QT_TRANSLATE_NOOP`` so ``pylupdate`` extracts them under the ``Capabilities``
 context; they hold the English source verbatim and are localised at display time
 via ``QCoreApplication.translate(TRANSLATION_CONTEXT, text)``. ``keywords`` stay
-untranslated on purpose -- they are the search index and must match what users
-actually type (often English/romaji jargon like "i+1", "tts", "ocr").
+untranslated on purpose -- they preserve English/romaji jargon users type (like
+"i+1", "tts", "ocr") alongside the translated title and description.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
 TRANSLATION_CONTEXT = "Capabilities"
 
@@ -590,7 +590,13 @@ def search(query: str) -> list[Capability]:
         return list(CAPABILITIES)
     out: list[Capability] = []
     for cap in CAPABILITIES:
-        haystack = (cap.title, cap.description, *cap.keywords)
+        haystack = (
+            cap.title,
+            cap.description,
+            QCoreApplication.translate(TRANSLATION_CONTEXT, cap.title),
+            QCoreApplication.translate(TRANSLATION_CONTEXT, cap.description),
+            *cap.keywords,
+        )
         if any(q in part.lower() for part in haystack):
             out.append(cap)
     return out
