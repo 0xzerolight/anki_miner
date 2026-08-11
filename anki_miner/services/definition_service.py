@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
@@ -18,6 +19,26 @@ if TYPE_CHECKING:
     from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 logger = logging.getLogger(__name__)
+
+
+def _word_unique_batches(
+    pairs: list[tuple[str, str | None]],
+) -> Iterator[list[tuple[str, str | None]]]:
+    """Split pairs so each provider batch contains each word at most once."""
+    pending = pairs
+    while pending:
+        batch: list[tuple[str, str | None]] = []
+        deferred: list[tuple[str, str | None]] = []
+        seen_words: set[str] = set()
+        for pair in pending:
+            word, _reading = pair
+            if word in seen_words:
+                deferred.append(pair)
+                continue
+            seen_words.add(word)
+            batch.append(pair)
+        yield batch
+        pending = deferred
 
 
 def collect_dictionary_css_entries(config: AnkiMinerConfig) -> list[tuple[str, str, str]]:
@@ -203,7 +224,13 @@ class DefinitionService:
                 _add(result.text, result.conditions)
         return candidates
 
-    def _fallback_lookup_offline(self, word: str, orth_base: str, ctype: str | None) -> str | None:
+    def _fallback_lookup_offline(
+        self,
+        word: str,
+        orth_base: str,
+        ctype: str | None,
+        is_cancelled: Callable[[], bool] | None = None,
+    ) -> str | None:
         """First rules-validated fallback hit across offline providers, else None.
 
         Candidates are tried in priority order (variants, then fewest-step
@@ -217,6 +244,8 @@ class DefinitionService:
             return None
         for cand_text, cand_conditions in candidates:
             for provider in self._providers:
+                if is_cancelled is not None and is_cancelled():
+                    return None
                 if provider.is_online or not provider.is_available():
                     continue
                 fb = getattr(provider, "lookup_fallback", None)
@@ -241,6 +270,8 @@ class DefinitionService:
         words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
         fallback_context: dict[str, tuple[str, str | None]] | None = None,
+        *,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> list[str | None]:
         """Resolve definitions for a list of ``(word, reading | None)`` pairs,
         preserving first-hit-wins. The reading is a per-word ranking BOOST
@@ -249,12 +280,13 @@ class DefinitionService:
         aligned to the input pairs.
 
         Fast path: providers exposing the optional ``lookup_many`` batch method
-        are queried ONCE for the still-unfilled pairs (one IN-clause SQLite
-        query per dictionary instead of one query per word). Words an earlier
-        provider resolves are removed from the remaining set BEFORE the next
-        provider is consulted, so chain semantics are first-hit-wins across the
-        provider order. Providers without ``lookup_many`` (e.g. the online Jisho
-        fallback) are consulted per-word for the remaining words.
+        are queried once per word-unique sub-batch of still-unfilled pairs (one
+        IN-clause SQLite query per sub-batch instead of one query per word).
+        Words an earlier provider resolves are removed from the remaining set
+        BEFORE the next provider is consulted, so chain semantics are
+        first-hit-wins across the provider order. Providers without
+        ``lookup_many`` (e.g. the online Jisho fallback) are consulted per-word
+        for the remaining words.
 
         Lookup-miss fallback (plan item 5.2): ``fallback_context`` maps a lookup
         word to its ``(orth_base, cType)``. For any word STILL unresolved after
@@ -273,16 +305,18 @@ class DefinitionService:
 
         self.ensure_loaded()
 
-        # Resolve over the chain into a per-word map keyed by the FIRST seen
-        # occurrence — duplicate words collapse to one lookup (first reading
-        # wins), mirroring the chain's word-level dedup.
-        resolved: dict[str, str | None] = {}
-        remaining: list[tuple[str, str | None]] = []
-        seen: set[str] = set()
-        for word, reading in words:
-            if word not in seen:
-                seen.add(word)
-                remaining.append((word, reading))
+        cancelled = False
+
+        def cancellation_requested() -> bool:
+            nonlocal cancelled
+            if is_cancelled is not None and is_cancelled():
+                cancelled = True
+            return cancelled
+
+        # Reading is part of lookup identity. Exact duplicate pairs collapse,
+        # but the same spelling with two readings must resolve twice.
+        resolved: dict[tuple[str, str | None], str] = {}
+        remaining = list(dict.fromkeys(words))
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,
         # not an oversight. This is the never-raises provider boundary: a provider
@@ -292,34 +326,47 @@ class DefinitionService:
         # let a single buggy/edge-case provider crash a run. Words it failed to
         # resolve fall through to the next provider, and any earlier hits are kept.
         for provider in self._providers:
-            if not remaining:
+            if not remaining or cancellation_requested():
                 break
             if not provider.is_available():
                 continue
             batch_fn = getattr(provider, "lookup_many", None)
             if callable(batch_fn):
-                try:
-                    hits = batch_fn(remaining)
-                except Exception as e:
-                    logger.warning(
-                        "Provider '%s' raised during lookup_many; skipping: %s",
-                        provider.name,
-                        e,
-                    )
-                    continue
                 still_remaining: list[tuple[str, str | None]] = []
-                for word, reading in remaining:
-                    result = hits.get(word)
-                    if result:
-                        resolved[word] = result
-                    else:
-                        still_remaining.append((word, reading))
+                batches = list(_word_unique_batches(remaining))
+                for batch_index, batch in enumerate(batches):
+                    if cancellation_requested():
+                        break
+                    try:
+                        hits = batch_fn(batch)
+                    except Exception as e:
+                        logger.warning(
+                            "Provider '%s' raised during lookup_many; skipping: %s",
+                            provider.name,
+                            e,
+                        )
+                        still_remaining.extend(batch)
+                        for uncalled in batches[batch_index + 1 :]:
+                            still_remaining.extend(uncalled)
+                        break
+                    for pair in batch:
+                        word, _reading = pair
+                        result = hits.get(word)
+                        if result:
+                            resolved[pair] = result
+                        else:
+                            still_remaining.append(pair)
+                if cancelled:
+                    break
                 remaining = still_remaining
             else:
                 # Per-word fallback for providers lacking the batch method (the
                 # reading boost applies only to the offline batch path).
                 still_remaining = []
-                for word, reading in remaining:
+                for pair in remaining:
+                    if cancellation_requested():
+                        break
+                    word, _reading = pair
                     try:
                         result = provider.lookup(word)
                     except Exception as e:
@@ -329,32 +376,43 @@ class DefinitionService:
                             word,
                             e,
                         )
-                        still_remaining.append((word, reading))
+                        still_remaining.append(pair)
                         continue
                     if result:
-                        resolved[word] = result
+                        resolved[pair] = result
                     else:
-                        still_remaining.append((word, reading))
+                        still_remaining.append(pair)
+                if cancelled:
+                    break
                 remaining = still_remaining
 
         # Miss-only fallback: for words the whole chain left unresolved, retry
         # deinflection/variant candidates against offline providers. Gated on
         # fallback_context so the hot path (words that hit) pays nothing.
         if fallback_context:
-            for word, _reading in remaining:
+            for pair in remaining:
+                if cancellation_requested():
+                    break
+                word, _reading = pair
                 ctx = fallback_context.get(word)
                 if ctx is None:
                     continue
                 orth_base, ctype = ctx
-                html = self._fallback_lookup_offline(word, orth_base, ctype)
+                html = self._fallback_lookup_offline(
+                    word,
+                    orth_base,
+                    ctype,
+                    is_cancelled,
+                )
                 if html:
-                    resolved[word] = html
+                    resolved[pair] = html
 
         results: list[str | None] = []
-        for i, (word, _reading) in enumerate(words, 1):
-            definition = resolved.get(word)
+        for i, pair in enumerate(words, 1):
+            word, _reading = pair
+            definition = resolved.get(pair)
             results.append(definition)
-            if progress_callback:
+            if progress_callback and not cancelled:
                 if definition:
                     progress_callback.on_progress(
                         i,
@@ -372,7 +430,7 @@ class DefinitionService:
                         ),
                     )
 
-        if progress_callback:
+        if progress_callback and not cancellation_requested():
             progress_callback.on_complete()
         return results
 
@@ -752,14 +810,16 @@ class DefinitionService:
         self,
         words: list[tuple[str, str | None]],
         progress_callback: ProgressCallback | None = None,
+        *,
+        is_cancelled: Callable[[], bool] | None = None,
     ) -> list[str | None]:
         """Collect glossary HTML for ``(word, reading | None)`` pairs, preserving
         input order. The reading is a per-word ranking BOOST threaded to each
         offline provider's ``lookup_many``.
 
         Fast path (OVH-050): offline providers that expose ``lookup_many`` are
-        queried ONCE for all words (one IN-clause SQLite query per dictionary
-        instead of N per-word queries). Walk semantics:
+        queried once per word-unique sub-batch (one IN-clause SQLite query per
+        sub-batch instead of N per-word queries). Walk semantics:
         * Every available *offline* provider is queried in chain order; each
           provider's returned HTML is concatenated verbatim (each provider wraps
           its hit in ``<div class="yomitan-glossary">…</div>``, so the result is
@@ -777,6 +837,14 @@ class DefinitionService:
 
         self.ensure_loaded()
 
+        cancelled = False
+
+        def cancellation_requested() -> bool:
+            nonlocal cancelled
+            if is_cancelled is not None and is_cancelled():
+                cancelled = True
+            return cancelled
+
         # Collect all available offline providers (batch-capable or per-word).
         offline_providers: list[DictionaryProvider] = []
         online_providers: list[DictionaryProvider] = []
@@ -788,78 +856,87 @@ class DefinitionService:
             else:
                 offline_providers.append(provider)
 
-        # Unique (word, reading) pairs for the provider queries; first reading
-        # wins on duplicate words. Output is still mapped back to every input pair.
-        unique_pairs: list[tuple[str, str | None]] = []
-        seen: set[str] = set()
-        for word, reading in words:
-            if word not in seen:
-                seen.add(word)
-                unique_pairs.append((word, reading))
+        # Exact duplicate pairs collapse; distinct readings stay separate.
+        unique_pairs = list(dict.fromkeys(words))
 
-        # Per-word accumulator: word → list[str] of offline HTML hits.
-        offline_hits: dict[str, list[str]] = {w: [] for w, _ in unique_pairs}
+        # Pair-keyed accumulator: each reading keeps its provider-ranked HTML.
+        offline_hits: dict[tuple[str, str | None], list[str]] = {pair: [] for pair in unique_pairs}
 
         for provider in offline_providers:
+            if cancellation_requested():
+                break
             batch_fn = getattr(provider, "lookup_many", None)
             if callable(batch_fn):
-                try:
-                    provider_results = batch_fn(unique_pairs)
-                except Exception as e:
-                    logger.warning(
-                        "Provider '%s' raised during lookup_many; skipping: %s",
-                        provider.name,
-                        e,
-                    )
-                    continue
-                for w, _reading in unique_pairs:
-                    html = provider_results.get(w)
-                    if html:
-                        offline_hits[w].append(html)
-            else:
-                for w, _reading in unique_pairs:
+                for batch in _word_unique_batches(unique_pairs):
+                    if cancellation_requested():
+                        break
                     try:
-                        html = provider.lookup(w)
+                        provider_results = batch_fn(batch)
+                    except Exception as e:
+                        logger.warning(
+                            "Provider '%s' raised during lookup_many; skipping: %s",
+                            provider.name,
+                            e,
+                        )
+                        break
+                    for pair in batch:
+                        word, _reading = pair
+                        html = provider_results.get(word)
+                        if html:
+                            offline_hits[pair].append(html)
+            else:
+                for pair in unique_pairs:
+                    if cancellation_requested():
+                        break
+                    word, _reading = pair
+                    try:
+                        html = provider.lookup(word)
                     except Exception as e:
                         logger.warning(
                             "Provider '%s' raised during lookup of '%s'; skipping: %s",
                             provider.name,
-                            w,
+                            word,
                             e,
                         )
                         continue
                     if html:
-                        offline_hits[w].append(html)
+                        offline_hits[pair].append(html)
 
         # Words with no offline hits fall back to online providers (per-word).
-        online_results: dict[str, str | None] = {}
-        for w, _reading in unique_pairs:
-            if not offline_hits[w]:
+        online_results: dict[tuple[str, str | None], str | None] = {}
+        for pair in unique_pairs:
+            if cancellation_requested():
+                break
+            word, _reading = pair
+            if not offline_hits[pair]:
                 for provider in online_providers:
+                    if cancellation_requested():
+                        break
                     try:
-                        html = provider.lookup(w)
+                        html = provider.lookup(word)
                     except Exception as e:
                         logger.warning(
                             "Provider '%s' raised during lookup of '%s'; skipping: %s",
                             provider.name,
-                            w,
+                            word,
                             e,
                         )
                         continue
                     if html:
-                        online_results[w] = html
+                        online_results[pair] = html
                         break
                 else:
-                    online_results[w] = None
+                    online_results[pair] = None
 
         results: list[str | None] = []
-        for i, (word, _reading) in enumerate(words, 1):
-            if offline_hits[word]:
-                glossary: str | None = "".join(offline_hits[word])
+        for i, pair in enumerate(words, 1):
+            word, _reading = pair
+            if offline_hits[pair]:
+                glossary: str | None = "".join(offline_hits[pair])
             else:
-                glossary = online_results.get(word)
+                glossary = online_results.get(pair)
             results.append(glossary)
-            if progress_callback:
+            if progress_callback and not cancelled:
                 if glossary:
                     progress_callback.on_progress(
                         i,
@@ -877,7 +954,7 @@ class DefinitionService:
                         ),
                     )
 
-        if progress_callback:
+        if progress_callback and not cancellation_requested():
             progress_callback.on_complete()
         return results
 

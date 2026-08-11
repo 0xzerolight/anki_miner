@@ -8,6 +8,8 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from anki_miner.exceptions import SetupError
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
@@ -52,7 +54,12 @@ def _processor_for_words(test_config, words: list[TokenizedWord]):
     definition_service.has_usable_offline_provider.return_value = True
     definition_service.has_offline_definitions.side_effect = lambda terms: dict.fromkeys(terms, True)
     definition_service.offline_term_identities.return_value = {}
-    definition_service.get_definitions_batch.side_effect = lambda pairs, *_args: ["definition"] * len(pairs)
+
+    def _definitions(pairs, *_args, is_cancelled):
+        assert is_cancelled() is False
+        return ["definition"] * len(pairs)
+
+    definition_service.get_definitions_batch.side_effect = _definitions
 
     anki_service = MagicMock(name="AnkiService")
     anki_service.get_existing_vocabulary.return_value = set()
@@ -86,6 +93,21 @@ def _summary_record(caplog, prefix: str):
     return next(
         record for record in caplog.records if record.name == _LOGGER and record.getMessage().startswith(prefix)
     )
+
+
+def test_definition_double_requires_live_cancel_predicate(test_config, tmp_path):
+    processor, _ = _processor_for_words(test_config, [_word(0)])
+
+    result = _run_episode(processor, tmp_path)
+
+    assert result.cards_created == 1
+    lookup_call = processor.definition_service.get_definitions_batch.call_args
+    is_cancelled = lookup_call.kwargs["is_cancelled"]
+    assert is_cancelled() is False
+    with pytest.raises(TypeError, match="is_cancelled"):
+        processor.definition_service.get_definitions_batch.side_effect(*lookup_call.args)
+    processor.cancel()
+    assert is_cancelled() is True
 
 
 def test_full_fake_run_emits_one_count_summary_per_phase(test_config, tmp_path, caplog):

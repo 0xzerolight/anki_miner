@@ -6,6 +6,7 @@ import sqlite3
 import threading
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -23,6 +24,7 @@ from anki_miner.orchestration.episode_processor import (
 )
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.pitch_accent_service import PitchEntry
 from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
@@ -3447,19 +3449,42 @@ class TestProcessYoutubeUrlCancelPropagation:
         assert any("cancel" in e.lower() for e in result.errors)
         mock_services["media_extractor"].extract_media_batch.assert_not_called()
 
-    def test_cancel_event_during_definitions_stops_before_card_creation(self, test_config, mock_services, tmp_path):
-        """Stop during phase 4 must not create cards."""
-        processor, _ = self._build(test_config, mock_services, tmp_path)
+    def test_cancel_event_during_definitions_stops_next_request_and_card_creation(
+        self,
+        test_config,
+        mock_services,
+        tmp_path,
+    ):
+        """Stop during phase 4 must reach DefinitionService's request loop."""
+        config = replace(test_config, bypass_optional_filters=True)
+        processor, _ = self._build(config, mock_services, tmp_path)
         cancel_event = threading.Event()
+        words = [_make_word("食べる"), _make_word("走る", start_time=5.0)]
+        provider_calls: list[str] = []
 
-        def _define_then_cancel(lemmas, cb, fallback_context=None):
+        def lookup(word: str) -> None:
+            provider_calls.append(word)
             cancel_event.set()
-            return ["1. to eat"]
+            return None
 
-        mock_services["definition_service"].get_definitions_batch.side_effect = _define_then_cancel
+        provider = SimpleNamespace(
+            name="Jisho",
+            is_online=True,
+            load=lambda: None,
+            is_available=lambda: True,
+            lookup=lookup,
+        )
+        processor.definition_service = DefinitionService(config, providers=[provider])
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [
+            (words[0], _make_media("taberu")),
+            (words[1], _make_media("hashiru")),
+        ]
 
         result = self._run(processor, tmp_path, cancel_event)
 
+        assert provider_calls == ["食べる"]
         assert any("cancel" in e.lower() for e in result.errors)
         assert result.cards_created == 0
         mock_services["anki_service"].create_cards_batch.assert_not_called()
@@ -3941,7 +3966,9 @@ class TestGlossaryFetch:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_services["definition_service"].get_glossaries_batch.assert_called_once_with([("殺る", "やる")], None)
+        glossary_call = mock_services["definition_service"].get_glossaries_batch.call_args
+        assert glossary_call.args == ([("殺る", "やる")], None)
+        assert glossary_call.kwargs["is_cancelled"]() is False
         payload = mock_services["anki_service"].create_cards_batch.call_args[0][0][0]
         assert "glossary" not in (payload.extra_fields or {})
 
@@ -3966,10 +3993,12 @@ class TestGlossaryFetch:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        assert mock_services["definition_service"].get_glossaries_batch.call_args_list == [
-            call([("探し", "さがし")], None),
-            call([("探す", "さがす")], None),
+        glossary_calls = mock_services["definition_service"].get_glossaries_batch.call_args_list
+        assert [glossary_call.args for glossary_call in glossary_calls] == [
+            ([("探し", "さがし")], None),
+            ([("探す", "さがす")], None),
         ]
+        assert all(glossary_call.kwargs["is_cancelled"]() is False for glossary_call in glossary_calls)
 
     def test_glossary_miss_no_retry_for_non_variant(self, test_config, mock_services, tmp_path, monkeypatch):
         """A miss on a word whose mined_form == lemma retries nothing — there is

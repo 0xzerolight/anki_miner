@@ -1349,6 +1349,7 @@ class EpisodeProcessor:
             lookup_pairs,
             progress_callback,
             fallback_context,
+            is_cancelled=lambda: self.cancelled,
         )
         self.presenter.show_success(
             QCoreApplication.translate(
@@ -1364,6 +1365,7 @@ class EpisodeProcessor:
             glossaries = self.definition_service.get_glossaries_batch(
                 lookup_pairs,
                 progress_callback,
+                is_cancelled=lambda: self.cancelled,
             )
             # get_glossaries_batch has no miss-fallback mechanism, so a miss may
             # retry once under a same-kanji, okurigana-only lemma alternate.
@@ -1387,7 +1389,11 @@ class EpisodeProcessor:
                     )
                     for i in retry_idx
                 ]
-                retry_glossaries = self.definition_service.get_glossaries_batch(retry_pairs, None)
+                retry_glossaries = self.definition_service.get_glossaries_batch(
+                    retry_pairs,
+                    None,
+                    is_cancelled=lambda: self.cancelled,
+                )
                 for i, g in zip(retry_idx, retry_glossaries, strict=True):
                     glossaries[i] = g
 

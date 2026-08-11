@@ -12,7 +12,11 @@ from anki_miner.config import AnkiMinerConfig, paths
 from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import ValidationIssue, ValidationResult
 from anki_miner.services._ankiconnect import post_action
-from anki_miner.services.anki_note_builder import configured_target_field_names
+from anki_miner.services.anki_note_builder import (
+    configured_target_field_names,
+    field_mapping_error,
+    field_target_collision_message,
+)
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
@@ -624,20 +628,23 @@ class ValidationService:
             logger.exception("Unexpected error checking field names")
             return False, f"Error checking fields: {e}"
 
-        actual_fields = set(actual_fields_list)
+        targets = [target for target in self.config.anki_fields.values() if target]
+        if self.config.card_type:
+            marker_target = self.config.card_type_marker_fields.get(self.config.card_type, "")
+            if marker_target:
+                targets.append(marker_target)
+        collision_error = field_target_collision_message(self.config.anki_note_type, targets)
+        if collision_error:
+            return False, collision_error
+
         configured_fields = configured_target_field_names(self.config)
-        missing = configured_fields - actual_fields
-        if missing:
-            return False, (
-                f"Field(s) {', '.join(sorted(missing))} not found on note type "
-                f"'{self.config.anki_note_type}'. "
-                f"Available: {', '.join(sorted(actual_fields))}"
-            )
         word_target = self.config.anki_fields["word"]
-        if not actual_fields_list or word_target != actual_fields_list[0]:
-            first_field = actual_fields_list[0] if actual_fields_list else "(none)"
-            return False, (
-                f"Word field '{word_target}' must map to the first field '{first_field}' "
-                f"on note type '{self.config.anki_note_type}'. Check Settings → Anki field mapping."
-            )
+        mapping_error = field_mapping_error(
+            self.config.anki_note_type,
+            actual_fields_list,
+            configured_fields,
+            word_target,
+        )
+        if mapping_error:
+            return False, mapping_error
         return True, "All configured fields exist"

@@ -548,7 +548,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             if plan.total_field_changes > shown_rows:
                 parts.append(self.tr("Showing first {rows} rows.").format(rows=shown_rows))
         elif not plan.options.overwrite:
-            parts.append(self.tr("Nothing to fill — all selected fields already have values."))
+            parts.append(self.tr("No new values were found for the selected fields."))
         elif plan.identical_skips > 0:
             parts.append(
                 self.tr("Nothing to overwrite — the freshly computed values are identical to the existing content.")
@@ -657,16 +657,26 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
         parts = [
-            self.tr("Filled {fields} field(s) on {notes} note(s). Tagged {tag}.").format(
-                fields=result.fields_filled, notes=result.notes_updated, tag=BACKFILL_TAG
+            self.tr("Filled {fields} field(s) on {notes} note(s).").format(
+                fields=result.fields_filled,
+                notes=result.notes_updated,
             )
         ]
+        if result.tagged:
+            parts.append(self.tr("Tagged {tag}.").format(tag=BACKFILL_TAG))
         if result.skipped_stale:
             parts.append(
                 self.tr("{count} skipped — changed or deleted since the scan.").format(count=result.skipped_stale)
             )
         if result.tagged < result.notes_updated:
             parts.append(self.tr("Tagging failed for some notes (see log)."))
+        if result.failed:
+            parts.append(
+                self.tr("{count} note update(s) were not confirmed by Anki; scan again to retry.").format(
+                    count=result.failed
+                )
+            )
+            self._run_failed = True
         self.status_label.setText(" ".join(parts))
 
     def _on_apply_cancelled(self) -> None:
@@ -674,8 +684,11 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self.preview_table.setRowCount(0)
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
-        if self.status_label.text() in {self.tr("Applying…"), self.tr("Cancelling…")}:
+        receipt = self.status_label.text()
+        if receipt in {self.tr("Applying…"), self.tr("Cancelling…")}:
             self.status_label.setText(self.tr("Cancelled."))
+        elif not receipt.startswith(self.tr("Cancelled.")):
+            self.status_label.setText(f"{self.tr('Cancelled.')} {receipt}")
 
     # ------------------------------------------------------------------
     # Worker plumbing
