@@ -468,6 +468,32 @@ def test_factory_path_cancel_before_run_skips_factory(tmp_path, qapp):
     assert results == [[]]
 
 
+def test_cancel_during_factory_skips_preflight(tmp_path, qapp):
+    built = _ok_processor()
+    worker = None
+
+    def factory():
+        assert worker is not None
+        worker.cancel()
+        return built
+
+    worker = ManualPairWorkerThread(
+        None,
+        [_pair(tmp_path, 1)],
+        progress_callback=None,
+        processor_factory=factory,
+    )
+    results: list = []
+    worker.result_ready.connect(results.append)
+
+    worker.run()
+
+    built._preflight_card_target.assert_not_called()
+    built.check_offline_dictionary.assert_not_called()
+    built.process_episode.assert_not_called()
+    assert results == [[]]
+
+
 def test_both_processor_and_factory_raises(tmp_path, qapp):
     """Supplying both episode_processor and processor_factory raises ValueError."""
     proc = _ok_processor()

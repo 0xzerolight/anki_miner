@@ -36,6 +36,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils import queue_state_store
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
@@ -166,6 +168,36 @@ class TestInitialState:
 
     def test_list_widget_empty(self, tab):
         assert tab.list_widget.count() == 0
+
+
+class TestQueueRecovery:
+    @pytest.mark.parametrize("missing_field", ["video_id", "resolved_sub_mode", "video_info"])
+    def test_retry_restored_failure_reprobes_before_it_can_mine(self, tab, missing_field):
+        snapshot = QueueSnapshot(
+            key=tab.QUEUE_STATE_KEY,
+            items=(
+                QueueItemSnapshot(
+                    item_id="restored-failure",
+                    source=queue_state_store.url_source("https://youtu.be/abc123"),
+                    status=queue_state_store.STATUS_ERROR,
+                    error="download failed",
+                ),
+            ),
+        )
+        assert tab.restore_queue_snapshot(snapshot) == 1
+        item = tab._queue.all_items()[0]
+        item.video_id = "abc123"
+        item.resolved_sub_mode = "manual_only"
+        item.video_info = _make_video_info()
+        setattr(item, missing_field, None)
+        probes_before = tab._probe_worker_cls.call_count
+
+        should_mine = tab._retry_item(item)
+
+        assert should_mine is False
+        assert item.status is YouTubeItemStatus.PROBING
+        assert tab._probe_worker_cls.call_count == probes_before + 1
+        assert getattr(item, missing_field) is None
 
 
 class TestAddUrl:

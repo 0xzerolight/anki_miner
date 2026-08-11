@@ -71,6 +71,11 @@ def _add_audiobook(tab, tmp_path: Path, stem: str):
 def _add_youtube(tab, title: str):
     item = tab._queue.add(f"https://youtu.be/{title}")
     item.status = YouTubeItemStatus.READY
+    # A READY row is one the probe already resolved, so it carries every field
+    # the worker requires - not just video_info. Omitting these made the row
+    # look ready while the run path would still have to re-probe it.
+    item.video_id = title
+    item.resolved_sub_mode = "manual_only"
     item.video_info = VideoInfo(
         video_id=title,
         title=title,

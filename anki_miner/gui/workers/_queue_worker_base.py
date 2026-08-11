@@ -211,6 +211,7 @@ class RunBoundaryControls:
         """Open the gate and clear both requests. Call from ``__init__``."""
         self._pause_requested = threading.Event()
         self._stop_after_current = threading.Event()
+        self._stop_claim_lock = threading.Lock()
         self._resume_gate = threading.Event()
         self._resume_gate.set()
         self._paused = threading.Event()
@@ -231,8 +232,9 @@ class RunBoundaryControls:
         one verb prompt-free). The gate is opened too, so a run already paused
         stops instead of waiting for a Resume that is not coming.
         """
-        self._stop_after_current.set()
-        self._resume_gate.set()
+        with self._stop_claim_lock:
+            self._stop_after_current.set()
+            self._resume_gate.set()
 
     @property
     def is_paused(self) -> bool:
@@ -389,13 +391,16 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
             return True
 
     def _try_claim_item(self, item: ItemT) -> bool:
-        """Atomically claim and mark *item* unless Clear skipped it first."""
-        with self._skip_lock:
-            if item in self._skipped:
+        """Atomically claim and mark *item* unless Stop or Clear won first."""
+        with self._stop_claim_lock:
+            if self._stop_after_current.is_set():
                 return False
-            self._claimed.add(item)
-            self._mark_item_claimed(item)
-            return True
+            with self._skip_lock:
+                if item in self._skipped:
+                    return False
+                self._claimed.add(item)
+                self._mark_item_claimed(item)
+                return True
 
     def run(self) -> None:
         """Process the queue end-to-end.
@@ -435,6 +440,9 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
                 self.error.emit(f"{type(exc).__name__}: {exc}")
                 self.queue_finished.emit()
                 return
+        if self.is_cancelled:
+            self.queue_finished.emit()
+            return
         preflight_error = queue_preflight_error(
             self._processor._preflight_card_target,
             self._processor.check_offline_dictionary,

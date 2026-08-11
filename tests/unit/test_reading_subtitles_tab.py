@@ -1,13 +1,13 @@
 """Tests for the subtitles sub-tab of the Reading tab.
 
 ``ReadingSubtitlesTab`` mines the listed subtitle files sequentially over the
-shared ``_ReadingMiningTabBase`` lifecycle — one ephemeral ``ReadingQueueItem``
+shared ``_ReadingMiningTabBase`` lifecycle — one row-backed ``ReadingQueueItem``
 per file, composed into a single whole-run progress bar (the manga pattern).
 Behaviour under test:
 
 * File-list management: Add (deduped), Remove Selected, Clear; drops append
   ALL dropped subtitle files; manga/novel drops earn a cross-tab hint.
-* Start: each listed file is classified by ``detect`` into one ephemeral item;
+* Start: each new listed file is classified by ``detect`` into one row-backed item;
   the whole list launches as one run.
 * Per-item signals are READ-ONLY on item state (the worker owns the lifecycle):
   they compose the whole-run bar + log outcomes, never write status.
@@ -26,11 +26,16 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import Qt
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
+from anki_miner.gui.utils import queue_state_store
+from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.models.reading_queue import ReadingQueueItem
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
@@ -274,7 +279,7 @@ class TestDragDrop:
 
 
 class TestStartRun:
-    """The listed files launch as one sequential run of ephemeral items."""
+    """The listed files launch as one sequential run of row-backed items."""
 
     def test_mine_builds_one_item_per_file(self, tab, tmp_path):
         queue_cls = tab._queue_worker_cls
@@ -327,6 +332,115 @@ class TestStartRun:
         assert not tab.cancel_button.isHidden()
         assert not tab.add_files_button.isEnabled()
         assert "Starting" in tab.overall_progress_widget.status_label.text()
+
+
+class TestQueueRecovery:
+    def test_snapshot_preserves_live_item_outcomes(self, tab, tmp_path):
+        processing_path = _sub_file(tmp_path, "processing.srt")
+        failed_path = _sub_file(tmp_path, "failed.srt")
+        tab._add_paths([processing_path, failed_path])
+        processing = ReadingQueueItem(
+            source=ReadingSourceRef(kind="subtitle", path=processing_path, title="processing"),
+            title="processing",
+            kind="subtitle",
+            status=ReadyItemStatus.PROCESSING,
+            cards_created=2,
+        )
+        failed = ReadingQueueItem(
+            source=ReadingSourceRef(kind="subtitle", path=failed_path, title="failed"),
+            title="failed",
+            kind="subtitle",
+            status=ReadyItemStatus.ERROR,
+            cards_created=3,
+            error_message="Anki unavailable",
+        )
+        tab.file_list.item(0).setData(Qt.ItemDataRole.UserRole, processing)
+        tab.file_list.item(1).setData(Qt.ItemDataRole.UserRole, failed)
+
+        snapshot = tab.queue_snapshot()
+
+        assert [row.status for row in snapshot.items] == [
+            queue_state_store.STATUS_INTERRUPTED,
+            queue_state_store.STATUS_ERROR,
+        ]
+        assert snapshot.items[0].result_count == 2
+        assert snapshot.items[1].result_count == 3
+        assert snapshot.items[1].error == "Anki unavailable"
+
+    def test_restore_holds_interrupted_item_out_of_next_run(self, tab, tmp_path):
+        interrupted_path = _sub_file(tmp_path, "interrupted.srt")
+        ready_path = _sub_file(tmp_path, "ready.srt")
+        interrupted_ref = ReadingSourceRef(kind="subtitle", path=interrupted_path, title="interrupted")
+        ready_ref = ReadingSourceRef(kind="subtitle", path=ready_path, title="ready")
+        interrupted_source = queue_state_store.reading_source(interrupted_ref)
+        ready_source = queue_state_store.reading_source(ready_ref)
+        assert interrupted_source is not None
+        assert ready_source is not None
+        snapshot = QueueSnapshot(
+            key=tab.QUEUE_STATE_KEY,
+            items=(
+                QueueItemSnapshot(
+                    item_id="interrupted",
+                    source=interrupted_source,
+                    status=queue_state_store.STATUS_INTERRUPTED,
+                    result_count=2,
+                ),
+                QueueItemSnapshot(
+                    item_id="ready",
+                    source=ready_source,
+                    status=queue_state_store.STATUS_READY,
+                ),
+            ),
+        )
+
+        assert tab.restore_queue_snapshot(snapshot) == 2
+        launched: list[ReadingQueueItem] = []
+        tab._detect_or_report = MagicMock(
+            side_effect=lambda path: [ReadingSourceRef(kind="subtitle", path=path, title=path.stem)]
+        )
+        tab._launch_run = MagicMock(side_effect=lambda items: launched.extend(items) or False)
+
+        tab._on_mine_clicked()
+
+        assert [item.title for item in launched] == ["ready"]
+        interrupted = tab.file_list.item(0).data(Qt.ItemDataRole.UserRole)
+        assert interrupted.status is ReadyItemStatus.ERROR
+        assert interrupted.cards_created == 2
+        assert interrupted.error_message == "Interrupted when Anki Miner closed"
+
+    def test_restored_terminal_only_rows_disable_mine(self, tab, tmp_path):
+        completed_path = _sub_file(tmp_path, "completed.srt")
+        interrupted_path = _sub_file(tmp_path, "interrupted.srt")
+        completed_source = queue_state_store.reading_source(
+            ReadingSourceRef(kind="subtitle", path=completed_path, title="completed")
+        )
+        interrupted_source = queue_state_store.reading_source(
+            ReadingSourceRef(kind="subtitle", path=interrupted_path, title="interrupted")
+        )
+        assert completed_source is not None
+        assert interrupted_source is not None
+        snapshot = QueueSnapshot(
+            key=tab.QUEUE_STATE_KEY,
+            items=(
+                QueueItemSnapshot(
+                    item_id="completed",
+                    source=completed_source,
+                    status=queue_state_store.STATUS_COMPLETED,
+                ),
+                QueueItemSnapshot(
+                    item_id="interrupted",
+                    source=interrupted_source,
+                    status=queue_state_store.STATUS_INTERRUPTED,
+                ),
+            ),
+        )
+
+        assert tab.restore_queue_snapshot(snapshot) == 2
+        tab._launch_run = MagicMock()
+
+        assert not tab.mine_button.isEnabled()
+        tab.mine_button.click()
+        tab._launch_run.assert_not_called()
 
 
 class TestItemSlots:
@@ -404,8 +518,27 @@ class TestItemSlots:
         tab._on_worker_finished()  # release the run
         tab._on_clear_clicked()  # the list persists across runs — start fresh
         _mine(tab, [_sub_file(tmp_path, "a.srt"), _sub_file(tmp_path, "b.srt")])
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
+        tab._run_items[1].status = ReadyItemStatus.ERROR
         tab._on_queue_finished()
-        assert "Finished 2 subtitle files" in tab.log_widget.text_edit.toPlainText()
+        assert "Done: 1 succeeded, 1 failed." in tab.log_widget.text_edit.toPlainText()
+
+    def test_queue_finished_does_not_count_untouched_items(self, tab, tmp_path):
+        _mine(
+            tab,
+            [
+                _sub_file(tmp_path, "a.srt"),
+                _sub_file(tmp_path, "b.srt"),
+                _sub_file(tmp_path, "c.srt"),
+            ],
+        )
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
+
+        tab._on_queue_finished()
+
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Done: 1 succeeded, 0 failed." in log
+        assert "Finished 3 subtitle files" not in log
 
 
 class TestCleanup:

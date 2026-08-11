@@ -118,6 +118,9 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             if self.episode_processor is None:
                 assert self._processor_factory is not None  # validated in __init__
                 self.episode_processor = self._processor_factory()
+            if self.check_cancelled():
+                self.result_ready.emit(results)
+                return
 
             preflight_error = queue_preflight_error(
                 self.episode_processor._preflight_card_target,

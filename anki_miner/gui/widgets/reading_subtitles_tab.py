@@ -4,8 +4,8 @@ Mines subtitle files (``.srt``/``.ass``/``.ssa``/``.vtt``) as text — no video,
 so no screenshots and no extracted sentence audio (synthetic sentence TTS, if
 enabled in Audio settings, still applies like any reading-sourced card) —
 through the shared reading pipeline. Add files via the multi-select picker (or
-drop several); **Mine** runs them sequentially as one job (one ephemeral
-:class:`ReadingQueueItem` per file) through the shared
+drop several); **Mine** runs them sequentially as one job (one
+:class:`ReadingQueueItem` per file, retained on its list row) through the shared
 :class:`~anki_miner.gui.widgets._reading_mining_base._ReadingMiningTabBase`
 lifecycle, composing per-file progress into one whole-run bar like the manga
 sub-tab ("File N/M" in the status label). Word inspection happens via the
@@ -86,15 +86,15 @@ _HISTORY_KEY = "reading.subtitles.inputs"
 # holds the same number of files at every text scale.
 _VISIBLE_FILE_ROWS = 4
 
-# Item-data role stamping each list row with its ephemeral ``ReadingQueueItem``
-# at Mine time, so a mid-run Remove/Clear can route the removed row to the
+# Item-data role storing each list row's ``ReadingQueueItem`` from Mine or
+# restore, so a mid-run Remove/Clear can route the removed row to the
 # worker's identity-keyed skip channel (the worker iterates its own frozen
 # snapshot, not the live list).
 _ITEM_ROLE = Qt.ItemDataRole.UserRole
 
 
 class ReadingSubtitlesTab(_ReadingMiningTabBase):
-    """Multi-file subtitle mining sub-tab (sequential ephemeral items).
+    """Multi-file subtitle mining sub-tab (sequential row-backed items).
 
     Owns, via the base, at most one running
     :class:`~anki_miner.gui.workers.reading_queue_worker.ReadingQueueWorker`
@@ -292,11 +292,23 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
         Dropping forty subtitle files in is exactly the twenty minutes of
         assembly D16-C refuses to throw away on quit. Each row is stored as a
-        file-backed :class:`ReadingSourceRef`, so nothing but a path travels.
+        file-backed :class:`ReadingSourceRef` plus its durable outcome fields.
         """
         items = []
         for index, path in enumerate(self.listed_paths()):
-            source = queue_state_store.reading_source(ReadingSourceRef(kind="subtitle", path=path, title=path.stem))
+            list_item = self.file_list.item(index)
+            queue_item = list_item.data(_ITEM_ROLE) if list_item is not None else None
+            if isinstance(queue_item, ReadingQueueItem):
+                ref = queue_item.source
+                status = queue_state_store.status_from_run_state(queue_item.status.value)
+                error = queue_item.error_message or ""
+                result_count = queue_item.cards_created
+            else:
+                ref = ReadingSourceRef(kind="subtitle", path=path, title=path.stem)
+                status = queue_state_store.STATUS_READY
+                error = ""
+                result_count = 0
+            source = queue_state_store.reading_source(ref)
             if source is None:
                 continue
             items.append(
@@ -304,6 +316,9 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
                     item_id=f"{index}:{path.name}",
                     source=source,
                     title=path.name,
+                    status=status,
+                    error=error,
+                    result_count=result_count,
                 )
             )
         return QueueSnapshot(key=self.QUEUE_STATE_KEY, items=tuple(items))
@@ -317,7 +332,8 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         """
         if self.worker_thread is not None or self.listed_paths():
             return 0
-        restored: list[Path] = []
+        restored = 0
+        restored_paths: set[str] = set()
         for row in snapshot.items:
             ref = queue_state_store.reading_ref_from_source(row.source)
             if ref is None or ref.path is None:
@@ -325,9 +341,27 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             if not ref.path.is_file():
                 self.log_widget.append_warning(tr_format(self.tr("File not found: %1"), str(ref.path)))
                 continue
-            restored.append(ref.path)
-        self._add_paths(restored)
-        return len(restored)
+            path_text = str(ref.path)
+            if path_text in restored_paths:
+                continue
+            restored_paths.add(path_text)
+            item = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
+            item.cards_created = row.result_count
+            if row.is_interrupted:
+                item.status = ReadyItemStatus.ERROR
+                item.error_message = self.tr("Interrupted when Anki Miner closed")
+            elif row.status == queue_state_store.STATUS_COMPLETED:
+                item.status = ReadyItemStatus.COMPLETED
+            elif row.status == queue_state_store.STATUS_ERROR:
+                item.status = ReadyItemStatus.ERROR
+                item.error_message = row.error
+            self.file_list.addItem(path_text)
+            list_item = self.file_list.item(self.file_list.count() - 1)
+            if list_item is not None:
+                list_item.setData(_ITEM_ROLE, item)
+            restored += 1
+        self._recompute_buttons()
+        return restored
 
     def _add_paths(self, paths: list[Path]) -> None:
         """Append subtitle files to the list, skipping duplicates."""
@@ -460,10 +494,10 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     def _on_mine_clicked(self) -> None:
         """Mine every listed file sequentially.
 
-        Each file is classified by ``detector.detect`` (one subtitle ref per
-        valid file) into an ephemeral :class:`ReadingQueueItem`; the items are
-        never stored — the QListWidget is the only queue-like state. A ``True``
-        launch swaps Mine for Cancel and resets the progress bar.
+        Each new file is classified by ``detector.detect`` (one subtitle ref
+        per valid file) into a :class:`ReadingQueueItem` stored on its list row;
+        restored rows reuse their stored item. A ``True`` launch swaps Mine for
+        Cancel and resets the progress bar.
         """
         if self.worker_thread is not None:
             return
@@ -478,6 +512,12 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
         items: list[ReadingQueueItem] = []
         for row, path in enumerate(paths):
+            list_item = self.file_list.item(row)
+            restored_item = list_item.data(_ITEM_ROLE) if list_item is not None else None
+            if isinstance(restored_item, ReadingQueueItem):
+                if restored_item.status is ReadyItemStatus.READY:
+                    items.append(restored_item)
+                continue
             refs = self._detect_or_report(path)
             if refs is None:
                 return
@@ -486,7 +526,6 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
             # Stamp the list row with its queue item so a mid-run Remove/Clear
             # can route it to worker.try_skip_item. Subtitle files always classify
             # to exactly one ref (detector._subtitle_ref), so row↔item is 1:1.
-            list_item = self.file_list.item(row)
             if list_item is not None and row_items:
                 list_item.setData(_ITEM_ROLE, row_items[0])
 
@@ -604,8 +643,11 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
 
         Single-file outcomes are already logged by ``_on_item_finished``.
         """
-        if len(self._run_items) > 1:
-            self.log_widget.append_info(tr_format(self.tr("Finished %1 subtitle files."), len(self._run_items)))
+        if len(self._run_items) <= 1:
+            return
+        succeeded = sum(1 for item in self._run_items if item.status == ReadyItemStatus.COMPLETED)
+        failed = sum(1 for item in self._run_items if item.status == ReadyItemStatus.ERROR)
+        self.log_widget.append_info(tr_format(self.tr("Done: %1 succeeded, %2 failed."), succeeded, failed))
 
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends (called from the base cleanup slot).
@@ -633,8 +675,15 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         """
         run_active = self.worker_thread is not None
         has_items = self.file_list.count() > 0
+        has_runnable_items = False
+        for row in range(self.file_list.count()):
+            list_item = self.file_list.item(row)
+            queue_item = list_item.data(_ITEM_ROLE) if list_item is not None else None
+            if not isinstance(queue_item, ReadingQueueItem) or queue_item.status is ReadyItemStatus.READY:
+                has_runnable_items = True
+                break
         self.mine_button.setVisible(not run_active)
-        self.mine_button.setEnabled(not run_active)
+        self.mine_button.setEnabled(not run_active and (not has_items or has_runnable_items))
         self.cancel_button.setVisible(run_active)
         self.add_files_button.setEnabled(not run_active)
         self.remove_selected_button.setEnabled(has_items)

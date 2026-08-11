@@ -237,9 +237,6 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             # item's, so handles never accumulate across items.
             self._close_current_processor()
 
-            if item.status != QueueItemStatus.PENDING:
-                continue  # already terminal from an earlier run in this session
-
             # OWNERSHIP: during a run, this worker thread owns every QueueItem
             # status/result write, applied synchronously at pick/finish time so
             # get_next_pending() can never re-pick an in-flight item. Relying on
@@ -248,7 +245,12 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             # caught up, and got picked again. BatchProcessingTab's slots are
             # render-only; between runs (retry reset, repopulation) the GUI
             # thread owns the model.
-            item.status = QueueItemStatus.PROCESSING
+            with self._stop_claim_lock:
+                if self._stop_after_current.is_set():
+                    break
+                if item.status != QueueItemStatus.PENDING:
+                    continue  # already terminal from an earlier run in this session
+                item.status = QueueItemStatus.PROCESSING
             self.item_started.emit(item.id, item.display_name)
 
             try:

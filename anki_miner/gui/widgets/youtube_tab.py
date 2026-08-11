@@ -550,10 +550,12 @@ class YouTubeTab(_ListQueueMiningTabBase):
         """Retry a failed row the way it failed.
 
         A probe failure never reached the miner, so mining it would just fail
-        again for the same reason; it is re-probed instead, and stays out of the
-        retry run.
+        again for the same reason. A restored mining failure also has no probe
+        metadata because snapshots store only durable URL facts. Both are
+        re-probed and stay out of the retry run until that succeeds.
         """
-        if item.status == YouTubeItemStatus.PROBE_ERROR:
+        probe_incomplete = item.video_id is None or item.resolved_sub_mode is None or item.video_info is None
+        if item.status == YouTubeItemStatus.PROBE_ERROR or probe_incomplete:
             self._add_flow.retry_probe(item)
             return False
         return super()._retry_item(item)

@@ -488,6 +488,28 @@ def test_finish_current_then_stop_completes_the_item_and_ends(qapp, processor, t
     assert len(caps["queue_finished"].calls) == 1
 
 
+def test_finish_current_between_boundary_check_and_claim_stops_next_item(make_worker, processor):
+    """Finish-current must win when it lands before the next item is claimed."""
+    first = _make_item("a")
+    second = _make_item("b")
+    worker = make_worker(items=[first, second])
+    claim = worker._try_claim_item
+
+    def _claim_after_stop(item):
+        if item is second:
+            worker.request_stop_after_current()
+        return claim(item)
+
+    worker._try_claim_item = _claim_after_stop
+
+    worker.run()
+
+    assert processor.process_episode.call_count == 1
+    assert first in worker._claimed
+    assert second not in worker._claimed
+    assert second.status is ReadyItemStatus.READY
+
+
 def test_finish_current_releases_a_paused_run(qapp, processor, test_config):
     barrier = _ItemBarrier()
     processor.process_episode.side_effect = barrier
@@ -520,6 +542,32 @@ def test_finish_current_releases_a_paused_run(qapp, processor, test_config):
     assert not thread.is_alive()
     assert barrier.started == ["a"]
     assert caps["resumed"].calls == []
+
+
+def test_cancel_during_processor_factory_skips_queue_preflight(qapp, test_config):
+    processor = make_mock_processor("process_episode", _ok_result())
+    worker = None
+
+    def _factory():
+        assert worker is not None
+        worker.cancel()
+        return processor
+
+    worker = AudiobookQueueWorker(
+        processor=None,
+        config=test_config,
+        items=[_make_item()],
+        curation_callback=None,
+        processor_factory=_factory,
+    )
+    caps = connect_all(worker)
+
+    worker.run()
+
+    processor._preflight_card_target.assert_not_called()
+    processor.check_offline_dictionary.assert_not_called()
+    processor.process_episode.assert_not_called()
+    assert len(caps["queue_finished"].calls) == 1
 
 
 def test_pause_requested_before_the_run_holds_the_first_item(qapp, processor, test_config):
