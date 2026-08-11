@@ -1129,6 +1129,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         if index != self._ui_subtab_index:
             self.ui_panel.reset_baseline()
 
+    def _commit_immediate_config(
+        self,
+        config: AnkiMinerConfig,
+        commit: Callable[[AnkiMinerConfig], None],
+    ) -> None:
+        """Mark a narrow immediate write so its synchronous echo is adoption-only."""
+        was_committing = self._committing
+        self._committing = True
+        try:
+            commit(config)
+        finally:
+            self._committing = was_committing
+
     def _on_theme_state_changed(self, active: str, favorites: tuple) -> None:
         """Forward Themes panel changes through ``config_changed``.
 
@@ -1138,7 +1151,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         persists to ``gui_config.json`` without duplicate logic.
         """
         new_config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
-        self.config_changed.emit(new_config)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_font_scale_changed(self, scale: float) -> None:
         """Fold the UI panel's text-size change into the config and persist.
@@ -1150,7 +1163,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         The running process keeps the boot scale until it is relaunched.
         """
         new_config = replace(self.config, ui_font_scale=scale)
-        self.config_changed.emit(new_config)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_zoom_changed(self, zoom: float) -> None:
         """Persist a whole-UI zoom change immediately (applies on next launch).
@@ -1160,12 +1173,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         restart note and this slot only folds ``ui_zoom`` into the config.
         """
         new_config = replace(self.config, ui_zoom=zoom)
-        self.config_changed.emit(new_config)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_language_changed(self, language: str) -> None:
         """Persist a UI-language change immediately (applies on next launch)."""
         new_config = replace(self.config, ui_language=language)
-        self.config_changed.emit(new_config)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_native_dialogs_changed(self, use_native: bool) -> None:
         """Persist the file-dialog mode immediately (applies to the next dialog).
@@ -1174,7 +1187,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         the committed config, so no direct ``file_dialogs`` call here.
         """
         new_config = replace(self.config, use_native_file_dialogs=use_native)
-        self.config_changed.emit(new_config)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def commit_settings(self) -> None:
         """Commit the save-path panels into the config and emit ``config_changed``.
@@ -1298,6 +1311,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         ):
             kept_back.append(self.tr("dictionary folder (Dictionaries)"))
             new_dicts_root = self.config.dicts_root
+        dicts_root_changed = new_dicts_root != self.config.dicts_root
 
         # Fold: each panel's contribute() returns a new frozen config with its
         # own fields applied.  Panels outside the Save round-trip (dictionary /
@@ -1367,13 +1381,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         except ConfigCommitError as error:
             if error.result.persisted:
                 self._sync_persisted_config(new_config)
+                if dicts_root_changed:
+                    self._loading = True
+                    try:
+                        self.dictionary_panel.set_dicts_root(new_dicts_root)
+                    finally:
+                        self._loading = False
             raise
 
         # Sync the dictionary panel only after configuration persistence
         # succeeds, so a failed save cannot transfer mutation authority to an
         # uncommitted root. Under _loading because set_dicts_root re-emits the
         # selector's path_changed.
-        if new_dicts_root != self.config.dicts_root:
+        if dicts_root_changed:
             self._loading = True
             try:
                 self.dictionary_panel.set_dicts_root(new_dicts_root)
@@ -1589,6 +1609,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration from external source.
 
+        A synchronous echo from this tab's own commit is adoption-only: the
+        widgets already contain the values that were just saved. External
+        refreshes still follow the field-diff rules below.
+
         Skips reloading the panel widgets when the incoming config differs from
         the current one ONLY in externally-managed fields (theme, font scale,
         first-run flags, update-banner fields — see ``_EXTERNAL_ONLY_FIELDS``).
@@ -1604,6 +1628,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Args:
             config: New configuration to load
         """
+        if self._committing:
+            self.config = config
+            return
         changed = {
             f.name for f in dataclasses.fields(config) if getattr(config, f.name) != getattr(self.config, f.name)
         }
@@ -1697,7 +1724,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _commit_remove_config(self, config: AnkiMinerConfig) -> ConfigCommitResult:
         """Commit one remove and normalize its durable failure boundary."""
         try:
-            self._commit_config(config)
+            self._commit_immediate_config(config, self._commit_config)
         except ConfigCommitError as error:
             if error.result.persisted:
                 self._sync_persisted_config(config)
@@ -1737,7 +1764,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         needs to sync to Anki here.
         """
         new_config = replace(self.config, dictionary_chain=new_chain)
-        self._commit_config(new_config)
+        self._commit_immediate_config(new_config, self._commit_config)
 
     def _persist_audio_chain_change(self, new_chain: tuple[AudioSourceEntry, ...]) -> None:
         """Save an audio chain mutation to disk and notify listeners.
@@ -1747,7 +1774,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
-        self._commit_config(new_config)
+        self._commit_immediate_config(new_config, self._commit_config)
 
     def _persist_reading_tts_change(self) -> None:
         """Save the sentence-TTS toggles immediately (no Save click needed)."""
@@ -1758,7 +1785,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             reading_tts_google_enabled=google_on,
             reading_tts_papago_enabled=papago_on,
         )
-        self.config_changed.emit(new_config)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_retry_missing_audio(self) -> None:
         """Clear JPod101 ``.miss`` markers so absent words are re-tried next run.
@@ -1807,7 +1834,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, frequency_chain=new_chain)
-        self._commit_config(new_config)
+        self._commit_immediate_config(new_config, self._commit_config)
 
     def _persist_pitch_chain_change(self, new_chain: tuple[PitchSourceEntry, ...]) -> None:
         """Save a pitch chain mutation to disk and notify listeners.
@@ -1817,7 +1844,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         requiring the user to click Save in Settings.
         """
         new_config = replace(self.config, pitch_chain=new_chain)
-        self._commit_config(new_config)
+        self._commit_immediate_config(new_config, self._commit_config)
 
     # === Known words handlers (Issues #38 / #42) ===
 

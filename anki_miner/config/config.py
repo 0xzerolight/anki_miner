@@ -556,6 +556,13 @@ class AnkiMinerConfig:
         "cleaned up" — it is the supported way to normalise fields during
         __post_init__ on a frozen dataclass.
         """
+        if (
+            not isinstance(self.max_parallel_workers, int)
+            or isinstance(self.max_parallel_workers, bool)
+            or not 1 <= self.max_parallel_workers <= 20
+        ):
+            raise ValueError("max_parallel_workers must be an integer from 1 to 20")
+
         # Convert paths to Path objects (handles both str and Path inputs)
         if isinstance(self.media_temp_folder, str):
             object.__setattr__(self, "media_temp_folder", Path(self.media_temp_folder))

@@ -160,6 +160,45 @@ def test_clear_queue_empties_rows(panel, monkeypatch):
     assert "empty" in panel.queue_stats_label.text().lower()
 
 
+@pytest.mark.parametrize("cleared_selector", [0, 1], ids=["video", "subtitle"])
+def test_edit_rejects_a_cleared_folder_without_changing_bound_item(
+    panel,
+    monkeypatch,
+    tmp_path,
+    cleared_selector,
+):
+    from PyQt6.QtWidgets import QDialog, QDialogButtonBox
+
+    from anki_miner.gui.widgets.enhanced import FileSelector
+
+    video = tmp_path / "video"
+    subtitle = tmp_path / "subtitle"
+    video.mkdir()
+    subtitle.mkdir()
+    widget = _add_widget(panel, "Series", "id-1", video=video, subtitle=subtitle, offset=1.5)
+    item = panel._items[id(widget)]
+
+    def clear_and_try_accept(dialog):
+        selectors = dialog.findChildren(FileSelector)
+        assert len(selectors) == 2
+        selectors[cleared_selector].set_path("")
+        buttons = dialog.findChild(QDialogButtonBox)
+        assert buttons is not None
+        ok = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        assert ok is not None
+        ok.click()
+        assert dialog.result() != QDialog.DialogCode.Accepted
+        return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(QDialog, "exec", clear_and_try_accept)
+
+    panel._edit_item(widget)
+
+    assert widget.get_folders() == (video, subtitle)
+    assert (item.video_folder, item.subtitle_folder) == (video, subtitle)
+    assert item.subtitle_offset == 1.5
+
+
 class TestImeSafeDialogs:
     """D49 — Return belongs to the input method, never to a dialog's OK button.
 

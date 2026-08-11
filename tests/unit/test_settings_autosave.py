@@ -15,8 +15,11 @@ from pathlib import Path
 import pytest
 from PyQt6.QtWidgets import QMessageBox
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.gui.workers.import_worker import ImportWorker
+from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 
 @pytest.fixture
@@ -118,6 +121,108 @@ class TestDebounceWiring:
         with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
             tab.dictionary_panel.release(token)
         assert blocker.args[0].anki_deck_name == "WaitForToken"
+
+
+class TestCommitSelfEcho:
+    def test_debounced_commit_adopts_echo_without_reloading_panels(self, tab):
+        tab.config_changed.connect(tab.update_config)
+        tab.anki_panel.anki_tags_input.setText("saved-tag")
+        load_calls: list[None] = []
+        original = tab._load_config
+
+        def spy_load():
+            load_calls.append(None)
+            original()
+
+        tab._load_config = spy_load
+
+        tab.commit_settings()
+
+        assert load_calls == []
+        assert tab.config.anki_tags == "saved-tag"
+
+    def test_dicts_root_commit_self_echo_syncs_panel_registry(self, tab, tmp_path, no_modals, monkeypatch):
+        scan_roots: list[Path] = []
+        monkeypatch.setattr(DictionaryRegistry, "load", lambda registry: scan_roots.append(registry._root))
+        tab.config_changed.connect(tab.update_config)
+        new_root = tmp_path / "new_dicts"
+        new_root.mkdir()
+        tab.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+        tab.commit_settings()
+
+        assert tab.config.dicts_root == new_root
+        assert tab.dictionary_panel._dicts_root == new_root
+        tab.dictionary_panel._build_view()
+        assert scan_roots == [new_root]
+
+    @pytest.mark.parametrize("persisted", [False, True], ids=["pre-save", "post-save"])
+    def test_dicts_root_commit_failure_keeps_all_consumers_on_durable_root(
+        self, tab, tmp_path, no_modals, monkeypatch, qtbot, persisted
+    ):
+        scan_roots: list[Path] = []
+        import_roots: list[Path] = []
+        monkeypatch.setattr(DictionaryRegistry, "load", lambda registry: scan_roots.append(registry._root))
+        old_root = tab.config.dicts_root
+
+        def commit_then_fail(config):
+            if persisted:
+                tab.update_config(replace(config, config_version=config.config_version + 1))
+                result = ConfigCommitResult.post_save_failure(RuntimeError("refresh failed"))
+            else:
+                result = ConfigCommitResult.pre_save_failure(OSError("disk full"))
+            raise ConfigCommitError(result)
+
+        tab._commit_config = commit_then_fail
+        new_root = tmp_path / "new_dicts"
+        new_root.mkdir()
+        tab.dictionary_panel.dicts_root_selector.set_path(str(new_root))
+
+        assert tab.commit_pending_settings_for_mutation() is False
+        expected_root = new_root if persisted else old_root
+        assert tab.config.dicts_root == expected_root
+        assert tab.dictionary_panel.get_dicts_root() == new_root
+        assert tab.dictionary_panel._dicts_root == expected_root
+
+        tab.dictionary_panel._build_view()
+        tab.dictionary_panel.refresh_registry()
+        qtbot.waitUntil(lambda: len(scan_roots) == 2, timeout=3000)
+        assert scan_roots == [expected_root, expected_root]
+
+        def probe_import(_zip_path: Path, dest_root: Path):
+            import_roots.append(dest_root)
+            raise RuntimeError("import probe")
+
+        monkeypatch.setattr(ImportWorker, "for_yomitan", staticmethod(probe_import))
+        with pytest.raises(RuntimeError, match="import probe"):
+            tab._dict_import_flow._add_dict_picked("trace", 0.0, str(tmp_path / "dict.zip"))
+        assert import_roots == [expected_root]
+
+        entry = ChainEntry(kind="indexed", dict_id="test-dict")
+        assert tab.dictionary_panel._entry_disk_dir(entry) == expected_root / "test-dict"
+
+    def test_zoom_commit_preserves_pending_panel_edit(self, tab):
+        tab.config_changed.connect(tab.update_config)
+        tab.anki_panel.anki_tags_input.setText("pending-tag")
+
+        tab._on_zoom_changed(1.25)
+
+        assert tab.anki_panel.get_anki_tags() == "pending-tag"
+        assert tab.config.ui_zoom == 1.25
+        assert tab.config.anki_tags != "pending-tag"
+        assert tab._settings_dirty is True
+
+    def test_native_dialog_commit_preserves_pending_panel_edit(self, tab):
+        tab.config_changed.connect(tab.update_config)
+        tab.anki_panel.anki_tags_input.setText("pending-tag")
+        use_native = not tab.config.use_native_file_dialogs
+
+        tab._on_native_dialogs_changed(use_native)
+
+        assert tab.anki_panel.get_anki_tags() == "pending-tag"
+        assert tab.config.use_native_file_dialogs is use_native
+        assert tab.config.anki_tags != "pending-tag"
+        assert tab._settings_dirty is True
 
 
 class TestPerFieldValidation:

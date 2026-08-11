@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AudioSourceEntry
+from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue
@@ -461,13 +462,37 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def _handle_diskless_remove(self, entry: AudioSourceEntry, index: int) -> bool:
         if entry.kind == "pack":
             return False
-        # User-added online source (custom): nothing on disk to delete, so drop
-        # it directly with no destructive-confirmation dialog.
-        new_chain = list(self.get_chain())
-        del new_chain[index]
-        self._chain = new_chain
+        # User-added online source (custom): nothing on disk to delete, but the
+        # chain still crosses the same durable commit boundary as a pack.
+        display = self._entry_display_name(entry)
+        chain = self.get_chain()
+        new_chain = (*chain[:index], *chain[index + 1 :])
+        if self._remove_chain_commit is None:
+            self._chain = list(new_chain)
+            self.chain_changed.emit()
+            result = ConfigCommitResult.committed()
+        else:
+            try:
+                result = self._remove_chain_commit(new_chain)
+            except Exception as error:
+                result = ConfigCommitResult.pre_save_failure(error)
+            if result.persisted:
+                self._chain = list(new_chain)
+        if not result.persisted:
+            msg = self._error_text(result)
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=tr_format(
+                        self.tr("Removal of %1 was not saved. The source is unchanged — try again."),
+                        display,
+                    ),
+                    details=f"{display}: {msg}",
+                )
+            )
+            return True
         self._rebuild_list()
-        self.chain_changed.emit()
+        if not result.refreshed:
+            self._warn_post_save_failure(display, self._error_text(result))
         return True
 
     def _entry_display_name(self, entry: AudioSourceEntry) -> str:
