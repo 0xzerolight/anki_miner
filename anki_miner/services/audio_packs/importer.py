@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from anki_miner.config import paths as config_paths
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
@@ -15,6 +16,7 @@ from anki_miner.services._sqlite_index import (
     write_ownership_marker,
 )
 from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
+from anki_miner.services.audio_packs.fetcher import purge_pack_cache
 from anki_miner.services.audio_packs.formats import PARSERS, detect_pack_format, parse_ozk5
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
@@ -234,7 +236,7 @@ def repair_audio_pack(
     cancel_check: Callable[[], bool] | None = None,
 ) -> AudioPackImportResult:
     """Explicitly repair ``pack_id``, retaining an invalid prior slot as quarantine."""
-    return repair_managed_slot(
+    result = repair_managed_slot(
         pack_dir,
         dest_root,
         pack_id,
@@ -248,6 +250,8 @@ def repair_audio_pack(
             overwrite=overwrite,
         ),
     )
+    purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)
+    return result
 
 
 _CANCEL_BATCH_SIZE = 5000

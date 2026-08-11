@@ -155,6 +155,31 @@ class TestAudioStageLogging:
         assert record.levelno == logging.WARNING
         assert record.name == "anki_miner.orchestration.audio_stage"
 
+    def test_previous_failure_does_not_warn_after_later_hit(self, test_config, tmp_path):
+        counts = _counts()
+        outcomes = iter([None, tmp_path / "recovered.mp3"])
+
+        def _fetch_candidates(*_args, **_kwargs):
+            result = next(outcomes)
+            if result is None:
+                counts["connection"] += 1
+            return result
+
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.side_effect = _fetch_candidates
+        fetcher.stats.side_effect = lambda: dict(counts)
+        presenter = MagicMock()
+        stage = self._stage(self._enabled_config(test_config), fetcher, presenter)
+
+        stage.fetch_expression_audio([(_make_word(), _make_media("failed"))], None)
+        presenter.show_warning.reset_mock()
+        recovered_media = _make_media("recovered")
+
+        stage.fetch_expression_audio([(_make_word(), recovered_media)], None)
+
+        assert recovered_media.expression_audio_filename == "recovered.mp3"
+        presenter.show_warning.assert_not_called()
+
 
 class TestExpressionAudio:
     """Phase-3 expression (pronunciation) audio fetching (Issue #73)."""

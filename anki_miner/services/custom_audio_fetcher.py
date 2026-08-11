@@ -27,6 +27,9 @@ from urllib.parse import urljoin
 import requests
 
 from anki_miner.services.audio_fetch_common import (
+    classify_request_exception as _classify_request_exception,
+)
+from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
 )
 from anki_miner.services.audio_fetch_common import (
@@ -165,6 +168,7 @@ class CustomAudioFetcher:
                 self._cache_dir,
                 stem,
                 failure_counts=self._failure_counts,
+                cancelled_check=cancelled_check,
             )
             if result is not None:
                 return result
@@ -188,9 +192,18 @@ class CustomAudioFetcher:
                 base = response.url
             finally:
                 response.close()
-        except (requests.RequestException, OSError, ValueError) as exc:
+        except ValueError as exc:
             # ValueError covers json.JSONDecodeError (non-JSON body).
             self._failure_counts["non_audio"] += 1
+            logger.debug(
+                "custom_json fetch failed for %s: %s: %s",
+                _redact_url_for_log(url),
+                type(exc).__name__,
+                _redact_url_for_log(str(exc)),
+            )
+            return []
+        except (requests.RequestException, OSError) as exc:
+            self._failure_counts[_classify_request_exception(exc)] += 1
             logger.debug(
                 "custom_json fetch failed for %s: %s: %s",
                 _redact_url_for_log(url),

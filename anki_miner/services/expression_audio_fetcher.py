@@ -178,10 +178,10 @@ class JPod101AudioFetcher:
             cancelled_check: Optional zero-argument callable that returns True
                 when the caller has requested cancellation.  Consulted after
                 the input guards, again immediately before ``time.sleep``, and
-                once more before the network request.  When it returns True this
-                method returns None immediately — no cache writes, no .miss
-                marker.  Mid-request cancellation is NOT attempted: the timeout
-                (10 s) already bounds the worst-case stall per word.
+                once more before the network request and between response chunks.
+                When it returns True this method returns None immediately — no
+                cache writes, no .miss marker. The read timeout still bounds a
+                peer that stops yielding chunks.
 
         Returns:
             Path to a cached mp3, or None if unavailable.
@@ -254,6 +254,8 @@ class JPod101AudioFetcher:
                 chunks: list[bytes] = []
                 total = 0
                 for chunk in response.iter_content(chunk_size=8192):
+                    if cancelled_check is not None and cancelled_check():
+                        return None
                     total += len(chunk)
                     if total > MAX_AUDIO_BYTES:
                         # Oversized — transient failure, nothing written.
@@ -310,7 +312,12 @@ class JPod101AudioFetcher:
 
         except (requests.RequestException, OSError) as exc:
             self._failure_counts[_classify_request_exception(exc)] += 1
-            logger.debug("expression audio fetch failed for %s: %s", mined_form, exc)
+            identity = hashlib.sha256(f"{mined_form}\0{reading}".encode()).hexdigest()[:12]
+            logger.debug(
+                "expression audio fetch failed identity=%s error=%s",
+                identity,
+                type(exc).__name__,
+            )
             return None
 
     def fetch_candidates(

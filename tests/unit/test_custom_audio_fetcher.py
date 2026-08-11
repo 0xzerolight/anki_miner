@@ -6,6 +6,7 @@ import json
 import logging
 from unittest.mock import MagicMock
 
+import pytest
 import requests
 
 from anki_miner.services.custom_audio_fetcher import (
@@ -273,6 +274,23 @@ class TestCustomAudioFetcherDirect:
         assert f.fetch("食べる", "たべる", cancelled_check=lambda: True) is None
         f._session.get.assert_not_called()
 
+    def test_cancelled_between_response_chunks_does_not_cache(self, tmp_path):
+        f = self._fetcher(tmp_path)
+        cancelled = False
+
+        def _chunks(chunk_size=8192):
+            nonlocal cancelled
+            yield b"ID3audio"
+            cancelled = True
+            yield b"more-audio"
+
+        response = _audio_response()
+        response.iter_content.side_effect = _chunks
+        f._session.get.return_value = response
+
+        assert f.fetch("食べる", "たべる", cancelled_check=lambda: cancelled) is None
+        assert not (tmp_path / "cache").exists() or not any((tmp_path / "cache").iterdir())
+
 
 # ---------------------------------------------------------------------------
 # CustomAudioFetcher — custom_json (audioSourceList)
@@ -366,6 +384,32 @@ class TestCustomAudioFetcherJson:
         bad.json.side_effect = json.JSONDecodeError("bad", "", 0)
         f._session.get.return_value = bad
         assert f.fetch("食べる", "たべる") is None
+
+    @pytest.mark.parametrize(
+        ("error", "bucket"),
+        [
+            (requests.exceptions.SSLError("expired certificate"), "ssl"),
+            (requests.exceptions.Timeout("slow"), "timeout"),
+            (requests.exceptions.ConnectionError("offline"), "connection"),
+            (OSError("socket closed"), "connection"),
+        ],
+    )
+    def test_transport_error_uses_transport_bucket(self, tmp_path, error, bucket):
+        f = self._fetcher(tmp_path)
+        f._session.get.side_effect = error
+
+        assert f.fetch("食べる", "たべる") is None
+        assert f.stats()[bucket] == 1
+        assert f.stats()["non_audio"] == 0
+
+    def test_malformed_json_uses_non_audio_bucket(self, tmp_path):
+        f = self._fetcher(tmp_path)
+        bad = _json_response(None)
+        bad.json.side_effect = json.JSONDecodeError("bad", "", 0)
+        f._session.get.return_value = bad
+
+        assert f.fetch("食べる", "たべる") is None
+        assert f.stats()["non_audio"] == 1
 
     def test_non_200_json_returns_none(self, tmp_path):
         f = self._fetcher(tmp_path)

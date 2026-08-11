@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import pytest
 
+from anki_miner.services.audio_packs import fetcher as audio_pack_fetcher
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
@@ -95,7 +97,7 @@ class TestHit:
         result = fetcher.fetch("食べる", "たべる")
 
         assert result is not None
-        assert result.parent == cache_dir
+        assert result.parent.parent == cache_dir
 
     def test_hit_cache_filename_has_pack_prefix(self, tmp_path: Path):
         db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
@@ -138,6 +140,41 @@ class TestHit:
         assert result is not None
         assert result.resolve() != (pack_dir / "taberu.mp3").resolve()
 
+    def test_concurrent_cold_copies_share_final_without_staging_collision(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetchers = [_make_fetcher(db, pack_dir, cache_dir) for _ in range(2)]
+        barrier = threading.Barrier(2)
+        real_copy2 = audio_pack_fetcher.shutil.copy2
+
+        def _synchronised_copy(src, dst):
+            result = real_copy2(src, dst)
+            barrier.wait(timeout=2)
+            return result
+
+        monkeypatch.setattr(audio_pack_fetcher.shutil, "copy2", _synchronised_copy)
+        results: list[Path | None] = [None, None]
+        threads = [
+            threading.Thread(
+                target=lambda index=i: results.__setitem__(index, fetchers[index].fetch("食べる", "たべる"))
+            )
+            for i in range(2)
+        ]
+
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=3)
+
+        assert not any(thread.is_alive() for thread in threads)
+        assert all(result is not None for result in results)
+        assert {result.read_bytes() for result in results if result is not None} == {b"AUDIO:taberu.mp3"}
+        assert list(cache_dir.rglob("*.part")) == []
+
 
 # ---------------------------------------------------------------------------
 # Leftover .part file not returned as cache hit
@@ -155,16 +192,17 @@ class TestLeftoverPartFile:
         """
         db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
         cache_dir = tmp_path / "cache"
-        cache_dir.mkdir(parents=True, exist_ok=True)
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+        owned_cache_dir = fetcher._cache_dir
+        owned_cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Pre-create a leftover staging file with garbage content.
         from anki_miner.utils.file_utils import safe_filename
 
         stem = safe_filename("testpack_食べる_たべる")
-        part_file = cache_dir / f"{stem}.mp3.part"
+        part_file = owned_cache_dir / f"{stem}.mp3.part"
         part_file.write_bytes(b"GARBAGE")
 
-        fetcher = _make_fetcher(db, pack_dir, cache_dir)
         result = fetcher.fetch("食べる", "たべる")
 
         assert result is not None
@@ -173,6 +211,7 @@ class TestLeftoverPartFile:
         # Must be a real file with correct content.
         assert result.is_file()
         assert result.read_bytes() == b"AUDIO:taberu.mp3"
+        assert part_file.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -202,13 +241,14 @@ class TestCacheHit:
         db, pack_dir = _build_pack(tmp_path, entries)
         cache_dir = tmp_path / "cache"
         fetcher = _make_fetcher(db, pack_dir, cache_dir)
+        owned_cache_dir = fetcher._cache_dir
 
         scans = 0
         real_iterdir = Path.iterdir
 
         def _counted_iterdir(path):
             nonlocal scans
-            if path == cache_dir:
+            if path == owned_cache_dir:
                 scans += 1
             return real_iterdir(path)
 
