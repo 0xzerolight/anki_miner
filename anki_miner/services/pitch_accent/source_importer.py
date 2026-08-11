@@ -85,6 +85,7 @@ def import_pitch_source(
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
+    before_promote: Callable[[], None] | None = None,
 ) -> PitchSourceImportResult:
     """Import ``input_path`` into ``dest_root/<source_id>/index.sqlite``.
 
@@ -104,6 +105,8 @@ def import_pitch_source(
         cancel_check: Optional zero-arg predicate; if it returns True the import
             aborts (partial staging files are cleaned up).
         overwrite: If true, replace an existing same-id source atomically.
+        before_promote: Optional last-moment guard run immediately before the
+            staged directory replaces the managed slot.
 
     Raises:
         SetupError: On a missing/unsupported input, or a source that yields zero
@@ -121,6 +124,7 @@ def import_pitch_source(
             progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            before_promote=before_promote,
         )
     if suffix in _CSV_SUFFIXES:
         return _import_csv(
@@ -130,6 +134,7 @@ def import_pitch_source(
             source_name=source_name,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            before_promote=before_promote,
         )
     raise SetupError(
         f"Unsupported pitch source '{input_path.name}'. "
@@ -172,6 +177,7 @@ def _import_zip(
     progress: ProgressFn | None,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
+    before_promote: Callable[[], None] | None,
 ) -> PitchSourceImportResult:
     with open_yomitan_meta_banks(zip_path, kind="pitch") as banks:
         entries_out, skipped_display_only = extract_pitch_rows(banks, progress=progress, cancel_check=cancel_check)
@@ -212,6 +218,7 @@ def _import_zip(
             skipped_malformed=banks.skipped_malformed,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            before_promote=before_promote,
         )
 
     logger.info(
@@ -234,6 +241,7 @@ def _import_csv(
     source_name: str | None = None,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
+    before_promote: Callable[[], None] | None,
 ) -> PitchSourceImportResult:
     stem = csv_path.stem
     # Honor an explicit display name (reimport passes the existing meta name);
@@ -284,6 +292,7 @@ def _import_csv(
         skipped_display_only=0,
         cancel_check=cancel_check,
         overwrite=overwrite,
+        before_promote=before_promote,
     )
     logger.info(
         "Imported %d pitch entries from CSV '%s' as source '%s'",
@@ -308,6 +317,7 @@ def _finalize(
     skipped_malformed: int = 0,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
+    before_promote: Callable[[], None] | None,
 ) -> PitchSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -351,7 +361,13 @@ def _finalize(
             raise OperationCancelled("Import cancelled")
 
         try:
-            promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
+            promote_staged_dir(
+                staging,
+                final_path,
+                mover=shutil.move,
+                overwrite=overwrite,
+                before_promote=before_promote,
+            )
         except FileExistsError as exc:
             raise SetupError(f"Pitch source '{source_id}' already exists") from exc
     finally:

@@ -121,6 +121,7 @@ def import_frequency_source(
     progress: ProgressFn | None = None,
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
+    before_promote: Callable[[], None] | None = None,
 ) -> FreqSourceImportResult:
     """Import ``input_path`` into ``dest_root/<source_id>/index.sqlite``.
 
@@ -140,6 +141,8 @@ def import_frequency_source(
         cancel_check: Optional zero-arg predicate; if it returns True the import
             aborts (partial staging files are cleaned up by the temp dir).
         overwrite: If true, replace an existing same-id source atomically.
+        before_promote: Optional last-moment guard run immediately before the
+            staged directory replaces the managed slot.
 
     Raises:
         SetupError: On a missing/unsupported input, or a source that yields zero
@@ -157,6 +160,7 @@ def import_frequency_source(
             progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            before_promote=before_promote,
         )
     if suffix in _CSV_SUFFIXES:
         return _import_csv(
@@ -166,6 +170,7 @@ def import_frequency_source(
             source_name=source_name,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            before_promote=before_promote,
         )
     raise SetupError(
         f"Unsupported frequency source '{input_path.name}'. Provide a Yomitan .zip or a .csv/.tsv/.txt rank list."
@@ -207,6 +212,7 @@ def _import_zip(
     progress: ProgressFn | None,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
+    before_promote: Callable[[], None] | None,
 ) -> FreqSourceImportResult:
     with open_yomitan_meta_banks(zip_path, kind="frequency") as banks:
         title = banks.title
@@ -315,6 +321,7 @@ def _import_zip(
             is_categorical=is_categorical,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            before_promote=before_promote,
         )
 
     logger.info(
@@ -337,6 +344,7 @@ def _import_csv(
     source_name: str | None = None,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
+    before_promote: Callable[[], None] | None,
 ) -> FreqSourceImportResult:
     stem = csv_path.stem
     # Honor an explicit display name (reimport passes the existing meta name);
@@ -417,6 +425,7 @@ def _import_csv(
         converted_to_ranks=converted,
         cancel_check=cancel_check,
         overwrite=overwrite,
+        before_promote=before_promote,
     )
     logger.info(
         "Imported %d frequency entries from CSV '%s' as source '%s'",
@@ -515,6 +524,7 @@ def _finalize(
     is_categorical: bool = False,
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
+    before_promote: Callable[[], None] | None,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -561,7 +571,13 @@ def _finalize(
             raise OperationCancelled("Import cancelled")
 
         try:
-            promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
+            promote_staged_dir(
+                staging,
+                final_path,
+                mover=shutil.move,
+                overwrite=overwrite,
+                before_promote=before_promote,
+            )
         except FileExistsError as exc:
             raise SetupError(f"Frequency source '{source_id}' already exists") from exc
     finally:

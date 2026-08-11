@@ -126,6 +126,7 @@ def promote_staged_dir(
     *,
     mover: Callable[[str, str], object],
     overwrite: bool,
+    before_promote: Callable[[], None] | None = None,
 ) -> None:
     """Promote a staging directory to its final slot, failure-safe.
 
@@ -136,6 +137,9 @@ def promote_staged_dir(
             transfer or no-clobber placement.
         overwrite: When ``final`` already exists, replace it (back up first,
             restore on failure). When false, fail without touching ``final``.
+        before_promote: Optional last-moment guard called after staging work
+            and immediately before each placement attempt. An exception aborts
+            without replacing ``final``.
 
     Raises:
         FileExistsError: When ``overwrite`` is false and ``final`` exists.
@@ -157,6 +161,8 @@ def promote_staged_dir(
                     write_ownership_marker(local_parent, ownership[1], ownership[0])
                 local_staging = local_parent / final.name
                 mover(str(staging), str(local_staging))
+                if before_promote is not None:
+                    before_promote()
                 os.replace(local_staging, final)
             finally:
                 robust_rmtree(local_parent, mode="outcome")
@@ -178,8 +184,12 @@ def promote_staged_dir(
                         "Destination is not an owned Anki Miner slot",
                         str(final),
                     )
+                if before_promote is not None:
+                    before_promote()
                 atomic_replace_dir(source, final)
                 return
+            if before_promote is not None:
+                before_promote()
             os.replace(source, final)
 
         try:

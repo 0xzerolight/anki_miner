@@ -152,6 +152,11 @@ class TaskRegistry(QObject):
     #: :meth:`TaskHandle.cancelling`.
     cancel_requested = pyqtSignal(str)
 
+    #: Relay used by a second entry point that discovers an already-running
+    #: singleton task. The registry still owns no view; MainWindow decides how
+    #: to reveal the retained owner.
+    reveal_requested = pyqtSignal(str)
+
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._snapshots: dict[str, TaskSnapshot] = {}
@@ -231,6 +236,13 @@ class TaskRegistry(QObject):
         if snapshot is None or not snapshot.is_running or not snapshot.cancellable:
             return
         self.cancel_requested.emit(task_id)
+
+    def request_reveal(self, task_id: str) -> None:
+        """Ask the UI owner to reveal an existing running task."""
+        snapshot = self._snapshots.get(task_id)
+        if snapshot is None or not snapshot.is_running:
+            return
+        self.reveal_requested.emit(task_id)
 
     def tick(self, now: float | None = None) -> None:
         """Advance the elapsed clock and silence age of every running task.

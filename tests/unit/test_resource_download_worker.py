@@ -18,6 +18,10 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadSummary,
     ResourceDownloadWorker,
 )
+from anki_miner.services._sqlite_index import write_ownership_marker
+from anki_miner.services.dictionary.importers import yomitan_importer
+from anki_miner.services.frequency import source_importer as frequency_source_importer
+from anki_miner.services.pitch_accent import source_importer as pitch_source_importer
 from anki_miner.services.resource_catalog import ResourceSpec
 from tests.unit._resume_key_assert import assert_stable_resume_key as _assert_stable_resume_key
 
@@ -85,6 +89,18 @@ def _connect_capture(worker):
     return done, progress, summaries
 
 
+def test_summary_pins_the_roots_captured_by_the_worker(tmp_path):
+    worker = _make_worker([], tmp_path)
+    _done, _progress, summaries = _connect_capture(worker)
+
+    worker.run()
+
+    summary = summaries[0]
+    assert summary.dicts_root == tmp_path / "dicts"
+    assert summary.freqs_root == tmp_path / "freqs"
+    assert summary.pitch_root == tmp_path / "pitch"
+
+
 def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
@@ -112,11 +128,28 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     dict_calls: list[dict] = []
     freq_calls: list[dict] = []
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         dict_calls.append({"zip_path": zip_path, "dest_root": dest_root, "overwrite": overwrite, "dict_id": dict_id})
         return _FakeYomitanResult()
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+    def fake_freq(
+        input_path,
+        dest_root,
+        *,
+        progress=None,
+        cancel_check=None,
+        overwrite=False,
+        before_promote=None,
+    ):
         freq_calls.append({"input_path": input_path, "dest_root": dest_root, "overwrite": overwrite})
         return _FakeFreqResult()
 
@@ -156,6 +189,117 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     assert all(d[1] for d in done)
 
 
+@pytest.mark.parametrize(
+    ("spec", "root_name", "family", "importer_module"),
+    [
+        pytest.param(DICT_SPEC, "dicts", "dictionary", yomitan_importer, id="dictionary"),
+        pytest.param(FREQ_SPEC, "freqs", "frequency", frequency_source_importer, id="frequency"),
+        pytest.param(PITCH_SPEC, "pitch", "pitch", pitch_source_importer, id="pitch"),
+    ],
+)
+def test_final_promotion_rechecks_resource_release_after_staging(
+    tmp_path,
+    monkeypatch,
+    spec,
+    root_name,
+    family,
+    importer_module,
+):
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    root = tmp_path / root_name
+    slot = root / spec.id
+    slot.mkdir(parents=True)
+    write_ownership_marker(slot, spec.id, family)
+    old_marker = slot / "old-generation"
+    old_marker.write_text("old", encoding="utf-8")
+    with sqlite3.connect(slot / "index.sqlite") as conn:
+        conn.execute("CREATE TABLE old_generation (value TEXT)")
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        temp = Path(dest_dir) / "resource.part"
+        if spec.kind == "dict":
+            with zipfile.ZipFile(temp, "w") as zf:
+                zf.writestr(
+                    "index.json",
+                    json.dumps({"title": "Jitendex", "format": 3, "revision": "rev"}),
+                )
+                zf.writestr(
+                    "term_bank_1.json",
+                    json.dumps([["猫", "ねこ", "", "", 0, ["cat"], 1, ""]]),
+                )
+        elif spec.kind == "freq":
+            with zipfile.ZipFile(temp, "w") as zf:
+                zf.writestr(
+                    "index.json",
+                    json.dumps({"title": "JPDB Freq", "format": 3, "revision": "rev"}),
+                )
+                zf.writestr("term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
+        else:
+            temp.write_bytes(VALID_PITCH)
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *_a, **_kw: ([], []))
+
+    worker = _make_worker([spec], tmp_path)
+    release_checks: list[tuple[bool, bool, bool]] = []
+    reopened: list[sqlite3.Connection] = []
+    promotion_seam_active = False
+    promotion_calls: list[tuple[Path, bool]] = []
+
+    real_promote_staged_dir = importer_module.promote_staged_dir
+
+    def reopen_at_promotion(staging, final, *, mover, overwrite, before_promote=None):
+        nonlocal promotion_seam_active
+        promotion_calls.append((final, (staging / "index.sqlite").is_file()))
+        reopened.append(sqlite3.connect(slot / "index.sqlite"))
+        promotion_seam_active = True
+        try:
+            return real_promote_staged_dir(
+                staging,
+                final,
+                mover=mover,
+                overwrite=overwrite,
+                before_promote=before_promote,
+            )
+        finally:
+            promotion_seam_active = False
+
+    def release_resources(request) -> None:
+        allowed = not reopened
+        release_checks.append((promotion_seam_active, bool(reopened), allowed))
+        request.resolve(allowed)
+
+    monkeypatch.setattr(importer_module, "promote_staged_dir", reopen_at_promotion)
+    worker.require_promotion_approval()
+    worker.promotion_requested.connect(release_resources)
+    _done, _progress, summaries = _connect_capture(worker)
+
+    try:
+        worker.run()
+    finally:
+        for connection in reopened:
+            connection.close()
+
+    assert promotion_calls == [(slot, True)]
+    assert release_checks == [(False, False, True), (True, True, False)]
+    assert summaries[0].succeeded == []
+    assert len(summaries[0].failed) == 1
+    assert "Indexed resources became busy" in summaries[0].failed[0].detail
+    assert old_marker.read_text(encoding="utf-8") == "old"
+
+
 def test_per_item_failure_isolation(tmp_path, monkeypatch):
     download_dir = tmp_path / "downloads"
     download_dir.mkdir()
@@ -175,10 +319,27 @@ def test_per_item_failure_isolation(tmp_path, monkeypatch):
         temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"DATA")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         return _FakeYomitanResult()
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+    def fake_freq(
+        input_path,
+        dest_root,
+        *,
+        progress=None,
+        cancel_check=None,
+        overwrite=False,
+        before_promote=None,
+    ):
         raise RuntimeError("freq boom")
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -383,7 +544,16 @@ def test_cancellation_stops_loop_early(tmp_path, monkeypatch):
         temp.write_bytes(b"DATA")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         return _FakeYomitanResult()
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -429,7 +599,16 @@ def test_cancellation_after_completed_item_keeps_success_and_marks_rest_not_proc
         temp.write_bytes(b"ZIP")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         worker.cancel()
         return _FakeYomitanResult()
 
@@ -499,7 +678,16 @@ def test_leftover_temp_cleanup_when_importer_fails(tmp_path, monkeypatch):
         created_temps.append(temp)
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         raise RuntimeError("import boom")
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -613,7 +801,16 @@ def _run_dict_download(tmp_path, monkeypatch, *, imported_source_name: str):
         temp.write_bytes(b"ZIP")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         # Land the pinned slot on disk so the sweep sees a keep_id dir.
         _seed_dict_dir(Path(dest_root), dict_id, imported_source_name)
         return _FakeYomitanResult(dict_id=dict_id, source_name=imported_source_name)
@@ -692,7 +889,16 @@ def test_sweep_not_invoked_on_freq_or_pitch(tmp_path, monkeypatch):
         temp.write_bytes(VALID_PITCH if url.endswith(".txt") else b"ZIP")
         return temp
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, source_id=None, overwrite=False):
+    def fake_freq(
+        input_path,
+        dest_root,
+        *,
+        progress=None,
+        cancel_check=None,
+        source_id=None,
+        overwrite=False,
+        before_promote=None,
+    ):
         return _FakeFreqResult()
 
     sweep_calls: list[tuple] = []
@@ -808,7 +1014,16 @@ def test_install_phase_opens_before_the_importer_and_keeps_the_transferred_size(
         progress(629_145_600, 629_145_600, "Downloading")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         order.append("import")
         return _FakeYomitanResult()
 
@@ -845,7 +1060,16 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
         temp.write_bytes(b"ZIP")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         progress(0, 0, "Validating archive")
         progress(184_200, 0, "Inserted 184,200 entries")
         progress(0, 0, "Finalizing import")  # A message with no count is not a regression.
@@ -884,7 +1108,15 @@ def test_file_counting_importers_never_report_a_fabricated_entry_count(tmp_path,
         temp.write_bytes(b"ZIP")
         return temp
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+    def fake_freq(
+        input_path,
+        dest_root,
+        *,
+        progress=None,
+        cancel_check=None,
+        overwrite=False,
+        before_promote=None,
+    ):
         progress(1, 4, "term_meta_bank_1.json")  # A file index, NOT entries.
         return _FakeFreqResult()
 
@@ -917,11 +1149,28 @@ def test_each_resource_starts_its_own_phase_sequence(tmp_path, monkeypatch):
         progress(10, 10, "Downloading")
         return temp
 
-    def fake_dict(zip_path, dest_root, *, progress=None, overwrite=False, cancel_check=None, dict_id=None):
+    def fake_dict(
+        zip_path,
+        dest_root,
+        *,
+        progress=None,
+        overwrite=False,
+        cancel_check=None,
+        dict_id=None,
+        before_promote=None,
+    ):
         progress(99, 0, "Inserted 99 entries")
         return _FakeYomitanResult()
 
-    def fake_freq(input_path, dest_root, *, progress=None, cancel_check=None, overwrite=False):
+    def fake_freq(
+        input_path,
+        dest_root,
+        *,
+        progress=None,
+        cancel_check=None,
+        overwrite=False,
+        before_promote=None,
+    ):
         return _FakeFreqResult()
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)

@@ -103,7 +103,6 @@ LEDGER: dict[str, str] = {
     "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_tracks_clicked._on_streams": "notice",
     "gui/widgets/subtitle_retime_tab.py::SubtitleRetimeTab._on_tracks_clicked._on_choices": "notice",
     # --- Owned by another workstream's surface ------------------------------
-    "gui/widgets/dialogs/resource_download_dialog.py::ResourceDownloadSession.start": "w1-download",
     "gui/widgets/dialogs/results_dialog.py::ResultsDialog._on_undo_error": "w5-queue",
     # The two terminal Batch boxes that used to sit here are gone: W1-T8's
     # inline run receipt replaced them, so a finished or cancelled run now

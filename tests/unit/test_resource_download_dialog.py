@@ -11,12 +11,14 @@ the split between *imported* and *installed*.
 from __future__ import annotations
 
 import threading
+from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from PyQt6.QtCore import QLocale, Qt, QThread, pyqtSignal
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWidgets import QLabel, QWidget
 
 from anki_miner.config import create_default_config
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
@@ -35,6 +37,7 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourcePhase,
     ResourceProgress,
 )
+from anki_miner.services.resource_catalog import ResourceSpec
 
 MOD = "anki_miner.gui.widgets.dialogs.resource_download_dialog"
 
@@ -116,6 +119,7 @@ def _start(
     registry: TaskRegistry | None = None,
     adopt=None,
     release=None,
+    acquire=None,
     clock=None,
 ) -> tuple[ResourceDownloadSession, Path]:
     download_dir = tmp_path / "download"
@@ -124,6 +128,8 @@ def _start(
     monkeypatch.setattr(mod.tempfile, "mkdtemp", lambda **_kwargs: str(download_dir))
     monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *a, **kw: worker)
     extra = {} if clock is None else {"clock": clock}
+    if acquire is not None:
+        extra["acquire_mutation"] = acquire
     session = ResourceDownloadSession(
         parent,
         create_default_config(),
@@ -151,8 +157,9 @@ def _drain(qtbot, worker: _FakeWorker) -> None:
 def test_release_false_aborts_without_downloading(parent, monkeypatch):
     built = MagicMock()
     monkeypatch.setattr(mod, "ResourceDownloadWorker", built)
+    parent.status_label = QLabel(parent)
 
-    with patch(f"{MOD}.QMessageBox.warning") as warn:
+    with patch("PyQt6.QtWidgets.QMessageBox.warning") as warn:
         session = start_resource_download(
             parent,
             create_default_config(),
@@ -162,8 +169,8 @@ def test_release_false_aborts_without_downloading(parent, monkeypatch):
 
     assert session is None
     built.assert_not_called()  # nothing touched disk
-    warn.assert_called_once()
-    body = warn.call_args.args[2]
+    warn.assert_not_called()
+    body = parent.status_label.text()
     assert "Indexed resources are in use" in body
     assert all(task in body for task in ("mining", "startup prewarm", "card backfill"))
 
@@ -291,6 +298,166 @@ def test_worker_is_adopted_so_shutdown_can_join_it(parent, monkeypatch, tmp_path
     _drain(qtbot, worker)
 
 
+@pytest.mark.parametrize(
+    ("summary", "cancel"),
+    [
+        pytest.param(_successful_summary(), False, id="success"),
+        pytest.param(
+            ResourceDownloadSummary(
+                results=[ResourceDownloadResult("f", "freq", "Freq", "u", False, "network failed")]
+            ),
+            False,
+            id="failure",
+        ),
+        pytest.param(ResourceDownloadSummary(cancelled=True, requested_count=1), True, id="cancel"),
+    ],
+)
+def test_mutation_lease_is_released_only_after_native_finish(
+    parent,
+    monkeypatch,
+    tmp_path,
+    qtbot,
+    summary,
+    cancel,
+):
+    events: list[str] = []
+    worker = _FakeWorker(summary)
+
+    def acquire():
+        events.append("acquire")
+        return create_default_config(), lambda: events.append("release")
+
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker, acquire=acquire)
+    assert worker.summary_emitted.wait(2.0)
+    qtbot.wait(20)
+    assert events == ["acquire"]
+
+    if cancel:
+        session.cancel()
+    _drain(qtbot, worker)
+
+    assert events == ["acquire", "release"]
+
+
+def test_mutation_lease_is_released_when_initial_resource_release_raises(parent):
+    events: list[str] = []
+
+    def acquire():
+        events.append("acquire")
+        return create_default_config(), lambda: events.append("release")
+
+    def release_resources() -> bool:
+        events.append("resource-release")
+        raise RuntimeError("release exploded")
+
+    session = ResourceDownloadSession(
+        parent,
+        create_default_config(),
+        activate=lambda _summary: None,
+        release_resources=release_resources,
+        acquire_mutation=acquire,
+    )
+
+    with pytest.raises(RuntimeError, match="release exploded"):
+        session.start()
+
+    assert events == ["acquire", "resource-release", "release"]
+
+
+def test_mutation_lease_is_released_before_a_raising_blocked_reporter(parent):
+    events: list[str] = []
+
+    def acquire():
+        events.append("acquire")
+        return create_default_config(), lambda: events.append("release")
+
+    def release_resources() -> bool:
+        events.append("resource-release")
+        return False
+
+    def report_blocked(_message: str) -> None:
+        events.append("report")
+        raise RuntimeError("reporter exploded")
+
+    session = ResourceDownloadSession(
+        parent,
+        create_default_config(),
+        activate=lambda _summary: None,
+        release_resources=release_resources,
+        acquire_mutation=acquire,
+        blocked=report_blocked,
+    )
+
+    with pytest.raises(RuntimeError, match="reporter exploded"):
+        session.start()
+
+    assert events == ["acquire", "resource-release", "release", "report"]
+
+
+def test_promotion_rechecks_release_on_gui_thread_and_preserves_slot(parent, monkeypatch, tmp_path, qtbot):
+    from anki_miner.gui.workers import resource_download_worker
+
+    spec = ResourceSpec(
+        id="jitendex",
+        kind="dict",
+        display_name="Jitendex",
+        url="https://example.invalid/jitendex.zip",
+        license_note="note",
+    )
+    dicts_root = tmp_path / "dicts"
+    slot = dicts_root / spec.id
+    slot.mkdir(parents=True)
+    marker = slot / "marker"
+    marker.write_text("old", encoding="utf-8")
+    config = replace(
+        create_default_config(),
+        dicts_root=dicts_root,
+        freqs_root=tmp_path / "freqs",
+        pitch_root=tmp_path / "pitch",
+    )
+    release_threads: list[QThread] = []
+    import_calls: list[Path] = []
+
+    def release_resources() -> bool:
+        release_threads.append(QThread.currentThread())
+        return len(release_threads) == 1
+
+    def fake_download(url, *, dest_dir, **_kwargs):
+        downloaded = Path(dest_dir) / "jitendex.zip"
+        downloaded.write_bytes(b"ZIP")
+        return downloaded
+
+    def fake_import(_source, _root, **_kwargs):
+        import_calls.append(marker)
+        marker.write_text("new", encoding="utf-8")
+        return SimpleNamespace(dict_id=spec.id, source_name="Jitendex", entry_count=1)
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    monkeypatch.setattr(resource_download_worker, "import_yomitan_zip", fake_import)
+    monkeypatch.setattr(resource_download_worker, "sweep_superseded_dicts", lambda *_a, **_kw: ([], []))
+    adopted = []
+    outcomes = []
+    session = ResourceDownloadSession(
+        parent,
+        config,
+        activate=lambda _summary: config,
+        release_resources=release_resources,
+        adopt_worker=adopted.append,
+        specs=[spec],
+    )
+    session.finished.connect(outcomes.append)
+
+    with qtbot.waitSignal(session.finished, timeout=3000):
+        assert session.start()
+    assert adopted[0].wait(3000)
+
+    assert len(release_threads) == 2
+    assert all(thread is parent.thread() for thread in release_threads)
+    assert import_calls == []
+    assert marker.read_text(encoding="utf-8") == "old"
+    assert outcomes[0].activated is False
+
+
 # ---------------------------------------------------------------------------
 # Cancel (ported): one verb, no prompt, cancelled summary preserved
 # ---------------------------------------------------------------------------
@@ -301,7 +468,7 @@ def test_cancel_locks_the_button_and_asks_the_worker_exactly_once(parent, monkey
     session, _dir = _start(monkeypatch, tmp_path, parent, worker)
     assert worker.started_event.wait(2.0)
 
-    with patch(f"{MOD}.QMessageBox.question") as question:
+    with patch("PyQt6.QtWidgets.QMessageBox.question") as question:
         session.window.cancel_button.click()
         session.window.cancel_button.click()  # A second press must change nothing.
 
@@ -417,6 +584,37 @@ def test_activation_refusal_says_imported_but_not_active(parent, monkeypatch, tm
     assert session.window.resource_label.text() == "Imported, but not active — Retry setup"
     assert "Installed" not in session.window.resource_label.text()
     assert session.window.retry_button.isVisible()
+
+
+def test_changed_live_root_refuses_activation(parent, monkeypatch, tmp_path, qtbot):
+    from anki_miner.gui.utils.resource_setup import apply_download_summary
+
+    captured_root = tmp_path / "captured-dicts"
+    live_root = tmp_path / "live-dicts"
+    base = replace(create_default_config(), dicts_root=captured_root)
+    live = replace(base, dicts_root=live_root)
+    summary = _successful_summary()
+    summary.dicts_root = captured_root
+    worker = _FakeWorker(summary)
+    outcomes: list = []
+    download_dir = tmp_path / "download"
+    download_dir.mkdir()
+    monkeypatch.setattr(mod.tempfile, "mkdtemp", lambda **_kwargs: str(download_dir))
+    monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *_args, **_kwargs: worker)
+    session = ResourceDownloadSession(
+        parent,
+        base,
+        activate=lambda result: apply_download_summary(live, result),
+    )
+    session.finished.connect(outcomes.append)
+    assert session.start()
+
+    _drain(qtbot, worker)
+    qtbot.waitUntil(lambda: len(outcomes) == 1, timeout=3000)
+
+    assert outcomes[0].activated is False
+    assert outcomes[0].config.dicts_root == captured_root
+    assert session.window.resource_label.text() == "Imported, but not active — Retry setup"
 
 
 def test_a_raising_activator_is_a_refusal_not_a_crash(parent, monkeypatch, tmp_path, qtbot):
@@ -565,6 +763,49 @@ def test_registry_carries_the_run_and_its_transfer_line(parent, monkeypatch, tmp
 
     _drain(qtbot, worker)
     registry.shutdown()
+
+
+def test_running_registry_rejects_second_start_and_reveals_retained_session(parent, monkeypatch, qtbot):
+    registry = TaskRegistry()
+    workers: list[_FakeWorker] = []
+
+    def build_worker(*_args, **_kwargs):
+        worker = _FakeWorker(_successful_summary())
+        workers.append(worker)
+        return worker
+
+    monkeypatch.setattr(mod, "ResourceDownloadWorker", build_worker)
+    first = start_resource_download(
+        parent,
+        create_default_config(),
+        activate=lambda _summary: None,
+        task_registry=registry,
+    )
+    assert first is not None
+    assert workers[0].started_event.wait(2.0)
+    first.window.hide()
+    first_token = registry.snapshot(mod.TASK_ID).run_token
+    registry.reveal_requested.connect(lambda _task_id: first.reveal())
+
+    try:
+        second = start_resource_download(
+            parent,
+            create_default_config(),
+            activate=lambda _summary: None,
+            task_registry=registry,
+        )
+        qtbot.wait(20)
+
+        assert second is None
+        assert len(workers) == 1
+        assert first.window.isVisible()
+        assert registry.snapshot(mod.TASK_ID).run_token == first_token
+    finally:
+        for worker in workers:
+            worker.release_native.set()
+            assert worker.wait(3000)
+        qtbot.wait(20)
+        registry.shutdown()
 
 
 def test_registry_task_ends_cancelled_when_the_run_was_cancelled(parent, monkeypatch, tmp_path, qtbot):

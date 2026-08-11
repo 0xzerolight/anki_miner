@@ -20,13 +20,14 @@ What replaces it:
   says what is actually happening: download, then verify/install, then index,
   then activate.
 
-**Activation is the only part that locks anything.** The caller supplies an
-activator; the session calls it once, after the worker's native thread finish.
-Because the download now runs in the background, the user may have edited
-Settings while it ran — so the activator (not this module) is responsible for
-committing pending settings first and recomputing from the *live* config. Until
-that activator returns a config, the word *Installed* is not used: a resource
-that imported but could not be switched on says
+The session may hold the Settings mutation token through native worker finish,
+pinning its captured roots while mining remains usable. Immediately before each
+importer, the worker asks the GUI thread to release newly-opened index handles.
+The caller supplies an activator; the session calls it once after native finish.
+Because other Settings may have changed during transfer, the activator is still
+responsible for committing pending settings and using the *live* config. Until
+it returns a config, the word *Installed* is not used: a resource that imported
+but could not be switched on says
 ``Imported, but not active — Retry setup`` instead.
 """
 
@@ -44,7 +45,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from PyQt6.QtCore import QCoreApplication, QLocale, QObject, Qt, pyqtSignal
-from PyQt6.QtWidgets import QLabel, QMessageBox, QProgressBar, QWidget
+from PyQt6.QtWidgets import QLabel, QProgressBar, QWidget
 
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskSpec
@@ -59,6 +60,7 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceDownloadWorker,
     ResourcePhase,
     ResourceProgress,
+    ResourcePromotionRequest,
 )
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.utils.i18n import tr_format
@@ -99,6 +101,8 @@ class ResourceDownloadOutcome:
 #: was refused or failed. The implementation owns committing pending settings
 #: and recomputing from the live config — see the module docstring.
 Activator = Callable[[ResourceDownloadSummary], "AnkiMinerConfig | None"]
+MutationAcquirer = Callable[[], "tuple[AnkiMinerConfig, Callable[[], None]] | None"]
+BlockedReporter = Callable[[str], None]
 
 
 # ---------------------------------------------------------------------------
@@ -399,6 +403,8 @@ class ResourceDownloadSession(QObject):
         *,
         activate: Activator,
         release_resources: Callable[[], bool] | None = None,
+        acquire_mutation: MutationAcquirer | None = None,
+        blocked: BlockedReporter | None = None,
         task_registry: TaskRegistry | None = None,
         adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
         specs: Sequence[ResourceSpec] = RECOMMENDED_DEFAULT_SET,
@@ -409,6 +415,8 @@ class ResourceDownloadSession(QObject):
         self._config = config
         self._activate = activate
         self._release_resources = release_resources
+        self._acquire_mutation = acquire_mutation
+        self._blocked = blocked
         self._registry = task_registry
         self._adopt_worker = adopt_worker
         self._specs = list(specs)
@@ -427,6 +435,7 @@ class ResourceDownloadSession(QObject):
         self._worker: ResourceDownloadWorker | None = None
         self._handle: TaskHandle | None = None
         self._download_dir: Path | None = None
+        self._release_mutation: Callable[[], None] | None = None
         self._summary: ResourceDownloadSummary | None = None
         self._cancel_requested = False
         self._terminal_handled = False
@@ -446,63 +455,90 @@ class ResourceDownloadSession(QObject):
 
     def start(self) -> bool:
         """Begin the run and return immediately. False means it never started."""
-        if self._release_resources is not None and not self._release_resources():
-            QMessageBox.warning(
-                self._parent,
-                QCoreApplication.translate("ResourceDownloadDialog", "Download Blocked"),
-                QCoreApplication.translate(
-                    "ResourceDownloadDialog",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
-                ),
-            )
-            return False
-
-        self._download_dir = Path(tempfile.mkdtemp(prefix="anki_miner_dl_"))
-
-        window = ResourceDownloadWindow(self._parent, self._specs)
-        window.cancel_requested.connect(self.cancel)
-        window.retry_requested.connect(self._retry_activation)
-        window.destroyed.connect(self._on_window_destroyed)
-        window.show_activity(
-            QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
-            QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
-            None,
-        )
-        window.show()
-        self._window = window
-
-        worker = ResourceDownloadWorker(
-            self._specs,
-            dicts_root=self._config.dicts_root,
-            freqs_root=self._config.freqs_root,
-            pitch_root=self._config.pitch_root,
-            download_dir=self._download_dir,
-        )
-        self._worker = worker
-        worker.item_progress.connect(self._on_item_progress)
-        worker.finished_summary.connect(self._on_summary)
-        worker.finished.connect(self._on_thread_finished)
-
         if self._registry is not None:
-            self._handle = self._registry.start(
-                TaskSpec(
-                    task_id=TASK_ID,
-                    title=QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
-                    owner=CapabilityTarget("settings", "dictionaries"),
+            snapshot = self._registry.snapshot(TASK_ID)
+            if snapshot is not None and snapshot.is_running:
+                self._registry.request_reveal(TASK_ID)
+                return False
+
+        if self._acquire_mutation is not None:
+            lease = self._acquire_mutation()
+            if lease is None:
+                self._report_blocked(
+                    QCoreApplication.translate(
+                        "ResourceDownloadDialog",
+                        "Resource settings are busy or could not be saved. Wait for the active task and try again.",
+                    )
                 )
+                return False
+            self._config, self._release_mutation = lease
+
+        try:
+            if self._release_resources is not None and not self._release_resources():
+                self._release_mutation_once()
+                self._report_blocked(
+                    QCoreApplication.translate(
+                        "ResourceDownloadDialog",
+                        "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                        "Wait for the active task to finish and try again.",
+                    )
+                )
+                return False
+
+            self._download_dir = Path(tempfile.mkdtemp(prefix="anki_miner_dl_"))
+
+            window = ResourceDownloadWindow(self._parent, self._specs)
+            window.cancel_requested.connect(self.cancel)
+            window.retry_requested.connect(self._retry_activation)
+            window.destroyed.connect(self._on_window_destroyed)
+            window.show_activity(
+                QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
+                QCoreApplication.translate("ResourceDownloadDialog", "Starting download…"),
+                None,
             )
-            self._registry.snapshot_changed.connect(self._on_registry_tick)
-            # A surface with no route to this worker -- the mini job monitor --
-            # can still ask for the run to stop. The asking arrives here; the
-            # stopping is still done by this session, through the same Cancel
-            # the window's own button uses.
-            self._registry.cancel_requested.connect(self._on_cancel_requested)
+            window.show()
+            self._window = window
 
-        if self._adopt_worker is not None:
-            self._adopt_worker(worker)
+            worker = ResourceDownloadWorker(
+                self._specs,
+                dicts_root=self._config.dicts_root,
+                freqs_root=self._config.freqs_root,
+                pitch_root=self._config.pitch_root,
+                download_dir=self._download_dir,
+            )
+            self._worker = worker
+            worker.item_progress.connect(self._on_item_progress)
+            worker.finished_summary.connect(self._on_summary)
+            worker.finished.connect(self._on_thread_finished)
+            promotion_requested = getattr(worker, "promotion_requested", None)
+            require_promotion_approval = getattr(worker, "require_promotion_approval", None)
+            if promotion_requested is not None and callable(require_promotion_approval):
+                promotion_requested.connect(self._on_promotion_requested)
+                require_promotion_approval()
 
-        worker.start()
+            if self._registry is not None:
+                self._handle = self._registry.start(
+                    TaskSpec(
+                        task_id=TASK_ID,
+                        title=QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
+                        owner=CapabilityTarget("settings", "dictionaries"),
+                    )
+                )
+                self._registry.snapshot_changed.connect(self._on_registry_tick)
+                # A surface with no route to this worker -- the mini job monitor --
+                # can still ask for the run to stop. The asking arrives here; the
+                # stopping is still done by this session, through the same Cancel
+                # the window's own button uses.
+                self._registry.cancel_requested.connect(self._on_cancel_requested)
+
+            if self._adopt_worker is not None:
+                self._adopt_worker(worker)
+
+            worker.start()
+        except Exception:
+            self._cleanup()
+            self._release_mutation_once()
+            raise
         return True
 
     def reveal(self) -> None:
@@ -569,6 +605,17 @@ class ResourceDownloadSession(QObject):
         if isinstance(summary, ResourceDownloadSummary) and self._summary is None:
             self._summary = summary
 
+    def _on_promotion_requested(self, request: object) -> None:
+        """Recheck open indexed-resource handles on the GUI thread."""
+        if not isinstance(request, ResourcePromotionRequest):
+            return
+        try:
+            allowed = self._release_resources is None or self._release_resources()
+        except Exception:  # noqa: BLE001 - release failure must fail closed
+            logger.exception("Resource release handshake failed")
+            allowed = False
+        request.resolve(allowed)
+
     def _on_thread_finished(self) -> None:
         """Terminal handling, gated on the worker's NATIVE thread finish.
 
@@ -580,6 +627,7 @@ class ResourceDownloadSession(QObject):
             return
         self._terminal_handled = True
         self._worker = None
+        self._release_mutation_once()
 
         if self._registry is not None:
             with contextlib.suppress(TypeError, RuntimeError):
@@ -612,6 +660,9 @@ class ResourceDownloadSession(QObject):
                 results=summary.results,
                 cancelled=True,
                 requested_count=summary.requested_count,
+                dicts_root=summary.dicts_root,
+                freqs_root=summary.freqs_root,
+                pitch_root=summary.pitch_root,
             )
         self._summary = summary
 
@@ -729,6 +780,20 @@ class ResourceDownloadSession(QObject):
     def _on_window_destroyed(self) -> None:
         self._window = None
 
+    def _report_blocked(self, message: str) -> None:
+        if self._blocked is not None:
+            self._blocked(message)
+            return
+        status_label = getattr(self._parent, "status_label", None)
+        if isinstance(status_label, QLabel):
+            status_label.setText(message)
+
+    def _release_mutation_once(self) -> None:
+        release = self._release_mutation
+        self._release_mutation = None
+        if release is not None:
+            release()
+
     def _cleanup(self) -> None:
         """Drop the staging directory once the worker's thread has truly exited."""
         if self._download_dir is not None:
@@ -742,17 +807,21 @@ def start_resource_download(
     *,
     activate: Activator,
     release_resources: Callable[[], bool] | None = None,
+    acquire_mutation: MutationAcquirer | None = None,
+    blocked: BlockedReporter | None = None,
     task_registry: TaskRegistry | None = None,
     adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
 ) -> ResourceDownloadSession | None:
     """Start a background recommended-resource run; None means it never started.
 
     ``release_resources`` drops live dictionary sqlite handles before the worker
-    runs (like the reimport flows). The import overwrites a pinned slot in place
-    and the sweep deletes superseded dirs, so on Windows an open
+    runs and again immediately before each importer promotion. The import
+    overwrites a pinned slot in place and the sweep deletes superseded dirs, so
+    on Windows an open
     ``IndexedDictProvider`` connection would make the rename/rmtree fail with
     "Access denied" (Issues #30/#32). If it returns False, indexed resources are
-    in use — warn and abort without touching disk.
+    in use — report through the caller's nonmodal surface and abort without
+    touching the managed slot.
 
     The returned session must be retained by the caller: it is not Qt-parented,
     because the widget that started it may be gone long before the run ends.
@@ -762,6 +831,8 @@ def start_resource_download(
         config,
         activate=activate,
         release_resources=release_resources,
+        acquire_mutation=acquire_mutation,
+        blocked=blocked,
         task_registry=task_registry,
         adopt_worker=adopt_worker,
     )

@@ -42,6 +42,22 @@ def apply_download_summary(config: AnkiMinerConfig, summary: ResourceDownloadSum
     if not succeeded:
         return config
 
+    root_fields = {
+        "dict": "dicts_root",
+        "freq": "freqs_root",
+        "pitch": "pitch_root",
+    }
+    for result in succeeded:
+        root_field = root_fields.get(result.kind)
+        if root_field is None:
+            continue
+        captured_root = getattr(summary, root_field, None)
+        live_root = getattr(config, root_field)
+        if captured_root is not None and captured_root != live_root:
+            raise ValueError(
+                f"{result.display_name} was imported under {captured_root}, but the active {root_field} is {live_root}"
+            )
+
     chain = list(config.dictionary_chain)
     freq_chain = list(config.frequency_chain)
     pitch_chain = list(config.pitch_chain)
