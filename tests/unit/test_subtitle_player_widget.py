@@ -370,6 +370,21 @@ class TestPlayRange:
         assert fake_mpv["player"].pause is False
         assert widget._range_end == 9.5
 
+    def test_eof_finishes_range_once(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        finished = []
+        widget.range_finished.connect(lambda: finished.append(True))
+        widget.play_range(9.0, 10.5)
+        widget._on_time_pos(10.0)
+        widget._on_pause_changed(True)
+
+        widget._on_eof(True)
+        widget._on_eof(True)
+
+        assert finished == [True]
+        assert widget._range_end is None
+        assert widget.play_button.text() == "Play"
+
     @pytest.mark.parametrize("action", ["play", "pause", "stop", "toggle_play_pause"])
     def test_transport_action_cancels_the_range(self, qtbot, fake_mpv, action):
         """A user taking over playback is never yanked to a stale boundary."""

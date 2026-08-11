@@ -1,10 +1,12 @@
 """Tests for word curation callback in EpisodeProcessor."""
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.presenters import NullPresenter
@@ -29,6 +31,19 @@ def _make_media(prefix="word"):
         screenshot_filename=f"{prefix}.jpg",
         audio_filename=f"{prefix}.mp3",
     )
+
+
+def test_curation_search_matches_hidden_sentence_suffix(qtbot):
+    sentence = "前" * 60 + "検索語"
+    dialog = WordCurationDialog([replace(_make_word(), sentence=sentence)])
+    qtbot.addWidget(dialog)
+
+    dialog.search_input.setText("検索語")
+    dialog._search_debounce_timer.stop()
+    dialog._apply_search()
+
+    assert "検索語" not in dialog.table.item(0, 4).text()
+    assert not dialog.table.isRowHidden(0)
 
 
 class TestCurationCallback:

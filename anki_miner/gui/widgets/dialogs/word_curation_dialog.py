@@ -52,6 +52,7 @@ from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.fonts import japanese_cell_font, make_scaled_font
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
+    COPY_ROLE,
     CellRole,
     add_min_max_buttons,
     configure_data_view,
@@ -162,12 +163,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._show_player = ctx is not None and ctx.video_file is not None and ctx.video_file.exists()
         self._show_dict = lookup_fn is not None
         # Manga page pane: gated on page_units exactly like the player gates
-        # on video_file. Cache holds decoded QImages (GUI-thread only);
+        # on video_file. Cache holds converted QPixmaps (GUI-thread only);
         # _page_request_gen is the stale-guard for off-thread loads and
         # _closing blocks any dispatch once teardown has run (see _stop_player).
         self._page_units = ctx.page_units if ctx is not None else None
         self._show_image = bool(self._page_units)
-        self._page_cache: OrderedDict[ImageRef, QImage] = OrderedDict()
+        self._page_cache: OrderedDict[ImageRef, tuple[QPixmap, int]] = OrderedDict()
         self._page_request_gen = 0
         self._closing = False
         # Sentence picker: shown when at least one word has alternative example
@@ -1129,7 +1130,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             visible = False
             for col in (1, 2, 3, 4):
                 cell = self.table.item(row, col)
-                if cell and text_lower in cell.text().lower():
+                value = cell.data(COPY_ROLE) if cell and col == 4 else cell.text() if cell else ""
+                if text_lower in str(value).lower():
                     visible = True
                     break
             self.table.setRowHidden(row, not visible)
@@ -1518,7 +1520,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         cached = self._page_cache.get(ref)
         if cached is not None:
             self._page_cache.move_to_end(ref)
-            self.page_image_view.show_page(QPixmap.fromImage(cached), box, caption)
+            pixmap, _byte_count = cached
+            self.page_image_view.show_page(pixmap, box, caption)
             return
 
         def on_done(image: object) -> None:
@@ -1528,13 +1531,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if gen != self._page_request_gen:
                 return
             assert isinstance(image, QImage)
-            self._page_cache[ref] = image
+            pixmap = QPixmap.fromImage(image)
+            self._page_cache[ref] = (pixmap, image.sizeInBytes())
             while (
                 len(self._page_cache) > _PAGE_CACHE_CAP
-                or sum(cached.sizeInBytes() for cached in self._page_cache.values()) > _PAGE_CACHE_MAX_BYTES
+                or sum(byte_count for _, byte_count in self._page_cache.values()) > _PAGE_CACHE_MAX_BYTES
             ):
                 self._page_cache.popitem(last=False)
-            self.page_image_view.show_page(QPixmap.fromImage(image), box, caption)
+            self.page_image_view.show_page(pixmap, box, caption)
 
         def on_error(message: str) -> None:
             if gen != self._page_request_gen:
