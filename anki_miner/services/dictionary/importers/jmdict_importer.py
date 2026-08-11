@@ -55,6 +55,7 @@ JMDICT_DICT_ID = "jmdict-english"
 MAX_SENSES = 5
 
 ProgressFn = Callable[[int, int, str], None]
+_Sense = tuple[list[str], set[str], set[str]]
 
 
 @dataclass(frozen=True)
@@ -144,11 +145,17 @@ def import_jmdict_xml(
                         readings.append(reb)
                         reading_restrs.append([x.text for x in r.findall("re_restr") if x.text])
 
-                senses: list[list[str]] = []
+                senses: list[_Sense] = []
                 for sense in entry.findall("sense"):
                     glosses = [g.text for g in sense.findall("gloss") if g.text]
                     if glosses:
-                        senses.append(glosses)
+                        senses.append(
+                            (
+                                glosses,
+                                {x.text for x in sense.findall("stagk") if x.text},
+                                {x.text for x in sense.findall("stagr") if x.text},
+                            )
+                        )
                 if not senses:
                     malformed_entries += 1
                     if malformed_exemplar == "-":
@@ -159,8 +166,6 @@ def import_jmdict_xml(
                     malformed_entries += 1
                     if malformed_exemplar == "-":
                         malformed_exemplar = sequence if sequence is not None else "unknown-sequence"
-
-                content = _format_senses_html(senses)
 
                 # One kanji-keyed row per APPLICABLE reading, respecting
                 # ``re_restr``: a reading with no restriction applies to every
@@ -176,30 +181,36 @@ def import_jmdict_xml(
                     ]
                     if applicable:
                         for reb in applicable:
-                            yield DictRow(
-                                term=term,
-                                reading=reb,
-                                content=content,
-                                sequence=sequence,
-                            )
+                            content = _format_senses_for_row(senses, term, reb)
+                            if content:
+                                yield DictRow(
+                                    term=term,
+                                    reading=reb,
+                                    content=content,
+                                    sequence=sequence,
+                                )
                     else:
                         # No reading applies to this kanji headword (unusual);
                         # still emit the term so its definition remains lookable.
-                        yield DictRow(
-                            term=term,
-                            reading=None,
-                            content=content,
-                            sequence=sequence,
-                        )
+                        content = _format_senses_for_row(senses, term, None)
+                        if content:
+                            yield DictRow(
+                                term=term,
+                                reading=None,
+                                content=content,
+                                sequence=sequence,
+                            )
 
                 # One row per reading, keyed by the reading (term and reading equal).
                 for reading in readings:
-                    yield DictRow(
-                        term=reading,
-                        reading=reading,
-                        content=content,
-                        sequence=sequence,
-                    )
+                    content = _format_senses_for_row(senses, None, reading)
+                    if content:
+                        yield DictRow(
+                            term=reading,
+                            reading=reading,
+                            content=content,
+                            sequence=sequence,
+                        )
 
                 if progress and i % 1000 == 0:
                     progress(i, total_entries, f"Processed {i}/{total_entries} entries")
@@ -279,3 +290,15 @@ def repair_jmdict_xml(
 def _format_senses_html(senses: list[list[str]]) -> str:
     items = "".join(f"<li>{escape('; '.join(glosses))}</li>" for glosses in senses[:MAX_SENSES])
     return f"<ol>{items}</ol>"
+
+
+def _format_senses_for_row(senses: list[_Sense], term: str | None, reading: str | None) -> str:
+    applicable = [
+        glosses
+        for glosses, restricted_terms, restricted_readings in senses
+        if (not restricted_terms or term in restricted_terms)
+        and (not restricted_readings or reading in restricted_readings)
+    ]
+    if not applicable:
+        return ""
+    return _format_senses_html(applicable)

@@ -5,8 +5,10 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import read_ownership_marker
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     YomitanImportResult,
     derive_dict_id_from_zip,
@@ -100,6 +102,64 @@ class TestImportYomitanZip:
             assert terms == {"食べる", "犬"}
         finally:
             conn.close()
+
+    @pytest.mark.parametrize(
+        "glossary",
+        [
+            pytest.param([], id="empty-glossary"),
+            pytest.param([""], id="empty-string"),
+            pytest.param([[]], id="empty-list-member"),
+            pytest.param([{"type": "unsupported", "text": "lost"}], id="unsupported-member"),
+            pytest.param(
+                ["", [], {"type": "unsupported", "text": "lost"}],
+                id="all-empty-members",
+            ),
+        ],
+    )
+    def test_empty_rendered_entry_is_not_stored_or_allowed_to_mask_fallback(
+        self,
+        tmp_path: Path,
+        glossary: list[object],
+    ):
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "empty.zip",
+            term_banks=[[["犬", "いぬ", "", "", 0, glossary, 1, ""]]],
+            tag_banks=[],
+        )
+        dest_root = tmp_path / "dicts"
+
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        db_path = dest_root / result.dict_id / "index.sqlite"
+        conn = open_readonly(db_path)
+        try:
+            stored_count = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+        finally:
+            conn.close()
+
+        class LowerProvider:
+            name = "lower"
+            is_online = False
+
+            def load(self) -> bool:
+                return True
+
+            def is_available(self) -> bool:
+                return True
+
+            def lookup(self, word: str) -> str | None:
+                return "LOWER" if word == "犬" else None
+
+        top = IndexedDictProvider(result.dict_id, db_path)
+        definitions = DefinitionService(AnkiMinerConfig(), [top, LowerProvider()]).get_definitions_batch(
+            [("犬", "いぬ")]
+        )
+        top.close()
+
+        assert result.entry_count == 0
+        assert read_meta(db_path)["entry_count"] == "0"
+        assert stored_count == 0
+        assert definitions == ["LOWER"]
 
     def test_progress_reaches_total_only_after_commit_and_promotion(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "test.zip")
@@ -704,7 +764,10 @@ class TestImportYomitanZip:
             "content": {
                 "tag": "table",
                 "data": {"content": "formsTable"},
-                "content": {"tag": "tbody", "content": []},
+                "content": {
+                    "tag": "tbody",
+                    "content": {"tag": "tr", "content": {"tag": "td", "content": "呪言"}},
+                },
             },
         }
         zip_path = build_yomitan_zip(
