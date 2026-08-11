@@ -580,12 +580,14 @@ class DeckBuilderTab(MiningTabBase):
 
     def _set_buttons_running(self) -> None:
         """Disable Preview + Build; enable Cancel."""
+        self._set_request_controls_enabled(False)
         self.preview_button.setEnabled(False)
         self.build_button.setEnabled(False)
         self.cancel_button.setEnabled(True)
 
     def _restore_buttons(self) -> None:
         """Re-enable Preview; disable Build + Cancel; reset Cancel label."""
+        self._set_request_controls_enabled(True)
         self.preview_button.setEnabled(True)
         self.build_button.setEnabled(False)
         self.cancel_button.setEnabled(False)
@@ -595,6 +597,19 @@ class DeckBuilderTab(MiningTabBase):
         if self._cancel_requested:
             self.progress_widget.reset()
             self.progress_widget.set_status(self.tr("Cancelled"))
+
+    def _set_request_controls_enabled(self, enabled: bool) -> None:
+        """Lock the request snapshot while its preview/build worker exists."""
+        for control in (
+            self.video_folder_selector,
+            self.subtitle_folder_selector,
+            self.deck_name_edit,
+            self.mode_combo,
+            self.top_n_spinbox,
+            self.coverage_spinbox,
+            self.collection_filter_checkbox,
+        ):
+            control.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Config update

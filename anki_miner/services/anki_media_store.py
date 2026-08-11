@@ -21,6 +21,7 @@ import html
 import logging
 import re
 from collections.abc import Iterable, Iterator
+from dataclasses import replace
 from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
@@ -49,6 +50,14 @@ _DICT_MEDIA_IMG_RE = re.compile(
     re.IGNORECASE,
 )
 _IMG_SRC_RE = re.compile(r'src="([^"]+)"', re.IGNORECASE)
+_GLOSS_IMAGE_LINK_RE = re.compile(
+    r'<a\b[^>]*class="[^"]*\bgloss-image-link\b[^"]*"[^>]*>.*?</a>',
+    re.IGNORECASE | re.DOTALL,
+)
+_MASK_IMAGE_URL_RE = re.compile(
+    r"(?P<prefix>--image:\s*url\(&quot;)(?P<src>.*?)(?P<suffix>&quot;\))",
+    re.IGNORECASE,
+)
 
 # Media uploads are base64-heavy; a smaller chunk than the 100-note addNotes
 # batch keeps individual request payloads manageable.
@@ -81,6 +90,43 @@ def _extract_dict_media_srcs(definition_html: str) -> list[str]:
         if m:
             out.append(html.unescape(m.group(1)))
     return out
+
+
+def _rewrite_dict_media_srcs(definition_html: str, stored_names: dict[str, str]) -> str:
+    """Rewrite tagged image and paired mask URLs to confirmed filenames."""
+    if not definition_html or not stored_names:
+        return definition_html
+
+    def rewrite_tag(match: re.Match[str]) -> str:
+        tag = match.group(0)
+
+        def rewrite_src(src_match: re.Match[str]) -> str:
+            logical_name = html.unescape(src_match.group(1))
+            actual_name = stored_names.get(logical_name)
+            if actual_name is None:
+                return src_match.group(0)
+            return f'src="{html.escape(actual_name, quote=True)}"'
+
+        return _IMG_SRC_RE.sub(rewrite_src, tag, count=1)
+
+    rewritten = _DICT_MEDIA_IMG_RE.sub(rewrite_tag, definition_html)
+
+    def rewrite_envelope(match: re.Match[str]) -> str:
+        envelope = match.group(0)
+        if _DICT_MEDIA_IMG_RE.search(envelope) is None:
+            return envelope
+
+        def rewrite_mask(mask_match: re.Match[str]) -> str:
+            logical_name = html.unescape(mask_match.group("src"))
+            actual_name = stored_names.get(logical_name)
+            if actual_name is None:
+                return mask_match.group(0)
+            escaped_name = html.escape(actual_name, quote=True)
+            return f"{mask_match.group('prefix')}{escaped_name}{mask_match.group('suffix')}"
+
+        return _MASK_IMAGE_URL_RE.sub(rewrite_mask, envelope)
+
+    return _GLOSS_IMAGE_LINK_RE.sub(rewrite_envelope, rewritten)
 
 
 def _resolve_dict_media_path(src: str, dicts_root: Path) -> Path | None:
@@ -254,6 +300,10 @@ class AnkiMediaStore:
         # AnkiConnect this run. Avoids re-uploading the same accent SVG once
         # per card across a 5000-word batch.
         self._dict_media_uploaded: set[str] = set()
+        # Logical rendered src -> Anki-confirmed stored filename. Anki may
+        # sanitize a name or choose a collision-safe suffix; later payloads must
+        # reuse that exact answer instead of the logical src.
+        self._dict_media_names: dict[str, str] = {}
 
     def store_batch(self, word_data_list: list[CardPayload]) -> set[str]:
         """Store all media files in Anki collection via batched ``multi`` POSTs.
@@ -388,9 +438,6 @@ class AnkiMediaStore:
                         seen.add(src)
                         all_srcs.append(src)
 
-        if not all_srcs:
-            return
-
         # Resolve each src; cache missing ones now so we don't retry.
         items: list[tuple[str, dict]] = []
         for src in all_srcs:
@@ -402,17 +449,34 @@ class AnkiMediaStore:
                 continue
             action = _build_store_media_action(src, file_path)
             if action is not None:
+                # Anki's default is destructive. Preserve an existing
+                # different-bytes collection file and adopt the returned name.
+                action["params"]["deleteExisting"] = False
                 items.append((src, action))
 
         # Shared with the screenshot/audio path: chunks bounded by action count
         # AND base64 byte budget, per-file fallback when a multi POST trips the
         # oversized-body connection reset. _store_media_chunk returns only the
         # srcs confirmed stored, so failures stay uncached and retry next batch.
-        # Dict media is cached by the src the rendered <img> references (the sent
-        # name / dict key), not any AnkiConnect rename — the HTML is already
-        # emitted, so the sent name is the one that must not be re-uploaded.
+        # Cache the full logical-to-actual map: a later payload carrying the same
+        # rendered src still needs its HTML rewritten even though no upload runs.
         for chunk in _chunk_media_actions(items):
-            self._dict_media_uploaded.update(self._store_media_chunk(chunk).keys())
+            stored = self._store_media_chunk(chunk)
+            self._dict_media_uploaded.update(stored)
+            self._dict_media_names.update(stored)
+
+        # CardPayload is frozen, so replace entries in the caller-owned list.
+        # AnkiService builds notes only after this pass and therefore sees the
+        # exact confirmed names in both Definition and Glossary.
+        for index, item in enumerate(word_data_list):
+            definition = _rewrite_dict_media_srcs(item.definition, self._dict_media_names)
+            extra_fields = item.extra_fields
+            if extra_fields and isinstance(extra_fields.get("glossary"), str):
+                glossary = _rewrite_dict_media_srcs(extra_fields["glossary"], self._dict_media_names)
+                if glossary != extra_fields["glossary"]:
+                    extra_fields = {**extra_fields, "glossary": glossary}
+            if definition != item.definition or extra_fields is not item.extra_fields:
+                word_data_list[index] = replace(item, definition=definition, extra_fields=extra_fields)
 
     def _store_media_chunk(self, chunk: list[tuple[str, dict]]) -> dict[str, str]:
         """Store one chunk via ``multi``; fall back to per-file POSTs on transport failure.

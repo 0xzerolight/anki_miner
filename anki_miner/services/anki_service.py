@@ -2,7 +2,7 @@
 
 import logging
 import re
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 import requests
 from PyQt6.QtCore import QCoreApplication
@@ -124,6 +124,15 @@ class AnkiService:
         # A service that has not submitted anything has written nothing.
         self.anki_write_state: AnkiWriteState = AnkiWriteState.NO_NOTE_WRITE
         self.last_created_note_ids: list[int] = []
+        # Positionally aligned mined forms for the confirmed IDs above. Unlike
+        # ProcessingResult.mined_forms, this is not a known_words.db undo
+        # receipt; Deck Builder consumes it to promote only cards Anki created.
+        self.last_created_mined_forms: list[str] = []
+        # Positionally aligned source lemmas for the same IDs. Deck Builder's
+        # cross-episode dedup keys on corpus lemmas, which need not map
+        # one-to-one to mined forms.
+        self.last_created_lemmas: list[str] = []
+        self._cancelled_check: Callable[[], bool] | None = None
         # Number of notes not created during the last create_cards_batch call.
         # Combines both sources:
         #   - notes the pre-add duplicate probe (_probe_duplicates) classified as
@@ -495,7 +504,7 @@ class AnkiService:
             )
         logger.debug("Anki add tags done: notes=%d", len(note_ids))
 
-    def get_existing_vocabulary(self) -> set[str]:
+    def get_existing_vocabulary(self, *, allow_degraded: bool = True) -> set[str]:
         """Get all Japanese vocabulary words already in Anki.
 
         Queries the collection (minus any ``config.excluded_decks``; see
@@ -507,7 +516,8 @@ class AnkiService:
             Set of Expression (first-field) values already in the
             collection, dedup-normalized (HTML/media-stripped, NFC) — i.e.
             ``mined_form`` strings, not lemmas. Returns an
-            empty set as a graceful-degradation fallback if AnkiConnect
+            empty set as a graceful-degradation fallback when
+            ``allow_degraded`` is true and AnkiConnect
             responds but the call fails for a recoverable, non-connection
             transport reason (e.g. a ``Timeout`` or a JSON decode
             ``ValueError``) — a warning is logged and filtering is
@@ -596,6 +606,8 @@ class AnkiService:
             cause = e.__cause__
             if cause is None or isinstance(cause, requests.exceptions.ConnectionError):
                 raise
+            if not allow_degraded:
+                raise
             logger.warning("Failed to fetch existing vocabulary (filtering disabled): %s", e)
             return set()
 
@@ -623,6 +635,10 @@ class AnkiService:
         """
         self._media_store.upload_dict_media(word_data_list)
 
+    def set_cancelled_check(self, cancelled: Callable[[], bool] | None) -> None:
+        """Install the live Phase-5 cancellation predicate for one call."""
+        self._cancelled_check = cancelled
+
     def create_cards_batch(
         self,
         word_data_list: list[CardPayload],
@@ -646,6 +662,8 @@ class AnkiService:
         )
         if not word_data_list:
             self.last_created_note_ids = []
+            self.last_created_mined_forms = []
+            self.last_created_lemmas = []
             self.last_skipped_duplicates = 0
             self.last_media_store_failures = 0
             log_summary(
@@ -662,6 +680,8 @@ class AnkiService:
             return []
 
         self.last_created_note_ids = []
+        self.last_created_mined_forms = []
+        self.last_created_lemmas = []
         self.last_skipped_duplicates = 0
         self.last_media_store_failures = 0
         skipped_duplicates = 0
@@ -674,16 +694,35 @@ class AnkiService:
                 QCoreApplication.translate("AnkiService", "Creating Anki cards"),
             )
 
-        # First, store all media files and track which succeeded
-        stored_files = self._store_media_files_batch(word_data_list)
+        excluded_deck_admission = bool(self.config.excluded_decks and not self.config.allow_duplicate_cards)
+        if excluded_deck_admission:
+            # The normal Phase-2 admission query deliberately excludes these
+            # decks. Reuse that same answer here, then allow admitted notes past
+            # Anki's collection-wide duplicate rule. Keep a local seen set so
+            # one run still submits a given first field at most once.
+            # This answer authorizes bypassing Anki's collection-wide duplicate
+            # rule. An uncertain answer must fail closed, unlike Phase 2's
+            # best-effort filtering preview.
+            existing = self.get_existing_vocabulary(allow_degraded=False)
+            seen: set[str] = set()
+            candidate_payloads: list[CardPayload] = []
+            for item in word_data_list:
+                note = build_note(item, self.config, set()).note
+                fields = note.get("fields") or {}
+                first_value = next(iter(fields.values()), "")
+                key = _strip_for_dedup(first_value if isinstance(first_value, str) else "")
+                duplicate = bool(key and (key in existing or key in seen))
+                if duplicate:
+                    skipped_duplicates += 1
+                else:
+                    candidate_payloads.append(item)
+                if key:
+                    seen.add(key)
+        else:
+            candidate_payloads = list(word_data_list)
+        probed_duplicates = skipped_duplicates
 
-        # Ship dict-bundled assets referenced by any definition or glossary in
-        # the batch via a single batched multi pass. Done up-front so uploads
-        # finish before notes reference the filenames; AnkiConnect serializes
-        # per-connection, safe.
-        self._upload_dict_media_batch(word_data_list)
-
-        # Then create notes in batches. AnkiConnect accepts arbitrary array
+        # Create surviving notes in batches. AnkiConnect accepts arbitrary array
         # sizes; 100 cuts round-trips ~2x vs 50 with no observed errors on a
         # representative deck. Larger sizes (200+) show diminishing returns
         # because note construction time inside Anki dominates over HTTP.
@@ -693,12 +732,15 @@ class AnkiService:
         # incremental cache merge in the finally. Only created words are merged —
         # see the rationale there (F10).
         created_forms: list[str] = []
+        created_lemmas: list[str] = []
         # Diagnostic counters for the bold path (Issue #20). Surface whether
         # the precomputed bolded strings actually made it to the note body,
         # so users who enable the option but see no bold can tell from the
         # log whether the parse populated the fields.
         bold_used = 0
         bold_fallback = 0
+        media_store_failures = 0
+        cancelled_between_batches = False
 
         # Persist progress even if a later batch raises. Earlier batches'
         # cards already exist in Anki; on a mid-run failure we must still
@@ -706,8 +748,39 @@ class AnkiService:
         # vocab cache before the error propagates — otherwise those cards are
         # orphaned with no record. The `finally` runs on success AND failure.
         try:
-            for i in range(0, len(word_data_list), batch_size):
-                batch = word_data_list[i : i + batch_size]
+            for i in range(0, len(candidate_payloads), batch_size):
+                if self._cancelled_check is not None and self._cancelled_check():
+                    cancelled_between_batches = True
+                    break
+
+                candidate_batch = candidate_payloads[i : i + batch_size]
+                # Probe each chunk only after the prior chunk's addNotes response.
+                # A repeated first field crossing the 100-note boundary then sees
+                # the first note in Anki and is rejected before any of its media is
+                # uploaded. Excluded-deck admission deliberately permits collection
+                # duplicates, but still validates every locally admitted note with
+                # duplicates allowed so bad fields fail before media side effects.
+                probe_notes = [build_note(item, self.config, set()).note for item in candidate_batch]
+                if excluded_deck_admission:
+                    self._validate_notes_addible(probe_notes)
+                    batch = candidate_batch
+                else:
+                    is_duplicate = self._probe_duplicates(probe_notes)
+                    batch = [
+                        item for item, duplicate in zip(candidate_batch, is_duplicate, strict=True) if not duplicate
+                    ]
+                    batch_duplicates = sum(is_duplicate)
+                    skipped_duplicates += batch_duplicates
+                    probed_duplicates += batch_duplicates
+
+                if not batch:
+                    continue
+
+                # Upload only this confirmed-to-be-addable batch. A Stop after
+                # it commits prevents every later batch's media and notes.
+                stored_files = self._store_media_files_batch(batch)
+                media_store_failures += self.last_media_store_failures
+                self._upload_dict_media_batch(batch)
 
                 # Build notes array for this batch (field mapping lives in
                 # anki_note_builder).
@@ -718,23 +791,13 @@ class AnkiService:
                         bold_used += 1
                     if built.used_bold_fallback:
                         bold_fallback += 1
-                    notes.append(built.note)
+                    note = built.note
+                    if excluded_deck_admission:
+                        note["options"] = {"allowDuplicate": True}
+                    notes.append(note)
 
-                # Pre-add duplicate probe (Yomitan partitionAddibleNotes): ask
-                # AnkiConnect which of these notes it would reject as duplicates
-                # BEFORE submitting, so we skip only real duplicates and submit
-                # the rest. `_probe_duplicates` surfaces a genuine (non-duplicate)
-                # rejection — bad field mapping, empty first field — as an error
-                # rather than silently dropping it; that error propagates to the
-                # pipeline boundary (the finally still records earlier batches).
-                is_duplicate = self._probe_duplicates(notes)
-                submit_notes = [note for note, dup in zip(notes, is_duplicate, strict=True) if not dup]
-                submit_payloads = [item for item, dup in zip(batch, is_duplicate, strict=True) if not dup]
-
-                # Every probe-flagged duplicate is counted as skipped.
-                dup_notes = [note for note, dup in zip(notes, is_duplicate, strict=True) if dup]
-                skipped_duplicates += len(dup_notes)
-                probed_duplicates += len(dup_notes)
+                submit_notes = notes
+                submit_payloads = batch
 
                 # Submit only the non-duplicates. `post_action` raises
                 # `AnkiConnectionError` for connection failures, transport errors,
@@ -789,6 +852,9 @@ class AnkiService:
                 created_forms.extend(
                     item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
                 )
+                created_lemmas.extend(
+                    item.word.lemma for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is not None
+                )
 
                 if progress_callback:
                     # Report the CUMULATIVE run total, never per-chunk figures:
@@ -797,7 +863,7 @@ class AnkiService:
                     # the real run total (the reported Issue: misleading
                     # "Cards created: 100/100").
                     progress_callback.on_progress(
-                        min(i + batch_size, len(word_data_list)),
+                        min(i + len(candidate_batch) + skipped_duplicates, len(word_data_list)),
                         tr_format(
                             QCoreApplication.translate("AnkiService", "Cards created: %1/%2"),
                             total_created,
@@ -809,7 +875,10 @@ class AnkiService:
             # earlier ones on a mid-run failure). Runs before the exception
             # re-raises.
             self.last_created_note_ids = all_created_ids
+            self.last_created_mined_forms = created_forms
+            self.last_created_lemmas = created_lemmas
             self.last_skipped_duplicates = skipped_duplicates
+            self.last_media_store_failures = media_store_failures
             # Incremental merge: if the cache is already populated, union the
             # mined_forms of cards actually CREATED this run into it so subsequent
             # episodes (within the same batch run or the same manual-pair session)
@@ -827,7 +896,7 @@ class AnkiService:
                     if key and _JAPANESE_RE.search(key):
                         self._existing_vocab_cache.add(key)
 
-        if progress_callback:
+        if progress_callback and not cancelled_between_batches:
             progress_callback.on_complete()
         if skipped_duplicates > 0:
             logger.info(
@@ -951,6 +1020,52 @@ class AnkiService:
                 raise AnkiConnectionError(f"AnkiConnect rejected note {i} (not a duplicate): {error}")
         logger.debug("Anki duplicate probe done: duplicates=%d", sum(is_duplicate))
         return is_duplicate
+
+    def _validate_notes_addible(self, notes: list[dict]) -> None:
+        """Raise if any first-field-only note is invalid with duplicates allowed."""
+        if not notes:
+            return
+
+        stripped = [self._strip_note_to_first_field(note) for note in notes]
+        dup_allowed = [{**note, "options": {**note.get("options", {}), "allowDuplicate": True}} for note in stripped]
+        try:
+            result = _expect_list(
+                post_action(
+                    self.config.ankiconnect_url,
+                    "canAddNotesWithErrorDetail",
+                    params={"notes": dup_allowed},
+                    timeout=60,
+                ),
+                "canAddNotesWithErrorDetail",
+                len(notes),
+                dict,
+            )
+        except AnkiConnectionError as e:
+            if _UNSUPPORTED_ACTION_SUBSTRING not in str(e).lower():
+                raise
+            addible = _expect_list(
+                post_action(
+                    self.config.ankiconnect_url,
+                    "canAddNotes",
+                    params={"notes": dup_allowed},
+                    timeout=60,
+                ),
+                "canAddNotes",
+                len(notes),
+                bool,
+            )
+            for index, can_add in enumerate(addible):
+                if not can_add:
+                    raise AnkiConnectionError(
+                        f"AnkiConnect rejected note {index} even with duplicates allowed"
+                    ) from None
+            return
+
+        for index, item in enumerate(result):
+            error = item.get("error")
+            if error is not None or item.get("canAdd") is not True:
+                detail = error if isinstance(error, str) and error else "note is not addable"
+                raise AnkiConnectionError(f"AnkiConnect rejected note {index}: {detail}")
 
     def _probe_duplicates_fallback(self, stripped: list[dict], no_dup: list[dict]) -> list[bool]:
         """Classify duplicates via two diffed ``canAddNotes`` calls.

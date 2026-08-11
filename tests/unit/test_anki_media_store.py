@@ -15,6 +15,8 @@ from anki_miner.services.anki_media_store import (
     _extract_dict_media_srcs,
     _stream_encode_chunks,
 )
+from anki_miner.services.anki_note_builder import build_note
+from anki_miner.services.dictionary.yomitan_renderer import structured_content_to_html
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -493,3 +495,95 @@ class TestDictMediaSrcUnescaping:
         assert base64.b64decode(actions[0]["params"]["data"]) == b"<svg/>"
         # Cached under the same unescaped key so it never double-misses.
         assert "d__a&b.svg" in store._dict_media_uploaded
+
+
+class TestDictionaryMediaConfirmedNames:
+    def _item(self, make_tokenized_word, src: str) -> CardPayload:
+        tag = f'<img class="anki-miner-dict-media" src="{src}">'
+        return CardPayload(
+            word=make_tokenized_word(),
+            media=MediaData(),
+            definition=f"definition {tag}",
+            extra_fields={"glossary": f"glossary {tag}"},
+        )
+
+    def test_anki_rename_rewrites_definition_and_glossary(self, test_config, tmp_path, make_tokenized_word):
+        from dataclasses import replace
+
+        media_dir = tmp_path / "dicts" / "d" / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "pitch[1].svg").write_bytes(b"<svg/>")
+        config = replace(test_config, dicts_root=tmp_path / "dicts")
+        items = [self._item(make_tokenized_word, "d__pitch[1].svg")]
+
+        with patch(
+            "anki_miner.services.anki_media_store.post_multi",
+            return_value=["d__pitch1.svg"],
+        ):
+            store = AnkiMediaStore(config)
+            store.upload_dict_media(items)
+
+        assert "d__pitch[1].svg" not in items[0].definition
+        assert 'src="d__pitch1.svg"' in items[0].definition
+        assert items[0].extra_fields is not None
+        assert 'src="d__pitch1.svg"' in items[0].extra_fields["glossary"]
+
+    def test_real_renderer_rename_rewrites_img_and_monochrome_mask_in_final_note(
+        self, test_config, tmp_path, make_tokenized_word
+    ):
+        media_dir = tmp_path / "dicts" / "d" / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "pitch[1].svg").write_bytes(b"<svg/>")
+        config = replace(test_config, dicts_root=tmp_path / "dicts")
+        logical_name = "d__pitch[1].svg"
+        actual_name = "d__pitch1.svg"
+        rendered = structured_content_to_html(
+            {"tag": "img", "path": "pitch[1].svg", "appearance": "monochrome"},
+            dict_id="d",
+        )
+        assert rendered.count(logical_name) == 2
+        items = [CardPayload(word=make_tokenized_word(), media=MediaData(), definition=rendered)]
+
+        with patch("anki_miner.services.anki_media_store.post_multi", return_value=[actual_name]):
+            AnkiMediaStore(config).upload_dict_media(items)
+
+        final_note = build_note(items[0], config, set()).note
+        definition_field = config.anki_fields["definition"]
+        assert final_note["fields"][definition_field].count(actual_name) == 2
+        assert logical_name not in final_note["fields"][definition_field]
+
+    def test_collision_safe_store_keeps_existing_bytes_and_uses_returned_name(
+        self, test_config, tmp_path, make_tokenized_word
+    ):
+        media_dir = tmp_path / "dicts" / "d" / "media"
+        media_dir.mkdir(parents=True)
+        (media_dir / "icon.svg").write_bytes(b"new-dictionary-bytes")
+        config = replace(test_config, dicts_root=tmp_path / "dicts")
+        items = [self._item(make_tokenized_word, "d__icon.svg")]
+        media_files = {"d__icon.svg": b"old-user-bytes"}
+        captured_actions: list[dict] = []
+
+        def store_without_overwrite(_url, actions, timeout):
+            stored_names = []
+            for action in actions:
+                captured_actions.append(action)
+                params = action["params"]
+                sent_name = params["filename"]
+                actual_name = sent_name
+                if sent_name in media_files and params.get("deleteExisting") is False:
+                    actual_name = "d__icon_1.svg"
+                media_files[actual_name] = base64.b64decode(params["data"])
+                stored_names.append(actual_name)
+            return stored_names
+
+        with patch("anki_miner.services.anki_media_store.post_multi", side_effect=store_without_overwrite):
+            store = AnkiMediaStore(config)
+            store.upload_dict_media(items)
+
+        action = captured_actions[0]
+        assert action["params"]["deleteExisting"] is False
+        assert media_files["d__icon.svg"] == b"old-user-bytes"
+        assert media_files["d__icon_1.svg"] == b"new-dictionary-bytes"
+        final_note = build_note(items[0], config, set()).note
+        definition_field = config.anki_fields["definition"]
+        assert 'src="d__icon_1.svg"' in final_note["fields"][definition_field]

@@ -480,6 +480,27 @@ def test_preview_ready_populates_labels(tab):
     assert "250" in tab._preview_labels["card_count"].text()
 
 
+def test_request_controls_stay_locked_from_preview_until_terminal_state(tab):
+    controls = (
+        tab.video_folder_selector,
+        tab.subtitle_folder_selector,
+        tab.deck_name_edit,
+        tab.mode_combo,
+        tab.top_n_spinbox,
+        tab.coverage_spinbox,
+        tab.collection_filter_checkbox,
+    )
+
+    tab._set_buttons_running()
+    assert all(not control.isEnabled() for control in controls)
+
+    tab._on_preview_ready(_fake_preview())
+    assert all(not control.isEnabled() for control in controls)
+
+    tab._restore_buttons()
+    assert all(control.isEnabled() for control in controls)
+
+
 # ---------------------------------------------------------------------------
 # 7. _on_build_clicked calls worker.confirm()
 # ---------------------------------------------------------------------------

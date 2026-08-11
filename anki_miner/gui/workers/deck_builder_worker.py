@@ -28,6 +28,7 @@ from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
+from anki_miner.models import MiningOutcome, classify_result
 from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.corpus_aggregator import aggregate, select
@@ -270,7 +271,10 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 # A successful, error-free zero-card result therefore contributes
                 # zero and continues. Any failed non-raising ProcessingResult is
                 # rejected below before its staged lemmas, card count, or item
-                # completion can be committed. We deliberately let the callback
+                # completion can be committed. A cancelled result may still
+                # carry confirmed IDs/lemmas from the last completed Anki batch;
+                # only that confirmed subset is promoted below before returning.
+                # We deliberately let the callback
                 # return the (possibly empty) filtered list rather than pre-skip:
                 # pre-skipping would require re-deriving each episode's mineable
                 # lemma set here.
@@ -282,16 +286,19 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                     episode_name_override=name,
                     progress_callback=self.progress_callback,
                 )
-                if self.check_cancelled():
-                    pending_carded.clear()
-                    break
-                if not result.success or result.errors:
+                outcome = classify_result(result)
+                if outcome is MiningOutcome.FAILED:
                     pending_carded.clear()
                     detail = "; ".join(result.errors) or "processing result reported failure"
                     raise RuntimeError(f"Deck build failed for {name}: {detail}")
-                carded.update(pending_carded)
+
+                confirmed_lemmas = list(proc.anki_service.last_created_lemmas)
+                carded.update(lemma for lemma in confirmed_lemmas if lemma in pending_carded)
+                pending_carded.clear()
                 total += result.cards_created
                 self.item_completed.emit(name, result.cards_created)
+                if outcome is MiningOutcome.CANCELLED or self.check_cancelled():
+                    return
 
             # A mid-build cancel breaks out of the loop above; do NOT emit
             # build_finished in that case — the GUI would otherwise show a
@@ -343,9 +350,9 @@ class DeckBuilderWorker(ProcessorOwningWorker):
 
         The returned closure keeps a word iff its lemma is in ``selected`` and
         neither confirmed in ``carded`` nor staged in ``pending_carded``. The
-        caller merges the stage into ``carded`` only after ``process_episode``
-        returns a successful, error-free result; failed/cancelled results clear
-        the stage. ``carded`` is shared across all episodes in one build.
+        stage contains selected corpus lemmas; the caller promotes only lemmas
+        Anki confirmed created. ``carded`` is shared across all episodes in one
+        build.
         """
 
         def callback(words: list) -> list:
