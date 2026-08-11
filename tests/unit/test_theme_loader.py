@@ -133,6 +133,17 @@ class TestValidateTheme:
         errors = validate_theme_data(theme)
         assert errors == []
 
+    @pytest.mark.parametrize("value", [{}, []], ids=("object", "array"))
+    def test_required_color_values_must_be_strings(self, value):
+        from anki_miner.gui.resources.styles.theme import validate_theme_data
+
+        theme = _make_valid_theme()
+        theme["colors"]["primary"] = value
+
+        errors = validate_theme_data(theme)
+
+        assert any("primary" in error and "string" in error for error in errors)
+
 
 class TestDiscoverThemes:
     """Tests for discover_themes()."""
@@ -159,6 +170,18 @@ class TestDiscoverThemes:
         themes = discover_themes(themes_dir)
         assert len(themes) == 1
         assert "good" in themes
+
+    def test_skips_excessively_nested_json(self, themes_dir: Path):
+        from anki_miner.gui.resources.styles.theme import discover_themes
+
+        (themes_dir / "deep.json").write_text("[" * 10_000 + "]" * 10_000, encoding="utf-8")
+
+        try:
+            themes = discover_themes(themes_dir)
+        except RecursionError:
+            pytest.fail("nested theme JSON escaped the fail-soft discovery path")
+
+        assert themes == {}
 
     def test_skips_invalid_root(self, themes_dir: Path):
         from anki_miner.gui.resources.styles.theme import discover_themes

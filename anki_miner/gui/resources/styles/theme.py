@@ -201,6 +201,11 @@ def validate_theme_data(data: dict) -> list[str]:
         missing = REQUIRED_COLOR_KEYS - set(data["colors"].keys())
         if missing:
             errors.append(f"Missing color keys: {', '.join(sorted(missing))}")
+        non_string = sorted(
+            key for key in REQUIRED_COLOR_KEYS & data["colors"].keys() if not isinstance(data["colors"][key], str)
+        )
+        if non_string:
+            errors.append(f"Color values must be strings: {', '.join(non_string)}")
 
     # Optional grouping fields. Missing is OK; present must be non-empty string.
     if "family" in data and (not isinstance(data["family"], str) or not data["family"].strip()):
