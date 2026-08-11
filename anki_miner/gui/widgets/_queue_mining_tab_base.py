@@ -269,6 +269,7 @@ class _QueueMiningTabBase(MiningTabBase):
         worker = self._make_worker(items, curation_cb, processor_factory)
         worker.item_started.connect(self._on_item_started)
         worker.item_progress.connect(self._on_item_progress)
+        worker.item_warning.connect(self._on_item_warning)
         # The wait between automatic attempts and the pause at an item boundary
         # are both things the run is doing, so both are reported like any other
         # phase rather than looking like a stall (D30-B, D29-A).
@@ -332,6 +333,15 @@ class _QueueMiningTabBase(MiningTabBase):
         """Run-level fatal: flag for the terminal bar state and log it."""
         self._run_failed = True
         self.log_widget.append_error(message)
+
+    def _on_item_warning(self, idx: int, item_description: str, error_message: str) -> None:
+        """Keep a recoverable per-word loss in Activity without failing the item."""
+        del idx
+        if item_description and error_message:
+            message = f"{item_description}: {error_message}"
+        else:
+            message = error_message or item_description
+        self.log_widget.append_warning(message)
 
     def _retry_line(self, attempt: int, maximum: int, remaining_s: int) -> str:
         """Render the countdown, or empty when this tab supplies no template."""

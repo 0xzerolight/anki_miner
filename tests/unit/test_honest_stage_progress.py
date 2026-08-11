@@ -11,10 +11,14 @@ whole-episode percentage, because no honest denominator for one exists.
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
+from anki_miner.gui.widgets._queue_mining_tab_base import _QueueMiningTabBase
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
+from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.presenters.null_presenter import NullPresenter, NullProgressCallback
 
@@ -138,10 +142,58 @@ def test_adapter_carries_the_stage_across_a_later_stages_items(adapter_emissions
     assert not any("Extracting media: Fetching definitions" in label for _, label in seen)
 
 
-def test_adapter_errors_stay_silent(adapter_emissions):
-    """A failed item is reported by the queue, not by re-animating progress."""
-    seen, adapter = adapter_emissions
+def test_adapter_emits_nonfatal_errors_without_advancing_progress(adapter_emissions):
+    """A recoverable media loss is a warning, not ordinary progress."""
+    seen, _adapter = adapter_emissions
+    warnings: list[tuple[int, str, str]] = []
+    adapter = QueueMiningProgressAdapter(
+        idx=4,
+        emit=lambda idx, label: seen.append((idx, label)),
+        warning=lambda idx, item, error: warnings.append((idx, item, error)),
+    )
 
     adapter.on_error("word-01", "boom")
 
     assert seen == []
+    assert warnings == [(4, "word-01", "boom")]
+
+
+def test_queue_routes_nonfatal_adapter_errors_to_activity():
+    warnings: list[str] = []
+    tab = SimpleNamespace(
+        log_widget=SimpleNamespace(append_warning=warnings.append),
+    )
+    adapter = QueueMiningProgressAdapter(
+        idx=2,
+        emit=lambda _idx, _label: pytest.fail("warning advanced progress"),
+        warning=lambda idx, item, error: _QueueMiningTabBase._on_item_warning(tab, idx, item, error),
+    )
+
+    adapter.on_error("word-01", "audio extraction failed")
+    adapter.on_complete()
+
+    assert warnings == ["word-01: audio extraction failed"]
+
+
+def test_running_queue_worker_supplies_the_adapter_warning_channel(qapp):
+    class WarningWorker(SequentialQueueWorker[object]):
+        def _run_queue(self) -> None:
+            adapter = QueueMiningProgressAdapter(idx=3, emit=self.item_progress.emit)
+            adapter.on_error("word-02", "screenshot extraction failed")
+            self.item_finished.emit(3, "completed-result", None, 1)
+
+    worker = WarningWorker(
+        processor=object(),  # type: ignore[arg-type]
+        config=object(),  # type: ignore[arg-type]
+        items=[],
+        curation_callback=None,
+    )
+    warnings: list[tuple[int, str, str]] = []
+    finished: list[tuple[int, object, object, int]] = []
+    worker.item_warning.connect(lambda idx, item, error: warnings.append((idx, item, error)))
+    worker.item_finished.connect(lambda idx, result, error, attempts: finished.append((idx, result, error, attempts)))
+
+    worker.run()
+
+    assert warnings == [(3, "word-02", "screenshot extraction failed")]
+    assert finished == [(3, "completed-result", None, 1)]

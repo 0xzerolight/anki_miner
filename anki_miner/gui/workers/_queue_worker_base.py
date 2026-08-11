@@ -15,6 +15,7 @@ signals to subclasses):
   mid-run via :meth:`try_skip_item` are silently skipped: no signals for them.
 * ``item_progress(int, str)`` — idx, label. Text only: an item's own completion
   fraction is not knowable, so none is published.
+* ``item_warning(int, str, str)`` — idx, item description, recoverable error.
 * ``item_retrying(int, int, int, int)`` — idx, next attempt, maximum, seconds
   left before that attempt starts. The backoff between automatic attempts, said
   out loud (D30).
@@ -93,6 +94,19 @@ RETRY_DELAY_S = 8.0
 #: How often a paused run re-checks its gate. It is asleep either way; the poll
 #: only bounds how long a cancel can take to be noticed.
 _PAUSE_POLL_S = 0.1
+
+# The progress adapter is constructed inside each concrete worker's item body,
+# while the warning signal lives here. Run context bridges those existing call
+# sites without making every worker duplicate the same callback argument.
+_active_queue_run = threading.local()
+
+
+def _emit_active_queue_warning(idx: int, item_description: str, error_message: str) -> None:
+    """Emit a recoverable warning on the queue worker running this thread."""
+    worker = getattr(_active_queue_run, "worker", None)
+    if worker is not None:
+        worker.item_warning.emit(idx, item_description, error_message)
+
 
 #: Fetch failures that are *deterministic*: a second download costs another full
 #: transfer and fails identically. Each is a :class:`YouTubeFetchError` subclass,
@@ -300,6 +314,9 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
     # (idx, label). No percentage: the queue bar counts finished items, and the
     # label carries the stage plus the true count inside it.
     item_progress = pyqtSignal(int, str)
+    # (idx, item description, error). A nonfatal warning stays separate from
+    # progress and from the item's eventual terminal classification.
+    item_warning = pyqtSignal(int, str, str)
     # (idx, next_attempt, maximum, remaining_seconds). One per countdown second,
     # so the wait between automatic attempts is visible instead of looking like
     # a stall (D30-B).
@@ -409,12 +426,20 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
         and the cancel/skip loop scaffolding live here; the subclass
         :meth:`_run_item` supplies the per-item body.
         """
+        previous = getattr(_active_queue_run, "worker", None)
+        _active_queue_run.worker = self
         try:
-            self._run_queue()
-        except Exception as exc:  # noqa: BLE001 - QThread.run exception boundary
-            logger.exception("%s run failed", type(self).__name__)
-            self.error.emit(f"{type(exc).__name__}: {exc}")
-            self.queue_finished.emit()
+            try:
+                self._run_queue()
+            except Exception as exc:  # noqa: BLE001 - QThread.run exception boundary
+                logger.exception("%s run failed", type(self).__name__)
+                self.error.emit(f"{type(exc).__name__}: {exc}")
+                self.queue_finished.emit()
+        finally:
+            if previous is None:
+                del _active_queue_run.worker
+            else:
+                _active_queue_run.worker = previous
 
     def _run_queue(self) -> None:
         """Run queue logic inside :meth:`run`'s exception boundary."""

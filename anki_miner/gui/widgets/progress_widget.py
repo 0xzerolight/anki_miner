@@ -16,7 +16,10 @@ under three rules that keep the motion from becoming a second, prettier lie:
   the stored truth at any instant without waiting for anything.
 """
 
+from __future__ import annotations
+
 from time import time
+from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
@@ -25,6 +28,9 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QVBo
 from anki_miner.gui.resources.styles import FONT_SIZES, MOTION, SPACING
 from anki_miner.gui.utils import motion
 from anki_miner.gui.utils.fonts import make_scaled_monospace_font
+
+if TYPE_CHECKING:
+    from anki_miner.gui.controllers.task_registry import TaskRegistry
 
 
 class ProgressWidget(QWidget):
@@ -44,14 +50,47 @@ class ProgressWidget(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self._start_time = None
+        self._start_time: float | None = None
         self._items_processed = 0
         self._total_items = 0
         # Set by freeze(): the bar has stopped believing anything new about
         # where the run will get to. Cleared by reset() for the next run.
         self._frozen = False
         self._last_percent = 0
+        self._task_registry: TaskRegistry | None = None
+        self._task_id: str | None = None
+        self._task_run_token: int | None = None
+        self._task_elapsed_s: float | None = None
         self._setup_ui()
+
+    def bind_task(self, registry: TaskRegistry, task_id: str) -> None:
+        """Use the authoritative task clock for this screen's elapsed display."""
+        if self._task_registry is not registry:
+            if self._task_registry is not None:
+                self._task_registry.snapshot_changed.disconnect(self._on_task_snapshot_changed)
+            registry.snapshot_changed.connect(self._on_task_snapshot_changed)
+            self._task_registry = registry
+        self._task_id = task_id
+        self._task_run_token = None
+        self._refresh_task_elapsed()
+
+    def _on_task_snapshot_changed(self, task_id: str) -> None:
+        if task_id == self._task_id:
+            self._refresh_task_elapsed()
+
+    def _refresh_task_elapsed(self, *, running_only: bool = False) -> None:
+        registry = self._task_registry
+        task_id = self._task_id
+        if registry is None or task_id is None:
+            return
+        snapshot = registry.snapshot(task_id)
+        if snapshot is None or (running_only and not snapshot.is_running):
+            return
+        if self._task_run_token is not None and snapshot.run_token < self._task_run_token:
+            return
+        self._task_run_token = snapshot.run_token
+        self._task_elapsed_s = max(0.0, snapshot.elapsed_s)
+        self._update_stats()
 
     def _setup_ui(self) -> None:
         """Set up the user interface."""
@@ -154,7 +193,7 @@ class ProgressWidget(QWidget):
         self._total_items = total
 
         # Start timer on first progress update
-        if self._start_time is None and current > 0:
+        if self._task_id is None and self._start_time is None and current > 0:
             self._start_time = time()
 
         if total > 0:
@@ -193,7 +232,7 @@ class ProgressWidget(QWidget):
         self._total_items = 100
         self._last_percent = percent
 
-        if self._start_time is None and percent > 0:
+        if self._task_id is None and self._start_time is None and percent > 0:
             self._start_time = time()
 
         # Coming back from the busy marquee is a mode change, not progress:
@@ -254,9 +293,11 @@ class ProgressWidget(QWidget):
         """
         self.progress_bar.setMaximum(100)
         self._snap_fill(100)
+        self._items_processed = self._total_items
+        self._last_percent = 100
         self.status_label.setText(message)
-        if self._start_time is not None:
-            elapsed = time() - self._start_time
+        elapsed = self._elapsed()
+        if elapsed is not None:
             minutes = int(elapsed // 60)
             seconds = int(elapsed % 60)
             self.stats_label.setText(f"{minutes:02d}:{seconds:02d}")
@@ -302,8 +343,10 @@ class ProgressWidget(QWidget):
         self.status_label.setText(self.tr("Ready"))
         self.stats_label.setText("")
         self._start_time = None
+        self._task_elapsed_s = None
         self._items_processed = 0
         self._total_items = 0
+        self._refresh_task_elapsed(running_only=True)
 
     def set_indeterminate(self) -> None:
         """Set progress bar to indeterminate mode (busy indicator)."""
@@ -352,11 +395,10 @@ class ProgressWidget(QWidget):
 
     def _update_stats(self) -> None:
         """Update the statistics label with elapsed time and rate."""
-        if self._start_time is None or self._items_processed == 0:
+        elapsed = self._elapsed()
+        if elapsed is None:
             self.stats_label.setText("")
             return
-
-        elapsed = time() - self._start_time
 
         # Format elapsed time
         minutes = int(elapsed // 60)
@@ -381,3 +423,11 @@ class ProgressWidget(QWidget):
                 stats_parts.append(f"{self.tr('ETA ~')}{eta_minutes:02d}:{eta_secs:02d}")
 
         self.stats_label.setText(" | ".join(stats_parts))
+
+    def _elapsed(self) -> float | None:
+        """Return the registry clock, falling back for unbound standalone use."""
+        if self._task_elapsed_s is not None:
+            return self._task_elapsed_s
+        if self._start_time is not None:
+            return max(0.0, time() - self._start_time)
+        return None
