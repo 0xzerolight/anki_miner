@@ -307,6 +307,33 @@ class TestShutdownJoinsOffThreadWorkers:
         prewarm_call = next(call for call in ctrl._join_worker_for_close.call_args_list if call.args == (worker,))
         assert prewarm_call.kwargs["timeout_ms"] == 2000
 
+    def test_shutdown_rejects_successor_from_queued_completion(self, controller, qtbot):
+        from PyQt6.QtWidgets import QTabWidget
+
+        from anki_miner.gui.utils.run_off_thread import run_off_thread
+
+        successor_started = False
+        spawned = []
+        parent = QObject(controller._window)
+
+        def start_successor(_result) -> None:
+            def work() -> None:
+                nonlocal successor_started
+                successor_started = True
+
+            spawned.append(run_off_thread(parent, work, lambda _value: None))
+
+        first = run_off_thread(parent, lambda: "done", start_successor)
+        assert first.wait(2000)
+
+        tabs = QTabWidget()
+        qtbot.addWidget(tabs)
+        assert controller.shutdown(tabs) == []
+
+        qtbot.waitUntil(lambda: bool(spawned), timeout=2000)
+        assert successor_started is False
+        assert not spawned[0].isRunning()
+
 
 def test_deferred_close_finalizes_once_after_deleted_laggard(controller, monkeypatch):
     from PyQt6 import sip

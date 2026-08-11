@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 _WorkerT = TypeVar("_WorkerT", bound=QThread)
 
 _REGISTRY_ATTR = "_off_thread_workers"
+_DISPATCH_CLOSED_ATTR = "_off_thread_dispatch_closed"
 
 # Process-global registry of every LIVE run_off_thread worker. Each worker is
 # also tracked on its parent's _off_thread_workers set (for premature-GC
@@ -84,6 +85,11 @@ def run_off_thread(
         parent=parent,
     )
 
+    if _dispatch_closed(parent):
+        worker.cancel()
+        logger.debug("off-thread dispatch rejected during shutdown")
+        return worker
+
     worker.result_ready.connect(on_done)
     if on_error is None:
         # SingleCallWorker.report_failure already logged this at the level its
@@ -116,6 +122,24 @@ def run_off_thread(
 
     worker.start()
     return worker
+
+
+def close_off_thread_dispatch(root: QObject) -> None:
+    """Reject new off-thread work owned by ``root`` or its descendants."""
+    setattr(root, _DISPATCH_CLOSED_ATTR, True)
+
+
+def _dispatch_closed(parent: QObject) -> bool:
+    """Return whether ``parent`` belongs to an application tree closing down."""
+    current: QObject | None = parent
+    while current is not None:
+        if bool(getattr(current, _DISPATCH_CLOSED_ATTR, False)):
+            return True
+        try:
+            current = current.parent()
+        except RuntimeError:
+            return True
+    return False
 
 
 def still_running(worker: QThread | None) -> bool:

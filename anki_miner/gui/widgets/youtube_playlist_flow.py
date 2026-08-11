@@ -157,6 +157,7 @@ class PlaylistAddController:
     * the at-most-one playlist resolve / playlist entry-probe workers and the
       frozen ``_playlist_probe_items`` idx snapshot,
     * the ``_playlist_generation`` counter that drops late resolves,
+    * the shutdown guard that permanently closes worker dispatch,
     * a frozen :class:`AnkiMinerConfig` snapshot (refreshed via
       :meth:`update_config` alongside the fetcher).
 
@@ -201,6 +202,7 @@ class PlaylistAddController:
         # Bumped on Clear so a late playlist_resolved from a pre-Clear Add is
         # ignored instead of popping a dialog over an emptied queue.
         self._playlist_generation = 0
+        self._shutdown_started = False
 
     # ------------------------------------------------------------------
     # Tab-facing API
@@ -220,6 +222,8 @@ class PlaylistAddController:
 
     def begin(self, url: str) -> None:
         """Add *url* — single videos probe directly, playlists resolve first."""
+        if self._shutdown_started:
+            return
         # Reject option-leading / non-URL inputs before they reach yt-dlp as
         # an argument. Leave the field populated so the user can fix it. T-34.
         if not _is_acceptable_add_input(url):
@@ -285,6 +289,9 @@ class PlaylistAddController:
         subprocess must never freeze the GUI thread at shutdown — on timeout we
         log and retain the handle for deferred close tracking.
         """
+        self._shutdown_started = True
+        self._playlist_generation += 1
+
         lagging_probes: list[YouTubeProbeWorker] = []
         for probe in list(self._probe_workers):
             probe.quit()
@@ -349,10 +356,14 @@ class PlaylistAddController:
         Args:
             item: The queued row to re-probe, in place.
         """
+        if self._shutdown_started:
+            return
         self._start_probe(item)
 
     def _start_probe(self, item: YouTubeQueueItem) -> None:
         """Put *item* into PROBING and spawn a metadata probe worker for it."""
+        if self._shutdown_started:
+            return
         # The queue model defaults to PENDING; flip to PROBING up-front so the
         # row widget renders the checking state immediately.
         item.status = YouTubeItemStatus.PROBING
@@ -410,6 +421,8 @@ class PlaylistAddController:
 
     def _begin_playlist_resolve(self, url: str, url_info: YouTubeUrlInfo) -> None:
         """Spawn a flat-playlist resolve worker for *url*."""
+        if self._shutdown_started:
+            return
         self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Resolving playlist…"))
         self._callbacks.clear_url_input()
 
@@ -458,8 +471,8 @@ class PlaylistAddController:
         generation: int,
     ) -> None:
         """Resolve succeeded — confirm with the user, then expand or fall back."""
-        if generation != self._playlist_generation:
-            return  # User hit Clear while resolving — drop the late result.
+        if self._shutdown_started or generation != self._playlist_generation:
+            return  # Clear or shutdown invalidated this resolve.
         if not isinstance(pl, PlaylistInfo):  # pragma: no cover - signal guard
             return
 
@@ -554,6 +567,8 @@ class PlaylistAddController:
 
     def _expand_playlist(self, entries: Sequence[PlaylistEntry], playlist_title: str) -> None:
         """Add *entries* as PROBING queue rows and start the sequential probe."""
+        if self._shutdown_started:
+            return
         # A single-added item keeps video_id=None until its probe completes, so
         # fall back to the URL-derived id; otherwise a video added standalone
         # (probe in flight) then again via a playlist slips the dedup and gets

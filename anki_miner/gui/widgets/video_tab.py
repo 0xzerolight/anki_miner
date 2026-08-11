@@ -31,7 +31,8 @@ Close contract (differs from ``ReadingTab`` — read before changing):
   :class:`~anki_miner.gui.controllers.background_tasks.BackgroundTaskController`
   routes each yielded worker through the same cancel → bounded-join →
   laggard-deferral policy they got as top-level tabs. YouTube's worker is
-  naturally skipped: its own ``shutdown()`` already joined and nulled it.
+  naturally skipped: its own ``shutdown()`` already joined and nulled it. Child
+  iterators also surface nested workers such as retained YouTube probe threads.
 """
 
 from __future__ import annotations
@@ -209,7 +210,7 @@ class VideoTab(QWidget):
                 logger.exception("Video sub-tab shutdown failed")
 
     def iter_close_workers(self) -> Iterator[QThread]:
-        """Yield each child's still-live worker for the controller's close join.
+        """Yield each child's direct and nested workers for close joining.
 
         Called by ``BackgroundTaskController.shutdown`` AFTER :meth:`shutdown`
         has poisoned the curation gates. Single/Batch leave a running
@@ -221,6 +222,9 @@ class VideoTab(QWidget):
             worker = getattr(child, "worker_thread", None)
             if worker is not None:
                 yield worker
+            iter_workers = getattr(child, "iter_close_workers", None)
+            if callable(iter_workers):
+                yield from iter_workers()
 
     def release_dictionary_resources(self) -> bool:
         """Release cached dictionary handles in all children (no short-circuit).
