@@ -159,6 +159,33 @@ def test_max_frequency_warning_shown_only_when_cutoff_without_source(qtbot):
     assert not panel.max_frequency_warning.isHidden()
 
 
+def test_frequency_warning_action_opens_frequency_settings(qtbot):
+    from dataclasses import replace
+
+    from PyQt6.QtWidgets import QWidget
+
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.capabilities import CapabilityTarget
+
+    class _Window(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.target = None
+
+        def reveal_capability(self, target):
+            self.target = target
+
+    window = _Window()
+    qtbot.addWidget(window)
+    panel = FilteringSettingsPanel(window)
+    panel.load_from_config(replace(AnkiMinerConfig(), max_frequency_rank=15000))
+    assert not panel.max_frequency_warning_action.isHidden()
+
+    panel.max_frequency_warning_action.click()
+
+    assert window.target == CapabilityTarget("settings", "frequency")
+
+
 def test_the_frequency_band_round_trips_through_the_panel(qtbot):
     from dataclasses import replace
 

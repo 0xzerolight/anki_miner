@@ -1080,6 +1080,33 @@ def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
     assert page.guidance_label.text() != ""
 
 
+def test_notetype_guidance_recheck_refreshes_in_place_without_opening_docs(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(wiz_config, anki_note_type="Basic"))
+    qtbot.addWidget(wiz)
+    service = _stub_anki_service(monkeypatch, wiz, notetypes=["Basic"])
+    service.get_note_type_fields.return_value = ["Expression", "Sentence"]
+    opened = MagicMock()
+    monkeypatch.setattr(pages_mod, "_open_url", opened)
+    page = wiz.notetype_page
+    page.notetype_combo.setCurrentText("Basic")
+    page._on_fields_fetched("Basic", ["Front", "Back"])
+    assert page.guidance_label.isVisibleTo(page)
+    assert 'href="recheck"' in page.guidance_label.text()
+    assert f'href="{pages_mod.NOTE_TYPE_HELP_URL}"' in page.guidance_label.text()
+
+    page.guidance_label.linkActivated.emit("recheck")
+
+    qtbot.waitUntil(lambda: service.get_model_names.call_count == 1, timeout=3000)
+    qtbot.waitUntil(lambda: page._field_names == ["Expression", "Sentence"], timeout=3000)
+    assert not page.guidance_label.isVisibleTo(page)
+    opened.assert_not_called()
+    for worker in list(wiz._workers):
+        assert worker.wait(3000)
+
+
 def test_notetype_page_suitable_fieldlist_hides_guidance(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
@@ -1417,6 +1444,101 @@ def test_done_page_keeps_finish_disabled_when_anki_went_away(qtbot, wiz_config, 
     # Nothing downstream was even asked: a deck query against a closed Anki
     # spends its ten-second timeout to learn nothing.
     assert fake.calls == ["dictionary", "ankiconnect"]
+
+
+def test_done_page_recheck_reruns_failed_sweep_and_updates_in_place(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    fake = _FakeValidation(ankiconnect=False)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    opened = MagicMock()
+    monkeypatch.setattr(pages_mod, "_open_url", opened)
+    page = wiz.done_page
+    _run_page_check(qtbot, page, page.summary_label)
+    assert page._live_check is not None
+    assert page._live_check.wait(3000)
+    assert page.isComplete() is False
+
+    fake.answers["ankiconnect"] = True
+    fake.calls.clear()
+    release_recheck = threading.Event()
+    check_dictionary = fake.check_offline_dictionary
+
+    def blocked_dictionary_check():
+        release_recheck.wait(3.0)
+        return check_dictionary()
+
+    fake.check_offline_dictionary = blocked_dictionary_check  # type: ignore[method-assign]
+    try:
+        page.recheck_button.click()
+        qtbot.waitUntil(lambda: page._live_check is not None and page._live_check.isRunning(), timeout=3000)
+        assert page.recheck_button.isEnabled() is False
+        release_recheck.set()
+        qtbot.waitUntil(page.isComplete, timeout=3000)
+    finally:
+        release_recheck.set()
+        if page._live_check is not None:
+            assert page._live_check.wait(3000)
+
+    assert fake.calls == ["dictionary", "ankiconnect", "deck", "note_type", "fields"]
+    assert "<b>No</b>" not in page.summary_label.text()
+    opened.assert_not_called()
+
+
+def test_done_page_back_next_reentry_supersedes_blocked_old_config_sweep(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    old_validation = _FakeValidation()
+    new_validation = _FakeValidation(ankiconnect=False)
+    old_release = threading.Event()
+    old_entered = threading.Event()
+    check_old_dictionary = old_validation.check_offline_dictionary
+
+    def blocked_old_dictionary_check():
+        old_entered.set()
+        old_release.wait(3.0)
+        return check_old_dictionary()
+
+    old_validation.check_offline_dictionary = blocked_old_dictionary_check  # type: ignore[method-assign]
+    old_config = replace(wiz_config, anki_deck_name="Old Deck")
+    wiz = SetupWizard(old_config)
+    qtbot.addWidget(wiz)
+    snapshots: list[str] = []
+
+    def validation_service():
+        deck_name = wiz.working_config().anki_deck_name
+        snapshots.append(deck_name)
+        return old_validation if deck_name == "Old Deck" else new_validation
+
+    monkeypatch.setattr(wiz, "validation_service", validation_service)
+    page = wiz.done_page
+    old_worker = None
+    try:
+        page.initializePage()
+        qtbot.waitUntil(old_entered.is_set, timeout=3000)
+        old_worker = page._live_check
+        assert old_worker is not None
+
+        wiz.update_working_config(replace(old_config, anki_deck_name="New Deck"))
+        page.initializePage()  # Back followed by Next re-enters the page here.
+
+        assert page._live_check is not old_worker
+        assert old_worker.is_cancelled is True
+        qtbot.waitUntil(lambda: "New Deck" in page.summary_label.text(), timeout=3000)
+        assert page.isComplete() is False
+
+        old_release.set()
+        assert old_worker.wait(3000)
+        qtbot.wait(50)
+        assert "New Deck" in page.summary_label.text()
+        assert page.isComplete() is False
+        assert snapshots == ["Old Deck", "New Deck"]
+    finally:
+        old_release.set()
+        workers = {old_worker, page._live_check}
+        for worker in workers:
+            if worker is not None:
+                assert worker.wait(3000)
 
 
 def test_done_page_keeps_finish_disabled_without_a_usable_dictionary(qtbot, wiz_config, monkeypatch):
