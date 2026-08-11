@@ -15,13 +15,13 @@ class UpdateWorkerThread(CancellableWorker):
     """Worker thread for checking updates in the background.
 
     Emits ``result_ready`` with an :class:`~anki_miner.services.update_checker.UpdateInfo`
-    when a newer release is available, or with ``None`` when there is no update or
-    the check failed (network error, etc.). The signal is typed as ``object`` so
-    Qt can carry either payload across the thread boundary.
+    when a newer release is available, with ``None`` when there is no update, or
+    with the checker's exception when the check failed. The signal is typed as
+    ``object`` so Qt can carry every payload across the thread boundary.
     """
 
-    # Carries UpdateInfo | None — typed as object so Qt's metatype system
-    # accepts both the dataclass and None without registering a custom type.
+    # Carries UpdateInfo | None | BaseException — typed as object so Qt's
+    # metatype system accepts every payload without custom registration.
     result_ready = pyqtSignal(object)
 
     def __init__(self, checker: UpdateChecker, parent=None):
@@ -44,6 +44,12 @@ class UpdateWorkerThread(CancellableWorker):
             info = self.checker.check_for_update()
 
             if not self.check_cancelled():
+                failure = getattr(self.checker, "last_error", None)
+                if isinstance(failure, BaseException):
+                    message = f"Error checking for updates: {failure}"
+                    self.error.emit(message)
+                    self.result_ready.emit(failure)
+                    return
                 # Always emit (info may be None) so the main-thread slot can
                 # take the single config-write code path either way.
                 self.result_ready.emit(info)

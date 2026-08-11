@@ -20,7 +20,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from anki_miner.services.update_checker import UpdateInfo
+from anki_miner.gui.widgets.dialogs.system_health_window import HEALTH_OK, HEALTH_UNKNOWN
+from anki_miner.gui.workers.update_worker import UpdateWorkerThread
+from anki_miner.services.update_checker import UpdateChecker, UpdateInfo
 
 
 @pytest.fixture
@@ -50,7 +52,7 @@ def _info(version: str = "9.9.9") -> UpdateInfo:
 
 
 def test_none_result_creates_no_banner(main_window):
-    """A None payload (no update / failed check) builds no banner."""
+    """A verified no-update payload builds no banner."""
     with patch("anki_miner.gui.widgets.update_banner.UpdateBanner") as banner_cls:
         main_window._on_update_check_result(None)
 
@@ -65,6 +67,33 @@ def test_non_update_info_object_creates_no_banner(main_window):
 
     banner_cls.assert_not_called()
     assert main_window._update_banner is None
+
+
+def test_only_verified_no_update_records_healthy_state(main_window, monkeypatch):
+    main_window._on_update_check_result(None)
+
+    verified = main_window._health_report.get("app.updates")
+    assert verified.state == HEALTH_OK
+    assert verified.checked_at is not None
+
+    monkeypatch.setattr(
+        "anki_miner.services.update_checker.urllib.request.urlopen",
+        MagicMock(side_effect=OSError("network down")),
+    )
+    worker = UpdateWorkerThread(UpdateChecker("2.0.4"))
+    payloads: list[object] = []
+    errors: list[str] = []
+    worker.result_ready.connect(payloads.append)
+    worker.error.connect(errors.append)
+    worker.run()
+
+    assert errors
+    assert len(payloads) == 1
+    assert payloads[0] is not None
+    main_window._on_update_check_result(payloads[0])
+
+    failed = main_window._health_report.get("app.updates")
+    assert failed.state == HEALTH_UNKNOWN
 
 
 def test_skipped_version_creates_no_banner(main_window):

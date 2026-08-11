@@ -313,7 +313,7 @@ class StatusBarWidget(QStatusBar):
         Args:
             count: Number of cards to add (default: 1)
         """
-        self._cards_created_session += count
+        self._cards_created_session = max(0, self._cards_created_session + count)
         self._update_stats()
 
     def set_system_status(self, ankiconnect: bool, ffmpeg: bool) -> None:

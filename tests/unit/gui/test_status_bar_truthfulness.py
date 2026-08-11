@@ -145,3 +145,16 @@ class TestSystemStatusRemainsClickable:
         qtbot.addWidget(bar)
 
         assert bar.system_status_widget.cursor().shape() == Qt.CursorShape.PointingHandCursor
+
+
+class TestSessionCardCount:
+    def test_replayed_negative_delta_never_underflows(self, qtbot):
+        bar = StatusBarWidget()
+        qtbot.addWidget(bar)
+        bar.increment_cards_created(1)
+
+        bar.increment_cards_created(-1)
+        bar.increment_cards_created(-1)
+
+        assert bar._cards_created_session == 0
+        assert bar.stats_label.text().startswith("0 ")
