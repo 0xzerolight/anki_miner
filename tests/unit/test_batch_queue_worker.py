@@ -1323,6 +1323,47 @@ def test_pause_lands_between_series_not_inside_one(tmp_path):
     assert len(results["finished"]) == 1
 
 
+def test_finish_current_in_post_boundary_gap_leaves_next_series_pending(tmp_path):
+    """A stop that lands after the boundary check must beat the next claim."""
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    proc = MagicMock()
+    proc.process_episode.return_value = _ok_result(cards=1)
+
+    queue = BatchQueue()
+    first = queue.add_item(tmp_path / "v1", tmp_path / "s1", "One")
+    second = queue.add_item(tmp_path / "v2", tmp_path / "s2", "Two")
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None, items=[first, second])
+    results = _wire_capture_only(worker)
+
+    real_close = worker._close_current_processor
+    close_calls = 0
+
+    def _close_and_stop_in_gap() -> None:
+        nonlocal close_calls
+        close_calls += 1
+        real_close()
+        if close_calls == 2:
+            worker.request_stop_after_current()
+
+    worker._close_current_processor = _close_and_stop_in_gap  # type: ignore[method-assign]
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert results["started"] == [first.id]
+    assert first.status is QueueItemStatus.COMPLETED
+    assert second.status is QueueItemStatus.PENDING
+
+
 def test_cancel_releases_a_worker_waiting_at_a_series_boundary():
     """A closed gate must never outlive a Cancel — that is a shutdown deadlock."""
     worker = BatchQueueWorkerThread(BatchQueue(), AnkiMinerConfig(), MagicMock(), None)

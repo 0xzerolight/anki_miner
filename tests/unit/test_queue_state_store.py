@@ -10,12 +10,17 @@ disk at all.
 from __future__ import annotations
 
 import json
+from unittest.mock import MagicMock
 
 import pytest
+from PyQt6.QtCore import Qt
 
 from anki_miner.gui.utils import queue_state_store as store
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
+from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
+from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.models.reading_queue import ReadingQueueItem
 
 KEY = "queue.audiobook"
 
@@ -206,6 +211,35 @@ class TestInterruptedRows:
         row = QueueItemSnapshot(item_id="x", source=store.url_source("https://youtu.be/abc"))
         assert row.input_paths() == ()
         assert row.missing_paths() == ()
+
+    def test_a_processing_reading_source_round_trips_as_interrupted(self, _home, tmp_path, qtbot, test_config):
+        subtitle = tmp_path / "episode.srt"
+        subtitle.write_text("1", encoding="utf-8")
+        ref = ReadingSourceRef(kind="subtitle", path=subtitle, title="episode")
+        tab = ReadingSubtitlesTab(
+            config=test_config,
+            processor=MagicMock(name="EpisodeProcessor"),
+            presenter=MagicMock(name="Presenter"),
+        )
+        qtbot.addWidget(tab)
+        tab._add_paths([subtitle])
+        live_item = ReadingQueueItem(
+            source=ref,
+            title=ref.title,
+            kind=ref.kind,
+            status=ReadyItemStatus.PROCESSING,
+            cards_created=4,
+            error_message="partial",
+        )
+        tab.file_list.item(0).setData(Qt.ItemDataRole.UserRole, live_item)
+
+        store.save(tab.queue_snapshot())
+        loaded = store.load(tab.QUEUE_STATE_KEY)
+
+        assert loaded is not None
+        assert loaded.items[0].status == store.STATUS_INTERRUPTED
+        assert loaded.items[0].error == "partial"
+        assert loaded.items[0].result_count == 4
 
 
 class TestReadingSources:
