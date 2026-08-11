@@ -41,10 +41,10 @@ import logging
 from collections.abc import Callable
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
-from anki_miner.models import MiningOutcome, classify_result, result_error_text
+from anki_miner.models import CANCELLED_ERROR, MiningOutcome, ProcessingResult, classify_result, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.reading_queue import ReadingQueueItem
@@ -109,6 +109,16 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         """Run one load + mine attempt, classifying whether it may be repeated."""
         try:
             return self._classify_return(self._mine_one(idx, item))
+        except OperationCancelled:
+            logger.info("ReadingQueueWorker item %d load cancelled", idx)
+            return self._classify_return(
+                ProcessingResult(
+                    total_words_found=0,
+                    new_words_found=0,
+                    cards_created=0,
+                    errors=[CANCELLED_ERROR],
+                )
+            )
         except SetupError as exc:
             # The load step and process_reading raise SetupError with a
             # crafted, user-facing message (DRM, invalid source, note-type
@@ -168,6 +178,7 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         document = detector.load(
             item.source,
             strip_subtitle_annotations=self._config.strip_subtitle_annotations,
+            cancel_check=self.check_cancelled,
         )
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document

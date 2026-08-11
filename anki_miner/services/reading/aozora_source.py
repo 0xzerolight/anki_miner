@@ -16,8 +16,9 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
+from collections.abc import Callable
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
     ReadingDocument,
     ReadingSourceRef,
@@ -251,7 +252,17 @@ def _extract_header(lines: list[str]) -> tuple[str, list[str]]:
 # --- unit emission -------------------------------------------------------
 
 
-def _emit_units(body_lines: list[str], aozora: bool = True) -> tuple[list[ReadingUnit], int, int]:
+def _raise_if_cancelled(cancel_check: Callable[[], bool] | None) -> None:
+    if cancel_check is not None and cancel_check():
+        raise OperationCancelled("Reading load cancelled")
+
+
+def _emit_units(
+    body_lines: list[str],
+    aozora: bool = True,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> tuple[list[ReadingUnit], int, int]:
     units: list[ReadingUnit] = []
     index = 0
     para_no = 0
@@ -261,6 +272,7 @@ def _emit_units(body_lines: list[str], aozora: bool = True) -> tuple[list[Readin
     heading_buf: list[str] = []
 
     for raw in body_lines:
+        _raise_if_cancelled(cancel_check)
         line = raw[1:] if raw.startswith("　") else raw  # strip one indent
         line = _resolve_gaiji(line)
         # Ruby stripping is unconditional (any 《…》), so only on the Aozora path
@@ -299,6 +311,7 @@ def _emit_units(body_lines: list[str], aozora: bool = True) -> tuple[list[Readin
             para_no += 1
             label = current_chapter if current_chapter else f"¶{para_no}"
             for sentence in split_sentences(text):
+                _raise_if_cancelled(cancel_check)
                 units.append(
                     ReadingUnit(
                         text=sentence,
@@ -318,8 +331,13 @@ def _emit_units(body_lines: list[str], aozora: bool = True) -> tuple[list[Readin
 # --- public API ----------------------------------------------------------
 
 
-def load(ref: ReadingSourceRef) -> ReadingDocument:
+def load(
+    ref: ReadingSourceRef,
+    *,
+    cancel_check: Callable[[], bool] | None = None,
+) -> ReadingDocument:
     """Load an Aozora or plain-text novel into a book ``ReadingDocument``."""
+    _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     try:
@@ -330,6 +348,7 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
             )
         with ref.path.open("rb") as f:
             raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
+        _raise_if_cancelled(cancel_check)
         if len(raw) > _MAX_TEXT_FILE_BYTES:
             raise SetupError(
                 f"novel file '{ref.path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
@@ -348,7 +367,11 @@ def load(ref: ReadingSourceRef) -> ReadingDocument:
         title = ref.title
         body_lines = lines
 
-    units, paragraphs, skipped = _emit_units(body_lines, aozora=aozora)
+    units, paragraphs, skipped = _emit_units(
+        body_lines,
+        aozora=aozora,
+        cancel_check=cancel_check,
+    )
     doc = ReadingDocument(
         title=title,
         kind="book",

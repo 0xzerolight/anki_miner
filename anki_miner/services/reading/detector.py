@@ -19,10 +19,11 @@ from __future__ import annotations
 import json
 import logging
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Literal
 
-from anki_miner.exceptions import SetupError
+from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
 from anki_miner.utils.logging_ext import log_summary
 
@@ -60,7 +61,11 @@ _SUBTITLE_EXTS: tuple[str, ...] = (".srt", ".ass", ".ssa", ".vtt")
 _BOOK_EXTS: tuple[str, ...] = (".epub", ".txt")
 
 
-def detect(path: Path) -> list[ReadingSourceRef]:
+def detect(
+    path: Path,
+    *,
+    diagnostics: list[tuple[Path, str]] | None = None,
+) -> list[ReadingSourceRef]:
     """Classify a dropped path into loadable reading sources.
 
     Cascade (first match wins):
@@ -75,8 +80,10 @@ def detect(path: Path) -> list[ReadingSourceRef]:
     5. ``.srt``/``.ass``/``.ssa``/``.vtt`` → one subtitle document (metadata
        deferred to the loader).
 
-    Raises :class:`SetupError` on unusable input (missing sidecar, invalid
-    ``.mokuro`` JSON/schema, unrecognized path).
+    ``diagnostics`` receives ``(archive_path, reason)`` entries for malformed
+    embedded volumes skipped during a folder scan. Raises :class:`SetupError`
+    on unusable input (missing sidecar, invalid ``.mokuro`` JSON/schema,
+    unrecognized path).
     """
     suffix = path.suffix.lower()
     is_directory = path.is_dir()
@@ -98,7 +105,8 @@ def detect(path: Path) -> list[ReadingSourceRef]:
             _log_detected(path, refs, format_="mokuro", reason=reason, marker=marker)
             return refs
         if is_directory:
-            degraded_archives: list[Path] = []
+            degraded_archives = diagnostics if diagnostics is not None else []
+            diagnostic_start = len(degraded_archives)
             refs = _detect_directory(path, degraded_archives=degraded_archives)
             markers = [Path(ref.ocr_entry).name if ref.ocr_entry else ref.path.name for ref in refs if ref.path]
             reason = (
@@ -110,7 +118,7 @@ def detect(path: Path) -> list[ReadingSourceRef]:
                 format_="mokuro",
                 reason=reason,
                 marker=markers,
-                skipped_archives=len(degraded_archives),
+                skipped_archives=len(degraded_archives) - diagnostic_start,
             )
             return refs
         if suffix == ".epub":
@@ -152,7 +160,12 @@ def detect(path: Path) -> list[ReadingSourceRef]:
         raise
 
 
-def load(ref: ReadingSourceRef, *, strip_subtitle_annotations: bool = False) -> ReadingDocument:
+def load(
+    ref: ReadingSourceRef,
+    *,
+    strip_subtitle_annotations: bool = False,
+    cancel_check: Callable[[], bool] | None = None,
+) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
     Imports the per-kind loader lazily inside the branch so importing this
@@ -160,26 +173,34 @@ def load(ref: ReadingSourceRef, *, strip_subtitle_annotations: bool = False) -> 
     ``kind="text"`` refs are pathless (built by the Text sub-tab, never by
     :func:`detect`) and carry their content in ``ref.text``.
     """
+    if cancel_check is not None and cancel_check():
+        raise OperationCancelled("Reading load cancelled")
     if ref.kind == "mokuro":
         from . import mokuro_source
 
-        return mokuro_source.load(ref)
+        return mokuro_source.load(ref) if cancel_check is None else mokuro_source.load(ref, cancel_check=cancel_check)
     if ref.kind == "epub":
         from . import epub_source
 
-        return epub_source.load(ref)
+        return epub_source.load(ref) if cancel_check is None else epub_source.load(ref, cancel_check=cancel_check)
     if ref.kind == "txt":
         from . import aozora_source
 
-        return aozora_source.load(ref)
+        return aozora_source.load(ref) if cancel_check is None else aozora_source.load(ref, cancel_check=cancel_check)
     if ref.kind == "subtitle":
         from . import subtitle_source
 
-        return subtitle_source.load(ref, strip_annotations=strip_subtitle_annotations)
+        if cancel_check is None:
+            return subtitle_source.load(ref, strip_annotations=strip_subtitle_annotations)
+        return subtitle_source.load(
+            ref,
+            strip_annotations=strip_subtitle_annotations,
+            cancel_check=cancel_check,
+        )
     if ref.kind == "text":
         from . import text_source
 
-        return text_source.load(ref)
+        return text_source.load(ref) if cancel_check is None else text_source.load(ref, cancel_check=cancel_check)
 
     raise SetupError(f"Unknown reading source kind: {ref.kind!r}")
 
@@ -352,7 +373,7 @@ def _detect_archive(archive_path: Path) -> list[ReadingSourceRef]:
 def _detect_directory(
     directory: Path,
     *,
-    degraded_archives: list[Path] | None = None,
+    degraded_archives: list[tuple[Path, str]] | None = None,
 ) -> list[ReadingSourceRef]:
     """A dropped directory is a title dir, a dropped image dir, or not mokuro.
 
@@ -435,7 +456,7 @@ def _embedded_mokuro_ref(
     archive_path: Path,
     *,
     strict: bool,
-    degraded_archives: list[Path] | None = None,
+    degraded_archives: list[tuple[Path, str]] | None = None,
 ) -> ReadingSourceRef | None:
     """Probe an archive for exactly one embedded ``.mokuro`` member.
 
@@ -496,7 +517,7 @@ def _embedded_mokuro_ref(
                 exc,
             )
         if degraded_archives is not None:
-            degraded_archives.append(archive_path)
+            degraded_archives.append((archive_path, str(exc)))
         return None
     return ReadingSourceRef(
         kind="mokuro",

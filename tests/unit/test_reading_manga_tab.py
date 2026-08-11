@@ -23,18 +23,19 @@ Behaviour under test:
   to ``None`` for no document / book-kind documents / image-less volumes (with
   no worker at all, both are ``None``).
 
-Qt threads are never started — ``ReadingQueueWorker`` is class-level patched at
-the base module so ``start()`` is a no-op and constructor kwargs can be
-inspected.
+``ReadingQueueWorker`` is class-level patched at the base module so its
+``start()`` is a no-op and constructor kwargs can be inspected. Detection
+tests start a real ``SingleCallWorker`` and join it before teardown.
 """
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import QMimeData, QPointF, Qt, QUrl
+from PyQt6.QtCore import QMimeData, QPointF, Qt, QTimer, QUrl
 from PyQt6.QtGui import QDropEvent
 
 from anki_miner.config import AnkiMinerConfig
@@ -50,8 +51,8 @@ from anki_miner.models.reading import (
 
 _WORKER_TARGET = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
 _CREATE_TARGET = "anki_miner.gui.widgets._reading_mining_base.create_episode_processor"
-# detect() runs in the shared base helper (_detect_or_report); patch it there.
-_DETECT = "anki_miner.gui.widgets._reading_mining_base.detector.detect"
+# Canonical detector seam remains stable if the tab changes how it imports it.
+_DETECT = "anki_miner.services.reading.detector.detect"
 _URLS = "anki_miner.gui.widgets.reading_manga_tab.urls_from_event"
 
 
@@ -72,6 +73,7 @@ def tab(qtbot, test_config: AnkiMinerConfig):
             presenter=MagicMock(name="Presenter"),
         )
         qtbot.addWidget(widget)
+        widget._qtbot = qtbot  # type: ignore[attr-defined]
         widget._queue_worker_cls = queue_cls  # type: ignore[attr-defined]
         try:
             yield widget
@@ -108,6 +110,7 @@ def _mine(tab, refs, folder: str = "/src/series"):
     tab.volume_folder_selector.set_path(folder)
     with patch(_DETECT, return_value=list(refs)):
         tab._on_folder_mine_clicked()
+        tab._qtbot.waitUntil(lambda: not tab._detection_pending)
 
 
 def _volume_file(tmp_path: Path, name: str = "Vol1.cbz") -> Path:
@@ -122,6 +125,7 @@ def _mine_file(tab, file: Path, refs):
     tab.volume_file_selector.set_path(str(file))
     with patch(_DETECT, return_value=list(refs)):
         tab._on_mine_clicked()
+        tab._qtbot.waitUntil(lambda: not tab._detection_pending)
 
 
 class TestInitialState:
@@ -170,7 +174,8 @@ class TestMineVolumeFile:
         with patch(_DETECT, return_value=[_make_ref("mokuro", "Solo Vol")]) as detect:
             tab.volume_file_selector.set_path(str(cbz))
             tab._on_mine_clicked()
-        detect.assert_called_once_with(cbz)
+            tab._qtbot.waitUntil(lambda: not tab._detection_pending)
+        detect.assert_called_once_with(cbz, diagnostics=[])
         assert queue_cls.call_count == 1
         items = queue_cls.call_args.kwargs["items"]
         # Item titles carry the volume, same as the folder path (Y6).
@@ -217,6 +222,7 @@ class TestMineVolumeFile:
         tab.volume_file_selector.set_path(str(cbz))
         with patch(_DETECT, side_effect=SetupError("No .mokuro data found")):
             tab._on_mine_clicked()
+            tab._qtbot.waitUntil(lambda: not tab._detection_pending)
         assert queue_cls.call_count == 0
         assert "No .mokuro data found" in tab.log_widget.text_edit.toPlainText()
 
@@ -364,6 +370,7 @@ class TestMineSeries:
 
             widget = ReadingMangaTab(config=test_config, processor=None, presenter=MagicMock(name="Presenter"))
             qtbot.addWidget(widget)
+            widget._qtbot = qtbot  # type: ignore[attr-defined]
             try:
                 _mine(widget, [_make_ref()])
                 assert q_cls.call_args.kwargs["processor"] is None
@@ -373,6 +380,63 @@ class TestMineSeries:
                 assert factory() is built
             finally:
                 widget.deleteLater()
+
+
+class TestDetectionThreading:
+    def test_folder_detection_keeps_event_loop_live_and_disables_both_actions(self, qtbot, tmp_path, tab):
+        folder = tmp_path / "series"
+        folder.mkdir()
+        tab.volume_folder_selector.set_path(str(folder))
+        queue_cls = tab._queue_worker_cls
+        started = threading.Event()
+        release = threading.Event()
+        heartbeat_while_blocked: list[bool] = []
+
+        def _detect(_path, *, diagnostics=None):
+            started.set()
+            assert release.wait(2)
+            return [_make_ref()]
+
+        QTimer.singleShot(0, lambda: heartbeat_while_blocked.append(not release.is_set()))
+        fallback_release = threading.Timer(0.5, release.set)
+        fallback_release.start()
+        try:
+            with patch(_DETECT, side_effect=_detect):
+                tab._on_folder_mine_clicked()
+                qtbot.waitUntil(started.is_set)
+                assert not tab.mine_button.isEnabled()
+                assert not tab.folder_mine_button.isEnabled()
+                qtbot.waitUntil(lambda: bool(heartbeat_while_blocked))
+                assert heartbeat_while_blocked == [True]
+                assert queue_cls.call_count == 0
+
+                detection_worker = tab._detection_worker
+                release.set()
+                assert detection_worker is not None
+                assert detection_worker.wait(2000)
+                qtbot.waitUntil(lambda: queue_cls.call_count == 1)
+        finally:
+            release.set()
+            fallback_release.join()
+
+    def test_shutdown_discards_queued_detection_result(self, qtbot, tmp_path, tab):
+        folder = tmp_path / "series"
+        folder.mkdir()
+        tab.volume_folder_selector.set_path(str(folder))
+        queue_cls = tab._queue_worker_cls
+
+        with patch(_DETECT, return_value=[_make_ref()]):
+            tab._on_folder_mine_clicked()
+            detection_worker = tab._detection_worker
+            assert detection_worker is not None
+            assert detection_worker.wait(2000)
+            assert queue_cls.call_count == 0
+
+            tab.shutdown()
+            qtbot.wait(20)
+
+        assert queue_cls.call_count == 0
+        assert tab.worker_thread is None
 
 
 class TestInvalidPath:
@@ -390,6 +454,7 @@ class TestInvalidPath:
         tab.volume_folder_selector.set_path("/src/bad")
         with patch(_DETECT, side_effect=SetupError("no .mokuro volumes inside it")):
             tab._on_folder_mine_clicked()
+            tab._qtbot.waitUntil(lambda: not tab._detection_pending)
         assert queue_cls.call_count == 0
         assert "no .mokuro volumes" in tab.log_widget.text_edit.toPlainText()
 
@@ -398,8 +463,9 @@ class TestInvalidPath:
         tab.volume_folder_selector.set_path("/src/bad")
         with patch(_DETECT, side_effect=RuntimeError("boom")):
             tab._on_folder_mine_clicked()
+            tab._qtbot.waitUntil(lambda: not tab._detection_pending)
         assert queue_cls.call_count == 0
-        assert "boom" in tab.log_widget.text_edit.toPlainText()
+        assert "Could not process bad: boom" in tab.log_widget.text_edit.toPlainText()
 
     def test_run_refused_while_worker_active(self, tab):
         _mine(tab, [_make_ref()])
@@ -407,6 +473,26 @@ class TestInvalidPath:
         calls_before = queue_cls.call_count
         _mine(tab, [_make_ref("mokuro", "Second")], folder="/src/second")
         assert queue_cls.call_count == calls_before  # no second worker
+
+    def test_skipped_archive_warning_precedes_survivor_run(self, qtbot, tab):
+        queue_cls = tab._queue_worker_cls
+        ref = _make_ref("mokuro", "Survivor")
+        bad = Path("/src/series/Broken.cbz")
+
+        def _detect(_path, *, diagnostics=None):
+            if diagnostics is not None:
+                diagnostics.append((bad, "Invalid .mokuro JSON"))
+            return [ref]
+
+        tab.volume_folder_selector.set_path("/src/series")
+        with patch(_DETECT, side_effect=_detect):
+            tab._on_folder_mine_clicked()
+            qtbot.waitUntil(lambda: queue_cls.call_count == 1)
+
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Broken.cbz" in log
+        assert "Invalid .mokuro JSON" in log
+        assert log.index("Broken.cbz") < log.index("run starting")
 
 
 class TestPerItemSignalsReadOnly:

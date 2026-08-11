@@ -402,6 +402,23 @@ def test_title_dir_bad_archive_skipped_not_fatal(tmp_path):
     assert [r.volume for r in refs] == ["Vol1"]
 
 
+def test_title_dir_bad_archive_reports_diagnostic_beside_survivor(tmp_path):
+    title_dir = tmp_path / "MyManga"
+    title_dir.mkdir()
+    good = title_dir / "Vol1.cbz"
+    bad = title_dir / "Vol2.cbz"
+    _write_archive(good, {"Vol1.mokuro": _mokuro_bytes(volume="Vol1")})
+    _write_archive(bad, {"Vol2.mokuro": b"{not json"})
+    diagnostics: list[tuple[Path, str]] = []
+
+    refs = detector.detect(title_dir, diagnostics=diagnostics)
+
+    assert [r.volume for r in refs] == ["Vol1"]
+    assert len(diagnostics) == 1
+    assert diagnostics[0][0] == bad
+    assert "Invalid .mokuro" in diagnostics[0][1]
+
+
 # --------------------------------------------------------------------------- #
 # Case 3: a dropped directory → title dir, dropped image dir, or not mokuro.
 # --------------------------------------------------------------------------- #
@@ -679,6 +696,31 @@ def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyP
         fake_load.assert_called_once_with(ref, strip_annotations=False)
     else:
         fake_load.assert_called_once_with(ref)
+
+
+@pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle", "text"])
+def test_load_forwards_cancel_check_to_source_module(kind: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    if kind == "text":
+        ref = ReadingSourceRef(kind="text", title="Text", text="x")
+    else:
+        ref = ReadingSourceRef(
+            kind=kind,  # type: ignore[arg-type]
+            path=Path("whatever"),
+            image_root=None,
+            title="T",
+            volume=None,
+        )
+    module = importlib.import_module(_LOADER_MODULES[kind])
+    fake_load = MagicMock(return_value=object())
+    monkeypatch.setattr(module, "load", fake_load)
+    cancel_check = MagicMock(return_value=False)
+
+    detector.load(ref, cancel_check=cancel_check)
+
+    if kind == "subtitle":
+        fake_load.assert_called_once_with(ref, strip_annotations=False, cancel_check=cancel_check)
+    else:
+        fake_load.assert_called_once_with(ref, cancel_check=cancel_check)
 
 
 def test_load_does_not_import_sibling_modules():

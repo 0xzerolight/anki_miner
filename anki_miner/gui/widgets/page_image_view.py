@@ -194,7 +194,15 @@ class _PageCanvas(QWidget):
     def clamped_box(box: tuple[int, int, int, int], img_w: int, img_h: int) -> QRect:
         """``box`` intersected with the page rect (out-of-bounds boxes exist)."""
         xmin, ymin, xmax, ymax = box
-        return QRect(xmin, ymin, xmax - xmin, ymax - ymin).intersected(QRect(0, 0, img_w, img_h))
+        if img_w <= 0 or img_h <= 0 or xmin >= xmax or ymin >= ymax:
+            return QRect()
+        left = min(max(xmin, 0), img_w)
+        top = min(max(ymin, 0), img_h)
+        right = min(max(xmax, 0), img_w)
+        bottom = min(max(ymax, 0), img_h)
+        if left >= right or top >= bottom:
+            return QRect()
+        return QRect(left, top, right - left, bottom - top)
 
     def paintEvent(self, event) -> None:  # noqa: N802 - Qt override
         painter = QPainter(self)

@@ -451,6 +451,20 @@ def test_pairing_ambiguous_stem_not_matched(tmp_path):
     assert doc.units[0].image_ref is None
 
 
+def test_pairing_ambiguous_stem_blocks_equal_count_positional_fallback(tmp_path):
+    img_root = tmp_path / "imgs"
+    _mkimg(img_root, "a/page.png")
+    _mkimg(img_root, "b/page.png")
+    pages = [
+        _page("page.jpg", [_block(["いち"])]),
+        _page("other.jpg", [_block(["にー"])]),
+    ]
+
+    doc = load(_write_ref(tmp_path, _mokuro(pages), img_root))
+
+    assert [unit.image_ref for unit in doc.units] == [None, None]
+
+
 def test_dir_junk_and_nonimage_files_ignored(tmp_path):
     img_root = tmp_path / "imgs"
     _mkimg(img_root, "__MACOSX/001.jpg")  # junk path
@@ -489,6 +503,29 @@ def test_archive_imageref_without_extraction(tmp_path, monkeypatch):
     assert doc.units[1].image_ref == ImageRef(archive, "002.jpg")
     # No files extracted to disk beyond the two we created ourselves.
     assert {p.name for p in tmp_path.iterdir()} == {"vol.mokuro", "vol.cbz"}
+
+
+def test_archive_raw_full_path_wins_normalized_name_collision(tmp_path):
+    archive = tmp_path / "vol.cbz"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("page.png", _IMG_BYTES)
+        zf.writestr("PAGE.PNG", _IMG_BYTES)
+
+    doc = load(_write_ref(tmp_path, _mokuro([_page("page.png", [_block(["ほんぶん"])])]), archive))
+
+    assert doc.units[0].image_ref == ImageRef(archive, "page.png")
+
+
+def test_archive_normalized_name_collision_is_ambiguous_without_raw_match(tmp_path):
+    archive = tmp_path / "vol.cbz"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("page.png", _IMG_BYTES)
+        zf.writestr("PAGE.PNG", _IMG_BYTES)
+
+    doc = load(_write_ref(tmp_path, _mokuro([_page("PaGe.PnG", [_block(["ほんぶん"])])]), archive))
+
+    assert doc.units[0].image_ref is None
+    assert any("no image matched" in warning for warning in doc.warnings)
 
 
 def test_embedded_ocr_entry_loads_without_extraction(tmp_path, monkeypatch):
