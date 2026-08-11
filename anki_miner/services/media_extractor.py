@@ -60,8 +60,12 @@ def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, fl
     """
     if word.clip_override is not None:
         start, end = word.clip_override
-        return max(0.0, start), max(end - start, MIN_CLIP_SECONDS)
-    return max(0.0, word.start_time - padding), word.duration + (padding * 2)
+        start = max(0.0, start)
+        return start, max(end - start, MIN_CLIP_SECONDS)
+    padded_start = word.start_time - padding
+    start = max(0.0, padded_start)
+    duration = word.duration + (padding * 2) - (start - padded_start)
+    return start, duration
 
 
 def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
@@ -105,7 +109,8 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     # int16 → float32 in [-1.0, 1.0]. astype already yields a writable, owned
     # array (np.frombuffer over immutable bytes is read-only), which
     # faster-whisper/ctranslate2 may require — no separate .copy() needed.
-    samples = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+    samples = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
+    samples /= 32768.0
     duration = n_frames / sample_rate
     return samples, sample_rate, duration
 
@@ -340,8 +345,9 @@ class MediaExtractorService:
                 of auto-detecting Japanese. None (default) preserves existing JP auto-detect.
             audio_only: When True (audiobook mining), skip screenshots, extract
                 embedded cover art once for the whole batch and share it across
-                every word, and keep words on audio success instead of
-                screenshot success. Missing cover art never excludes a word.
+                every word, and keep words on audio success when audio is
+                requested. Picture-only batches keep every word even without
+                cover art.
             animated_format: Effective animated screenshot format, resolved once
                 per run. ``_RESOLVE`` (the default) self-resolves here before the
                 pool so every worker shares one value; the orchestrator passes
@@ -350,8 +356,9 @@ class MediaExtractorService:
 
         Returns:
             List of (word, media_data) tuples — only words whose screenshot
-            succeeded (or, in audio_only mode, whose audio succeeded); the
-            other medium's failure does not exclude.
+            succeeded (or, in audio_only mode, whose requested audio succeeded).
+            Picture-only audio_only batches retain every word; the other
+            medium's failure does not exclude.
         """
         log_summary(
             logger,
@@ -479,11 +486,12 @@ class MediaExtractorService:
                             )
                             n_logged += 1
 
-                        # audio_only keys the keep/drop decision on audio (there
-                        # is no per-word screenshot); default mode keeps the
-                        # original screenshot-based filter.
+                        # audio_only normally keys the keep/drop decision on
+                        # audio (there is no per-word screenshot); picture-only
+                        # batches request no audio and keep every word. Default
+                        # mode keeps the original screenshot-based filter.
                         if audio_only:
-                            keep = has_audio if include_audio else include_screenshot and cover_path is not None
+                            keep = has_audio if include_audio else True
                         else:
                             keep = has_screenshot if include_screenshot else include_audio and has_audio
                         if keep:
@@ -504,9 +512,9 @@ class MediaExtractorService:
                             # mode only).  The card is still kept — that is the
                             # intended curation policy — but the silent gap in the
                             # Audio field is surfaced to the GUI error band.
-                            # audio_only mode is untouched: its keep decision already
-                            # keys on has_audio, so a word reaching here always has
-                            # audio.
+                            # audio_only with requested audio keys on has_audio,
+                            # so a word reaching here has audio. Picture-only is
+                            # the deliberate exception, with include_audio=False.
                             if not audio_only and include_audio and not has_audio and progress_callback:
                                 progress_callback.on_error(
                                     word.lemma,
@@ -1018,7 +1026,9 @@ class MediaExtractorService:
         if self.config.screenshot_animated_match_audio:
             if audio_window is None:
                 pad = float(self.config.audio_padding)
-                audio_window = (max(0.0, start_time - pad), duration + 2 * pad)
+                padded_end = start_time + duration + pad
+                clip_start = max(0.0, start_time - pad)
+                audio_window = (clip_start, padded_end - clip_start)
             clip_start, audio_duration = audio_window
             clip_duration = max(audio_duration, 0.5)
         else:
