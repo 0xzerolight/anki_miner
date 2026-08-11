@@ -12,7 +12,7 @@ license = "GPL-3.0-or-later"
 # The OFL travels with the bundled Noto Sans JP fallback (see
 # anki_miner/gui/resources/fonts/PROVENANCE.md) — redistributing the font
 # without its licence would breach the OFL.
-license-files = ["LICENSE", "anki_miner/gui/resources/fonts/OFL.txt"]
+license-files = ["LICENSE", "anki_miner/gui/resources/fonts/OFL.txt", "licenses/local-audio-yomichan/LICENSE"]
 authors = [
     {name = "Anki Miner Contributors"}
 ]

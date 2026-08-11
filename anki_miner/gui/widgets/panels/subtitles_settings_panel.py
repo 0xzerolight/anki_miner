@@ -5,8 +5,8 @@ Subtitles main tab:
 
 - **Speech-to-text (ASR)** — Whisper model selection + in-app model download.
   When the optional ``[asr]`` extra is not installed the engine is unavailable;
-  the panel says so plainly and shows the exact pip command instead of letting
-  the download silently fail.
+  the panel says so plainly and shows a usable install route instead of one
+  that cannot modify a sealed bundle.
 - **Alignment (alass)** — optional binary-path override plus an in-app
   "Download alass" button on the platforms that ship a binary (Linux/Windows),
   and the three retiming knobs (split penalty, frame-rate correction,
@@ -86,6 +86,8 @@ def _device_options(vulkan_available: bool = False) -> list[tuple[str, str]]:
 # Exact command that installs the optional speech-to-text engine. Shown
 # verbatim (and copyable) when faster-whisper is not importable.
 _ASR_INSTALL_COMMAND = 'pip install "anki-miner[asr]"'
+# PyInstaller bundles are sealed; pipx creates a separate ASR-capable install.
+_ASR_FROZEN_INSTALL_COMMAND = 'pipx install "anki-miner[asr]"'
 
 # Homebrew command for alass on macOS, where no upstream binary is published.
 _ALASS_BREW_COMMAND = "brew install alass"
@@ -299,8 +301,8 @@ class SubtitlesSettingsPanel(FormPanel):
 
         # Guidance shown only when faster-whisper is not installed. The engine is
         # a Python package (not a downloadable binary), so the app can't fetch it
-        # for the user — point them at the one-line pip command instead of
-        # surfacing a cryptic ImportError after a dead "Download model" click.
+        # for the user — point them at an executable remedy instead of surfacing
+        # a cryptic ImportError after a dead "Download model" click.
         self._asr_engine_guidance = self._build_engine_guidance()
         self.add_field(
             "",
@@ -531,10 +533,17 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def _build_engine_guidance(self) -> QWidget:
         """Build the (initially hidden) 'install the ASR engine' guidance block."""
-        guidance = self._build_guidance(
-            self.tr("Subtitle generation needs the faster-whisper engine. Install it with:"),
-            _ASR_INSTALL_COMMAND,
-        )
+        if getattr(sys, "frozen", False):
+            message = self.tr(
+                "Subtitle generation needs the faster-whisper engine. "
+                "This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, "
+                "or run the command below and then launch the separate pipx-installed Anki Miner:"
+            )
+            command = _ASR_FROZEN_INSTALL_COMMAND
+        else:
+            message = self.tr("Subtitle generation needs the faster-whisper engine. Install it with:")
+            command = _ASR_INSTALL_COMMAND
+        guidance = self._build_guidance(message, command)
         guidance.setVisible(False)
         return guidance
 

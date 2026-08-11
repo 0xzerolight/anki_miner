@@ -183,6 +183,7 @@ jobs:
           brew install mpv dylibbundler
           MPV_PREFIX="$(brew --prefix mpv)"
           MPV_VERSION="$(brew list --versions mpv | awk '{print $2}')"
+          OPUS_VERSION="$(brew list --versions opus | awk '{print $2}')"
           mkdir -p work out
           cp "${MPV_PREFIX}/lib/libmpv.2.dylib" work/libmpv.2.dylib
           chmod u+w work/libmpv.2.dylib
@@ -215,10 +216,12 @@ jobs:
           cp "$(brew --prefix mpv)/share/doc/mpv/Copyright" out/Copyright 2>/dev/null \
             || curl -fL "https://raw.githubusercontent.com/mpv-player/mpv/master/Copyright" -o out/Copyright
           curl -fL "https://raw.githubusercontent.com/mpv-player/mpv/master/LICENSE.GPL" -o out/LICENSE.GPL
+          curl -fL "https://raw.githubusercontent.com/xiph/opus/v${OPUS_VERSION}/COPYING" -o out/COPYING.libopus
           {
             echo "artifact: libmpv-macos-${{ matrix.arch }}.tar.gz"
             echo "built: $(date -u +%Y-%m-%dT%H:%M:%SZ) on ${{ matrix.runner }}"
             echo "homebrew mpv: ${MPV_VERSION}"
+            echo "homebrew opus: ${OPUS_VERSION}"
             echo "min-OS (LC_BUILD_VERSION minos): ${MINOS:-unknown}"
             echo "dylib closure ($(ls out/*.dylib | wc -l | tr -d ' ') files) via dylibbundler, ad-hoc re-signed"
             echo "source offer: https://mpv.io + Homebrew formula mpv ${MPV_VERSION}"

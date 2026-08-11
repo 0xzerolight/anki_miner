@@ -196,8 +196,9 @@ jobs:
           # platform safe because an incomplete lock never fails the build on
           # unlisted packages, and a constraint never force-installs a package
           # the target doesn't require (so "." won't pull onnxruntime on Intel).
-          # NOTE: the .deb package is system-managed; it does NOT bundle
-          # faster-whisper (users install the [asr] extra separately if desired).
+          # NOTE: the .deb package is system-managed and does NOT bundle
+          # faster-whisper. Frozen-app guidance sends users to the ASR-capable
+          # AppImage or a separate pipx install; pip cannot extend this bundle.
           pip install "${{ matrix.install_target }}" -c requirements.lock
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
@@ -698,8 +699,16 @@ jobs:
             Write-Error "vulkan-1.dll not found (VULKAN_SDK=$env:VULKAN_SDK, System32); libmpv-2.dll load-time dep would be missing"
             exit 1
           }
+          # Committed from Vulkan-Loader's SDK-matched vulkan-sdk-1.4.350.0 tag.
+          # The spec bundles this directory; fail here if binary/license pairing
+          # ever drifts before PyInstaller runs.
+          $license = 'licenses\vulkan-loader\LICENSE.txt'
+          if (-not (Test-Path -LiteralPath $license -PathType Leaf)) {
+            Write-Error "Vulkan Loader license missing at $license"
+            exit 1
+          }
           Copy-Item $dll.FullName vendor\libmpv\ -Force
-          Write-Host "Bundled Vulkan loader from $($dll.FullName); vendor/libmpv/ now:"
+          Write-Host "Bundled Vulkan loader from $($dll.FullName) with $license; vendor/libmpv/ now:"
           Get-ChildItem vendor\libmpv
 
       # Build the wheel from the pinned pywhispercpp ref with the Vulkan backend,
@@ -1185,7 +1194,8 @@ jobs:
           # must NOT ship the bundled GPL ffmpeg the PyInstaller tree carries.
           # It must also NOT ship faster-whisper/ctranslate2 — the [asr] extra is
           # installed for the whole Linux job so the AppImage onedir has the ASR
-          # libs, but the .deb must stay lean (users pip-install [asr] separately).
+          # libs, but the .deb must stay lean. Users switch to that AppImage or a
+          # separate pipx install; pip cannot extend the sealed .deb interpreter.
           # Stage a copy with both ffmpeg and ASR libs stripped; the AppImage
           # (built above) keeps everything.
           rm -rf dist/deb-stage
@@ -1208,8 +1218,8 @@ jobs:
           # Also strip the ctranslate2 shared lib itself (libctranslate2.so.*).
           find dist/deb-stage -name 'libctranslate2*.so*' -delete
           # whisper.cpp/ggml (pywhispercpp Vulkan backend) — same rationale: the
-          # .deb is system-managed and stays lean; users who want local ASR
-          # pip-install the extra (now [asr-vulkan]) separately. The AppImage
+          # .deb is system-managed and stays lean; users who want local ASR use
+          # the AppImage or a separate pipx install. The AppImage
           # (built above) keeps these. Strip the package dir, the _pywhispercpp
           # extension, and every ggml/whisper shared lib (incl. ggml-vulkan),
           # across both onedir layouts.

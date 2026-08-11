@@ -3,13 +3,157 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
+import tomllib
+from collections import defaultdict
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _write_executable(path: Path, text: str) -> None:
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o755)
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    (repo / "scripts").mkdir(parents=True)
+    (repo / "anki_miner").mkdir()
+    (repo / ".github").mkdir()
+    shutil.copy2(PROJECT_ROOT / "scripts" / "release_preflight.sh", repo / "scripts" / "release_preflight.sh")
+    (repo / "anki_miner" / "__init__.py").write_text('__version__ = "9.9.9"\n', encoding="utf-8")
+    (repo / ".github" / "ytdlp-pin.json").write_text(
+        '{"version":"test","assets":{"linux":{"asset":"yt-dlp_linux","sha256":"feedface","install_as":"yt-dlp"}}}\n',
+        encoding="utf-8",
+    )
+    (repo / "requirements.lock").touch()
+    (repo / "pyproject.toml").touch()
+    (repo / "anki_miner.spec").touch()
+    _write_executable(repo / "scripts" / "bundle_smoke.sh", "#!/usr/bin/env bash\nexit 0\n")
+
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    fake_pip = tmp_path / "fake-pip"
+    fake_pyinstaller = tmp_path / "fake-pyinstaller"
+    _write_executable(fake_pip, "#!/usr/bin/env bash\nexit 0\n")
+    _write_executable(
+        fake_pyinstaller,
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'if [ "${1:-}" = "--version" ]; then echo 6.20.0; exit 0; fi\n'
+        "test -f vendor/libmpv/libmpv.so.2\n"
+        "mkdir -p dist/AnkiMiner\n",
+    )
+    _write_executable(
+        fake_bin / "python3",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'if [ "${1:-}" = "-m" ] && [ "${2:-}" = "venv" ]; then\n'
+        '  mkdir -p "$3/bin"\n'
+        '  cp "$0" "$3/bin/python"\n'
+        '  cp "$FAKE_PIP" "$3/bin/pip"\n'
+        '  cp "$FAKE_PYINSTALLER" "$3/bin/pyinstaller"\n'
+        "  exit 0\n"
+        "fi\n"
+        'case "$*" in\n'
+        '  *"__version__"*) echo 9.9.9 ;;\n'
+        "  *'[\"version\"]'*) echo test ;;\n"
+        "  *'[\"asset\"]'*) echo yt-dlp_linux ;;\n"
+        "  *'[\"sha256\"]'*) echo feedface ;;\n"
+        "  *'[\"install_as\"]'*) echo yt-dlp ;;\n"
+        "esac\n",
+    )
+    _write_executable(
+        fake_bin / "curl",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "out=''\n"
+        'while [ "$#" -gt 0 ]; do\n'
+        '  if [ "$1" = "-o" ]; then out="$2"; shift 2; else shift; fi\n'
+        "done\n"
+        'mkdir -p "$(dirname "$out")"\n'
+        ': > "$out"\n',
+    )
+    _write_executable(
+        fake_bin / "sha256sum",
+        '#!/usr/bin/env bash\nset -euo pipefail\ncat >> "$SHA_RECORD"\n',
+    )
+    _write_executable(
+        fake_bin / "tar",
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "archive=''\n"
+        "dest=''\n"
+        'while [ "$#" -gt 0 ]; do\n'
+        '  case "$1" in\n'
+        '    -C) dest="$2"; shift 2 ;;\n'
+        "    -*) shift ;;\n"
+        '    *) archive="$1"; shift ;;\n'
+        "  esac\n"
+        "done\n"
+        'case "$archive" in\n'
+        '  *ffmpeg*) mkdir -p "$dest/pkg/bin"; touch "$dest/pkg/bin/ffmpeg" "$dest/pkg/bin/ffprobe" ;;\n'
+        '  *libmpv*) mkdir -p "$dest"; touch "$dest/libmpv.so.2" "$dest/Copyright" "$dest/SOURCES.txt" ;;\n'
+        "esac\n",
+    )
+
+    sha_record = tmp_path / "sha-record.txt"
+    env = os.environ.copy()
+    env.update(
+        {
+            "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+            "FAKE_PIP": str(fake_pip),
+            "FAKE_PYINSTALLER": str(fake_pyinstaller),
+            "SHA_RECORD": str(sha_record),
+        }
+    )
+    result = subprocess.run(
+        ["bash", "scripts/release_preflight.sh", "--clean", "--skip-package"],
+        cwd=repo,
+        env=env,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert (repo / "vendor" / "libmpv" / "libmpv.so.2").is_file()
+    assert (repo / "licenses" / "libmpv" / "Copyright").is_file()
+    assert (repo / "licenses" / "libmpv" / "SOURCES.txt").is_file()
+    assert "5d9278463edab8f2a467f45c2c66416070d4e1543024df30fed2f721def663c1" in sha_record.read_text(encoding="utf-8")
+
+
+def test_release_constraints_cover_direct_dependencies() -> None:
+    project = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    direct = {canonicalize_name(Requirement(raw).name) for raw in project["dependencies"]}
+    pins: dict[str, list[str]] = defaultdict(list)
+    for line in (PROJECT_ROOT / "requirements.lock").read_text(encoding="utf-8").splitlines():
+        match = re.fullmatch(r"([A-Za-z0-9_.-]+)==([^\s;]+)", line.strip())
+        if match:
+            pins[canonicalize_name(match.group(1))].append(match.group(2))
+
+    missing = direct - pins.keys()
+    duplicates = {name: versions for name, versions in pins.items() if name in direct and len(versions) != 1}
+    assert not missing, f"direct dependencies without exact release constraints: {sorted(missing)}"
+    assert not duplicates, f"direct dependencies with duplicate release constraints: {duplicates}"
+
+
+def test_local_audio_notice_is_declared_for_wheel_and_frozen_bundle() -> None:
+    pyproject = tomllib.loads((PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    notice = "licenses/local-audio-yomichan/LICENSE"
+
+    assert notice in pyproject["project"]["license-files"]
+    assert '"licenses", "local-audio-yomichan"' in (PROJECT_ROOT / "anki_miner.spec").read_text(encoding="utf-8")
+    assert notice in (PROJECT_ROOT / "scripts" / "check_wheel_assets.py").read_text(encoding="utf-8")
 
 
 def test_bundle_smoke_pins_c_locale() -> None:

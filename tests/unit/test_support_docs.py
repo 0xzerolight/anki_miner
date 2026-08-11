@@ -1,8 +1,34 @@
 from pathlib import Path
 
 import yaml
+from PyQt6.QtWidgets import QLabel, QLineEdit
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_asr_less_frozen_install_guidance_offers_only_executable_remedies(qtbot, monkeypatch) -> None:
+    from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
+
+    monkeypatch.setattr("sys.frozen", True, raising=False)
+    monkeypatch.setattr("sys.platform", "linux")
+    panel = SubtitlesSettingsPanel(suppress_optional_startup=True)
+    qtbot.addWidget(panel)
+
+    guidance = panel._asr_engine_guidance
+    message = " ".join(label.text() for label in guidance.findChildren(QLabel))
+    commands = [field.text() for field in guidance.findChildren(QLineEdit) if field.objectName() == "command-text"]
+    assert "faster-whisper engine" in message
+    assert "This packaged app cannot be extended" in message
+    assert "launch the separate pipx-installed Anki Miner" in message
+    assert "ASR-capable AppImage" in message
+    assert commands == ['pipx install "anki-miner[asr]"']
+    assert "pip install" not in message + " ".join(commands)
+
+    installation = (ROOT / "README.md").read_text(encoding="utf-8").split("## Installation", maxsplit=1)[1]
+    assert "| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` ² |" in installation
+    assert "² Excludes local Whisper subtitle generation." in installation
+    assert "ASR-capable AppImage" in installation
+    assert 'pipx install "anki-miner[asr]"' in installation
 
 
 def test_readme_exposes_first_install_recovery_and_troubleshooting() -> None:

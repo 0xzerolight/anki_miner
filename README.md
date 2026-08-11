@@ -46,10 +46,12 @@ Grab the download for your platform from the [latest release](https://github.com
 | Windows | `AnkiMiner-*-Setup.exe` |
 | macOS (Apple Silicon / M1-M4) | `AnkiMiner-macOS-arm64.tar.gz` |
 | macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
-| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
+| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` ² |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
 ¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
+
+² Excludes local Whisper subtitle generation. Use the ASR-capable AppImage, or create a separate install with `pipx install "anki-miner[asr]"`.
 
 ### First-run notes (unsigned builds)
 
