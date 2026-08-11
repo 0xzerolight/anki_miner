@@ -12,17 +12,20 @@ Also covers the Anki note-write provenance a failed result carries
 
 from __future__ import annotations
 
+import threading
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
-from anki_miner.models import AnkiWriteState, ProcessingResult
+from anki_miner.models import AnkiWriteState, ProcessingResult, TokenizedWord
 from anki_miner.models.processing import (
     CANCELLED_ERROR,
     MiningOutcome,
     classify_result,
 )
+from anki_miner.presenters import NullPresenter
+from tests.conftest import build_processor
 
 
 def test_clean_result_is_success():
@@ -58,6 +61,61 @@ def test_partial_cards_with_errors_still_failed():
     result = ProcessingResult(total_words_found=5, new_words_found=5, cards_created=2, errors=["anki went away"])
     assert classify_result(result) is MiningOutcome.FAILED
     assert result.cards_created == 2
+
+
+@pytest.mark.parametrize("empty_phase", ["parse", "filter"])
+def test_stopped_empty_phase_result_classifies_as_cancelled(test_config, tmp_path, empty_phase):
+    cancel_event = threading.Event()
+    subtitle_parser = MagicMock()
+    word_filter = MagicMock()
+    word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+    anki_service = MagicMock()
+    definition_service = MagicMock()
+    definition_service.has_usable_offline_provider.return_value = True
+
+    word = TokenizedWord(
+        surface="食べた",
+        lemma="食べる",
+        reading="タベル",
+        sentence="食べた。",
+        start_time=1.0,
+        end_time=2.0,
+        duration=1.0,
+        pos="動詞",
+    )
+    if empty_phase == "parse":
+
+        def _parse_then_cancel(_subtitle_file):
+            cancel_event.set()
+            return []
+
+        subtitle_parser.parse_subtitle_file.side_effect = _parse_then_cancel
+    else:
+        subtitle_parser.parse_subtitle_file.return_value = [word]
+        anki_service.get_existing_vocabulary.return_value = set()
+
+        def _filter_then_cancel(_words, _existing):
+            cancel_event.set()
+            return []
+
+        word_filter.filter_unknown.side_effect = _filter_then_cancel
+
+    processor = build_processor(
+        config=test_config,
+        presenter=NullPresenter(),
+        subtitle_parser=subtitle_parser,
+        word_filter=word_filter,
+        definition_service=definition_service,
+        anki_service=anki_service,
+    )
+
+    result = processor.process_episode(
+        tmp_path / "episode.mkv",
+        tmp_path / "episode.ass",
+        cancel_event=cancel_event,
+    )
+
+    assert classify_result(result) is MiningOutcome.CANCELLED
 
 
 class TestAnkiWriteProvenance:

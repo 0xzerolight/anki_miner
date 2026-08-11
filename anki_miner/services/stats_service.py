@@ -98,6 +98,8 @@ class StatsService:
                 mined_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
         """)
+        # ``unique_words`` is a legacy schema column. New writes use its
+        # default and runtime queries ignore it so existing databases stay valid.
         conn.execute("""
             CREATE TABLE IF NOT EXISTS series_difficulty (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -187,7 +189,6 @@ class StatsService:
         episode_name: str,
         total_words: int,
         unknown_words: int,
-        unique_words: int,
     ) -> None:
         """Record difficulty data for an episode.
 
@@ -201,14 +202,13 @@ class StatsService:
             conn.execute(
                 """INSERT INTO series_difficulty
                    (series_name, episode_name, total_words, unknown_words,
-                    unique_words, difficulty_score, recorded_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    difficulty_score, recorded_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     series_name,
                     episode_name,
                     total_words,
                     unknown_words,
-                    unique_words,
                     difficulty_score,
                     datetime.now().isoformat(),
                 ),
@@ -224,7 +224,6 @@ class StatsService:
                     series_name,
                     CAST(AVG(total_words) AS INTEGER) as total_words,
                     CAST(AVG(unknown_words) AS INTEGER) as unknown_words,
-                    CAST(AVG(unique_words) AS INTEGER) as unique_words,
                     AVG(difficulty_score) as difficulty_score,
                     MAX(recorded_at) as recorded_at
                 FROM series_difficulty
@@ -236,7 +235,6 @@ class StatsService:
                     series_name=row["series_name"],
                     total_words=row["total_words"] or 0,
                     unknown_words=row["unknown_words"] or 0,
-                    unique_words=row["unique_words"] or 0,
                     difficulty_score=row["difficulty_score"] or 0.0,
                     recorded_at=datetime.fromisoformat(row["recorded_at"]),
                 )

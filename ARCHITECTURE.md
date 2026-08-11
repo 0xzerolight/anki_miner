@@ -30,7 +30,7 @@ Subtitle file (ASS/SRT/SSA)
 │ 2. Filter Unknown Words                            │
 │    WordFilterService + AnkiService                  │
 │    + optional: FrequencyService, WordListService,   │
-│      KnownWordDB, cross-episode counts              │
+│      KnownWordDB                                    │
 │    → list[TokenizedWord] (unknown only)             │
 ├─────────────────────────────────────────────────────┤
 │ 3. Extract Media                                    │
@@ -212,7 +212,7 @@ The import flow is in `gui/controllers/audio_pack_import_flow.py`; the panel it 
 
 **EpisodeProcessor** (`orchestration/episode_processor.py`):
 - Receives all services via constructor injection
-- `process_episode(video_file, subtitle_file, progress_callback, curation_callback, cross_episode_counts, episode_name_override, series_name_override, audio_track_override, source_label_override, audio_only, cancel_event)` runs the 5-stage pipeline. `audio_only=True` is the Audiobook path (no per-word screenshots); `audio_track_override` pins a specific audio stream; `source_label_override` names the source on the card.
+- `process_episode(video_file, subtitle_file, progress_callback, curation_callback, episode_name_override, series_name_override, audio_track_override, source_label_override, audio_only, cancel_event)` runs the 5-stage pipeline. `audio_only=True` is the Audiobook path (no per-word screenshots); `audio_track_override` pins a specific audio stream; `source_label_override` names the source on the card.
 - `_run_pipeline(ctx, cancel_event, body)` is the shared run skeleton both entry points wrap: pre-flight gates (dictionary staleness, card-target verify, offline dictionary — all outside the `try` so a `SetupError` propagates instead of collapsing into a "completed" result), per-run temp allocation, the Anki accumulator reset, the `_external_cancel` bridge, and the try/except/finally tail. Path-specific work lives in the caller's `body` closure.
 - `_stamp_write_provenance(result, failure=...)` is the single funnel every returned `ProcessingResult` passes through. It stamps `anki_write_state` from the live `AnkiService` (fail-closed to `NOTE_WRITE_UNCERTAIN` for anything that is not a real `AnkiWriteState`) and `failure_is_transient` from the raised exception — the two fields automatic retry consumes.
 - `orchestration/audio_stage.py` (`AudioStage`) owns the expression-audio and sentence-TTS fetch loops and their progress-band accounting. It is the one cluster lifted out of the phase methods because it touches no pipeline ctx; `EpisodeProcessor` still constructs and closes the fetchers.
@@ -220,7 +220,6 @@ The import flow is in `gui/controllers/audio_pack_import_flow.py`; the panel it 
 - `process_reading()` mines mokuro manga volumes and Japanese novels. It reuses `_phase2_filter`, `_phase4_lookup`, and `_phase5_create` but swaps the video media stage for `_phase3_reading_media`, which materializes each word's page/cover image and expression audio (no ffmpeg, no sentence audio). Between filtering and media it applies a `reading_min_occurrence` floor (`WordFilterService.filter_by_episode_count`) that drops words appearing fewer than the configured number of times in the volume (1 = off); force-included words bypass the floor.
 - Cancellation checkpoints between each phase (`self._cancelled` flag); the YouTube flow additionally threads a `threading.Event` into the fetcher so an in-flight yt-dlp subprocess can be killed.
 - Supports `curation_callback` (GUI presents word selection dialog)
-- Supports `cross_episode_counts` for batch frequency filtering
 - Supports `episode_name_override` / `series_name_override` so YouTube-sourced sessions have stable, file-name-independent identity.
 - Records to StatsService and KnownWordDB after successful processing
 - Cleans up temp media files in `finally` block

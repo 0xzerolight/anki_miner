@@ -1,10 +1,11 @@
 """Tests for StatsService."""
 
 import threading
+from dataclasses import fields
 
 import pytest
 
-from anki_miner.models.stats import MilestoneKind, MiningSession
+from anki_miner.models.stats import DifficultyEntry, MilestoneKind, MiningSession
 from anki_miner.services.stats_service import StatsService
 
 
@@ -226,9 +227,12 @@ class TestDifficulty:
         svc.load()
         return svc
 
+    def test_model_has_no_duplicate_unique_words_field(self):
+        assert "unique_words" not in {field.name for field in fields(DifficultyEntry)}
+
     def test_record_and_retrieve_difficulty(self, service):
-        service.record_difficulty("Easy Show", "ep01", 500, 50, 400)
-        service.record_difficulty("Hard Show", "ep01", 500, 250, 400)
+        service.record_difficulty("Easy Show", "ep01", 500, 50)
+        service.record_difficulty("Hard Show", "ep01", 500, 250)
 
         rankings = service.get_series_difficulty()
         assert len(rankings) == 2
@@ -236,27 +240,62 @@ class TestDifficulty:
         assert rankings[0].series_name == "Easy Show"
         assert rankings[0].difficulty_score < rankings[1].difficulty_score
 
+    def test_reduced_api_records_without_duplicate_unique_count(self, service):
+        service.record_difficulty("Show", "ep01", 100, 25)
+
+        rankings = service.get_series_difficulty()
+        assert len(rankings) == 1
+        assert rankings[0].difficulty_score == pytest.approx(0.25)
+
+    def test_legacy_table_with_unique_words_column_still_loads(self, tmp_path):
+        import sqlite3
+
+        db_path = tmp_path / "legacy-stats.db"
+        with sqlite3.connect(db_path) as conn:
+            conn.execute("""CREATE TABLE series_difficulty (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    series_name TEXT NOT NULL,
+                    episode_name TEXT NOT NULL,
+                    total_words INTEGER NOT NULL DEFAULT 0,
+                    unknown_words INTEGER NOT NULL DEFAULT 0,
+                    unique_words INTEGER NOT NULL DEFAULT 0,
+                    difficulty_score REAL NOT NULL DEFAULT 0.0,
+                    recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+                )""")
+            conn.execute("""INSERT INTO series_difficulty
+                   (series_name, episode_name, total_words, unknown_words,
+                    unique_words, difficulty_score)
+                   VALUES ('Legacy Show', 'ep01', 100, 20, 80, 0.2)""")
+
+        service = StatsService(db_path)
+        assert service.load() is True
+        service.record_difficulty("Legacy Show", "ep02", 100, 40)
+
+        rankings = service.get_series_difficulty()
+        assert len(rankings) == 1
+        assert rankings[0].difficulty_score == pytest.approx(0.3)
+
     def test_difficulty_score_calculation(self, service):
-        service.record_difficulty("Test", "ep01", 100, 25, 80)
+        service.record_difficulty("Test", "ep01", 100, 25)
         rankings = service.get_series_difficulty()
         assert abs(rankings[0].difficulty_score - 0.25) < 0.01
 
     def test_skips_zero_total_words(self, service):
-        service.record_difficulty("Test", "ep01", 0, 0, 0)
+        service.record_difficulty("Test", "ep01", 0, 0)
         rankings = service.get_series_difficulty()
         assert len(rankings) == 0
 
     def test_first_difficulty_record_initializes_and_persists(self, tmp_path):
         service = StatsService(tmp_path / "stats.db")
-        service.record_difficulty("Test", "ep01", 100, 25, 80)
+        service.record_difficulty("Test", "ep01", 100, 25)
 
         rankings = service.get_series_difficulty()
         assert len(rankings) == 1
         assert rankings[0].series_name == "Test"
 
     def test_averages_across_episodes(self, service):
-        service.record_difficulty("Show", "ep01", 100, 10, 80)  # 0.10
-        service.record_difficulty("Show", "ep02", 100, 30, 80)  # 0.30
+        service.record_difficulty("Show", "ep01", 100, 10)  # 0.10
+        service.record_difficulty("Show", "ep02", 100, 30)  # 0.30
         rankings = service.get_series_difficulty()
         assert len(rankings) == 1
         assert abs(rankings[0].difficulty_score - 0.20) < 0.01
@@ -374,7 +413,7 @@ class TestReset:
                     elapsed_time=1.0,
                 )
             )
-            service.record_difficulty(f"Show {i}", f"ep_{i:02d}", 100, 10, 80)
+            service.record_difficulty(f"Show {i}", f"ep_{i:02d}", 100, 10)
 
     def test_returns_total_rows_removed(self, service):
         self._populate(service, sessions=3)
@@ -430,7 +469,7 @@ class TestReset:
                 elapsed_time=1.0,
             )
         )
-        service.record_difficulty("After", "ep_01", 100, 10, 80)
+        service.record_difficulty("After", "ep_01", 100, 10)
 
         sessions = service.get_recent_sessions()
         assert len(sessions) == 1
@@ -507,4 +546,4 @@ class TestRecordDifficultyRaises:
             import pytest as _pytest
 
             with _pytest.raises(sqlite3.OperationalError):
-                service.record_difficulty("Show", "ep01", 100, 20, 80)
+                service.record_difficulty("Show", "ep01", 100, 20)
