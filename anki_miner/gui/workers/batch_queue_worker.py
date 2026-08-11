@@ -36,9 +36,9 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     # Signals for queue-level progress
     queue_started = pyqtSignal(int)  # total_items
     item_started = pyqtSignal(str, str)  # item_id, display_name
-    item_completed = pyqtSignal(str, int)  # item_id, cards_created
-    item_failed = pyqtSignal(str, str)  # item_id, error_message
-    queue_finished = pyqtSignal(int)  # total_cards_created
+    item_completed = pyqtSignal(str, int)  # item_id, run_cards_created
+    item_failed = pyqtSignal(str, str, int)  # item_id, error_message, run_cards_created
+    queue_finished = pyqtSignal(int)  # run_cards_created
     # The run stopped at a series boundary, and later left it again (D29-A).
     run_paused = pyqtSignal()
     run_resumed = pyqtSignal()
@@ -128,9 +128,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     def run(self):
         """Process all pending items in queue sequentially."""
         self.log_start("BatchQueueWorkerThread", items=len(self.batch_queue.get_all_items()))
-        total_cards = self.batch_queue.total_cards_created
-        if not isinstance(total_cards, int):
-            total_cards = 0
+        total_cards = 0
         # Frozen here, before anything runs: from this point the run's item
         # total, its progress numbers and its receipt all describe the same set
         # of series, whatever happens to the panel (D29-A).
@@ -253,6 +251,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 item.status = QueueItemStatus.PROCESSING
             self.item_started.emit(item.id, item.display_name)
 
+            cards_for_item = 0
             try:
                 # Create config with item's subtitle offset
                 config_with_offset = replace(self.config, subtitle_offset=item.subtitle_offset)
@@ -286,7 +285,6 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         pending_pairs.append((pair, pair_key))
 
                 # Process each pair using episode processor
-                cards_for_item = 0
                 interrupted = False
                 failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
                 for pair, pair_key in pending_pairs:
@@ -347,15 +345,15 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     )
                     item.status = QueueItemStatus.ERROR
                     item.error_message = msg
-                    self.item_failed.emit(item.id, msg)
+                    self.item_failed.emit(item.id, msg, cards_for_item)
                 else:
                     item.status = QueueItemStatus.COMPLETED
-                    self.item_completed.emit(item.id, item.cards_created)
+                    self.item_completed.emit(item.id, cards_for_item)
 
             except Exception as e:  # noqa: BLE001 — surface every failure to GUI
                 logger.exception("BatchQueueWorker item %s failed", item.id)
                 item.status = QueueItemStatus.ERROR
                 item.error_message = str(e)
-                self.item_failed.emit(item.id, str(e))
+                self.item_failed.emit(item.id, str(e), cards_for_item)
 
         return total_cards

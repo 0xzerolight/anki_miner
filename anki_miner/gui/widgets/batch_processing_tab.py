@@ -106,6 +106,7 @@ class BatchProcessingTab(MiningTabBase):
         self._is_processing = False
         self._cancel_requested = False
         self._run_failed = False
+        self._run_had_item_failures = False
         # Both start methods assign the same union-typed worker_thread, so the
         # active path (Queue = two-level series items vs Quick = one episode
         # per item) is tracked explicitly for _on_progress_update's branch.
@@ -699,6 +700,7 @@ class BatchProcessingTab(MiningTabBase):
         self.overall_progress_widget.reset()
         self._cancel_requested = False
         self._run_failed = False
+        self._run_had_item_failures = False
         self._queue_mode = queue_mode
         self._items_done = 0
         self._items_total = 0
@@ -784,16 +786,21 @@ class BatchProcessingTab(MiningTabBase):
 
         Args:
             item_id: Item ID
-            cards_created: Number of cards created
+            cards_created: Number of cards created during this run
         """
         self._record_receipt_counts(notes_added=cards_created, failed=False)
         self._advance_queue_bar(item_id)
         self.presenter.show_success(result_copy.created_cards(cards_created, self.config.anki_deck_name))
 
         # Update queue panel — address the completed row by id (T-30).
-        self.queue_panel.set_processing_item_complete(item_id, cards_created)
+        cumulative_cards = cards_created
+        for item in self.batch_queue.get_all_items():
+            if item.id == item_id:
+                cumulative_cards = max(cumulative_cards, item.cards_created)
+                break
+        self.queue_panel.set_processing_item_complete(item_id, cumulative_cards)
 
-    def _on_item_failed(self, item_id: str, error_message: str) -> None:
+    def _on_item_failed(self, item_id: str, error_message: str, cards_created: int = 0) -> None:
         """Called when an item fails.
 
         Render-only: the worker already set ERROR status and error_message
@@ -802,8 +809,10 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             item_id: Item ID
             error_message: Error message
+            cards_created: Notes confirmed earlier in this series during this run
         """
-        self._record_receipt_counts(notes_added=0, failed=True)
+        self._run_had_item_failures = True
+        self._record_receipt_counts(notes_added=cards_created, failed=True)
         self.presenter.show_error(error_message)
         self._advance_queue_bar(item_id)
 
@@ -838,7 +847,7 @@ class BatchProcessingTab(MiningTabBase):
         stopped (D20).
 
         Args:
-            total_cards: Total cards created across all series
+            total_cards: Total cards created during this run
         """
         self._restore_buttons()
 
@@ -849,6 +858,9 @@ class BatchProcessingTab(MiningTabBase):
         elif self._run_failed:
             self.overall_progress_widget.reset()
             self.overall_progress_widget.set_status(self.tr("Failed — see log"))
+        elif self._run_had_item_failures:
+            self.overall_progress_widget.reset()
+            self.overall_progress_widget.set_status(self.tr("Finished with errors — see log"))
         else:
             self.overall_progress_widget.show_completion(tr_format(self.tr("Complete — %1 cards created"), total_cards))
 
@@ -1035,13 +1047,19 @@ class BatchProcessingTab(MiningTabBase):
         """
         for result in results:
             self._record_receipt_result(result)
+        self._run_had_item_failures = any(not result.success for result in results)
         self._restore_buttons()
 
         # A cancelled run keeps its frozen bar and says nothing here: the
         # receipt sealed on QThread.finished states what the stopped run
         # managed to do, and a modal announcing "Complete" is the last thing
         # someone who just pressed Cancel wants (D20/D22).
-        if not self._cancel_requested:
+        if self._cancel_requested:
+            return
+        if self._run_had_item_failures:
+            self.overall_progress_widget.reset()
+            self.overall_progress_widget.set_status(self.tr("Finished with errors — see log"))
+        else:
             self.overall_progress_widget.show_completion(
                 tr_format(self.tr("Complete — %1 cards created"), sum(r.cards_created for r in results))
             )

@@ -278,8 +278,11 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         fatal = bool(getattr(self, "_run_failed", False))
         self._finish_receipt(cancelled=cancelled, fatal=fatal)
         # The published run closes on the same thread-end signal, so the status
-        # bar and the pinned bar stop describing a run that has ended.
-        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=fatal))
+        # bar and the pinned bar stop describing a run that has ended. Item
+        # failures degrade the task, but stay non-fatal in the receipt so a
+        # mixed run remains PARTIAL rather than FAILED.
+        task_failed = fatal or bool(getattr(self, "_run_had_item_failures", False))
+        self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=task_failed))
 
     def _finish_receipt(self, *, cancelled: bool = False, fatal: bool = False) -> None:
         """Seal the run and show its receipt. Idempotent; safe on every path.

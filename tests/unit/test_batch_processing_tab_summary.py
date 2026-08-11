@@ -17,9 +17,10 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
-from anki_miner.models.processing import ProcessingResult
+from anki_miner.models.processing import ProcessingResult, TerminalOutcome
 
 
 @pytest.fixture
@@ -42,6 +43,13 @@ def clock(monkeypatch):
     return state
 
 
+@pytest.fixture
+def task_registry(qapp):
+    registry = TaskRegistry()
+    yield registry
+    registry.shutdown()
+
+
 def _finish(tab, results: list[ProcessingResult], *, pairs: int) -> str:
     with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
         tab._start_processing_with_pairs([object()] * pairs)
@@ -50,8 +58,9 @@ def _finish(tab, results: list[ProcessingResult], *, pairs: int) -> str:
     return tab._receipt_widget.summary_text
 
 
-def test_failed_results_are_named_in_the_receipt(tab, clock):
+def test_failed_results_are_named_consistently_across_run_surfaces(tab, clock, task_registry):
     """Mixed results: the receipt states how many of the episodes completed."""
+    tab.bind_task_registry(task_registry)
     failed = ProcessingResult(
         total_words_found=0,
         new_words_found=0,
@@ -63,6 +72,9 @@ def test_failed_results_are_named_in_the_receipt(tab, clock):
     summary = _finish(tab, [failed, succeeded], pairs=2)
 
     assert summary == "Finished with errors — 1 of 2 episodes completed; 2 notes added in 00m 00s"
+    assert tab.overall_progress_widget.status_label.text() == "Finished with errors — see log"
+    assert tab._receipt_widget.receipt.outcome is TerminalOutcome.PARTIAL
+    assert task_registry.snapshot(tab.TASK_ID).outcome is TaskOutcome.FAILED
 
 
 def test_all_success_reads_as_a_complete_run(tab, clock):

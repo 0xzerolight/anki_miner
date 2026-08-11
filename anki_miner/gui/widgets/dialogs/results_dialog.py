@@ -11,7 +11,7 @@ from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.gui.widgets.enhanced import StatCard
-from anki_miner.models import ProcessingResult
+from anki_miner.models import ProcessingResult, TerminalOutcome
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -67,7 +67,14 @@ class ResultsDialog(EnhancedDialog):
         # rather than congratulating the user for it (D47-B) -- the number is
         # the thing they opened the dialog to read, and "Success!" made them
         # find it again in the stat cards below.
-        if self.processing_result.success:
+        terminal_outcome = getattr(self.processing_result, "terminal_outcome", None)
+        if terminal_outcome is TerminalOutcome.CANCELLED:
+            self.set_header("error", self.tr("Cancelled"))
+        elif terminal_outcome is TerminalOutcome.PARTIAL:
+            self.set_header("error", self.tr("Finished with errors"))
+        elif terminal_outcome is TerminalOutcome.FAILED:
+            self.set_header("error", self.tr("Mining failed"))
+        elif self.processing_result.success:
             self.set_header("complete", result_copy.created_cards(self.processing_result.cards_created))
         else:
             self.set_header("error", self.tr("Completed with Errors"))

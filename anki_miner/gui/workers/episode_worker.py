@@ -10,6 +10,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
+from anki_miner.models import AnkiWriteState
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.utils.logging_ext import log_summary
 
@@ -126,11 +127,10 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 cancel_event=self._cancel_event,
             )
 
-            # Once Anki has committed cards, the result owns the only exact
-            # note-ID receipt the GUI can register for Undo. A cancel that
-            # lands after that commit must not discard it. Zero-commit
-            # cancelled runs remain silent.
-            if result.cards_created or not self.check_cancelled():
+            # A late Cancel may have no confirmed IDs while an addNotes request
+            # remains uncertain. Keep that warning receipt; suppress only a
+            # cancellation that proves no note request was sent.
+            if result.anki_write_state is not AnkiWriteState.NO_NOTE_WRITE or not self.check_cancelled():
                 self.result_ready.emit(result)
                 log_summary(
                     logger,

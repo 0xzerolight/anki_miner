@@ -18,8 +18,10 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
+from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.models.processing import CANCELLED_ERROR, ProcessingResult
+from anki_miner.models.processing import CANCELLED_ERROR, ProcessingResult, TerminalOutcome
 from anki_miner.models.reading import ReadingSourceRef
 
 _READING_WORKER = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
@@ -38,6 +40,13 @@ def clock(monkeypatch):
     return state
 
 
+@pytest.fixture
+def task_registry(qapp):
+    registry = TaskRegistry()
+    yield registry
+    registry.shutdown()
+
+
 def _result(cards: int, *, errors: list[str] | None = None) -> ProcessingResult:
     return ProcessingResult(
         total_words_found=cards * 3,
@@ -46,6 +55,28 @@ def _result(cards: int, *, errors: list[str] | None = None) -> ProcessingResult:
         errors=list(errors or []),
         card_ids=list(range(cards)),
     )
+
+
+@pytest.mark.parametrize(
+    ("results", "outcome", "title"),
+    [
+        ([_result(2), _result(0, errors=["deck missing"])], TerminalOutcome.PARTIAL, "Finished with errors"),
+        ([_result(0, errors=["deck missing"])], TerminalOutcome.FAILED, "Mining failed"),
+    ],
+)
+def test_non_success_run_details_keep_the_terminal_header(qtbot, results, outcome, title):
+    from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
+
+    accumulator = RunReceiptAccumulator(len(results), monotonic_start=0.0, wall_start=0.0)
+    for result in results:
+        accumulator.record_result(result)
+    aggregate = accumulator.finish(monotonic_now=1.0, wall_now=1.0).aggregate_result()
+
+    assert aggregate is not None
+    dialog = ResultsDialog(aggregate)
+    qtbot.addWidget(dialog)
+    assert getattr(aggregate, "terminal_outcome", None) is outcome
+    assert dialog._title_label.text() == title
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +193,24 @@ class TestListQueueReceipt:
 
         aggregate = youtube_tab._presenter.show_run_details.call_args.args[0]
         assert aggregate.cards_created == 5
+
+    def test_cancelled_details_keep_the_cancelled_header(self, youtube_tab, clock, qtbot):
+        from anki_miner.gui.widgets.dialogs.results_dialog import ResultsDialog
+
+        _ready_youtube_item(youtube_tab, "aaa")
+        _ready_youtube_item(youtube_tab, "bbb")
+        youtube_tab._on_mine_clicked()
+        youtube_tab._on_item_finished(0, _result(2), None, 1)
+        youtube_tab._cancel_requested = True
+        youtube_tab._after_run_cleanup()
+
+        youtube_tab._receipt_widget.details_button.click()
+
+        aggregate = youtube_tab._presenter.show_run_details.call_args.args[0]
+        dialog = ResultsDialog(aggregate)
+        qtbot.addWidget(dialog)
+        assert getattr(aggregate, "terminal_outcome", None) is TerminalOutcome.CANCELLED
+        assert dialog._title_label.text() == "Cancelled"
 
 
 # ---------------------------------------------------------------------------
@@ -387,21 +436,25 @@ class TestBatchReceipt:
         )
         message_box.information.assert_not_called()
 
-    def test_the_queue_path_counts_series_from_the_worker_signals(self, batch_tab, clock, tmp_path):
+    def test_the_queue_path_reports_item_failure_consistently(self, batch_tab, clock, task_registry, tmp_path):
+        batch_tab.bind_task_registry(task_registry)
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show B", 0.0)
         with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
             with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
                 batch_tab._start_queue_worker()
             batch_tab._on_item_completed(batch_tab.batch_queue.get_all_items()[0].id, 40)
-            batch_tab._on_item_failed(batch_tab.batch_queue.get_all_items()[1].id, "no subtitles")
+            batch_tab._on_item_failed(batch_tab.batch_queue.get_all_items()[1].id, "no subtitles", 5)
             clock["t"] += 65
             batch_tab._on_queue_finished(40)
             batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == (
-            "Finished with errors — 1 of 2 series completed; 40 notes added in 01m 05s"
+            "Finished with errors — 1 of 2 series completed; 45 notes added in 01m 05s"
         )
+        assert batch_tab.overall_progress_widget.status_label.text() == "Finished with errors — see log"
+        assert batch_tab._receipt_widget.receipt.outcome is TerminalOutcome.PARTIAL
+        assert task_registry.snapshot(batch_tab.TASK_ID).outcome is TaskOutcome.FAILED
         message_box.information.assert_not_called()
 
     def test_a_cancelled_queue_run_opens_no_dialog(self, batch_tab, clock, tmp_path):
