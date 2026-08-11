@@ -78,14 +78,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
                 "%1 was only partly removed. Re-import or repair this frequency source before retrying."
             ),
             config_pending_failure_summary=self.tr(
-                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
+                "%1 could not be restored after its settings update failed. Restart Anki Miner before retrying."
             ),
             post_save_summary=self.tr(
                 "%1 was removed, but Anki Miner could not refresh it. "
                 "The removal is saved and will remain after a restart."
             ),
             cleanup_pending_summary=self.tr(
-                "%1 was removed, but its leftover folder could not be deleted. " "Cleanup will be retried at startup."
+                "%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup."
             ),
         )
         self._setup_fields()
@@ -126,17 +126,18 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         container = self._build_chain_container(
             ChainListLabels(
                 # Not the first-match sentence the other three chains carry:
-                # frequency layers every enabled source and only uses the order
-                # to break ties. Copying their wording here would be a lie.
+                # frequency layers every enabled source, while order controls
+                # only the source list rendered on cards.
                 explanation=self.tr(
-                    "Sources are layered additively — the best (lowest) rank across all "
-                    "enabled sources wins. Top entry breaks ties first."
+                    "Every enabled source contributes. The lowest rank is used for filtering; "
+                    "Frequency Sort uses the harmonic mean. This order controls how sources "
+                    "are listed on the card."
                 ),
                 add=self.tr("Add frequency source…"),
                 remove=self.tr("Remove frequency source"),
                 remove_tooltip=self.tr("Remove the selected frequency source"),
                 move_up=self.tr("Move up"),
-                move_up_tooltip=self.tr("Move up (breaks rank ties first)"),
+                move_up_tooltip=self.tr("Move up in the card's source list"),
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down"),
             )

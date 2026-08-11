@@ -16,6 +16,7 @@ from typing import Any, Callable
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
+    resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
 )
@@ -173,7 +174,12 @@ def import_yomitan_zip(
         # A caller-supplied slot pins the on-disk folder to a stable name; else
         # derive it from title+revision (the historical behavior).
         if dict_id is None:
-            dict_id = _derive_dict_id(title, revision)
+            dict_id = resolve_auto_store_id(
+                dest_root,
+                _derive_dict_id(title, revision),
+                "dictionary",
+                {"source_name": title, "source_revision": revision},
+            )
 
         try:
             final_path = resolve_managed_slot(dest_root, dict_id)

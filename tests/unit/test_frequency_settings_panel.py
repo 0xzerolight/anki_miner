@@ -103,6 +103,24 @@ def test_set_chain_renders_correct_row_count(qapp, qtbot, tmp_path):
     assert panel._list.count() == 2
 
 
+def test_explanation_matches_frequency_aggregation_and_display_order(qapp, qtbot, tmp_path):
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (FreqEntry(source_id="jpdb", enabled=True),),
+        registry_meta={"jpdb": _make_meta("jpdb")},
+    )
+
+    assert panel._explanation_label.text() == (
+        "Every enabled source contributes. The lowest rank is used for filtering; "
+        "Frequency Sort uses the harmonic mean. This order controls how sources "
+        "are listed on the card."
+    )
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.up_button.toolTip() == "Move up in the card's source list"
+
+
 def test_row_toggle_survives_rescan(qapp, qtbot, tmp_path):
     """Disabling a row must survive an unguarded rescan rebuild (Bug S2)."""
     panel = FrequencySettingsPanel(tmp_path)

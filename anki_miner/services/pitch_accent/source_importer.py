@@ -36,6 +36,7 @@ from pathlib import Path
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
+    resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
 )
@@ -176,7 +177,12 @@ def _import_zip(
         entries_out, skipped_display_only = extract_pitch_rows(banks, progress=progress, cancel_check=cancel_check)
         title = banks.title
         revision = banks.revision
-        resolved_id = source_id or _derive_source_id(title)
+        resolved_id = source_id or resolve_auto_store_id(
+            dest_root,
+            _derive_source_id(title),
+            "pitch",
+            {"source_name": title, "source_revision": revision},
+        )
 
         if not entries_out:
             raise SetupError(
@@ -230,11 +236,16 @@ def _import_csv(
     overwrite: bool,
 ) -> PitchSourceImportResult:
     stem = csv_path.stem
-    resolved_id = source_id or _derive_source_id(stem)
     # Honor an explicit display name (reimport passes the existing meta name);
     # otherwise derive from the filename stem — preserving it here keeps
     # reimport from collapsing the label to the generic "source.csv" stem.
     resolved_name = source_name if source_name else stem
+    resolved_id = source_id or resolve_auto_store_id(
+        dest_root,
+        _derive_source_id(stem),
+        "pitch",
+        {"source_name": resolved_name, "source_revision": ""},
+    )
 
     # key = (kanji, reading) -> (pattern, nasal, devoice); first occurrence
     # wins, matching the legacy single-CSV loader and the zip path.

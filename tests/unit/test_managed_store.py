@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import sqlite3
+from functools import partial
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services import _sqlite_index
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
@@ -19,8 +21,13 @@ from anki_miner.services._sqlite_index import (
     write_ownership_marker,
 )
 from anki_miner.services.audio_packs import storage as audio_storage
+from anki_miner.services.audio_packs.importer import import_audio_pack
 from anki_miner.services.dictionary import storage as dictionary_storage
+from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.frequency import storage as frequency_storage
+from anki_miner.services.frequency.source_importer import import_frequency_source
+from anki_miner.services.pitch_accent.source_importer import import_pitch_source
+from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 
 @pytest.mark.parametrize(
@@ -59,6 +66,57 @@ def test_resolve_managed_slot_returns_direct_child_of_resolved_root(tmp_path: Pa
     root = tmp_path / "root"
 
     assert resolve_managed_slot(root, "safe-slot") == root.resolve() / "safe-slot"
+
+
+def test_auto_ids_disambiguate_slug_collisions_and_reimport_stably(tmp_path: Path) -> None:
+    first = tmp_path / "A B.csv"
+    second = tmp_path / "A-B.csv"
+    first.write_text("term,rank\n猫,1\n", encoding="utf-8")
+    second.write_text("term,rank\n犬,2\n", encoding="utf-8")
+    root = tmp_path / "freqs"
+
+    first_result = import_frequency_source(first, root)
+    second_result = import_frequency_source(second, root)
+
+    assert first_result.source_id == "a-b"
+    assert second_result.source_id.startswith("a-b-")
+    assert second_result.source_id != first_result.source_id
+    repeated = import_frequency_source(second, root, overwrite=True)
+    assert repeated.source_id == second_result.source_id
+
+
+@pytest.mark.parametrize("family", ("dictionary", "frequency", "pitch", "audio"))
+def test_auto_id_importers_do_not_route_around_foreign_slot(tmp_path: Path, family: str) -> None:
+    root = tmp_path / "managed" / family
+    foreign = root / "slot"
+    foreign.mkdir(parents=True)
+    payload = foreign / "keep.txt"
+    payload.write_text("foreign", encoding="utf-8")
+
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    if family == "dictionary":
+        source = build_yomitan_zip(inputs / "source.zip", title="slot", revision="")
+        import_source = partial(import_yomitan_zip, source, root, overwrite=True)
+    elif family == "frequency":
+        source = inputs / "slot.csv"
+        source.write_text("term,rank\n猫,1\n", encoding="utf-8")
+        import_source = partial(import_frequency_source, source, root, overwrite=True)
+    elif family == "pitch":
+        source = inputs / "slot.csv"
+        source.write_text("ねこ,猫,1\n", encoding="utf-8")
+        import_source = partial(import_pitch_source, source, root, overwrite=True)
+    else:
+        source = inputs / "slot"
+        source.mkdir()
+        (source / "ねこ - 猫.mp3").touch()
+        import_source = partial(import_audio_pack, source, root, overwrite=True)
+
+    with pytest.raises(SetupError, match="not an Anki Miner-managed"):
+        import_source()
+
+    assert payload.read_text(encoding="utf-8") == "foreign"
+    assert [child.name for child in root.iterdir()] == ["slot"]
 
 
 @pytest.mark.parametrize("store_id", ("slot.bak-new", "slot.tomb-new"))
@@ -156,27 +214,28 @@ def test_frequency_schema_uses_version_specific_columns(tmp_path: Path) -> None:
         entries_sql="CREATE TABLE entries (term TEXT, rank INTEGER)",
         meta={"schema_version": "1"},
     )
-    v2 = _create_index(
-        tmp_path / "v2",
+    current = _create_index(
+        tmp_path / "current",
         entries_sql=("CREATE TABLE entries (term TEXT, reading TEXT, rank INTEGER, display_value TEXT)"),
         meta={"schema_version": str(frequency_storage.SCHEMA_VERSION)},
     )
-    v2_missing_display = _create_index(
-        tmp_path / "v2-missing-display",
+    current_missing_display = _create_index(
+        tmp_path / "current-missing-display",
         entries_sql="CREATE TABLE entries (term TEXT, reading TEXT, rank INTEGER)",
         meta={"schema_version": str(frequency_storage.SCHEMA_VERSION)},
     )
-    v2_missing_term = _create_index(
-        tmp_path / "v2-missing-term",
+    current_missing_term = _create_index(
+        tmp_path / "current-missing-term",
         entries_sql=("CREATE TABLE entries (reading TEXT, rank INTEGER, display_value TEXT)"),
         meta={"schema_version": str(frequency_storage.SCHEMA_VERSION)},
     )
 
-    assert validate_index_schema(v1, "frequency")
+    assert not validate_index_schema(v1, "frequency")
     assert not validate_index_schema(v1_missing_reading, "frequency")
-    assert validate_index_schema(v2, "frequency")
-    assert not validate_index_schema(v2_missing_display, "frequency")
-    assert not validate_index_schema(v2_missing_term, "frequency")
+    assert validate_index_schema(current, "frequency")
+    assert not validate_index_schema(current_missing_display, "frequency")
+    assert not validate_index_schema(current_missing_term, "frequency")
+    assert prove_owned_slot(tmp_path, "v1", "frequency")
 
 
 def test_audio_schema_requires_lookup_columns(tmp_path: Path) -> None:

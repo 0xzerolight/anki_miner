@@ -19,6 +19,7 @@ across the importer's staging-dir cleanup (matters on Windows).
 from __future__ import annotations
 
 import sqlite3
+import unicodedata
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -26,13 +27,9 @@ import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.services._sqlite_index import write_meta as write_meta
 
-# v2 (this release) adds a nullable ``display_value`` column. The change is
-# purely additive — term/reading/rank are unchanged — so a v1 index (which lacks
-# the column) is still fully readable: readers treat display_value as absent (see
-# IndexedFreqProvider.load / FrequencySourceRegistry). No reimport is ever
-# required for correctness; a reimport only *gains* display values. Any migration
-# past v2 must stay additive to keep this backward-read guarantee.
-SCHEMA_VERSION = 2
+# v3 has no table change. It forces a one-time reimport with NFC-normalized term
+# and reading keys; older indexes can miss canonically equivalent lookups.
+SCHEMA_VERSION = 3
 
 # Sentinel rank stored for a word-based (categorical) source's rows. Its real
 # level lives in ``display_value``; the rank column only holds this out-of-band
@@ -86,8 +83,15 @@ def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) 
     conn = sqlite3.connect(db_path)
     try:
         batch: list[FreqRow] = []
-        for row in rows:
-            batch.append(row)
+        for term, reading, rank, display_value in rows:
+            batch.append(
+                (
+                    unicodedata.normalize("NFC", term),
+                    unicodedata.normalize("NFC", reading) if reading is not None else None,
+                    rank,
+                    display_value,
+                )
+            )
             if len(batch) >= batch_size:
                 conn.executemany(
                     "INSERT INTO entries (term, reading, rank, display_value) VALUES (?, ?, ?, ?)",

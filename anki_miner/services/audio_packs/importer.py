@@ -12,6 +12,7 @@ from anki_miner.config import paths as config_paths
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
+    resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
 )
@@ -101,7 +102,12 @@ def import_audio_pack(
 
     # --- pack_id derivation ---
     if pack_id is None:
-        pack_id = derive_pack_id(pack_dir.name)
+        pack_id = resolve_auto_store_id(
+            dest_root,
+            derive_pack_id(pack_dir.name),
+            "audio",
+            {"pack_dir": str(pack_dir)},
+        )
     if pack_id == "jpod101":
         # Reserved for the online JPod101 source: its cache files are named
         # jpod101_{word}_{reading}.* and a pack with the same id would collide,

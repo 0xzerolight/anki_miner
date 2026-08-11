@@ -106,7 +106,7 @@ class MultiFrequencyService:
         Returned in provider (chain) order; providers with no rank are omitted.
         This is the per-source breakdown rendered on the card — ``display_value``
         is the human string a card shows in place of the bare rank (None for
-        plain-int/CSV ranks or v1 indexes). ``reading`` scopes the per-source
+        plain-int/CSV ranks). ``reading`` scopes the per-source
         lookup so homographs no longer inherit each other's ranks.
         """
         results: list[tuple[str, int, str | None]] = []

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import unicodedata
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -41,6 +42,25 @@ def test_lookup_returns_rank(tmp_path: Path):
     assert provider.load() is True
     assert provider.lookup("猫") == 100
     assert provider.lookup("犬") == 200
+
+
+def test_nfd_keys_are_stored_and_looked_up_as_nfc(tmp_path: Path):
+    decomposed = "か\u3099く"
+    composed = unicodedata.normalize("NFC", decomposed)
+    db = _build_source(tmp_path, "nfc", [(decomposed, decomposed, 10)])
+    with sqlite3.connect(db) as conn:
+        assert conn.execute("SELECT term, reading FROM entries").fetchone() == (composed, composed)
+    provider = IndexedFreqProvider("nfc", db, "NFC")
+    assert provider.load() is True
+    assert provider.lookup(composed, composed) == 10
+    assert provider.lookup(decomposed, decomposed) == 10
+    provider.close()
+
+
+def test_pre_nfc_schema_is_rejected(tmp_path: Path):
+    db = _build_source(tmp_path, "old", [("猫", "ねこ", 100)], schema_version=2)
+    provider = IndexedFreqProvider("old", db, "Old")
+    assert provider.load() is False
 
 
 def test_lookup_min_over_homographs(tmp_path: Path):
@@ -200,17 +220,12 @@ def test_lookup_detail_before_load_returns_none(tmp_path: Path):
     assert provider.lookup_detail("猫") is None
 
 
-def test_v1_index_loads_and_reads_with_absent_display(tmp_path: Path):
-    # A legacy v1 index (no display_value column) must load after the 1->2 bump
-    # and read as before, with display_value reported absent.
+def test_v1_index_requires_reimport(tmp_path: Path):
     db = tmp_path / "old" / "index.sqlite"
     build_v1_index(db, [("猫", "ねこ", 100), ("生", "せい", 80), ("生", "なま", 500)])
     provider = IndexedFreqProvider("old", db, "Old")
-    assert provider.load() is True
-    assert provider.is_available() is True
-    assert provider.lookup("猫") == 100
-    assert provider.lookup("生", "なま") == 500  # reading-scoping still works on v1
-    assert provider.lookup_detail("猫") == (100, None)  # display absent on v1
+    assert provider.load() is False
+    assert provider.is_available() is False
 
 
 # ---------------------------------------------------------------------------
@@ -300,12 +315,12 @@ def test_lookup_detail_many_empty_pairs(tmp_path: Path):
     assert provider.lookup_detail_many([]) == []
 
 
-def test_lookup_detail_many_v1_index_display_none(tmp_path: Path):
+def test_lookup_detail_many_v1_index_requires_reimport(tmp_path: Path):
     db = tmp_path / "legacy" / "index.sqlite"
     build_v1_index(db, [("猫", "ねこ", 100), ("生", "せい", 80)])
     provider = IndexedFreqProvider("legacy", db, "Legacy")
-    assert provider.load() is True
-    assert provider.lookup_detail_many([("猫", "ねこ"), ("生", "せい")]) == [(100, None), (80, None)]
+    assert provider.load() is False
+    assert provider.lookup_detail_many([("猫", "ねこ"), ("生", "せい")]) == [None, None]
 
 
 def test_lookup_detail_many_chunking_equivalence(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

@@ -3,6 +3,7 @@
 import csv
 import logging
 import re
+import unicodedata
 from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from itertools import chain, islice
@@ -339,7 +340,7 @@ def iter_pitch_csv_rows(path: Path) -> Iterator[_ParsedRow]:
         with open(path, encoding="utf-8") as f:
             sample = f.read(4096)
             f.seek(0)
-            delimiter = detect_delimiter(sample)
+            delimiter = detect_delimiter(sample, prefer_tab=True)
 
             reader = csv.reader(f, delimiter=delimiter)
 
@@ -463,8 +464,8 @@ def build_pitch_maps(parsed_rows: Iterable[_ParsedRow]) -> PitchMaps:
         if normalized_pattern is None:
             continue
         entry = PitchEntry(normalized_pattern, entry.nasal, entry.devoice)
-        reading = katakana_to_hiragana(reading)
-        surface = katakana_to_hiragana(kanji or reading)
+        reading = katakana_to_hiragana(unicodedata.normalize("NFC", reading))
+        surface = katakana_to_hiragana(unicodedata.normalize("NFC", kanji or reading))
         if not surface:
             continue
         key = (surface, reading)
@@ -553,8 +554,8 @@ class PitchMapsStore:
         if self._by_pair is None:
             return None
 
-        word = katakana_to_hiragana(word)
-        reading = katakana_to_hiragana(reading)
+        word = katakana_to_hiragana(unicodedata.normalize("NFC", word))
+        reading = katakana_to_hiragana(unicodedata.normalize("NFC", reading))
         exact = self._by_pair.get((word, reading))
         if exact is not None:
             return exact
