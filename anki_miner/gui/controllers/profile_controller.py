@@ -420,7 +420,25 @@ class ProfileController:
                     exc,
                 ),
             )
-        return self._switch_locked(profile.id)
+        result = self._switch_locked(profile.id)
+        if result.switched:
+            return result
+        try:
+            ProfileStore.delete(profile.id)
+        except (OSError, ValueError) as exc:
+            logger.warning("Could not remove settings profile '%s' after its switch failed: %s", profile.id, exc)
+            cleanup_reason = tr_format(
+                QCoreApplication.translate(
+                    "ProfileController",
+                    "The new profile '%1' (%2) remains because cleanup failed: %3. Delete it manually.",
+                ),
+                profile.name,
+                f"{profile.id}.json",
+                exc,
+            )
+            reason = f"{result.reason} {cleanup_reason}" if result.reason else cleanup_reason
+            return SwitchResult(switched=False, reason=reason)
+        return result
 
     def _switch_locked(self, profile_id: str) -> SwitchResult:
         """The switch body, run inside a held ``_dictionary_mutation_guard``."""

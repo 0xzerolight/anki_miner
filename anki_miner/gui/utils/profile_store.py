@@ -30,11 +30,17 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.config_manager import _CONFIG_MAX_BYTES, GUIConfigManager
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
-from anki_miner.utils.slug import slugify
+from anki_miner.utils.slug import is_windows_device_basename, slugify
 
 logger = logging.getLogger(__name__)
 
 MAX_PROFILES = 50
+
+# ``atomic_write_path`` stages ``.<id>-<8 random chars>.json`` beside the
+# destination. Leave that staging overhead plus the largest collision suffix
+# inside the common 255-byte component limit.
+_PROFILE_ID_MAX_BYTES = 240
+_PROFILE_ID_BASE_MAX_BYTES = _PROFILE_ID_MAX_BYTES - len(f"-{MAX_PROFILES}".encode())
 
 # JSON-only marker key holding a profile's display name. Popped by
 # GUIConfigManager._migrate_dict, so it never reaches AnkiMinerConfig.
@@ -225,9 +231,12 @@ class ProfileStore:
             ValueError: If ``name`` is blank, collides case-insensitively with
                 an existing display name, or the store is already at
                 :data:`MAX_PROFILES`.
-            OSError: If the file cannot be written.
+            OSError: If the profile directory cannot be enumerated or the file
+                cannot be written.
         """
-        existing = cls.list_profiles()
+        existing = cls.scan_profiles()
+        if existing is None:
+            raise OSError(f"Could not enumerate profile directory: {cls.profiles_dir()}")
         clean = cls._validate_name(name, existing)
         if len(existing) >= MAX_PROFILES:
             raise ValueError(f"Profile limit reached ({MAX_PROFILES})")
@@ -254,9 +263,13 @@ class ProfileStore:
                 unreadable file lands here rather than on OSError — the bounded
                 reader swallows read OSErrors into its sentinel.
             FileNotFoundError: If no file exists for ``profile_id``.
-            OSError: If the rewritten file cannot be written.
+            OSError: If the profile directory cannot be enumerated or the
+                rewritten file cannot be written.
         """
-        clean = cls._validate_name(name, cls.list_profiles(), exclude_id=profile_id)
+        existing = cls.scan_profiles()
+        if existing is None:
+            raise OSError(f"Could not enumerate profile directory: {cls.profiles_dir()}")
+        clean = cls._validate_name(name, existing, exclude_id=profile_id)
 
         path = cls._path_for(profile_id)
         if not path.exists():
@@ -317,12 +330,17 @@ class ProfileStore:
 
         Raises:
             ValueError: If ``profile_id`` is empty, starts with a dot, contains
-                a path separator or ``..``, or does not resolve to a bare
-                filename.
+                a path separator or ``..``, is a Windows device basename, or
+                does not resolve to a bare filename.
         """
         if not profile_id:
             raise ValueError("Profile id must not be empty")
-        if profile_id.startswith(".") or ".." in profile_id or any(sep in profile_id for sep in _ID_SEPARATORS):
+        if (
+            profile_id.startswith(".")
+            or ".." in profile_id
+            or any(sep in profile_id for sep in _ID_SEPARATORS)
+            or is_windows_device_basename(profile_id)
+        ):
             raise ValueError(f"Invalid profile id: {profile_id!r}")
         filename = f"{profile_id}.json"
         if PurePosixPath(filename).name != filename or PureWindowsPath(filename).name != filename:
@@ -361,7 +379,7 @@ class ProfileStore:
         ``slugify`` maps non-ASCII code points to ``u<hex>``, so a pure-CJK name
         yields a usable id (e.g. ``u30a2u30cb``) rather than an empty string.
         """
-        base = slugify(name, fallback="profile")
+        base = slugify(name, fallback="profile", max_bytes=_PROFILE_ID_BASE_MAX_BYTES)
         candidate = base
         suffix = 2
         while cls._path_for(candidate).exists():

@@ -1283,6 +1283,70 @@ class TestCreateFromCurrent:
         assert warnings_shown == [result.reason]
         assert [p.id for p in ProfileStore.list_profiles()] == ["a"]
 
+    def test_a_pre_save_switch_failure_removes_only_the_new_profile(self, controller, window, profile_a, monkeypatch):
+        path_a = _seed("a", profile_a, "A")
+        _activate("a", profile_a)
+        before = (path_a.read_bytes(), GUIConfigManager.CONFIG_FILE.read_bytes())
+        monkeypatch.setattr(
+            GUIConfigManager,
+            "save_config",
+            lambda config: (_ for _ in ()).throw(OSError("disk full")),
+        )
+
+        result = controller.create_from_current("Anime")
+
+        assert not result.switched
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
+        assert window.config is profile_a
+        assert ProfileStore.list_profiles() == (Profile(id="a", name="A"),)
+        assert (path_a.read_bytes(), GUIConfigManager.CONFIG_FILE.read_bytes()) == before
+
+    def test_second_resource_refusal_removes_the_new_profile(self, controller, window, profile_a):
+        _seed("a", profile_a, "A")
+        _activate("a", profile_a)
+        releases = iter((True, False))
+        window.release_dictionary_resources = lambda: next(releases)
+
+        result = controller.create_from_current("Anime")
+
+        assert not result.switched
+        assert ProfileStore.list_profiles() == (Profile(id="a", name="A"),)
+
+    def test_failed_new_profile_cleanup_is_reported(self, controller, window, profile_a, monkeypatch):
+        _seed("a", profile_a, "A")
+        _activate("a", profile_a)
+        releases = iter((True, False))
+        window.release_dictionary_resources = lambda: next(releases)
+        monkeypatch.setattr(
+            ProfileStore,
+            "delete",
+            lambda profile_id: (_ for _ in ()).throw(OSError("cleanup denied")),
+        )
+
+        result = controller.create_from_current("Anime")
+
+        assert not result.switched
+        assert result.reason is not None
+        assert "Anime" in result.reason
+        assert "cleanup denied" in result.reason
+        assert ProfileStore.list_profiles() == (
+            Profile(id="a", name="A"),
+            Profile(id="anime", name="Anime"),
+        )
+
+    def test_durable_degraded_switch_preserves_the_new_profile(self, controller, window, profile_a):
+        _seed("a", profile_a, "A")
+        _activate("a", profile_a)
+        window.build_services_error = RuntimeError("refresh failed")
+
+        result = controller.create_from_current("Anime")
+
+        assert result.switched
+        assert result.reason is not None and "refresh failed" in result.reason
+        assert GUIConfigManager.ACTIVE_PROFILE_ID == "anime"
+        assert ProfileStore.read_profile("anime").anki_deck_name == profile_a.anki_deck_name
+        assert "anime" in {profile.id for profile in ProfileStore.list_profiles()}
+
 
 # ---------------------------------------------------------------------------
 # Terminal header sync

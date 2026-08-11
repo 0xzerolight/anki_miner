@@ -32,6 +32,29 @@ def test_validate_store_id_rejects_non_component_ids(store_id: str) -> None:
         validate_store_id(store_id)
 
 
+@pytest.mark.parametrize(
+    "store_id",
+    (
+        "CON",
+        "prn",
+        "Aux",
+        "nul",
+        *(f"com{index}" for index in range(1, 10)),
+        *(f"lpt{index}" for index in range(1, 10)),
+        "COM¹",
+        "com²",
+        "Com³",
+        "LPT¹",
+        "lpt²",
+        "Lpt³",
+        "con.backup",
+    ),
+)
+def test_validate_store_id_rejects_windows_device_basenames(store_id: str) -> None:
+    with pytest.raises(ValueError):
+        validate_store_id(store_id)
+
+
 def test_resolve_managed_slot_returns_direct_child_of_resolved_root(tmp_path: Path) -> None:
     root = tmp_path / "root"
 
