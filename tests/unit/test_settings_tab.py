@@ -1177,3 +1177,44 @@ def test_name_lists_are_fetched_once_on_first_show(tab):
         tab.hide()
         tab.show()
     assert refresh.call_count == 1
+
+
+def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_path, monkeypatch, qtbot):
+    import sqlite3
+    import time
+
+    from PyQt6.QtCore import QTimer
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.services.known_word_db import KnownWordDB
+
+    db_path = tmp_path / "known_words.db"
+    db = KnownWordDB(db_path)
+    db.initialize()
+    db.add_words({"食べる"}, source="anki")
+    tab.config = replace(tab.config, known_words_db_path=db_path)
+    monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: QMessageBox.StandardButton.Ok)
+
+    holder = sqlite3.connect(db_path)
+    holder.execute("BEGIN IMMEDIATE")
+    event_loop_tick: list[bool] = []
+    QTimer.singleShot(0, lambda: event_loop_tick.append(True))
+    workers = []
+    try:
+        started = time.monotonic()
+        tab._on_rebuild_known_words()
+        elapsed = time.monotonic() - started
+        workers = list(getattr(tab, "_off_thread_workers", ()))
+
+        assert elapsed < 0.5
+        assert tab.filtering_panel.rebuild_known_words_button.isEnabled() is False
+        qtbot.waitUntil(lambda: bool(event_loop_tick), timeout=500)
+        assert len(workers) == 1
+    finally:
+        holder.rollback()
+        holder.close()
+        for worker in workers:
+            worker.wait(6000)
+
+    qtbot.waitUntil(lambda: tab.filtering_panel.rebuild_known_words_button.isEnabled(), timeout=1000)

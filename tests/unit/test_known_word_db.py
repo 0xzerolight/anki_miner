@@ -4,6 +4,7 @@ import os
 import sqlite3
 import stat
 import sys
+import threading
 
 import pytest
 
@@ -704,3 +705,55 @@ class TestNfcMigration:
         with sqlite3.connect(db_path) as conn:
             row = conn.execute("SELECT lemma, source, added_at FROM known_words").fetchone()
         assert row == (self.NFC, "user", "2026-01-01")
+
+    def test_concurrent_writer_waits_for_migration_snapshot(self, tmp_path, monkeypatch):
+        """The migration lock must cover its version check, read, and rewrite."""
+        import anki_miner.services.known_word_db as known_word_db_mod
+
+        db_path = self._legacy_db(tmp_path, [(self.NFD, "anki", "2026-01-01")])
+        migration_reading = threading.Event()
+        release_migration = threading.Event()
+        writer_committed = threading.Event()
+        errors: list[BaseException] = []
+        real_normalize = known_word_db_mod.normalize_lemma
+
+        def pause_while_normalizing(word):
+            migration_reading.set()
+            assert release_migration.wait(5)
+            return real_normalize(word)
+
+        def initialize():
+            try:
+                KnownWordDB(db_path).initialize()
+            except BaseException as exc:  # pragma: no cover - thread receipt
+                errors.append(exc)
+
+        def write_new_word():
+            try:
+                with sqlite3.connect(db_path) as conn:
+                    conn.execute(
+                        "INSERT INTO known_words (lemma, source) VALUES (?, ?)",
+                        ("新規", "user"),
+                    )
+                    conn.commit()
+                writer_committed.set()
+            except BaseException as exc:  # pragma: no cover - thread receipt
+                errors.append(exc)
+
+        monkeypatch.setattr(known_word_db_mod, "normalize_lemma", pause_while_normalizing)
+        migration = threading.Thread(target=initialize)
+        writer = threading.Thread(target=write_new_word)
+        migration.start()
+        assert migration_reading.wait(5)
+        writer.start()
+        try:
+            assert not writer_committed.wait(0.2), "writer committed inside the migration snapshot"
+        finally:
+            release_migration.set()
+            migration.join(5)
+            writer.join(5)
+
+        assert not migration.is_alive()
+        assert not writer.is_alive()
+        assert errors == []
+        assert KnownWordDB(db_path).get_known_words() == {self.NFC, "新規"}

@@ -1844,25 +1844,48 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         try:
             db = KnownWordDB(self.config.known_words_db_path)
+        except Exception as error:  # noqa: BLE001 - preserve the existing constructor boundary
+            self._on_rebuild_known_words_error(str(error))
+            return
+
+        def work() -> int:
             db.initialize()
             # Preserve the user-curated ignore list (Issue #42); only the
             # Anki-synced rows are rebuilt from Anki on the next run.
-            removed = db.clear(preserve_user=True)
-        except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("The known-words cache could not be cleared."),
-                    details=str(e),
-                )
-            )
-            return
+            return db.clear(preserve_user=True)
 
-        self.clear_screen_issue()
-        QMessageBox.information(
+        self.filtering_panel.rebuild_known_words_button.setEnabled(False)
+        run_off_thread(
             self,
-            self.tr("Rebuild Known Words DB"),
-            tr_format(self.tr("Cleared %1 cached word(s). The cache will rebuild on the next run."), removed),
+            work,
+            lambda removed: self._on_rebuild_known_words_succeeded(
+                lambda: QMessageBox.information(
+                    self,
+                    self.tr("Rebuild Known Words DB"),
+                    tr_format(
+                        self.tr("Cleared %1 cached word(s). The cache will rebuild on the next run."),
+                        removed,
+                    ),
+                )
+            ),
+            self._on_rebuild_known_words_error,
+            on_finished=self._on_rebuild_known_words_finished,
         )
+
+    def _on_rebuild_known_words_succeeded(self, notify: Callable[[], object]) -> None:
+        self.clear_screen_issue()
+        notify()
+
+    def _on_rebuild_known_words_error(self, message: str) -> None:
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("The known-words cache could not be cleared."),
+                details=message,
+            )
+        )
+
+    def _on_rebuild_known_words_finished(self) -> None:
+        self.filtering_panel.rebuild_known_words_button.setEnabled(True)
 
     def _on_manage_known_words(self) -> None:
         """Open the Manage Known Words dialog (Issue #42)."""

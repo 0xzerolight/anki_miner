@@ -1,5 +1,7 @@
 """Tests for KnownWordsManagerDialog (Issue #42)."""
 
+import contextlib
+import threading
 import unicodedata
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -138,6 +140,83 @@ class TestExportDialogStartDir:
         assert initial != "", "initial path must not be empty"
         assert "known_words.txt" in initial, f"suggested filename must be preserved; got {initial!r}"
 
+    def test_write_failure_shows_nonmodal_retry(self, qtbot, tmp_path, monkeypatch, capture_off_thread, message_boxes):
+        db = _db_with_user_words(tmp_path, user=("ラーメン",))
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        picks: list[str] = []
+
+        def pick_save(*args, on_done, **kwargs):
+            target = str(tmp_path / "known_words.txt")
+            picks.append(target)
+            on_done(target)
+
+        monkeypatch.setattr(known_words_dialog_mod.file_dialogs, "pick_save_file", pick_save)
+        monkeypatch.setattr(dlg, "export_to", MagicMock(side_effect=OSError("disk full")))
+
+        dlg._on_export()
+        capture_off_thread["on_error"]("disk full")
+        capture_off_thread["on_finished"]()
+
+        issue = dlg.issue_banner().current_issue()
+        assert issue is not None
+        assert issue.action_id == "known-words.export-retry"
+        assert "disk full" in issue.details
+        assert dlg.isVisible()
+        assert message_boxes["infos"] == []
+        dlg.issue_banner().action_button.click()
+        assert len(picks) == 2
+
+    @pytest.mark.parametrize("export_error", [False, True], ids=["success", "error"])
+    def test_close_suppresses_delayed_real_worker_callbacks(
+        self, qtbot, tmp_path, monkeypatch, message_boxes, export_error
+    ):
+        db = _db_with_user_words(tmp_path, user=("ラーメン",))
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+        dlg.show()
+        target = tmp_path / "known_words.txt"
+        entered = threading.Event()
+        release = threading.Event()
+        real_export_to = dlg.export_to
+
+        def delayed_export(path):
+            entered.set()
+            if not release.wait(3):
+                raise TimeoutError("test did not release export")
+            if export_error:
+                raise OSError("disk full")
+            return real_export_to(path)
+
+        monkeypatch.setattr(dlg, "export_to", delayed_export)
+        monkeypatch.setattr(
+            known_words_dialog_mod.file_dialogs,
+            "pick_save_file",
+            lambda *args, on_done, **kwargs: on_done(str(target)),
+        )
+
+        dlg._on_export()
+        workers = list(dlg._off_thread_workers)
+        assert len(workers) == 1
+        try:
+            assert entered.wait(3)
+            dlg.accept()
+            release.set()
+            assert workers[0].wait(3000)
+            qtbot.waitUntil(lambda: not dlg._off_thread_workers, timeout=3000)
+        finally:
+            release.set()
+            for worker in workers:
+                with contextlib.suppress(RuntimeError):
+                    worker.wait(3000)
+
+        assert not dlg.isVisible()
+        assert message_boxes["infos"] == []
+        assert dlg.issue_banner().current_issue() is None
+        assert dlg.export_button.isEnabled() is False
+        assert target.exists() is not export_error
+
 
 # ----------------------------------------------------------------------
 # Import…
@@ -215,11 +294,12 @@ def capture_off_thread(monkeypatch):
     """Replace run_off_thread with a capturing stub (no real worker thread)."""
     captured: dict = {}
 
-    def fake(parent, work, on_done, on_error=None, *, error_prefix=""):
+    def fake(parent, work, on_done, on_error=None, *, error_prefix="", on_finished=None):
         captured["parent"] = parent
         captured["work"] = work
         captured["on_done"] = on_done
         captured["on_error"] = on_error
+        captured["on_finished"] = on_finished
         return MagicMock()
 
     monkeypatch.setattr(known_words_dialog_mod, "run_off_thread", fake)
@@ -346,6 +426,30 @@ class TestImportSlot:
 
         assert "work" not in capture_off_thread, "no worker on cancelled picker"
         assert dlg.import_button.isEnabled() is True
+
+    def test_close_ignores_late_parse_result(self, qtbot, tmp_path, monkeypatch, capture_off_thread, message_boxes):
+        db = _db_with_user_words(tmp_path, user=(), anki=())
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+
+        _start_import(dlg, monkeypatch)
+        dlg.accept()
+        capture_off_thread["on_done"](_import_result({"寿司"}))
+
+        assert message_boxes["questions"] == []
+        assert message_boxes["infos"] == []
+        assert db.get_words_by_source("user") == set()
+
+    def test_close_ignores_late_parse_error(self, qtbot, tmp_path, monkeypatch, capture_off_thread, message_boxes):
+        db = _db_with_user_words(tmp_path, user=(), anki=())
+        dlg = KnownWordsManagerDialog(db)
+        qtbot.addWidget(dlg)
+
+        _start_import(dlg, monkeypatch)
+        dlg.accept()
+        capture_off_thread["on_error"]("boom")
+
+        assert dlg.issue_banner().current_issue() is None
 
 
 class TestFormatLabels:

@@ -156,6 +156,13 @@ class TestMigakuLegacy:
         assert result.words == frozenset({"言葉", "猫"})
         assert result.total_entries == 3
 
+    def test_known_word_padding_is_removed(self, tmp_path):
+        payload = [["  食べる  ", 2]]
+
+        result = parse_known_words_file(_write(tmp_path, "backup.json", json.dumps(payload)))
+
+        assert result.words == frozenset({"食べる"})
+
 
 class TestMigakuCsv:
     def test_known_rows_only(self, tmp_path):

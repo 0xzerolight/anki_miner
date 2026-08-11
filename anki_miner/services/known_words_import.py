@@ -139,7 +139,7 @@ def _parse_json(data: Any) -> KnownWordsImportResult:
             for pair in data
         )
     ):
-        words = {word for word, status in data if status == 2 and _clean(word)}
+        words = {_clean(word) for word, status in data if status == 2 and _clean(word)}
         return _result("migaku_legacy", words, len(data))
     raise KnownWordsImportError("unrecognized")
 
