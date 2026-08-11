@@ -14,6 +14,7 @@ from typing import Any
 
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.bounded_reader import read_json_bounded
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,11 @@ class GUIConfigManager:
     # hidden; a disk read there (let alone a "missing -> create" write) would
     # add a new failure mode to all three.
     ACTIVE_PROFILE_ID: str | None = None
+
+    # A recovered .bak must not become authoritative while an adjacent store
+    # tombstone has no durable deletion-intent marker. Tied to CONFIG_FILE so
+    # test/home retargeting cannot carry the hold onto another config.
+    _DEFERRED_BACKUP_REPAIR_FOR: Path | None = None
 
     # Schema version stamped into every saved gui_config.json. Bump it only
     # when introducing a migration shim that a load MUST run for files written
@@ -109,6 +115,15 @@ class GUIConfigManager:
         Raises:
             OSError: If unable to create directory or write file
         """
+        if cls._DEFERRED_BACKUP_REPAIR_FOR == cls.CONFIG_FILE:
+            if not backup_config_repair_is_safe(config):
+                logger.warning(
+                    "Configuration save deferred until retained deletion intent is durable: %s",
+                    cls.CONFIG_FILE,
+                )
+                return
+            cls._DEFERRED_BACKUP_REPAIR_FOR = None
+
         # Ensure directory exists
         cls.CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
@@ -432,11 +447,14 @@ class GUIConfigManager:
 
     @classmethod
     def load_config_with_provenance(cls) -> tuple[AnkiMinerConfig, bool]:
-        """Load config plus whether usable persisted chain provenance exists."""
+        """Load config plus whether its chains authorize artifact collection."""
         bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
         if cls.CONFIG_FILE.exists():
             try:
-                return cls._parse_and_migrate(cls.CONFIG_FILE), True
+                config = cls._parse_and_migrate(cls.CONFIG_FILE)
+                if cls._DEFERRED_BACKUP_REPAIR_FOR == cls.CONFIG_FILE:
+                    cls._DEFERRED_BACKUP_REPAIR_FOR = None
+                return config, True
             except (_ConfigReadError, TypeError, ValueError) as e:
                 logger.warning("gui_config.json invalid (%s); attempting .bak recovery", e)
             except OSError as e:
@@ -444,6 +462,8 @@ class GUIConfigManager:
                 # crash startup — try .bak before falling back to defaults.
                 logger.warning("gui_config.json unreadable (%s); attempting .bak recovery", e)
         elif not bak_path.exists():
+            if cls._DEFERRED_BACKUP_REPAIR_FOR == cls.CONFIG_FILE:
+                cls._DEFERRED_BACKUP_REPAIR_FOR = None
             return create_default_config(), False
         else:
             logger.warning("gui_config.json missing; attempting .bak recovery")
@@ -451,10 +471,17 @@ class GUIConfigManager:
         # One .bak attempt — no loop.
         try:
             config = cls._parse_and_migrate(bak_path)
-            cls._repair_primary_from_backup(bak_path)
+            if backup_config_repair_is_safe(config):
+                if cls._DEFERRED_BACKUP_REPAIR_FOR == cls.CONFIG_FILE:
+                    cls._DEFERRED_BACKUP_REPAIR_FOR = None
+                cls._repair_primary_from_backup(bak_path)
+            else:
+                cls._DEFERRED_BACKUP_REPAIR_FOR = cls.CONFIG_FILE
             logger.warning("gui_config.json recovered from .bak")
-            return config, True
+            return config, False
         except (_ConfigReadError, TypeError, ValueError, OSError) as bak_err:
+            if cls._DEFERRED_BACKUP_REPAIR_FOR == cls.CONFIG_FILE:
+                cls._DEFERRED_BACKUP_REPAIR_FOR = None
             logger.warning("gui_config.json.bak also unusable (%s); using defaults", bak_err)
             return create_default_config(), False
 

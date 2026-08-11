@@ -111,6 +111,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self.config = config
         self.worker_thread: BackfillScanWorker | BackfillApplyWorker | None = None
         self._plan: BackfillPlan | None = None
+        self._scan_warnings: tuple[str, ...] = ()
         self._decks_requested = False
         self._deck_worker: SingleCallWorker | None = None
         # Set by the error slot, read when the thread ends: an error arrives
@@ -369,6 +370,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         """
         self.config = config
         self._plan = None
+        self._scan_warnings = ()
         self.preview_table.setRowCount(0)
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
@@ -463,12 +465,21 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         )
         worker.start()
 
-    def _on_scan_finished(self, plan: BackfillPlan) -> None:
+    def _on_scan_finished(self, plan: BackfillPlan, warnings: tuple[str, ...] = ()) -> None:
+        self._scan_warnings = tuple(warnings)
         self._plan = plan if plan.notes else None
         self._populate_preview(plan)
-        self.apply_button.setEnabled(bool(plan.notes))
+        self.apply_button.setEnabled(self._can_apply_plan())
         self._sync_action_prominence()
         self.status_label.setText("")
+
+    def _can_apply_plan(self) -> bool:
+        if self._plan is None:
+            return False
+        if not self._scan_warnings:
+            return True
+        summary = self.summary_label.text()
+        return not self.summary_label.isHidden() and all(warning in summary for warning in self._scan_warnings)
 
     def _populate_preview(self, plan: BackfillPlan) -> None:
         rows = [(note.expression, change) for note in plan.notes for change in note.changes][:_PREVIEW_ROW_CAP]
@@ -521,7 +532,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         return _display(text)
 
     def _summary_text(self, plan: BackfillPlan, shown_rows: int) -> str:
-        parts: list[str] = []
+        parts: list[str] = list(self._scan_warnings)
         if plan.scanned == 0:
             # A query that matched nothing is NOT "all fields already have
             # values" — that sentence sent users hunting for a filled-in
@@ -610,6 +621,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             return
         if plan.config_version != self.config.config_version:
             self._plan = None
+            self._scan_warnings = ()
             self.preview_table.setRowCount(0)
             self.apply_button.setEnabled(False)
             self.summary_label.setText("")
@@ -653,6 +665,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
 
     def _on_apply_finished(self, result: BackfillResult) -> None:
         self._plan = None
+        self._scan_warnings = ()
         self.preview_table.setRowCount(0)
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
@@ -671,6 +684,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
 
     def _on_apply_cancelled(self) -> None:
         self._plan = None
+        self._scan_warnings = ()
         self.preview_table.setRowCount(0)
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
@@ -683,7 +697,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
 
     def _set_running(self, running: bool) -> None:
         self.scan_button.setEnabled(not running)
-        self.apply_button.setEnabled(not running and self._plan is not None)
+        self.apply_button.setEnabled(not running and self._can_apply_plan())
         self.cancel_button.setEnabled(running)
         for checkbox in self.field_checkboxes.values():
             checkbox.setEnabled(not running)

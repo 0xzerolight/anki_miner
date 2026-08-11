@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
+from anki_miner.config import PitchSourceEntry
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.workers import backfill_worker as backfill_worker_module
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, BackfillResult
+from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 
 _OPTIONS = BackfillOptions(field_keys=frozenset({"frequency"}))
 _PLAN = BackfillPlan(
@@ -101,12 +104,86 @@ class TestBackfillScanWorker:
             with qtbot.waitSignal(worker.result_ready, timeout=5000) as blocker:
                 worker.start()
             worker.wait(5000)
-        assert blocker.args == [_PLAN]
+        assert blocker.args == [_PLAN, ()]
         anki_cls.assert_called_once_with(test_config)
         factory.assert_called_once_with(test_config)
         assert scan.call_args[0][0] is anki_cls.return_value
         assert scan.call_args[0][2] is factory.return_value
         factory.return_value.close.assert_called_once_with()
+
+    def test_missing_primary_warning_reaches_mixed_plan_approval(self, qtbot, test_config, tmp_path, monkeypatch):
+        pitch_root = tmp_path / "pitch"
+        primary_csv = tmp_path / "primary.csv"
+        primary_csv.write_text("はし,橋,0\n", encoding="utf-8")
+        fallback_csv = tmp_path / "fallback.csv"
+        fallback_csv.write_text("はし,橋,1\n", encoding="utf-8")
+        import_pitch_source(primary_csv, pitch_root, source_id="primary", source_name="Primary")
+        import_pitch_source(fallback_csv, pitch_root, source_id="fallback", source_name="Fallback")
+        (pitch_root / "primary").rename(tmp_path / "primary-offline")
+
+        fields = dict(test_config.anki_fields)
+        fields.update(
+            {
+                "expression_reading": "ExpressionReading",
+                "expression_furigana": "ExpressionFurigana",
+                "pitch_graph": "",
+                "pitch_text": "PitchText",
+            }
+        )
+        config = replace(
+            test_config,
+            anki_fields=fields,
+            pitch_root=pitch_root,
+            pitch_chain=(PitchSourceEntry("primary"), PitchSourceEntry("fallback")),
+        )
+
+        class _BackfillAnki:
+            def note_type_names(self):
+                return [config.anki_note_type]
+
+            def ordered_note_type_field_names(self, _note_type):
+                return ["word", "ExpressionReading", "ExpressionFurigana", "PitchText"]
+
+            def find_notes(self, _query):
+                return [1]
+
+            def notes_info(self, _note_ids):
+                return [
+                    {
+                        "noteId": 1,
+                        "fields": {
+                            "word": {"value": "橋"},
+                            "ExpressionReading": {"value": "はし"},
+                            "ExpressionFurigana": {"value": ""},
+                            "PitchText": {"value": ""},
+                        },
+                    }
+                ]
+
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", lambda _config: _BackfillAnki())
+        tab = CardBackfillTab(config)
+        qtbot.addWidget(tab)
+        tab.field_checkboxes["pitch"].setChecked(True)
+        tab.field_checkboxes["reading"].setChecked(True)
+
+        tab._start_scan()
+        worker = tab.worker_thread
+        assert isinstance(worker, BackfillScanWorker)
+        qtbot.waitUntil(lambda: not worker.isRunning(), timeout=5000)
+        worker.wait(5000)
+        qtbot.waitUntil(lambda: tab.worker_thread is None, timeout=5000)
+
+        warning = "Pitch accent source 'primary' unavailable; skipped"
+        assert tab._plan is not None
+        planned = {change.field_key for note in tab._plan.notes for change in note.changes}
+        assert planned == {"expression_furigana", "pitch_text"}
+        assert warning in tab.summary_label.text()
+        assert not tab.summary_label.isHidden()
+        assert tab.apply_button.isEnabled()
+
+        tab.summary_label.clear()
+        tab._set_running(False)
+        assert not tab.apply_button.isEnabled()
 
     def test_emits_error_on_anki_service_valueerror(self, qtbot, test_config):
         with patch(f"{_WORKER_MOD}.AnkiService", side_effect=ValueError("bad mapping")):

@@ -25,7 +25,7 @@ from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, prim
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec
+from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec, ChainSourceRow
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainListLabels,
     ChainSettingsPanelBase,
@@ -127,6 +127,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     add_pack_requested = pyqtSignal()
     reimport_pack_requested = pyqtSignal(str)
+    restore_requested = pyqtSignal()
     # Emitted when the user asks to clear JPod101 .miss markers so absent words
     # are re-tried next run. The settings tab owns the actual unlink sweep (it
     # holds the audio_cache path); the panel only surfaces the affordance.
@@ -210,6 +211,14 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
         self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
 
+        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
+        self._restore_btn.setToolTip(
+            self.tr(
+                "Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed."
+            )
+        )
+        self._restore_btn.clicked.connect(self.restore_requested.emit)
+
         container = self._build_chain_container(
             ChainListLabels(
                 explanation=self.tr(
@@ -223,7 +232,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down in priority"),
             ),
-            extra_actions=(self._retry_missing_btn,),
+            extra_actions=(self._restore_btn, self._retry_missing_btn),
         )
         # Two ways in, one control: a second primary button beside the first
         # would say the app has two equally-important task actions here (D41).
@@ -248,6 +257,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 self._add_btn.text(),
                 self._add_pack_action.text(),
                 self._add_online_action.text(),
+                self._restore_btn.text(),
                 self._retry_missing_btn.text(),
             ),
         )
@@ -350,6 +360,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)
+        self._restore_btn.setEnabled(enabled)
 
     def set_chain(
         self,
@@ -360,9 +371,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         if registry_meta is not None:
             # Caller pre-supplied meta; use it directly, no disk scan needed.
             self._view = _RegistryView(registry_meta.get)
-        else:
-            # Invalidate so _rebuild_list will scan on demand.
-            self._view = None
         self._rebuild_list()
 
     def _entry_with_enabled(self, entry: AudioSourceEntry, enabled: bool) -> AudioSourceEntry:
@@ -435,11 +443,16 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
     def _row_spec(self, entry: AudioSourceEntry, view: _RegistryView | None) -> ChainRowSpec:
         display, fmt, count, dir_missing, schema_stale = self._describe_entry(entry, view)
+        pack_missing = (
+            entry.kind == "pack" and view is not None and (entry.pack_id is None or view.get(entry.pack_id) is None)
+        )
         metadata: tuple[str, ...] = (fmt,) if fmt else ()
         if count is not None:
             metadata = (*metadata, tr_format(self.tr("%1 entries"), f"{count:,}"))
         if schema_stale:
             warning = self.tr("⚠ re-import required (app upgrade)")
+        elif pack_missing:
+            warning = self.tr("⚠ pack missing — re-import")
         elif dir_missing:
             warning = self.tr("⚠ folder missing — re-import")
         else:
@@ -452,6 +465,14 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             enabled_accessible_text=tr_format(self.tr("Enable %1"), display),
             enabled_tooltip=tr_format(self.tr("Enable or disable %1"), display),
             warning=warning,
+            repair_text=self.tr("Re-import") if pack_missing and entry.pack_id else "",
+        )
+
+    def _connect_row_repair(self, row: ChainSourceRow) -> None:
+        if row.repair_button is None or not row.entry.pack_id:
+            return
+        row.repair_button.clicked.connect(
+            lambda _checked=False, pack_id=row.entry.pack_id: self.reimport_pack_requested.emit(pack_id)
         )
 
     def _is_protected_entry(self, entry: AudioSourceEntry) -> bool:

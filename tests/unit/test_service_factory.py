@@ -392,6 +392,95 @@ class TestPitchServiceWiring:
         services = service_factory.create_services(cfg)
         assert services.pitch_accent_service is None
 
+    def test_missing_enabled_source_warns_and_preserves_remaining_order(self, tmp_path: Path):
+        from anki_miner.config import PitchSourceEntry
+        from anki_miner.services.pitch_accent.source_importer import import_pitch_source
+
+        pitch_root = tmp_path / "pitch"
+        fallback = tmp_path / "fallback.csv"
+        fallback.write_text("はし,橋,1\n", encoding="utf-8")
+        later = tmp_path / "later.csv"
+        later.write_text("はし,橋,2\n", encoding="utf-8")
+        import_pitch_source(fallback, pitch_root, source_id="fallback", source_name="Fallback")
+        import_pitch_source(later, pitch_root, source_id="later", source_name="Later")
+        cfg = dataclasses.replace(
+            self._config(tmp_path, with_source=False),
+            pitch_chain=(
+                PitchSourceEntry("primary"),
+                PitchSourceEntry("fallback"),
+                PitchSourceEntry("later"),
+            ),
+        )
+        load_result = service_factory.ServiceLoadResult()
+
+        service = service_factory._build_pitch_service(cfg, load_result)
+
+        assert service is not None
+        assert [provider.source_id for provider in service.providers] == ["fallback", "later"]
+        assert service.lookup_entry("橋", "はし").pattern == "1"
+        assert any("primary" in warning for warning in load_result.warnings)
+
+    def test_backfill_uses_remaining_pitch_source_and_carries_named_warning(self, tmp_path: Path):
+        from anki_miner.config import PitchSourceEntry
+        from anki_miner.services.card_backfiller import BackfillOptions, scan_backfill
+        from anki_miner.services.pitch_accent.source_importer import import_pitch_source
+
+        pitch_root = tmp_path / "pitch"
+        fallback = tmp_path / "fallback.csv"
+        fallback.write_text("はし,橋,1\n", encoding="utf-8")
+        import_pitch_source(fallback, pitch_root, source_id="fallback", source_name="Fallback")
+        fields = dict(AnkiMinerConfig().anki_fields)
+        fields.update(
+            {
+                "word": "Expression",
+                "expression_reading": "ExpressionReading",
+                "pitch_text": "PitchText",
+            }
+        )
+        cfg = dataclasses.replace(
+            self._config(tmp_path, with_source=False),
+            anki_fields=fields,
+            pitch_root=pitch_root,
+            pitch_chain=(PitchSourceEntry("primary"), PitchSourceEntry("fallback")),
+        )
+
+        class _BackfillAnki:
+            def note_type_names(self):
+                return [cfg.anki_note_type]
+
+            def ordered_note_type_field_names(self, _note_type):
+                return ["Expression", "ExpressionReading", "PitchText"]
+
+            def find_notes(self, _query):
+                return [1]
+
+            def notes_info(self, _note_ids):
+                return [
+                    {
+                        "noteId": 1,
+                        "fields": {
+                            "Expression": {"value": "橋"},
+                            "ExpressionReading": {"value": "はし"},
+                            "PitchText": {"value": ""},
+                        },
+                    }
+                ]
+
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            plan = scan_backfill(
+                _BackfillAnki(),
+                cfg,
+                bundle,
+                BackfillOptions(field_keys=frozenset({"pitch_text"})),
+            )
+        finally:
+            bundle.close()
+
+        assert len(plan.notes) == 1
+        assert plan.unavailable_fields == ()
+        assert any("primary" in warning for warning in bundle.load_result.warnings)
+
 
 class TestCompoundMatchingInjection:
     """term_lookup wiring: injected iff toggle on AND an enabled indexed dict."""

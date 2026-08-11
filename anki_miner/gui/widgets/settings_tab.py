@@ -69,6 +69,7 @@ from anki_miner.gui.widgets.panels import (
     UISettingsPanel,
     YouTubeSettingsPanel,
 )
+from anki_miner.gui.widgets.panels.chain_settings_panel_base import ChainSettingsPanelBase
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.settings_search import (
     BREADCRUMB_SEPARATOR,
@@ -79,8 +80,11 @@ from anki_miner.gui.widgets.settings_search import (
     build_entries,
     flash_search_hit,
 )
+from anki_miner.services.audio_packs.registry import AudioPackMeta, AudioPackRegistry
 from anki_miner.services.expression_audio_fetcher import purge_miss_markers
+from anki_miner.services.frequency.registry import FreqSourceMeta, FrequencySourceRegistry
 from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.pitch_accent.registry import PitchSourceMeta, PitchSourceRegistry
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 from anki_miner.utils.i18n import tr_format
 
@@ -677,6 +681,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Audio panel signals — wire Add/Reimport to the import flow controller.
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
         self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
+        self.audio_panel.restore_requested.connect(self._restore_audio_from_disk)
         # Persist chain immediately after reorder/toggle.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
@@ -686,6 +691,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
         self.frequency_panel.reimport_source_requested.connect(self._frequency_import_flow.reimport_source)
+        self.frequency_panel.restore_requested.connect(self._restore_frequency_from_disk)
         # Persist chain immediately after reorder/toggle.
         self.frequency_panel.chain_changed.connect(
             lambda: self._persist_frequency_chain_change(self.frequency_panel.get_chain())
@@ -694,6 +700,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Pitch panel signals — same wiring as frequency.
         self.pitch_panel.add_source_requested.connect(self._pitch_import_flow.add_source)
         self.pitch_panel.reimport_source_requested.connect(self._pitch_import_flow.reimport_source)
+        self.pitch_panel.restore_requested.connect(self._restore_pitch_from_disk)
         self.pitch_panel.chain_changed.connect(lambda: self._persist_pitch_chain_change(self.pitch_panel.get_chain()))
 
         # Filtering panel: excluded-decks picker + known-words cache rebuild (Issue #38).
@@ -718,6 +725,142 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.cuda_pack_download_requested.connect(self._on_cuda_pack_download_clicked)
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
         self.subtitles_panel.vulkan_model_download_requested.connect(self._on_vulkan_download_clicked)
+
+    def _start_restore_scan(
+        self,
+        panel: ChainSettingsPanelBase,
+        work: Callable[[], object],
+        on_done: Callable[[object], None],
+        error_summary: str,
+    ) -> None:
+        if not panel.prepare_for_mutation():
+            return
+        token = panel.hold_mutation("restore")
+
+        def finish(result: object) -> None:
+            try:
+                on_done(result)
+            finally:
+                panel.release(token)
+
+        def fail(message: str) -> None:
+            try:
+                panel.show_screen_issue(ScreenIssue(summary=error_summary, details=message))
+            finally:
+                panel.release(token)
+
+        try:
+            run_off_thread(self, work, finish, fail)
+        except Exception as error:  # noqa: BLE001 - dispatch failure is shown inline
+            fail(str(error))
+
+    def _restore_audio_from_disk(self) -> None:
+        scan_root = self.config.audio_packs_root
+        scan_chain = self.audio_panel.get_chain()
+        panel_config = replace(self.config, expression_audio_chain=scan_chain)
+
+        def scan() -> object:
+            registry = AudioPackRegistry(scan_root)
+            registry.load()
+            return registry.unlisted(panel_config)
+
+        def apply(result: object) -> None:
+            if self.config.audio_packs_root != scan_root or self.audio_panel.get_chain() != scan_chain:
+                return
+            packs = cast(list[AudioPackMeta], result)
+            if not packs:
+                return
+            chain = list(scan_chain)
+            entries = [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
+            insert_at = next(
+                (index for index, entry in enumerate(chain) if entry.kind == "jpod101" and entry.enabled),
+                len(chain),
+            )
+            new_chain = tuple(chain[:insert_at] + entries + chain[insert_at:])
+            try:
+                self._persist_audio_chain_change(new_chain)
+            except Exception as error:  # noqa: BLE001 - persistence boundary
+                self.audio_panel.show_screen_issue(
+                    ScreenIssue(summary=self.tr("The audio packs could not be restored."), details=str(error))
+                )
+                return
+            self.audio_panel.set_chain(new_chain)
+            self.audio_panel.refresh_registry()
+
+        self._start_restore_scan(
+            self.audio_panel,
+            scan,
+            apply,
+            self.tr("Installed audio packs could not be checked."),
+        )
+
+    def _restore_frequency_from_disk(self) -> None:
+        scan_root = self.config.freqs_root
+        scan_chain = self.frequency_panel.get_chain()
+        panel_config = replace(self.config, frequency_chain=scan_chain)
+
+        def scan() -> object:
+            registry = FrequencySourceRegistry(scan_root)
+            registry.load()
+            return registry.unlisted(panel_config)
+
+        def apply(result: object) -> None:
+            if self.config.freqs_root != scan_root or self.frequency_panel.get_chain() != scan_chain:
+                return
+            sources = cast(list[FreqSourceMeta], result)
+            if not sources:
+                return
+            new_chain = (*scan_chain, *(FreqEntry(source.source_id) for source in sources))
+            try:
+                self._persist_frequency_chain_change(new_chain)
+            except Exception as error:  # noqa: BLE001 - persistence boundary
+                self.frequency_panel.show_screen_issue(
+                    ScreenIssue(summary=self.tr("The frequency sources could not be restored."), details=str(error))
+                )
+                return
+            self.frequency_panel.set_chain(new_chain)
+            self.frequency_panel.refresh_registry()
+
+        self._start_restore_scan(
+            self.frequency_panel,
+            scan,
+            apply,
+            self.tr("Installed frequency sources could not be checked."),
+        )
+
+    def _restore_pitch_from_disk(self) -> None:
+        scan_root = self.config.pitch_root
+        scan_chain = self.pitch_panel.get_chain()
+        panel_config = replace(self.config, pitch_chain=scan_chain)
+
+        def scan() -> object:
+            registry = PitchSourceRegistry(scan_root)
+            registry.load()
+            return registry.unlisted(panel_config)
+
+        def apply(result: object) -> None:
+            if self.config.pitch_root != scan_root or self.pitch_panel.get_chain() != scan_chain:
+                return
+            sources = cast(list[PitchSourceMeta], result)
+            if not sources:
+                return
+            new_chain = (*scan_chain, *(PitchSourceEntry(source.source_id) for source in sources))
+            try:
+                self._persist_pitch_chain_change(new_chain)
+            except Exception as error:  # noqa: BLE001 - persistence boundary
+                self.pitch_panel.show_screen_issue(
+                    ScreenIssue(summary=self.tr("The pitch accent sources could not be restored."), details=str(error))
+                )
+                return
+            self.pitch_panel.set_chain(new_chain)
+            self.pitch_panel.refresh_registry()
+
+        self._start_restore_scan(
+            self.pitch_panel,
+            scan,
+            apply,
+            self.tr("Installed pitch accent sources could not be checked."),
+        )
 
     def _wire_edit_signals(self) -> None:
         """Arm the auto-save debounce on any user edit in the save-path panels.
