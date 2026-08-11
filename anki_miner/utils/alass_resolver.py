@@ -2,8 +2,7 @@
 
 Resolution order (first hit wins):
 
-1. **Config override** — ``config.alass_location`` when set and the file
-   actually exists.
+1. **Config override** — ``config.alass_location`` when set and runnable.
 2. **Bundled** — inside a PyInstaller frozen bundle, ``sys._MEIPASS/bin/alass``
    (``alass.exe`` on Windows, otherwise ``alass``).
 3. **Managed** — an in-app-downloaded binary at ``config.bin_root/alass``
@@ -67,7 +66,7 @@ def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str
     # 1. Config override.
     if override:
         override_path = Path(override)
-        if override_path.is_file():
+        if _executable_file(override_path):
             return str(override_path)
 
     # 2. Bundled binary inside the frozen distributable. Require the executable
@@ -102,7 +101,7 @@ def alass_available(alass_location, bin_root) -> bool:
 
     Resolves through the same order as :func:`resolve_alass` (override ->
     bundled -> managed -> PATH) and reports whether the result is actually
-    present: an explicit path must exist on disk, and the bare ``"alass"``
+    present: an explicit path must be runnable, and the bare ``"alass"``
     literal must be found on PATH. Mirrors the retime tab's existing
     availability probe so the Settings panel and the retime tab agree on
     whether alass is usable.
@@ -110,4 +109,4 @@ def alass_available(alass_location, bin_root) -> bool:
     resolved = _resolve("alass", alass_location, bin_root)
     if resolved == "alass":
         return shutil.which("alass") is not None
-    return Path(resolved).exists()
+    return _executable_file(Path(resolved))

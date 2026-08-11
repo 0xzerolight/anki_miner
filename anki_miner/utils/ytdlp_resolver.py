@@ -2,7 +2,7 @@
 
 Resolution order (first hit wins):
 
-1. **Config override** — ``config.ytdlp_location`` when set and the file exists.
+1. **Config override** — ``config.ytdlp_location`` when set and runnable.
 2. **Verified downloaded copy** — ``ytdlp_download_dir()/<name>``
    (``~/.anki_miner/bin/``) when executable and covered by a matching SHA-256
    receipt. Legacy pre-receipt files are never selected.
@@ -45,8 +45,9 @@ no-override / non-frozen / no-download case is intentional: it preserves the
 historical behavior the YouTube subprocess tests assert (``cmd[0] == "yt-dlp"``).
 
 **Cache correctness:** the updater clears the cache after install; the cache key
-also includes the current PATH hit. A cached managed path is re-hashed before
-every return so replacement or tampering cannot outlive a stale cache entry.
+also includes the current PATH hit. Cached concrete paths are checked for
+runnability before every return, and a cached managed path is also re-hashed, so
+replacement or tampering cannot outlive a stale cache entry.
 """
 
 import contextlib
@@ -73,7 +74,8 @@ __all__ = [
 
 # Cache keyed by (override-as-str, frozen-state, meipass, download-dir-str,
 # PATH-hit) so a changed override, bundle state, or PATH resolution is never
-# masked. Cached managed paths are re-verified before every return.
+# masked. Cached concrete paths are rechecked before every return, with managed
+# paths also re-verified against their receipt.
 _CACHE: dict[tuple, str] = {}
 
 # Serializes resolver cache transactions and each app-managed yt-dlp generation
@@ -196,11 +198,16 @@ def resolve_ytdlp(config) -> str:
         if cached is not None:
             managed = download_dir / ytdlp_binary_name()
             cached_is_managed = _is_managed_path(cached, managed)
-            if not cached_is_managed and not _is_within_directory(cached, download_dir):
+            if cached == "yt-dlp" and override_key != cached:
                 return cached
-            if cached_is_managed and _is_verified_managed_binary(managed):
+            if not _is_runnable(Path(cached)):
+                del _CACHE[cache_key]
+            elif not cached_is_managed and not _is_within_directory(cached, download_dir):
+                return cached
+            elif cached_is_managed and _is_verified_managed_binary(managed):
                 return str(managed)
-            del _CACHE[cache_key]
+            else:
+                del _CACHE[cache_key]
 
         resolved = _compute(override, frozen, meipass, download_dir, path_ytdlp)
         _CACHE[cache_key] = resolved
@@ -243,7 +250,7 @@ def _compute(
         override_path = Path(override)
         # Pointing the override at the managed slot must not bypass its
         # verification requirement.
-        if override_path.is_file() and (
+        if _is_runnable(override_path) and (
             not _is_managed_path(override_path, downloaded) or _is_verified_managed_binary(downloaded)
         ):
             return str(override_path)
