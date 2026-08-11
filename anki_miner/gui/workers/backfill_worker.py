@@ -5,6 +5,7 @@ import logging
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.utils.service_factory import create_shared_lookup_services
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
@@ -16,6 +17,7 @@ from anki_miner.services.card_backfiller import (
     apply_backfill,
     scan_backfill,
 )
+from anki_miner.services.dictionary.registry import format_stale_reimport_message
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -53,6 +55,10 @@ class BackfillScanWorker(CancellableWorker):
             try:
                 if self.check_cancelled():
                     return
+                if self.options.field_keys & {"definition", "glossary"}:
+                    stale = shared_lookup.dictionary_registry.stale_enabled(self.config)
+                    if stale:
+                        raise SetupError(format_stale_reimport_message(stale))
                 plan = scan_backfill(
                     anki_service,
                     self.config,

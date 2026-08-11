@@ -73,6 +73,38 @@ def missing_fields_message(note_type: str, missing: set[str], actual: set[str]) 
     )
 
 
+def field_target_collision_message(note_type: str, targets: list[str]) -> str | None:
+    """Return the shared error for duplicate nonempty Anki field targets."""
+    duplicate_targets = {target for target in targets if target and targets.count(target) > 1}
+    if not duplicate_targets:
+        return None
+    shown = ", ".join(sorted(duplicate_targets))
+    return (
+        f"Field(s) {shown} mapped more than once. "
+        f"Map each Anki Miner field to a different field on note type '{note_type}'."
+    )
+
+
+def field_mapping_error(
+    note_type: str,
+    ordered_actual: list[str],
+    required: set[str],
+    word_target: str,
+) -> str | None:
+    """Return the shared missing/first-field mapping error, if any."""
+    actual = set(ordered_actual)
+    missing = required - actual
+    if missing:
+        return missing_fields_message(note_type, missing, actual)
+    if not ordered_actual or word_target != ordered_actual[0]:
+        first_field = ordered_actual[0] if ordered_actual else "(none)"
+        return (
+            f"Word field '{word_target}' must map to the first field '{first_field}' "
+            f"on note type '{note_type}'. Check Settings → Anki field mapping."
+        )
+    return None
+
+
 # Optional fields whose value is pre-rendered HTML/SVG inserted verbatim (like
 # glossary), NOT html.escape()d by the OPTIONAL pass — escaping would turn the
 # tags into literal text. They follow the skip-when-empty contract: an absent

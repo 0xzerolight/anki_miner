@@ -23,7 +23,8 @@ from anki_miner.services.anki_note_builder import (
     _strip_for_dedup,
     build_note,
     configured_target_field_names,
-    missing_fields_message,
+    field_mapping_error,
+    field_target_collision_message,
     missing_note_type_message,
 )
 from anki_miner.utils.i18n import tr_format
@@ -339,28 +340,22 @@ class AnkiService:
             marker_target = self.config.card_type_marker_fields.get(self.config.card_type, "")
             if marker_target:
                 targets.append(marker_target)
-        duplicate_targets = {target for target in targets if targets.count(target) > 1}
-        if duplicate_targets:
-            shown = ", ".join(sorted(duplicate_targets))
-            raise SetupError(
-                f"Field(s) {shown} mapped more than once. "
-                f"Map each Anki Miner field to a different field on note type '{self.config.anki_note_type}'."
-            )
+        collision_error = field_target_collision_message(self.config.anki_note_type, targets)
+        if collision_error:
+            raise SetupError(collision_error)
 
         ordered_actual = self.ordered_note_type_field_names(self.config.anki_note_type)
         actual = set(ordered_actual)
         required = configured_target_field_names(self.config)
-        missing = required - actual
-        if missing:
-            raise SetupError(missing_fields_message(self.config.anki_note_type, missing, actual))
-
         word_target = self.config.anki_fields["word"]
-        if not ordered_actual or word_target != ordered_actual[0]:
-            first_field = ordered_actual[0] if ordered_actual else "(none)"
-            raise SetupError(
-                f"Word field '{word_target}' must map to the first field '{first_field}' "
-                f"on note type '{self.config.anki_note_type}'. Check Settings → Anki field mapping."
-            )
+        mapping_error = field_mapping_error(
+            self.config.anki_note_type,
+            ordered_actual,
+            required,
+            word_target,
+        )
+        if mapping_error:
+            raise SetupError(mapping_error)
 
         decks = post_action(self.config.ankiconnect_url, "deckNames", timeout=15) or []
         if self.config.anki_deck_name not in decks:

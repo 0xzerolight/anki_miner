@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import logging
 from dataclasses import replace
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -21,7 +23,9 @@ from anki_miner.services.card_backfiller import (
     apply_backfill,
     scan_backfill,
 )
+from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.morphology import SyntheticToken
+from anki_miner.services.validation_service import ValidationService
 
 # ---------------------------------------------------------------------------
 # Helpers / fakes
@@ -126,10 +130,17 @@ class FakeDefinitionService:
         self.defs = defs or {}
         self.glossaries = glossaries or {}
 
-    def get_definitions_batch(self, pairs, progress_callback=None, fallback_context=None):
+    def get_definitions_batch(
+        self,
+        pairs,
+        progress_callback=None,
+        fallback_context=None,
+        *,
+        is_cancelled=None,
+    ):
         return [self.defs.get(word) for word, _reading in pairs]
 
-    def get_glossaries_batch(self, pairs, progress_callback=None):
+    def get_glossaries_batch(self, pairs, progress_callback=None, *, is_cancelled=None):
         return [self.glossaries.get(word) for word, _reading in pairs]
 
 
@@ -359,6 +370,38 @@ class TestScanPreflight:
         assert plan.absent_fields == ("Frequency",)
         assert "pitch_graph" in _changes_by_key(plan, 1)
 
+    def test_validation_and_backfill_share_duplicate_mapping_error(self, test_config, monkeypatch):
+        mappings = dict.fromkeys(test_config.anki_fields, "")
+        mappings.update(word="Expression", frequency="Expression")
+        config = replace(test_config, anki_fields=mappings)
+        anki = FakeAnkiService(note_fields={"Expression"})
+
+        with pytest.raises(SetupError) as caught:
+            scan_backfill(
+                anki,
+                config,
+                _services(freq=FakeFrequencyService()),
+                _options({"frequency"}),
+            )
+
+        monkeypatch.setattr(
+            "anki_miner.services.validation_service.post_action",
+            lambda *_args, **_kwargs: ["Expression"],
+        )
+        assert ValidationService(config).check_field_names() == (False, str(caught.value))
+
+    def test_backfill_has_no_runtime_import_of_qt_bearing_anki_service(self):
+        project_root = Path(__file__).resolve().parents[2]
+        source = (project_root / "anki_miner/services/card_backfiller.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        runtime_imports = [
+            node
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom) and node.module == "anki_miner.services.anki_service"
+        ]
+
+        assert runtime_imports == []
+
     def test_probes_once_each_per_scan(self, backfill_config):
         anki = FakeAnkiService({i: _note(i, word="猫", Frequency="") for i in range(1, 6)})
         scan_backfill(anki, backfill_config, _services(freq=FakeFrequencyService()), _options({"frequency"}))
@@ -527,6 +570,39 @@ class TestScanFrequency:
         plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}))
         assert "JPDB" in _changes_by_key(plan, 1)["frequency"]
 
+    def test_different_kanji_lemma_is_not_used_as_frequency_fallback(
+        self,
+        backfill_config,
+        monkeypatch,
+    ):
+        calls: list[tuple[str, str]] = []
+
+        def tagger(text):
+            return [SyntheticToken(text, "動詞", "*", "掛ける", "カケル")]
+
+        class RecordingFrequency(FakeFrequencyService):
+            def lookup_all(self, term, reading):
+                calls.append((term, reading))
+                if term == "掛ける":
+                    return [("wrong homograph", 7, None)]
+                return []
+
+        monkeypatch.setattr(
+            "anki_miner.services.card_backfiller.get_shared_tagger",
+            lambda: tagger,
+        )
+        anki = FakeAnkiService({1: _note(1, word="賭ける", ExpressionReading="かける", Frequency="")})
+
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=RecordingFrequency()),
+            _options({"frequency"}),
+        )
+
+        assert plan.notes == ()
+        assert calls == [("賭ける", "かける")]
+
     def test_miss_writes_sort_sentinel_and_counts_it(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="")})
         freq = FakeFrequencyService({})
@@ -591,6 +667,39 @@ class TestScanDefinitionGlossary:
         defs = FakeDefinitionService(defs={"猫": "<p>cat</p>"})
         plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"definition"}))
         assert "<p>cat</p>" in _changes_by_key(plan, 1)["definition"]
+
+    def test_same_expression_with_distinct_readings_keeps_distinct_definitions(self, backfill_config):
+        calls: list[list[tuple[str, str | None]]] = []
+
+        def lookup_many(pairs):
+            calls.append(list(pairs))
+            return {word: f"definition:{reading}" for word, reading in pairs}
+
+        provider = SimpleNamespace(
+            name="reading-aware",
+            is_online=False,
+            load=lambda: None,
+            is_available=lambda: True,
+            lookup_many=lookup_many,
+        )
+        definitions = DefinitionService(backfill_config, [provider])
+        anki = FakeAnkiService(
+            {
+                1: _note(1, word="弾く", ExpressionReading="ひく", definition=""),
+                2: _note(2, word="弾く", ExpressionReading="はじく", definition=""),
+            }
+        )
+
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(defs=definitions),
+            _options({"definition"}),
+        )
+
+        assert _changes_by_key(plan, 1)["definition"] == "definition:ひく"
+        assert _changes_by_key(plan, 2)["definition"] == "definition:はじく"
+        assert calls == [[("弾く", "ひく")], [("弾く", "はじく")]]
 
     def test_glossary_proposal_gets_trailing_style_block(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})

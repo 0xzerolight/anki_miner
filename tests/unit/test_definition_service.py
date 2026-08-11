@@ -521,6 +521,60 @@ class TestGetDefinitionsBatchFastPath:
         assert recording_progress.starts[0] == (2, "Fetching definitions")
         assert recording_progress.completes == 1
 
+    def test_same_word_distinct_readings_are_resolved_separately(self, test_config):
+        calls: list[list[tuple[str, str | None]]] = []
+        provider = make_batch_provider("reading-aware")
+
+        def lookup_many(pairs, scope_homographs=True):
+            calls.append(list(pairs))
+            return {word: f"definition:{reading}" for word, reading in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        results = service.get_definitions_batch([("弾く", "ひく"), ("弾く", "はじく")])
+
+        assert results == ["definition:ひく", "definition:はじく"]
+        assert calls == [[("弾く", "ひく")], [("弾く", "はじく")]]
+
+    def test_cancellation_stops_before_next_provider(self, test_config):
+        cancelled = False
+        first = make_batch_provider("first")
+        second = make_batch_provider("second", table={"x": "second-x"})
+
+        def first_lookup(pairs, scope_homographs=True):
+            nonlocal cancelled
+            cancelled = True
+            return {}
+
+        first.lookup_many.side_effect = first_lookup
+        service = DefinitionService(test_config, providers=[first, second])
+
+        assert service.get_definitions_batch(
+            [("x", None)],
+            is_cancelled=lambda: cancelled,
+        ) == [None]
+        second.lookup_many.assert_not_called()
+
+    def test_cancellation_stops_before_next_per_word_request(self, test_config):
+        cancelled = False
+        provider = make_provider("Jisho")
+        provider.is_online = True
+
+        def lookup(word):
+            nonlocal cancelled
+            cancelled = True
+            return None
+
+        provider.lookup.side_effect = lookup
+        service = DefinitionService(test_config, providers=[provider])
+
+        assert service.get_definitions_batch(
+            [("first", None), ("second", None)],
+            is_cancelled=lambda: cancelled,
+        ) == [None, None]
+        provider.lookup.assert_called_once_with("first")
+
 
 class TestConfigStored:
     """The config object is stored verbatim (no mutation)."""
@@ -721,6 +775,41 @@ class TestGetGlossariesBatchFastPath:
         results = service.get_glossaries_batch([("x", None)])
         legacy.lookup.assert_called_once_with("x")
         assert results == ["<div>L</div>"]
+
+    def test_same_word_distinct_readings_are_resolved_separately(self, test_config):
+        calls: list[list[tuple[str, str | None]]] = []
+        provider = make_batch_offline_provider("reading-aware")
+
+        def lookup_many(pairs, scope_homographs=True):
+            calls.append(list(pairs))
+            return {word: f"<div>{reading}</div>" for word, reading in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        results = service.get_glossaries_batch([("弾く", "ひく"), ("弾く", "はじく")])
+
+        assert results == ["<div>ひく</div>", "<div>はじく</div>"]
+        assert calls == [[("弾く", "ひく")], [("弾く", "はじく")]]
+
+    def test_cancellation_stops_before_next_online_request(self, test_config):
+        cancelled = False
+        online = make_provider("Jisho")
+        online.is_online = True
+
+        def lookup(word):
+            nonlocal cancelled
+            cancelled = True
+            return None
+
+        online.lookup.side_effect = lookup
+        service = DefinitionService(test_config, providers=[online])
+
+        assert service.get_glossaries_batch(
+            [("first", None), ("second", None)],
+            is_cancelled=lambda: cancelled,
+        ) == [None, None]
+        online.lookup.assert_called_once_with("first")
 
 
 class TestClose:
@@ -1477,6 +1566,29 @@ class TestGetDefinitionsBatchFallback:
         # 食べた → 食べる (v1); entry is adj-i → rejected → still a miss.
         out = service.get_definitions_batch([("食べた", None)], None, {"食べた": ("", None)})
         assert out == [None]
+
+    def test_cancellation_stops_before_next_fallback_provider(self, test_config):
+        cancelled = False
+        first = make_batch_provider("first")
+        second = make_batch_provider("second")
+
+        def first_fallback(word, conditions):
+            nonlocal cancelled
+            cancelled = True
+            return None
+
+        first.lookup_fallback.side_effect = first_fallback
+        second.lookup_fallback.return_value = "wrong late hit"
+        service = DefinitionService(test_config, providers=[first, second])
+
+        assert service.get_definitions_batch(
+            [("ネコ", None)],
+            None,
+            {"ネコ": ("", None)},
+            is_cancelled=lambda: cancelled,
+        ) == [None]
+        first.lookup_fallback.assert_called_once()
+        second.lookup_fallback.assert_not_called()
 
 
 class TestLookupAllOfflineFallback:

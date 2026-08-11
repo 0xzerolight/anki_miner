@@ -115,7 +115,8 @@ def _make_processor(
     definition_service = definition_service or MagicMock(name="DefinitionService")
     definition_service.has_offline_definitions.side_effect = lambda lemmas: dict.fromkeys(lemmas, True)
 
-    def _defs(pairs, pc=None, fb=None):
+    def _defs(pairs, pc=None, fb=None, *, is_cancelled):
+        assert is_cancelled() is False
         if pc is not None:
             pc.on_start(len(pairs), "definitions")
             for i in range(len(pairs)):
@@ -123,7 +124,8 @@ def _make_processor(
             pc.on_complete()
         return ["<def>"] * len(pairs)
 
-    def _gloss(pairs, pc=None):
+    def _gloss(pairs, pc=None, *, is_cancelled):
+        assert is_cancelled() is False
         if pc is not None:
             pc.on_start(len(pairs), "glossaries")
             for i in range(len(pairs)):
@@ -227,6 +229,36 @@ def test_missing_offline_dictionary_raises_before_reading_parse(test_config):
 
 def _sources(anki_service) -> list[str]:
     return [p.extra_fields["source"] for p in anki_service.last_card_data if p.extra_fields]
+
+
+@pytest.mark.parametrize(
+    "method_name",
+    ["get_definitions_batch", "get_glossaries_batch"],
+)
+def test_definition_doubles_require_live_cancel_predicate(test_config, method_name):
+    fields = dict(test_config.anki_fields)
+    fields["glossary"] = "Glossary"
+    config = replace(test_config, anki_fields=fields)
+    word = _word("犬", 0)
+    parser = MagicMock(name="SubtitleParser")
+    parser.parse_text_units.side_effect = _parse_returning(
+        [word],
+        None,
+        collections.Counter({"犬": 1}),
+    )
+    processor = _make_processor(config, subtitle_parser=parser)
+
+    result = processor.process_reading(_document([_unit(0)]))
+
+    assert result.cards_created == 1
+    method = getattr(processor.definition_service, method_name)
+    lookup_call = method.call_args
+    is_cancelled = lookup_call.kwargs["is_cancelled"]
+    assert is_cancelled() is False
+    with pytest.raises(TypeError, match="is_cancelled"):
+        method.side_effect(*lookup_call.args)
+    processor.cancel()
+    assert is_cancelled() is True
 
 
 # --------------------------------------------------------------------------- #

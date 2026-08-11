@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
@@ -129,6 +130,31 @@ class TestBackfillScanWorker:
             worker.start()
             worker.wait(5000)
         assert emitted == []
+
+    def test_stale_enabled_dictionary_fails_before_definition_scan(self, test_config, monkeypatch):
+        options = BackfillOptions(field_keys=frozenset({"definition"}))
+        shared_lookup = MagicMock()
+        shared_lookup.dictionary_registry.stale_enabled.return_value = [SimpleNamespace(source_name="Old Dictionary")]
+        scan = MagicMock(return_value=_PLAN)
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "create_shared_lookup_services",
+            MagicMock(return_value=shared_lookup),
+        )
+        monkeypatch.setattr(backfill_worker_module, "scan_backfill", scan)
+        worker = BackfillScanWorker(test_config, options)
+        errors: list[str] = []
+        worker.error.connect(errors.append)
+
+        worker.run()
+
+        assert errors == [
+            "Backfill scan failed: Dictionary 'Old Dictionary' needs reimport "
+            "(schema upgrade) — Settings → Dictionaries → Reimport All"
+        ]
+        scan.assert_not_called()
+        shared_lookup.close.assert_called_once_with()
 
 
 class TestBackfillApplyWorker:

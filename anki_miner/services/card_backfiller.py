@@ -37,7 +37,8 @@ from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
     _SOUND_REF_RE,
     _strip_for_dedup,
-    missing_fields_message,
+    field_mapping_error,
+    field_target_collision_message,
     missing_note_type_message,
 )
 
@@ -54,6 +55,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_graph_field,
     render_pitch_text_field,
 )
+from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.text_utils import (
@@ -372,7 +374,12 @@ def _scan_backfill_impl(
                 first_failed_mined_form = mined_form
             contexts.append(context)
 
-        definitions, glossaries = _chunk_definition_lookups(definition_service, contexts, selected)
+        definitions, glossaries = _chunk_definition_lookups(
+            definition_service,
+            contexts,
+            selected,
+            is_cancelled=is_cancelled,
+        )
 
         for idx, ctx in enumerate(contexts):
             changes, note_identicals, note_guessed = _compute_note_changes(
@@ -472,13 +479,9 @@ def _preflight(
     """
     anki_fields = config.anki_fields
     targets = [word_field, *(anki_fields[key] for key in selected if anki_fields[key])]
-    duplicate_targets = {target for target in targets if targets.count(target) > 1}
-    if duplicate_targets:
-        shown = ", ".join(sorted(duplicate_targets))
-        raise SetupError(
-            f"Field(s) {shown} mapped more than once. "
-            f"Map each Anki Miner field to a different field on note type '{config.anki_note_type}'."
-        )
+    collision_error = field_target_collision_message(config.anki_note_type, targets)
+    if collision_error:
+        raise SetupError(collision_error)
 
     note_types = anki_service.note_type_names()
     if config.anki_note_type not in note_types:
@@ -491,21 +494,20 @@ def _preflight(
 
     ordered_actual = anki_service.ordered_note_type_field_names(config.anki_note_type)
     actual = set(ordered_actual)
-    if word_field not in actual:
+    mapping_error = field_mapping_error(
+        config.anki_note_type,
+        ordered_actual,
+        {word_field},
+        word_field,
+    )
+    if mapping_error:
         logger.warning(
             "Backfill preflight failed: note_type=%s field=%s fields=%d",
             config.anki_note_type,
             word_field,
             len(actual),
         )
-        raise SetupError(missing_fields_message(config.anki_note_type, {word_field}, actual))
-
-    if not ordered_actual or word_field != ordered_actual[0]:
-        first_field = ordered_actual[0] if ordered_actual else "(none)"
-        raise SetupError(
-            f"Word field '{word_field}' must map to the first field '{first_field}' "
-            f"on note type '{config.anki_note_type}'. Check Settings → Anki field mapping."
-        )
+        raise SetupError(mapping_error)
 
     return tuple(sorted({anki_fields[key] for key in selected if anki_fields[key] not in actual}))
 
@@ -571,6 +573,8 @@ def _chunk_definition_lookups(
     definition_service: Any,
     contexts: list[_NoteContext],
     selected: set[str],
+    *,
+    is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[str | None], list[str | None]]:
     """Batch the chunk's definition/glossary lookups (the _phase4 recipe).
 
@@ -583,6 +587,8 @@ def _chunk_definition_lookups(
         return definitions, glossaries
 
     for key, results in (("definition", definitions), ("glossary", glossaries)):
+        if is_cancelled and is_cancelled():
+            break
         if key not in selected:
             continue
         idx_map: list[int] = []
@@ -595,9 +601,18 @@ def _chunk_definition_lookups(
         if not pairs:
             continue
         if key == "definition":
-            found = definition_service.get_definitions_batch(pairs, None, fallback_context)
+            found = definition_service.get_definitions_batch(
+                pairs,
+                None,
+                fallback_context,
+                is_cancelled=is_cancelled,
+            )
         else:
-            found = definition_service.get_glossaries_batch(pairs, None)
+            found = definition_service.get_glossaries_batch(
+                pairs,
+                None,
+                is_cancelled=is_cancelled,
+            )
             # Miss-only lemma retry (mirrors _phase4: get_glossaries_batch has
             # no fallback mechanism of its own).
             retry_idx = [
@@ -609,7 +624,11 @@ def _chunk_definition_lookups(
                 retry_pairs: list[tuple[str, str | None]] = [
                     (contexts[idx_map[j]].lemma, contexts[idx_map[j]].reading or None) for j in retry_idx
                 ]
-                retried = definition_service.get_glossaries_batch(retry_pairs, None)
+                retried = definition_service.get_glossaries_batch(
+                    retry_pairs,
+                    None,
+                    is_cancelled=is_cancelled,
+                )
                 for j, g in zip(retry_idx, retried, strict=True):
                     found[j] = g
         for j, value in enumerate(found):
@@ -764,7 +783,12 @@ def _frequency_proposals(
     9999999 miss-sentinel is mining-faithful (sorts unranked words last).
     """
     sources = frequency_service.lookup_all(ctx.mined_form, ctx.reading)
-    if not sources and ctx.lemma and ctx.lemma != ctx.mined_form:
+    if (
+        not sources
+        and ctx.lemma
+        and ctx.lemma != ctx.mined_form
+        and _differs_by_okurigana_only(ctx.mined_form, ctx.lemma)
+    ):
         sources = frequency_service.lookup_all(ctx.lemma, ctx.reading)
 
     proposals: dict[str, str] = {}

@@ -11,6 +11,7 @@ from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QFont, QShortcut
 from PyQt6.QtWidgets import QApplication, QHeaderView, QScrollArea
 
+from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.utils.qt_helpers import data_row_height
 from anki_miner.gui.widgets.backfill_tab import (
     _PREVIEW_ROW_CAP,
@@ -296,11 +297,11 @@ class TestPreviewTable:
         assert not tab.apply_button.isEnabled()
         assert tab.summary_label.text() != ""
 
-    def test_empty_plan_fill_mode_keeps_already_have_values_wording(self, tab):
-        # scanned>0 is what makes this sentence true: notes WERE examined and
-        # every target already had a value.
+    def test_empty_plan_fill_mode_is_neutral_about_existing_values(self, tab):
+        # A zero-change fill scan can mean populated targets OR lookup misses.
         tab._on_scan_finished(_plan([], scanned=12))
-        assert "already have values" in tab.summary_label.text()
+        assert "No new values were found" in tab.summary_label.text()
+        assert "already have values" not in tab.summary_label.text()
 
     def test_empty_plan_overwrite_with_identicals_says_identical(self, tab):
         plan = _plan(
@@ -489,6 +490,61 @@ class TestApplyFlow:
         assert "14" in tab.status_label.text()
         assert not tab.apply_button.isEnabled()
         assert tab.preview_table.rowCount() == 0
+
+    def test_unconfirmed_updates_are_visible_and_mark_run_failed(self, tab):
+        registry = TaskRegistry(tab)
+        tab.bind_task_registry(registry)
+        tab._publish_task_start("Card backfill", total=1)
+        worker = MagicMock()
+        worker.is_cancelled = False
+        tab.worker_thread = worker
+        tab._on_scan_finished(_plan([_note_plan(1)]))
+
+        tab._on_apply_finished(
+            BackfillResult(
+                notes_updated=1,
+                fields_filled=1,
+                tagged=1,
+                skipped_stale=0,
+                failed=2,
+            )
+        )
+
+        assert "2 note update(s) were not confirmed" in tab.status_label.text()
+        assert "scan again to retry" in tab.status_label.text()
+        assert tab._run_failed is True
+        tab._on_worker_finished()
+        snapshot = registry.snapshot(tab.TASK_ID)
+        assert snapshot is not None
+        assert snapshot.outcome is TaskOutcome.FAILED
+
+    def test_cancelled_apply_keeps_confirmed_partial_counts_and_cancel_verdict(self, tab):
+        registry = TaskRegistry(tab)
+        tab.bind_task_registry(registry)
+        tab._publish_task_start("Card backfill", total=1)
+        worker = MagicMock()
+        worker.is_cancelled = True
+        tab.worker_thread = worker
+        tab._on_scan_finished(_plan([_note_plan(1)]))
+        tab.status_label.setText("Cancelling…")
+        tab._on_apply_finished(
+            BackfillResult(
+                notes_updated=1,
+                fields_filled=2,
+                tagged=1,
+                skipped_stale=0,
+            )
+        )
+
+        tab._on_apply_cancelled()
+
+        assert tab.status_label.text().startswith("Cancelled.")
+        assert "2 field(s)" in tab.status_label.text()
+        assert "1 note(s)" in tab.status_label.text()
+        tab._on_worker_finished()
+        snapshot = registry.snapshot(tab.TASK_ID)
+        assert snapshot is not None
+        assert snapshot.outcome is TaskOutcome.CANCELLED
 
 
 class TestConfigAndLifecycle:
