@@ -165,3 +165,17 @@ class TestReadWordFileException:
             pytest.raises(SetupError, match="Error reading word list file"),
         ):
             service.load()
+
+    def test_memory_error_escapes_unchanged(self, tmp_path):
+        """Allocation exhaustion must stay fatal instead of disabling the list."""
+        from unittest.mock import patch
+
+        bl = tmp_path / "blacklist.txt"
+        bl.write_text("食べる\n", encoding="utf-8")
+        service = WordListService(blacklist_path=bl)
+
+        with (
+            patch.object(type(bl), "open", side_effect=MemoryError("allocation failed")),
+            pytest.raises(MemoryError, match="allocation failed"),
+        ):
+            service.load()

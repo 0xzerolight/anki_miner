@@ -1,6 +1,7 @@
 """Service for managing custom word blacklists and whitelists."""
 
 import logging
+import unicodedata
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
@@ -98,9 +99,11 @@ class WordListService:
             words: set[str] = set()
             with path.open("r", encoding="utf-8") as f:
                 for line in f:
-                    stripped = line.strip()
+                    stripped = unicodedata.normalize("NFC", line.strip())
                     if stripped and not stripped.startswith("#"):
                         words.add(stripped)
             return words
+        except MemoryError:
+            raise
         except Exception as e:
             raise SetupError(f"Error reading word list file {path}: {e}") from e

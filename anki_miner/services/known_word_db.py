@@ -89,28 +89,29 @@ class KnownWordDB:
         ``added_at``. Gated on ``PRAGMA user_version`` so a large collection is
         not rescanned on every launch.
         """
-        if int(conn.execute("PRAGMA user_version").fetchone()[0]) >= _SCHEMA_VERSION:
-            return
-        rows = conn.execute("SELECT lemma, source, added_at FROM known_words").fetchall()
-        merged: dict[str, tuple[str, str]] = {}
-        rewritten = False
-        for lemma, source, added_at in rows:
-            canonical = normalize_lemma(lemma)
-            if canonical != lemma:
-                rewritten = True
-            previous = merged.get(canonical)
-            if previous is None:
-                merged[canonical] = (source, added_at)
-                continue
-            rewritten = True
-            previous_source, previous_added_at = previous
-            merged[canonical] = (
-                "user" if "user" in (previous_source, source) else previous_source,
-                min(previous_added_at, added_at),
-            )
         try:
+            conn.execute("BEGIN IMMEDIATE")
+            if int(conn.execute("PRAGMA user_version").fetchone()[0]) >= _SCHEMA_VERSION:
+                conn.commit()
+                return
+            rows = conn.execute("SELECT lemma, source, added_at FROM known_words").fetchall()
+            merged: dict[str, tuple[str, str]] = {}
+            rewritten = False
+            for lemma, source, added_at in rows:
+                canonical = normalize_lemma(lemma)
+                if canonical != lemma:
+                    rewritten = True
+                previous = merged.get(canonical)
+                if previous is None:
+                    merged[canonical] = (source, added_at)
+                    continue
+                rewritten = True
+                previous_source, previous_added_at = previous
+                merged[canonical] = (
+                    "user" if "user" in (previous_source, source) else previous_source,
+                    min(previous_added_at, added_at),
+                )
             if rewritten:
-                conn.execute("BEGIN IMMEDIATE")
                 conn.execute("DELETE FROM known_words")
                 conn.executemany(
                     "INSERT INTO known_words (lemma, source, added_at) VALUES (?, ?, ?)",

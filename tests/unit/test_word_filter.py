@@ -1,6 +1,7 @@
 """Tests for word_filter service."""
 
 import re
+import unicodedata
 
 import pytest
 
@@ -417,6 +418,16 @@ class TestWordFilterService:
             result = service.filter_by_word_lists([kakeru_bet, kakeru_hang], wls)
             assert [w.mined_form for w in result] == ["掛ける"]
 
+        def test_decomposed_blacklist_matches_composed_mined_form(self, test_config, tmp_path):
+            bl = tmp_path / "bl.txt"
+            bl.write_text(unicodedata.normalize("NFD", "がくせい") + "\n", encoding="utf-8")
+            wls = WordListService(blacklist_path=bl)
+            wls.load()
+
+            service = WordFilterService(test_config)
+
+            assert service.filter_by_word_lists([create_word("がくせい")], wls) == []
+
     class TestPartitionWhitelisted:
         """Tests for partition_whitelisted (whitelist force-include split)."""
 
@@ -472,6 +483,18 @@ class TestWordFilterService:
             forced, rest = service.partition_whitelisted([kakeru_bet, other], wls)
             assert [w.mined_form for w in forced] == ["賭ける"]
             assert [w.mined_form for w in rest] == ["飲む"]
+
+        def test_decomposed_whitelist_matches_composed_mined_form(self, test_config, tmp_path):
+            wl = tmp_path / "wl.txt"
+            wl.write_text(unicodedata.normalize("NFD", "がくせい") + "\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+
+            word = create_word("がくせい")
+            forced, rest = WordFilterService(test_config).partition_whitelisted([word], wls)
+
+            assert forced == [word]
+            assert rest == []
 
     class TestFilterByScriptType:
         """Tests for filter_by_script_type method (Issue #57)."""

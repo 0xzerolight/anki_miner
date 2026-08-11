@@ -8,6 +8,7 @@ not editable here — only counted for context.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtGui import QFont
@@ -49,6 +50,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
     def __init__(self, known_word_db: KnownWordDB, parent=None):
         super().__init__(parent)
         self._db = known_word_db
+        self._dialog_generation = 0
         # The list may never have been written if the user only just enabled the
         # feature — initialize so reads/writes don't hit a missing file.
         self._db.initialize()
@@ -156,6 +158,11 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
     def _selected_words(self) -> set[str]:
         return {item.text() for item in self.word_list.selectedItems()}
 
+    def done(self, result: int) -> None:
+        """Close the dialog and invalidate unfinished async UI callbacks."""
+        self._dialog_generation += 1
+        super().done(result)
+
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
@@ -205,6 +212,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 return
             path = Path(path_str)
             self.import_button.setEnabled(False)
+            generation = self._dialog_generation
 
             def work() -> KnownWordsImportResult | KnownWordsImportError:
                 # Expected failures travel through on_done so the reason survives
@@ -214,7 +222,12 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 except KnownWordsImportError as exc:
                     return exc
 
-            run_off_thread(self, work, self._on_import_parsed, self._on_import_failed)
+            run_off_thread(
+                self,
+                work,
+                lambda outcome: self._on_import_parsed(generation, outcome),
+                lambda message: self._on_import_failed(generation, message),
+            )
 
         file_dialogs.pick_open_file(
             self,
@@ -224,7 +237,9 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
             on_done=_on_picked,
         )
 
-    def _on_import_parsed(self, outcome: object) -> None:
+    def _on_import_parsed(self, generation: int, outcome: object) -> None:
+        if generation != self._dialog_generation:
+            return
         self.import_button.setEnabled(True)
         if isinstance(outcome, KnownWordsImportError):
             self._show_import_error(outcome)
@@ -284,7 +299,9 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
             )
         self.show_screen_issue(ScreenIssue(summary=message))
 
-    def _on_import_failed(self, message: str) -> None:
+    def _on_import_failed(self, generation: int, message: str) -> None:
+        if generation != self._dialog_generation:
+            return
         self.import_button.setEnabled(True)
         self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be read."), details=message))
 
@@ -299,11 +316,21 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         def _on_picked(path_str: str) -> None:
             if not path_str:
                 return
-            count = self.export_to(Path(path_str))
-            QMessageBox.information(
+            self.export_button.setEnabled(False)
+            generation = self._dialog_generation
+            run_off_thread(
                 self,
-                self.tr("Export Complete"),
-                tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+                lambda: self.export_to(Path(path_str)),
+                lambda count: self._on_export_succeeded(
+                    generation,
+                    lambda: QMessageBox.information(
+                        self,
+                        self.tr("Export Complete"),
+                        tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+                    ),
+                ),
+                lambda message: self._on_export_failed(generation, path_str, message),
+                on_finished=lambda: self._on_export_finished(generation),
             )
 
         file_dialogs.pick_save_file(
@@ -313,6 +340,30 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
             "Text Files (*.txt);;All Files (*)",
             on_done=_on_picked,
         )
+
+    def _on_export_succeeded(self, generation: int, notify: Callable[[], object]) -> None:
+        if generation != self._dialog_generation:
+            return
+        self.clear_screen_issue()
+        notify()
+
+    def _on_export_failed(self, generation: int, path_str: str, message: str) -> None:
+        if generation != self._dialog_generation:
+            return
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("The known words list could not be exported."),
+                details=f"{path_str}: {message}",
+                action_id="known-words.export-retry",
+                action_text=self.tr("Retry"),
+            ),
+            action=self._on_export,
+        )
+
+    def _on_export_finished(self, generation: int) -> None:
+        if generation != self._dialog_generation:
+            return
+        self.export_button.setEnabled(True)
 
     def _on_reset(self) -> None:
         if self.word_list.count() == 0:
