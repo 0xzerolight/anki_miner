@@ -32,6 +32,13 @@ def _name_match_key(name: str) -> str:
     return key.casefold() if _CASE_INSENSITIVE_FS else key
 
 
+def output_path_identity(path: Path) -> tuple[Path, str | None]:
+    """Return canonical identity for an existing or planned write target."""
+    if path.exists():
+        return path.resolve(), None
+    return path.parent.resolve(), _name_match_key(path.name)
+
+
 def resolve_output_path(out_dir: Path, name: str) -> Path:
     """Return the exact path the caller should write/replace for *name* in *out_dir*.
 
@@ -47,21 +54,45 @@ def resolve_output_path(out_dir: Path, name: str) -> Path:
     subtitle is clobbered. Same fallback when *out_dir* is unreadable or holds no
     match.
     """
-    exact = out_dir / name
+    return resolve_output_paths(out_dir, [name])[0]
+
+
+def resolve_output_paths(out_dir: Path, names: Sequence[str]) -> list[Path]:
+    """Resolve several output names from one snapshot of *out_dir*.
+
+    Each name follows :func:`resolve_output_path`'s exact/NFC/platform-case
+    contract. The directory is scanned and indexed once for the whole batch.
+    New names are reserved under the same match key so equivalent names planned
+    before either exists resolve to one target.
+    """
+    exact_paths = [out_dir / name for name in names]
     try:
         entries = sorted(p for p in out_dir.iterdir() if p.is_file())
     except OSError:
-        return exact
-    target = _name_match_key(name)
-    matches: list[Path] = []
+        entries = []
+
+    exact_by_name = {path.name: path for path in entries}
+    matches_by_key: dict[str, list[Path]] = {}
     for p in entries:
-        if p.name == name:  # byte-exact wins outright
-            return p
-        if _name_match_key(p.name) == target:
-            matches.append(p)
-    if len(matches) == 1:
-        return matches[0]
-    return exact  # 0 matches -> create; >=2 ambiguous -> refuse to guess
+        matches_by_key.setdefault(_name_match_key(p.name), []).append(p)
+
+    resolved: list[Path] = []
+    planned_by_key: dict[str, Path] = {}
+    for name, exact in zip(names, exact_paths, strict=True):
+        byte_exact = exact_by_name.get(name)
+        if byte_exact is not None:
+            resolved.append(byte_exact)
+            continue
+        match_key = _name_match_key(name)
+        matches = matches_by_key.get(match_key, [])
+        if len(matches) == 1:
+            resolved.append(matches[0])
+        elif matches:
+            resolved.append(exact)
+        else:
+            planned = planned_by_key.setdefault(match_key, exact)
+            resolved.append(planned)
+    return resolved
 
 
 def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = None) -> Path | None:

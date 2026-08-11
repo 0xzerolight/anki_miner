@@ -55,7 +55,12 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.dialogs import AudioTracksDialog, SubtitleTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
-from anki_miner.gui.workers.condense_worker import CondenseItem, CondenseWorker
+from anki_miner.gui.workers.condense_worker import (
+    CondenseItem,
+    CondenseOutputCollisionError,
+    CondenseWorker,
+    plan_condense_outputs,
+)
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
@@ -776,6 +781,21 @@ class CondenseTab(_ToolTabBase):
             return
 
         out_dir = self._custom_output_dir
+        output_format = str(self.format_combo.currentData())
+        try:
+            output_paths = plan_condense_outputs(items, out_dir, output_format)
+        except CondenseOutputCollisionError as exc:
+            details = "\n".join(
+                f"{output}: {', '.join(str(source) for source in sources)}"
+                for output, sources in exc.collisions.items()
+            )
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Multiple media files would write to the same output file."),
+                    details=details,
+                )
+            )
+            return
 
         # Pre-run writable check. When out_dir is None every output lands next to
         # its source media, so check the first item's parent.
@@ -796,10 +816,11 @@ class CondenseTab(_ToolTabBase):
             self.config,
             items,
             output_dir=out_dir,
+            output_paths=output_paths,
             overwrite=self.overwrite_checkbox.isChecked(),
             padding_ms=self.padding_spinbox.value(),
             offset_ms=self.offset_spinbox.value(),
-            output_format=self.format_combo.currentData(),
+            output_format=output_format,
             bitrate_kbps=self.config.condenser_bitrate_kbps,
             filtered_chars=self.config.condenser_filtered_chars,
             write_subs=self.write_subs_checkbox.isChecked(),

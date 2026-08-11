@@ -300,6 +300,27 @@ class TestSave:
         qtbot.waitUntil(lambda: "[ERROR]" in log.text_edit.toPlainText())
         qtbot.waitUntil(lambda: log.save_button.isEnabled())
 
+    def test_failed_save_preserves_existing_file(self, log, qtbot, tmp_path, monkeypatch):
+        target = tmp_path / "run.txt"
+        target.write_bytes(b"ORIGINAL")
+        monkeypatch.setattr(
+            log_widget_module.file_dialogs,
+            "pick_save_file",
+            lambda *a, on_done, **k: on_done(str(target)),
+        )
+
+        def _fail_mid_write(path: Path, text: str, **_kwargs) -> int:
+            path.write_bytes(text.encode("utf-8")[:4])
+            raise OSError("staged write failed")
+
+        monkeypatch.setattr(Path, "write_text", _fail_mid_write)
+        log.append_info("new run log")
+        log.save_button.click()
+
+        qtbot.waitUntil(lambda: "staged write failed" in log.text_edit.toPlainText())
+        qtbot.waitUntil(lambda: log.save_button.isEnabled())
+        assert target.read_bytes() == b"ORIGINAL"
+
     def test_suggested_name_is_a_text_file(self, log, monkeypatch):
         captured: list[str] = []
 

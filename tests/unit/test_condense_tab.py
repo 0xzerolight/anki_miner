@@ -512,6 +512,33 @@ def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
     assert "Matched 2 of 2" in tab.log_widget.text_edit.toPlainText()
 
 
+def test_folder_same_stem_outputs_are_rejected_before_worker_start(qtbot, tmp_path):
+    config = _make_config(tmp_path)
+    media_folder = tmp_path / "media"
+    media_folder.mkdir()
+    for suffix in (".mkv", ".mp4"):
+        (media_folder / f"episode{suffix}").write_bytes(b"fake")
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(media_folder))
+
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS) as worker_cls,
+    ):
+        tab._on_condense()
+
+    worker_cls.assert_not_called()
+    issue = tab.issue_banner().current_issue()
+    assert issue is not None
+    assert "same output" in issue.summary.lower()
+    assert "episode.mkv" in issue.details
+    assert "episode.mp4" in issue.details
+    assert "episode_condensed.mp3" in issue.details
+
+
 # ---------------------------------------------------------------------------
 # Worker kwargs assembly
 # ---------------------------------------------------------------------------
@@ -545,6 +572,7 @@ def test_worker_kwargs_from_widget_state_single(qtbot, tmp_path):
     assert args[0].condenser_padding_ms == 700
     assert args[1] == [CondenseItem(media, sub)]
     assert kwargs["output_dir"] is None
+    assert kwargs["output_paths"] == [tmp_path / "episode_condensed.opus"]
     assert kwargs["overwrite"] is True
     assert kwargs["padding_ms"] == 700
     assert kwargs["offset_ms"] == -250

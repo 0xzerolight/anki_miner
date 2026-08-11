@@ -5,7 +5,7 @@ The 5-signal contract and per-file queue loop live in
 product policy (subtitle-source priority, JP-track pick, the pure interval math,
 the ffmpeg condense pass, sidecar writing) lives in
 :func:`~anki_miner.services.audio_condenser.condense_one`. This worker is the
-signal adapter: it resolves the output path, runs the skip gate, calls
+signal adapter: it uses the precomputed output path, runs the skip gate, calls
 ``condense_one``, and maps its structured :class:`~anki_miner.services.audio_condenser.CondenseStatus`
 back to translated messages. ``EncoderUnavailableError`` is declared as a
 queue-stopping fatal exception.
@@ -13,7 +13,9 @@ queue-stopping fatal exception.
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,10 +26,14 @@ from anki_miner.services.audio_condenser import (
     EncoderUnavailableError,
     condense_one,
 )
-from anki_miner.utils.file_pairing import resolve_output_path
+from anki_miner.utils.file_pairing import output_path_identity, resolve_output_paths
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_COMPONENT_BYTES = 255
+_CONDENSED_SUFFIX = "_condensed"
+_TRUNCATED_HASH_CHARS = 12
 
 
 @dataclass
@@ -42,13 +48,94 @@ class CondenseItem:
     external_sub: Path | None = None
 
 
+class CondenseOutputCollisionError(ValueError):
+    """Raised when multiple Condense inputs share a planned output path."""
+
+    def __init__(self, collisions: dict[Path, tuple[Path, ...]]) -> None:
+        super().__init__("Multiple Condense inputs would write to the same output path")
+        self.collisions = collisions
+
+
+def plan_condense_outputs(
+    items: list[CondenseItem],
+    output_dir: Path | None,
+    output_format: str,
+) -> list[Path]:
+    """Resolve bounded output paths for every queued item before work starts."""
+    extension = f".{output_format}"
+    requests_by_dir: dict[Path, list[tuple[int, str]]] = {}
+    for index, item in enumerate(items):
+        out_dir = (output_dir if output_dir is not None else item.media.parent).resolve()
+        name = _bounded_condense_name(item.media.stem, extension, _component_byte_limit(out_dir))
+        requests_by_dir.setdefault(out_dir, []).append((index, name))
+
+    outputs_by_index: dict[int, Path] = {}
+    for out_dir, requests in requests_by_dir.items():
+        resolved = resolve_output_paths(out_dir, [name for _index, name in requests])
+        for (index, _name), path in zip(requests, resolved, strict=True):
+            outputs_by_index[index] = path
+    outputs = [outputs_by_index[index] for index in range(len(items))]
+    return validate_condense_outputs(items, outputs)
+
+
+def validate_condense_outputs(items: list[CondenseItem], output_paths: list[Path]) -> list[Path]:
+    """Return *output_paths* or raise for missing or duplicate destinations."""
+    paths = list(output_paths)
+    if len(paths) != len(items):
+        raise ValueError("output_paths must contain one path per CondenseItem")
+
+    outputs_by_identity: dict[tuple[Path, str | None], tuple[Path, list[Path]]] = {}
+    for item, output in zip(items, paths, strict=True):
+        _first_output, sources = outputs_by_identity.setdefault(
+            output_path_identity(output),
+            (output, []),
+        )
+        sources.append(item.media)
+    collisions = {output: tuple(sources) for output, sources in outputs_by_identity.values() if len(sources) > 1}
+    if collisions:
+        raise CondenseOutputCollisionError(collisions)
+    return paths
+
+
+def _bounded_condense_name(stem: str, extension: str, byte_limit: int) -> str:
+    fixed = _CONDENSED_SUFFIX + extension
+    candidate = stem + fixed
+    if len(candidate.encode("utf-8")) <= byte_limit:
+        return candidate
+
+    digest = hashlib.sha256(stem.encode("utf-8")).hexdigest()[:_TRUNCATED_HASH_CHARS]
+    marker = f"-{digest}"
+    stem_budget = byte_limit - len((marker + fixed).encode("utf-8"))
+    if stem_budget < 0:
+        raise ValueError("Condense output suffix exceeds the filesystem component limit")
+    return _truncate_utf8(stem, stem_budget) + marker + fixed
+
+
+def _truncate_utf8(value: str, byte_budget: int) -> str:
+    used = 0
+    for index, char in enumerate(value):
+        char_bytes = len(char.encode("utf-8"))
+        if used + char_bytes > byte_budget:
+            return value[:index]
+        used += char_bytes
+    return value
+
+
+def _component_byte_limit(directory: Path) -> int:
+    try:
+        limit = os.pathconf(directory, "PC_NAME_MAX")
+    except (AttributeError, OSError, ValueError):
+        return _DEFAULT_COMPONENT_BYTES
+    return limit if limit > 0 else _DEFAULT_COMPONENT_BYTES
+
+
 class CondenseWorker(FileQueueWorker):
     """Condense a list of media files down to their dialogue audio.
 
     Per file:
     1. Emits ``file_started(idx)``.
-    2. Resolves ``<stem>_condensed.<format>`` in *output_dir* (or next to the
-       media). If it already exists and *overwrite* is False — emits
+    2. Uses the planned ``<stem>_condensed.<format>`` path in *output_dir* (or
+       next to the media). If it already exists and *overwrite* is False — emits
        ``file_skipped(idx, out_audio)`` and continues.
     3. Delegates to :func:`~anki_miner.services.audio_condenser.condense_one`,
        which resolves a subtitle source (D9 priority), runs the pipeline, invokes
@@ -74,6 +161,8 @@ class CondenseWorker(FileQueueWorker):
         items: Ordered list of :class:`CondenseItem`.
         output_dir: When given, condensed audio is written here instead of next
             to each source media file.
+        output_paths: Precomputed paths from :func:`plan_condense_outputs`.
+            Direct worker callers may omit this and let the worker plan them.
         overwrite: When ``True``, an existing condensed audio file is regenerated.
         padding_ms: Milliseconds of padding added to each cue before merging.
         offset_ms: Millisecond offset applied to every cue (once).
@@ -98,6 +187,7 @@ class CondenseWorker(FileQueueWorker):
         items: list[CondenseItem],
         *,
         output_dir: Path | None = None,
+        output_paths: list[Path] | None = None,
         overwrite: bool = False,
         padding_ms: int = 500,
         offset_ms: int = 0,
@@ -115,10 +205,15 @@ class CondenseWorker(FileQueueWorker):
         self._config = config
         self._items = list(items)
         self._output_dir = output_dir
+        planned_outputs = (
+            plan_condense_outputs(self._items, output_dir, output_format)
+            if output_paths is None
+            else list(output_paths)
+        )
+        self._output_paths = validate_condense_outputs(self._items, planned_outputs)
         self._overwrite = overwrite
         self._padding_ms = padding_ms
         self._offset_ms = offset_ms
-        self._output_format = output_format
         self._bitrate_kbps = bitrate_kbps
         self._filtered_chars = filtered_chars
         self._write_subs = write_subs
@@ -136,12 +231,7 @@ class CondenseWorker(FileQueueWorker):
         return self._items
 
     def _process_item(self, idx: int, item: CondenseItem) -> None:
-        # Output name: <media stem>_condensed.<format>, resolved against
-        # existing on-disk files so an overwrite replaces a visually-identical
-        # (NFC/NFD- or case-variant) twin in place instead of spawning a
-        # Windows duplicate. See resolve_output_path.
-        out_dir = self._output_dir if self._output_dir is not None else item.media.parent
-        out_audio = resolve_output_path(out_dir, f"{item.media.stem}_condensed.{self._output_format}")
+        out_audio = self._output_paths[idx]
 
         # Skip-if-exists keyed on the audio file only (D11).
         if out_audio.exists() and not self._overwrite:

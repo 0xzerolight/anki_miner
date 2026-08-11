@@ -45,6 +45,7 @@ from anki_miner.gui.utils import file_dialogs, result_copy
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.utils.fonts import make_scaled_monospace_font
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.i18n import tr_format
 
 LEVEL_INFO = "INFO"
@@ -457,7 +458,8 @@ class LogWidget(QWidget):
             text = self.full_text()
 
             def work() -> object:
-                target.write_text(text, encoding="utf-8")
+                with atomic_write_path(target) as staged:
+                    staged.write_text(text, encoding="utf-8")
                 return str(target)
 
             self.save_button.setEnabled(False)
