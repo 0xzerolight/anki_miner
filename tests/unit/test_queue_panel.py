@@ -255,3 +255,49 @@ class TestImeSafeDialogs:
         buttons = seen[0].findChildren(QPushButton)
         assert buttons
         assert not any(b.isDefault() or b.autoDefault() for b in buttons)
+
+
+class TestListMinHeightFitsCardRows:
+    """The list's minimum height is measured in card rows, not text lines.
+
+    A batch queue row is a multi-line QueueItemWidget card (~150px), so a
+    minimum derived from ``metric_row_height`` (one text line) held less than
+    one card and clipped its Edit/Remove footer in short windows.
+    """
+
+    def _frame(self, panel) -> int:
+        return 2 * panel.list_widget.frameWidth()
+
+    def test_one_row_fits_fully(self, panel):
+        widget = _add_widget(panel, "JJK S1", "id-1")
+        hint = panel._list_items[id(widget)].sizeHint().height()
+
+        assert panel.list_widget.minimumHeight() >= hint + self._frame(panel)
+
+    def test_minimum_caps_at_three_cards(self, panel):
+        widgets = [_add_widget(panel, f"S{i}", f"id-{i}") for i in range(5)]
+        hints = [panel._list_items[id(w)].sizeHint().height() for w in widgets]
+
+        expected = sum(hints[:3]) + self._frame(panel)
+        assert panel.list_widget.minimumHeight() == expected
+        assert panel.list_widget.minimumHeight() < sum(hints) + self._frame(panel)
+
+    def test_all_rows_hidden_falls_back_to_text_floor(self, panel):
+        from anki_miner.gui.widgets.base.sizing import metric_row_height
+        from anki_miner.gui.widgets.panels.queue_panel import _VISIBLE_QUEUE_ROWS
+
+        _add_widget(panel, "JJK S1", "id-1")
+        panel._on_search_changed("no row matches this")
+
+        floor = _VISIBLE_QUEUE_ROWS * metric_row_height(panel.list_widget)
+        assert panel.list_widget.minimumHeight() == floor
+
+    def test_collapsing_a_row_shrinks_the_minimum(self, panel):
+        widget = _add_widget(panel, "JJK S1", "id-1")
+        expanded = panel.list_widget.minimumHeight()
+
+        widget.toggle_expanded()
+
+        collapsed = panel.list_widget.minimumHeight()
+        assert collapsed < expanded
+        assert collapsed >= panel._list_items[id(widget)].sizeHint().height() + self._frame(panel)

@@ -55,9 +55,15 @@ from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-#: Rows the queue shows before it scrolls. Measured in rows, not pixels, so it
-#: still holds this many at 1.5x text.
+#: Text lines the empty-looking list still reserves when the filter or search
+#: hides every row. Measured in lines, not pixels, so it holds at 1.5x text.
 _VISIBLE_QUEUE_ROWS = 6
+
+#: Card rows the list guarantees visible before it scrolls internally. A batch
+#: queue row is a multi-line QueueItemWidget card, not a text line, so the
+#: minimum is measured in whole cards: anything less clips a card's Edit/Remove
+#: footer once a short window compresses the list to its minimum.
+_VISIBLE_QUEUE_CARDS = 3
 
 #: Row status -> filter chip. The same four words the row badge prints, so the
 #: Failed chip selects exactly the rows reading "Failed".
@@ -164,7 +170,7 @@ class QueuePanel(QFrame):
         self.list_widget.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
         self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
-        self.list_widget.setMinimumHeight(_VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget))
+        self._update_list_min_height()
         self.list_widget.itemSelectionChanged.connect(self._on_selection_changed)
 
         model = self.list_widget.model()
@@ -185,6 +191,32 @@ class QueuePanel(QFrame):
         scoped_shortcut(
             self.list_widget, QKeySequence("Alt+Down"), lambda: self._move_selection(1), context=widget_only
         )
+
+    def _update_list_min_height(self) -> None:
+        """Size the list's minimum in whole visible cards, not text lines.
+
+        Sums the size hints of the first ``_VISIBLE_QUEUE_CARDS`` rows the
+        filter and search leave visible — the same hints ``register_widget``
+        and ``_resize_row`` maintain from each card's real ``sizeHint()``, so
+        collapsed rows count short and expanded rows tall. A text-line metric
+        here held less than one card and clipped its footer buttons whenever a
+        short window compressed the list to its minimum. Beyond the cap the
+        list scrolls internally; the Expanding size policy still grows it
+        further when the window has height to spare.
+        """
+        hints = [
+            item.sizeHint().height()
+            for widget in self.queue_item_widgets
+            if (item := self._list_items.get(id(widget))) is not None and not item.isHidden()
+        ]
+        if hints:
+            min_h = sum(hints[:_VISIBLE_QUEUE_CARDS]) + 2 * self.list_widget.frameWidth()
+        else:
+            # Filter/search hid every row: reserve a few text lines so the
+            # still-visible list doesn't collapse to nothing. (An empty queue
+            # hides the list entirely; see _update_stats.)
+            min_h = _VISIBLE_QUEUE_ROWS * metric_row_height(self.list_widget)
+        self.list_widget.setMinimumHeight(min_h)
 
     # ------------------------------------------------------------------
     # Rows
@@ -235,12 +267,14 @@ class QueuePanel(QFrame):
 
         list_item.setHidden(not self._row_visible(widget))
         self._update_stats()
+        self._update_list_min_height()
 
     def _resize_row(self, widget: QueueItemWidget) -> None:
         """Re-hint the list item after its row changed height."""
         list_item = self._list_items.get(id(widget))
         if list_item is not None:
             list_item.setSizeHint(widget.sizeHint())
+        self._update_list_min_height()
 
     def _bind_widget(self, widget: QueueItemWidget) -> QueueItem | None:
         """Give ``widget`` its persistent queue item once both folders validate.
@@ -294,6 +328,7 @@ class QueuePanel(QFrame):
                 # widget alongside it.
                 self.list_widget.takeItem(row)
         self._update_stats()
+        self._update_list_min_height()
 
     def _edit_item(self, widget: QueueItemWidget) -> None:
         """Edit a queue item's folders and subtitle offset.
@@ -519,6 +554,7 @@ class QueuePanel(QFrame):
             list_item.setHidden(not visible)
         self._refresh_counts()
         self._refresh_selection_actions()
+        self._update_list_min_height()
 
     def _refresh_counts(self) -> None:
         """Restate the queue's shape. Counts the queue, never the current view."""
