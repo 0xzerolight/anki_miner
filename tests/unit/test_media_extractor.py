@@ -2537,6 +2537,7 @@ class TestExtractFullAudio:
         assert timeout > 60
 
 
+@pytest.mark.asr
 class TestWavToFloat32:
     """Tests for wav_to_float32 helper.
 
@@ -2646,6 +2647,7 @@ class TestExtractFullAudioWaveReadable:
         shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
         reason="needs real ffmpeg + ffprobe on PATH",
     )
+    @pytest.mark.asr
     def test_real_ffmpeg_output_roundtrips_through_wave(self, service, tmp_path):
         """End-to-end: real ffmpeg FLAC-in-MKV source → extract_full_audio → wav_to_float32.
 

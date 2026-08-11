@@ -15,6 +15,7 @@ import math
 import os
 import sys
 import types
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -45,6 +46,22 @@ _MIN_AVG_LOGPROB = -1.0
 # NaN/None probabilities are treated as "unknown" and kept.
 # PROVISIONAL: confirmed/tuned against the manual JP-clip release gate.
 _MIN_CPP_SEGMENT_PROBABILITY = 0.2
+
+
+@dataclass
+class Ct2ModelSession:
+    """Queue-owned faster-whisper model state reused across sequential decodes."""
+
+    model: Any | None = None
+    device_used: str | None = None
+    backend: str | None = None
+
+    def release(self) -> None:
+        """Drop the native model reference at queue completion."""
+        self.model = None
+        self.device_used = None
+        self.backend = None
+
 
 # --- Non-speech drop, CT2 path (vad_filter is OFF; see _transcribe_ct2) ---
 # Whisper transcribes the whole timeline, so it hallucinates over non-speech:
@@ -533,6 +550,7 @@ def transcribe(
     device: str = "auto",
     cuda_libs_root: Path | None = None,
     onnx_pack_root: Path | None = None,
+    ct2_model_session: Ct2ModelSession | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe *audio* using the specified faster-whisper model.
 
@@ -556,6 +574,9 @@ def transcribe(
             pack; enables Silero VAD in the bundle (where onnxruntime is
             stripped) by making it importable. Ignored when onnxruntime is
             already available (pip ``[asr]`` install).
+        ct2_model_session: Optional queue-owned faster-whisper model state.
+            Sequential callers reuse its resolved model and must call
+            :meth:`Ct2ModelSession.release` after the queue terminates.
 
     Returns:
         A list of ``(start_s, end_s, text)`` tuples in chronological order.
@@ -571,11 +592,22 @@ def transcribe(
         return []
 
     with timed_phase("ASR transcribe", logger):
+        # Keep the queue's preferred route separate from its reusable CT2
+        # fallback model. A per-file cpp failure must not make later files skip
+        # their own cpp attempt.
+        if ct2_model_session is not None and ct2_model_session.backend is None:
+            ct2_model_session.backend = "cpp" if _use_whisper_cpp_engine(device, model_name, models_root) else "ct2"
+
         # Pick the engine from *device*. CT2 (cpu/cuda) is the unchanged default; only
         # vulkan/auto with a usable Vulkan device and a present ggml model route to the
         # whisper.cpp engine. A GPU/engine problem there never crashes the run — it
         # falls back to a full CT2 CPU re-decode.
-        if _use_whisper_cpp_engine(device, model_name, models_root):
+        use_cpp = (
+            ct2_model_session.backend == "cpp"
+            if ct2_model_session is not None
+            else _use_whisper_cpp_engine(device, model_name, models_root)
+        )
+        if use_cpp:
             results = _transcribe_cpp(
                 audio,
                 model_name=model_name,
@@ -585,6 +617,7 @@ def transcribe(
                 progress_cb=progress_cb,
                 cuda_libs_root=cuda_libs_root,
                 onnx_pack_root=onnx_pack_root,
+                ct2_model_session=ct2_model_session,
             )
         else:
             # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not
@@ -607,6 +640,7 @@ def transcribe(
                 device=ct2_device,
                 cuda_libs_root=cuda_libs_root,
                 onnx_pack_root=onnx_pack_root,
+                ct2_model_session=ct2_model_session,
             )
 
     log_summary(
@@ -631,8 +665,8 @@ def _use_whisper_cpp_engine(device: str, model_name: str, models_root: Path) -> 
       * ``auto`` → CT2 CUDA wins if a CUDA GPU is present; otherwise cpp iff
         whisper.cpp is available AND a Vulkan device exists; else CT2 CPU.
 
-    When cpp is otherwise selected but the ggml acoustic file is missing on disk,
-    logs and returns False so the caller falls back to CT2 CPU (never crashes).
+    When cpp is otherwise selected but either required model file is missing on
+    disk, logs and returns False so the caller falls back to CT2 (never crashes).
     """
     if device in ("cpu", "cuda"):
         return False
@@ -659,6 +693,12 @@ def _use_whisper_cpp_engine(device: str, model_name: str, models_root: Path) -> 
             model_name,
         )
         return False
+    if not ggml_model_installer.is_vad_downloaded(models_root):
+        logger.warning(
+            "ASR backend fallback: requested=whisper.cpp reason=vad_missing fallback=ctranslate2 model=%s",
+            model_name,
+        )
+        return False
     return True
 
 
@@ -672,6 +712,7 @@ def _transcribe_cpp(
     progress_cb: Callable[[float], None] | None,
     cuda_libs_root: Path | None,
     onnx_pack_root: Path | None,
+    ct2_model_session: Ct2ModelSession | None = None,
 ) -> list[tuple[float, float, str]]:
     """Transcribe via the whisper.cpp (pywhispercpp) engine, with a CT2 CPU fallback.
 
@@ -745,6 +786,7 @@ def _transcribe_cpp(
             device="cpu",
             cuda_libs_root=cuda_libs_root,
             onnx_pack_root=onnx_pack_root,
+            ct2_model_session=ct2_model_session,
         )
 
 
@@ -759,6 +801,7 @@ def _transcribe_ct2(
     device: str,
     cuda_libs_root: Path | None,
     onnx_pack_root: Path | None,
+    ct2_model_session: Ct2ModelSession | None = None,
 ) -> list[tuple[float, float, str]]:
     """The faster-whisper (ctranslate2) transcription path — unchanged behaviour.
 
@@ -769,14 +812,21 @@ def _transcribe_ct2(
     """
     whisper_model_cls = _engine.get_whisper_model_cls()
     cpu_threads = min(4, os.cpu_count() or 4)
-    model, device_used = _resolve_model(
-        device,
-        cuda_libs_root,
-        whisper_model_cls,
-        model_name,
-        models_root,
-        cpu_threads,
-    )
+    if ct2_model_session is not None and ct2_model_session.model is not None:
+        model = ct2_model_session.model
+        device_used = ct2_model_session.device_used or "cpu"
+    else:
+        model, device_used = _resolve_model(
+            device,
+            cuda_libs_root,
+            whisper_model_cls,
+            model_name,
+            models_root,
+            cpu_threads,
+        )
+        if ct2_model_session is not None:
+            ct2_model_session.model = model
+            ct2_model_session.device_used = device_used
 
     # Decode flags that suppress the classic large-model hallucination failures:
     #  * condition_on_previous_text=False — a hallucinated phrase no longer seeds
@@ -836,6 +886,9 @@ def _transcribe_ct2(
                 models_root,
                 cpu_threads,
             )
+            if ct2_model_session is not None:
+                ct2_model_session.model = model
+                ct2_model_session.device_used = device_used
             segments_iter, _info = model.transcribe(audio, **transcribe_kwargs)
             first = next(segments_iter, _PEEK_EMPTY)
         if first is not _PEEK_EMPTY:

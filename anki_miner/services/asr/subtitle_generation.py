@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
+    from anki_miner.services.asr.transcriber import Ct2ModelSession
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ def generate_subtitle_one(
     on_extract_start: Callable[[], None] | None = None,
     transcribe_progress_cb: Callable[[float], None] | None = None,
     cancel_event: threading.Event | None = None,
+    ct2_model_session: Ct2ModelSession | None = None,
 ) -> SubtitleGenResult:
     """Transcribe one video to an SRT at *out_srt*.
 
@@ -80,6 +82,7 @@ def generate_subtitle_one(
         transcribe_progress_cb: Forwarded to the transcriber as its
             ``progress_cb`` (called with a 0.0–1.0 fraction).
         cancel_event: Cooperative cancel, forwarded to extractor + transcriber.
+        ct2_model_session: Optional queue-owned faster-whisper model state.
 
     Unexpected exceptions propagate to the caller (the worker isolates them
     per-file); only the temp-WAV cleanup is guaranteed here.
@@ -114,6 +117,9 @@ def generate_subtitle_one(
             return SubtitleGenResult(SubtitleGenStatus.CANCELLED)
 
         # --- Stage 3: transcribe ---
+        transcribe_kwargs = {}
+        if ct2_model_session is not None:
+            transcribe_kwargs["ct2_model_session"] = ct2_model_session
         segments = transcriber.transcribe(
             audio,
             model_name=config.asr_model,
@@ -125,6 +131,7 @@ def generate_subtitle_one(
             device=config.asr_device,
             cuda_libs_root=config.cuda_libs_root,
             onnx_pack_root=config.onnx_pack_root,
+            **transcribe_kwargs,
         )
         if _is_cancelled(cancel_event):
             return SubtitleGenResult(SubtitleGenStatus.CANCELLED)

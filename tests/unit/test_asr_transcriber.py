@@ -889,7 +889,7 @@ def _wire_cpp(
     monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(ct2_constructed))
     # ggml acoustic + VAD present by default (overridable by the test).
     monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
-    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: False)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: True)
     return ct2_constructed
 
 
@@ -1236,6 +1236,19 @@ def test_cpp_missing_ggml_model_falls_back_to_ct2_cpu(monkeypatch, tmp_path, cap
     assert cpp_constructed == []  # never built the cpp model
     assert [c["device"] for c in ct2] == ["cpu"]
     assert caplog.records
+
+
+def test_cpp_incomplete_bundle_without_vad_falls_back_to_ct2(monkeypatch, tmp_path):
+    """An acoustic model alone is not a usable whisper.cpp bundle."""
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1)
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: False)
+
+    assert transcriber._use_whisper_cpp_engine("vulkan", "small", tmp_path) is False
+
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: True)
+    assert transcriber._use_whisper_cpp_engine("vulkan", "small", tmp_path) is True
 
 
 def test_cpp_decode_params_vad_on_when_ggml_present(tmp_path, monkeypatch):
