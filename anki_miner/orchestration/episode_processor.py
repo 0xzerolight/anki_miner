@@ -1657,8 +1657,15 @@ class EpisodeProcessor:
                 )
             )
 
-        created_note_ids = self.anki_service.create_cards_batch(card_data, progress_callback)
+        self.anki_service.set_cancelled_check(lambda: self.cancelled)
+        try:
+            created_note_ids = self.anki_service.create_cards_batch(card_data, progress_callback)
+        finally:
+            self.anki_service.set_cancelled_check(None)
         cards_created = len(created_note_ids)
+        confirmed_mined_forms = list(self.anki_service.last_created_mined_forms)
+        if self.cancelled and CANCELLED_ERROR not in ctx.errors:
+            ctx.errors.append(CANCELLED_ERROR)
 
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "Successfully created %n card(s)", "", cards_created)
@@ -1684,11 +1691,12 @@ class EpisodeProcessor:
                 )
             )
 
-        # Collect mined_forms from the cards that were actually submitted.
+        # Collect mined_forms from the cards Anki confirmed created.
         # Stored as mined_form (POS-aware) to match what Anki records in the
         # Expression field (Issue #5). Returned to the caller so process_episode
-        # can stamp ProcessingResult.mined_forms for the Undo path (OVH-030).
-        mined_words: set[str] = {payload.word.mined_form for payload in card_data}
+        # The known-words transaction receipt below remains the separate value
+        # stamped onto ProcessingResult.mined_forms for Undo (OVH-030).
+        mined_words = set(confirmed_mined_forms)
 
         # Add newly mined words to known word DB.
         # Store mined_form so the local DB matches what Anki stores in the
@@ -1706,7 +1714,7 @@ class EpisodeProcessor:
         # of a pre-existing row. The insert returns its exact transaction-owned
         # receipt, avoiding a racy before/after snapshot.
         mined_forms_for_undo: list[str] = []
-        if self.known_word_db and self.known_word_db.is_available() and card_data:
+        if self.known_word_db and self.known_word_db.is_available() and mined_words:
             try:
                 mined_forms_for_undo = sorted(self.known_word_db.add_words_with_receipt(mined_words, source="mined"))
             except (sqlite3.Error, OSError) as e:

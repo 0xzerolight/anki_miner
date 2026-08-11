@@ -58,6 +58,8 @@ def _fake_processor(counts: collections.Counter[str], known: set[str] | None = N
         # default to empty so the estimate equals the known set in these tests.
         proc.known_word_db.get_words_by_source.return_value = set()
     proc.process_episode.return_value = _processing_result(1)
+    proc.anki_service.last_created_mined_forms = list(counts)[:1]
+    proc.anki_service.last_created_lemmas = list(counts)[:1]
     return proc
 
 
@@ -665,6 +667,105 @@ def test_cancel_mid_build_does_not_emit_build_finished(qapp):
         # Build was cancelled mid-loop: no completion summary, and ep2 never ran.
         assert finished == []
         ep2.process_episode.assert_not_called()
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_cancel_after_confirmed_episode_reports_committed_partial_result(qapp):
+    counts = collections.Counter({"a": 1})
+    base = _fake_processor(counts)
+    ep = _fake_processor(counts)
+    worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base, ep])
+
+    def commit_then_cancel(*args, curation_callback, **kwargs):
+        assert [word.lemma for word in curation_callback([_make_word("a")])] == ["a"]
+        ep.anki_service.last_created_mined_forms = ["a"]
+        ep.anki_service.last_created_lemmas = ["a"]
+        worker.cancel()
+        return _processing_result(1, errors=["Processing cancelled by user"])
+
+    ep.process_episode.side_effect = commit_then_cancel
+    try:
+        completed = _collect(worker.item_completed)
+        finished = _collect(worker.build_finished)
+        worker.confirm()
+        worker.run()
+
+        assert completed == [("ep1", 1)]
+        assert finished == []
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_only_confirmed_forms_are_carded_after_media_drop(qapp):
+    counts = collections.Counter({"a": 2, "b": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    kept: list[list[str]] = []
+
+    def first_episode(*args, curation_callback, **kwargs):
+        kept.append([word.lemma for word in curation_callback([_make_word("a"), _make_word("b")])])
+        ep1.anki_service.last_created_mined_forms = ["b"]
+        ep1.anki_service.last_created_lemmas = ["b"]
+        return _processing_result(1)
+
+    def second_episode(*args, curation_callback, **kwargs):
+        kept.append([word.lemma for word in curation_callback([_make_word("a")])])
+        ep2.anki_service.last_created_mined_forms = ["a"]
+        ep2.anki_service.last_created_lemmas = ["a"]
+        return _processing_result(1)
+
+    ep1.process_episode.side_effect = first_episode
+    ep2.process_episode.side_effect = second_episode
+    worker, _ = _make_worker(
+        qapp,
+        _make_request([_make_pair("ep1"), _make_pair("ep2")]),
+        processors=[base, ep1, ep2],
+    )
+    try:
+        worker.confirm()
+        worker.run()
+
+        assert kept == [["a", "b"], ["a"]]
+    finally:
+        worker._stop_patch.stop()
+
+
+def test_only_confirmed_lemma_is_blocked_when_mined_forms_collide(qapp):
+    counts = collections.Counter({"lemma-a": 1, "lemma-b": 1})
+    base = _fake_processor(counts)
+    ep1 = _fake_processor(counts)
+    ep2 = _fake_processor(counts)
+    kept: list[list[str]] = []
+
+    def first_episode(*args, curation_callback, **kwargs):
+        word_a = _make_word("lemma-a")
+        word_b = _make_word("lemma-b")
+        word_a.surface = word_b.surface = "同形"
+        kept.append([word.lemma for word in curation_callback([word_a, word_b])])
+        ep1.anki_service.last_created_mined_forms = ["同形"]
+        ep1.anki_service.last_created_lemmas = ["lemma-a"]
+        return _processing_result(1)
+
+    def second_episode(*args, curation_callback, **kwargs):
+        kept.append([word.lemma for word in curation_callback([_make_word("lemma-a"), _make_word("lemma-b")])])
+        ep2.anki_service.last_created_mined_forms = ["同形"]
+        ep2.anki_service.last_created_lemmas = ["lemma-b"]
+        return _processing_result(1)
+
+    ep1.process_episode.side_effect = first_episode
+    ep2.process_episode.side_effect = second_episode
+    worker, _ = _make_worker(
+        qapp,
+        _make_request([_make_pair("ep1"), _make_pair("ep2")]),
+        processors=[base, ep1, ep2],
+    )
+    try:
+        worker.confirm()
+        worker.run()
+
+        assert kept == [["lemma-a", "lemma-b"], ["lemma-b"]]
     finally:
         worker._stop_patch.stop()
 

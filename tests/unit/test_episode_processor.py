@@ -1774,7 +1774,12 @@ class TestKnownWordDBIntegration:
         mock_services["word_filter"].filter_unknown.return_value = [word]
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_mined_forms = ["食べる"]
+            return [1]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
         processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
@@ -1813,10 +1818,11 @@ class TestKnownWordDBIntegration:
         mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
 
-        # Simulate what the real create_cards_batch does: set last_created_note_ids
-        # as a side effect (the process_episode early reset clears any pre-call value).
+        # Simulate what the real create_cards_batch does: set its confirmed receipts
+        # as side effects (the process_episode early reset clears pre-call note IDs).
         def _create_batch(card_data, progress_callback=None):
             mock_services["anki_service"].last_created_note_ids = [12345]
+            mock_services["anki_service"].last_created_mined_forms = ["食べる"]
             return [12345]
 
         mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
@@ -4915,7 +4921,12 @@ class TestMinedFormsOnResult:
             (fresh, _make_media("neko")),
         ]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. cat"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
+
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_mined_forms = ["食べる", "猫"]
+            return [1, 2]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
         processor = build_processor(
             config=replace(test_config, use_known_words_db=True),
@@ -4943,7 +4954,12 @@ class TestMinedFormsOnResult:
             (fresh, _make_media("neko")),
         ]
         mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat", "1. cat"]
-        mock_services["anki_service"].create_cards_batch.return_value = [1, 2]
+
+        def _create_batch(card_data, progress_callback=None):
+            mock_services["anki_service"].last_created_mined_forms = ["食べる", "猫"]
+            return [1, 2]
+
+        mock_services["anki_service"].create_cards_batch.side_effect = _create_batch
 
         mock_known_db = MagicMock()
         mock_known_db.is_available.return_value = True

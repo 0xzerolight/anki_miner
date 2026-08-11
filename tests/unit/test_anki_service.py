@@ -739,6 +739,65 @@ class TestCreateCardsBatch:
             result = service.create_cards_batch(items)
 
         assert result == [100, 102, 104]
+        assert service.last_created_lemmas == ["word_0", "word_2", "word_4"]
+
+    def test_duplicate_in_second_note_chunk_never_uploads_its_media(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        items = []
+        for index in range(100):
+            expression = f"語{index}"
+            word = make_tokenized_word(surface=expression, lemma=expression, pos="名詞")
+            items.append(
+                CardPayload(
+                    word=word,
+                    media=MediaData(screenshot_filename=f"shot-{index}.jpg"),
+                    definition=f"definition {index}",
+                )
+            )
+        repeated = make_tokenized_word(surface="語0", lemma="語0", pos="名詞")
+        repeated_payload = CardPayload(
+            word=repeated,
+            media=MediaData(screenshot_filename="repeated.jpg"),
+            definition="repeated",
+        )
+        items.append(repeated_payload)
+
+        created_fields: set[str] = set()
+        stored_batches: list[list[CardPayload]] = []
+        next_id = 1
+
+        def probe(notes):
+            return [next(iter(note["fields"].values())) in created_fields for note in notes]
+
+        def store(batch):
+            stored_batches.append(list(batch))
+            return set()
+
+        def add_notes(_url, action, *, params, timeout):
+            nonlocal next_id
+            assert action == "addNotes"
+            note_ids = []
+            for note in params["notes"]:
+                first_field = next(iter(note["fields"].values()))
+                if first_field in created_fields:
+                    note_ids.append(None)
+                    continue
+                created_fields.add(first_field)
+                note_ids.append(next_id)
+                next_id += 1
+            return note_ids
+
+        with (
+            patch.object(service, "_probe_duplicates", side_effect=probe),
+            patch.object(service, "_store_media_files_batch", side_effect=store),
+            patch.object(service, "_upload_dict_media_batch"),
+            patch("anki_miner.services.anki_service.post_action", side_effect=add_notes),
+        ):
+            assert len(service.create_cards_batch(items)) == 100
+
+        assert [len(batch) for batch in stored_batches] == [100]
+        assert all(repeated_payload not in batch for batch in stored_batches)
+        assert service.last_skipped_duplicates == 1
 
     def test_non_duplicate_batch_error_propagates(self, test_config, make_tokenized_word):
         """A non-duplicate addNotes error (e.g. missing deck) still aborts."""
@@ -947,6 +1006,80 @@ class TestCreateCardsBatch:
 
         note = mock_post.call_args[1]["json"]["params"]["notes"][0]
         assert "options" not in note
+
+    def test_excluded_deck_admission_allows_anki_duplicate_but_deduplicates_run(self, test_config, make_tokenized_word):
+        """A word absent from the exclusion-aware vocabulary may be re-carded once."""
+        from dataclasses import replace
+
+        config = replace(test_config, excluded_decks=("Archive",))
+        service = AnkiService(config)
+        service._existing_vocab_cache = set()
+        word = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")
+        items = [
+            CardPayload(word=word, media=MediaData(), definition="cat"),
+            CardPayload(word=word, media=MediaData(), definition="cat again"),
+        ]
+
+        with (
+            patch.object(service, "_store_media_files_batch", return_value=set()),
+            patch.object(service, "_upload_dict_media_batch"),
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=[[{"canAdd": True, "error": None}], [10]],
+            ) as post,
+        ):
+            assert service.create_cards_batch(items) == [10]
+
+        assert [call.args[1] for call in post.call_args_list] == ["canAddNotesWithErrorDetail", "addNotes"]
+        validation_note = post.call_args_list[0].kwargs["params"]["notes"][0]
+        assert validation_note["options"]["allowDuplicate"] is True
+        submitted = post.call_args_list[1].kwargs["params"]["notes"]
+        assert len(submitted) == 1
+        assert submitted[0]["options"] == {"allowDuplicate": True}
+        assert service.last_skipped_duplicates == 1
+
+    def test_excluded_deck_invalid_note_fails_before_media_upload(self, test_config, make_tokenized_word):
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("Archive",)))
+        service._existing_vocab_cache = set()
+        invalid = make_tokenized_word(surface="", lemma="", pos="名詞")
+
+        with (
+            patch.object(service, "_store_media_files_batch", return_value=set()) as store_media,
+            patch.object(service, "_upload_dict_media_batch") as upload_dict_media,
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                return_value=[{"canAdd": False, "error": "first field must not be empty"}],
+            ),
+            pytest.raises(AnkiConnectionError, match="first field must not be empty"),
+        ):
+            service.create_cards_batch([CardPayload(word=invalid, media=MediaData(), definition="invalid")])
+
+        store_media.assert_not_called()
+        upload_dict_media.assert_not_called()
+
+    def test_excluded_deck_admission_fails_closed_when_filtered_vocab_is_uncertain(
+        self, test_config, make_tokenized_word
+    ):
+        """A degraded exclusion query must not authorize collection-wide duplicates."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("Archive",)))
+        word = make_tokenized_word(surface="猫", lemma="猫", sentence="猫だ。", pos="名詞")
+        timeout_error = AnkiConnectionError("timed out")
+        timeout_error.__cause__ = requests.exceptions.Timeout("slow")
+
+        with (
+            patch("anki_miner.services.anki_service.post_action", side_effect=[timeout_error, [10]]),
+            patch.object(service, "_store_media_files_batch", return_value=set()) as store_media,
+            patch.object(service, "_upload_dict_media_batch") as upload_dict_media,
+            pytest.raises(AnkiConnectionError, match="timed out"),
+        ):
+            service.create_cards_batch([CardPayload(word=word, media=MediaData(), definition="cat")])
+
+        store_media.assert_not_called()
+        upload_dict_media.assert_not_called()
 
     def test_bolded_sentence_used_when_flag_on(self, test_config, make_tokenized_word):
         """When bold_target_in_sentence=True and precomputed forms exist, the
