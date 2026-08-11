@@ -11,6 +11,8 @@ here exists because the old terminal dialogs got it wrong:
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.utils.progress_telemetry import SUSPEND_GAP_S
 from anki_miner.models.processing import CANCELLED_ERROR, ProcessingResult, TerminalOutcome
@@ -52,6 +54,16 @@ class TestCounts:
         assert receipt.notes_added == 5
         assert receipt.note_ids == (11, 12, 13, 21, 22)
 
+    def test_a_successful_duck_typed_result_keeps_its_counts(self):
+        acc = _accumulator(1)
+        acc.record_result(SimpleNamespace(cards_created=7, card_ids=[31, 32], errors=[]))
+
+        receipt = _finish(acc)
+
+        assert receipt.outcome is TerminalOutcome.SUCCESS
+        assert receipt.notes_added == 7
+        assert receipt.note_ids == (31, 32)
+
     def test_a_worker_exception_counts_as_a_failed_item(self):
         acc = _accumulator(2)
         acc.record_result(_result(4))
@@ -72,6 +84,32 @@ class TestCounts:
         assert receipt.outcome is TerminalOutcome.FAILED
         assert receipt.items_failed == 1
 
+    def test_a_failed_result_keeps_confirmed_note_writes(self):
+        acc = _accumulator(1)
+        acc.record_result(_result(2, ids=[101, 102], errors=["later addNotes failed"]))
+
+        receipt = _finish(acc)
+
+        assert receipt.outcome is TerminalOutcome.FAILED
+        assert receipt.notes_added == 2
+        assert receipt.note_ids == (101, 102)
+
+        aggregate = receipt.aggregate_result()
+        assert aggregate is not None
+        assert aggregate.cards_created == 2
+        assert aggregate.card_ids == [101, 102]
+
+    def test_a_cancelled_result_keeps_confirmed_note_writes(self):
+        acc = _accumulator(1)
+        acc.record_result(_result(2, ids=[201, 202], errors=[CANCELLED_ERROR]))
+        acc.mark_cancel_requested()
+
+        receipt = _finish(acc)
+
+        assert receipt.outcome is TerminalOutcome.CANCELLED
+        assert receipt.notes_added == 2
+        assert receipt.note_ids == (201, 202)
+
     def test_a_cancelled_item_is_neither_completed_nor_failed(self):
         acc = _accumulator(3)
         acc.record_result(_result(2, ids=[1, 2]))
@@ -88,12 +126,12 @@ class TestCounts:
         """The Batch queue worker reports per-item counts, never a result."""
         acc = _accumulator(2)
         acc.record_counts(notes_added=7, failed=False)
-        acc.record_counts(notes_added=0, failed=True)
+        acc.record_counts(notes_added=3, failed=True)
 
         receipt = _finish(acc)
 
         assert (receipt.items_completed, receipt.items_failed) == (1, 1)
-        assert receipt.notes_added == 7
+        assert receipt.notes_added == 10
         assert receipt.note_ids == ()
 
 
@@ -167,6 +205,16 @@ class TestDetails:
         assert aggregate is not None
         assert aggregate.errors == ["deck missing"]
         assert aggregate.success is False
+
+    def test_the_aggregate_result_carries_the_receipt_outcome(self):
+        acc = _accumulator(2)
+        acc.record_result(_result(1, ids=[1]))
+        acc.record_result(_result(0, errors=["deck missing"]))
+
+        aggregate = _finish(acc).aggregate_result()
+
+        assert aggregate is not None
+        assert getattr(aggregate, "terminal_outcome", None) is TerminalOutcome.PARTIAL
 
     def test_a_run_without_result_objects_has_no_details(self):
         acc = _accumulator(1)

@@ -33,6 +33,13 @@ from anki_miner.models.processing import (
 )
 
 
+@dataclass
+class _RunAggregateResult(ProcessingResult):
+    """A details result that keeps the whole run's terminal outcome."""
+
+    terminal_outcome: TerminalOutcome = TerminalOutcome.SUCCESS
+
+
 @dataclass(frozen=True)
 class RunReceipt:
     """The immutable record of one finished run. Rendered, never recomputed."""
@@ -74,7 +81,7 @@ class RunReceipt:
             note_ids.extend(result.card_ids)
         known = sum(r.total_words_found - r.new_words_found for r in self.results)
         total_words = sum(r.total_words_found for r in self.results)
-        return ProcessingResult(
+        return _RunAggregateResult(
             total_words_found=total_words,
             new_words_found=sum(r.new_words_found for r in self.results),
             cards_created=self.notes_added,
@@ -83,6 +90,7 @@ class RunReceipt:
             comprehension_percentage=(known / total_words * 100) if total_words else 0.0,
             card_ids=note_ids,
             mined_forms=mined_forms,
+            terminal_outcome=self.outcome,
         )
 
 
@@ -125,14 +133,19 @@ class RunReceiptAccumulator:
         cancellation marker inside an otherwise ordinary result.
         """
         outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
-        if isinstance(result, ProcessingResult):
-            self._results.append(result)
+        processing_result = result if isinstance(result, ProcessingResult) else None
+        if processing_result is not None:
+            self._results.append(processing_result)
+            self._notes += int(processing_result.cards_created or 0)
+            if isinstance(processing_result.card_ids, list):
+                self._note_ids.extend(int(i) for i in processing_result.card_ids)
         if outcome is MiningOutcome.SUCCESS:
             self._completed += 1
-            self._notes += int(getattr(result, "cards_created", 0) or 0)
-            ids = getattr(result, "card_ids", None)
-            if isinstance(ids, list):
-                self._note_ids.extend(int(i) for i in ids)
+            if processing_result is None:
+                self._notes += int(getattr(result, "cards_created", 0) or 0)
+                ids = getattr(result, "card_ids", None)
+                if isinstance(ids, list):
+                    self._note_ids.extend(int(i) for i in ids)
         elif outcome is MiningOutcome.FAILED:
             self._failed += 1
         # A cancelled item is neither: it did not finish and it did not fail.
@@ -141,14 +154,15 @@ class RunReceiptAccumulator:
         """Record one item that produced counts but no result object.
 
         The Batch queue worker owns its own item lifecycle and emits
-        ``item_completed(id, cards_created)`` / ``item_failed(id, message)``, so
-        this is the only shape available there.
+        ``item_completed(id, cards_created)`` /
+        ``item_failed(id, message, cards_created)``, so this is the only shape
+        available there.
         """
+        self._notes += max(0, notes_added)
         if failed:
             self._failed += 1
             return
         self._completed += 1
-        self._notes += max(0, notes_added)
 
     def mark_cancel_requested(self) -> None:
         """Note that the user asked to stop. Outranks every other outcome."""

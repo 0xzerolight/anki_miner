@@ -102,7 +102,7 @@ def _wire_status_slots(worker: BatchQueueWorkerThread, _queue: BatchQueue) -> di
     def on_completed(item_id: str, cards: int) -> None:
         results["completed"].append((item_id, cards))
 
-    def on_failed(item_id: str, msg: str) -> None:
+    def on_failed(item_id: str, msg: str, _cards: int) -> None:
         results["failed"].append((item_id, msg))
 
     def on_finished(total: int) -> None:
@@ -184,6 +184,8 @@ def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
 
     worker = _make_worker_with_queue(queue)
     results = _wire_status_slots(worker, queue)
+    failed_with_counts: list[tuple] = []
+    worker.item_failed.connect(lambda *args: failed_with_counts.append(args))
 
     with (
         patch(
@@ -201,11 +203,13 @@ def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
     assert len(results["failed"]) == 1
     _item_id, msg = results["failed"][0]
     assert "1/2 episodes failed" in msg
+    assert failed_with_counts == [(queue.get_all_items()[0].id, msg, 3)]
     # Partial cards still count toward queue total
     assert results["finished"] == [3], "queue_finished should include cards from successful pairs"
 
 
-def test_partial_series_retry_skips_committed(tmp_path):
+def test_partial_series_retry_emits_only_new_cards_after_cumulative_row_total(tmp_path):
+    """Retry keeps lifetime row count while signals report only current-run cards."""
     pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
     pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
     queue = BatchQueue()
@@ -249,8 +253,8 @@ def test_partial_series_retry_skips_committed(tmp_path):
     processed_videos = [call.args[0] for call in retry_processor.process_episode.call_args_list]
     assert processed_videos == [pair2.video]
     assert item.cards_created == 5
-    assert retry_results["completed"] == [(item.id, 5)]
-    assert retry_results["finished"] == [5]
+    assert retry_results["completed"] == [(item.id, 2)]
+    assert retry_results["finished"] == [2]
 
 
 def test_retry_skips_only_committed_pair_path_when_episode_numbers_match(tmp_path):
@@ -286,8 +290,8 @@ def test_retry_skips_only_committed_pair_path_when_episode_numbers_match(tmp_pat
     processed_videos = [call.args[0] for call in processor.process_episode.call_args_list]
     assert processed_videos == [pair2.video]
     assert item.cards_created == 5
-    assert results["completed"] == [(item.id, 5)]
-    assert results["finished"] == [5]
+    assert results["completed"] == [(item.id, 2)]
+    assert results["finished"] == [2]
 
 
 def test_all_pairs_succeed_emits_item_completed(tmp_path):
@@ -337,7 +341,7 @@ def _wire_capture_only(worker: BatchQueueWorkerThread) -> dict:
     results: dict = {"started": [], "completed": [], "failed": [], "finished": []}
     worker.item_started.connect(lambda item_id, _name: results["started"].append(item_id))
     worker.item_completed.connect(lambda item_id, cards: results["completed"].append((item_id, cards)))
-    worker.item_failed.connect(lambda item_id, msg: results["failed"].append((item_id, msg)))
+    worker.item_failed.connect(lambda item_id, msg, _cards: results["failed"].append((item_id, msg)))
     worker.queue_finished.connect(lambda total: results["finished"].append(total))
     return results
 
@@ -628,7 +632,7 @@ def test_setup_error_emits_item_failed(tmp_path):
     worker = BatchQueueWorkerThread(queue, config, MagicMock(), None)
 
     failed_emissions = []
-    worker.item_failed.connect(lambda item_id, msg: failed_emissions.append((item_id, msg)))
+    worker.item_failed.connect(lambda item_id, msg, _cards: failed_emissions.append((item_id, msg)))
 
     with (
         patch(
@@ -966,7 +970,7 @@ def test_missing_offline_dictionary_aborts_queue_once(qapp):
     def _record_started(item_id: str, display_name: str) -> None:
         started.append((item_id, display_name))
 
-    def _record_failed(item_id: str, message: str) -> None:
+    def _record_failed(item_id: str, message: str, _cards: int) -> None:
         failed.append((item_id, message))
 
     worker.item_started.connect(_record_started)

@@ -10,7 +10,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
-from anki_miner.models.processing import ProcessingResult
+from anki_miner.models.processing import AnkiWriteState, ProcessingResult
 
 
 def _make_factory_worker(qapp, factory, **kwargs):
@@ -185,7 +185,12 @@ def test_zero_commit_result_suppressed_when_cancelled_after_processing(qapp):
 
     def _cancel_mid_run(*args, **kwargs):
         worker.cancel()  # user pressed Cancel during the pipeline
-        return ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
+        return ProcessingResult(
+            total_words_found=0,
+            new_words_found=0,
+            cards_created=0,
+            anki_write_state=AnkiWriteState.NO_NOTE_WRITE,
+        )
 
     worker.processor.process_episode.side_effect = _cancel_mid_run
 
@@ -196,6 +201,29 @@ def test_zero_commit_result_suppressed_when_cancelled_after_processing(qapp):
     # Processing ran, but the late cancel swallows the result.
     worker.processor.process_episode.assert_called_once()
     assert results == []
+
+
+def test_late_cancel_emits_uncertain_write_result(qapp):
+    worker = _make_worker(qapp)
+    result = ProcessingResult(
+        total_words_found=0,
+        new_words_found=0,
+        cards_created=0,
+        errors=["addNotes response lost"],
+        anki_write_state=AnkiWriteState.NOTE_WRITE_UNCERTAIN,
+    )
+
+    def _cancel_during_uncertain_write(*args, **kwargs):
+        worker.cancel()
+        return result
+
+    worker.processor.process_episode.side_effect = _cancel_during_uncertain_write
+    results: list[ProcessingResult] = []
+    worker.result_ready.connect(results.append)
+
+    worker.run()
+
+    assert results == [result]
 
 
 def test_late_cancel_retains_undo(qtbot, qapp):
