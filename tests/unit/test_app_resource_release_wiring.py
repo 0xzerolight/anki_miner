@@ -42,3 +42,99 @@ def test_running_backfill_scan_refuses_window_fanout(wired_window) -> None:
     tabs["Utilities"].backfill_tab.worker_thread = worker
 
     assert window.release_dictionary_resources() is False
+
+
+def test_tools_download_holds_dictionary_mutation_until_session_releases(wired_window, monkeypatch) -> None:
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog
+
+    window, _titles, tabs = wired_window
+    panel = tabs["Settings"].dictionary_panel
+    observed: list[bool] = []
+
+    def fake_start(_parent, _config, **kwargs):
+        config, release = kwargs["acquire_mutation"]()
+        assert config is window.config
+        observed.append(panel.has_active_mutation("resource-download"))
+        release()
+        observed.append(panel.has_active_mutation("resource-download"))
+        return MagicMock(task_id=resource_download_dialog.TASK_ID)
+
+    monkeypatch.setattr(resource_download_dialog, "start_resource_download", fake_start)
+    monkeypatch.setattr(window.background_tasks, "cancel_jmdict_migration", lambda: None)
+
+    window._download_recommended_resources()
+
+    assert observed == [True, False]
+
+
+def test_tools_download_busy_state_uses_main_issue_banner(wired_window, monkeypatch) -> None:
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog
+
+    window, _titles, _tabs = wired_window
+
+    def fake_start(_parent, _config, **kwargs):
+        kwargs["blocked"]("Indexed resources are in use.")
+        return None
+
+    monkeypatch.setattr(resource_download_dialog, "start_resource_download", fake_start)
+    monkeypatch.setattr(window.background_tasks, "cancel_jmdict_migration", lambda: None)
+
+    window._download_recommended_resources()
+
+    issue = window.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == "Indexed resources are in use."
+    assert issue.action_id == "resource-download.retry"
+
+
+def test_resource_download_retry_clears_its_issue_after_start(wired_window, monkeypatch) -> None:
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog
+
+    window, _titles, _tabs = wired_window
+    session = MagicMock(task_id=resource_download_dialog.TASK_ID)
+    attempts = 0
+
+    def fake_start(_parent, _config, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            kwargs["blocked"]("Indexed resources are in use.")
+            return None
+        return session
+
+    monkeypatch.setattr(resource_download_dialog, "start_resource_download", fake_start)
+    monkeypatch.setattr(window.background_tasks, "cancel_jmdict_migration", lambda: None)
+
+    window._download_recommended_resources()
+    banner = window.issue_banner()
+    assert banner.current_issue() is not None
+
+    banner.action_button.click()
+
+    assert attempts == 2
+    assert window._resource_download_session is session
+    assert banner.current_issue() is None
+
+
+def test_activation_clears_only_matching_resource_download_issue(wired_window, monkeypatch) -> None:
+    from anki_miner.gui.widgets.base import ScreenIssue
+    from anki_miner.gui.workers.resource_download_worker import ResourceDownloadResult, ResourceDownloadSummary
+
+    window, _titles, _tabs = wired_window
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.utils.resource_setup.apply_download_summary",
+        lambda config, _summary: config,
+    )
+    monkeypatch.setattr(window, "update_config", lambda _config: None)
+
+    window._show_resource_download_blocked("Indexed resources are in use.")
+    assert window._activate_downloaded_resources(summary) is window.config
+    assert window.issue_banner().current_issue() is None
+
+    other_issue = ScreenIssue(summary="Another failure.", action_id="other.retry", action_text="Retry")
+    window.show_screen_issue(other_issue)
+    assert window._activate_downloaded_resources(summary) is window.config
+    assert window.issue_banner().current_issue() is other_issue

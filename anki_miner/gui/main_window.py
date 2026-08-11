@@ -174,6 +174,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # lifetime stays with BackgroundTaskController and the owning tab.
         # Constructed BEFORE _setup_ui so the status strip can bind to it.
         self.task_registry = TaskRegistry(self)
+        self.task_registry.reveal_requested.connect(self._on_task_activated)
 
         # The live recommended-resource run, if any. Retained here rather than
         # Qt-parented: it outlives its own window, which the user can hide.
@@ -592,6 +593,21 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             yield True
         finally:
             panel.release(token)
+
+    def _acquire_resource_download_mutation(self) -> tuple[AnkiMinerConfig, Callable[[], None]] | None:
+        """Hold Settings' dictionary mutation token for one native worker run."""
+        settings_idx = self._settings_tab_index()
+        if settings_idx < 0:
+            return self.config, lambda: None
+        settings_tab = self.tabs.widget(settings_idx)
+        preflight = getattr(settings_tab, "commit_pending_settings_for_mutation", None)
+        panel = getattr(settings_tab, "dictionary_panel", None)
+        if not callable(preflight) or panel is None:
+            return self.config, lambda: None
+        if not preflight():
+            return None
+        token = panel.hold_mutation("resource-download")
+        return self.config, lambda: panel.release(token)
 
     def _report_shortcut_failure(self, details: str) -> None:
         """One place for the desktop-shortcut failure sentence (D24)."""
@@ -1133,11 +1149,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _download_recommended_resources(self) -> None:
         """Tools-menu handler: start the background recommended-resource run.
 
-        The run no longer holds the dictionary-mutation lease for its whole
-        length — mining stays usable while several hundred megabytes transfer.
-        What still happens up front is the same-slot race guard: the recommended
-        dictionary writes into the slot the legacy JMdict XML migration also
-        targets, so an in-flight migration is stopped first.
+        Mining stays usable while several hundred megabytes transfer. Settings'
+        dictionary mutation token stays held through native worker finish so the
+        root cannot move under the captured import paths. The same-slot startup
+        migration is stopped first.
         """
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
 
@@ -1149,12 +1164,34 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self.config,
             activate=self._activate_downloaded_resources,
             release_resources=self.release_dictionary_resources,
+            acquire_mutation=self._acquire_resource_download_mutation,
+            blocked=self._show_resource_download_blocked,
             task_registry=self.task_registry,
             adopt_worker=self.background_tasks.adopt_resource_download_worker,
         )
         if session is not None:
             # Retained here, not Qt-parented: the session outlives its window.
             self._resource_download_session = session
+            self._clear_resource_download_issue()
+
+    def _show_resource_download_blocked(self, message: str) -> None:
+        """Keep recoverable resource contention on the main issue surface."""
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=message,
+                action_id="resource-download.retry",
+                action_text=self.tr("Retry"),
+            ),
+            action=self._download_recommended_resources,
+        )
+
+    def _clear_resource_download_issue(self) -> None:
+        """Clear only contention reported by the recommended-resource run."""
+        banner = self.issue_banner()
+        if banner is not None:
+            issue = banner.current_issue()
+            if issue is not None and issue.action_id == "resource-download.retry":
+                self.clear_screen_issue()
 
     def _activate_downloaded_resources(self, summary: object) -> "AnkiMinerConfig | None":
         """Switch downloaded resources on, or refuse without claiming success.
@@ -1176,8 +1213,23 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 return None
             # update_config (not from_settings) propagates via config_refreshed
             # to all tabs incl. Settings, and persists.
-            new_config = apply_download_summary(self.config, summary)
+            try:
+                new_config = apply_download_summary(self.config, summary)
+            except ValueError as error:
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr(
+                            "Downloaded resources were left inactive because their storage folder changed."
+                        ),
+                        details=str(error),
+                        action_id="settings.dictionaries",
+                        action_text=self.tr("Open Settings"),
+                    ),
+                    action=self._open_settings,
+                )
+                return None
             self.update_config(new_config)
+            self._clear_resource_download_issue()
             return new_config
 
     def _run_capability_browser_tool(self) -> None:

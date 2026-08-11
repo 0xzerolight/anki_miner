@@ -107,6 +107,7 @@ def import_yomitan_zip(
     overwrite: bool = False,
     cancel_check: Callable[[], bool] | None = None,
     dict_id: str | None = None,
+    before_promote: Callable[[], None] | None = None,
 ) -> YomitanImportResult:
     """Import a Yomitan zip into dest_root/<dict_id>/index.sqlite.
 
@@ -129,6 +130,8 @@ def import_yomitan_zip(
                  re-import) so a title that embeds a changing release date does
                  not fork a new directory every download. Display name still
                  comes from the zip title; only the folder name is pinned.
+        before_promote: Optional last-moment guard run immediately before the
+                        staged directory replaces the managed slot.
 
     Raises:
         SetupError: On invalid input, format mismatch, or already-exists when
@@ -349,7 +352,13 @@ def import_yomitan_zip(
         if os.path.lexists(final_path) and not overwrite:
             raise SetupError(f"Dictionary '{dict_id}' already exists")
         _raise_if_cancelled(cancel_check)
-        promote_staged_dir(staging, final_path, mover=shutil.move, overwrite=overwrite)
+        promote_staged_dir(
+            staging,
+            final_path,
+            mover=shutil.move,
+            overwrite=overwrite,
+            before_promote=before_promote,
+        )
 
         result = YomitanImportResult(
             dict_id=dict_id,

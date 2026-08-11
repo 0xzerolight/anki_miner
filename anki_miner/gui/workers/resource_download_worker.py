@@ -29,10 +29,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from threading import Event
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
+from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
@@ -127,6 +129,26 @@ class ResourceProgress:
     entries: int | None = None
 
 
+class ResourcePromotionRequest:
+    """Worker-to-GUI handshake immediately before an importer can promote."""
+
+    def __init__(self) -> None:
+        self._resolved = Event()
+        self._allowed = False
+
+    def resolve(self, allowed: bool) -> None:
+        """Return the GUI thread's resource-release decision to the worker."""
+        self._allowed = allowed
+        self._resolved.set()
+
+    def wait(self, cancelled: Callable[[], bool]) -> bool:
+        """Wait for the GUI decision while remaining responsive to Cancel."""
+        while not self._resolved.wait(0.05):
+            if cancelled():
+                return False
+        return self._allowed
+
+
 class _ItemPhaseReporter:
     """Folds one resource's two progress streams into one phase sequence.
 
@@ -205,6 +227,9 @@ class ResourceDownloadSummary:
     results: list[ResourceDownloadResult] = field(default_factory=list)
     cancelled: bool = False
     requested_count: int = 0
+    dicts_root: Path | None = None
+    freqs_root: Path | None = None
+    pitch_root: Path | None = None
 
     @property
     def succeeded(self) -> list[ResourceDownloadResult]:
@@ -238,6 +263,9 @@ class ResourceDownloadWorker(CancellableWorker):
     # Emits the ResourceDownloadSummary. Named *_summary to avoid colliding
     # with QThread.finished, which the codebase relies on.
     finished_summary = pyqtSignal(object)
+    # A blocking worker-side request whose decision is made by the GUI thread.
+    # The session connects this before start; direct unit use stays ungated.
+    promotion_requested = pyqtSignal(object)
 
     def __init__(
         self,
@@ -255,6 +283,29 @@ class ResourceDownloadWorker(CancellableWorker):
         self._freqs_root = freqs_root
         self._pitch_root = pitch_root
         self._download_dir = download_dir
+        self._promotion_approval_required = False
+
+    def require_promotion_approval(self) -> None:
+        """Require a GUI-thread release handshake before every importer."""
+        self._promotion_approval_required = True
+
+    def _promotion_allowed(self) -> bool:
+        if not self._promotion_approval_required:
+            return True
+        request = ResourcePromotionRequest()
+        self.promotion_requested.emit(request)
+        return request.wait(lambda: self.is_cancelled)
+
+    @staticmethod
+    def _promotion_blocked_detail() -> str:
+        return QCoreApplication.translate(
+            "ResourceDownloadDialog",
+            "Indexed resources became busy before installation; existing resources were left unchanged.",
+        )
+
+    def _require_promotion_allowed(self) -> None:
+        if not self._promotion_allowed():
+            raise SetupError(self._promotion_blocked_detail())
 
     def _reporter_for(self, spec: ResourceSpec) -> _ItemPhaseReporter:
         """Return the phase reporter for one resource."""
@@ -263,7 +314,12 @@ class ResourceDownloadWorker(CancellableWorker):
     def run(self) -> None:
         """Download + import each spec in order, isolating per-item failures."""
         self.log_start("ResourceDownloadWorker", specs=len(self._specs))
-        summary = ResourceDownloadSummary(requested_count=len(self._specs))
+        summary = ResourceDownloadSummary(
+            requested_count=len(self._specs),
+            dicts_root=self._dicts_root,
+            freqs_root=self._freqs_root,
+            pitch_root=self._pitch_root,
+        )
 
         for spec in self._specs:
             if self.check_cancelled():
@@ -293,6 +349,26 @@ class ResourceDownloadWorker(CancellableWorker):
                         temp.unlink()
                     break
 
+                if not self._promotion_allowed():
+                    with contextlib.suppress(OSError):
+                        temp.unlink()
+                    if self.is_cancelled:
+                        summary.cancelled = True
+                    else:
+                        detail = self._promotion_blocked_detail()
+                        summary.results.append(
+                            ResourceDownloadResult(
+                                spec_id=spec.id,
+                                kind=spec.kind,
+                                display_name=spec.display_name,
+                                url=spec.url,
+                                ok=False,
+                                detail=detail,
+                            )
+                        )
+                        self.item_done.emit(spec.id, False, detail)
+                    break
+
                 # The bytes are in; everything after this is local work. Said
                 # before the importer starts so a multi-minute index build is
                 # never mistaken for a stalled download.
@@ -313,6 +389,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         cancel_check=lambda: self.is_cancelled,
                         progress=reporter.importing,
                         dict_id=spec.id,
+                        before_promote=self._require_promotion_allowed,
                     )
                     dict_id = result.dict_id
                     detail = f"{result.entry_count} entries"
@@ -337,6 +414,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         cancel_check=lambda: self.is_cancelled,
                         progress=reporter.importing,
                         overwrite=True,
+                        before_promote=self._require_promotion_allowed,
                     )
                     source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"
@@ -354,6 +432,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         cancel_check=lambda: self.is_cancelled,
                         progress=reporter.importing,
                         overwrite=True,
+                        before_promote=self._require_promotion_allowed,
                     )
                     source_id = pitch_result.source_id
                     detail = tr_format(
