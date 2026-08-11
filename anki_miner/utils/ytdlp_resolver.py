@@ -49,10 +49,13 @@ also includes the current PATH hit. A cached managed path is re-hashed before
 every return so replacement or tampering cannot outlive a stale cache entry.
 """
 
+import contextlib
 import hashlib
 import os
 import shutil
 import sys
+import threading
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -61,6 +64,7 @@ from anki_miner.utils.bundled_binary import bundled_name, frozen_state
 
 __all__ = [
     "resolve_ytdlp",
+    "managed_ytdlp_lock",
     "ytdlp_available",
     "ytdlp_binary_name",
     "ytdlp_download_dir",
@@ -71,6 +75,12 @@ __all__ = [
 # PATH-hit) so a changed override, bundle state, or PATH resolution is never
 # masked. Cached managed paths are re-verified before every return.
 _CACHE: dict[tuple, str] = {}
+
+# Serializes resolver cache transactions and each app-managed yt-dlp generation
+# with updater promotion. RLock permits one caller to cover resolution/argv
+# construction while capability probes take the same lock around their
+# subprocess lifetime.
+_MANAGED_YTDLP_LOCK = threading.RLock()
 
 
 def _clear_cache() -> None:
@@ -147,27 +157,54 @@ def _is_within_directory(candidate: str | Path, directory: Path) -> bool:
     return True
 
 
+@contextlib.contextmanager
+def managed_ytdlp_lock(
+    executable: str | Path | None = None,
+    *,
+    blocking: bool = True,
+) -> Iterator[bool]:
+    """Lock a resolver transaction, managed process lifetime, or promotion.
+
+    ``executable=None`` always addresses the managed slot. Other executables do
+    not share its Windows image lock and pass through without serialization.
+    """
+    if executable is not None:
+        download_dir = ytdlp_download_dir()
+        managed = download_dir / ytdlp_binary_name()
+        if not (_is_managed_path(executable, managed) or _is_within_directory(executable, download_dir)):
+            yield True
+            return
+
+    acquired = _MANAGED_YTDLP_LOCK.acquire(blocking=blocking)
+    try:
+        yield acquired
+    finally:
+        if acquired:
+            _MANAGED_YTDLP_LOCK.release()
+
+
 def resolve_ytdlp(config) -> str:
     """Resolve the yt-dlp executable path/literal for the given config."""
-    override = getattr(config, "ytdlp_location", None)
-    override_key = str(override) if override else None
-    frozen, meipass = frozen_state()
-    download_dir = ytdlp_download_dir()
-    path_ytdlp = shutil.which("yt-dlp")
-    cache_key = (override_key, frozen, meipass, str(download_dir), path_ytdlp)
-    cached = _CACHE.get(cache_key)
-    if cached is not None:
-        managed = download_dir / ytdlp_binary_name()
-        cached_is_managed = _is_managed_path(cached, managed)
-        if not cached_is_managed and not _is_within_directory(cached, download_dir):
-            return cached
-        if cached_is_managed and _is_verified_managed_binary(managed):
-            return str(managed)
-        del _CACHE[cache_key]
+    with managed_ytdlp_lock():
+        override = getattr(config, "ytdlp_location", None)
+        override_key = str(override) if override else None
+        frozen, meipass = frozen_state()
+        download_dir = ytdlp_download_dir()
+        path_ytdlp = shutil.which("yt-dlp")
+        cache_key = (override_key, frozen, meipass, str(download_dir), path_ytdlp)
+        cached = _CACHE.get(cache_key)
+        if cached is not None:
+            managed = download_dir / ytdlp_binary_name()
+            cached_is_managed = _is_managed_path(cached, managed)
+            if not cached_is_managed and not _is_within_directory(cached, download_dir):
+                return cached
+            if cached_is_managed and _is_verified_managed_binary(managed):
+                return str(managed)
+            del _CACHE[cache_key]
 
-    resolved = _compute(override, frozen, meipass, download_dir, path_ytdlp)
-    _CACHE[cache_key] = resolved
-    return resolved
+        resolved = _compute(override, frozen, meipass, download_dir, path_ytdlp)
+        _CACHE[cache_key] = resolved
+        return resolved
 
 
 def ytdlp_available(config) -> bool:

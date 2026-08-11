@@ -19,7 +19,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import threading
 import time
 import urllib.parse
 import urllib.request
@@ -88,9 +87,13 @@ _CHUNK_BYTES = 64 * 1024
 # SHA2-256SUMS is currently tens of KiB; reject unreasonable responses.
 _MAX_SUMS_BYTES = 256 * 1024
 
-# Keep staged-file verification, promotion, and receipt publication ordered
-# across updater instances in this process.
-_INSTALL_LOCK = threading.Lock()
+# Backward-compatible module handle used by containment tests. Process users and
+# updater promotion share this exact lock through ytdlp_resolver.
+_INSTALL_LOCK = ytdlp_resolver._MANAGED_YTDLP_LOCK
+
+
+class _PromotionDeferred(Exception):
+    """Managed yt-dlp is active, so this update must retry later."""
 
 
 def _validate_github_url(url: str) -> bool:
@@ -165,7 +168,7 @@ class YtdlpUpdateResult:
 
     Attributes:
         action: One of ``"installed"``, ``"up_to_date"``, ``"skipped_throttle"``,
-            ``"unavailable"``, ``"failed"``.
+            ``"deferred"``, ``"unavailable"``, ``"failed"``.
         installed_version: The version now on disk (post-install or current).
         available_version: The latest version reported by GitHub, if known.
         path: Path to the installed binary on ``"installed"``, else None.
@@ -219,14 +222,16 @@ class YtdlpUpdater:
             # Resolves (and caches) the pre-install yt-dlp path;
             # check_and_update clears the resolver cache after a successful
             # install so the next resolve picks up the fresh binary.
-            cmd = [ytdlp_resolver.resolve_ytdlp(self._config), "--version"]
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=15,
-                **no_window_kwargs(),
-            )
+            executable = ytdlp_resolver.resolve_ytdlp(self._config)
+            cmd = [executable, "--ignore-config", "--version"]
+            with ytdlp_resolver.managed_ytdlp_lock(executable):
+                proc = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                    **no_window_kwargs(),
+                )
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             return None
         if proc.returncode != 0:
@@ -308,6 +313,21 @@ class YtdlpUpdater:
             with contextlib.suppress(OSError):
                 tmp.unlink()
 
+    def _restore_throttle(self, previous_mtime_ns: int | None) -> None:
+        """Undo this run's throttle touch after deferred promotion."""
+        path = self._throttle_path()
+        try:
+            if previous_mtime_ns is None:
+                path.unlink(missing_ok=True)
+            else:
+                os.utime(path, ns=(previous_mtime_ns, previous_mtime_ns))
+        except OSError:
+            logger.debug("Failed to restore yt-dlp update throttle", exc_info=True)
+
+    def _raise_if_cancelled(self) -> None:
+        if self._cancel is not None and self._cancel():
+            raise OperationCancelled("yt-dlp update cancelled")
+
     # --- orchestration -----------------------------------------------------
 
     def check_and_update(
@@ -319,12 +339,22 @@ class YtdlpUpdater:
         """Throttled check + (if newer) download/install. Returns a result; never raises."""
         if cancel is not None:
             self._cancel = cancel
+        previous_throttle_mtime_ns: int | None = None
         try:
             if not force and self._throttled():
                 return YtdlpUpdateResult(action="skipped_throttle", message="Checked recently; skipped.")
 
+            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+                if not acquired:
+                    return YtdlpUpdateResult(
+                        action="deferred",
+                        message="yt-dlp is in use; update deferred.",
+                    )
+
             # Write the throttle BEFORE the network call so a crash / tight loop
             # does not retry-storm GitHub.
+            with contextlib.suppress(OSError):
+                previous_throttle_mtime_ns = self._throttle_path().stat().st_mtime_ns
             self._touch_throttle()
 
             latest, url = self.latest_version_and_asset()
@@ -348,13 +378,18 @@ class YtdlpUpdater:
                 )
 
             path = self._download_and_install(url, latest)
-            ytdlp_resolver._clear_cache()
             return YtdlpUpdateResult(
                 action="installed",
                 installed_version=latest,
                 available_version=latest,
                 path=path,
                 message=f"Updated yt-dlp to {latest}.",
+            )
+        except _PromotionDeferred:
+            self._restore_throttle(previous_throttle_mtime_ns)
+            return YtdlpUpdateResult(
+                action="deferred",
+                message="yt-dlp is in use; update deferred.",
             )
         except OperationCancelled:
             # The user asked to stop. Not a fault, so no traceback — but the
@@ -398,8 +433,7 @@ class YtdlpUpdater:
                 if not _validate_github_url(final_url):
                     raise ValueError(f"Refusing yt-dlp redirect to off-allowlist URL: {final_url!r}")
                 while True:
-                    if self._cancel is not None and self._cancel():
-                        raise OperationCancelled("yt-dlp download cancelled")
+                    self._raise_if_cancelled()
                     chunk = response.read(_CHUNK_BYTES)
                     if not chunk:
                         break
@@ -409,6 +443,7 @@ class YtdlpUpdater:
             if written < _MIN_SIZE_BYTES:
                 raise ValueError(f"Downloaded yt-dlp is implausibly small ({written} bytes); rejecting.")
 
+            self._raise_if_cancelled()
             sums_request = urllib.request.Request(
                 sums_url,
                 headers={"User-Agent": "anki-miner (+https://github.com/0xzerolight/anki_miner)"},
@@ -421,11 +456,15 @@ class YtdlpUpdater:
                 if len(manifest) > _MAX_SUMS_BYTES:
                     raise ValueError(f"{_SUMS_ASSET_NAME} exceeds the {_MAX_SUMS_BYTES:,}-byte cap")
                 expected_sha256 = _manifest_sha256(manifest, asset_name)
+            self._raise_if_cancelled()
 
-            with _INSTALL_LOCK:
+            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+                if not acquired:
+                    raise _PromotionDeferred
                 digest = hashlib.sha256()
                 with tmp.open("rb") as staged:
                     for chunk in iter(lambda: staged.read(_CHUNK_BYTES), b""):
+                        self._raise_if_cancelled()
                         digest.update(chunk)
                 actual_sha256 = digest.hexdigest()
                 # TLS-served sums authenticate this GitHub release, not a publisher key;
@@ -446,8 +485,13 @@ class YtdlpUpdater:
                                 **no_window_kwargs(),
                             )
 
-                self._atomic_replace(tmp, final)
-                self._write_verification_receipt(final, actual_sha256)
+                self._raise_if_cancelled()
+                self._promote_verified_binary(tmp, final, actual_sha256)
+                ytdlp_resolver._clear_cache()
+                from anki_miner.services import youtube_fetcher
+
+                youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
+                youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
             logger.info("Installed yt-dlp %s to %s", version, final)
             return final
         except BaseException:
@@ -455,6 +499,42 @@ class YtdlpUpdater:
             with contextlib.suppress(OSError):
                 tmp.unlink()
             raise
+
+    def _promote_verified_binary(self, staged: Path, final: Path, sha256: str) -> None:
+        """Publish binary + receipt as one rollback-safe managed generation."""
+        receipt = ytdlp_resolver.ytdlp_verification_receipt_path(final)
+        binary_backup = final.with_name(f".{final.name}.{os.getpid()}.rollback")
+        receipt_backup = receipt.with_name(f".{receipt.name}.{os.getpid()}.rollback")
+        binary_existed = final.exists()
+        receipt_existed = receipt.exists()
+        binary_backed_up = False
+        receipt_backed_up = False
+        try:
+            if binary_existed:
+                self._atomic_replace(final, binary_backup)
+                binary_backed_up = True
+            if receipt_existed:
+                self._atomic_replace(receipt, receipt_backup)
+                receipt_backed_up = True
+            self._atomic_replace(staged, final)
+            self._write_verification_receipt(final, sha256)
+        except BaseException:
+            if binary_backed_up:
+                self._atomic_replace(binary_backup, final)
+            elif not binary_existed:
+                with contextlib.suppress(OSError):
+                    final.unlink()
+            if receipt_backed_up:
+                self._atomic_replace(receipt_backup, receipt)
+            elif not receipt_existed:
+                with contextlib.suppress(OSError):
+                    receipt.unlink()
+            raise
+        else:
+            with contextlib.suppress(OSError):
+                binary_backup.unlink()
+            with contextlib.suppress(OSError):
+                receipt_backup.unlink()
 
     def _write_verification_receipt(self, binary: Path, sha256: str) -> None:
         """Atomically record the verified digest beside a promoted binary."""

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import signal
-import subprocess
+import sys
 import threading
 import time
 from dataclasses import replace
@@ -13,6 +14,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import psutil
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
@@ -27,6 +29,8 @@ from anki_miner.exceptions.youtube import (
 )
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
+
+_REAL_KILLPG = os.killpg if sys.platform != "win32" else None
 
 # ---------------------------------------------------------------------------
 # Test helpers
@@ -52,12 +56,52 @@ def _make_metadata(**overrides: Any) -> dict[str, Any]:
 
 
 def _fake_run(returncode: int, stdout: str = "", stderr: str = "") -> Any:
-    """Build a subprocess.CompletedProcess-like object."""
+    """Build an object accepted by subprocess and supervisor call sites."""
     proc = MagicMock()
     proc.returncode = returncode
     proc.stdout = stdout
     proc.stderr = stderr
+    proc.state = SupervisedState.COMPLETED if returncode == 0 else SupervisedState.FAILED
+    proc.error = None
     return proc
+
+
+def _pid_is_live(pid: int) -> bool:
+    try:
+        return psutil.Process(pid).status() != psutil.STATUS_ZOMBIE
+    except psutil.Error:
+        return False
+
+
+def _probe_tree_helper(tmp_path: Path) -> tuple[Path, Path, Path]:
+    parent_pid_path = tmp_path / "probe-parent.pid"
+    child_pid_path = tmp_path / "probe-child.pid"
+    body = "\n".join(
+        [
+            "import os",
+            "import pathlib",
+            "import subprocess",
+            "import sys",
+            "import time",
+            f"pathlib.Path({str(parent_pid_path)!r}).write_text(str(os.getpid()))",
+            "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])",
+            f"pathlib.Path({str(child_pid_path)!r}).write_text(str(child.pid))",
+            "time.sleep(60)",
+        ]
+    )
+    if sys.platform == "win32":
+        script = tmp_path / "yt-dlp-probe-helper.py"
+        script.write_text(body, encoding="utf-8")
+        helper = tmp_path / "yt-dlp-probe-helper.cmd"
+        helper.write_text(
+            f'@echo off\r\n"{sys.executable}" "{script}" %*\r\n',
+            encoding="utf-8",
+        )
+    else:
+        helper = tmp_path / "yt-dlp-probe-helper"
+        helper.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
+        helper.chmod(0o755)
+    return helper, parent_pid_path, child_pid_path
 
 
 class _FakePopen:
@@ -154,7 +198,9 @@ def _stub_supervisor_killpg() -> Any:
 class TestProbeMetadata:
     def test_happy_path_manual_subs(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(subtitles={"ja": [{"ext": "vtt"}]})
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.video_id == "dQw4w9WgXcQ"
         assert info.title == "Test Video"
@@ -174,14 +220,18 @@ class TestProbeMetadata:
         is why the manual branch deliberately does not filter on names.
         """
         payload = _make_metadata(subtitles={"ja": [{"ext": "vtt", "name": "Japanese (from the manga)"}]})
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_manual_ja_subs is True
 
     def test_manual_translation_key_is_not_mistaken_for_native(self, service: YouTubeFetcherService) -> None:
         """A ``ja-en`` manual translation must not register as manual Japanese."""
         payload = _make_metadata(subtitles={"ja-en": [{"ext": "vtt", "name": "Japanese from English"}]})
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_manual_ja_subs is False
 
@@ -191,7 +241,9 @@ class TestProbeMetadata:
             automatic_captions={"ja": [{"name": "Japanese"}]},
             language="ja",
         )
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_manual_ja_subs is False
         assert info.has_auto_ja_subs is True
@@ -201,7 +253,9 @@ class TestProbeMetadata:
             automatic_captions={"ja": [{"name": "Japanese (from English)"}]},
             language="en",
         )
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_auto_ja_subs is False
 
@@ -210,7 +264,9 @@ class TestProbeMetadata:
             automatic_captions={"ja": [{"name": "Japanese"}]},
             language="en",
         )
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_auto_ja_subs is False
 
@@ -218,7 +274,10 @@ class TestProbeMetadata:
         payload = _make_metadata()
         del payload["id"]
         with (
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload), stderr="some warn")),
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(0, json.dumps(payload), stderr="some warn"),
+            ),
             pytest.raises(YouTubeFetchError, match="incomplete metadata"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
@@ -227,33 +286,41 @@ class TestProbeMetadata:
         payload = _make_metadata()
         del payload["thumbnail"]
         del payload["uploader"]
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.video_id == "dQw4w9WgXcQ"
 
     def test_video_too_long(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(duration=99999)
         with (
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))),
             pytest.raises(VideoTooLongError),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
     def test_empty_subtitles_dict(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(subtitles={})
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_manual_ja_subs is False
 
     def test_age_restricted(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(age_limit=18)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.is_age_restricted is True
 
     def test_is_live(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(is_live=True)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.is_live is True
 
@@ -266,7 +333,9 @@ class TestProbeMetadata:
         caller's "Live streams not supported" branch can fire.
         """
         payload = _make_metadata(duration=None, is_live=True)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.is_live is True
         assert info.duration_s == 0
@@ -274,7 +343,7 @@ class TestProbeMetadata:
     def test_non_zero_exit_raises(self, service: YouTubeFetcherService) -> None:
         with (
             patch(
-                "subprocess.run",
+                "anki_miner.services.youtube_fetcher.run_supervised",
                 return_value=_fake_run(1, stdout="", stderr="ERROR: Video unavailable"),
             ),
             pytest.raises(YouTubeFetchError, match="exit 1"),
@@ -285,7 +354,9 @@ class TestProbeMetadata:
         cfg = replace(yt_config, youtube_cookies_from_browser="firefox")
         svc = YouTubeFetcherService(cfg)
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             svc.probe_metadata("https://youtu.be/abc123")
         args, _ = mrun.call_args
         cmd = args[0]
@@ -297,7 +368,9 @@ class TestProbeMetadata:
         cfg = replace(yt_config, youtube_cookies_file=cookies)
         svc = YouTubeFetcherService(cfg)
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             svc.probe_metadata("https://youtu.be/abc123")
         args, _ = mrun.call_args
         cmd = args[0]
@@ -309,7 +382,9 @@ class TestProbeMetadata:
         cfg = replace(yt_config, youtube_cookies_file=cookies, youtube_cookies_from_browser="firefox")
         svc = YouTubeFetcherService(cfg)
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             svc.probe_metadata("https://youtu.be/abc123")
         args, _ = mrun.call_args
         cmd = args[0]
@@ -319,7 +394,9 @@ class TestProbeMetadata:
 
     def test_probe_no_cookie_flags_when_unset(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         args, _ = mrun.call_args
         cmd = args[0]
@@ -330,7 +407,10 @@ class TestProbeMetadata:
         """Exit 0 but unparseable stdout (the site or yt-dlp broke) wraps the
         JSONDecodeError into a YouTubeFetchError instead of leaking it."""
         with (
-            patch("subprocess.run", return_value=_fake_run(0, "not-json", stderr="some warn")),
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(0, "not-json", stderr="some warn"),
+            ),
             pytest.raises(YouTubeFetchError, match="non-JSON"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
@@ -338,10 +418,69 @@ class TestProbeMetadata:
     def test_empty_stdout_raises_non_json(self, service: YouTubeFetcherService) -> None:
         """Exit 0 with empty stdout is also non-JSON, not an empty VideoInfo."""
         with (
-            patch("subprocess.run", return_value=_fake_run(0, "", stderr="")),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, "", stderr="")),
             pytest.raises(YouTubeFetchError, match="non-JSON"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
+
+
+class TestAppOwnedCommandIsolation:
+    def test_metadata_probe_ignores_user_config(self, service: YouTubeFetcherService) -> None:
+        payload = _make_metadata()
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
+            service.probe_metadata("https://youtu.be/abc123")
+        assert mrun.call_args.args[0][1] == "--ignore-config"
+
+    def test_playlist_probe_ignores_user_config(self, service: YouTubeFetcherService) -> None:
+        payload = {
+            "id": "PLxxxxxxxxxxxx",
+            "title": "List",
+            "playlist_count": 1,
+            "entries": [{"id": "dQw4w9WgXcQ", "title": "V", "duration": 10}],
+        }
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
+            service.probe_playlist("https://www.youtube.com/playlist?list=secret", limit=5)
+        assert mrun.call_args.args[0][1] == "--ignore-config"
+
+    def test_fetch_ignores_user_config(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        assert service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "manual_only")[1] == "--ignore-config"
+
+    @pytest.mark.real_ytdlp
+    def test_capability_probes_ignore_user_config(self) -> None:
+        from anki_miner.services import youtube_fetcher as yf
+
+        yf._ytdlp_supports_js_runtimes.cache_clear()
+        yf._ytdlp_supports_remote_components.cache_clear()
+        with patch("subprocess.run", return_value=_fake_run(0, "old help")) as mrun:
+            yf._ytdlp_supports_js_runtimes("yt-dlp")
+            yf._ytdlp_supports_remote_components("yt-dlp")
+        assert [call.args[0][1] for call in mrun.call_args_list] == ["--ignore-config", "--ignore-config"]
+
+
+@pytest.mark.parametrize("probe", ["metadata", "playlist"])
+def test_probe_log_redacts_query_and_fragment(
+    service: YouTubeFetcherService,
+    caplog: pytest.LogCaptureFixture,
+    probe: str,
+) -> None:
+    url = "https://www.youtube.com/watch?v=public&si=PRIVATE_TOKEN#PRIVATE_FRAGMENT"
+    with (
+        caplog.at_level("INFO", logger="anki_miner.services.youtube_fetcher"),
+        patch.object(service, "_ytdlp", side_effect=YtdlpNotFoundError("stop after log")),
+        pytest.raises(YtdlpNotFoundError),
+    ):
+        if probe == "metadata":
+            service.probe_metadata(url)
+        else:
+            service.probe_playlist(url, limit=5)
+
+    assert "https://www.youtube.com/watch" in caplog.text
+    assert "PRIVATE_TOKEN" not in caplog.text
+    assert "PRIVATE_FRAGMENT" not in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -675,7 +814,9 @@ class TestUrlArgumentSeparator:
 
     def test_probe_metadata_inserts_separator(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata(self._HOSTILE)
         cmd = mrun.call_args.args[0]
         self._assert_sep_then_url(cmd, self._HOSTILE)
@@ -687,7 +828,9 @@ class TestUrlArgumentSeparator:
             "playlist_count": 1,
             "entries": [{"id": "dQw4w9WgXcQ", "title": "V", "duration": 10}],
         }
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_playlist(self._HOSTILE, limit=5)
         cmd = mrun.call_args.args[0]
         self._assert_sep_then_url(cmd, self._HOSTILE)
@@ -1340,19 +1483,106 @@ class TestResolveOutputsAmbiguity:
 
 
 def test_probe_metadata_timeout_wrapped(service: YouTubeFetcherService) -> None:
+    timed_out = SupervisedResult(SupervisedState.TIMED_OUT, None, "", "")
     with (
         patch(
-            "subprocess.run",
-            side_effect=subprocess.TimeoutExpired(cmd="yt-dlp", timeout=60),
+            "anki_miner.services.youtube_fetcher.run_supervised",
+            return_value=timed_out,
         ),
         pytest.raises(YouTubeFetchError, match="timed out"),
     ):
         service.probe_metadata("https://youtu.be/abc123")
 
 
-def test_probe_metadata_missing_yt_dlp(service: YouTubeFetcherService) -> None:
+def test_probe_metadata_uses_supervisor_timeout(service: YouTubeFetcherService) -> None:
+    timed_out = SupervisedResult(SupervisedState.TIMED_OUT, None, "", "")
     with (
-        patch("subprocess.run", side_effect=FileNotFoundError()),
+        patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=timed_out) as supervised,
+        pytest.raises(YouTubeFetchError, match="timed out"),
+    ):
+        service.probe_metadata("https://youtu.be/abc123", timeout_s=0.1)
+    assert supervised.call_args.kwargs["timeout_s"] == 0.1
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process-group integration coverage")
+@pytest.mark.parametrize("probe", ["metadata", "playlist"])
+def test_probe_timeout_terminates_helper_tree(
+    yt_config: AnkiMinerConfig,
+    tmp_path: Path,
+    probe: str,
+) -> None:
+    helper, parent_pid_path, child_pid_path = _probe_tree_helper(tmp_path)
+    service = YouTubeFetcherService(replace(yt_config, ytdlp_location=helper))
+
+    assert _REAL_KILLPG is not None
+    with (
+        patch("anki_miner.utils.process_supervisor.os.killpg", side_effect=_REAL_KILLPG),
+        pytest.raises(YouTubeFetchError, match="timed out"),
+    ):
+        if probe == "metadata":
+            service.probe_metadata("https://youtu.be/abc123", timeout_s=1.0)
+        else:
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest", limit=5, timeout_s=1.0)
+
+    parent_pid = int(parent_pid_path.read_text())
+    child_pid = int(child_pid_path.read_text())
+    try:
+        assert not _pid_is_live(parent_pid)
+        assert not _pid_is_live(child_pid)
+    finally:
+        for pid in (parent_pid, child_pid):
+            if _pid_is_live(pid):
+                psutil.Process(pid).kill()
+
+
+def _assert_windows_probe_timeout_terminates_helper_tree(
+    yt_config: AnkiMinerConfig,
+    tmp_path: Path,
+    probe: str,
+) -> None:
+    helper, parent_pid_path, child_pid_path = _probe_tree_helper(tmp_path)
+    service = YouTubeFetcherService(replace(yt_config, ytdlp_location=helper))
+    started = time.monotonic()
+
+    with pytest.raises(YouTubeFetchError, match="timed out"):
+        if probe == "metadata":
+            service.probe_metadata("https://youtu.be/abc123", timeout_s=2.0)
+        else:
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest", limit=5, timeout_s=2.0)
+
+    elapsed = time.monotonic() - started
+    assert elapsed < 5.0
+    parent_pid = int(parent_pid_path.read_text())
+    child_pid = int(child_pid_path.read_text())
+    try:
+        assert not _pid_is_live(parent_pid)
+        assert not _pid_is_live(child_pid)
+    finally:
+        for pid in (parent_pid, child_pid):
+            if _pid_is_live(pid):
+                psutil.Process(pid).kill()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows Job Object integration coverage")
+def test_probe_metadata_timeout_terminates_windows_js_runtime_tree(
+    yt_config: AnkiMinerConfig,
+    tmp_path: Path,
+) -> None:
+    _assert_windows_probe_timeout_terminates_helper_tree(yt_config, tmp_path, "metadata")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows Job Object integration coverage")
+def test_probe_playlist_timeout_terminates_windows_js_runtime_tree(
+    yt_config: AnkiMinerConfig,
+    tmp_path: Path,
+) -> None:
+    _assert_windows_probe_timeout_terminates_helper_tree(yt_config, tmp_path, "playlist")
+
+
+def test_probe_metadata_missing_yt_dlp(service: YouTubeFetcherService) -> None:
+    missing = SupervisedResult(SupervisedState.FAILED, None, "", "", FileNotFoundError())
+    with (
+        patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=missing),
         pytest.raises(YouTubeFetchError, match="yt-dlp executable not found"),
     ):
         service.probe_metadata("https://youtu.be/abc123")
@@ -1489,7 +1719,9 @@ class TestJsRuntimeArgs:
         self._enable_capability(monkeypatch, True)
         monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"node"}))
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         cmd = mrun.call_args[0][0]
         assert "--js-runtimes" in cmd
@@ -1545,14 +1777,18 @@ class TestJsRuntimeArgs:
         # is present, so no flag is added.
         monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory(set()))
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         assert "--js-runtimes" not in mrun.call_args[0][0]
 
     def test_unsupported_ytdlp_omits_flag(self, service: YouTubeFetcherService) -> None:
         # autouse fixture defaults the capability probe to False (old yt-dlp).
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         assert "--js-runtimes" not in mrun.call_args[0][0]
 
@@ -1599,7 +1835,9 @@ class TestRemoteComponentArgs:
         self._enable_capability(monkeypatch, True)
         monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory({"node"}))
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         cmd = mrun.call_args[0][0]
         assert "--remote-components" in cmd
@@ -1635,7 +1873,9 @@ class TestRemoteComponentArgs:
         self._enable_capability(monkeypatch, True)
         monkeypatch.setattr("anki_miner.services.youtube_fetcher.shutil.which", _which_factory(set()))
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         cmd = mrun.call_args[0][0]
         assert "--js-runtimes" not in cmd
@@ -1645,7 +1885,9 @@ class TestRemoteComponentArgs:
     def test_unsupported_ytdlp_omits_flag(self, service: YouTubeFetcherService) -> None:
         # autouse fixture defaults the capability probe to False (old yt-dlp).
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_metadata("https://youtu.be/abc123")
         assert "--remote-components" not in mrun.call_args[0][0]
 
@@ -1729,7 +1971,9 @@ class TestProbePlaylist:
 
     def test_happy_path_entries_parsed_in_order(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.title == "Test Playlist"
         assert info.playlist_id == "PLtest123456789"
@@ -1743,46 +1987,60 @@ class TestProbePlaylist:
 
     def test_canonical_urls_built_from_video_id(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload(entries=[_make_playlist_entry("aaaaaaaaaaa", url="https://some-other-url")])
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         # URL must be canonical, NOT from entry's own url field
         assert info.entries[0].url == "https://www.youtube.com/watch?v=aaaaaaaaaaa"
 
     def test_duration_parsed_as_int(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload(entries=[_make_playlist_entry("aaaaaaaaaaa", duration=183)])
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.entries[0].duration_s == 183
 
     def test_missing_duration_yields_none(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload(entries=[_make_playlist_entry("aaaaaaaaaaa", duration=None)])
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.entries[0].duration_s is None
 
     def test_missing_playlist_count_yields_none(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload(playlist_count=None)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.total_count is None
 
     def test_missing_title_defaults_to_playlist(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
         del payload["title"]
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.title == "Playlist"
 
     def test_empty_title_defaults_to_playlist(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload(title="")
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.title == "Playlist"
 
     def test_missing_id_yields_none_playlist_id(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
         del payload["id"]
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.playlist_id is None
 
@@ -1792,7 +2050,9 @@ class TestProbePlaylist:
 
     def test_command_contains_flat_playlist_flags(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
         cmd = mrun.call_args[0][0]
         assert "--flat-playlist" in cmd
@@ -1801,7 +2061,9 @@ class TestProbePlaylist:
 
     def test_command_contains_playlist_items_limit_plus_one(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
         cmd = mrun.call_args[0][0]
         assert "--playlist-items" in cmd
@@ -1809,7 +2071,9 @@ class TestProbePlaylist:
 
     def test_command_does_not_contain_no_playlist(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
         cmd = mrun.call_args[0][0]
         assert "--no-playlist" not in cmd
@@ -1817,7 +2081,9 @@ class TestProbePlaylist:
     def test_command_appends_url_last(self, service: YouTubeFetcherService) -> None:
         url = "https://www.youtube.com/playlist?list=PLtest123456789"
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_playlist(url, limit=5)
         cmd = mrun.call_args[0][0]
         assert cmd[-1] == url
@@ -1826,7 +2092,9 @@ class TestProbePlaylist:
         cfg = replace(yt_config, youtube_cookies_from_browser="chrome")
         svc = YouTubeFetcherService(cfg)
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             svc.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=5)
         cmd = mrun.call_args[0][0]
         assert "--cookies-from-browser" in cmd
@@ -1837,7 +2105,9 @@ class TestProbePlaylist:
         cfg = replace(yt_config, youtube_cookies_file=cookies)
         svc = YouTubeFetcherService(cfg)
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             svc.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=5)
         cmd = mrun.call_args[0][0]
         assert "--cookies" in cmd
@@ -1845,7 +2115,9 @@ class TestProbePlaylist:
 
     def test_command_no_cookie_flags_when_unset(self, service: YouTubeFetcherService) -> None:
         payload = _make_playlist_payload()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=5)
         cmd = mrun.call_args[0][0]
         assert "--cookies" not in cmd
@@ -1861,7 +2133,9 @@ class TestProbePlaylist:
         hex_chars = "0123456789abcde"
         entries = [_make_playlist_entry(f"{'a' * 10}{hex_chars[i]}", f"Video {i}", 60) for i in range(11)]
         payload = _make_playlist_payload(entries=entries)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=10)
         assert len(info.entries) == 11  # all limit+1 entries returned (no truncation)
 
@@ -1875,7 +2149,9 @@ class TestProbePlaylist:
             _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
         ]
         payload = _make_playlist_payload(entries=entries)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert len(info.entries) == 1
         assert info.entries[0].video_id == "bbbbbbbbbbb"
@@ -1886,7 +2162,9 @@ class TestProbePlaylist:
             _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
         ]
         payload = _make_playlist_payload(entries=entries)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert len(info.entries) == 1
         assert info.entries[0].video_id == "bbbbbbbbbbb"
@@ -1897,7 +2175,9 @@ class TestProbePlaylist:
             _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
         ]
         payload = _make_playlist_payload(entries=entries)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert len(info.entries) == 1
         assert info.entries[0].video_id == "bbbbbbbbbbb"
@@ -1909,7 +2189,9 @@ class TestProbePlaylist:
             _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
         ]
         payload = _make_playlist_payload(entries=entries)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert len(info.entries) == 1
 
@@ -1920,7 +2202,9 @@ class TestProbePlaylist:
             _make_playlist_entry("bbbbbbbbbbb", "Normal video"),
         ]
         payload = _make_playlist_payload(entries=entries)
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert len(info.entries) == 1
         assert info.entries[0].video_id == "bbbbbbbbbbb"
@@ -1928,14 +2212,18 @@ class TestProbePlaylist:
     def test_missing_title_on_entry_defaults_to_video_id(self, service: YouTubeFetcherService) -> None:
         entry: dict[str, Any] = {"id": "aaaaaaaaaaa", "duration": 60}
         payload = _make_playlist_payload(entries=[entry])
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.entries[0].title == "aaaaaaaaaaa"
 
     def test_empty_title_on_entry_defaults_to_video_id(self, service: YouTubeFetcherService) -> None:
         entry = _make_playlist_entry("aaaaaaaaaaa", title="")
         payload = _make_playlist_payload(entries=[entry])
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
             info = service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
         assert info.entries[0].title == "aaaaaaaaaaa"
 
@@ -1946,7 +2234,7 @@ class TestProbePlaylist:
         ]
         payload = _make_playlist_payload(entries=entries)
         with (
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))),
             pytest.raises(YouTubeFetchError, match="no accessible videos"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
@@ -1959,7 +2247,7 @@ class TestProbePlaylist:
         payload = _make_playlist_payload()
         del payload["entries"]
         with (
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))),
             pytest.raises(YouTubeFetchError, match="not a playlist"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
@@ -1968,7 +2256,7 @@ class TestProbePlaylist:
         payload = _make_playlist_payload()
         payload["entries"] = "not a list"
         with (
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))),
             pytest.raises(YouTubeFetchError, match="not a playlist"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
@@ -1976,7 +2264,7 @@ class TestProbePlaylist:
     def test_non_zero_exit_raises_with_stderr_tail(self, service: YouTubeFetcherService) -> None:
         with (
             patch(
-                "subprocess.run",
+                "anki_miner.services.youtube_fetcher.run_supervised",
                 return_value=_fake_run(1, stdout="", stderr="ERROR: Playlist unavailable"),
             ),
             pytest.raises(YouTubeFetchError, match="exit 1"),
@@ -1984,25 +2272,39 @@ class TestProbePlaylist:
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
 
     def test_timeout_raises(self, service: YouTubeFetcherService) -> None:
+        timed_out = SupervisedResult(SupervisedState.TIMED_OUT, None, "", "")
         with (
             patch(
-                "subprocess.run",
-                side_effect=subprocess.TimeoutExpired(cmd="yt-dlp", timeout=120),
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=timed_out,
             ),
             pytest.raises(YouTubeFetchError, match="timed out"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
 
-    def test_ytdlp_missing_raises(self, service: YouTubeFetcherService) -> None:
+    def test_uses_supervisor_timeout(self, service: YouTubeFetcherService) -> None:
+        timed_out = SupervisedResult(SupervisedState.TIMED_OUT, None, "", "")
         with (
-            patch("subprocess.run", side_effect=FileNotFoundError()),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=timed_out) as supervised,
+            pytest.raises(YouTubeFetchError, match="timed out"),
+        ):
+            service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50, timeout_s=0.1)
+        assert supervised.call_args.kwargs["timeout_s"] == 0.1
+
+    def test_ytdlp_missing_raises(self, service: YouTubeFetcherService) -> None:
+        missing = SupervisedResult(SupervisedState.FAILED, None, "", "", FileNotFoundError())
+        with (
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=missing),
             pytest.raises(YouTubeFetchError, match="yt-dlp executable not found"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
 
     def test_non_json_output_raises(self, service: YouTubeFetcherService) -> None:
         with (
-            patch("subprocess.run", return_value=_fake_run(0, "not-json-output", stderr="some warn")),
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(0, "not-json-output", stderr="some warn"),
+            ),
             pytest.raises(YouTubeFetchError, match="non-JSON"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
@@ -2011,16 +2313,13 @@ class TestProbePlaylist:
 class TestNoWindowSpawn:
     """Issue #79: every yt-dlp spawn must suppress a Windows console."""
 
-    SENTINEL = {"creationflags": 0x424242}
-
-    def test_probe_metadata_spreads_no_window(self, service: YouTubeFetcherService) -> None:
+    def test_probe_metadata_routes_through_supervisor(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata()
-        with (
-            patch("anki_miner.services.youtube_fetcher.no_window_kwargs", return_value=self.SENTINEL),
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun,
-        ):
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as supervised:
             service.probe_metadata("https://youtu.be/abc123")
-        assert mrun.call_args.kwargs.get("creationflags") == 0x424242
+        supervised.assert_called_once()
 
     def test_fetch_video_starts_new_session(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         _make_happy_outputs(tmp_path)
@@ -2059,7 +2358,9 @@ class TestYtdlpResolverIntegration:
         payload = _make_metadata()
         with (
             patch("anki_miner.utils.ytdlp_resolver.shutil.which", return_value=None),
-            patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun,
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+            ) as mrun,
         ):
             service.probe_metadata("https://youtu.be/abc123")
         assert mrun.call_args.args[0][0] == "yt-dlp"
@@ -2071,7 +2372,9 @@ class TestYtdlpResolverIntegration:
         cfg = replace(yt_config, ytdlp_location=binary)
         svc = YouTubeFetcherService(cfg)
         payload = _make_metadata()
-        with patch("subprocess.run", return_value=_fake_run(0, json.dumps(payload))) as mrun:
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ) as mrun:
             svc.probe_metadata("https://youtu.be/abc123")
         assert mrun.call_args.args[0][0] == str(binary)
 
@@ -2089,15 +2392,17 @@ class TestYtdlpNotFound:
     """FileNotFoundError from yt-dlp must surface as YtdlpNotFoundError."""
 
     def test_probe_metadata_missing_binary(self, service: YouTubeFetcherService) -> None:
+        missing = SupervisedResult(SupervisedState.FAILED, None, "", "", FileNotFoundError())
         with (
-            patch("subprocess.run", side_effect=FileNotFoundError()),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=missing),
             pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
     def test_probe_playlist_missing_binary(self, service: YouTubeFetcherService) -> None:
+        missing = SupervisedResult(SupervisedState.FAILED, None, "", "", FileNotFoundError())
         with (
-            patch("subprocess.run", side_effect=FileNotFoundError()),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=missing),
             pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
         ):
             service.probe_playlist("https://youtu.be/abc123", limit=5)

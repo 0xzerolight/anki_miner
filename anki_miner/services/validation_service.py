@@ -17,7 +17,7 @@ from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.subprocess_utils import no_window_kwargs
-from anki_miner.utils.ytdlp_resolver import resolve_ytdlp
+from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
 
 logger = logging.getLogger(__name__)
 
@@ -317,6 +317,7 @@ class ValidationService:
         resolved_path: str,
         *,
         version_flag: str = "-version",
+        prefix_args: tuple[str, ...] = (),
         missing_message: str | None = None,
     ) -> tuple[bool, str]:
         """Run ``<resolved_path> <version_flag>`` and classify the result.
@@ -329,6 +330,7 @@ class ValidationService:
         Args:
             version_flag: ffmpeg/ffprobe use the single-dash ``-version``; alass and
                 yt-dlp use ``--version``.
+            prefix_args: Arguments that must precede the version flag.
             missing_message: Overrides the generic not-found text for optional tools
                 that want to name the feature the user loses.
 
@@ -337,7 +339,7 @@ class ValidationService:
         """
         try:
             result = subprocess.run(
-                [resolved_path, version_flag],
+                [resolved_path, *prefix_args, version_flag],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -399,7 +401,7 @@ class ValidationService:
             resolve_alass(self.config),
             version_flag="--version",
             missing_message=(
-                "alass not found — subtitle retiming will be unavailable; " "install alass or set its path in Settings"
+                "alass not found — subtitle retiming will be unavailable; install alass or set its path in Settings"
             ),
         )
 
@@ -418,23 +420,25 @@ class ValidationService:
         Returns:
             Tuple of (success, message).
         """
-        try:
-            resolved = resolve_ytdlp(self.config)
-        except FileNotFoundError:
-            return (
-                False,
-                "yt-dlp is present but unverified, so it will not be used. "
-                "Re-run Settings → YouTube → Update yt-dlp now.",
+        with managed_ytdlp_lock():
+            try:
+                resolved = resolve_ytdlp(self.config)
+            except FileNotFoundError:
+                return (
+                    False,
+                    "yt-dlp is present but unverified, so it will not be used. "
+                    "Re-run Settings → YouTube → Update yt-dlp now.",
+                )
+            return self._check_tool(
+                "yt-dlp",
+                resolved,
+                version_flag="--version",
+                prefix_args=("--ignore-config",),
+                missing_message=(
+                    "yt-dlp not found — YouTube mining will be unavailable; "
+                    "use Settings → YouTube → Update yt-dlp now to install it"
+                ),
             )
-        return self._check_tool(
-            "yt-dlp",
-            resolved,
-            version_flag="--version",
-            missing_message=(
-                "yt-dlp not found — YouTube mining will be unavailable; "
-                "use Settings → YouTube → Update yt-dlp now to install it"
-            ),
-        )
 
     def _ytdlp_staleness_warning(self, version_message: str) -> str | None:
         """Nudge opted-out users whose yt-dlp has aged out, else None.
@@ -543,7 +547,7 @@ class ValidationService:
             msg = str(e)
             prefix = "AnkiConnect error in 'deckNames': "
             if msg.startswith(prefix):
-                return False, f"Error fetching decks: {msg[len(prefix):]}"
+                return False, f"Error fetching decks: {msg[len(prefix) :]}"
             return False, f"Error checking deck: {e}"
         except Exception as e:
             logger.exception("Unexpected error checking deck existence")
@@ -579,7 +583,7 @@ class ValidationService:
             msg = str(e)
             prefix = "AnkiConnect error in 'modelNames': "
             if msg.startswith(prefix):
-                return False, f"Error fetching models: {msg[len(prefix):]}"
+                return False, f"Error fetching models: {msg[len(prefix) :]}"
             return False, f"Error checking note type: {e}"
         except Exception as e:
             logger.exception("Unexpected error checking note type existence")
@@ -612,7 +616,7 @@ class ValidationService:
             msg = str(e)
             prefix = "AnkiConnect error in 'modelFieldNames': "
             if msg.startswith(prefix):
-                return False, f"Error fetching fields: {msg[len(prefix):]}"
+                return False, f"Error fetching fields: {msg[len(prefix) :]}"
             return False, f"Error checking fields: {e}"
         except Exception as e:
             logger.exception("Unexpected error checking field names")

@@ -361,8 +361,10 @@ def run_supervised(
         with contextlib.suppress(queue.Empty):
             consume(*events.get(timeout=wait_s))
 
-    if state in {SupervisedState.TIMED_OUT, SupervisedState.CANCELLED, SupervisedState.FAILED}:
-        _terminate_tree(proc, job)
+    # A successful parent can still leave a helper holding inherited pipes or
+    # running in its process group. Supervision owns the whole tree, not only the
+    # immediate process, so every terminal state closes descendants.
+    _terminate_tree(proc, job)
     returncode = _bounded_wait(proc)
 
     drain_deadline = time.monotonic() + _DRAIN_TIMEOUT_S
