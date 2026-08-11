@@ -275,6 +275,16 @@ class TestAddUrlRejection:
         assert tab._queue.all_items() == []
         assert probe_cls.call_count == 0
 
+    def test_malformed_bracketed_url_rejected(self, tab):
+        tab.url_edit.setText("https://[")
+
+        tab._on_add_clicked()
+
+        assert tab._queue.all_items() == []
+        assert tab._probe_worker_cls.call_count == 0
+        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
+        assert tab.url_edit.text() == "https://["
+
     def test_plain_https_url_still_accepted(self, tab):
         # http(s) inputs remain accepted — yt-dlp stays the final validator
         # for non-YouTube-shaped URLs (no behaviour change for that path).
@@ -1265,7 +1275,13 @@ class TestUpdateConfig:
 
 def _resolve_playlist(tab, url: str, pl: PlaylistInfo) -> None:
     """Helper: simulate the resolve worker emitting ``playlist_resolved``."""
-    tab._add_flow._on_playlist_resolved(url, classify_youtube_url(url), pl, tab._add_flow._playlist_generation)
+    tab._add_flow._on_playlist_resolved(
+        url,
+        classify_youtube_url(url),
+        pl,
+        tab._add_flow._playlist_generation,
+        tab._add_flow._config.youtube_playlist_max,
+    )
 
 
 class TestPlaylistAdd:
@@ -1395,6 +1411,23 @@ class TestPlaylistResolved:
         items = tab._queue.all_items()
         assert [i.video_id for i in items] == [e.video_id for e in pl.entries[:3]]
 
+    def test_resolve_uses_cap_captured_when_request_started(self, tab):
+        resolve_config = replace(tab._add_flow._config, youtube_playlist_max=3)
+        tab._add_flow.update_config(resolve_config, MagicMock(name="ResolveFetcher"))
+        tab.url_edit.setText(PLAYLIST_URL)
+        tab._on_add_clicked()
+        resolved_callback = tab._add_flow._playlist_resolve_worker.playlist_resolved.connect.call_args.args[0]
+
+        live_config = replace(resolve_config, youtube_playlist_max=100)
+        tab._add_flow.update_config(live_config, MagicMock(name="LiveFetcher"))
+        pl = _make_playlist_info(n=4, total_count=500)
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="playlist") as ask:
+            resolved_callback(pl)
+
+        assert ask.call_args.args[2:] == (3, True)
+        assert [item.video_id for item in tab._queue.all_items()] == [entry.video_id for entry in pl.entries[:3]]
+
     def test_over_cap_by_total_count_only(self, tab):
         """total_count > cap flags over-cap even when fewer entries survived parsing."""
         # The add flow reads its own frozen snapshot — override it there.
@@ -1467,6 +1500,7 @@ class TestPlaylistResolved:
                 classify_youtube_url(PLAYLIST_URL),
                 _make_playlist_info(n=3),
                 stale_generation,
+                tab._add_flow._config.youtube_playlist_max,
             )
 
         ask.assert_not_called()

@@ -752,7 +752,6 @@ class YouTubeFetcherService:
             "requested format is not available",
             "only images are available",
             "drm protected",
-            "sabr",
         )
         if any(marker in joined_lower for marker in stale_extractor_markers):
             raise YouTubeFetchError(

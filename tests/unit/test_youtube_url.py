@@ -1,5 +1,7 @@
 """Tests for anki_miner.utils.youtube_url — YouTube URL classification util."""
 
+import pytest
+
 from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
 
 # ---------------------------------------------------------------------------
@@ -86,6 +88,10 @@ class TestPurePlaylistUrl:
 
     def test_playlist_scheme_less(self):
         assert classify_youtube_url(f"youtube.com/playlist?list={PL}") == _playlist(PL)
+
+    @pytest.mark.parametrize("playlist_id", ["WL", "LL", "LM"])
+    def test_special_playlist_ids(self, playlist_id):
+        assert classify_youtube_url(f"https://www.youtube.com/playlist?list={playlist_id}") == _playlist(playlist_id)
 
 
 # ---------------------------------------------------------------------------
