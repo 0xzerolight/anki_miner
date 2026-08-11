@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -375,6 +376,10 @@ def test_override_resets_after_processing_finished(tab):
     # _on_processing_finished calls _restore_buttons, which expects the worker set up
     tab.worker_thread = MagicMock(name="EpisodeWorkerThread")
     tab.worker_thread.isRunning.return_value = False
+    tab._curation_video = Path("/video/ep01.mkv")
+    tab._curation_subtitle = Path("/subs/ep01.ass")
+    tab._curation_video_raw = "/video/ep01.mkv"
+    tab._curation_subtitle_raw = "/subs/ep01.ass"
 
     result = MagicMock(name="ProcessingResult")
     tab._on_processing_finished(result)
@@ -623,12 +628,98 @@ def test_processing_finished_saves_offset_to_recent(tab):
     tab.video_selector.set_path("/video/ep01.mkv")
     tab.subtitle_selector.set_path("/subs/ep01.ass")
     tab.offset_spinbox.setValue(3.5)
+    tab._curation_video = Path("/video/ep01.mkv")
+    tab._curation_subtitle = Path("/subs/ep01.ass")
+    tab._curation_video_raw = "/video/ep01.mkv"
+    tab._curation_subtitle_raw = "/subs/ep01.ass"
+    tab._curation_offset = 3.5
 
     tab._on_processing_finished(MagicMock(name="ProcessingResult"))
 
     args, _ = tab.recent_manager.add_entry.call_args
     # add_entry(Path(video), Path(subtitle), offset)
     assert args[2] == pytest.approx(3.5)
+
+
+def test_processing_finished_without_run_snapshot_preserves_live_selection(tab, tmp_path):
+    video = tmp_path / "next.mkv"
+    subtitle = tmp_path / "next.srt"
+    video.touch()
+    subtitle.touch()
+    tab.video_selector.set_path(str(video))
+    tab.subtitle_selector.set_path(str(subtitle))
+    tab.offset_spinbox.setValue(7.5)
+    tab.recent_manager = MagicMock(name="RecentFilesManager")
+
+    result = MagicMock(name="ProcessingResult")
+    result.success = True
+    result.cards_created = 4
+
+    tab._on_processing_finished(result)
+
+    tab.recent_manager.add_entry.assert_not_called()
+    assert tab.video_selector.get_path() == str(video)
+    assert tab.subtitle_selector.get_path() == str(subtitle)
+    assert tab.offset_spinbox.value() == pytest.approx(7.5)
+
+
+def test_processing_finished_uses_run_snapshot_and_preserves_new_selection(tab, tmp_path):
+    video_a = tmp_path / "a.mkv"
+    subtitle_a = tmp_path / "a.srt"
+    video_b = tmp_path / "b.mkv"
+    subtitle_b = tmp_path / "b.srt"
+    for path in (video_a, subtitle_a, video_b, subtitle_b):
+        path.touch()
+
+    tab.video_selector.set_path(str(video_a))
+    tab.subtitle_selector.set_path(str(subtitle_a))
+    tab.offset_spinbox.setValue(1.25)
+    tab.recent_manager = MagicMock(name="RecentFilesManager")
+    tab.recent_manager.get_recent.return_value = []
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    with patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker):
+        tab._start_processing()
+
+    tab.video_selector.set_path(str(video_b))
+    tab.subtitle_selector.set_path(str(subtitle_b))
+    tab.offset_spinbox.setValue(7.5)
+    result = MagicMock(name="ProcessingResult")
+    result.success = True
+    result.cards_created = 4
+
+    tab._on_processing_finished(result)
+
+    tab.recent_manager.add_entry.assert_called_once_with(video_a, subtitle_a, 1.25)
+    assert tab.video_selector.get_path() == str(video_b)
+    assert tab.subtitle_selector.get_path() == str(subtitle_b)
+    assert tab.offset_spinbox.value() == pytest.approx(7.5)
+
+
+def test_processing_finished_clears_unchanged_noncanonical_launch_paths(tab, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    video = Path("episode.mkv")
+    subtitle = Path("episode.srt")
+    video.touch()
+    subtitle.touch()
+    raw_video = "./episode.mkv"
+    raw_subtitle = "./episode.srt"
+    tab.video_selector.set_path(raw_video)
+    tab.subtitle_selector.set_path(raw_subtitle)
+    tab.recent_manager = MagicMock(name="RecentFilesManager")
+    tab.recent_manager.get_recent.return_value = []
+
+    mock_worker = MagicMock(name="EpisodeWorkerThread")
+    with patch("anki_miner.gui.widgets.single_episode_tab.EpisodeWorkerThread", return_value=mock_worker):
+        tab._start_processing()
+
+    result = MagicMock(name="ProcessingResult")
+    result.success = True
+    result.cards_created = 4
+    tab._on_processing_finished(result)
+
+    assert tab.video_selector.get_path() == ""
+    assert tab.subtitle_selector.get_path() == ""
 
 
 def test_recent_selection_restores_offset(tab):
@@ -928,6 +1019,40 @@ def test_timing_parse_runs_off_gui_thread(tab, tmp_path, qtbot):
 
     assert parse_thread["id"] != threading.get_ident()  # parsed off the GUI thread
     assert tab.timing_button.isEnabled()  # re-enabled after success
+
+
+def test_timing_parse_discards_result_after_inputs_change(tab, tmp_path):
+    from PyQt6.QtWidgets import QDialog
+
+    video_a = tmp_path / "a.mkv"
+    subtitle_a = tmp_path / "a.srt"
+    video_b = tmp_path / "b.mkv"
+    subtitle_b = tmp_path / "b.srt"
+    for path in (video_a, subtitle_a, video_b, subtitle_b):
+        path.touch()
+
+    tab.video_selector.set_path(str(video_a))
+    tab.subtitle_selector.set_path(str(subtitle_a))
+    done_callbacks = []
+
+    def _capture(_owner, _work, done, _error):
+        done_callbacks.append(done)
+
+    viewer = MagicMock()
+    viewer.exec.return_value = QDialog.DialogCode.Rejected
+    with (
+        patch("anki_miner.gui.widgets.single_episode_tab.run_off_thread", side_effect=_capture),
+        patch("anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", return_value=viewer) as viewer_cls,
+    ):
+        viewer_cls.DialogCode = QDialog.DialogCode
+        viewer_cls.ALIGN_REQUESTED = 2
+        tab._on_timing_clicked()
+        tab.video_selector.set_path(str(video_b))
+        tab.subtitle_selector.set_path(str(subtitle_b))
+        done_callbacks[0]([(0.0, 1.0, "line")])
+
+    viewer_cls.assert_not_called()
+    assert tab.timing_button.isEnabled()
 
 
 def test_timing_empty_entries_shows_info_and_reenables(tab, tmp_path, qtbot):

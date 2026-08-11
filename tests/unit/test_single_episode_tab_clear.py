@@ -11,6 +11,7 @@ track.
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,11 +35,22 @@ def tab(qapp, qtbot, test_config):
 
 
 def test_processing_finished_clears_both_file_selectors(tab):
-    """Regression for bug 3: video + subtitle inputs must clear on success."""
+    """Regression for bug 3: video + subtitle inputs must clear on success.
+
+    Completion works from the run snapshot captured at launch, never from the
+    live selectors (A18-005), so the test supplies that snapshot rather than
+    relying on whatever the widgets happen to hold when the run ends.
+    """
     tab.video_selector.set_path("/tmp/video.mkv")
     tab.subtitle_selector.set_path("/tmp/subs.ass")
     assert tab.video_selector.get_path() == "/tmp/video.mkv"
     assert tab.subtitle_selector.get_path() == "/tmp/subs.ass"
+
+    tab._curation_video = Path("/tmp/video.mkv")
+    tab._curation_subtitle = Path("/tmp/subs.ass")
+    tab._curation_video_raw = "/tmp/video.mkv"
+    tab._curation_subtitle_raw = "/tmp/subs.ass"
+    tab._curation_offset = 0.0
 
     recent_manager = MagicMock(name="RecentManager")
     recent_manager.get_recent.return_value = []

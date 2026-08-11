@@ -121,12 +121,14 @@ class SingleEpisodeTab(MiningTabBase):
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
 
-        # Curation snapshots — captured on the GUI thread at _start_processing so
-        # the off-thread _build_curation_context never reads live QWidgets
-        # (cross-thread QWidget access is undefined behaviour). Mirrors the Batch
-        # worker's _curation_* snapshot.
+        # Run snapshots — captured on the GUI thread at _start_processing so
+        # completion and off-thread curation never read mutable QWidgets for run
+        # inputs. Keep raw strings too: Path normalizes spellings such as ``./x``,
+        # but selector ownership is the exact text present when the run started.
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
+        self._curation_video_raw: str | None = None
+        self._curation_subtitle_raw: str | None = None
         self._curation_offset: float = 0.0
         self._curation_audio_track_override: int | None = None
 
@@ -529,6 +531,11 @@ class SingleEpisodeTab(MiningTabBase):
 
         def _on_parsed(result: object) -> None:
             self.timing_button.setEnabled(True)
+            if (
+                self.video_selector.path_or_none() != video_path
+                or self.subtitle_selector.path_or_none() != subtitle_path
+            ):
+                return
             entries = cast("list[tuple[float, float, str]]", result)
             if not entries:
                 QMessageBox.information(
@@ -633,6 +640,8 @@ class SingleEpisodeTab(MiningTabBase):
         # _build_curation_context reads plain attributes, never live QWidgets.
         self._curation_video = video_file
         self._curation_subtitle = subtitle_file
+        self._curation_video_raw = video_path
+        self._curation_subtitle_raw = subtitle_path
         self._curation_offset = offset
         self._curation_audio_track_override = self._audio_track_override
 
@@ -785,18 +794,24 @@ class SingleEpisodeTab(MiningTabBase):
                 self.progress_widget.set_status(self.tr("Failed — see log"))
 
         if result.success:
-            # Add to recent files
-            video_path = self.video_selector.path_or_none()
-            subtitle_path = self.subtitle_selector.path_or_none()
-            if video_path is not None and subtitle_path is not None:
-                offset = self.offset_spinbox.value()
-                self.recent_manager.add_entry(Path(video_path), Path(subtitle_path), offset)
+            # The curation snapshots are also the completed run's immutable
+            # inputs; live selectors may already hold the next pair.
+            video_file = self._curation_video
+            subtitle_file = self._curation_subtitle
+            completed_offset = self._curation_offset
+            if video_file is not None and subtitle_file is not None:
+                self.recent_manager.add_entry(video_file, subtitle_file, completed_offset)
                 self._refresh_recent_combo()
 
-            # Clear file selectors so the next run starts from a clean slate.
-            # Failed/cancelled runs keep their paths (Issue #51 retry affordance).
-            self.video_selector.clear()
-            self.subtitle_selector.clear()
+            # Clear only inputs still owned by this run. A pair selected while
+            # processing stays ready for the next run.
+            if self._curation_video_raw is not None and self.video_selector.path_or_none() == self._curation_video_raw:
+                self.video_selector.clear()
+            if (
+                self._curation_subtitle_raw is not None
+                and self.subtitle_selector.path_or_none() == self._curation_subtitle_raw
+            ):
+                self.subtitle_selector.clear()
 
         # Show result
         self.presenter.show_processing_result(result)

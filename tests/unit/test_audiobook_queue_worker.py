@@ -304,6 +304,18 @@ def test_process_episode_kwargs(make_worker, mock_processor):
     assert forwarded(["a"]) == ["a"]
 
 
+def test_process_episode_preserves_distinct_manual_subtitle(make_worker, mock_processor):
+    item = AudiobookQueueItem(
+        audio_file=Path("/audio/book.mp3"),
+        subtitle_file=Path("/subtitles/narrator-edited.srt"),
+    )
+    worker = make_worker(items=[item])
+
+    worker.run()
+
+    assert mock_processor.process_episode.call_args.args == (item.audio_file, item.subtitle_file)
+
+
 def test_worker_cancel_event_passed_to_process_episode(make_worker, mock_processor):
     """Stop mid-mine must reach the processor's checkpoints: the worker's own
     _cancel_event is handed to process_episode as cancel_event (NOT the sticky
