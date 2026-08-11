@@ -77,7 +77,10 @@ def _is_acceptable_add_input(url: str) -> bool:
     candidate = url.strip()
     if not candidate:
         return False
-    scheme = urlparse(candidate).scheme.lower()
+    try:
+        scheme = urlparse(candidate).scheme.lower()
+    except ValueError:
+        return False
     if scheme in ("http", "https"):
         return True
     if _BARE_VIDEO_ID_RE.match(candidate):
@@ -426,14 +429,17 @@ class PlaylistAddController:
         self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Resolving playlist…"))
         self._callbacks.clear_url_input()
 
+        cap = self._config.youtube_playlist_max
         worker = YouTubePlaylistResolveWorker(
             self._fetcher,
             url,
-            limit=self._config.youtube_playlist_max,
+            limit=cap,
             parent=self._parent,
         )
         worker.playlist_resolved.connect(
-            lambda pl, u=url, ui=url_info, g=self._playlist_generation: self._on_playlist_resolved(u, ui, pl, g)
+            lambda pl, u=url, ui=url_info, g=self._playlist_generation, c=cap: self._on_playlist_resolved(
+                u, ui, pl, g, c
+            )
         )
         worker.playlist_error.connect(self._on_playlist_resolve_error)
         worker.finished.connect(self._on_playlist_resolve_finished)
@@ -469,6 +475,7 @@ class PlaylistAddController:
         url_info: YouTubeUrlInfo,
         pl: object,
         generation: int,
+        cap: int,
     ) -> None:
         """Resolve succeeded — confirm with the user, then expand or fall back."""
         if self._shutdown_started or generation != self._playlist_generation:
@@ -476,7 +483,6 @@ class PlaylistAddController:
         if not isinstance(pl, PlaylistInfo):  # pragma: no cover - signal guard
             return
 
-        cap = self._config.youtube_playlist_max
         # Over-cap contract from YouTubeFetcherService.probe_playlist: the
         # fetcher returns up to cap+1 entries untruncated, and total_count is
         # the authoritative size when yt-dlp reports it.

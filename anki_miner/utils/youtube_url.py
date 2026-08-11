@@ -48,9 +48,12 @@ from urllib.parse import parse_qs, urlparse
 # anki_miner/services/youtube_fetcher.py.
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
-# Playlist ids are at least 12 characters (real YouTube ids are 24-34 chars,
-# but enforce only a lower bound so we stay forward-compatible).
+# Ordinary playlist ids are at least 12 characters (real YouTube ids are
+# 24-34 chars, but enforce only a lower bound so we stay forward-compatible).
 _PLAYLIST_ID_RE = re.compile(r"^[A-Za-z0-9_-]{12,}$")
+
+# Exact account-scoped playlist ids supported by YouTube and yt-dlp.
+_SPECIAL_PLAYLIST_IDS = frozenset({"WL", "LL", "LM"})
 
 # Mix playlists start with "RD" (Radio/auto-generated mixes).
 _MIX_LIST_PREFIX = "RD"
@@ -82,7 +85,7 @@ class YouTubeUrlInfo:
             valid playlist id was found; callers should fall through to the
             existing single-video probe path.
         video_id: 11-character YouTube video id, or ``None``.
-        playlist_id: YouTube playlist id (≥ 12 chars), or ``None``.
+        playlist_id: Supported YouTube playlist id, or ``None``.
     """
 
     kind: Literal["video", "playlist", "video_in_playlist", "unknown"]
@@ -141,6 +144,8 @@ def _parse_playlist_id(qs: dict[str, list[str]]) -> str | None:
     # Ignore Mix playlists (auto-generated, unbounded).
     if candidate.startswith(_MIX_LIST_PREFIX):
         return None
+    if candidate in _SPECIAL_PLAYLIST_IDS:
+        return candidate
     if _PLAYLIST_ID_RE.match(candidate):
         return candidate
     return None

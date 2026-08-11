@@ -1075,7 +1075,6 @@ class TestStaleExtractorMapping:
             "ERROR: [youtube] abc123: Requested format is not available. Use --list-formats",
             "WARNING: Only images are available for download. use --list-formats to see them",
             "WARNING: This video is drm protected and only images are available for download",
-            "WARNING: Some android client https formats have been skipped (SABR-only experiment)",
         ],
     )
     def test_maps_to_an_actionable_message(
@@ -1096,6 +1095,24 @@ class TestStaleExtractorMapping:
             pytest.raises(YouTubeFetchError, match="exited non-zero"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_routine_sabr_warning_does_not_mask_later_failure(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        lines = [
+            "WARNING: Some web client https formats have been skipped; YouTube is forcing SABR streaming for this client.",
+            "ERROR: unable to download video data: HTTP Error 403: Forbidden",
+        ]
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            pytest.raises(YouTubeFetchError) as exc_info,
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+        message = str(exc_info.value)
+        assert "HTTP Error 403" in message
+        assert "Update yt-dlp now" not in message
 
 
 class TestFetchVideoErrors:
