@@ -3,7 +3,7 @@
 #
 # Mirrors the Linux build job of .github/workflows/release.yml as faithfully as
 # a Linux box allows: isolated venv (.[asr] + pinned PyInstaller), SHA-verified
-# vendor fetch (ffmpeg + alass), PyInstaller build, the three bundle smokes
+# vendor fetch (ffmpeg + alass + yt-dlp + libmpv), PyInstaller build, the three bundle smokes
 # (via scripts/bundle_smoke.sh — the same script CI runs), then AppImage + .deb.
 #
 # CANNOT reproduce (CI-only, by platform): Windows Inno Setup, the Windows
@@ -45,6 +45,8 @@ FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-20
 FFMPEG_SHA256="0d14781b885c491f5c3b799cbe7d3a26ba8a7eb01935483185e31ea7d79c8cd3"
 ALASS_URL="https://github.com/kaegi/alass/releases/download/v2.0.0/alass-linux64"
 ALASS_SHA256="7bd0b9ae7e035d3ba940eacffb21243614df36231d47f21f0b4ce42001ab7fcd"
+LIBMPV_URL="https://github.com/0xzerolight/anki_miner/releases/download/vendor-libmpv-20260712/libmpv-linux-x86_64.tar.gz"
+LIBMPV_SHA256="5d9278463edab8f2a467f45c2c66416070d4e1543024df30fed2f721def663c1"
 NFPM_VERSION="2.46.0"
 NFPM_SHA256="43b4cb72cde2d6e61c02e5b330e3276882252bf67c057e089957f9dbd2c8de42"
 
@@ -80,10 +82,12 @@ echo "pyinstaller: $("$VENV/bin/pyinstaller" --version)"
 echo
 
 # --- 3. vendor fetch (SHA-verified, cached) -----------------------------------
-echo "=== vendor ffmpeg + alass + yt-dlp ==="
-mkdir -p "$CACHE" vendor/ffmpeg vendor/alass vendor/yt-dlp licenses/alass licenses/yt-dlp
+echo "=== vendor ffmpeg + alass + yt-dlp + libmpv ==="
+mkdir -p "$CACHE" vendor/ffmpeg vendor/alass vendor/yt-dlp vendor/libmpv \
+  licenses/alass licenses/yt-dlp licenses/libmpv
 if [ "$CLEAN" = "1" ]; then
-  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/alass/alass vendor/yt-dlp/yt-dlp
+  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/alass/alass vendor/yt-dlp/yt-dlp \
+    vendor/libmpv/libmpv.so.2 licenses/libmpv/Copyright licenses/libmpv/SOURCES.txt
 fi
 
 verify_sha() { echo "$2  $1" | sha256sum -c - >/dev/null 2>&1; }
@@ -101,6 +105,19 @@ if [ ! -f vendor/ffmpeg/ffmpeg ] || [ ! -f vendor/ffmpeg/ffprobe ]; then
   chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
 fi
 echo "vendor/ffmpeg: $(ls vendor/ffmpeg)"
+
+if [ ! -f vendor/libmpv/libmpv.so.2 ] || [ ! -f licenses/libmpv/Copyright ] || [ ! -f licenses/libmpv/SOURCES.txt ]; then
+  LIBMPV_TARBALL="$CACHE/libmpv-linux-x86_64.tar.gz"
+  if [ ! -f "$LIBMPV_TARBALL" ] || ! verify_sha "$LIBMPV_TARBALL" "$LIBMPV_SHA256"; then
+    curl -fL "$LIBMPV_URL" -o "$LIBMPV_TARBALL" || die "libmpv download failed"
+  fi
+  verify_sha "$LIBMPV_TARBALL" "$LIBMPV_SHA256" || die "libmpv SHA256 mismatch"
+  rm -rf "$CACHE/libmpv-extract"; mkdir -p "$CACHE/libmpv-extract"
+  tar -xzf "$LIBMPV_TARBALL" -C "$CACHE/libmpv-extract"
+  cp "$CACHE/libmpv-extract/libmpv.so.2" vendor/libmpv/
+  cp "$CACHE/libmpv-extract/Copyright" "$CACHE/libmpv-extract/SOURCES.txt" licenses/libmpv/
+fi
+echo "vendor/libmpv: $(ls vendor/libmpv)"
 
 if [ ! -f vendor/alass/alass ]; then
   ALASS_DL="$CACHE/alass-linux64"

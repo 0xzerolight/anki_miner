@@ -10,8 +10,13 @@ Run after ``python -m build --wheel``.
 from __future__ import annotations
 
 import sys
+import tomllib
 import zipfile
+from collections import defaultdict
 from pathlib import Path
+
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 # Every package resource tree that must ship intact in the wheel. The dictionary
@@ -25,6 +30,8 @@ RESOURCE_DIRS = [
 ]
 SPEC_FILE = REPO_ROOT / "anki_miner.spec"
 DIST_DIR = REPO_ROOT / "dist"
+PYPROJECT_FILE = REPO_ROOT / "pyproject.toml"
+REQUIREMENTS_LOCK_FILE = REPO_ROOT / "requirements.lock"
 
 # Assets that must exist on disk AND in the wheel, named one by one. The generic
 # disk-vs-wheel comparison below cannot catch these: deleting a file from disk
@@ -39,6 +46,7 @@ REQUIRED_ASSETS = [
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/PROVENANCE.md",
 ]
+REQUIRED_WHEEL_LICENSES = ["licenses/local-audio-yomichan/LICENSE"]
 
 EXCLUDE_DIRS = {"__pycache__"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
@@ -85,13 +93,46 @@ def check_spec_references_resources() -> None:
         '"anki_miner", "gui", "resources"',
         '"anki_miner", "services", "dictionary", "resources"',
         '"anki_miner", "resources"',
+        '"licenses", "local-audio-yomichan"',
+        '"licenses", "vulkan-loader"',
     ]
     for token in expected:
         if token not in text:
             sys.exit(
-                f"error: {SPEC_FILE} does not reference {token!r}; "
-                "PyInstaller spec and packaging config have drifted"
+                f"error: {SPEC_FILE} does not reference {token!r}; PyInstaller spec and packaging config have drifted"
             )
+
+
+def check_release_constraints_cover_direct_dependencies() -> None:
+    """Require one exact, normalized constraint for every base dependency."""
+    project = tomllib.loads(PYPROJECT_FILE.read_text(encoding="utf-8"))["project"]
+    direct = {canonicalize_name(Requirement(raw).name) for raw in project["dependencies"]}
+    pins: dict[str, list[str]] = defaultdict(list)
+    for line in REQUIREMENTS_LOCK_FILE.read_text(encoding="utf-8").splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#"):
+            continue
+        requirement = Requirement(raw)
+        specs = list(requirement.specifier)
+        if len(specs) == 1 and specs[0].operator == "==":
+            pins[canonicalize_name(requirement.name)].append(specs[0].version)
+
+    missing = direct - pins.keys()
+    if missing:
+        sys.exit(f"error: direct dependencies without exact release constraints: {sorted(missing)}")
+    duplicates = {name: versions for name, versions in pins.items() if name in direct and len(versions) != 1}
+    if duplicates:
+        sys.exit(f"error: direct dependencies with duplicate release constraints: {duplicates}")
+
+
+def check_required_wheel_licenses(wheel_path: Path) -> None:
+    """Assert required third-party notices landed in wheel metadata."""
+    with zipfile.ZipFile(wheel_path) as zf:
+        names = zf.namelist()
+    for license_path in REQUIRED_WHEEL_LICENSES:
+        suffix = f".dist-info/licenses/{license_path}"
+        if not any(name.endswith(suffix) for name in names):
+            sys.exit(f"error: required license missing from {wheel_path.name}: {license_path}")
 
 
 def check_required_assets(on_disk: set[str], in_wheel: set[str], wheel_name: str) -> int:
@@ -108,9 +149,11 @@ def check_required_assets(on_disk: set[str], in_wheel: set[str], wheel_name: str
 
 
 def main() -> int:
+    check_release_constraints_cover_direct_dependencies()
     check_spec_references_resources()
 
     wheel = find_wheel()
+    check_required_wheel_licenses(wheel)
     on_disk = fs_assets()
     in_wheel = wheel_assets(wheel)
 

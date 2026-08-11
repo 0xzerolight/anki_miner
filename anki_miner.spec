@@ -138,6 +138,25 @@ libmpv_license_datas = []
 if os.path.isdir(libmpv_license_dir):
     libmpv_license_datas.append((libmpv_license_dir, os.path.join("licenses", "libmpv")))
 
+# Bundle the MIT notice for audio-pack parser code ported from
+# local-audio-yomichan. It ships in the wheel via project.license-files and must
+# also accompany frozen copies of formats.py.
+local_audio_license_dir = os.path.join(project_root, "licenses", "local-audio-yomichan")
+local_audio_license_datas = []
+if os.path.isdir(local_audio_license_dir):
+    local_audio_license_datas.append(
+        (local_audio_license_dir, os.path.join("licenses", "local-audio-yomichan"))
+    )
+
+# Windows release builds add the Apache-licensed Vulkan loader next to libmpv.
+# Keep its committed, version-matched notice in the frozen bundle.
+vulkan_loader_license_dir = os.path.join(project_root, "licenses", "vulkan-loader")
+vulkan_loader_license_datas = []
+if os.path.isdir(vulkan_loader_license_dir):
+    vulkan_loader_license_datas.append(
+        (vulkan_loader_license_dir, os.path.join("licenses", "vulkan-loader"))
+    )
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -235,7 +254,9 @@ a = Analysis(
     + ffmpeg_license_datas
     + alass_license_datas
     + ytdlp_license_datas
-    + libmpv_license_datas,
+    + libmpv_license_datas
+    + local_audio_license_datas
+    + vulkan_loader_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

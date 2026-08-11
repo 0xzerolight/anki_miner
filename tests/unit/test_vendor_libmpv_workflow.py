@@ -14,6 +14,8 @@ import pytest
 
 _WORKFLOWS_DIR = Path(__file__).parents[2] / ".github" / "workflows"
 _WORKFLOW_PATH = _WORKFLOWS_DIR / "vendor-libmpv.yml"
+_RELEASE_WORKFLOW_PATH = _WORKFLOWS_DIR / "release.yml"
+_ROOT = Path(__file__).parents[2]
 
 _WORKFLOW_PATHS = sorted([*_WORKFLOWS_DIR.glob("*.yml"), *_WORKFLOWS_DIR.glob("*.yaml")])
 
@@ -39,3 +41,32 @@ def test_vendor_libmpv_windows_checksum_fails_closed() -> None:
     assert 'grep -hF "$ASSET" *sha256* | sha256sum -c -' in mirror_step
     assert "|| true" not in mirror_step
     assert "WARNING: no upstream sha256" not in mirror_step
+
+
+def test_vendor_libmpv_macos_includes_pinned_libopus_notice() -> None:
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+    macos_step = workflow.split("- name: Bundle libmpv + dylib closure from Homebrew", 1)[1].split(
+        "- name: Smoke-load the bundled dylib", 1
+    )[0]
+
+    assert "OPUS_VERSION=\"$(brew list --versions opus | awk '{print $2}')\"" in macos_step
+    assert "xiph/opus/v${OPUS_VERSION}/COPYING" in macos_step
+    assert "out/COPYING.libopus" in macos_step
+    notice = (_ROOT / "licenses" / "libmpv" / "COPYING.libopus").read_text(encoding="utf-8")
+    assert "Copyright 2001-2023 Xiph.Org" in notice
+    assert "Redistributions in binary form must reproduce" in notice
+
+
+def test_windows_vulkan_loader_is_paired_with_its_license() -> None:
+    workflow = _RELEASE_WORKFLOW_PATH.read_text(encoding="utf-8")
+    loader_step = workflow.split("- name: Bundle the Vulkan loader next to libmpv (Windows)", 1)[1].split(
+        "- name: Build Vulkan pywhispercpp wheel (Linux)", 1
+    )[0]
+
+    assert "vulkan-1.dll" in loader_step
+    assert "licenses\\vulkan-loader\\LICENSE.txt" in loader_step
+    assert "Test-Path -LiteralPath $license" in loader_step
+    assert '"licenses", "vulkan-loader"' in (_ROOT / "anki_miner.spec").read_text(encoding="utf-8")
+    notice = (_ROOT / "licenses" / "vulkan-loader" / "LICENSE.txt").read_text(encoding="utf-8")
+    assert "Apache License" in notice
+    assert "Version 2.0, January 2004" in notice
