@@ -25,6 +25,7 @@ def wired(qtbot, test_config: AnkiMinerConfig):
     qtbot.addWidget(panel)
     panel.set_deck_name("JP::Mining")
     panel.set_note_type("Lapis")
+    panel.set_ankiconnect_url(test_config.ankiconnect_url)
     ctrl = AnkiProbeController(panel, panel, MagicMock(), lambda: test_config)
     return ctrl, panel
 
@@ -99,3 +100,137 @@ def test_close_workers_include_the_name_list_workers(wired, monkeypatch):
     assert len(workers) == 4
     assert sum(w is not None for w in workers) == 2
     assert len(started) == 2
+
+
+def test_field_probe_drops_result_and_error_after_endpoint_changes(wired, monkeypatch):
+    ctrl, panel = wired
+    panel.set_ankiconnect_url("http://127.0.0.1:8765")
+    populate = MagicMock()
+    monkeypatch.setattr(panel, "populate_from_field_list", populate)
+    worker = MagicMock()
+    worker.isRunning.return_value = False
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker",
+        MagicMock(return_value=worker),
+    )
+
+    ctrl.fetch_fields()
+    on_result = worker.result_ready.connect.call_args.args[0]
+    on_error = worker.error.connect.call_args.args[0]
+    panel.set_ankiconnect_url("http://127.0.0.1:9999")
+
+    on_result(["Expression", "Sentence"])
+    on_error("Error from old endpoint")
+
+    populate.assert_not_called()
+    assert panel.notetype_status.text() == ""
+
+
+def test_excluded_deck_probe_drops_late_callbacks_after_endpoint_clears(wired, monkeypatch):
+    ctrl, panel = wired
+    filtering_panel = ctrl._filtering_panel
+    worker = MagicMock()
+    worker.isRunning.return_value = False
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchDecksWorker",
+        MagicMock(return_value=worker),
+    )
+    report = MagicMock()
+    monkeypatch.setattr(ctrl, "_report", report)
+
+    ctrl.fetch_decks()
+    on_result = worker.result_ready.connect.call_args.args[0]
+    on_error = worker.error.connect.call_args.args[0]
+    panel.set_ankiconnect_url("")
+
+    on_result(["Deck from A"])
+    on_error("Error from A")
+
+    filtering_panel.set_available_decks.assert_not_called()
+    assert filtering_panel.set_add_deck_button_enabled.call_args.args == (True,)
+    report.assert_not_called()
+
+
+def test_name_list_probes_drop_late_callbacks_after_endpoint_changes(wired, monkeypatch):
+    ctrl, panel = wired
+    decks_worker = MagicMock()
+    notetypes_worker = MagicMock()
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchDecksWorker",
+        MagicMock(return_value=decks_worker),
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchNotetypesWorker",
+        MagicMock(return_value=notetypes_worker),
+    )
+
+    ctrl.refresh_name_lists()
+    on_decks_result = decks_worker.result_ready.connect.call_args.args[0]
+    on_decks_error = decks_worker.error.connect.call_args.args[0]
+    on_notetypes_result = notetypes_worker.result_ready.connect.call_args.args[0]
+    on_notetypes_error = notetypes_worker.error.connect.call_args.args[0]
+    panel.set_ankiconnect_url("http://127.0.0.1:9999")
+    panel.set_available_decks(["Current"])
+    panel.set_deck_name("Current")
+    panel.set_available_note_types(["CurrentType"])
+    panel.set_note_type("CurrentType")
+    panel.set_deck_status(None, "Current endpoint deck list pending")
+    panel.set_notetype_status(None, "Current endpoint note-type list pending")
+
+    on_decks_result(["Deck from A"])
+    on_decks_error("Deck error from A")
+    on_notetypes_result(["Type from A"])
+    on_notetypes_error("Note-type error from A")
+
+    assert panel.deck_combo.findText("Deck from A") == -1
+    assert panel.notetype_combo.findText("Type from A") == -1
+    assert panel.deck_status.text() == "Current endpoint deck list pending"
+    assert panel.notetype_status.text() == "Current endpoint note-type list pending"
+
+
+def test_blank_endpoint_does_not_start_field_probe(wired, monkeypatch):
+    ctrl, panel = wired
+    panel.set_ankiconnect_url("")
+    worker_factory = MagicMock()
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchFieldsWorker",
+        worker_factory,
+    )
+
+    ctrl.fetch_fields()
+
+    worker_factory.assert_not_called()
+
+
+def test_blank_endpoint_does_not_start_excluded_deck_probe(wired, monkeypatch):
+    ctrl, panel = wired
+    panel.set_ankiconnect_url("")
+    worker_factory = MagicMock()
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchDecksWorker",
+        worker_factory,
+    )
+
+    ctrl.fetch_decks()
+
+    worker_factory.assert_not_called()
+
+
+def test_blank_endpoint_does_not_start_name_list_probes(wired, monkeypatch):
+    ctrl, panel = wired
+    panel.set_ankiconnect_url("")
+    decks_factory = MagicMock()
+    notetypes_factory = MagicMock()
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchDecksWorker",
+        decks_factory,
+    )
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchNotetypesWorker",
+        notetypes_factory,
+    )
+
+    ctrl.refresh_name_lists()
+
+    decks_factory.assert_not_called()
+    notetypes_factory.assert_not_called()

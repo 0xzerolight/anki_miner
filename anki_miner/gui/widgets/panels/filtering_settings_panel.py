@@ -67,8 +67,8 @@ class FilteringSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
-        # Deck names fetched from AnkiConnect, cached so re-opening the picker
-        # doesn't trigger another round-trip. Empty until the first fetch.
+        # Most recently fetched deck names. Every picker open refreshes them
+        # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
         super().__init__("Word Filtering", parent=parent)
         self._setup_fields()
@@ -515,16 +515,13 @@ class FilteringSettingsPanel(FormPanel):
     # --- Excluded decks (Issue #38) ---
 
     def _on_add_deck_clicked(self) -> None:
-        """Open the deck picker, fetching the deck list first if needed.
+        """Fetch the current deck list, then open the picker.
 
-        On the first click ``_available_decks`` is empty, so we request a fetch
-        and defer opening the picker until :meth:`set_available_decks` is called
-        with the result. Subsequent clicks reuse the cached list.
+        The connected endpoint or active Anki collection may have changed since
+        the previous click, so an explicit Add Deck action never reuses names.
+        :meth:`set_available_decks` opens the picker when the fetch completes.
         """
-        if not self._available_decks:
-            self.fetch_decks_requested.emit()
-            return
-        self._open_deck_picker()
+        self.fetch_decks_requested.emit()
 
     def set_available_decks(self, decks: list[str]) -> None:
         """Receive the fetched deck list and open the picker.

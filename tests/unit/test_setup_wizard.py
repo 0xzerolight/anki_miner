@@ -579,6 +579,97 @@ def test_ankiconnect_page_complete_only_after_successful_recheck(qtbot, wiz_conf
     assert pages_mod is not None
 
 
+def test_ankiconnect_page_url_edit_invalidates_success(qtbot, wiz_config):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    page._on_recheck_result((True, "AnkiConnect v6 is running"))
+    assert page.isComplete() is True
+
+    with qtbot.waitSignal(page.completeChanged, timeout=1000):
+        page.url_input.setText("http://127.0.0.1:9999")
+
+    assert page.isComplete() is False
+    assert page.result_label.text() == ""
+
+
+def test_ankiconnect_page_drops_recheck_callbacks_for_changed_url(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    worker = MagicMock()
+    worker.isRunning.return_value = False
+    monkeypatch.setattr(pages_mod, "SingleCallWorker", MagicMock(return_value=worker))
+    monkeypatch.setattr(wiz, "register_worker", MagicMock())
+
+    page._on_recheck_clicked()
+    on_result = worker.result_ready.connect.call_args.args[0]
+    on_error = worker.error.connect.call_args.args[0]
+    page.url_input.setText("http://127.0.0.1:9999")
+
+    on_result((True, "Old endpoint succeeded"))
+    on_error("Old endpoint failed")
+
+    assert page.isComplete() is False
+    assert page.result_label.text() == ""
+
+
+def test_ankiconnect_page_exact_new_endpoint_can_restore_completion(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    worker_a = MagicMock()
+    worker_a.isRunning.return_value = False
+    worker_b = MagicMock()
+    worker_b.isRunning.return_value = False
+    monkeypatch.setattr(pages_mod, "SingleCallWorker", MagicMock(side_effect=[worker_a, worker_b]))
+    monkeypatch.setattr(wiz, "register_worker", MagicMock())
+
+    page._on_recheck_clicked()
+    on_a_result = worker_a.result_ready.connect.call_args.args[0]
+    on_a_result((True, "A ok"))
+    assert page.isComplete() is True
+
+    endpoint_b = "http://127.0.0.1:9999"
+    page.url_input.setText(endpoint_b)
+    assert page.isComplete() is False
+    page._on_recheck_clicked()
+    on_b_result = worker_b.result_ready.connect.call_args.args[0]
+    on_b_result((True, "B ok"))
+
+    assert page._active_recheck_url == endpoint_b
+    assert wiz.working_config().ankiconnect_url == endpoint_b
+    assert page.isComplete() is True
+    assert page.result_label.text() == "B ok"
+
+
+def test_ankiconnect_page_blank_url_does_not_probe_previous_endpoint(qtbot, wiz_config, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    page = wiz.ankiconnect_page
+    worker_factory = MagicMock()
+    monkeypatch.setattr(pages_mod, "SingleCallWorker", worker_factory)
+    monkeypatch.setattr(wiz, "register_worker", MagicMock())
+
+    page.url_input.clear()
+    page._on_recheck_clicked()
+
+    worker_factory.assert_not_called()
+    assert wiz.working_config().ankiconnect_url == ""
+    assert page.isComplete() is False
+
+
 def test_ankiconnect_page_writes_url_to_working_config(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 

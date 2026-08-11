@@ -250,6 +250,7 @@ class AnkiSettingsPanel(FormPanel):
         self.notetype_status = QLabel()
         self.notetype_status.setObjectName("validation-status")
         self.add_widget(self.notetype_status)
+        self.ankiconnect_url_input.textChanged.connect(lambda _text: self._clear_status(self.notetype_status))
 
         # Note-type preset. Lapis / Kiku / Senren publish fixed field names, so
         # their mapping is knowable without asking Anki — and it carries three
@@ -977,7 +978,7 @@ class AnkiSettingsPanel(FormPanel):
 
     def get_ankiconnect_url(self) -> str:
         """Return the AnkiConnect URL."""
-        return self.ankiconnect_url_input.text()
+        return self.ankiconnect_url_input.text().strip()
 
     def set_ankiconnect_url(self, value: str) -> None:
         """Set the AnkiConnect URL field."""

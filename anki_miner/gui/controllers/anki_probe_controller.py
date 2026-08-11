@@ -137,6 +137,8 @@ class AnkiProbeController:
             return
 
         ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
+        if not ankiconnect_url:
+            return
         # Patch the live config with the user's in-flight input values so the
         # service hits the URL/note type currently shown in the form, not
         # whatever was last saved to disk.
@@ -144,7 +146,7 @@ class AnkiProbeController:
         probe_config = replace(
             config,
             anki_note_type=note_type,
-            ankiconnect_url=ankiconnect_url or config.ankiconnect_url,
+            ankiconnect_url=ankiconnect_url,
         )
 
         try:
@@ -159,16 +161,27 @@ class AnkiProbeController:
 
         worker = FetchFieldsWorker(service, note_type, self._parent)
         self._fetch_fields_worker = worker
-        worker.result_ready.connect(lambda names, stamp=note_type: self._on_fetch_fields_finished(stamp, names))
-        worker.error.connect(self._on_fetch_fields_error)
+        worker.result_ready.connect(
+            lambda names, stamp=(note_type, ankiconnect_url): self._on_fetch_fields_finished(stamp[0], names, stamp[1])
+        )
+        worker.error.connect(
+            lambda message, stamp=(note_type, ankiconnect_url): self._on_fetch_fields_error(message, stamp[0], stamp[1])
+        )
         worker.start()
 
-    def _on_fetch_fields_finished(self, note_type: str, field_names: list[str]) -> None:
+    def _on_fetch_fields_finished(
+        self,
+        note_type: str,
+        field_names: list[str],
+        ankiconnect_url: str | None = None,
+    ) -> None:
         """Populate the panel with the fetched field list (main-thread slot)."""
         if not self._alive(self._anki_panel):
             return
         self._anki_panel.set_fetch_fields_button_enabled(True)
         if note_type != self._anki_panel.get_note_type().strip():
+            return
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
             return
         if not field_names:
             # Empty list means AnkiConnect rejected the request or returned
@@ -182,11 +195,20 @@ class AnkiProbeController:
         self._anki_panel.populate_from_field_list(field_names)
         self._anki_panel.set_notetype_status(True, f"Fetched {len(field_names)} fields and auto-mapped them")
 
-    def _on_fetch_fields_error(self, message: str) -> None:
+    def _on_fetch_fields_error(
+        self,
+        message: str,
+        note_type: str | None = None,
+        ankiconnect_url: str | None = None,
+    ) -> None:
         """Surface an unexpected worker exception via the note-type status line."""
         if not self._alive(self._anki_panel):
             return
         self._anki_panel.set_fetch_fields_button_enabled(True)
+        if note_type is not None and note_type != self._anki_panel.get_note_type().strip():
+            return
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
+            return
         self._anki_panel.set_notetype_status(False, message)
 
     def _report(self, summary: str, details: str = "") -> None:
@@ -213,8 +235,10 @@ class AnkiProbeController:
             return
 
         ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
+        if not ankiconnect_url:
+            return
         config = self._get_config()
-        probe_config = replace(config, ankiconnect_url=ankiconnect_url or config.ankiconnect_url)
+        probe_config = replace(config, ankiconnect_url=ankiconnect_url)
 
         try:
             service = AnkiService(probe_config)
@@ -231,15 +255,19 @@ class AnkiProbeController:
         self._filtering_panel.set_add_deck_button_enabled(False)
         worker = FetchDecksWorker(service, self._parent)
         self._fetch_decks_worker = worker
-        worker.result_ready.connect(self._on_fetch_decks_finished)
-        worker.error.connect(self._on_fetch_decks_error)
+        worker.result_ready.connect(
+            lambda names, endpoint=ankiconnect_url: self._on_fetch_decks_finished(names, endpoint)
+        )
+        worker.error.connect(lambda message, endpoint=ankiconnect_url: self._on_fetch_decks_error(message, endpoint))
         worker.start()
 
-    def _on_fetch_decks_finished(self, deck_names: list[str]) -> None:
+    def _on_fetch_decks_finished(self, deck_names: list[str], ankiconnect_url: str | None = None) -> None:
         """Hand the fetched deck list to the panel, which opens the picker."""
         if not self._alive(self._filtering_panel):
             return
         self._filtering_panel.set_add_deck_button_enabled(True)
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
+            return
         if not deck_names:
             self._report(
                 QCoreApplication.translate(
@@ -250,11 +278,13 @@ class AnkiProbeController:
             return
         self._filtering_panel.set_available_decks(deck_names)
 
-    def _on_fetch_decks_error(self, message: str) -> None:
+    def _on_fetch_decks_error(self, message: str, ankiconnect_url: str | None = None) -> None:
         """Surface an unexpected deck-fetch worker exception."""
         if not self._alive(self._filtering_panel):
             return
         self._filtering_panel.set_add_deck_button_enabled(True)
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
+            return
         self._report(
             QCoreApplication.translate(
                 "AnkiProbeController",
@@ -280,8 +310,10 @@ class AnkiProbeController:
         as it does for an f-string.
         """
         ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
+        if not ankiconnect_url:
+            return
         config = self._get_config()
-        probe_config = replace(config, ankiconnect_url=ankiconnect_url or config.ankiconnect_url)
+        probe_config = replace(config, ankiconnect_url=ankiconnect_url)
 
         try:
             service = AnkiService(probe_config)
@@ -297,8 +329,12 @@ class AnkiProbeController:
             )
             decks_worker = FetchDecksWorker(service, self._parent)
             self._name_decks_worker = decks_worker
-            decks_worker.result_ready.connect(self._on_name_decks_fetched)
-            decks_worker.error.connect(self._on_name_decks_error)
+            decks_worker.result_ready.connect(
+                lambda names, endpoint=ankiconnect_url: self._on_name_decks_fetched(names, endpoint)
+            )
+            decks_worker.error.connect(
+                lambda message, endpoint=ankiconnect_url: self._on_name_decks_error(message, endpoint)
+            )
             decks_worker.start()
 
         if self._name_notetypes_worker is None or not self._name_notetypes_worker.isRunning():
@@ -307,8 +343,12 @@ class AnkiProbeController:
             )
             types_worker = FetchNotetypesWorker(service, self._parent)
             self._name_notetypes_worker = types_worker
-            types_worker.result_ready.connect(self._on_name_notetypes_fetched)
-            types_worker.error.connect(self._on_name_notetypes_error)
+            types_worker.result_ready.connect(
+                lambda names, endpoint=ankiconnect_url: self._on_name_notetypes_fetched(names, endpoint)
+            )
+            types_worker.error.connect(
+                lambda message, endpoint=ankiconnect_url: self._on_name_notetypes_error(message, endpoint)
+            )
             types_worker.start()
 
     def _set_notetype_status(self, exists: bool | None, message: str) -> None:
@@ -327,8 +367,10 @@ class AnkiProbeController:
             return
         self._anki_panel.set_notetype_status(exists, message)
 
-    def _on_name_decks_fetched(self, deck_names: object) -> None:
+    def _on_name_decks_fetched(self, deck_names: object, ankiconnect_url: str | None = None) -> None:
         if not self._alive(self._anki_panel):
+            return
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
             return
         names = [str(n) for n in deck_names] if isinstance(deck_names, list) else []
         if not names:
@@ -359,13 +401,17 @@ class AnkiProbeController:
                 ),
             )
 
-    def _on_name_decks_error(self, message: str) -> None:
+    def _on_name_decks_error(self, message: str, ankiconnect_url: str | None = None) -> None:
         if not self._alive(self._anki_panel):
+            return
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
             return
         self._anki_panel.set_deck_status(False, message)
 
-    def _on_name_notetypes_fetched(self, model_names: object) -> None:
+    def _on_name_notetypes_fetched(self, model_names: object, ankiconnect_url: str | None = None) -> None:
         if not self._alive(self._anki_panel):
+            return
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
             return
         names = [str(n) for n in model_names] if isinstance(model_names, list) else []
         if not names:
@@ -391,7 +437,9 @@ class AnkiProbeController:
         # Deliberately silent on success: this label is shared with Auto-Map
         # Fields, whose terminal message is worth more than a count.
 
-    def _on_name_notetypes_error(self, message: str) -> None:
+    def _on_name_notetypes_error(self, message: str, ankiconnect_url: str | None = None) -> None:
         if not self._alive(self._anki_panel):
+            return
+        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
             return
         self._set_notetype_status(False, message)

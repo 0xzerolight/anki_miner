@@ -48,14 +48,20 @@ def test_remove_with_no_selection_is_noop(qtbot):
     assert panel.get_excluded_decks() == ("A",)
 
 
-def test_add_deck_emits_fetch_when_no_cache(qtbot):
-    """First Add Deck click with no cached decks requests a fetch."""
+def test_add_deck_always_fetches_current_endpoint(qtbot, monkeypatch):
+    """Every Add Deck click requests names from the current Anki endpoint."""
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
+    panel._available_decks = ["Old Collection"]
     fired = []
+    picker_calls = []
     panel.fetch_decks_requested.connect(lambda: fired.append(True))
+    monkeypatch.setattr(panel, "_open_deck_picker", lambda: picker_calls.append(True))
+
     panel._on_add_deck_clicked()
+
     assert fired == [True]
+    assert picker_calls == []
 
 
 def test_set_available_decks_caches_and_skips_already_excluded(qtbot, monkeypatch):
@@ -81,5 +87,5 @@ def test_set_available_decks_caches_and_skips_already_excluded(qtbot, monkeypatc
     assert captured["choices"] == ["Mining", "Default"]
     # The picked deck is appended.
     assert panel.get_excluded_decks() == ("RTK", "Mining")
-    # Decks are cached, so a second Add click opens the picker without re-fetching.
+    # Keep the names until the next fetch replaces them.
     assert panel._available_decks == ["RTK", "Mining", "Default"]
