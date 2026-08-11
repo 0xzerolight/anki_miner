@@ -16,17 +16,18 @@ the tiny model genuinely cannot be obtained (e.g. offline first run).
 Marked ``network``: obtaining the tiny model is a real HTTP download on a cold
 cache, which the socket tripwire (tests/_network_tripwire.py) otherwise records
 and fails at teardown — flaky on whether the runner already has the model. The
-marker suppresses the tripwire for these tests; when the download genuinely
-fails (offline), ``_load_tiny_model`` still catches it and skips, so the tests
-are never red for a missing model — they run when it is obtainable, skip when
-not.
+marker suppresses the tripwire for these tests. Missing packages, failed
+downloads, and invalid caches skip; constructor failures after validation fail.
 """
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
+from _pytest.outcomes import Skipped
 
 from anki_miner.services.asr import _engine, transcriber
 
@@ -87,7 +88,7 @@ def _tiny_model_file_is_valid() -> bool:
 
 
 def _load_tiny_model():
-    """Construct a real pywhispercpp ``Model("tiny")`` or skip if unobtainable."""
+    """Construct a validated real model; skip only unavailable prerequisites."""
     try:
         model_cls = _engine.get_whisper_cpp_model_cls()
     except ImportError as exc:  # pragma: no cover — pywhispercpp absent
@@ -102,11 +103,32 @@ def _load_tiny_model():
         pytest.skip(f"tiny whisper.cpp model could not be obtained: {exc}")
     if not _tiny_model_file_is_valid():
         pytest.skip("cached ggml-tiny.bin is missing or corrupt (bad download purged)")
+    # "tiny" resolves to the validated cache file. Constructor/API or native
+    # initialization errors are product failures, not unavailable prerequisites.
+    return model_cls("tiny")
+
+
+def test_load_tiny_model_constructor_failure_is_not_skipped(monkeypatch):
+    """A validated cache makes constructor/API failures real test failures."""
+
+    class BrokenModel:
+        def __init__(self, _name):
+            raise RuntimeError("constructor signature drift")
+
+    utils = ModuleType("pywhispercpp.utils")
+    utils.download_model = lambda _name: None  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "pywhispercpp.utils", utils)
+    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", lambda: BrokenModel)
+    monkeypatch.setattr(sys.modules[__name__], "_tiny_model_file_is_valid", lambda: True)
+
     try:
-        # "tiny" resolves to the validated cache file.
-        return model_cls("tiny")
-    except Exception as exc:  # noqa: BLE001 — offline / download failure → skip, not fail
-        pytest.skip(f"tiny whisper.cpp model could not be obtained: {exc}")
+        _load_tiny_model()
+    except Skipped as exc:
+        pytest.fail(f"validated constructor failure was skipped: {exc}")
+    except RuntimeError as exc:
+        assert str(exc) == "constructor signature drift"
+    else:
+        pytest.fail("validated constructor failure did not propagate")
 
 
 def test_cpp_segments_real_units_in_seconds():

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import gc
 import unicodedata
+import weakref
 from pathlib import Path
 
 import pytest
@@ -134,6 +136,7 @@ def _patch_transcribe(monkeypatch, *, segments=None, raise_exc=None):
         device="auto",
         cuda_libs_root=None,
         onnx_pack_root=None,
+        ct2_model_session=None,
     ):
         if raise_exc is not None:
             raise raise_exc
@@ -206,6 +209,134 @@ def test_happy_path_two_files_signal_sequence(qapp, tmp_path, monkeypatch):
     assert len(srt_calls) == 2
 
 
+def test_two_file_queue_reuses_and_releases_one_ct2_model(qapp, tmp_path, monkeypatch):
+    """Sequential CT2 work keeps one model alive only for the queue lifetime."""
+    from types import SimpleNamespace
+
+    from anki_miner.services.asr import _engine, transcriber
+
+    config = _make_config(tmp_path)
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+    videos = [tmp_path / "ep01.mkv", tmp_path / "ep02.mkv"]
+    for video in videos:
+        video.write_bytes(b"")
+
+    construction_count = 0
+    model_refs: list[weakref.ReferenceType] = []
+    decode_instances: list[int] = []
+    decode_kwargs: list[dict] = []
+
+    class ReusableModel:
+        def __init__(self, *_args, **_kwargs):
+            nonlocal construction_count
+            construction_count += 1
+            model_refs.append(weakref.ref(self))
+
+        def transcribe(self, _audio, **kwargs):
+            decode_instances.append(id(self))
+            decode_kwargs.append(kwargs)
+            segment = SimpleNamespace(
+                start=0.0,
+                end=1.0,
+                text="こんにちは",
+                avg_logprob=0.0,
+                compression_ratio=0.0,
+                no_speech_prob=0.0,
+            )
+            return iter([segment]), SimpleNamespace(language="ja")
+
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 0)
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: False)
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: ReusableModel)
+    monkeypatch.setattr(transcriber, "_cuda_device_count", lambda: 0)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    _patch_wav_to_float32(monkeypatch)
+    _patch_srt_writer(monkeypatch)
+
+    worker = _make_worker(videos, config, extractor=_FakeExtractor())
+    cap = _capture(worker)
+    worker.run()
+
+    assert construction_count == 1
+    assert len(set(decode_instances)) == 1
+    assert decode_kwargs[0] == decode_kwargs[1]
+    assert len(cap["finished"]) == 2
+    assert all(error is None for _idx, _out, error in cap["finished"])
+
+    gc.collect()
+    assert model_refs and model_refs[0]() is None
+
+
+def test_two_file_queue_retries_cpp_after_fallback_and_reuses_ct2(qapp, tmp_path, monkeypatch):
+    """A per-file cpp failure does not make its CT2 fallback queue-sticky."""
+    from types import SimpleNamespace
+
+    from anki_miner.services.asr import _engine, ggml_model_installer, transcriber
+
+    config = AnkiMinerConfig(
+        asr_model="large-v3",
+        asr_device="vulkan",
+        asr_models_root=tmp_path / "models",
+        media_temp_folder=tmp_path / "temp",
+    )
+    config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+    videos = [tmp_path / "ep01.mkv", tmp_path / "ep02.mkv"]
+    for video in videos:
+        video.write_bytes(b"")
+
+    cpp_constructions = 0
+    ct2_constructions = 0
+    ct2_decodes = 0
+
+    class FailingCppModel:
+        def __init__(self, *_args, **_kwargs):
+            nonlocal cpp_constructions
+            cpp_constructions += 1
+
+        def transcribe(self, *_args, **_kwargs):
+            raise RuntimeError("input-specific cpp failure")
+
+    class ReusableCt2Model:
+        def __init__(self, *_args, **_kwargs):
+            nonlocal ct2_constructions
+            ct2_constructions += 1
+
+        def transcribe(self, _audio, **_kwargs):
+            nonlocal ct2_decodes
+            ct2_decodes += 1
+            segment = SimpleNamespace(
+                start=0.0,
+                end=1.0,
+                text="こんにちは",
+                avg_logprob=0.0,
+                compression_ratio=0.0,
+                no_speech_prob=0.0,
+            )
+            return iter([segment]), SimpleNamespace(language="ja")
+
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 0)
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1)
+    monkeypatch.setattr(_engine, "ensure_ggml_backends_loaded", lambda: None)
+    monkeypatch.setattr(_engine, "get_whisper_cpp_model_cls", lambda: FailingCppModel)
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: ReusableCt2Model)
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda _name, _root: True)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    monkeypatch.setattr(ggml_model_installer, "is_vad_downloaded", lambda _root: True)
+    _patch_wav_to_float32(monkeypatch)
+    _patch_srt_writer(monkeypatch)
+
+    worker = _make_worker(videos, config, extractor=_FakeExtractor())
+    cap = _capture(worker)
+    worker.run()
+
+    assert cpp_constructions == 2
+    assert ct2_constructions == 1
+    assert ct2_decodes == 2
+    assert len(cap["finished"]) == 2
+    assert all(error is None for _idx, _out, error in cap["finished"])
+
+
 def test_no_speech_reports_warning_and_writes_no_srt(qapp, tmp_path, monkeypatch):
     """Empty transcription surfaces a 'no speech' outcome, not a clean Done (C5)."""
     config = _make_config(tmp_path)
@@ -258,6 +389,7 @@ def test_cancel_during_transcribe_emits_cancelled(qapp, tmp_path, monkeypatch):
         device="auto",
         cuda_libs_root=None,
         onnx_pack_root=None,
+        ct2_model_session=None,
     ):
         if cancel_event is not None:
             cancel_event.set()  # user cancels mid-transcription
@@ -420,6 +552,7 @@ def test_overwrite_re_transcribes_existing(qapp, tmp_path, monkeypatch):
         device="auto",
         cuda_libs_root=None,
         onnx_pack_root=None,
+        ct2_model_session=None,
     ):
         transcribe_calls.append(1)
         if progress_cb is not None:
@@ -728,6 +861,7 @@ def test_final_progress_is_100_on_success(qapp, tmp_path, monkeypatch):
         device="auto",
         cuda_libs_root=None,
         onnx_pack_root=None,
+        ct2_model_session=None,
     ):
         # Only emit 50%, not 100% — worker must force 100%.
         if progress_cb is not None:
@@ -783,6 +917,7 @@ def test_transcribe_receives_device_and_cuda_libs_root_from_config(qapp, tmp_pat
         device="auto",
         cuda_libs_root=None,
         onnx_pack_root=None,
+        ct2_model_session=None,
     ):
         captured["device"] = device
         captured["cuda_libs_root"] = cuda_libs_root

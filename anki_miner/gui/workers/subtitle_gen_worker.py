@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.asr.subtitle_generation import (
@@ -24,6 +25,9 @@ from anki_miner.services.asr.subtitle_generation import (
 )
 from anki_miner.utils.file_pairing import resolve_output_path
 from anki_miner.utils.i18n import tr_format
+
+if TYPE_CHECKING:
+    from anki_miner.services.asr.transcriber import Ct2ModelSession
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +86,18 @@ class SubtitleGenWorker(FileQueueWorker):
             self._extractor = MediaExtractorService(config)
         else:
             self._extractor = extractor
+        self._ct2_model_session: Ct2ModelSession | None = None
+
+    def _process_queue(self) -> None:
+        from anki_miner.services.asr.transcriber import Ct2ModelSession
+
+        session = Ct2ModelSession()
+        self._ct2_model_session = session
+        try:
+            super()._process_queue()
+        finally:
+            self._ct2_model_session = None
+            session.release()
 
     def _queue_items(self) -> list[Path]:
         return self._video_files
@@ -122,6 +138,7 @@ class SubtitleGenWorker(FileQueueWorker):
                 on_extract_start=_on_extract_start,
                 transcribe_progress_cb=_transcribe_progress,
                 cancel_event=self._cancel_event,
+                ct2_model_session=self._ct2_model_session,
             )
         except Exception as exc:  # noqa: BLE001 — per-file isolation
             logger.exception("subtitle_gen_worker: error on %s", video_path)
