@@ -522,6 +522,33 @@ class TestValidationService:
     class TestValidateSetup:
         """Tests for validate_setup — mocking at real boundaries (requests.post, subprocess.run)."""
 
+        def test_missing_fields_fail_only_field_mapping_check(self, test_config, monkeypatch):
+            service = ValidationService(test_config)
+            monkeypatch.setattr(service, "_check_ankiconnect", lambda: (True, "ok"))
+            monkeypatch.setattr(service, "_check_ffmpeg", lambda: (True, "ok"))
+            monkeypatch.setattr(service, "_check_ffprobe", lambda: (True, "ok"))
+            monkeypatch.setattr(service, "_check_alass", lambda: (True, "ok"))
+            monkeypatch.setattr(service, "_check_ytdlp", lambda: (True, "2026.08.01 [venv]"))
+            monkeypatch.setattr(service, "_check_deck_exists", lambda: (True, "ok"))
+            monkeypatch.setattr(service, "_check_note_type_exists", lambda: (True, "ok"))
+            monkeypatch.setattr(
+                service,
+                "_check_field_names_exist",
+                lambda: (False, "Field(s) Picture not found"),
+            )
+            monkeypatch.setattr(service, "_check_offline_dictionary", lambda: (True, "ok"))
+
+            result = service.validate_setup()
+
+            assert result.field_mapping_ok is False
+            assert result.all_passed is False
+            assert result.ankiconnect_ok is True
+            assert result.ffmpeg_ok is True
+            assert result.ffprobe_ok is True
+            assert result.deck_exists is True
+            assert result.note_type_exists is True
+            assert [(issue.component, issue.severity) for issue in result.issues] == [("Field Mapping", "WARNING")]
+
         def test_all_pass(self, test_config, tmp_path):
             """All checks pass when external services respond correctly."""
             from dataclasses import replace
@@ -565,7 +592,8 @@ class TestValidationService:
             # Field names check
             field_names_resp = MagicMock()
             field_names_resp.json.return_value = {
-                "result": list({v for v in test_config.anki_fields.values() if v}),
+                "result": [test_config.anki_fields["word"]]
+                + sorted({v for v in test_config.anki_fields.values() if v} - {test_config.anki_fields["word"]}),
                 "error": None,
             }
 
@@ -641,7 +669,8 @@ class TestValidationService:
 
             field_resp = MagicMock()
             field_resp.json.return_value = {
-                "result": list({v for v in test_config.anki_fields.values() if v}),
+                "result": [test_config.anki_fields["word"]]
+                + sorted({v for v in test_config.anki_fields.values() if v} - {test_config.anki_fields["word"]}),
                 "error": None,
             }
 
@@ -741,7 +770,8 @@ class TestValidationService:
 
             field_resp = MagicMock()
             field_resp.json.return_value = {
-                "result": list({v for v in test_config.anki_fields.values() if v}),
+                "result": [test_config.anki_fields["word"]]
+                + sorted({v for v in test_config.anki_fields.values() if v} - {test_config.anki_fields["word"]}),
                 "error": None,
             }
 

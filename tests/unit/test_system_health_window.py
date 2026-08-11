@@ -42,6 +42,7 @@ def _result(*, ankiconnect_ok=True, deck=True, note_type=True, issues=None, vers
         ffmpeg_ok=True,
         deck_exists=deck,
         note_type_exists=note_type,
+        field_mapping_ok=ankiconnect_ok and note_type,
         issues=list(issues or []),
         tool_versions=dict(versions or {}),
     )

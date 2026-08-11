@@ -549,12 +549,23 @@ class TestValidationIssue:
 class TestValidationResult:
     """Tests for ValidationResult dataclass."""
 
+    def test_field_mapping_status_is_required(self):
+        with pytest.raises(TypeError, match="field_mapping_ok"):
+            ValidationResult(
+                ankiconnect_ok=True,
+                ffmpeg_ok=True,
+                deck_exists=True,
+                note_type_exists=True,
+                issues=[ValidationIssue("Field Mapping", "WARNING", "Picture is missing")],
+            )
+
     def test_all_passed_true(self):
         result = ValidationResult(
             ankiconnect_ok=True,
             ffmpeg_ok=True,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert result.all_passed is True
 
@@ -564,6 +575,7 @@ class TestValidationResult:
             ffmpeg_ok=True,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert result.all_passed is False
 
@@ -573,6 +585,7 @@ class TestValidationResult:
             ffmpeg_ok=False,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert result.all_passed is False
 
@@ -583,6 +596,7 @@ class TestValidationResult:
             ffprobe_ok=False,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert result.all_passed is False
 
@@ -592,6 +606,7 @@ class TestValidationResult:
             ffmpeg_ok=True,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert result.ffprobe_ok is True
 
@@ -606,6 +621,7 @@ class TestValidationResult:
             ffmpeg_ok=False,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
             issues=issues,
         )
         errors = result.get_errors()
@@ -622,6 +638,7 @@ class TestValidationResult:
             ffmpeg_ok=True,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
             issues=issues,
         )
         warnings = result.get_warnings()
@@ -634,6 +651,7 @@ class TestValidationResult:
             ffmpeg_ok=True,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert "PASSED" in str(result)
 
@@ -643,5 +661,6 @@ class TestValidationResult:
             ffmpeg_ok=True,
             deck_exists=True,
             note_type_exists=True,
+            field_mapping_ok=True,
         )
         assert "FAILED" in str(result)

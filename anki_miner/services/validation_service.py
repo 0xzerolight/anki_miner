@@ -188,6 +188,7 @@ class ValidationService:
                 )
 
         # Check field names exist on note type (only if note type is valid)
+        fields_ok = False
         if ankiconnect_ok and note_type_ok:
             fields_ok, fields_msg = self._check_field_names_exist()
             if not fields_ok:
@@ -243,6 +244,7 @@ class ValidationService:
             ffprobe_ok=ffprobe_ok,
             deck_exists=deck_ok,
             note_type_exists=note_type_ok,
+            field_mapping_ok=fields_ok,
             issues=issues,
             tool_versions=tool_versions,
         )
@@ -256,7 +258,7 @@ class ValidationService:
         return self._check_ankiconnect()
 
     def check_field_names(self) -> tuple[bool, str]:
-        """Public wrapper over :meth:`_check_field_names_exist` (setup wizard).
+        """Public wrapper over the field-mapping check (setup wizard).
 
         Returns:
             Tuple of (success, message) — identical to the private method.
@@ -597,7 +599,7 @@ class ValidationService:
         return False, f"Note type '{note_type}' not found. Available: {available}{more}"
 
     def _check_field_names_exist(self) -> tuple[bool, str]:
-        """Check that configured field names exist on the note type.
+        """Check configured field presence and the first-field invariant.
 
         Returns:
             Tuple of (success, message)
@@ -630,5 +632,12 @@ class ValidationService:
                 f"Field(s) {', '.join(sorted(missing))} not found on note type "
                 f"'{self.config.anki_note_type}'. "
                 f"Available: {', '.join(sorted(actual_fields))}"
+            )
+        word_target = self.config.anki_fields["word"]
+        if not actual_fields_list or word_target != actual_fields_list[0]:
+            first_field = actual_fields_list[0] if actual_fields_list else "(none)"
+            return False, (
+                f"Word field '{word_target}' must map to the first field '{first_field}' "
+                f"on note type '{self.config.anki_note_type}'. Check Settings → Anki field mapping."
             )
         return True, "All configured fields exist"

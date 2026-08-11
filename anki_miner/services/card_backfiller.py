@@ -455,19 +455,31 @@ def _preflight(
 
     Deliberately NOT ``AnkiService.verify_card_target`` — that validates every
     configured field including the card-type marker field, so unrelated mapping
-    drift would hard-fail a backfill that never touches those fields. Two
-    checks are fatal (nothing can be scanned without them) and the third is
-    reported:
+    drift would hard-fail a backfill that never touches those fields. Mapping
+    collisions and the checks needed to identify notes are fatal; unrelated
+    absent selected fields are reported:
 
+    - Word or selected targets mapped more than once → ``SetupError``;
     - note type absent from the collection → ``SetupError``;
     - the Expression field absent from the note type → ``SetupError``, since no
       note can then carry the identity every lookup and the apply-time
       staleness recheck key on;
+    - the Expression field is not the note type's first field → ``SetupError``;
     - any other selected field absent → returned by name, its key dropped by
       the caller. The remaining groups still run.
 
-    Two AnkiConnect calls per scan, both before the note loop.
+    At most two AnkiConnect calls per scan, both before the note loop.
     """
+    anki_fields = config.anki_fields
+    targets = [word_field, *(anki_fields[key] for key in selected if anki_fields[key])]
+    duplicate_targets = {target for target in targets if targets.count(target) > 1}
+    if duplicate_targets:
+        shown = ", ".join(sorted(duplicate_targets))
+        raise SetupError(
+            f"Field(s) {shown} mapped more than once. "
+            f"Map each Anki Miner field to a different field on note type '{config.anki_note_type}'."
+        )
+
     note_types = anki_service.note_type_names()
     if config.anki_note_type not in note_types:
         logger.warning(
@@ -477,7 +489,8 @@ def _preflight(
         )
         raise SetupError(missing_note_type_message(config.anki_note_type, note_types))
 
-    actual = anki_service.note_type_field_names(config.anki_note_type)
+    ordered_actual = anki_service.ordered_note_type_field_names(config.anki_note_type)
+    actual = set(ordered_actual)
     if word_field not in actual:
         logger.warning(
             "Backfill preflight failed: note_type=%s field=%s fields=%d",
@@ -487,7 +500,13 @@ def _preflight(
         )
         raise SetupError(missing_fields_message(config.anki_note_type, {word_field}, actual))
 
-    anki_fields = config.anki_fields
+    if not ordered_actual or word_field != ordered_actual[0]:
+        first_field = ordered_actual[0] if ordered_actual else "(none)"
+        raise SetupError(
+            f"Word field '{word_field}' must map to the first field '{first_field}' "
+            f"on note type '{config.anki_note_type}'. Check Settings → Anki field mapping."
+        )
+
     return tuple(sorted({anki_fields[key] for key in selected if anki_fields[key] not in actual}))
 
 

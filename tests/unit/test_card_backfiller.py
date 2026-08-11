@@ -38,11 +38,17 @@ _SVG_GRAPH = '<svg viewBox="0 0 100 40"><circle cx="5" cy="5" r="4"/><path d="M0
 _GLOSS_HTML = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">gloss</li></ol></div>'
 
 
-class _AllFields(frozenset):
-    """A note type that has every field the config maps (the default fixture)."""
-
-    def __contains__(self, item: object) -> bool:
-        return True
+_DEFAULT_NOTE_FIELDS = [
+    "word",
+    "ExpressionReading",
+    "ExpressionFurigana",
+    "PitchGraph",
+    "PitchText",
+    "Frequency",
+    "FrequencySort",
+    "definition",
+    "Glossary",
+]
 
 
 class FakeAnkiService:
@@ -63,15 +69,19 @@ class FakeAnkiService:
         self.queries: list[str] = []
         self.probes: list[str] = []
         self.note_types = ["test_note_type"] if note_types is None else note_types
-        self.note_fields = _AllFields() if note_fields is None else note_fields
+        fields = _DEFAULT_NOTE_FIELDS if note_fields is None else note_fields
+        self.note_fields = sorted(fields, key=lambda field: (field != "word", field))
 
     def note_type_names(self) -> list[str]:
         self.probes.append("modelNames")
         return list(self.note_types)
 
     def note_type_field_names(self, note_type: str) -> set[str]:
+        return set(self.ordered_note_type_field_names(note_type))
+
+    def ordered_note_type_field_names(self, note_type: str) -> list[str]:
         self.probes.append(f"modelFieldNames:{note_type}")
-        return self.note_fields
+        return list(self.note_fields)
 
     def find_notes(self, query: str) -> list[int]:
         self.queries.append(query)
@@ -290,6 +300,25 @@ class TestScanPreflight:
     Without it every one of these cases returned an empty plan and wrote
     nothing to the log, which is indistinguishable from a broken tool.
     """
+
+    def test_ordered_field_probe_is_required(self, backfill_config):
+        class LegacyAnkiService:
+            def note_type_names(self):
+                return [backfill_config.anki_note_type]
+
+            def note_type_field_names(self, _note_type):
+                return set(backfill_config.anki_fields.values())
+
+            def find_notes(self, _query):
+                return []
+
+        with pytest.raises(AttributeError, match="ordered_note_type_field_names"):
+            scan_backfill(
+                LegacyAnkiService(),
+                backfill_config,
+                _services(),
+                _options({"frequency"}),
+            )
 
     def test_missing_note_type_raises_before_querying(self, backfill_config):
         anki = FakeAnkiService(note_types=["Basic", "Other"])
