@@ -60,6 +60,18 @@ class SubtitleStream:
     is_default: bool = False
 
 
+def is_japanese_language_tag(language_tag: str | None) -> bool:
+    """Return whether *language_tag* identifies Japanese.
+
+    Alongside the legacy aliases, accept BCP 47 tags whose primary language
+    subtag is ``ja`` (for example, ``ja-JP``).
+    """
+    if language_tag is None:
+        return False
+    normalized = language_tag.lower()
+    return normalized in JAPANESE_LANGUAGE_CODES or normalized.startswith("ja-")
+
+
 def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -> dict | None:
     """Run ffprobe for ``select_streams`` and return the parsed JSON object.
 
@@ -244,15 +256,16 @@ def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -
     """
     streams = list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
 
-    for stream in streams:
-        if stream.language_tag in JAPANESE_LANGUAGE_CODES:
-            logger.info(
-                "Found Japanese audio: global stream %d, audio track %d (language: %s)",
-                stream.global_index,
-                stream.audio_index,
-                stream.language_tag,
-            )
-            return stream
+    japanese_streams = [stream for stream in streams if is_japanese_language_tag(stream.language_tag)]
+    if japanese_streams:
+        stream = next((candidate for candidate in japanese_streams if candidate.is_default), japanese_streams[0])
+        logger.info(
+            "Found Japanese audio: global stream %d, audio track %d (language: %s)",
+            stream.global_index,
+            stream.audio_index,
+            stream.language_tag,
+        )
+        return stream
 
     available_langs = [s.language_tag or "unknown" for s in streams]
     logger.warning("No Japanese audio found in %s. Available languages: %s", video_file, available_langs)
