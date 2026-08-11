@@ -12,6 +12,13 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
+def test_bundle_smoke_pins_c_locale() -> None:
+    script = (PROJECT_ROOT / "scripts" / "bundle_smoke.sh").read_text(encoding="utf-8")
+
+    assert "\nexport LC_ALL=C\n" in script
+    assert script.index("export LC_ALL=C") < script.index('DIST="${1:')
+
+
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
 def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None:
     dist = tmp_path / "dist" / "AnkiMiner"
@@ -120,12 +127,14 @@ def test_smoke_graph_matches_build_aselect_graph(tmp_path: Path) -> None:
         (dist / library).touch()
 
     env = os.environ.copy()
+    env.pop("LC_ALL", None)
     env.update(
         {
             "BUNDLE_SMOKE_SKIP_ASR": "1",
             "BUNDLE_SMOKE_SKIP_MPV": "1",
             "BUNDLE_SMOKE_SKIP_WHISPERCPP": "1",
             "BUNDLE_SMOKE_GRAPH_TERMS": "125",
+            "LC_NUMERIC": "es_ES.UTF-8",
             "SMOKE_GRAPH_RECORD": str(captured),
             "SMOKE_HOME_RECORD": str(tmp_path / "homes.txt"),
         }
