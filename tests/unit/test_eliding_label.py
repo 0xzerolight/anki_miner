@@ -49,6 +49,21 @@ def test_long_text_sets_tooltip_to_full_text(qtbot) -> None:
     assert label.toolTip() == _LONG
 
 
+def test_markup_like_filename_is_literal_when_elided(qtbot) -> None:
+    filename = "<b>Episode 1</b>.mp3"
+    label = ElidingLabel()
+    qtbot.addWidget(label)
+    label.resize(2000, 20)
+    label.setText(filename)
+    assert label.textFormat() is Qt.TextFormat.PlainText
+    assert label.text() == filename
+
+    label.resize(70, 20)
+    QApplication.sendEvent(label, QResizeEvent(QSize(70, 20), QSize(2000, 20)))
+    assert "…" in label.text()
+    assert label.toolTip() == filename
+
+
 def test_newlines_collapsed_in_display_but_kept_in_full_text_and_tooltip(qtbot) -> None:
     multiline = "line one\nline two\nline three"
     label = ElidingLabel()

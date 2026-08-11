@@ -45,6 +45,7 @@ class ElidingLabel(QLabel):
             parent: Optional parent widget.
         """
         super().__init__(parent)
+        self.setTextFormat(Qt.TextFormat.PlainText)
         self._full_text = ""
         self._elide_mode = mode
         self._tooltip_override = ""

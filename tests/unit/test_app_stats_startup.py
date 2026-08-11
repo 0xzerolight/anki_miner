@@ -77,17 +77,37 @@ def test_startup_load_runs_off_gui_thread_and_refreshes_open_analytics(qtbot):
 
 
 @pytest.mark.parametrize("failure_mode", ["false", "error"])
-def test_startup_load_failure_logs_one_warning_without_refresh(failure_mode, monkeypatch, qtbot, caplog):
+def test_startup_load_failure_shows_unavailable_issue_and_retry_recovers(failure_mode, monkeypatch, qtbot, caplog):
     window = QWidget()
     qtbot.addWidget(window)
+    window.show()
     service = _analytics_service()
-    analytics = MagicMock(spec=AnalyticsTab)
+    ready = False
+    attempts = 0
+
+    def load() -> bool:
+        nonlocal attempts, ready
+        attempts += 1
+        if attempts == 1:
+            if failure_mode == "false":
+                return False
+            raise RuntimeError("db unavailable")
+        ready = True
+        return True
+
+    service.load.side_effect = load
+    service.is_available.side_effect = lambda: ready
+    analytics = AnalyticsTab(service)
+    qtbot.addWidget(analytics)
+    analytics.show()
 
     def fake_run_off_thread(parent, work, on_done, on_error):
-        if failure_mode == "false":
-            on_done(False)
+        try:
+            result = work()
+        except Exception as exc:
+            on_error(str(exc))
         else:
-            on_error("db unavailable")
+            on_done(result)
         return MagicMock()
 
     monkeypatch.setattr(app_module, "run_off_thread", fake_run_off_thread, raising=False)
@@ -102,7 +122,53 @@ def test_startup_load_failure_logs_one_warning_without_refresh(failure_mode, mon
         and record.getMessage().startswith("Stats database initialization failed")
     ]
     assert len(warnings) == 1
-    analytics.refresh_data.assert_not_called()
+    issue = analytics.issue_banner().current_issue()
+    assert issue is not None
+    assert issue.summary == "Analytics could not be refreshed."
+    assert analytics.issue_banner().isVisible()
+
+    analytics.refresh_button.click()
+    assert analytics.issue_banner().current_issue() is issue
+    assert attempts == 1
+
+    analytics.issue_banner().action_button.click()
+    qtbot.waitUntil(lambda: analytics._last_refresh is not None, timeout=3000)
+    assert attempts == 2
+    assert analytics.issue_banner().current_issue() is None
+    for worker in list(getattr(analytics, "_off_thread_workers", set())):
+        assert worker.wait(3000)
+
+
+def test_latest_stats_retry_result_wins_when_callbacks_arrive_out_of_order(monkeypatch, qtbot):
+    window = QWidget()
+    qtbot.addWidget(window)
+    window.show()
+    service = _analytics_service()
+    analytics = AnalyticsTab(service)
+    qtbot.addWidget(analytics)
+    analytics.show()
+    refresh_data = MagicMock()
+    monkeypatch.setattr(analytics, "refresh_data", refresh_data)
+    callbacks = []
+
+    def fake_run_off_thread(parent, work, on_done, on_error):
+        callbacks.append((on_done, on_error))
+        return MagicMock()
+
+    monkeypatch.setattr(app_module, "run_off_thread", fake_run_off_thread, raising=False)
+    app_module._start_stats_load(window, service, analytics)
+    callbacks[0][0](False)
+    assert analytics.issue_banner().current_issue() is not None
+
+    analytics.issue_banner().action_button.click()
+    analytics.issue_banner().action_button.click()
+    assert len(callbacks) == 3
+
+    callbacks[2][0](True)
+    callbacks[1][1]("late failed load")
+
+    refresh_data.assert_called_once_with(force=True)
+    assert analytics.issue_banner().current_issue() is None
 
 
 def test_ready_after_window_hidden_skips_refresh(monkeypatch, qtbot):
@@ -112,6 +178,14 @@ def test_ready_after_window_hidden_skips_refresh(monkeypatch, qtbot):
     qtbot.addWidget(window)
     service = _analytics_service()
     analytics = MagicMock(spec=AnalyticsTab)
+    properties: dict[str, object] = {}
+
+    def set_property(name: str, value: object) -> bool:
+        properties[name] = value
+        return True
+
+    analytics.property.side_effect = properties.get
+    analytics.setProperty.side_effect = set_property
 
     def fake_run_off_thread(parent, work, on_done, on_error):
         on_done(True)  # delivered while window is still hidden

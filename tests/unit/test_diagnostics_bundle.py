@@ -7,14 +7,17 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Iterator
+from unittest.mock import MagicMock
 from zipfile import ZipFile
 
 import pytest
+import requests
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, ChainEntry
 from anki_miner.diagnostics import bundle
 from anki_miner.diagnostics.bundle import collect_log_members, default_bundle_name, write_diagnostics_bundle
 from anki_miner.diagnostics.environment import EnvironmentSnapshot
+from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher
 
 
 class SpySinkHandler(RotatingFileHandler):
@@ -72,6 +75,27 @@ def _snapshot(tmp_path: Path) -> EnvironmentSnapshot:
 
 def _disable_early_crash_member(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(bundle, "_early_crash_path", lambda: tmp_path / "absent-early-crash.log")
+
+
+def _archive_members(path: Path) -> dict[str, bytes]:
+    with ZipFile(path) as archive:
+        return {name: archive.read(name) for name in archive.namelist()}
+
+
+def _failed_fetch(tmp_path: Path, *, kind: str, source_url: str) -> None:
+    fetcher = CustomAudioFetcher(
+        url_template=source_url,
+        kind=kind,
+        cache_dir=tmp_path / f"cache-{kind}",
+        file_prefix=f"test-{kind}",
+        delay=0,
+    )
+    fetcher._session = MagicMock()
+    fetcher._session.get.side_effect = requests.ConnectionError(source_url)
+    try:
+        assert fetcher.fetch("語", "ご") is None
+    finally:
+        fetcher.close()
 
 
 def test_collect_log_members_includes_existing_rotations_and_locks_each_read(tmp_path: Path, monkeypatch) -> None:
@@ -151,6 +175,244 @@ def test_bundle_contains_logs_health_and_full_settings(tmp_path: Path, monkeypat
     assert settings["dictionary_chain"] == [{"kind": "indexed", "dict_id": "private-dictionary", "enabled": True}]
     assert "tools.ffmpeg: state=ok" in health
     assert result.total_bytes == total_bytes
+
+
+def test_bundle_redacts_custom_audio_url_queries_and_fragments(tmp_path: Path, monkeypatch) -> None:
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    custom_url = "https://audio.example:8443/api/audio?token=PRIVATE_QUERY&term={term}#PRIVATE_FRAGMENT"
+    custom_json_url = "https://json.example/list/{language}?key=PRIVATE_JSON#PRIVATE_JSON_FRAGMENT"
+    non_custom_url = "https://builtin.example/audio?keep=this#unchanged"
+    config = AnkiMinerConfig(
+        expression_audio_chain=(
+            AudioSourceEntry(kind="custom", url=custom_url, enabled=False),
+            AudioSourceEntry(kind="custom_json", url=custom_json_url, enabled=True),
+            AudioSourceEntry(kind="jpod101", url=non_custom_url, enabled=True),
+        )
+    )
+    target = tmp_path / "diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=config,
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    with ZipFile(target) as archive:
+        settings_bytes = archive.read("settings.json")
+        chain = json.loads(settings_bytes)["expression_audio_chain"]
+
+    assert b"PRIVATE_QUERY" not in settings_bytes
+    assert b"PRIVATE_FRAGMENT" not in settings_bytes
+    assert b"PRIVATE_JSON" not in settings_bytes
+    assert chain[0] == {
+        "enabled": False,
+        "kind": "custom",
+        "pack_id": None,
+        "url": "https://audio.example:8443/api/audio?REDACTED",
+    }
+    assert chain[1]["kind"] == "custom_json"
+    assert chain[1]["enabled"] is True
+    assert chain[1]["url"] == "https://json.example/list/{language}?REDACTED"
+    assert chain[2]["url"] == non_custom_url
+
+
+@pytest.mark.parametrize(
+    ("kind", "source_url", "expected_url", "username", "password"),
+    [
+        (
+            "custom",
+            "https://customuser:custompass@customuser.custompass.example/"
+            "customuser/custompass;u=customuser;p=custompass?token=PRIVATE_QUERY",
+            "<redacted-url>",
+            b"customuser",
+            b"custompass",
+        ),
+        (
+            "custom_json",
+            "https://jsonuser:jsonpass@jsonuser.jsonpass.example/"
+            "jsonuser/jsonpass;u=jsonuser;p=jsonpass?token=PRIVATE_QUERY",
+            "<redacted-url>",
+            b"jsonuser",
+            b"jsonpass",
+        ),
+    ],
+)
+def test_bundle_fail_closes_custom_audio_urls_with_userinfo(
+    tmp_path: Path,
+    monkeypatch,
+    kind: str,
+    source_url: str,
+    expected_url: str,
+    username: bytes,
+    password: bytes,
+) -> None:
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    config = AnkiMinerConfig(expression_audio_chain=(AudioSourceEntry(kind=kind, url=source_url),))
+    target = tmp_path / "diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=config,
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    with ZipFile(target) as archive:
+        members = {name: archive.read(name) for name in archive.namelist()}
+        saved_url = json.loads(members["settings.json"])["expression_audio_chain"][0]["url"]
+
+    credential_hits = [name for name, content in members.items() if username in content or password in content]
+    assert credential_hits == []
+    assert saved_url == expected_url
+
+
+def test_bundle_redaction_keeps_exporting_for_malformed_custom_audio_url(tmp_path: Path, monkeypatch) -> None:
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    malformed_url = "http://PRIVATE_USER:PRIVATE_PASSWORD@[bad?token=PRIVATE_QUERY"
+    config = AnkiMinerConfig(expression_audio_chain=(AudioSourceEntry(kind="custom", url=malformed_url),))
+    target = tmp_path / "diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=config,
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    with ZipFile(target) as archive:
+        settings_bytes = archive.read("settings.json")
+        saved_url = json.loads(settings_bytes)["expression_audio_chain"][0]["url"]
+
+    assert malformed_url.encode() not in settings_bytes
+    assert b"PRIVATE_USER" not in settings_bytes
+    assert b"PRIVATE_PASSWORD" not in settings_bytes
+    assert b"PRIVATE_QUERY" not in settings_bytes
+    assert saved_url == "<redacted-url>"
+
+
+@pytest.mark.parametrize(
+    ("kind", "secret_url", "clean_url", "clean_logged_url", "secrets"),
+    [
+        (
+            "custom",
+            "https://PERCENT_USER%3APERCENT_PASS%40audio.example/PERCENT_USER/PERCENT_PASS;u=PERCENT_USER",
+            "https://audio.example:8443/direct/{term}?token=PRIVATE_QUERY#PRIVATE_FRAGMENT",
+            "https://audio.example:8443/direct/語",
+            (b"PERCENT_USER", b"PERCENT_PASS"),
+        ),
+        (
+            "custom_json",
+            "https://IPV6_USER:IPV6_PASS@[2001:db8::7]/IPV6_USER/IPV6_PASS;p=IPV6_PASS",
+            "https://json.example:8443/list/{term}?token=PRIVATE_QUERY#PRIVATE_FRAGMENT",
+            "https://json.example:8443/list/語",
+            (b"IPV6_USER", b"IPV6_PASS"),
+        ),
+    ],
+)
+def test_failed_custom_audio_fetch_logs_and_bundle_fail_closed_for_userinfo(
+    tmp_path: Path,
+    monkeypatch,
+    caplog,
+    kind: str,
+    secret_url: str,
+    clean_url: str,
+    clean_logged_url: str,
+    secrets: tuple[bytes, bytes],
+) -> None:
+    active = tmp_path / "anki_miner.log"
+    _disable_early_crash_member(monkeypatch, tmp_path)
+
+    with _installed_sink(active), caplog.at_level(logging.DEBUG):
+        _failed_fetch(tmp_path, kind=kind, source_url=secret_url)
+        _failed_fetch(tmp_path, kind=kind, source_url=clean_url)
+        target = tmp_path / f"{kind}-diagnostics.zip"
+        write_diagnostics_bundle(
+            target,
+            config=AnkiMinerConfig(
+                expression_audio_chain=(
+                    AudioSourceEntry(kind=kind, url=secret_url),
+                    AudioSourceEntry(kind=kind, url=clean_url),
+                )
+            ),
+            snapshot=_snapshot(tmp_path),
+            health_lines=[],
+        )
+
+    log_bytes = active.read_bytes()
+    members = _archive_members(target)
+    assert all(secret not in log_bytes for secret in secrets)
+    assert [name for name, content in members.items() if any(secret in content for secret in secrets)] == []
+    assert clean_logged_url.encode() in log_bytes
+    assert clean_logged_url.encode() in members["anki_miner.log"]
+
+
+def test_nested_custom_json_download_failure_is_redacted_from_log_and_bundle(
+    tmp_path: Path, monkeypatch, caplog
+) -> None:
+    active = tmp_path / "anki_miner.log"
+    endpoint = "https://json.example/list/{term}?token=PRIVATE_QUERY"
+    nested_url = "https://NESTED_USER:NESTED_PASS@[2001:db8::8]/NESTED_USER/NESTED_PASS;p=NESTED_PASS"
+    response = MagicMock(status_code=200, url="https://json.example/list/語")
+    response.json.return_value = {
+        "type": "audioSourceList",
+        "audioSources": [{"url": nested_url}],
+    }
+    fetcher = CustomAudioFetcher(
+        url_template=endpoint,
+        kind="custom_json",
+        cache_dir=tmp_path / "cache-nested",
+        file_prefix="test-nested",
+        delay=0,
+    )
+    fetcher._session = MagicMock()
+    fetcher._session.get.side_effect = [response, requests.ConnectionError(nested_url)]
+    _disable_early_crash_member(monkeypatch, tmp_path)
+
+    try:
+        with _installed_sink(active), caplog.at_level(logging.DEBUG):
+            assert fetcher.fetch("語", "ご") is None
+            target = tmp_path / "nested-diagnostics.zip"
+            write_diagnostics_bundle(
+                target,
+                config=AnkiMinerConfig(expression_audio_chain=(AudioSourceEntry(kind="custom_json", url=endpoint),)),
+                snapshot=_snapshot(tmp_path),
+                health_lines=[],
+            )
+    finally:
+        fetcher.close()
+
+    log_bytes = active.read_bytes()
+    members = _archive_members(target)
+    secrets = (b"NESTED_USER", b"NESTED_PASS")
+    assert all(secret not in log_bytes for secret in secrets)
+    assert [name for name, content in members.items() if any(secret in content for secret in secrets)] == []
+
+
+def test_bundle_redacts_pre_fix_audio_failure_lines_from_rotated_logs(tmp_path: Path, monkeypatch) -> None:
+    active = tmp_path / "anki_miner.log"
+    active.write_bytes(b"current clean record\n")
+    rotated = Path(f"{active}.5")
+    rotated.write_bytes(
+        b"DEBUG audio download failed for "
+        b"https://legacy-user.legacy-pass.example/legacy-user/legacy-pass;u=legacy-user;p=legacy-pass: "
+        b"ConnectionError: offline\n"
+    )
+    _disable_early_crash_member(monkeypatch, tmp_path)
+
+    with _installed_sink(active):
+        target = tmp_path / "pre-fix-diagnostics.zip"
+        write_diagnostics_bundle(
+            target,
+            config=AnkiMinerConfig(log_path=active),
+            snapshot=_snapshot(tmp_path),
+            health_lines=[],
+        )
+
+    members = _archive_members(target)
+    assert [name for name, content in members.items() if b"legacy-user" in content] == []
+    assert [name for name, content in members.items() if b"legacy-pass" in content] == []
+    assert b"audio download failed for <redacted-url>" in members["anki_miner.log.5"]
 
 
 def test_permission_error_is_reported_in_result_and_readme(tmp_path: Path, monkeypatch) -> None:

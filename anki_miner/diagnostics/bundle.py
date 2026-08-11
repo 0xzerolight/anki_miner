@@ -21,8 +21,9 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit, urlunsplit
 
-from anki_miner.config import paths
+from anki_miner.config import AudioSourceEntry, paths
 from anki_miner.diagnostics.environment import EnvironmentSnapshot, format_environment_lines
 from anki_miner.utils.atomic_io import atomic_write_path
 
@@ -31,6 +32,7 @@ DIAGNOSTICS_ZIP_SUFFIX = ".zip"
 _GITHUB_ISSUES_URL = "https://github.com/0xzerolight/anki_miner/issues"
 _PRIVACY_SENTENCE = "This bundle contains file paths and file names from your computer. Review it before uploading."
 _UNCHECKED_HEALTH = "System Health has not been checked this session."
+_LEGACY_AUDIO_FAILURE_MARKERS = (b"audio download failed for ", b"custom_json fetch failed for ")
 
 
 @dataclass(frozen=True)
@@ -69,6 +71,21 @@ def _read_plain(path: Path) -> bytes | None:
         return None
 
 
+def _redact_legacy_audio_failure_lines(content: bytes) -> bytes:
+    """Fail closed for custom-audio failure records written before URL redaction."""
+    redacted: list[bytes] = []
+    for line in content.splitlines(keepends=True):
+        body = line.rstrip(b"\r\n")
+        ending = line[len(body) :]
+        for marker in _LEGACY_AUDIO_FAILURE_MARKERS:
+            marker_index = body.find(marker)
+            if marker_index >= 0:
+                body = body[: marker_index + len(marker)] + b"<redacted-url>"
+                break
+        redacted.append(body + ending)
+    return b"".join(redacted)
+
+
 def _sink_handlers() -> list[tuple[logging.Handler, Path]]:
     sinks: list[tuple[logging.Handler, Path]] = []
     for handler in logging.getLogger().handlers:
@@ -104,7 +121,7 @@ def collect_log_members() -> tuple[list[tuple[str, bytes]], list[str]]:
         if content is None:
             missing.append(name)
         else:
-            members.append((name, content))
+            members.append((name, _redact_legacy_audio_failure_lines(content)))
 
     collect("anki_miner.log", active_path, active_handler)
     for index in range(1, 6):
@@ -124,11 +141,31 @@ def collect_log_members() -> tuple[list[tuple[str, bytes]], list[str]]:
     return members, missing
 
 
+def _redact_custom_audio_url(url: str) -> str:
+    """Keep a useful URL shape without credentials or parse failures."""
+    try:
+        parts = urlsplit(url)
+        if parts.username is not None or "@" in unquote(parts.netloc):
+            return "<redacted-url>"
+        hostname = parts.hostname
+        port = parts.port
+    except ValueError:
+        return "<redacted-url>"
+    if not parts.scheme or hostname is None:
+        return "<redacted-url>"
+    host = f"[{hostname}]" if ":" in hostname else hostname
+    netloc = f"{host}:{port}" if port is not None else host
+    return urlunsplit((parts.scheme, netloc, parts.path, "REDACTED", ""))
+
+
 def _to_serializable(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return {field.name: _to_serializable(getattr(value, field.name)) for field in dataclasses.fields(value)}
+        serialized = {field.name: _to_serializable(getattr(value, field.name)) for field in dataclasses.fields(value)}
+        if isinstance(value, AudioSourceEntry) and value.kind in ("custom", "custom_json") and value.url:
+            serialized["url"] = _redact_custom_audio_url(value.url)
+        return serialized
     if isinstance(value, Mapping):
         return {key: _to_serializable(item) for key, item in value.items()}
     if isinstance(value, (list, tuple)):

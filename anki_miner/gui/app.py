@@ -61,6 +61,7 @@ from anki_miner.gui.utils.service_factory import create_youtube_fetcher
 from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
+from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
@@ -778,24 +779,55 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
 
 def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_tab: AnalyticsTab) -> None:
     """Initialize stats off-thread and refresh Analytics when ready."""
+    generation = int(analytics_tab.property("_stats_load_generation") or 0) + 1
+    analytics_tab.setProperty("_stats_load_generation", generation)
+
+    def is_current_load() -> bool:
+        return bool(analytics_tab.property("_stats_load_generation") == generation)
+
+    def window_is_visible() -> bool:
+        try:
+            return window.isVisible()
+        except RuntimeError:
+            return False
+
+    def retry() -> None:
+        _start_stats_load(window, stats_service, analytics_tab)
+
+    def show_unavailable(details: str = "") -> None:
+        if not window_is_visible():
+            return
+        analytics_tab.show_screen_issue(
+            ScreenIssue(
+                summary=analytics_tab.tr("Analytics could not be refreshed."),
+                details=details,
+                action_id="analytics.retry",
+                action_text=analytics_tab.tr("Retry"),
+            ),
+            action=retry,
+        )
 
     def on_done(result: object) -> None:
+        if not is_current_load():
+            return
         if result is not True:
             logger.warning("Stats database initialization failed")
+            show_unavailable()
             return
         # closeEvent's worker sweep runs on this same GUI thread and hides the
         # window first; a refresh delivered after it would spawn a fresh
         # Analytics worker nothing joins (QThread destroyed-while-running
         # abort). Visibility is therefore the closing gate.
-        try:
-            if not window.isVisible():
-                return
-        except RuntimeError:
+        if not window_is_visible():
             return
+        analytics_tab.clear_screen_issue()
         analytics_tab.refresh_data(force=True)
 
     def on_error(error_message: str) -> None:
+        if not is_current_load():
+            return
         logger.warning("Stats database initialization failed: %s", error_message)
+        show_unavailable(error_message)
 
     run_off_thread(window, stats_service.load, on_done, on_error)
 

@@ -42,10 +42,15 @@ def _json_response(payload: object, status: int = 200, url: str = "http://localh
 
 
 def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
-    direct_url = "https://direct-user:direct-pass@example.test/audio.mp3?token=direct#fragment"
-    json_url = "https://json-user:json-pass@example.test/list/word?token=json#fragment"
-    direct_error_url = "https://error-user:error-pass@failure.test/direct?error-token=direct#error-fragment"
-    json_error_url = "https://json-error-user:json-error-pass@failure.test/json?error-token=json#error-fragment"
+    direct_url = "https://example.test/audio.mp3?token=direct#fragment"
+    json_url = "https://example.test/list/word?token=json#fragment"
+    direct_error_url = (
+        "https://error-user:error-pass@failure.test/error-user/error-pass?error-token=direct#error-fragment"
+    )
+    json_error_url = (
+        "https://json-error-user:json-error-pass@failure.test/json-error-user/json-error-pass"
+        "?error-token=json#error-fragment"
+    )
 
     direct_session = MagicMock()
     direct_session.get.side_effect = requests.ConnectionError(direct_error_url)
@@ -67,6 +72,7 @@ def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
 
     assert "https://example.test/audio.mp3" in caplog.text
     assert "https://example.test/list/word" in caplog.text
+    assert "<redacted-url>" in caplog.text
     assert "ConnectionError" in caplog.text
     for secret in (
         "direct-user",
