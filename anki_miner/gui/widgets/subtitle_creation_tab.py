@@ -1,4 +1,4 @@
-"""Subtitle Creation tab — transcribe video files to SRT using the ASR engine.
+"""Subtitle Creation tab — transcribe video/audio files to SRT using ASR.
 
 Composes two :class:`~anki_miner.gui.widgets.enhanced.FileSelector` instances
 (single-file / folder mode toggle), an output-location row, an Overwrite
@@ -35,7 +35,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.constants import VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
@@ -48,9 +47,15 @@ from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
+_AUDIO_EXTENSIONS: frozenset[str] = frozenset({".mp3", ".m4a", ".m4b", ".aac", ".flac", ".opus", ".ogg", ".wav"})
+_MEDIA_EXTENSIONS: frozenset[str] = FilePairMatcher.VIDEO_EXTENSIONS | _AUDIO_EXTENSIONS
+_MEDIA_FILE_FILTER = (
+    "Media Files (" + " ".join(f"*{extension}" for extension in sorted(_MEDIA_EXTENSIONS)) + ");;All Files (*)"
+)
+
 
 class SubtitleCreationTab(_ToolTabBase):
-    """Tab for generating SRT subtitle files from video files via ASR.
+    """Tab for generating SRT subtitle files from video/audio files via ASR.
 
     Shared worker-signal slots, output-location slots, progress chrome, and the
     close contract live in :class:`~anki_miner.gui.widgets._tool_tab_base._ToolTabBase`.
@@ -101,7 +106,7 @@ class SubtitleCreationTab(_ToolTabBase):
             run_problem=self.tr("Some files could not be transcribed."),
             complete_template=self.tr("Complete — %1 files processed"),
             select_output_folder=self.tr("Select Output Folder"),
-            output_default=self.tr("Next to source video"),
+            output_default=self.tr("Next to source media"),
             task_title=self.tr("Subtitle generation"),
         )
 
@@ -188,14 +193,14 @@ class SubtitleCreationTab(_ToolTabBase):
         self.file_mode_button = ModernButton(self.tr("Single File"), variant="secondary")
         self.file_mode_button.setCheckable(True)
         self.file_mode_button.setChecked(True)
-        self.file_mode_button.setToolTip(self.tr("Transcribe one selected video file."))
+        self.file_mode_button.setToolTip(self.tr("Transcribe one selected video or audio file."))
         self.file_mode_button.clicked.connect(self._on_file_mode)
         mode_row.addWidget(self.file_mode_button)
 
         self.folder_mode_button = ModernButton(self.tr("Folder"), variant="secondary")
         self.folder_mode_button.setCheckable(True)
         self.folder_mode_button.setChecked(False)
-        self.folder_mode_button.setToolTip(self.tr("Transcribe every video file in a selected folder."))
+        self.folder_mode_button.setToolTip(self.tr("Transcribe every video or audio file in a selected folder."))
         self.folder_mode_button.clicked.connect(self._on_folder_mode)
         mode_row.addWidget(self.folder_mode_button)
 
@@ -204,19 +209,17 @@ class SubtitleCreationTab(_ToolTabBase):
 
         # File selector (single-file mode)
         self.file_selector = FileSelector(
-            label=self.tr("Video File:"),
+            label=self.tr("Video or Audio File:"),
             file_mode=True,
-            file_filter=VIDEO_FILE_FILTER,
+            file_filter=_MEDIA_FILE_FILTER,
             history_key="tools.generate.inputs",
-            drop_validator=accepts_suffixes(
-                FilePairMatcher.VIDEO_EXTENSIONS, self.tr("This field takes a video file.")
-            ),
+            drop_validator=accepts_suffixes(_MEDIA_EXTENSIONS, self.tr("This field takes a video or audio file.")),
         )
         layout.addWidget(self.file_selector)
 
         # Folder selector (folder mode, hidden by default)
         self.folder_selector = FileSelector(
-            label=self.tr("Video Folder:"),
+            label=self.tr("Video or Audio Folder:"),
             file_mode=False,
             history_key="tools.generate.inputs",
         )
@@ -236,7 +239,7 @@ class SubtitleCreationTab(_ToolTabBase):
 
         # Output description
         out_desc = QLabel(
-            self.tr("Generated .srt files are saved next to each source video unless you choose a folder.")
+            self.tr("Generated .srt files are saved next to each source file unless you choose a folder.")
         )
         out_desc.setObjectName("helper-text")
         out_desc.setWordWrap(True)
@@ -266,7 +269,7 @@ class SubtitleCreationTab(_ToolTabBase):
         # Overwrite checkbox
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing SRT files"))
         self.overwrite_checkbox.setToolTip(
-            self.tr("When unchecked, videos that already have an .srt file are skipped, not overwritten.")
+            self.tr("When unchecked, media files that already have an .srt file are skipped, not overwritten.")
         )
         layout.addWidget(self.overwrite_checkbox)
 
@@ -341,7 +344,7 @@ class SubtitleCreationTab(_ToolTabBase):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
 
-        # Collect video file list
+        # Collect media file list
         video_files = self._collect_video_files()
         if not video_files:
             return
@@ -350,12 +353,12 @@ class SubtitleCreationTab(_ToolTabBase):
         if self._custom_output_dir is not None:
             out_dir: Path | None = self._custom_output_dir
         else:
-            # "Next to source video" — each file goes next to itself.
+            # "Next to source media" — each file goes next to itself.
             # Pass None to the worker so it uses video_path.with_suffix(".srt").
             out_dir = None
 
         # Pre-run writable check.  When out_dir is None every output lands
-        # next to its source video, so check the first source file's parent.
+        # next to its source media, so check the first source file's parent.
         check_dir = out_dir if out_dir is not None else video_files[0].parent
         if not os.access(check_dir, os.W_OK):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
@@ -411,16 +414,18 @@ class SubtitleCreationTab(_ToolTabBase):
         worker.start()
 
     def _collect_video_files(self) -> list[Path]:
-        """Return the ordered list of video files to process, or [] on validation failure."""
+        """Return supported media files to process, or [] on validation failure."""
         if not self.file_selector.isHidden():
             path_str = self.file_selector.path_or_none()
             if path_str is None:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file before generating subtitles.")))
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("Choose a video or audio file before generating subtitles."))
+                )
                 return []
             p = Path(path_str)
             if not p.is_file():
                 self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That video file no longer exists."), details=path_str)
+                    ScreenIssue(summary=self.tr("That media file no longer exists."), details=path_str)
                 )
                 return []
             return [p]
@@ -433,11 +438,15 @@ class SubtitleCreationTab(_ToolTabBase):
             if not folder.is_dir():
                 self.show_screen_issue(ScreenIssue(summary=self.tr("That folder no longer exists."), details=path_str))
                 return []
-            files = sorted(
-                f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-            )
+            try:
+                files = sorted(f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in _MEDIA_EXTENSIONS)
+            except OSError:
+                self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be read."), details=path_str))
+                return []
             if not files:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("No video files were found in that folder.")))
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("No video or audio files were found in that folder."))
+                )
                 return []
             return files
 

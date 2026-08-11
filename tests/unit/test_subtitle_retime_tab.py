@@ -419,6 +419,24 @@ def test_folder_mode_missing_video_folder_warns(qtbot, tmp_path):
     assert pairs == []
 
 
+def test_unreadable_video_folder_reports_issue_without_raising(qtbot, tmp_path):
+    """Folder enumeration errors stay contained in the Retime screen."""
+    video_folder = tmp_path / "videos"
+    sub_folder = tmp_path / "subs"
+    video_folder.mkdir()
+    sub_folder.mkdir()
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(video_folder))
+    tab.subtitle_folder_selector.set_path(str(sub_folder))
+
+    with patch.object(Path, "iterdir", side_effect=PermissionError("denied")):
+        pairs = tab._collect_pairs()
+
+    assert pairs == []
+    assert tab.issue_banner().current_issue() is not None
+
+
 # ---------------------------------------------------------------------------
 # Output location toggle
 # ---------------------------------------------------------------------------
