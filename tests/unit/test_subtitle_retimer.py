@@ -854,6 +854,21 @@ class TestSubtitleReference:
 
         assert cmd[cmd.index("--encoding-inc") + 1] == "shift_jis"
 
+    def test_euc_jp_input_declared_as_euc_jp(
+        self,
+        tmp_dir: Path,
+        video: Path,
+        in_sub: Path,
+        out_sub: Path,
+        cfg: MagicMock,
+        stub_extractor: MagicMock,
+        stub_condenser: MagicMock,
+    ) -> None:
+        in_sub.write_bytes("1\n00:00:01,000 --> 00:00:02,000\n猫が走る\n\n".encode("euc_jp"))
+        cmd = self._run(tmp_dir, video, in_sub, out_sub, cfg, stub_extractor, stub_condenser)
+
+        assert cmd[cmd.index("--encoding-inc") + 1] == "euc-jp"
+
     def test_audio_path_keeps_alass_speed_default(
         self, video: Path, in_sub: Path, out_sub: Path, cfg: MagicMock, stub_extractor: MagicMock
     ) -> None:

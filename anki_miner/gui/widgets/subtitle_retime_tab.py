@@ -690,11 +690,17 @@ class SubtitleRetimeTab(_ToolTabBase):
                 return []
 
             # Count total video files for the log message
-            all_videos = sorted(
-                f
-                for f in video_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-            )
+            try:
+                all_videos = sorted(
+                    f
+                    for f in video_folder.iterdir()
+                    if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+                )
+            except OSError:
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("That video folder could not be read."), details=video_folder_str)
+                )
+                return []
             total_videos = len(all_videos)
 
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)

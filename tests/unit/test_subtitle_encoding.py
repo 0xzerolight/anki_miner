@@ -39,6 +39,22 @@ def test_cp932_named_with_the_whatwg_label(tmp_path):
     assert detect_subtitle_encoding(path) == "shift_jis"
 
 
+def test_euc_jp_decodes_as_japanese_and_uses_whatwg_label(tmp_path):
+    text = "1\r\n00:00:01,000 --> 00:00:03,000\r\n猫が走る\r\n\r\n"
+    data = text.encode("euc_jp")
+    path = tmp_path / "euc-jp.srt"
+    path.write_bytes(data)
+    with pytest.raises(UnicodeDecodeError) as exc_info:
+        data.decode("utf-8")
+
+    subs = load_with_fallback_encoding(path, exc_info.value)
+    detected = detect_subtitle_encoding(path)
+
+    assert subs[0].text == "猫が走る"
+    assert detected == "euc-jp"
+    assert detected != "euc-kr"
+
+
 @pytest.mark.parametrize(
     ("encoding", "expected"),
     [("utf-16-le", "utf-16le"), ("utf-16-be", "utf-16be")],

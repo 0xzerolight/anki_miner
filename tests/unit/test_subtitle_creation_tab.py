@@ -184,6 +184,66 @@ def test_mode_toggle_back_to_file(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Supported media inputs
+# ---------------------------------------------------------------------------
+
+
+def test_audio_files_are_admitted_by_picker(qtbot, tmp_path):
+    """Generate's file picker advertises its supported MP3 and WAV inputs."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    captured: dict[str, str] = {}
+
+    def _pick_open_file(parent, caption, directory, file_filter, *, on_done):
+        captured["filter"] = file_filter
+
+    with patch(
+        "anki_miner.gui.widgets.enhanced.file_selector.file_dialogs.pick_open_file",
+        side_effect=_pick_open_file,
+    ):
+        tab.file_selector.browse_button.click()
+
+    assert "*.mp3" in captured["filter"]
+    assert "*.wav" in captured["filter"]
+
+
+@pytest.mark.parametrize("suffix", [".mp3", ".wav"])
+def test_audio_files_are_admitted_by_drop(qtbot, tmp_path, suffix):
+    """Generate's drop gate accepts supported audio files."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    audio = tmp_path / f"episode{suffix}"
+    audio.write_bytes(b"fake")
+
+    accepted, _reason = tab.file_selector._drop_validator(audio)
+    assert accepted is True
+
+
+def test_audio_files_are_collected_from_folder(qtbot, tmp_path):
+    """Folder mode includes supported audio beside video inputs."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    mp3 = tmp_path / "episode01.mp3"
+    wav = tmp_path / "episode02.wav"
+    mp3.write_bytes(b"fake")
+    wav.write_bytes(b"fake")
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+
+    assert tab._collect_video_files() == [mp3, wav]
+
+
+def test_unreadable_folder_reports_issue_without_raising(qtbot, tmp_path):
+    """Folder enumeration errors stay contained in the Generate screen."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+
+    with patch.object(Path, "iterdir", side_effect=PermissionError("denied")):
+        files = tab._collect_video_files()
+
+    assert files == []
+    assert tab.issue_banner().current_issue() is not None
+
+
+# ---------------------------------------------------------------------------
 # Engine-unavailable guard
 # ---------------------------------------------------------------------------
 

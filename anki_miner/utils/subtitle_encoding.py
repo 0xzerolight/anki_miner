@@ -1,4 +1,4 @@
-"""Shared pysubs2 encoding fallback (Unicode BOM, then cp932-first, then detector).
+"""Shared pysubs2 encoding fallback (BOM, cp932, validated EUC-JP, detector).
 
 Japanese subtitle files are frequently cp932/Shift-JIS, but pysubs2 defaults to
 UTF-8 and raises :class:`UnicodeDecodeError` on them. Both the Audio Condenser
@@ -39,6 +39,8 @@ _WHATWG_LABELS = {
     "shift-jis": "shift_jis",
     "sjis": "shift_jis",
     "ms932": "shift_jis",
+    "euc_jp": "euc-jp",
+    "euc-jp": "euc-jp",
     "cp949": "euc-kr",
     "euc_kr": "euc-kr",
     "euc-kr": "euc-kr",
@@ -63,7 +65,7 @@ _WHATWG_LABELS = {
 
 
 def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
-    """Retry loading *path* from its BOM, then cp932, then detection (D10).
+    """Retry loading *path* from its BOM, cp932, EUC-JP, then detection (D10).
 
     UTF-16/UTF-32 BOMs are authoritative and checked before cp932 because their
     NUL-interleaved bytes can decode as cp932 without producing usable cues.
@@ -71,9 +73,10 @@ def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeE
     on purpose: the detector confidently mis-detects real cp932 Japanese as
     ``cp949`` and decodes it *without* raising (silent mojibake), so for the
     app's dominant non-UTF-8 input the explicit cp932 attempt must win first.
-    Only if cp932 itself raises :class:`UnicodeDecodeError` do we consult the
-    (soft-imported) detector; if that also fails, *original_error* (the UTF-8
-    error) is raised.
+    Only if cp932 itself raises :class:`UnicodeDecodeError` do we try EUC-JP.
+    That candidate must decode to Japanese text before it can win; otherwise
+    unrestricted detection follows. If that also fails, *original_error* (the
+    UTF-8 error) is raised.
     """
     path = Path(path)
     if original_error.object.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
@@ -84,6 +87,8 @@ def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeE
         return pysubs2.load(str(path), encoding="cp932")
     except UnicodeDecodeError:
         pass
+    if _is_japanese_euc_jp(path):
+        return pysubs2.load(str(path), encoding="euc_jp")
     encoding = _detect_encoding(path)
     if encoding:
         try:
@@ -97,9 +102,9 @@ def detect_subtitle_encoding(path: str | Path) -> str | None:
     """Return the WHATWG encoding label for *path*, or None when unsure.
 
     Runs the same precedence as :func:`load_with_fallback_encoding` — UTF-8,
-    then BOM, then cp932, then the charset-normalizer detector — but reports the
-    encoding's *name* instead of a parsed file, for callers that must declare it
-    to an external tool.
+    then BOM, then cp932, then validated EUC-JP, then the charset-normalizer
+    detector — but reports the encoding's *name* instead of a parsed file, for
+    callers that must declare it to an external tool.
 
     None means "could not name it confidently"; callers must then omit the
     declaration rather than guess, because naming the wrong encoding is worse
@@ -127,10 +132,35 @@ def detect_subtitle_encoding(path: str | Path) -> str | None:
             continue
         return _WHATWG_LABELS[candidate]
 
+    if _is_japanese_euc_jp_bytes(head):
+        return "euc-jp"
+
     detected = _detect_encoding(path)
     if detected is None:
         return None
     return _WHATWG_LABELS.get(detected.lower().replace(" ", ""))
+
+
+def _is_japanese_euc_jp(path: Path) -> bool:
+    try:
+        data = path.read_bytes()
+    except OSError:
+        return False
+    return _is_japanese_euc_jp_bytes(data)
+
+
+def _is_japanese_euc_jp_bytes(data: bytes) -> bool:
+    try:
+        text = data.decode("euc_jp")
+    except UnicodeDecodeError:
+        return False
+    return any(
+        0x3040 <= ord(char) <= 0x30FF
+        or 0xFF66 <= ord(char) <= 0xFF9F
+        or 0x3400 <= ord(char) <= 0x9FFF
+        or 0xF900 <= ord(char) <= 0xFAFF
+        for char in text
+    )
 
 
 def _detect_encoding(path: Path) -> str | None:
