@@ -16,9 +16,24 @@ class TestResolveAlass:
     def test_config_override_wins_when_file_exists(self, tmp_path):
         binary = tmp_path / "my-alass"
         binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
         config = _Cfg(alass_location=binary)
 
         assert resolve_alass(config) == str(binary)
+
+    def test_non_executable_override_falls_through_to_managed(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        override = tmp_path / "override-alass"
+        override.write_text("#!/bin/sh\n")
+        override.chmod(0o644)
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o755)
+
+        assert resolve_alass(_Cfg(alass_location=override, bin_root=bin_root)) == str(managed)
 
     def test_config_override_ignored_when_file_missing(self, tmp_path):
         missing = tmp_path / "does-not-exist"
@@ -83,6 +98,7 @@ class TestResolveAlass:
         # Both an override and a bundled binary exist; override wins.
         override = tmp_path / "override-alass"
         override.write_text("#!/bin/sh\n")
+        override.chmod(0o755)
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir()
         (bin_dir / "alass").write_text("#!/bin/sh\n")
@@ -150,6 +166,7 @@ class TestManagedBinRoot:
         monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
         override = tmp_path / "override-alass"
         override.write_text("#!/bin/sh\n")
+        override.chmod(0o755)
         bin_root = tmp_path / "bin"
         bin_root.mkdir()
         managed = bin_root / "alass"
@@ -187,8 +204,10 @@ class TestCaching:
     def test_cache_does_not_mask_changed_override(self, tmp_path):
         first = tmp_path / "alass-a"
         first.write_text("#!/bin/sh\n")
+        first.chmod(0o755)
         second = tmp_path / "alass-b"
         second.write_text("#!/bin/sh\n")
+        second.chmod(0o755)
 
         cfg_a = _Cfg(alass_location=first)
         cfg_b = _Cfg(alass_location=second)
@@ -200,6 +219,7 @@ class TestCaching:
     def test_repeated_call_hits_cache(self, tmp_path):
         binary = tmp_path / "alass-cached"
         binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
         config = _Cfg(alass_location=binary)
 
         first = resolve_alass(config)
@@ -251,8 +271,19 @@ class TestAlassAvailable:
         monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
         override = tmp_path / "my-alass"
         override.write_text("#!/bin/sh\n")
+        override.chmod(0o755)
 
         assert alass_available(override, None) is True
+
+    def test_non_executable_override_is_unavailable_without_fallback(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: None)
+        override = tmp_path / "my-alass"
+        override.write_text("#!/bin/sh\n")
+        override.chmod(0o644)
+
+        assert alass_available(override, None) is False
 
     def test_managed_available(self, tmp_path, monkeypatch):
         monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)

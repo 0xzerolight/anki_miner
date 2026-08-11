@@ -3,6 +3,7 @@
 import dataclasses
 import hashlib
 import shutil
+from pathlib import Path
 
 import pytest
 
@@ -80,6 +81,18 @@ class TestResolveYtdlp:
         monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
         config = dataclasses.replace(base_config, ytdlp_location=tmp_path / "does-not-exist")
         assert resolve_ytdlp(config) == "yt-dlp"
+
+    def test_config_override_ignored_when_not_executable(self, base_config, tmp_path, monkeypatch):
+        override = tmp_path / "override-yt-dlp"
+        override.write_text("#!/bin/sh\n")
+        override.chmod(0o644)
+        fallback = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(fallback))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        config = dataclasses.replace(base_config, ytdlp_location=override)
+
+        assert resolve_ytdlp(config) == str(fallback)
 
     def test_verified_downloaded_copy_used(self, base_config, tmp_path, monkeypatch):
         bin_dir = tmp_path / "home" / "bin"
@@ -343,3 +356,55 @@ class TestCaching:
         cfg_b = dataclasses.replace(base_config, ytdlp_location=second)
         assert resolve_ytdlp(cfg_a) == str(first)
         assert resolve_ytdlp(cfg_b) == str(second)
+
+    def test_deleted_cached_override_unmasks_path_fallback(self, base_config, tmp_path, monkeypatch):
+        override = _make_executable(tmp_path / "override-yt-dlp")
+        fallback = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(fallback))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        config = dataclasses.replace(base_config, ytdlp_location=override)
+        assert resolve_ytdlp(config) == str(override)
+
+        override.unlink()
+
+        assert resolve_ytdlp(config) == str(fallback)
+
+    def test_non_executable_cached_override_unmasks_path_fallback(self, base_config, tmp_path, monkeypatch):
+        override = _make_executable(tmp_path / "override-yt-dlp")
+        fallback = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(fallback))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        config = dataclasses.replace(base_config, ytdlp_location=override)
+        assert resolve_ytdlp(config) == str(override)
+
+        override.chmod(0o644)
+
+        assert resolve_ytdlp(config) == str(fallback)
+
+    def test_deleted_cached_relative_override_unmasks_path_fallback(self, base_config, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        override = _make_executable(Path("yt-dlp"))
+        fallback = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(fallback))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        config = dataclasses.replace(base_config, ytdlp_location=override)
+        assert resolve_ytdlp(config) == str(override)
+
+        override.unlink()
+
+        assert resolve_ytdlp(config) == str(fallback)
+
+    def test_non_executable_cached_relative_override_unmasks_path_fallback(self, base_config, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        override = _make_executable(Path("yt-dlp"))
+        fallback = _make_executable(tmp_path / "path-bin" / "yt-dlp")
+        monkeypatch.setattr(shutil, "which", lambda name: str(fallback))
+        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        config = dataclasses.replace(base_config, ytdlp_location=override)
+        assert resolve_ytdlp(config) == str(override)
+
+        override.chmod(0o644)
+
+        assert resolve_ytdlp(config) == str(fallback)
