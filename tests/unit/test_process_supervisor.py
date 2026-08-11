@@ -2,14 +2,28 @@
 
 from __future__ import annotations
 
+import os
 import queue
 import signal
 import subprocess
+import sys
 import threading
+import time
+from pathlib import Path
 from typing import Any
 from unittest.mock import ANY, MagicMock, patch
 
+import psutil
+import pytest
+
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
+
+
+def _pid_is_live(pid: int) -> bool:
+    try:
+        return psutil.Process(pid).status() != psutil.STATUS_ZOMBIE
+    except psutil.Error:
+        return False
 
 
 class _FakePipe:
@@ -200,3 +214,25 @@ def test_supervised_late_cancel_still_terminates_tree() -> None:
     assert result.state is SupervisedState.CANCELLED
     killpg.assert_any_call(proc.pid, signal.SIGTERM)
     killpg.assert_any_call(proc.pid, signal.SIGKILL)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX process-group integration coverage")
+def test_supervised_success_reaps_descendant_within_total_bound(tmp_path: Path) -> None:
+    child_pid_path = tmp_path / "child.pid"
+    code = (
+        "import pathlib, subprocess, sys, time; "
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']); "
+        "pathlib.Path(sys.argv[1]).write_text(str(child.pid)); "
+        "time.sleep(0.05)"
+    )
+    started = time.monotonic()
+    result = run_supervised([sys.executable, "-c", code, str(child_pid_path)], timeout_s=1.0)
+    elapsed = time.monotonic() - started
+    child_pid = int(child_pid_path.read_text())
+    try:
+        assert result.state is SupervisedState.COMPLETED
+        assert elapsed < 2.0
+        assert not _pid_is_live(child_pid)
+    finally:
+        if _pid_is_live(child_pid):
+            os.kill(child_pid, signal.SIGKILL)

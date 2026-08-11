@@ -1116,7 +1116,9 @@ class TestCheckYtdlp:
 
         assert ok is True
         assert "2026.06.09" in message
-        assert run.call_args.args[0][1] == "--version"
+        # App-owned invocation: --ignore-config so the user's yt-dlp config cannot
+        # reach a command this app issues on its own behalf.
+        assert run.call_args.args[0][1:] == ["--ignore-config", "--version"]
 
     def test_not_found_points_at_the_installer(self, test_config):
         service = ValidationService(test_config)

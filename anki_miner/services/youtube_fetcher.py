@@ -28,10 +28,11 @@ from anki_miner.exceptions.youtube import (
     YtdlpNotFoundError,
 )
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
+from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.subprocess_utils import no_window_kwargs
-from anki_miner.utils.ytdlp_resolver import resolve_ytdlp
+from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
 
 # Message appended to YtdlpNotFoundError so the user can self-serve the fix.
 _YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
@@ -74,13 +75,14 @@ def _ytdlp_supports_js_runtimes(ytdlp_path: str) -> bool:
     missing, timeout) returns False -> behave as before.
     """
     try:
-        proc = subprocess.run(
-            [ytdlp_path, "--help"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-        )
+        with managed_ytdlp_lock(ytdlp_path):
+            proc = subprocess.run(
+                [ytdlp_path, "--ignore-config", "--help"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+            )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return False
     return "--js-runtimes" in (proc.stdout or "")
@@ -96,13 +98,14 @@ def _ytdlp_supports_remote_components(ytdlp_path: str) -> bool:
     failure (yt-dlp missing, timeout) returns False -> behave as before. Issue #64.
     """
     try:
-        proc = subprocess.run(
-            [ytdlp_path, "--help"],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-        )
+        with managed_ytdlp_lock(ytdlp_path):
+            proc = subprocess.run(
+                [ytdlp_path, "--ignore-config", "--help"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+            )
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
         return False
     return "--remote-components" in (proc.stdout or "")
@@ -154,36 +157,36 @@ class YouTubeFetcherService:
                 required keys.
             VideoTooLongError: video duration exceeds configured maximum.
         """
-        logger.info("youtube probe starting: %s", url)
-        cmd: list[str] = [
-            self._ytdlp(),
-            "--skip-download",
-            "--dump-single-json",
-            "--no-playlist",
-        ]
-        cmd.extend(self._cookie_args())
-        cmd.extend(self._js_runtime_args())
-        cmd.extend(self._remote_component_args())
-        # End-of-options separator: a '-'/'--'-leading URL must not be parsed
-        # as a yt-dlp option (e.g. --update-to self-replaces the binary on the
-        # probe alone, --config-location loads a planted --exec config). T-34.
-        cmd.append("--")
-        cmd.append(url)
-
-        try:
-            proc = subprocess.run(
+        logger.info("youtube probe starting: %s", redact_url_for_log(url))
+        with managed_ytdlp_lock():
+            cmd: list[str] = [
+                self._ytdlp(),
+                "--ignore-config",
+                "--skip-download",
+                "--dump-single-json",
+                "--no-playlist",
+            ]
+            cmd.extend(self._cookie_args())
+            cmd.extend(self._js_runtime_args())
+            cmd.extend(self._remote_component_args())
+            # End-of-options separator: a '-'/'--'-leading URL must not be parsed
+            # as a yt-dlp option (e.g. --update-to self-replaces the binary on the
+            # probe alone, --config-location loads a planted --exec config). T-34.
+            cmd.append("--")
+            cmd.append(url)
+            proc = run_supervised(
                 cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+                timeout_s=timeout_s,
             )
-        except subprocess.TimeoutExpired as e:
-            raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {e.timeout}s") from e
-        except FileNotFoundError as e:
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from e
 
-        if proc.returncode != 0:
+        if isinstance(proc.error, FileNotFoundError):
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from proc.error
+        if proc.state is SupervisedState.TIMED_OUT:
+            raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {timeout_s}s")
+
+        if proc.state is SupervisedState.FAILED:
+            if proc.returncode is None and proc.error is not None:
+                raise YouTubeFetchError(f"yt-dlp metadata probe failed: {proc.error}") from proc.error
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
             raise YouTubeFetchError(
                 f"yt-dlp metadata probe failed (exit {proc.returncode}): {chr(10).join(stderr_tail)}"
@@ -284,36 +287,40 @@ class YouTubeFetcherService:
                 not a playlist (missing / non-list ``entries`` key), or all
                 entries were unusable (private / deleted / bad id).
         """
-        logger.info("youtube playlist probe starting: %s (limit=%s)", url, limit)
-        cmd: list[str] = [
-            self._ytdlp(),
-            "--skip-download",
-            "--flat-playlist",
-            "--dump-single-json",
-            "--playlist-items",
-            f"1:{limit + 1}",
-        ]
-        cmd.extend(self._cookie_args())
-        cmd.extend(self._js_runtime_args())
-        cmd.extend(self._remote_component_args())
-        # End-of-options separator before the user URL — see probe_metadata. T-34.
-        cmd.append("--")
-        cmd.append(url)
-
-        try:
-            proc = subprocess.run(
+        logger.info(
+            "youtube playlist probe starting: %s (limit=%s)",
+            redact_url_for_log(url),
+            limit,
+        )
+        with managed_ytdlp_lock():
+            cmd: list[str] = [
+                self._ytdlp(),
+                "--ignore-config",
+                "--skip-download",
+                "--flat-playlist",
+                "--dump-single-json",
+                "--playlist-items",
+                f"1:{limit + 1}",
+            ]
+            cmd.extend(self._cookie_args())
+            cmd.extend(self._js_runtime_args())
+            cmd.extend(self._remote_component_args())
+            # End-of-options separator before the user URL — see probe_metadata. T-34.
+            cmd.append("--")
+            cmd.append(url)
+            proc = run_supervised(
                 cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+                timeout_s=timeout_s,
             )
-        except subprocess.TimeoutExpired as e:
-            raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {e.timeout}s") from e
-        except FileNotFoundError as e:
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from e
 
-        if proc.returncode != 0:
+        if isinstance(proc.error, FileNotFoundError):
+            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from proc.error
+        if proc.state is SupervisedState.TIMED_OUT:
+            raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {timeout_s}s")
+
+        if proc.state is SupervisedState.FAILED:
+            if proc.returncode is None and proc.error is not None:
+                raise YouTubeFetchError(f"yt-dlp playlist probe failed: {proc.error}") from proc.error
             stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
             raise YouTubeFetchError(
                 f"yt-dlp playlist probe failed (exit {proc.returncode}): {chr(10).join(stderr_tail)}"
@@ -481,8 +488,6 @@ class YouTubeFetcherService:
         logger.info("youtube fetch starting: id=%s workspace=%s", video_id, workspace)
         self._preflight_ffmpeg()
 
-        cmd = self._build_fetch_cmd(url, workspace, sub_mode, fallback_allowed=fallback_allowed)
-
         tail: collections.deque[str] = collections.deque(maxlen=50)
         postprocessing_seen = False
 
@@ -509,13 +514,15 @@ class YouTubeFetcherService:
                 if progress_cb is not None:
                     progress_cb(QCoreApplication.translate("YouTubeFetcher", "Merging audio and video"), None)
 
-        process_result = run_supervised(
-            cmd,
-            timeout_s=_YTDLP_FETCH_TIMEOUT_S,
-            cancel=cancel_event,
-            line_callback=handle_line,
-            combine_stderr=True,
-        )
+        with managed_ytdlp_lock():
+            cmd = self._build_fetch_cmd(url, workspace, sub_mode, fallback_allowed=fallback_allowed)
+            process_result = run_supervised(
+                cmd,
+                timeout_s=_YTDLP_FETCH_TIMEOUT_S,
+                cancel=cancel_event,
+                line_callback=handle_line,
+                combine_stderr=True,
+            )
         if isinstance(process_result.error, FileNotFoundError):
             raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from process_result.error
         if process_result.state is SupervisedState.CANCELLED:
@@ -595,7 +602,7 @@ class YouTubeFetcherService:
         output_tpl = "%(id)s.%(ext)s"
         fmt = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
 
-        cmd: list[str] = [self._ytdlp()]
+        cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
         # process_subtitles, manual subs load first and automatic_captions only fill
         # languages not already present, so passing both flags writes exactly one

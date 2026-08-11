@@ -10,6 +10,8 @@ import io
 import json
 import os
 import shutil
+import subprocess
+import threading
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -20,10 +22,12 @@ from PyQt6.QtCore import QTimer
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.services import ytdlp_updater
+from anki_miner.services import youtube_fetcher, ytdlp_updater
+from anki_miner.services.validation_service import ValidationService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService, YtdlpNotFoundError
 from anki_miner.services.ytdlp_updater import YtdlpUpdater
 from anki_miner.utils import ytdlp_resolver
+from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
 
 _ORIGINAL_MAYBE_START_YTDLP_UPDATE = MainWindow._maybe_start_ytdlp_update
 _TAG = "2026.07.20"
@@ -454,3 +458,273 @@ def test_verified_asset_installs(
     assert installed.read_bytes() == binary
     assert os.access(installed, os.X_OK)
     assert installed.with_name("yt-dlp.verified").read_text(encoding="ascii").strip() == digest
+
+
+def test_active_managed_process_defers_update_without_throttling(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    binary = b"verified-binary" * 80_000
+    digest = hashlib.sha256(binary).hexdigest()
+    manifest = f"{digest}  {_ASSET_NAME}\n".encode()
+    _install_network(monkeypatch, binary, manifest=manifest)
+    monkeypatch.setattr(YtdlpUpdater, "latest_version_and_asset", lambda self: (_TAG, _ASSET_URL))
+    monkeypatch.setattr(YtdlpUpdater, "local_version", lambda self: "2026.01.01")
+    updater = YtdlpUpdater(AnkiMinerConfig())
+    results: list = []
+
+    ytdlp_updater._INSTALL_LOCK.acquire()
+    try:
+        thread = threading.Thread(target=lambda: results.append(updater.check_and_update()))
+        thread.start()
+        thread.join(0.2)
+        deferred_without_waiting = not thread.is_alive()
+    finally:
+        ytdlp_updater._INSTALL_LOCK.release()
+    thread.join(2)
+
+    assert deferred_without_waiting is True
+    assert results[0].action == "deferred"
+    assert not updater._throttle_path().exists()
+
+
+def _write_verified_managed_binary(home: Path, body: bytes = b"old-managed") -> Path:
+    managed = home / "bin" / "yt-dlp"
+    managed.parent.mkdir(parents=True, exist_ok=True)
+    managed.write_bytes(body)
+    managed.chmod(0o755)
+    managed.with_name("yt-dlp.verified").write_text(
+        hashlib.sha256(body).hexdigest(),
+        encoding="ascii",
+    )
+    ytdlp_resolver._clear_cache()
+    return managed
+
+
+def test_validation_ytdlp_probe_ignores_user_config(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    managed = _write_verified_managed_binary(isolated_ytdlp_home)
+    commands: list[list[str]] = []
+
+    def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:  # noqa: ARG001
+        commands.append(command)
+        return subprocess.CompletedProcess(command, 0, "2026.07.20\n", "")
+
+    monkeypatch.setattr("anki_miner.services.validation_service.subprocess.run", fake_run)
+
+    ok, _message = ValidationService(AnkiMinerConfig())._check_ytdlp()
+
+    assert ok is True
+    assert commands == [[str(managed), "--ignore-config", "--version"]]
+
+
+def test_validation_ytdlp_probe_defers_update_without_throttling(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _write_verified_managed_binary(isolated_ytdlp_home)
+    probe_started = threading.Event()
+    release_probe = threading.Event()
+    validation_result: list[tuple[bool, str]] = []
+
+    def blocking_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:  # noqa: ARG001
+        probe_started.set()
+        assert release_probe.wait(2)
+        return subprocess.CompletedProcess(command, 0, "2026.07.20\n", "")
+
+    monkeypatch.setattr("anki_miner.services.validation_service.subprocess.run", blocking_run)
+    monkeypatch.setattr(
+        YtdlpUpdater,
+        "latest_version_and_asset",
+        lambda self: (_ for _ in ()).throw(AssertionError("update reached network while validation ran")),
+    )
+    validation_thread = threading.Thread(
+        target=lambda: validation_result.append(ValidationService(AnkiMinerConfig())._check_ytdlp())
+    )
+    validation_thread.start()
+    assert probe_started.wait(2)
+    try:
+        update_result = YtdlpUpdater(AnkiMinerConfig()).check_and_update()
+    finally:
+        release_probe.set()
+        validation_thread.join(2)
+
+    assert not validation_thread.is_alive()
+    assert validation_result[0][0] is True
+    assert update_result.action == "deferred"
+    assert not YtdlpUpdater(AnkiMinerConfig())._throttle_path().exists()
+
+
+def test_promotion_and_cache_invalidation_block_probe_command_construction(
+    isolated_ytdlp_home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    managed = _write_verified_managed_binary(isolated_ytdlp_home)
+    binary = b"verified-binary" * 80_000
+    digest = hashlib.sha256(binary).hexdigest()
+    manifest = f"{digest}  {_ASSET_NAME}\n".encode()
+    _install_network(monkeypatch, binary, manifest=manifest)
+    monkeypatch.setattr(YtdlpUpdater, "latest_version_and_asset", lambda self: (_TAG, _ASSET_URL))
+    monkeypatch.setattr(YtdlpUpdater, "local_version", lambda self: "2026.01.01")
+
+    youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
+    youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+    monkeypatch.setattr(
+        youtube_fetcher.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(command, 0, "old help", ""),
+    )
+    assert youtube_fetcher._ytdlp_supports_js_runtimes(str(managed)) is False
+    assert youtube_fetcher._ytdlp_supports_remote_components(str(managed)) is False
+
+    invalidation_started = threading.Event()
+    release_invalidation = threading.Event()
+    real_clear = ytdlp_resolver._clear_cache
+
+    def blocking_clear() -> None:
+        invalidation_started.set()
+        assert release_invalidation.wait(2)
+        real_clear()
+
+    monkeypatch.setattr(ytdlp_resolver, "_clear_cache", blocking_clear)
+    monkeypatch.setattr(
+        youtube_fetcher.subprocess,
+        "run",
+        lambda command, **kwargs: subprocess.CompletedProcess(
+            command,
+            0,
+            "--js-runtimes --remote-components",
+            "",
+        ),
+    )
+    monkeypatch.setattr(
+        youtube_fetcher.shutil,
+        "which",
+        lambda name: "/usr/bin/node" if name == "node" else None,
+    )
+    probe_commands: list[list[str]] = []
+    probe_done = threading.Event()
+
+    def fake_supervised(command: list[str], **kwargs: object) -> SupervisedResult:  # noqa: ARG001
+        probe_commands.append(command)
+        return SupervisedResult(
+            SupervisedState.COMPLETED,
+            0,
+            json.dumps(
+                {
+                    "id": "dQw4w9WgXcQ",
+                    "title": "Test Video",
+                    "duration": 120,
+                    "subtitles": {},
+                    "automatic_captions": {},
+                }
+            ),
+            "",
+        )
+
+    monkeypatch.setattr(youtube_fetcher, "run_supervised", fake_supervised)
+    update_results: list = []
+    probe_errors: list[BaseException] = []
+    updater_thread = threading.Thread(
+        target=lambda: update_results.append(YtdlpUpdater(AnkiMinerConfig()).check_and_update())
+    )
+
+    def run_probe() -> None:
+        try:
+            YouTubeFetcherService(AnkiMinerConfig()).probe_metadata("https://youtu.be/dQw4w9WgXcQ")
+        except BaseException as exc:  # noqa: BLE001 - forwarded to the test thread
+            probe_errors.append(exc)
+        finally:
+            probe_done.set()
+
+    probe_thread = threading.Thread(target=run_probe)
+    updater_thread.start()
+    assert invalidation_started.wait(2)
+    probe_thread.start()
+    try:
+        assert not probe_done.wait(0.2)
+    finally:
+        release_invalidation.set()
+        updater_thread.join(3)
+        probe_thread.join(3)
+        youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
+        youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+
+    assert not updater_thread.is_alive()
+    assert not probe_thread.is_alive()
+    assert probe_errors == []
+    assert update_results[0].action == "installed"
+    assert probe_commands[0][0] == str(managed)
+    assert "--js-runtimes" in probe_commands[0]
+    assert "--remote-components" in probe_commands[0]
+
+
+def test_resolver_cache_writer_cannot_republish_stale_path_after_promotion(
+    isolated_ytdlp_home: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    external = tmp_path / "path-bin" / "yt-dlp"
+    external.parent.mkdir()
+    external.write_text("#!/bin/sh\n", encoding="utf-8")
+    external.chmod(0o755)
+    monkeypatch.setattr(ytdlp_resolver.shutil, "which", lambda name: str(external))
+    ytdlp_resolver._clear_cache()
+
+    compute_finished = threading.Event()
+    release_compute = threading.Event()
+    real_compute = ytdlp_resolver._compute
+
+    def blocking_compute(*args: object, **kwargs: object) -> str:
+        resolved = real_compute(*args, **kwargs)
+        compute_finished.set()
+        assert release_compute.wait(2)
+        return resolved
+
+    monkeypatch.setattr(ytdlp_resolver, "_compute", blocking_compute)
+    config = AnkiMinerConfig()
+    resolutions: list[str] = []
+    resolution_errors: list[BaseException] = []
+
+    def resolve_in_thread() -> None:
+        try:
+            resolutions.append(ytdlp_resolver.resolve_ytdlp(config))
+        except BaseException as exc:  # noqa: BLE001 - forwarded to the test thread
+            resolution_errors.append(exc)
+
+    resolver_thread = threading.Thread(target=resolve_in_thread)
+    resolver_thread.start()
+    assert compute_finished.wait(2)
+
+    managed = isolated_ytdlp_home / "bin" / "yt-dlp"
+    managed.parent.mkdir(parents=True, exist_ok=True)
+    staged = managed.with_name("staged-yt-dlp")
+    body = b"new-managed"
+    staged.write_bytes(body)
+    staged.chmod(0o755)
+    digest = hashlib.sha256(body).hexdigest()
+    updater = YtdlpUpdater(config)
+
+    try:
+        with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            initial_promotion_acquired = acquired
+            if acquired:
+                updater._promote_verified_binary(staged, managed, digest)
+                ytdlp_resolver._clear_cache()
+    finally:
+        release_compute.set()
+        resolver_thread.join(2)
+
+    assert not resolver_thread.is_alive()
+    assert resolution_errors == []
+    assert resolutions == [str(external)]
+
+    if not initial_promotion_acquired:
+        with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            assert acquired
+            updater._promote_verified_binary(staged, managed, digest)
+            ytdlp_resolver._clear_cache()
+
+    assert ytdlp_resolver.resolve_ytdlp(config) == str(managed)

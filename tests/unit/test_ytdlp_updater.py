@@ -7,6 +7,7 @@ the real ~/.anki_miner (home isolation fixtures redirect it to a tmp dir).
 import io
 import json
 import os
+import subprocess
 import time
 
 import pytest
@@ -179,6 +180,19 @@ class TestLocalVersion:
         updater = YtdlpUpdater(config)
         assert updater.local_version() is None
 
+    def test_version_probe_ignores_user_config(self, config, home, monkeypatch):
+        monkeypatch.setattr(ytdlp_updater.ytdlp_resolver, "resolve_ytdlp", lambda config: "yt-dlp")
+        captured: list[str] = []
+
+        def _run(command, **kwargs):  # noqa: ARG001
+            captured.extend(command)
+            return subprocess.CompletedProcess(command, 0, "2024.02.01\n", "")
+
+        monkeypatch.setattr(ytdlp_updater.subprocess, "run", _run)
+
+        assert YtdlpUpdater(config).local_version() == "2024.02.01"
+        assert captured[1] == "--ignore-config"
+
 
 class TestLatestVersionAndAsset:
     def test_picks_per_os_asset(self, config, home, monkeypatch):
@@ -307,17 +321,56 @@ class TestCheckAndUpdate:
             return dest
 
         monkeypatch.setattr(YtdlpUpdater, "_download_and_install", _install, raising=True)
-        cleared: dict = {}
-        from anki_miner.utils import ytdlp_resolver
-
-        monkeypatch.setattr(ytdlp_resolver, "_clear_cache", lambda: cleared.setdefault("c", True))
         updater = YtdlpUpdater(config)
         result = updater.check_and_update()
         assert isinstance(result, YtdlpUpdateResult)
         assert result.action == "installed"
         assert result.installed_version == "2024.03.10"
         assert installed["version"] == "2024.03.10"
-        assert cleared.get("c") is True
+
+    def test_successful_install_clears_capability_caches(self, config, home, monkeypatch):
+        import hashlib
+
+        from anki_miner.services import youtube_fetcher
+
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        data = b"x" * (2 * 1024 * 1024)
+        manifest = f"{hashlib.sha256(data).hexdigest()}  {_LINUX_ASSET}\n".encode()
+
+        def fake_urlopen(request, timeout=None):  # noqa: ARG001
+            if request.full_url.endswith("/SHA2-256SUMS"):
+                return _FakeResponse(manifest)
+            return _FakeResponse(data)
+
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", fake_urlopen)
+        help_outputs = iter(
+            [
+                "old help",
+                "old help",
+                "--js-runtimes",
+                "--remote-components",
+            ]
+        )
+
+        def fake_help(command, **kwargs):  # noqa: ARG001
+            return subprocess.CompletedProcess(command, 0, next(help_outputs), "")
+
+        monkeypatch.setattr(youtube_fetcher.subprocess, "run", fake_help)
+        path = str(home / "bin" / "yt-dlp")
+        youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
+        youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+        try:
+            assert youtube_fetcher._ytdlp_supports_js_runtimes(path) is False
+            assert youtube_fetcher._ytdlp_supports_remote_components(path) is False
+
+            installed = YtdlpUpdater(config)._download_and_install(_asset_url(), "2024.03.10")
+
+            assert installed == home / "bin" / "yt-dlp"
+            assert youtube_fetcher._ytdlp_supports_js_runtimes(path) is True
+            assert youtube_fetcher._ytdlp_supports_remote_components(path) is True
+        finally:
+            youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
+            youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
 
     def test_installed_when_no_local_version(self, config, home, monkeypatch):
         # Fresh install: local_version None -> proceed to install.
@@ -502,3 +555,87 @@ class TestDownloadAndInstall:
             updater._download_and_install(_asset_url(), "2024.03.10")
         assert not (updater.download_dir() / "yt-dlp").exists()
         assert list(updater.download_dir().glob("*.tmp")) == []
+
+    def test_cancel_during_checksum_fetch_prevents_promotion(self, config, home, monkeypatch):
+        import hashlib
+
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        data = b"x" * (2 * 1024 * 1024)
+        manifest = f"{hashlib.sha256(data).hexdigest()}  {_LINUX_ASSET}\n".encode()
+        cancelled = False
+
+        class _ChecksumResponse(_FakeResponse):
+            def read(self, size=-1):
+                nonlocal cancelled
+                cancelled = True
+                return super().read(size)
+
+        def _open(request, timeout=None):  # noqa: ARG001
+            if request.full_url.endswith("/SHA2-256SUMS"):
+                return _ChecksumResponse(manifest)
+            return _FakeResponse(data)
+
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _open)
+        updater = YtdlpUpdater(config, cancel=lambda: cancelled)
+
+        with pytest.raises(OperationCancelled):
+            updater._download_and_install(_asset_url(), "2024.03.10")
+
+        assert not (updater.download_dir() / "yt-dlp").exists()
+
+    def test_receipt_publication_failure_restores_previous_verified_pair(self, config, home, monkeypatch):
+        import hashlib
+
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        new_data = b"new" * (1024 * 1024)
+        self._fake_body(monkeypatch, new_data)
+        updater = YtdlpUpdater(config)
+        final = updater.download_dir() / "yt-dlp"
+        final.parent.mkdir(parents=True, exist_ok=True)
+        old_data = b"old-working-binary"
+        old_digest = hashlib.sha256(old_data).hexdigest()
+        final.write_bytes(old_data)
+        final.chmod(0o755)
+        receipt = final.with_name("yt-dlp.verified")
+        receipt.write_text(old_digest, encoding="ascii")
+        monkeypatch.setattr(
+            updater,
+            "_write_verification_receipt",
+            lambda binary, sha256: (_ for _ in ()).throw(OSError("receipt publication failed")),
+        )
+
+        with pytest.raises(OSError, match="receipt publication failed"):
+            updater._download_and_install(_asset_url(), "2024.03.10")
+
+        assert final.read_bytes() == old_data
+        assert receipt.read_text(encoding="ascii") == old_digest
+
+    def test_receipt_backup_failure_keeps_previous_verified_pair(self, config, home, monkeypatch):
+        import hashlib
+
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        new_data = b"new" * (1024 * 1024)
+        self._fake_body(monkeypatch, new_data)
+        updater = YtdlpUpdater(config)
+        final = updater.download_dir() / "yt-dlp"
+        final.parent.mkdir(parents=True, exist_ok=True)
+        old_data = b"old-working-binary"
+        old_digest = hashlib.sha256(old_data).hexdigest()
+        final.write_bytes(old_data)
+        final.chmod(0o755)
+        receipt = final.with_name("yt-dlp.verified")
+        receipt.write_text(old_digest, encoding="ascii")
+        real_replace = updater._atomic_replace
+
+        def fail_receipt_backup(source, destination):
+            if source == receipt and destination.name.endswith(".rollback"):
+                raise OSError("receipt backup failed")
+            real_replace(source, destination)
+
+        monkeypatch.setattr(updater, "_atomic_replace", fail_receipt_backup)
+
+        with pytest.raises(OSError, match="receipt backup failed"):
+            updater._download_and_install(_asset_url(), "2024.03.10")
+
+        assert final.read_bytes() == old_data
+        assert receipt.read_text(encoding="ascii") == old_digest
