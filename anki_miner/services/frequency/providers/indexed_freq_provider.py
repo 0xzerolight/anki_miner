@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import sqlite3
+import unicodedata
 from pathlib import Path
 
 from anki_miner.services._sqlite_index import open_readonly
@@ -81,8 +82,8 @@ class IndexedFreqProvider:
         # max_frequency_rank cutoff inert on a categorical-only chain.
         self.is_categorical = is_categorical
         self._conn: sqlite3.Connection | None = None
-        # Set at load() from PRAGMA table_info: a v1 index predates the
-        # display_value column, so its detail lookups report display None.
+        # Set at load() from PRAGMA table_info so a physical schema mismatch
+        # cannot mis-shape detail queries.
         self._has_display_value = False
 
     @property
@@ -109,12 +110,9 @@ class IndexedFreqProvider:
             version = int(meta.get("schema_version", "0"))
         except ValueError:
             version = 0
-        # Backward-compatible read: any version from 1..SCHEMA_VERSION loads
-        # (additive-only migrations). A v1 index simply lacks display_value.
-        # A future version > SCHEMA_VERSION is rejected — unknown schema.
-        if not (1 <= version <= SCHEMA_VERSION):
+        if version != SCHEMA_VERSION:
             logger.warning(
-                "Frequency source %s has schema_version=%s, supported range is 1..%s — needs reimport",
+                "Frequency source %s has schema_version=%s, expected %s — needs reimport",
                 self.source_id,
                 version,
                 SCHEMA_VERSION,
@@ -161,13 +159,15 @@ class IndexedFreqProvider:
     def lookup_detail(self, term: str, reading: str | None = None) -> tuple[int, str | None] | None:
         """``(rank, display_value)`` for the reading-scoped winning row, or None.
 
-        The display value is the human string of the winning row (None on a v1
-        index that predates the column, or on plain-int/CSV ranks). Feeds the
+        The display value is the human string of the winning row (None on
+        plain-int/CSV ranks). Feeds the
         card's per-source breakdown; the filter/sort paths take the rank alone
         via :meth:`lookup`.
         """
         if self._conn is None:
             return None
+        term = unicodedata.normalize("NFC", term)
+        reading = unicodedata.normalize("NFC", reading) if reading is not None else None
         display_col = "display_value" if self._has_display_value else "NULL"
         try:
             rows = self._conn.execute(
@@ -204,6 +204,13 @@ class IndexedFreqProvider:
         """
         if self._conn is None:
             return [None] * len(pairs)
+        pairs = [
+            (
+                unicodedata.normalize("NFC", term),
+                unicodedata.normalize("NFC", reading) if reading is not None else None,
+            )
+            for term, reading in pairs
+        ]
         display_col = "display_value" if self._has_display_value else "NULL"
         unique = list(dict.fromkeys(term for term, _reading in pairs))
         by_term: dict[str, list[tuple]] = {}

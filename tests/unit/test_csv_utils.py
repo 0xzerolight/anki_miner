@@ -1,5 +1,8 @@
 """Tests for anki_miner.utils.csv_utils."""
 
+from pathlib import Path
+
+from anki_miner.services.pitch_accent_service import iter_pitch_csv_rows
 from anki_miner.utils.csv_utils import detect_delimiter, is_header_row
 
 
@@ -26,8 +29,12 @@ class TestDetectDelimiter:
         assert detect_delimiter(sample) == "\t"
 
     def test_comma_wins_when_more_commas_than_tabs(self):
-        sample = "a,b,c\n1,2,3\n"
+        sample = 'term,rank,note\n猫,1,"has\ta tab"\n犬,2,plain\n'
         assert detect_delimiter(sample) == ","
+
+    def test_tab_wins_when_tab_fields_contain_comma_lists(self):
+        sample = "なんとか\t何とか\t1,0,2\n"
+        assert detect_delimiter(sample, prefer_tab=True) == "\t"
 
 
 class TestIsHeaderRow:
@@ -65,3 +72,11 @@ class TestIsHeaderRow:
     def test_partial_match_in_row_triggers_header(self):
         # only one cell needs to match
         assert is_header_row(["の", "kana"]) is True
+
+    def test_pitch_data_cell_matching_frequency_header_keyword_is_not_header(self, tmp_path: Path):
+        source = tmp_path / "pitch.csv"
+        source.write_text("かうんと,count,1\n", encoding="utf-8")
+
+        rows = list(iter_pitch_csv_rows(source))
+
+        assert [(row.reading, row.kanji, row.entry.pattern) for row in rows] == [("かうんと", "count", "1")]

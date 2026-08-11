@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+import unicodedata
 from pathlib import Path
 
 from anki_miner.services.pitch_accent import storage
@@ -25,6 +26,9 @@ _META = {
 
 
 class TestBuildIndex:
+    def test_schema_version_is_3(self) -> None:
+        assert storage.SCHEMA_VERSION == 3
+
     def test_build_creates_entries_and_meta(self, tmp_path: Path) -> None:
         db = tmp_path / "index.sqlite"
         total = storage.build_index(db, _ROWS, _META)
@@ -53,6 +57,22 @@ class TestBuildIndex:
 
 
 class TestRoundTrip:
+    def test_nfd_keys_are_stored_and_looked_up_as_nfc(self, tmp_path: Path) -> None:
+        db = tmp_path / "index.sqlite"
+        decomposed = "か\u3099く"
+        composed = unicodedata.normalize("NFC", decomposed)
+        storage.build_index(
+            db,
+            [(decomposed, decomposed, "1", "", "")],
+            dict(_META, entry_count="1"),
+        )
+        with sqlite3.connect(db) as conn:
+            assert conn.execute("SELECT reading, kanji FROM entries").fetchone() == (composed, composed)
+        provider = IndexedPitchProvider("test", db, "Test")
+        assert provider.load() is True
+        assert provider.lookup(composed, composed) == "1"
+        assert provider.lookup(decomposed, decomposed) == "1"
+
     def test_provider_rejects_pre_column_fix_schema_version(self, tmp_path: Path) -> None:
         db = tmp_path / "index.sqlite"
         storage.build_index(db, _ROWS, dict(_META, schema_version="1"))

@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+import unicodedata
 from pathlib import Path
 from unittest.mock import patch
 
@@ -22,6 +23,7 @@ from anki_miner.services.dictionary.storage import (
     exact_term_sequences,
     lookup,
     lookup_many,
+    lookup_with_rules,
     open_readonly,
     read_meta,
     read_meta_cached,
@@ -63,8 +65,8 @@ class TestCreateIndex:
             assert "idx_term" in indexes
             assert "idx_reading" in indexes
 
-    def test_schema_version_is_5(self):
-        assert SCHEMA_VERSION == 5
+    def test_schema_version_is_6(self):
+        assert SCHEMA_VERSION == 6
 
     def test_entries_table_has_tags_column(self, tmp_path: Path):
         db_path = tmp_path / "test.sqlite"
@@ -187,6 +189,30 @@ class TestReadingNormalization:
         try:
             stored = conn.execute("SELECT reading FROM entries WHERE term = ?", ("硝子",)).fetchone()[0]
             assert stored == "がらす"  # folded at write
+        finally:
+            conn.close()
+
+    def test_nfd_keys_are_stored_and_looked_up_as_nfc(self, tmp_path: Path):
+        db_path = tmp_path / "test.sqlite"
+        create_index(db_path)
+        decomposed = "か\u3099く"
+        composed = unicodedata.normalize("NFC", decomposed)
+        bulk_insert(
+            db_path,
+            [DictRow(term=decomposed, reading=decomposed, content="<div>learning</div>", sequence=1)],
+        )
+        conn = open_readonly(db_path)
+        try:
+            assert conn.execute("SELECT term, reading FROM entries").fetchone() == (composed, composed)
+            assert lookup(conn, composed) == [("<div>learning</div>", "", 1)]
+            assert lookup(conn, decomposed) == [("<div>learning</div>", "", 1)]
+            assert lookup_with_rules(conn, decomposed) == [("<div>learning</div>", "", 1, "")]
+            assert lookup_many(conn, [(decomposed, decomposed)])[decomposed] == [("<div>learning</div>", "", 1)]
+            assert terms_exist(conn, [decomposed]) == {decomposed}
+            assert terms_readings(conn, [decomposed]) == {decomposed: [composed]}
+            assert exact_term_sequences(conn, [(decomposed, decomposed)]) == {(composed, composed): {1}}
+            assert sequence_terms(conn, [(1, decomposed)]) == {(1, composed): {composed}}
+            assert attest_detail(conn, [decomposed], include_readings=True)[decomposed]
         finally:
             conn.close()
 

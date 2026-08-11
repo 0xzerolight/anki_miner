@@ -37,6 +37,17 @@ class TestNormalizeFreqRank:
     def test_float_string_truncates_to_int_rank(self) -> None:
         assert normalize_freq_rank("3.9位") == (3, "3.9位")
 
+    def test_direct_float_truncates_to_int_rank(self) -> None:
+        assert normalize_freq_rank(3.9) == (3, None)
+
+    def test_value_envelope_float_truncates_to_int_rank(self) -> None:
+        assert normalize_freq_rank({"value": 7.8, "displayValue": "7.8位"}) == (7, "7.8位")
+
+    def test_non_finite_float_rejected(self) -> None:
+        assert normalize_freq_rank(float("inf")) == (None, None)
+        assert normalize_freq_rank(float("nan")) == (None, None)
+        assert normalize_freq_rank({"value": float("-inf")}) == (None, None)
+
     def test_bool_rejected(self) -> None:
         assert normalize_freq_rank(True) == (None, None)
 

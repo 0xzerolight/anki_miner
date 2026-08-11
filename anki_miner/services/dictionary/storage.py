@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, NamedTuple
@@ -25,11 +26,11 @@ from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
 
-# v5: no table change — bumped to force a one-time reimport that preserves each
-# Yomitan term-bank row as one outer glossary item and marks forms rows.
+# v6: no table change — bumped to force a one-time reimport with NFC-normalized
+# term and reading keys.
 # Stale (< SCHEMA_VERSION) indexes are dropped and the startup Reimport-All
 # prompt + pre-run gate act on schema_ok; reimport is the migration.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 # Lone UTF-16 surrogates (U+D800–U+DFFF) have no valid UTF-8 encoding, so sqlite3
 # raises ``UnicodeEncodeError: surrogates not allowed`` the moment such text is
@@ -224,7 +225,7 @@ def _fold_reading(reading: str | None) -> str | None:
     its hiragana equivalent collate to one key; lookup folds the query side to
     match (schema v3, plan item 5.1 match-by-kana invariant).
     """
-    return katakana_to_hiragana(reading) if reading is not None else None
+    return katakana_to_hiragana(unicodedata.normalize("NFC", reading)) if reading is not None else None
 
 
 def _homograph_keep_mask(word: str, rows: list[tuple[str, str]]) -> list[bool]:
@@ -318,7 +319,7 @@ def bulk_insert(
             # collate to one key (schema v3); lookup folds the query side too.
             batch.append(
                 (
-                    _scrub_surrogates(row.term),
+                    _scrub_surrogates(unicodedata.normalize("NFC", row.term)),
                     _scrub_surrogates(_fold_reading(row.reading)),
                     _scrub_surrogates(row.content),
                     _scrub_surrogates(row.tags),
@@ -420,8 +421,9 @@ def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> l
     raw word — a katakana query still matches a kanji headword's folded reading
     (schema v3, touch point a).
     """
+    word = unicodedata.normalize("NFC", word)
     folded_word = katakana_to_hiragana(word)
-    folded_boost = katakana_to_hiragana(reading) if reading is not None else None
+    folded_boost = _fold_reading(reading)
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
     # rows: (content, tags, sequence, term). Scope homographs (Rule A/B) over the
     # ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
@@ -441,6 +443,7 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
     unconditionally at the caller). Katakana folding matches ``lookup``: a
     katakana candidate still matches a kanji headword's hiragana-folded reading.
     """
+    word = unicodedata.normalize("NFC", word)
     folded_word = katakana_to_hiragana(word)
     rows = conn.execute(_LOOKUP_RULES_SQL, (word, folded_word, word)).fetchall()
     # rows: (content, tags, sequence, rules, term). Render-side, so scope
@@ -493,25 +496,26 @@ def lookup_many(
     if not unique_pairs:
         return result
 
+    normalized_by_word = {word: unicodedata.normalize("NFC", word) for word, _ in unique_pairs}
+
     # Per-word folded boost reading (hiragana-folded to match stored readings);
     # None keeps the wildcard (no-boost) ordering for that word.
-    boost_by_word: dict[str, str | None] = {
-        w: (katakana_to_hiragana(r) if r is not None else None) for w, r in unique_pairs
-    }
+    boost_by_word: dict[str, str | None] = {w: _fold_reading(r) for w, r in unique_pairs}
     unique_words = [w for w, _ in unique_pairs]
 
     for start in range(0, len(unique_words), _BIND_CHUNK):
         chunk = unique_words[start : start + _BIND_CHUNK]
+        normalized_chunk = [normalized_by_word[w] for w in chunk]
         # Readings are stored hiragana-folded, so the ``reading IN`` clause must
         # bind the folded query words (touch point b) — a katakana requested
         # word still fetches the row whose folded reading it matches.
-        folded_chunk = [katakana_to_hiragana(w) for w in chunk]
+        folded_chunk = [katakana_to_hiragana(w) for w in normalized_chunk]
         placeholders = ", ".join("?" for _ in chunk)
         sql = (
             "SELECT id, term, reading, content, tags, score, sequence FROM entries "
             f"WHERE term IN ({placeholders}) OR reading IN ({placeholders})"
         )
-        rows = conn.execute(sql, (*chunk, *folded_chunk)).fetchall()
+        rows = conn.execute(sql, (*normalized_chunk, *folded_chunk)).fetchall()
 
         # Bucket each fetched row to every requested word it can satisfy. A row
         # may match one word by term and a different word by reading. Each entry
@@ -528,7 +532,9 @@ def lookup_many(
         #   * row_id: SQLite resolves equal (priority, score, sequence) ties by
         #     rowid ascending under the single-word query's MULTI-INDEX OR plan;
         #     replaying it here keeps lookup_many byte-identical to lookup.
-        chunk_set = set(chunk)
+        term_reverse: dict[str, list[str]] = {}
+        for requested, normalized in zip(chunk, normalized_chunk, strict=True):
+            term_reverse.setdefault(normalized, []).append(requested)
         # Hiragana-keyed reverse map (touch point c): folded requested word →
         # the requested word(s) that fold to it. A reading-only hit is assigned
         # back through this map so a katakana requested word (whose raw form no
@@ -554,8 +560,8 @@ def lookup_many(
             # both columns match, so collapse to one entry per requested word,
             # letting the term match (priority 0) win over a reading-only one.
             matched: dict[str, int] = {}
-            if term in chunk_set:
-                matched[term] = 0
+            for w in term_reverse.get(term, ()):
+                matched[w] = 0
             if folded_reading is not None:
                 for w in reading_reverse.get(folded_reading, ()):
                     matched.setdefault(w, 1)
@@ -570,7 +576,7 @@ def lookup_many(
                 # Filter BEFORE sort/cap: order-independent per-row predicate, so
                 # scoping then sorting equals ``lookup``'s scope-the-sorted-set.
                 # e[5]=term, e[6]=content (see the entry tuple above).
-                keep = _homograph_keep_mask(w, [(e[5], e[6]) for e in entries])
+                keep = _homograph_keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries])
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
             result[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries[:_LOOKUP_LIMIT]]
@@ -594,15 +600,21 @@ def terms_exist(conn: sqlite3.Connection, terms: list[str]) -> set[str]:
     token merges.
     """
     unique = list(dict.fromkeys(terms))
+    normalized = {term: unicodedata.normalize("NFC", term) for term in unique}
+    requested_by_term: dict[str, list[str]] = {}
+    for requested, term in normalized.items():
+        requested_by_term.setdefault(term, []).append(requested)
+    canonical_terms = list(requested_by_term)
     found: set[str] = set()
-    for start in range(0, len(unique), _EXIST_CHUNK):
-        chunk = unique[start : start + _EXIST_CHUNK]
+    for start in range(0, len(canonical_terms), _EXIST_CHUNK):
+        chunk = canonical_terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
             f"SELECT DISTINCT term FROM entries WHERE term IN ({placeholders})",
             chunk,
         ).fetchall()
-        found.update(row[0] for row in rows)
+        for (term,) in rows:
+            found.update(requested_by_term.get(term, ()))
     return found
 
 
@@ -618,9 +630,13 @@ def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list
     score-ordered so index 0 is the dictionary's best entry for the term.
     """
     unique = list(dict.fromkeys(terms))
+    requested_by_term: dict[str, list[str]] = {}
+    for requested in unique:
+        requested_by_term.setdefault(unicodedata.normalize("NFC", requested), []).append(requested)
+    canonical_terms = list(requested_by_term)
     found: dict[str, list[str]] = {}
-    for start in range(0, len(unique), _EXIST_CHUNK):
-        chunk = unique[start : start + _EXIST_CHUNK]
+    for start in range(0, len(canonical_terms), _EXIST_CHUNK):
+        chunk = canonical_terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
             f"SELECT term, reading FROM entries WHERE term IN ({placeholders}) "
@@ -628,9 +644,10 @@ def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list
             chunk,
         ).fetchall()
         for term, reading in rows:
-            readings = found.setdefault(term, [])
-            if reading not in readings:
-                readings.append(reading)
+            for requested in requested_by_term.get(term, ()):
+                readings = found.setdefault(requested, [])
+                if reading not in readings:
+                    readings.append(reading)
     return found
 
 
@@ -652,7 +669,7 @@ def exact_term_sequences(
             continue
         folded_reading = _fold_reading(reading)
         if folded_reading:
-            normalized_pairs.append((term, folded_reading))
+            normalized_pairs.append((unicodedata.normalize("NFC", term), folded_reading))
     normalized_pairs = list(dict.fromkeys(normalized_pairs))
     requested = set(normalized_pairs)
     terms = list(dict.fromkeys(term for term, _ in normalized_pairs))
@@ -754,15 +771,20 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
     if not unique:
         return result
 
+    normalized_by_word = {word: unicodedata.normalize("NFC", word) for word in unique}
+
     for start in range(0, len(unique), _BIND_CHUNK):
         chunk = unique[start : start + _BIND_CHUNK]
-        chunk_set = set(chunk)
+        normalized_chunk = [normalized_by_word[word] for word in chunk]
+        term_reverse: dict[str, list[str]] = {}
+        for requested, normalized in zip(chunk, normalized_chunk, strict=True):
+            term_reverse.setdefault(normalized, []).append(requested)
         if include_readings:
             # Readings are stored hiragana-folded, so bind the folded query words
             # (touch point b) and map a reading hit back through the folded key —
             # a katakana requested word still attests via a kanji headword's
             # folded reading (mirrors lookup_many's reading_reverse).
-            folded_chunk = [katakana_to_hiragana(w) for w in chunk]
+            folded_chunk = [katakana_to_hiragana(w) for w in normalized_chunk]
             reading_reverse: dict[str, list[str]] = {}
             for w, wf in zip(chunk, folded_chunk, strict=True):
                 reading_reverse.setdefault(wf, []).append(w)
@@ -771,15 +793,15 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
                 "SELECT term, reading, rules, tags FROM entries "
                 f"WHERE term IN ({placeholders}) OR reading IN ({placeholders})"
             )
-            rows = conn.execute(sql, (*chunk, *folded_chunk)).fetchall()
+            rows = conn.execute(sql, (*normalized_chunk, *folded_chunk)).fetchall()
             for term, reading, rules, tags in rows:
                 rules_val = rules if rules is not None else ""
                 tags_val = tags if tags is not None else ""
                 folded_reading = katakana_to_hiragana(reading) if reading is not None else None
                 # Term wins over reading for the same (row, word) pair.
                 matched: dict[str, str] = {}
-                if term in chunk_set:
-                    matched[term] = "term"
+                for w in term_reverse.get(term, ()):
+                    matched[w] = "term"
                 if folded_reading is not None:
                     for w in reading_reverse.get(folded_reading, ()):
                         matched.setdefault(w, "reading")
@@ -788,10 +810,11 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
         else:
             placeholders = ", ".join("?" for _ in chunk)
             sql = f"SELECT term, rules, tags FROM entries WHERE term IN ({placeholders})"
-            for term, rules, tags in conn.execute(sql, chunk).fetchall():
-                result[term].append(
-                    AttestRow("term", rules if rules is not None else "", tags if tags is not None else "")
-                )
+            for term, rules, tags in conn.execute(sql, normalized_chunk).fetchall():
+                for requested in term_reverse.get(term, ()):
+                    result[requested].append(
+                        AttestRow("term", rules if rules is not None else "", tags if tags is not None else "")
+                    )
     return result
 
 

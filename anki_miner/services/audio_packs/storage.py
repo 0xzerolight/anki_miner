@@ -14,6 +14,7 @@ block directory deletion).
 from __future__ import annotations
 
 import sqlite3
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable
@@ -23,7 +24,7 @@ from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.services._sqlite_index import write_meta as write_meta
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
@@ -118,8 +119,8 @@ def bulk_insert(
                 continue
             batch.append(
                 (
-                    row.expression,
-                    row.reading,
+                    unicodedata.normalize("NFC", row.expression),
+                    unicodedata.normalize("NFC", row.reading) if row.reading is not None else None,
                     row.source,
                     row.speaker,
                     row.display,
@@ -181,6 +182,7 @@ def lookup(conn: sqlite3.Connection, expression: str, reading: str | None = "") 
     all-reading rows are returned.  Pass a non-empty reading to restrict to
     rows whose reading is NULL or matches exactly.
     """
-    r = reading if reading is not None else ""
+    expression = unicodedata.normalize("NFC", expression)
+    r = unicodedata.normalize("NFC", reading) if reading is not None else ""
     rows = conn.execute(_LOOKUP_SQL, (expression, r, r)).fetchall()
     return [AudioEntry(file=row[0], source=row[1], speaker=row[2], reading=row[3]) for row in rows]

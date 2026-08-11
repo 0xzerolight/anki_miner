@@ -139,6 +139,31 @@ class TestZipImport:
         assert result.entry_count == 1
         assert _read_display(dest, result.source_id) == [("懸かる", 19920, "19920")]
 
+    def test_canonical_kana_usage_collision_prefers_unmarked_row(self, tmp_path: Path) -> None:
+        term_nfd = "は\u309aん"
+        term_nfc = "ぱん"
+        zip_path = _write_zip(
+            tmp_path / "canonical-jpdb.zip",
+            frequency_mode="rank-based",
+            banks=[
+                [
+                    term_nfd,
+                    "freq",
+                    {
+                        "reading": term_nfd,
+                        "frequency": {"value": 100, "displayValue": "100㋕"},
+                    },
+                ],
+                [term_nfc, "freq", {"reading": term_nfc, "frequency": 300}],
+            ],
+        )
+        dest = tmp_path / "sources"
+
+        result = import_frequency_source(zip_path, dest)
+
+        assert result.entry_count == 1
+        assert _read_entries(dest, result.source_id) == [(term_nfc, term_nfc, 300)]
+
     def test_all_kana_usage_rows_keep_min(self, tmp_path: Path) -> None:
         # A pure-kana headword carries ONLY ㋕ rows (one per word sharing the
         # kana spelling) — min still wins within the ㋕ bucket, display kept.
@@ -344,6 +369,28 @@ class TestZipImport:
         result = import_frequency_source(zip_path, dest)
         assert _read_display(dest, result.source_id) == [("猫", 5, None)]
 
+    def test_decimal_numeric_values_import_with_accurate_counts(self, tmp_path: Path) -> None:
+        zip_path = _write_zip(
+            tmp_path / "decimal.zip",
+            frequency_mode="rank-based",
+            banks=[
+                ["整数", "freq", 5],
+                ["直接小数", "freq", 2.5],
+                ["物小数", "freq", {"value": 3.5}],
+            ],
+        )
+        dest = tmp_path / "sources"
+
+        result = import_frequency_source(zip_path, dest)
+
+        assert result.entry_count == 3
+        assert result.skipped_display_only == 0
+        assert _read_entries(dest, result.source_id) == [
+            ("直接小数", None, 2),
+            ("物小数", None, 3),
+            ("整数", None, 5),
+        ]
+
     def test_min_rank_collision_keeps_that_rows_display(self, tmp_path: Path) -> None:
         # On a (term, reading) collision the min rank wins AND carries its own
         # display string, not the loser's.
@@ -530,6 +577,19 @@ class TestCsvImport:
         result = import_frequency_source(tsv_path, dest)
         assert _read_entries(dest, result.source_id) == [("犬", None, 3), ("猫", None, 5)]
 
+    def test_comma_csv_allows_quoted_tab_payload(self, tmp_path: Path) -> None:
+        csv_path = tmp_path / "notes.csv"
+        csv_path.write_text('term,rank,note\n猫,1,"has\ta tab"\n犬,2,plain\n', encoding="utf-8")
+        dest = tmp_path / "sources"
+
+        result = import_frequency_source(csv_path, dest)
+
+        assert result.entry_count == 2
+        assert _read_entries(dest, result.source_id) == [
+            ("猫", None, 1),
+            ("犬", None, 2),
+        ]
+
     def test_three_col_with_reading(self, tmp_path: Path) -> None:
         csv_path = tmp_path / "withreading.csv"
         csv_path.write_text("term,reading,rank\n行く,いく,12\n猫,ねこ,5\n", encoding="utf-8")
@@ -556,6 +616,21 @@ class TestCsvImport:
         assert result.entry_count == 1
         assert _read_entries(dest, result.source_id) == [("猫", None, 5)]
 
+    def test_first_canonical_occurrence_wins(self, tmp_path: Path) -> None:
+        term_nfd = "は\u309aん"
+        term_nfc = "ぱん"
+        csv_path = tmp_path / "canonical-dup.csv"
+        csv_path.write_text(
+            f"term,reading,rank\n{term_nfd},{term_nfd},5\n{term_nfc},{term_nfc},99\n",
+            encoding="utf-8",
+        )
+        dest = tmp_path / "sources"
+
+        result = import_frequency_source(csv_path, dest)
+
+        assert result.entry_count == 1
+        assert _read_entries(dest, result.source_id) == [(term_nfc, term_nfc, 5)]
+
     def test_txt_suffix_supported(self, tmp_path: Path) -> None:
         txt_path = tmp_path / "list.txt"
         txt_path.write_text("猫,5\n犬,3\n", encoding="utf-8")
@@ -576,6 +651,47 @@ class TestCsvImport:
         assert result.converted_to_ranks is True
         entries = _read_entries(dest, result.source_id)
         assert {term for term, _r, rank in entries if rank <= 10} == set(_MORE_COMMON)
+
+    @pytest.mark.parametrize("header", ["count", "occurrence"])
+    def test_occurrence_header_is_authoritative_without_probe_terms(self, tmp_path: Path, header: str) -> None:
+        csv_path = tmp_path / f"{header}.csv"
+        csv_path.write_text(f"term,{header}\n山,100\n川,5\n", encoding="utf-8")
+
+        result = import_frequency_source(csv_path, tmp_path / "sources")
+
+        assert result.converted_to_ranks is True
+        assert _read_entries(tmp_path / "sources", result.source_id) == [
+            ("山", None, 1),
+            ("川", None, 2),
+        ]
+
+    def test_headerless_keyword_term_is_kept_as_data(self, tmp_path: Path) -> None:
+        csv_path = tmp_path / "headerless.csv"
+        csv_path.write_text("count,1\n犬,2\n", encoding="utf-8")
+        dest = tmp_path / "sources"
+
+        result = import_frequency_source(csv_path, dest)
+
+        assert result.entry_count == 2
+        assert result.converted_to_ranks is False
+        assert _read_entries(dest, result.source_id) == [
+            ("count", None, 1),
+            ("犬", None, 2),
+        ]
+
+    def test_rank_header_is_authoritative_without_probe_terms(self, tmp_path: Path) -> None:
+        csv_path = tmp_path / "ranks.csv"
+        lines = ["term,rank"]
+        lines += [f"{term},5000" for term in _MORE_COMMON]
+        lines += [f"{term},3" for term in _LESS_COMMON]
+        csv_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = import_frequency_source(csv_path, tmp_path / "sources")
+
+        assert result.converted_to_ranks is False
+        entries = _read_entries(tmp_path / "sources", result.source_id)
+        assert {rank for _term, _reading, rank in entries} == {3, 5000}
+        assert {term for term, _reading, rank in entries if rank == 5000} == set(_MORE_COMMON)
 
     def test_rank_csv_not_converted(self, tmp_path: Path) -> None:
         csv_path = tmp_path / "ranks.csv"

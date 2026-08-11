@@ -6,10 +6,9 @@ there is exactly one implementation of each.
 
 Two concerns live here:
 
-* **CSV column extraction** — ``_extract_word_rank`` / ``_is_word_first_header``
-  / ``_WORD_FIRST_HEADER_COLS``: figure out which column is the word and which
-  is the rank from a delimiter-split row, honouring an importer-written
-  word-first header when present.
+* **CSV column extraction** — ``_extract_word_rank`` / ``_is_frequency_header``
+  / ``_is_word_first_header``: identify structural headers, then figure out
+  which column is the word and which is the rank from a delimiter-split row.
 * **Yomitan ``freq`` rank normalization** — ``normalize_freq_rank`` and its
   helpers: collapse Yomitan's five spec-defined ``freq`` data shapes to an
   ``int`` rank (or ``None`` for display-only / invalid entries).
@@ -46,6 +45,16 @@ def is_kana_usage_display(display_value: str | None) -> bool:
 # The Yomitan freq importer writes ``['term', 'rank']`` as its header; we recognise
 # both ``term`` and ``word`` so user-exported variants are also covered.
 _WORD_FIRST_HEADER_COLS = {"term", "word"}
+_WORD_HEADER_COLS = _WORD_FIRST_HEADER_COLS | {"lemma"}
+_OCCURRENCE_HEADER_COLS = {"count", "occurrence", "occurrences"}
+_RANK_HEADER_COLS = {"rank"}
+_FREQUENCY_VALUE_HEADER_COLS = _OCCURRENCE_HEADER_COLS | _RANK_HEADER_COLS | {"frequency", "freq"}
+
+
+def _is_frequency_header(row: list[str]) -> bool:
+    """Return True only when a row labels both word and numeric columns."""
+    columns = {cell.strip().lower() for cell in row}
+    return bool(columns & _WORD_HEADER_COLS and columns & _FREQUENCY_VALUE_HEADER_COLS)
 
 
 def _is_word_first_header(row: list[str]) -> bool:
@@ -56,6 +65,16 @@ def _is_word_first_header(row: list[str]) -> bool:
     auto-detect for those files.
     """
     return bool(row) and row[0].strip().lower() in _WORD_FIRST_HEADER_COLS
+
+
+def _header_frequency_mode(row: list[str]) -> str:
+    """Return an explicit frequency direction declared by a CSV header."""
+    columns = {cell.strip().lower() for cell in row}
+    if columns & _OCCURRENCE_HEADER_COLS:
+        return "occurrence-based"
+    if columns & _RANK_HEADER_COLS:
+        return "rank-based"
+    return ""
 
 
 def _extract_word_rank(row: list[str], *, word_first: bool = False) -> tuple[str, int | None]:
@@ -175,6 +194,9 @@ def _normalize_freq_rank_raw(data: Any) -> tuple[int | None, str | None]:
     if isinstance(data, int):
         return data, None
 
+    if isinstance(data, float):
+        return (int(data), None) if math.isfinite(data) else (None, None)
+
     if isinstance(data, str):
         # String payload: the whole string is the display value; the rank is its
         # first float-shaped run (Yomitan _getFrequencyInfo string branch).
@@ -195,6 +217,8 @@ def _normalize_freq_rank_raw(data: Any) -> tuple[int | None, str | None]:
                 return None, display
             if isinstance(value, int):
                 return value, display
+            if isinstance(value, float):
+                return (int(value), display) if math.isfinite(value) else (None, display)
             if isinstance(value, str):
                 return _string_to_rank(value), display
 

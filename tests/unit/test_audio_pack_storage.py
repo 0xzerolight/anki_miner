@@ -3,6 +3,7 @@
 import json
 import os
 import sqlite3
+import unicodedata
 from pathlib import Path
 from unittest.mock import patch
 
@@ -34,8 +35,8 @@ class TestCreateIndex:
             indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
             assert "idx_expr_reading" in indexes
 
-    def test_schema_version_is_1(self):
-        assert SCHEMA_VERSION == 1
+    def test_schema_version_is_2(self):
+        assert SCHEMA_VERSION == 2
 
     def test_entries_table_columns(self, tmp_path: Path):
         db_path = tmp_path / "index.sqlite"
@@ -60,6 +61,23 @@ class TestCreateIndex:
 
 
 class TestBulkInsertAndLookup:
+    def test_nfd_keys_are_stored_and_looked_up_as_nfc(self, tmp_path: Path):
+        db_path = tmp_path / "index.sqlite"
+        create_index(db_path)
+        decomposed = "か\u3099く"
+        composed = unicodedata.normalize("NFC", decomposed)
+        bulk_insert(
+            db_path,
+            [AudioPackRow(expression=decomposed, reading=decomposed, source="src", file="gaku.mp3")],
+        )
+        conn = open_readonly(db_path)
+        try:
+            assert conn.execute("SELECT expression, reading FROM entries").fetchone() == (composed, composed)
+            assert [row.file for row in lookup(conn, composed, composed)] == ["gaku.mp3"]
+            assert [row.file for row in lookup(conn, decomposed, decomposed)] == ["gaku.mp3"]
+        finally:
+            conn.close()
+
     def test_insert_and_lookup_round_trip(self, tmp_path: Path):
         db_path = tmp_path / "index.sqlite"
         create_index(db_path)

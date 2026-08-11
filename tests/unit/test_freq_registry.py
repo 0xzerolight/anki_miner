@@ -160,30 +160,36 @@ def test_load_on_missing_root_is_empty(tmp_path: Path):
     assert reg.get("anything") is None
 
 
-def test_v1_source_is_schema_ok_but_version_below_latest(tmp_path: Path):
-    # A real v1 index (no display_value column) stays loadable after the 1->2
-    # bump; schema_ok is True (loadable), decoupled from is-latest.
+def test_v1_source_requires_reimport(tmp_path: Path):
     build_v1_index(tmp_path / "old" / "index.sqlite", [("猫", "ねこ", 100)])
     reg = FrequencySourceRegistry(tmp_path)
     reg.load()
     meta = reg.get("old")
     assert meta is not None
     assert meta.version == 1
-    assert meta.schema_ok is True
-    # The optional out-of-date notice keys on version < SCHEMA_VERSION, which
-    # fires here — while schema_ok (loadable) does NOT distinguish v1 from v2.
+    assert meta.schema_ok is False
     assert meta.version < storage.SCHEMA_VERSION
 
 
-def test_v2_source_version_is_latest(tmp_path: Path):
-    _build_source(tmp_path, "new", [("猫", "ねこ", 100)])
+def test_v2_source_requires_reimport(tmp_path: Path):
+    _build_source(tmp_path, "old", [("猫", "ねこ", 100)], schema_version=2)
     reg = FrequencySourceRegistry(tmp_path)
     reg.load()
-    meta = reg.get("new")
+    meta = reg.get("old")
+    assert meta is not None
+    assert meta.version == 2
+    assert meta.schema_ok is False
+    assert meta.version < storage.SCHEMA_VERSION
+
+
+def test_current_source_version_is_schema_ok(tmp_path: Path):
+    _build_source(tmp_path, "current", [("猫", "ねこ", 100)])
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    meta = reg.get("current")
     assert meta is not None
     assert meta.version == storage.SCHEMA_VERSION
     assert meta.schema_ok is True
-    assert not (meta.version < storage.SCHEMA_VERSION)  # notice does NOT fire for v2
 
 
 def test_future_version_rejected(tmp_path: Path):
@@ -196,29 +202,16 @@ def test_future_version_rejected(tmp_path: Path):
     assert meta.schema_ok is False  # unknown newer schema — not loadable
 
 
-def test_v1_index_included_and_read_via_build_sources_load_lookup(tmp_path: Path):
-    # Regression for the traced zero-card failure: the build_sources schema drop
-    # runs BEFORE provider.load(), so both seams must accept v1. If either drops
-    # it, the v1 source vanishes and max_frequency_rank filters every word out.
-    build_v1_index(
-        tmp_path / "old" / "index.sqlite",
-        [("猫", "ねこ", 100), ("犬", "いぬ", 5000)],
-    )
+def test_v2_index_excluded_before_provider_load(tmp_path: Path):
+    _build_source(tmp_path, "old", [("猫", "ねこ", 100)], schema_version=2)
     reg = FrequencySourceRegistry(tmp_path)
     reg.load()
     config = AnkiMinerConfig(frequency_chain=(FreqEntry(source_id="old"),))
 
-    providers = reg.build_sources(config)
-    assert [p.source_id for p in providers] == ["old"]  # NOT dropped at build_sources
-    provider = providers[0]
-    assert provider.load() is True  # provider.load accepts v1 too
-
-    # Nonzero, correct filtered set: 猫 (rank 100) passes max_frequency_rank=1000;
-    # 犬 (rank 5000) does not — identical to pre-bump v1 behavior.
-    max_rank = 1000
-    passed = [t for t in ("猫", "犬") if (r := provider.lookup(t)) is not None and r <= max_rank]
-    assert passed == ["猫"]
-    assert provider.lookup_detail("猫") == (100, None)  # display absent on v1
+    meta = reg.get("old")
+    assert meta is not None
+    assert meta.schema_ok is False
+    assert reg.build_sources(config) == []
 
 
 def test_unlisted_excludes_chained_and_bad_schema(tmp_path: Path):

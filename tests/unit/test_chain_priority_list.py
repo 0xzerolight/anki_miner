@@ -487,9 +487,9 @@ class TestTheExplanationIsTrue:
         widget = _make_panel("frequency", qtbot, tmp_path, ("a", True))
         text = widget._explanation_label.text()
 
-        assert "additively" in text
-        assert "lowest) rank" in text
-        assert "breaks ties" in text
+        assert "contributes" in text
+        assert "lowest rank" in text
+        assert "listed on the card" in text
 
 
 class TestSettingAnchorsAreUnchanged:

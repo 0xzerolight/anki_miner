@@ -37,12 +37,9 @@ class FreqSourceMeta:
     source_name: str
     format: str
     entry_count: int
-    # ``schema_ok`` = loadable/chain-includable (version in the supported range),
-    # decoupled from is-latest: a v1 index reads fine (display_value treated as
-    # absent), so schema_ok is True for it. ``version`` is the raw on-disk schema
-    # version, exposed so an out-of-date notice can key on
-    # ``version < SCHEMA_VERSION`` (a reimport gains display values but is never
-    # required for correctness) — schema_ok no longer distinguishes v1 from v2.
+    # ``schema_ok`` = loadable/chain-includable. Only the current version is
+    # accepted because schema bumps require reimporting canonicalized keys.
+    # ``version`` is the raw on-disk schema version exposed for stale notices.
     schema_ok: bool
     version: int
     db_path: Path
@@ -88,11 +85,7 @@ class FrequencySourceRegistry:
             source_name=source_name if isinstance(source_name, str) else child.name,
             format=format_name if isinstance(format_name, str) else "unknown",
             entry_count=count,
-            # schema_ok policy: additive-only migrations, so every version from
-            # 1..current is readable (older = fewer columns, filled as absent by
-            # readers). A future version > SCHEMA_VERSION (written by a newer app)
-            # is rejected — we don't know its schema.
-            schema_ok=(1 <= version <= SCHEMA_VERSION),
+            schema_ok=(version == SCHEMA_VERSION),
             version=version,
             db_path=db,
             # Explicit == "1" — meta values are strings, so bool("0") would be
@@ -106,11 +99,9 @@ class FrequencySourceRegistry:
     def unlisted(self, config: AnkiMinerConfig) -> list[FreqSourceMeta]:
         """Return on-disk sources not referenced by any chain entry.
 
-        Only sources with schema_ok=True are returned — an unsupported-version
-        source (version outside 1..SCHEMA_VERSION) cannot be loaded and would be
-        dropped by build_sources anyway. A readable-but-older v1 source has
-        schema_ok=True, so it is offered normally. Results are sorted by
-        source_id for deterministic ordering.
+        Only sources with schema_ok=True are returned. A stale or future source
+        cannot be loaded and would be dropped by build_sources anyway. Results
+        are sorted by source_id for deterministic ordering.
 
         A source referenced by a *disabled* chain entry is still considered
         listed (it has a visible, unchecked row the user can re-enable), so it
@@ -128,14 +119,9 @@ class FrequencySourceRegistry:
         """Build the ordered provider list from config + disk state.
 
         Entries with enabled=False are skipped. Entries whose source_id is
-        missing on disk, or whose on-disk schema version is outside the supported
-        range (``schema_ok=False``), are dropped with a warning. A v1 index is
-        supported and included (its display values simply read as absent).
-        Providers are returned in chain order.
-
-        This drop runs *before* IndexedFreqProvider.load(), so it must accept the
-        same version range the provider does — else a v1 source would be dropped
-        here and never reach the (backward-compatible) provider read.
+        missing on disk, or whose on-disk schema version is not current
+        (``schema_ok=False``), are dropped with a warning. Providers are returned
+        in chain order. This gate must match IndexedFreqProvider.load().
 
         Caller is responsible for invoking provider.load() on each.
         """

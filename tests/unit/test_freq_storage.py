@@ -23,9 +23,8 @@ def _make_meta(entry_count: int = 2) -> dict[str, str]:
 def build_v1_index(db_path: Path, rows: list[tuple[str, str | None, int]]) -> None:
     """Materialize a legacy v1 index (no ``display_value`` column, schema_version=1).
 
-    Storage always writes the current (v2) schema, so a v1 fixture must be built
-    with raw SQL. Shared by the backward-compatibility tests: a v1 index must
-    stay fully readable after the 1→2 bump (display_value read as absent).
+    Storage always writes the current schema, so a v1 fixture must be built with
+    raw SQL. Provider and registry tests use it to verify forced reimport.
     """
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
@@ -49,9 +48,8 @@ def build_v1_index(db_path: Path, rows: list[tuple[str, str | None, int]]) -> No
         conn.close()
 
 
-class TestBackwardCompatV1:
-    """The 1→2 bump is additive; a v1 index must stay readable (see the registry
-    and provider tests for the load/lookup gating that consumes this fixture)."""
+class TestSchemaGenerations:
+    """Old physical layouts remain available as forced-reimport fixtures."""
 
     def test_v1_index_lacks_display_value_column(self, tmp_path: Path) -> None:
         db = tmp_path / "old" / "index.sqlite"
@@ -64,7 +62,7 @@ class TestBackwardCompatV1:
         assert cols == ["id", "term", "reading", "rank"]
         assert storage.read_meta(db)["schema_version"] == "1"
 
-    def test_v2_index_has_display_value_column(self, tmp_path: Path) -> None:
+    def test_current_index_has_display_value_column(self, tmp_path: Path) -> None:
         db = tmp_path / "new" / "index.sqlite"
         storage.build_index(db, [("猫", "ねこ", 100, "100㋕")], _make_meta(1))
         conn = sqlite3.connect(db)
@@ -73,12 +71,12 @@ class TestBackwardCompatV1:
         finally:
             conn.close()
         assert got == [("100㋕",)]
-        assert storage.read_meta(db)["schema_version"] == "2"
+        assert storage.read_meta(db)["schema_version"] == str(storage.SCHEMA_VERSION)
 
 
 class TestSchema:
-    def test_schema_version_is_two(self) -> None:
-        assert storage.SCHEMA_VERSION == 2
+    def test_schema_version_is_three(self) -> None:
+        assert storage.SCHEMA_VERSION == 3
 
     def test_create_index_creates_tables(self, tmp_path: Path) -> None:
         db = tmp_path / "index.sqlite"
