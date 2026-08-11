@@ -47,7 +47,7 @@ import pysubs2
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
+from anki_miner.utils.audio_track_detector import is_japanese_language_tag, list_subtitle_streams
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_utils import no_window_kwargs
@@ -921,15 +921,19 @@ def _resolve_embedded_subtitle(
 
 
 def _pick_subtitle_stream(streams: list[SubtitleStream], subtitle_track_override: int | None) -> SubtitleStream | None:
-    """Choose a subtitle stream: override sub_index → first JP text → first text."""
+    """Choose a subtitle stream: override, then non-forced/Japanese/demux order."""
     if subtitle_track_override is not None:
         return next((s for s in streams if s.sub_index == subtitle_track_override), None)
     text_streams = [s for s in streams if s.is_text]
     if not text_streams:
         return None
-    return next(
-        (s for s in text_streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
-        text_streams[0],
+    return min(
+        text_streams,
+        key=lambda stream: (
+            stream.is_forced,
+            not is_japanese_language_tag(stream.language_tag),
+            stream.sub_index,
+        ),
     )
 
 

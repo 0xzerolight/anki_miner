@@ -141,6 +141,33 @@ class TestFindJapaneseAudioStream:
         assert result is not None
         assert result.language_tag == lang_code.lower()
 
+    def test_japanese_primary_subtag_is_detected(self, video_file):
+        stdout = _ffprobe_json(
+            [
+                {"index": 1, "language": "eng"},
+                {"index": 4, "language": "ja-JP"},
+            ]
+        )
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = find_japanese_audio_stream(video_file)
+        assert result is not None
+        assert result.global_index == 4
+        assert result.language_tag == "ja-jp"
+
+    def test_default_japanese_stream_beats_earlier_commentary(self, video_file):
+        stdout = _ffprobe_json(
+            [
+                {"index": 2, "language": "jpn", "title": "Commentary", "default": 0},
+                {"index": 5, "language": "jpn", "title": "Main", "default": 1},
+            ]
+        )
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)):
+            result = find_japanese_audio_stream(video_file)
+        assert result is not None
+        assert result.global_index == 5
+        assert result.audio_index == 1
+        assert result.is_default is True
+
     def test_skips_streams_with_no_index(self, video_file):
         payload = {
             "streams": [

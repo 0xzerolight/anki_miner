@@ -1687,6 +1687,41 @@ def _make_audio_stream(audio_index: int, global_index: int) -> AudioStream:
 class TestAudioTrackOverride:
     """Tests for the audio_track_override feature in MediaExtractorService."""
 
+    def test_auto_selection_maps_later_default_japanese_global_index(self, service, video_file, tmp_path):
+        output_path = tmp_path / "out.mp3"
+        output_path.write_bytes(b"\xff\xfbfake")
+        probe_output = json.dumps(
+            {
+                "streams": [
+                    {
+                        "index": 2,
+                        "codec_type": "audio",
+                        "tags": {"language": "jpn", "title": "Commentary"},
+                        "disposition": {"default": 0},
+                    },
+                    {
+                        "index": 5,
+                        "codec_type": "audio",
+                        "tags": {"language": "ja-JP", "title": "Main"},
+                        "disposition": {"default": 1},
+                    },
+                ]
+            }
+        )
+
+        with (
+            patch(
+                f"{DETECTOR_MODULE}.subprocess.run",
+                return_value=MagicMock(returncode=0, stdout=probe_output),
+            ),
+            patch(f"{MODULE}.subprocess.Popen", return_value=_popen_mock()) as mock_popen,
+        ):
+            result = service._extract_audio(video_file, 1.0, 2.0, output_path)
+
+        assert result is True
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-map") + 1] == "0:5"
+
     # ------------------------------------------------------------------
     # 1. Override produces the correct -map arg
     # ------------------------------------------------------------------

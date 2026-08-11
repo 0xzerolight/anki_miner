@@ -931,14 +931,25 @@ def test_condenser_fault_preserves_existing_output(tmp_path):
 # --- extract_embedded_subtitle ---------------------------------------------
 
 
-def _sub_stream(*, sub_index: int, codec: str | None, is_text: bool = True) -> SubtitleStream:
+def _sub_stream(
+    *,
+    sub_index: int,
+    codec: str | None,
+    is_text: bool = True,
+    language: str | None = "jpn",
+    title: str | None = None,
+    is_forced: bool = False,
+    is_default: bool = False,
+) -> SubtitleStream:
     return SubtitleStream(
         index=sub_index + 1,
         sub_index=sub_index,
         codec_name=codec,
-        language_tag="jpn",
-        title=None,
+        language_tag=language,
+        title=title,
         is_text=is_text,
+        is_forced=is_forced,
+        is_default=is_default,
     )
 
 
@@ -1189,6 +1200,35 @@ def test_condense_one_embedded_success_and_temp_cleanup(tmp_path, monkeypatch):
     assert svc.condense_calls[0]["periods"] == [(500, 2500)]
     # Extracted embedded temp must be gone.
     assert not (tmp_path / "ep01.s0.srt").exists()
+
+
+def test_condense_one_auto_prefers_full_japanese_subtitle_over_forced(tmp_path, monkeypatch):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    forced = _sub_stream(sub_index=0, codec="ass", title="Forced", is_forced=True)
+    full = _sub_stream(sub_index=1, codec="ass", title="Full", is_default=True)
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(_LIST_STREAMS, lambda m, ffprobe: [forced, full])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, None, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert svc.extract_calls[0]["stream"] is full
+
+
+def test_condense_one_auto_uses_forced_subtitle_when_it_is_only_text_stream(tmp_path, monkeypatch):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    forced = _sub_stream(sub_index=0, codec="ass", title="Forced", is_forced=True)
+    monkeypatch.setattr(_RESOLVE_FFPROBE, lambda config: "ffprobe")
+    monkeypatch.setattr(_LIST_STREAMS, lambda m, ffprobe: [forced])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, None, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert svc.extract_calls[0]["stream"] is forced
 
 
 def test_condense_one_condense_failed(tmp_path):
