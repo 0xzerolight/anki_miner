@@ -266,6 +266,83 @@ class TestShutdown:
         tab.batch_tab.shutdown.assert_called_once_with()
         tab.youtube_tab.shutdown.assert_called_once_with()
 
+    def test_queued_playlist_resolve_cannot_spawn_probe_during_shutdown(self, qtbot, test_config):
+        """A pure-playlist resolve delivered after its close join is inert."""
+        from threading import Event, Timer
+
+        from anki_miner.gui.widgets.youtube_playlist_flow import (
+            PlaylistAddCallbacks,
+            PlaylistAddController,
+        )
+        from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo
+        from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
+
+        playlist_url = "https://www.youtube.com/playlist?list=PLabcdefghijkl"
+        playlist = PlaylistInfo(
+            playlist_id="PLabcdefghijkl",
+            title="Queued playlist",
+            entries=(
+                PlaylistEntry(
+                    video_id="abcdefghijk",
+                    title="Queued entry",
+                    duration_s=60,
+                    url="https://www.youtube.com/watch?v=abcdefghijk",
+                ),
+            ),
+            total_count=1,
+        )
+        resolve_entered = Event()
+        release_resolve = Event()
+
+        class _ResolveFetcher:
+            def probe_playlist(self, _url, _limit, *, timeout_s):
+                resolve_entered.set()
+                if not release_resolve.wait(timeout_s):
+                    raise TimeoutError("test resolve was not released")
+                return playlist
+
+        items: list[YouTubeQueueItem] = []
+
+        def enqueue(url: str) -> YouTubeQueueItem:
+            item = YouTubeQueueItem(url=url, status=YouTubeItemStatus.PENDING)
+            items.append(item)
+            return item
+
+        callbacks = PlaylistAddCallbacks(
+            enqueue=enqueue,
+            queued_items=lambda: list(items),
+            render_new_item=MagicMock(),
+            refresh_row=MagicMock(),
+            recompute_buttons=MagicMock(),
+            clear_url_input=MagicMock(),
+            log_info=MagicMock(),
+            log_warning=MagicMock(),
+            log_error=MagicMock(),
+        )
+        controller = PlaylistAddController(_ResolveFetcher(), test_config, callbacks)
+
+        with patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubePlaylistProbeWorker") as probe_cls:
+            controller.begin(playlist_url)
+            resolve_worker = controller._playlist_resolve_worker
+            assert resolve_worker is not None
+            assert resolve_entered.wait(1)
+
+            signal_delivered = Event()
+            resolve_worker.playlist_resolved.connect(lambda _playlist: signal_delivered.set())
+            release_timer = Timer(0.01, release_resolve.set)
+            release_timer.start()
+            try:
+                controller.shutdown()
+            finally:
+                release_resolve.set()
+                release_timer.join()
+                assert resolve_worker.wait(2000)
+
+            qtbot.waitUntil(signal_delivered.is_set, timeout=1000)
+
+            assert items == []
+            probe_cls.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # iter_close_workers (the divergence from ReadingTab)
@@ -294,6 +371,13 @@ class TestIterCloseWorkers:
         tab.youtube_tab.worker_thread = w_youtube
 
         assert list(tab.iter_close_workers()) == [w_single, w_batch, w_youtube]
+
+    def test_yields_workers_from_nested_child_iterators(self, tab):
+        nested = MagicMock(name="youtube-probe-worker")
+        tab.youtube_tab.worker_thread = None
+        tab.youtube_tab.iter_close_workers = MagicMock(return_value=(nested,))
+
+        assert list(tab.iter_close_workers()) == [nested]
 
 
 # ---------------------------------------------------------------------------

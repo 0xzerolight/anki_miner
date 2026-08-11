@@ -321,14 +321,13 @@ class TestRealSettingsTabIterCloseWorkers:
         assert w in workers
 
     def test_none_entries_tolerated_by_join_policy(self):
-        """_join_worker_for_close filters None entries; idle iter must not raise."""
+        """_join_worker_for_close accepts every None entry yielded while idle."""
         from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
 
         tab = _FakeRealSettingsTab()
-        # None entries must pass through _join_worker_for_close without error
         controller = MagicMock(spec=BackgroundTaskController)
-        controller._join_worker_for_close.return_value = True
-        for w in tab.iter_close_workers():
-            # Simulate what shutdown() does
-            if w is None or not (hasattr(w, "isRunning") and w.isRunning()):
-                continue  # real policy skips non-running / None
+        results = [
+            BackgroundTaskController._join_worker_for_close(controller, worker) for worker in tab.iter_close_workers()
+        ]
+
+        assert results == [True] * 8

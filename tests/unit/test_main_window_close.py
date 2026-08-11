@@ -704,6 +704,29 @@ class TestCloseEventJoinTimeoutPolicy:
         assert quit_calls == [True]
         assert not main_window.background_tasks._close_poll_timer.isActive()
 
+    def test_poll_rescans_global_workers_before_quit(self, quit_calls, main_window, monkeypatch):
+        from anki_miner.gui.controllers import background_tasks as bg_module
+
+        initial = _FakeWorker(running=True, wait_result=False)
+        late = _FakeWorker(running=True, wait_result=False)
+        main_window.background_tasks.update_worker = initial
+        rescan = MagicMock()
+        rescan.side_effect = lambda **_kwargs: [late] if rescan.call_count == 2 else []
+        monkeypatch.setattr(bg_module, "join_all_off_thread_workers", rescan)
+        _trigger_close(main_window)
+
+        initial.finish()
+        main_window.background_tasks._poll_deferred_close()
+
+        assert quit_calls == []
+        assert main_window.background_tasks._close_laggards == [late]
+
+        late.finish()
+        main_window.background_tasks._poll_deferred_close()
+
+        assert quit_calls == [True]
+        assert rescan.call_count == 3
+
 
 # ---------------------------------------------------------------------------
 # OVH-061 — closeEvent calls release_dictionary_resources after worker join

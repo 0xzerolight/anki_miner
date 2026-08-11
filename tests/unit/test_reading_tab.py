@@ -17,8 +17,8 @@ covers only the container:
   exception from one still lets the others run.
 - ``release_dictionary_resources`` evaluates ALL children (no short-circuit)
   and returns their ``and``.
-- No ``worker_thread`` attribute and no ``iter_close_workers`` method; the class
-  name stays exactly ``"ReadingTab"``.
+- No ``worker_thread`` attribute; ``iter_close_workers`` exposes child workers
+  retained after their bounded shutdown joins; class name stays ``"ReadingTab"``.
 
 Modelled on ``test_subtitles_tab.py``.
 """
@@ -319,7 +319,7 @@ class TestReleaseDictionaryResources:
 
 
 # ---------------------------------------------------------------------------
-# Close-contract surface (no worker_thread, no iter_close_workers)
+# Close-contract surface
 # ---------------------------------------------------------------------------
 
 
@@ -329,10 +329,16 @@ class TestCloseContractSurface:
         # shutdown(); the container must not expose one.
         assert not hasattr(tab, "worker_thread")
 
-    def test_no_iter_close_workers_method(self, tab):
-        # A post-shutdown iter would always be vestigial (children joined by
-        # shutdown()); the container deliberately omits it.
-        assert not hasattr(tab, "iter_close_workers")
+    def test_iter_close_workers_yields_children_retained_after_shutdown(self, tab):
+        children = _mock_children(tab)
+        workers = [MagicMock(name=f"worker-{index}") for index in range(4)]
+        for child, worker in zip(children, workers, strict=True):
+            child.worker_thread = worker
+
+        tab.shutdown()
+
+        iter_workers = getattr(tab, "iter_close_workers", lambda: ())
+        assert list(iter_workers()) == workers
 
     def test_class_name_is_reading_tab(self, tab):
         # main_window._MAIN_TAB_CLASSES["reading"] matches by type name.

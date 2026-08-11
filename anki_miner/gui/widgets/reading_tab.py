@@ -18,13 +18,11 @@ Close contract:
   still-running worker at app close (the same service-all principle as the
   release fan-out). Each child's ``shutdown`` bounded-joins its worker at
   ``_SHUTDOWN_WAIT_MS`` (30s), so the container's worst-case close is ~4x30s.
-- NO ``worker_thread`` attribute and NO ``iter_close_workers`` method.
+- NO ``worker_thread`` attribute, but ``iter_close_workers()`` exposes workers
+  retained by children whose bounded join timed out.
   :class:`~anki_miner.gui.controllers.background_tasks.BackgroundTaskController`
-  calls ``tab.shutdown()`` FIRST, which joins (or abandons-with-warning and
-  nulls) each child's worker; the subsequent ``getattr(tab, "worker_thread",
-  None)`` then yields ``None`` (safe) and a post-shutdown ``iter_close_workers``
-  would always be vestigial. (``SubtitlesTab`` needs ``iter_close_workers`` only
-  because its children have no ``shutdown()``; the reading children do.)
+  calls ``tab.shutdown()`` first, then routes each retained worker through its
+  deferred-close policy instead of destroying the container while it runs.
 """
 
 from __future__ import annotations
@@ -43,6 +41,10 @@ from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
 from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from PyQt6.QtCore import QThread
+
     from anki_miner.interfaces.presenter import PresenterProtocol
 
 logger = logging.getLogger(__name__)
@@ -60,11 +62,9 @@ class ReadingTab(QWidget):
     the container crosses no wires.
 
     Close contract (see the module docstring): this container exposes
-    ``shutdown()`` but deliberately provides neither a ``worker_thread``
-    attribute nor an ``iter_close_workers`` method. The controller calls
-    ``shutdown()`` first, which bounded-joins each child's worker (30s each →
-    ~4x30s worst case); a later ``worker_thread`` / ``iter_close_workers`` probe
-    would be vestigial.
+    ``shutdown()`` and ``iter_close_workers()`` but deliberately provides no
+    ``worker_thread`` attribute. The controller calls ``shutdown()`` first,
+    then defers close for any child worker retained after its 30-second join.
 
     Args:
         config: Frozen application configuration.
@@ -198,6 +198,13 @@ class ReadingTab(QWidget):
                 child.shutdown()
             except Exception:  # noqa: BLE001 - one child must not strand the others
                 logger.exception("Reading sub-tab shutdown failed")
+
+    def iter_close_workers(self) -> Iterator[QThread]:
+        """Yield child workers retained after their bounded shutdown joins."""
+        for child in (self.manga_tab, self.novels_tab, self.subtitles_tab, self.text_tab):
+            worker = getattr(child, "worker_thread", None)
+            if worker is not None:
+                yield worker
 
     def release_dictionary_resources(self) -> bool:
         """Release cached dictionary handles in every child (no short-circuit).

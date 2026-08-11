@@ -19,7 +19,12 @@ from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, join_or_retain, still_running
+from anki_miner.gui.utils.run_off_thread import (
+    close_off_thread_dispatch,
+    join_all_off_thread_workers,
+    join_or_retain,
+    still_running,
+)
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
 
 if TYPE_CHECKING:
@@ -563,6 +568,9 @@ class BackgroundTaskController(QObject):
             means the caller must defer the close via :meth:`defer_close`
             instead of letting Qt destroy running QThreads.
         """
+        dispatch_root = self.parent()
+        if dispatch_root is not None:
+            close_off_thread_dispatch(dispatch_root)
         laggards: list = []
 
         def join(worker, *, timeout_ms: int = _CLOSE_JOIN_GRACE_MS) -> None:
@@ -680,6 +688,10 @@ class BackgroundTaskController(QObject):
         if self._close_finalized:
             return
         if any(still_running(worker) for worker in self._close_laggards):
+            return
+        late_laggards = join_all_off_thread_workers(timeout_ms=0)
+        if late_laggards:
+            self._close_laggards = late_laggards
             return
         self._close_finalized = True
         if self._close_poll_timer is not None:
