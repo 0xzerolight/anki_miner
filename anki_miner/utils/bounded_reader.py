@@ -48,6 +48,6 @@ def read_json_bounded(path: Path, max_bytes: int, default: _T, label: str) -> An
         return default
     try:
         return json.loads(text)
-    except json.JSONDecodeError as exc:
+    except (json.JSONDecodeError, RecursionError) as exc:
         logger.warning("Could not decode %s %s: %s", label, path, exc)
         return default
