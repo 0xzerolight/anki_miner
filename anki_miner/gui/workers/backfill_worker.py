@@ -32,7 +32,7 @@ class BackfillScanWorker(CancellableWorker):
     """
 
     progress = pyqtSignal(int, int)  # (scanned, total)
-    result_ready = pyqtSignal(object)  # BackfillPlan
+    result_ready = pyqtSignal(object, object)  # (BackfillPlan, tuple[str, ...])
 
     def __init__(self, config: AnkiMinerConfig, options: BackfillOptions, parent=None) -> None:
         super().__init__(parent)
@@ -74,7 +74,7 @@ class BackfillScanWorker(CancellableWorker):
                         notes=len(plan.notes),
                         fields=plan.total_field_changes,
                     )
-                    self.result_ready.emit(plan)
+                    self.result_ready.emit(plan, tuple(shared_lookup.load_result.warnings))
             finally:
                 shared_lookup.close()
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI

@@ -30,6 +30,7 @@ from anki_miner.services.frequency.registry import FrequencySourceRegistry
 from anki_miner.services.pitch_accent import storage as pitch_storage
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
+from anki_miner.services.store_recovery import make_tombstone_path
 
 
 def _config(
@@ -395,6 +396,189 @@ def test_corrupt_config_defaults_restore_but_never_collect(
     assert loaded_from_persisted_config is False
     assert (config.audio_packs_root / "listed").is_dir()
     assert orphan.is_dir()
+
+
+def test_backup_config_does_not_restore_committed_deletion_tombstone(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "gui_config.json"
+    monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
+    old = _config(tmp_path, frequency_ids=("removed-source",))
+    new = replace(old, frequency_chain=())
+    slot = old.freqs_root / "removed-source"
+    frequency_storage.build_index(
+        slot / "index.sqlite",
+        [("猫", "ねこ", 1, None)],
+        {
+            "schema_version": str(frequency_storage.SCHEMA_VERSION),
+            "source_name": "Removed",
+        },
+    )
+    write_ownership_marker(slot, "removed-source", "frequency")
+    GUIConfigManager.save_config(old)
+    tombstone = make_tombstone_path(slot, generation=123, nonce="test")
+    os.replace(slot, tombstone)
+    GUIConfigManager.save_config(new)
+    config_path.write_text("{broken", encoding="utf-8")
+
+    recovered, allow_collection = GUIConfigManager.load_config_with_provenance()
+    run_startup_store_recovery(recovered, allow_collection=allow_collection)
+
+    assert [entry.source_id for entry in recovered.frequency_chain] == ["removed-source"]
+    assert allow_collection is False
+    assert not slot.exists()
+    assert tombstone.is_dir()
+
+    recovered_again, allow_collection_again = GUIConfigManager.load_config_with_provenance()
+    run_startup_store_recovery(recovered_again, allow_collection=allow_collection_again)
+
+    assert [entry.source_id for entry in recovered_again.frequency_chain] == ["removed-source"]
+    assert allow_collection_again is False
+    assert not slot.exists()
+    assert tombstone.is_dir()
+
+    recovered_third, allow_collection_third = GUIConfigManager.load_config_with_provenance()
+    run_startup_store_recovery(recovered_third, allow_collection=allow_collection_third)
+
+    assert [entry.source_id for entry in recovered_third.frequency_chain] == ["removed-source"]
+    assert allow_collection_third is True
+    assert not slot.exists()
+    assert tombstone.is_dir()
+
+
+def test_backup_config_defers_primary_repair_when_deletion_marker_cannot_be_written(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = tmp_path / "gui_config.json"
+    monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", config_path)
+    old = _config(tmp_path, frequency_ids=("removed-source",))
+    new = replace(old, frequency_chain=())
+    slot = old.freqs_root / "removed-source"
+    frequency_storage.build_index(
+        slot / "index.sqlite",
+        [("猫", "ねこ", 1, None)],
+        {"schema_version": str(frequency_storage.SCHEMA_VERSION)},
+    )
+    write_ownership_marker(slot, "removed-source", "frequency")
+    GUIConfigManager.save_config(old)
+    tombstone = make_tombstone_path(slot, generation=200, nonce="read-only")
+    os.replace(slot, tombstone)
+    GUIConfigManager.save_config(new)
+    config_path.write_text("{broken", encoding="utf-8")
+    real_touch = Path.touch
+
+    def refuse_deletion_markers(path: Path, *args, **kwargs) -> None:
+        if path.name.startswith(".anki-miner-retained-deletion-") or path.name == ".anki-miner-retained":
+            raise PermissionError("read-only deletion intent")
+        real_touch(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "touch", refuse_deletion_markers)
+
+    recovered, allow_collection = GUIConfigManager.load_config_with_provenance()
+    run_startup_store_recovery(recovered, allow_collection=allow_collection)
+
+    assert allow_collection is False
+    assert not slot.exists()
+    assert tombstone.is_dir()
+    retained = list(old.freqs_root.glob(".anki-miner-retained-deletion-*"))
+    assert retained == []
+    assert not (tombstone / ".anki-miner-retained").exists()
+
+    GUIConfigManager.save_config(recovered)
+    assert config_path.read_text(encoding="utf-8") == "{broken"
+
+    recovered_again, allow_collection_again = GUIConfigManager.load_config_with_provenance()
+    run_startup_store_recovery(recovered_again, allow_collection=allow_collection_again)
+
+    assert allow_collection_again is False
+    assert not slot.exists()
+    assert tombstone.is_dir()
+
+
+def test_backup_config_deletion_marker_blocks_older_tombstone_on_next_boot(
+    tmp_path: Path,
+) -> None:
+    config = _config(tmp_path, frequency_ids=("removed-source",))
+    slot = config.freqs_root / "removed-source"
+    older = make_tombstone_path(slot, generation=100, nonce="older")
+    newer = make_tombstone_path(slot, generation=200, nonce="newer")
+    for tombstone in (older, newer):
+        frequency_storage.build_index(
+            tombstone / "index.sqlite",
+            [("猫", "ねこ", 1, None)],
+            {"schema_version": str(frequency_storage.SCHEMA_VERSION)},
+        )
+        write_ownership_marker(tombstone, "removed-source", "frequency")
+
+    run_startup_store_recovery(config, allow_collection=False)
+
+    assert not slot.exists()
+    assert older.is_dir()
+    assert newer.is_dir()
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert not slot.exists()
+    assert older.is_dir()
+    assert newer.is_dir()
+
+
+def test_backup_config_deletion_marker_blocks_older_backup_on_next_boot(
+    tmp_path: Path,
+) -> None:
+    config = _config(tmp_path, frequency_ids=("removed-source",))
+    slot = config.freqs_root / "removed-source"
+    tombstone = make_tombstone_path(slot, generation=200, nonce="removed")
+    backup = config.freqs_root / "removed-source.bak-100-older"
+    for candidate in (backup, tombstone):
+        frequency_storage.build_index(
+            candidate / "index.sqlite",
+            [("猫", "ねこ", 1, None)],
+            {"schema_version": str(frequency_storage.SCHEMA_VERSION)},
+        )
+        write_ownership_marker(candidate, "removed-source", "frequency")
+
+    run_startup_store_recovery(config, allow_collection=False)
+
+    assert not slot.exists()
+    assert tombstone.is_dir()
+    assert backup.is_dir()
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert not slot.exists()
+    assert tombstone.is_dir()
+    assert backup.is_dir()
+
+
+def test_backup_config_tombstone_blocks_newer_backup_on_both_boots(
+    tmp_path: Path,
+) -> None:
+    config = _config(tmp_path, frequency_ids=("removed-source",))
+    slot = config.freqs_root / "removed-source"
+    tombstone = make_tombstone_path(slot, generation=200, nonce="removed")
+    backup = config.freqs_root / "removed-source.bak-300-newer"
+    for candidate in (backup, tombstone):
+        frequency_storage.build_index(
+            candidate / "index.sqlite",
+            [("猫", "ねこ", 1, None)],
+            {"schema_version": str(frequency_storage.SCHEMA_VERSION)},
+        )
+        write_ownership_marker(candidate, "removed-source", "frequency")
+
+    run_startup_store_recovery(config, allow_collection=False)
+
+    assert not slot.exists()
+    assert tombstone.is_dir()
+    assert backup.is_dir()
+
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert not slot.exists()
+    assert tombstone.is_dir()
+    assert backup.is_dir()
 
 
 def test_no_lock_startup_skips_destructive_recovery(tmp_path: Path) -> None:

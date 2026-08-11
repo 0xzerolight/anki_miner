@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import time
@@ -32,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 _DELETE_RETRY_BUDGET_S = 2.0
 _STAGING_MIN_AGE_NS = 24 * 60 * 60 * 1_000_000_000
+_RETAINED_TOMBSTONE_MARKER = ".anki-miner-retained"
+_RETAINED_DELETION_PREFIX = ".anki-miner-retained-deletion-"
 
 
 @dataclass(frozen=True)
@@ -184,6 +187,58 @@ def _collect_artifact(
     budget.delete(artifact.path, f"removed obsolete {artifact.kind}")
 
 
+def _retained_deletion_marker(spec: _FamilySpec, slot_id: str) -> Path:
+    identity = f"{spec.family}\0{slot_id}".encode()
+    return spec.root / f"{_RETAINED_DELETION_PREFIX}{hashlib.sha256(identity).hexdigest()}"
+
+
+def backup_config_repair_is_safe(config: AnkiMinerConfig) -> bool:
+    """Return whether a recovered backup may become the primary config."""
+    for spec in _family_specs(config):
+        try:
+            if not spec.root.is_dir():
+                continue
+            children = {child.name: child for child in spec.root.iterdir()}
+        except OSError:
+            logger.warning(
+                "Config backup repair deferred because the %s root could not be checked: %s",
+                spec.family,
+                spec.root,
+                exc_info=True,
+            )
+            return False
+
+        for slot_id in spec.listed_ids:
+            try:
+                validate_store_id(slot_id)
+            except ValueError:
+                continue
+            canonical = spec.root / slot_id
+            if validate_index_schema(canonical / "index.sqlite", spec.family) and prove_owned_slot(
+                spec.root,
+                slot_id,
+                spec.family,
+            ):
+                continue
+            deletion_marker = _retained_deletion_marker(spec, slot_id)
+            if deletion_marker.is_file():
+                continue
+            tombstones = tuple(
+                child
+                for name, child in children.items()
+                if (parsed := _recovery_artifact_name(name, spec.listed_ids)) is not None
+                if parsed == (slot_id, "tombstone")
+            )
+            if tombstones and not any((tombstone / _RETAINED_TOMBSTONE_MARKER).is_file() for tombstone in tombstones):
+                logger.warning(
+                    "Config backup repair deferred until deletion intent is durable: %s/%s",
+                    spec.family,
+                    slot_id,
+                )
+                return False
+    return True
+
+
 def _recover_slot(
     spec: _FamilySpec,
     slot_id: str,
@@ -212,10 +267,33 @@ def _recover_slot(
         for candidate_slot, kind in (parsed,)
         if candidate_slot == slot_id
     )
+    deletion_marker = _retained_deletion_marker(spec, slot_id)
+    eligible_candidates = candidates
+    if canonical_state != "valid" and slot_id in spec.listed_ids:
+        retained_deletion = deletion_marker.is_file() or any(
+            candidate.kind == "tombstone" and (candidate.path / _RETAINED_TOMBSTONE_MARKER).is_file()
+            for candidate in candidates
+        )
+        if retained_deletion:
+            eligible_candidates = ()
+        elif not allow_collection and any(candidate.kind == "tombstone" for candidate in candidates):
+            try:
+                deletion_marker.touch(exist_ok=True)
+            except OSError:
+                logger.warning(
+                    "Startup store recovery could not retain deletion intent durably: %s",
+                    deletion_marker,
+                    exc_info=True,
+                )
+            logger.warning(
+                "Startup store recovery retained tombstone because config provenance is not authoritative: %s",
+                slot_id,
+            )
+            return
     decision = decide_slot_recovery(
         canonical=canonical_state,
         listed=slot_id in spec.listed_ids,
-        candidates=candidates,
+        candidates=eligible_candidates,
     )
 
     quarantine: Path | None = None
@@ -271,6 +349,17 @@ def _recover_slot(
     if allow_collection:
         for artifact in decision.collect:
             _collect_artifact(spec, slot_id, artifact, budget)
+        if deletion_marker.is_file() and not any(
+            candidate.kind == "tombstone" and os.path.lexists(candidate.path) for candidate in candidates
+        ):
+            try:
+                deletion_marker.unlink()
+            except OSError:
+                logger.warning(
+                    "Startup store recovery could not clear resolved deletion intent: %s",
+                    deletion_marker,
+                    exc_info=True,
+                )
 
 
 def _sweep_staging(

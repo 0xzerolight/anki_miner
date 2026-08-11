@@ -11,12 +11,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from PyQt6.QtWidgets import QMessageBox
 
-from anki_miner.config import ChainEntry
+from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry, PitchSourceEntry
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.frequency_settings_panel import FrequencySettingsPanel
 from anki_miner.gui.widgets.panels.pitch_settings_panel import PitchSettingsPanel
+from anki_miner.services.audio_packs.registry import AudioPackMeta
+from anki_miner.services.frequency.registry import FreqSourceMeta
+from anki_miner.services.pitch_accent.registry import PitchSourceMeta
 
 
 @pytest.fixture
@@ -81,3 +85,69 @@ class TestRemoveFailure:
         assert "refresh failed" not in issue.summary
         assert "refresh failed" in issue.details
         assert "Jitendex" in issue.summary
+
+
+@pytest.mark.parametrize("kind", ["audio", "frequency", "pitch"])
+def test_config_echo_retains_metadata_and_only_root_change_rescans(qtbot, tmp_path, monkeypatch, kind):
+    index = tmp_path / "source" / "index.sqlite"
+    if kind == "audio":
+        widget = AudioPackSettingsPanel(tmp_path)
+        entry = AudioSourceEntry(kind="pack", pack_id="source")
+        meta = AudioPackMeta("source", "Source Name", "ajt", 12, True, tmp_path, True, index)
+        set_root = widget.set_packs_root
+    elif kind == "frequency":
+        widget = FrequencySettingsPanel(tmp_path)
+        entry = FreqEntry("source")
+        meta = FreqSourceMeta("source", "Source Name", "csv", 12, True, 1, index)
+        set_root = widget.set_freqs_root
+    else:
+        widget = PitchSettingsPanel(tmp_path)
+        entry = PitchSourceEntry("source")
+        meta = PitchSourceMeta("source", "Source Name", "csv", 12, True, 1, index)
+        set_root = widget.set_pitch_root
+    qtbot.addWidget(widget)
+    widget.set_chain((entry,), registry_meta={"source": meta})
+
+    set_root(tmp_path)
+    widget.set_chain((entry,))
+
+    assert widget._row_widget(0).title_label.full_text == "Source Name"
+    scans: list[bool] = []
+    monkeypatch.setattr(widget, "_scan_and_render_async", lambda: scans.append(True))
+    set_root(tmp_path / "new-root")
+    assert widget._view is None
+    assert scans == [True]
+
+
+def test_missing_audio_pack_is_visible_and_offers_reimport(qtbot, tmp_path):
+    widget = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(widget)
+    widget.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="gone"),),
+        registry_meta={},
+    )
+    requested: list[str] = []
+    widget.reimport_pack_requested.connect(requested.append)
+
+    row = widget._row_widget(0)
+    assert row.warning_label.full_text == "⚠ pack missing — re-import"
+    assert row.repair_button is not None
+    row.repair_button.click()
+    assert requested == ["gone"]
+
+
+@pytest.mark.parametrize("factory", [FrequencySettingsPanel, PitchSettingsPanel])
+def test_chain_only_remove_says_files_remain(qtbot, tmp_path, monkeypatch, factory):
+    widget = factory(tmp_path)
+    qtbot.addWidget(widget)
+    bodies: list[str] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda _parent, _title, body, *args: bodies.append(body) or QMessageBox.StandardButton.No,
+    )
+
+    assert "_confirm_chain_only_remove" in factory.__dict__
+    assert widget._confirm_chain_only_remove("Source") is False
+    assert "left untouched" in bodies[0]
+    assert "delete" not in bodies[0].lower()

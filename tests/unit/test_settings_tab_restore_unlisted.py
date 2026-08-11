@@ -16,9 +16,19 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtWidgets import QMessageBox
 
-from anki_miner.config import AnkiMinerConfig, ChainEntry
+import anki_miner.gui.widgets.settings_tab as settings_tab_module
+from anki_miner.config import (
+    AnkiMinerConfig,
+    AudioSourceEntry,
+    ChainEntry,
+    FreqEntry,
+    PitchSourceEntry,
+)
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+from anki_miner.services.audio_packs import storage as audio_storage
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION, create_index, write_meta
+from anki_miner.services.frequency import storage as frequency_storage
+from anki_miner.services.pitch_accent import storage as pitch_storage
 
 
 def _run_scan_sync(work, on_done, on_error):
@@ -71,6 +81,23 @@ def tab_for_restore(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
     (tmp_path / "dicts").mkdir(parents=True, exist_ok=True)
     widget = SettingsTab(cfg)
     widget._dict_import_flow._run_latest_scan = _run_scan_sync
+    qtbot.addWidget(widget)
+    yield widget
+    widget.deleteLater()
+
+
+@pytest.fixture
+def tab_for_resource_restore(test_config: AnkiMinerConfig, tmp_path: Path, qtbot):
+    cfg = replace(
+        test_config,
+        audio_packs_root=tmp_path / "audio_packs",
+        freqs_root=tmp_path / "freqs",
+        pitch_root=tmp_path / "pitch",
+        expression_audio_chain=(),
+        frequency_chain=(),
+        pitch_chain=(),
+    )
+    widget = SettingsTab(cfg, suppress_optional_startup=True)
     qtbot.addWidget(widget)
     yield widget
     widget.deleteLater()
@@ -239,3 +266,159 @@ def test_restore_schema_mismatched_not_offered(tab_for_restore, monkeypatch):
     assert tab.config.dictionary_chain == original_chain
     assert tab.dictionary_panel.get_chain() == panel_chain_before
     assert config_changed_emissions == []
+
+
+@pytest.mark.parametrize("kind", ["audio", "frequency", "pitch"])
+def test_restore_unlisted_resource_without_reimport(tab_for_resource_restore, tmp_path, monkeypatch, kind):
+    tab = tab_for_resource_restore
+    source_id = "retained-source"
+    if kind == "audio":
+        pack_dir = tmp_path / "original-audio"
+        pack_dir.mkdir()
+        db_path = tab.config.audio_packs_root / source_id / "index.sqlite"
+        audio_storage.create_index(db_path)
+        audio_storage.write_meta(
+            db_path,
+            {
+                "schema_version": str(audio_storage.SCHEMA_VERSION),
+                "pack_id": source_id,
+                "source": "Retained Audio",
+                "format": "ajt",
+                "entry_count": "0",
+                "pack_dir": str(pack_dir),
+            },
+        )
+        panel = tab.audio_panel
+        chain_attr = "expression_audio_chain"
+    elif kind == "frequency":
+        db_path = tab.config.freqs_root / source_id / "index.sqlite"
+        frequency_storage.build_index(
+            db_path,
+            [("猫", None, 1, None)],
+            {
+                "schema_version": str(frequency_storage.SCHEMA_VERSION),
+                "source_name": "Retained Frequency",
+                "format": "csv",
+                "entry_count": "1",
+            },
+        )
+        panel = tab.frequency_panel
+        chain_attr = "frequency_chain"
+    else:
+        db_path = tab.config.pitch_root / source_id / "index.sqlite"
+        pitch_storage.build_index(
+            db_path,
+            [("ねこ", "猫", "1", "", "")],
+            {
+                "schema_version": str(pitch_storage.SCHEMA_VERSION),
+                "source_name": "Retained Pitch",
+                "format": "csv",
+                "entry_count": "1",
+            },
+        )
+        panel = tab.pitch_panel
+        chain_attr = "pitch_chain"
+
+    monkeypatch.setattr(
+        settings_tab_module,
+        "run_off_thread",
+        lambda _parent, work, on_done, on_error: _run_scan_sync(work, on_done, on_error),
+    )
+    emissions: list[AnkiMinerConfig] = []
+    tab.config_changed.connect(emissions.append)
+
+    panel._restore_btn.click()
+
+    assert len(emissions) == 1
+    restored_chain = getattr(emissions[0], chain_attr)
+    restored_ids = [getattr(entry, "pack_id", None) or getattr(entry, "source_id", None) for entry in restored_chain]
+    assert restored_ids == [source_id]
+    assert db_path.is_file()
+
+
+@pytest.mark.parametrize("kind", ["audio", "frequency", "pitch"])
+def test_delayed_restore_result_is_discarded_after_root_and_chain_change(
+    tab_for_resource_restore,
+    tmp_path,
+    monkeypatch,
+    kind,
+):
+    tab = tab_for_resource_restore
+    source_id = "retained-source"
+    existing_id = "current-chain-source"
+    delayed: dict[str, object] = {}
+
+    def hold_scan(_parent, work, on_done, on_error):
+        delayed.update(work=work, on_done=on_done, on_error=on_error)
+
+    monkeypatch.setattr(settings_tab_module, "run_off_thread", hold_scan)
+
+    if kind == "audio":
+        panel = tab.audio_panel
+        root_attr = "audio_packs_root"
+        chain_attr = "expression_audio_chain"
+        new_root = tmp_path / "new-audio-packs"
+        pack_dir = tmp_path / "original-audio"
+        pack_dir.mkdir()
+        db_path = tab.config.audio_packs_root / source_id / "index.sqlite"
+        audio_storage.create_index(db_path)
+        audio_storage.write_meta(
+            db_path,
+            {
+                "schema_version": str(audio_storage.SCHEMA_VERSION),
+                "pack_id": source_id,
+                "source": "New Root Audio",
+                "format": "ajt",
+                "entry_count": "0",
+                "pack_dir": str(pack_dir),
+            },
+        )
+        new_chain = (AudioSourceEntry(kind="pack", pack_id=existing_id),)
+    elif kind == "frequency":
+        panel = tab.frequency_panel
+        root_attr = "freqs_root"
+        chain_attr = "frequency_chain"
+        new_root = tmp_path / "new-freqs"
+        db_path = tab.config.freqs_root / source_id / "index.sqlite"
+        frequency_storage.build_index(
+            db_path,
+            [("猫", None, 1, None)],
+            {
+                "schema_version": str(frequency_storage.SCHEMA_VERSION),
+                "source_name": "New Root Frequency",
+                "format": "csv",
+                "entry_count": "1",
+            },
+        )
+        new_chain = (FreqEntry(existing_id),)
+    else:
+        panel = tab.pitch_panel
+        root_attr = "pitch_root"
+        chain_attr = "pitch_chain"
+        new_root = tmp_path / "new-pitch"
+        db_path = tab.config.pitch_root / source_id / "index.sqlite"
+        pitch_storage.build_index(
+            db_path,
+            [("ねこ", "猫", "1", "", "")],
+            {
+                "schema_version": str(pitch_storage.SCHEMA_VERSION),
+                "source_name": "New Root Pitch",
+                "format": "csv",
+                "entry_count": "1",
+            },
+        )
+        new_chain = (PitchSourceEntry(existing_id),)
+
+    panel._restore_btn.click()
+    result = delayed["work"]()
+    result_ids = [getattr(item, "pack_id", None) or getattr(item, "source_id", None) for item in result]
+    assert result_ids == [source_id]
+
+    emissions: list[AnkiMinerConfig] = []
+    tab.config_changed.connect(emissions.append)
+    tab.reload_from_config(replace(tab.config, **{root_attr: new_root, chain_attr: new_chain}))
+
+    delayed["on_done"](result)
+
+    assert emissions == []
+    assert panel.get_chain() == new_chain

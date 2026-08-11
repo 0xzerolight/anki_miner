@@ -116,6 +116,18 @@ class AudioPackRegistry:
         """Snapshot of loaded packs keyed by folder name (pack_id)."""
         return dict(self._packs)
 
+    def unlisted(self, config: AnkiMinerConfig) -> list[AudioPackMeta]:
+        """Return schema-valid on-disk packs absent from the audio chain."""
+        chained_ids = {
+            entry.pack_id
+            for entry in config.expression_audio_chain
+            if entry.kind == "pack" and entry.pack_id is not None
+        }
+        return sorted(
+            (meta for meta in self._packs.values() if meta.pack_id not in chained_ids and meta.schema_ok),
+            key=lambda meta: meta.pack_id,
+        )
+
     # ------------------------------------------------------------------
     # Chain assembly
     # ------------------------------------------------------------------

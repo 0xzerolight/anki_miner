@@ -217,7 +217,21 @@ def _build_pitch_service(
     try:
         registry = PitchSourceRegistry(config.pitch_root)
         registry.load()
-        providers = [p for p in registry.build_sources(config) if p.load()]
+        loaded_providers = [p for p in registry.build_sources(config) if p.load()]
+        providers_by_id: dict[str, list] = {}
+        for provider in loaded_providers:
+            providers_by_id.setdefault(provider.source_id, []).append(provider)
+        providers = []
+        for entry in config.pitch_chain:
+            if not entry.enabled:
+                continue
+            available = providers_by_id.get(entry.source_id, [])
+            if not available:
+                load_result.warnings.append(
+                    tr_format(_tr("Pitch accent source '%1' unavailable; skipped"), entry.source_id)
+                )
+            else:
+                providers.append(available.pop(0))
         if not providers:
             # Nothing enabled / on-disk: no providers loaded. Not an error —
             # an enabled chain entry can still point at a missing on-disk index.

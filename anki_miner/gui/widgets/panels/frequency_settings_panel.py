@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import FreqEntry
 from anki_miner.gui.widgets.base import ScreenIssue
+from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainListLabels,
@@ -53,6 +54,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
 
     add_source_requested = pyqtSignal()
     reimport_source_requested = pyqtSignal(str)
+    restore_requested = pyqtSignal()
 
     ANCHOR_NAMESPACE = "frequency"
 
@@ -123,6 +125,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Frequency Sources"))
+        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
+        self._restore_btn.setToolTip(
+            self.tr(
+                "Re-add frequency sources found in the storage folder that aren't in the list above. "
+                "No re-import needed."
+            )
+        )
+        self._restore_btn.clicked.connect(self.restore_requested.emit)
         container = self._build_chain_container(
             ChainListLabels(
                 # Not the first-match sentence the other three chains carry:
@@ -140,7 +150,8 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
                 move_up_tooltip=self.tr("Move up in the card's source list"),
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down"),
-            )
+            ),
+            extra_actions=(self._restore_btn,),
         )
         self._add_btn.clicked.connect(self.add_source_requested.emit)
         self._list.customContextMenuRequested.connect(self._on_row_context_menu)
@@ -150,7 +161,11 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             container,
             anchor="chain",
             anchor_focus=self._list,
-            anchor_text=lambda: (self._explanation_label.text(), self._add_btn.text()),
+            anchor_text=lambda: (
+                self._explanation_label.text(),
+                self._add_btn.text(),
+                self._restore_btn.text(),
+            ),
         )
         self.add_stretch()
 
@@ -163,13 +178,11 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
         if registry_meta is not None:
             # Caller pre-supplied meta; use it directly, no disk scan needed.
             self._view = _RegistryView(registry_meta.get)
-        else:
-            # Invalidate so _rebuild_list will scan on demand.
-            self._view = None
         self._rebuild_list()
 
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)
+        self._restore_btn.setEnabled(enabled)
 
     # ------------------------------------------------------------------
     # Chain-panel hooks
@@ -226,21 +239,30 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
     def _owns_entry_disk_dir(self, entry: FreqEntry, target: Path) -> bool:
         return bool(entry.source_id) and prove_owned_slot(target.parent, entry.source_id, "frequency")
 
-    def _confirm_remove(self, display: str) -> bool:
+    def _confirm_remove(self, display: str, *, body: str | None = None) -> bool:
+        if body is None:
+            body = self.tr(
+                "Remove '%1' from the frequency chain?\n\nOnly the index files are deleted.\n"
+                "This cannot be undone. You would need to re-import to use this source again."
+            )
         reply = QMessageBox.question(
             self,
             self.tr("Remove frequency source"),
-            tr_format(
-                self.tr(
-                    "Remove '%1' from the frequency chain?\n\nOnly the index files are deleted.\n"
-                    "This cannot be undone. You would need to re-import to use this source again."
-                ),
-                display,
-            ),
+            tr_format(body, display),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
         return reply == QMessageBox.StandardButton.Yes
+
+    def _confirm_chain_only_remove(self, display: str) -> bool:
+        return self._confirm_remove(
+            display,
+            body=self.tr(
+                "Remove '%1' from the frequency chain?\n\n"
+                "Index files on disk will be left untouched because the folder could not be proven "
+                "to belong to Anki Miner."
+            ),
+        )
 
     def _acquire_release_for_remove(self) -> bool:
         # Drop any cached sqlite handles before rmtree (Windows lock safety).
