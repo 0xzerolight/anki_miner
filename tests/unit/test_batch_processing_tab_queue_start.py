@@ -43,3 +43,17 @@ def test_start_queue_worker_connects_finished_to_restore_buttons(tab):
 
     fake_worker.finished.connect.assert_any_call(tab._restore_buttons)
     fake_worker.start.assert_called_once()
+
+
+def test_start_queue_worker_connects_item_pairs_progress(tab):
+    """The queue path wires the within-series episode ticks into the Overall bar."""
+    tab.worker_thread = None
+    fake_worker = MagicMock(name="BatchQueueWorkerThread")
+
+    with patch(
+        "anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread",
+        return_value=fake_worker,
+    ):
+        tab._start_queue_worker()
+
+    fake_worker.item_pairs_progress.connect.assert_any_call(tab._on_item_pairs_progress)
