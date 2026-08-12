@@ -36,6 +36,10 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     # Signals for queue-level progress
     queue_started = pyqtSignal(int)  # total_items
     item_started = pyqtSignal(str, str)  # item_id, display_name
+    # Real within-series position: how many of this run's pending pairs have
+    # concluded their attempt. This is the only within-item number the bar may
+    # draw — it is a count of finished episodes, not a stage-weight estimate.
+    item_pairs_progress = pyqtSignal(str, int, int)  # item_id, pairs_done, pairs_total
     item_completed = pyqtSignal(str, int)  # item_id, run_cards_created
     item_failed = pyqtSignal(str, str, int)  # item_id, error_message, run_cards_created
     queue_finished = pyqtSignal(int)  # run_cards_created
@@ -284,7 +288,11 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     if pair_key not in committed_pair_keys:
                         pending_pairs.append((pair, pair_key))
 
-                # Process each pair using episode processor
+                # Process each pair using episode processor. The pending count
+                # is real, so the GUI may compose it into the series bar; every
+                # concluded attempt (success, soft failure, raise) ticks once.
+                pairs_done = 0
+                self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
                 interrupted = False
                 failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
                 for pair, pair_key in pending_pairs:
@@ -312,10 +320,14 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         # ManualPairWorkerThread's per-pair except).
                         logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
                         failed_pairs.append((pair.video.name, str(e)))
+                        pairs_done += 1
+                        self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
                         continue
                     cards_for_item += result.cards_created
                     if result.success:
                         committed_pair_keys.add(pair_key)
+                    pairs_done += 1
+                    self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
                     if self.check_cancelled():
                         interrupted = True
                         break

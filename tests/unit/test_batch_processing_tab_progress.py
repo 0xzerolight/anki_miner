@@ -125,3 +125,40 @@ def test_start_processing_wires_overall_progress_signals(tab):
 
     worker.pair_finished.emit(3, 3)
     assert tab.overall_progress_widget.progress_bar.value() == 100
+
+
+def test_queue_path_episode_ticks_fill_within_series(tab):
+    """Real per-episode counts fill the bar between series boundaries.
+
+    The composed value is (series done + episodes done / episodes total) over
+    the series total -- every quantity a count the worker actually has, so the
+    bar moves during a series without fabricating anything (the blank-bar bug).
+    """
+    pb = tab.overall_progress_widget.progress_bar
+    tab._begin_run(queue_mode=True)
+    tab._on_queue_started(2)
+    tab._on_item_started("a", "Show A")
+    tab._on_item_pairs_progress("a", 0, 12)
+    assert pb.value() == 0
+    tab._on_item_pairs_progress("a", 3, 12)
+    assert pb.value() == 12
+    tab._on_item_pairs_progress("a", 12, 12)
+    assert pb.value() == 50
+    tab._on_item_completed("a", 5)
+    assert pb.value() == 50
+    tab._on_item_started("b", "Show B")
+    tab._on_item_pairs_progress("b", 0, 4)
+    assert pb.value() == 50
+    tab._on_item_pairs_progress("b", 2, 4)
+    assert pb.value() == 75
+
+
+def test_queue_path_episode_ticks_ignore_zero_totals(tab):
+    """No series total yet, or an all-committed series with 0 pending pairs: no-op."""
+    pb = tab.overall_progress_widget.progress_bar
+    tab._begin_run(queue_mode=True)
+    tab._on_item_pairs_progress("a", 1, 3)  # queue_started not seen yet
+    assert pb.value() == 0
+    tab._on_queue_started(2)
+    tab._on_item_pairs_progress("a", 1, 0)  # empty pending set
+    assert pb.value() == 0

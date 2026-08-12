@@ -514,6 +514,7 @@ class BatchProcessingTab(MiningTabBase):
 
             worker.queue_started.connect(self._on_queue_started)
             worker.item_started.connect(self._on_item_started)
+            worker.item_pairs_progress.connect(self._on_item_pairs_progress)
             worker.item_completed.connect(self._on_item_completed)
             worker.item_failed.connect(self._on_item_failed)
             worker.queue_finished.connect(self._on_queue_finished)
@@ -821,12 +822,35 @@ class BatchProcessingTab(MiningTabBase):
         # stuck at "Processing" during the run and fell back to "Pending" after.
         self.queue_panel.set_item_status(item_id, "error")
 
+    def _on_item_pairs_progress(self, item_id: str, done: int, total: int) -> None:
+        """Fill the bar within a series from the worker's real episode counts.
+
+        The composed value is ``(series_done + done/total) / series_total`` —
+        every quantity a count the worker actually has (``total`` is this run's
+        pending-pair list for the series), so this honours the no-fabricated-
+        fill rule that keeps stage weights off the bar. Monotone against the
+        boundary ticks: the final ``(n, n)`` emit equals the percent
+        ``_advance_queue_bar`` recomputes, and the next series' ``(0, m)``
+        emit reproduces it again.
+
+        Args:
+            item_id: The series being mined (unused; the bar is run-scoped)
+            done: Pairs whose attempt concluded so far in this series
+            total: Pending pairs in this series for this run; ``<= 0`` no-ops
+        """
+        if self._items_total <= 0 or total <= 0:
+            return
+        fraction = min(done / total, 1.0)
+        percent = int((self._items_done + fraction) / self._items_total * 100)
+        self.overall_progress_widget.set_percent(percent)
+
     def _advance_queue_bar(self, item_id: str) -> None:
         """Advance the series-granular bar after a terminal item outcome.
 
         The queue path is TWO-LEVEL (one item = a series of N episodes whose
-        count is unknown up front), so the bar moves per series only; what the
-        current episode is doing drives the status label instead.
+        count is unknown up front), so the bar moves per whole series here;
+        between these boundary ticks ``_on_item_pairs_progress`` fills with the
+        series' real episode counts, and the stage detail stays in words.
 
         Counted over a RUN-LOCAL set of item ids rather than the queue's
         all-time ``completed_count + failed_count``: retrying 2 failures after 8

@@ -1378,3 +1378,66 @@ def test_cancel_releases_a_worker_waiting_at_a_series_boundary():
     worker.cancel()
 
     assert worker._resume_gate.is_set()
+
+
+# ---------------------------------------------------------------------------
+# Within-series episode progress (the queue bar's only within-item truth)
+# ---------------------------------------------------------------------------
+
+
+def test_item_pairs_progress_ticks_each_episode(tmp_path):
+    """One (0, total) prime plus one tick per finished pair, addressed by item id."""
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+
+    proc = MagicMock()
+    proc.process_episode.side_effect = [_ok_result(cards=3), _ok_result(cards=2)]
+
+    worker = _make_worker_with_queue(queue)
+    ticks: list[tuple] = []
+    worker.item_pairs_progress.connect(lambda *args: ticks.append(args))
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        worker.run()
+
+    assert ticks == [(item.id, 0, 2), (item.id, 1, 2), (item.id, 2, 2)]
+
+
+def test_item_pairs_progress_counts_failed_attempts(tmp_path):
+    """A pair that raises still concluded its attempt, so it still ticks."""
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+
+    proc = MagicMock()
+    proc.process_episode.side_effect = [_ok_result(cards=3), SetupError("Anki blipped")]
+
+    worker = _make_worker_with_queue(queue)
+    ticks: list[tuple] = []
+    worker.item_pairs_progress.connect(lambda *args: ticks.append(args))
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        worker.run()
+
+    assert ticks == [(item.id, 0, 2), (item.id, 1, 2), (item.id, 2, 2)]
