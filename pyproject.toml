@@ -200,7 +200,13 @@ extend-exclude = '''
 '''
 
 [tool.mypy]
-python_version = "3.11"
+# 3.12, not the 3.11 floor: numpy >= 2.5 is 3.12-only and its stubs use PEP 695
+# `type` statements, which mypy hard-rejects when told to target 3.11 — and
+# mypy 2.x parses installed stubs even under follow_imports = "skip", so there
+# is no override that avoids them. Any env that has those stubs is >= 3.12 by
+# construction (CI's typecheck job runs 3.12); 3.11 runtime compatibility stays
+# covered by CI's 3.11 test leg.
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false

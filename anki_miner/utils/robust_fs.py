@@ -64,7 +64,7 @@ def _on_rmtree_exc(
 def _rmtree_once(target: Path) -> None:
     rmtree = shutil.rmtree
     if sys.version_info >= (3, 12):
-        rmtree(target, onexc=_on_rmtree_exc)  # type: ignore[call-arg]
+        rmtree(target, onexc=_on_rmtree_exc)
     else:
         rmtree(target, onerror=_on_rmtree_error)
 
