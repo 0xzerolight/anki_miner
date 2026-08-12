@@ -483,10 +483,13 @@ class AnkiMinerConfig:
     # `retime_correct_framerate` is the INVERSE of `--disable-fps-guessing`:
     # default off, because FPS guessing stretches an already-correct subtitle
     # and only helps when the sub came from a different-framerate release.
-    # `retime_single_offset` is `--no-split` (one global shift, never segments).
+    # `retime_single_offset` is `--no-split` (one global shift, never segments):
+    # default ON, diverging from alass's own default, because Japanese media
+    # generally has no ad-break cuts — splitting mostly invents spurious cut
+    # points on a merely-offset subtitle. Uncheck to allow segmented alignment.
     retime_split_penalty: float = 7.0
     retime_correct_framerate: bool = False
-    retime_single_offset: bool = False
+    retime_single_offset: bool = True
 
     # ASR (Automatic Speech Recognition) settings. Used by the Local Subtitle
     # Creation feature (offline transcription via faster-whisper). Requires

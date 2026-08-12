@@ -356,11 +356,16 @@ def test_reading_min_occurrence_default_and_replace():
 class TestRetimeOptions:
     """The alass alignment knobs, persisted in config since they left the tab."""
 
-    def test_defaults_match_alass(self):
+    def test_defaults(self):
+        """Penalty/framerate match alass; single offset deliberately diverges.
+
+        Japanese media rarely has ad-break cuts, so the app defaults to
+        `--no-split` even though alass itself defaults to segmented alignment.
+        """
         cfg = AnkiMinerConfig()
         assert cfg.retime_split_penalty == 7.0
         assert cfg.retime_correct_framerate is False
-        assert cfg.retime_single_offset is False
+        assert cfg.retime_single_offset is True
 
     @pytest.mark.parametrize(
         ("given", "expected"),
