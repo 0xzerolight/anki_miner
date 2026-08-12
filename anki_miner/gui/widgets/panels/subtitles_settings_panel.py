@@ -525,10 +525,14 @@ class SubtitlesSettingsPanel(FormPanel):
         )
 
         self.retime_single_offset_checkbox = QCheckBox(self.tr("Shift by a single offset only"))
+        self.retime_single_offset_checkbox.setChecked(True)
         self.add_field(
             self.tr("Single offset"),
             self.retime_single_offset_checkbox,
-            helper=self.tr("Shift the entire subtitle by one amount; never cut it into separately-timed segments."),
+            helper=self.tr(
+                "Shift the entire subtitle by one amount; never cut it into separately-timed segments. "
+                "Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment."
+            ),
         )
 
     def _build_engine_guidance(self) -> QWidget:

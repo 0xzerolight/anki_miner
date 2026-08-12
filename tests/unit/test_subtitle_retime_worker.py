@@ -110,7 +110,7 @@ def test_alass_options_come_from_config(qapp, tmp_path):
         _make_config(),
         retime_split_penalty=12.0,
         retime_correct_framerate=True,
-        retime_single_offset=True,
+        retime_single_offset=False,
     )
     worker = SubtitleRetimeWorker(
         config,
@@ -125,12 +125,12 @@ def test_alass_options_come_from_config(qapp, tmp_path):
     assert kw["split_penalty"] == 12.0
     # `retime_correct_framerate` is the inverse of the alass flag.
     assert kw["disable_fps_guessing"] is False
-    assert kw["no_split"] is True
+    assert kw["no_split"] is False
     assert kw["reference_override"] == ReferenceOverride(kind="audio", index=3)
 
 
 def test_default_alass_options_forwarded(qapp, tmp_path):
-    """Defaults: fps-guessing disabled, no split, auto reference (None)."""
+    """Defaults: fps-guessing disabled, single-offset mode, auto reference (None)."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     for p in (v, s):
@@ -148,7 +148,7 @@ def test_default_alass_options_forwarded(qapp, tmp_path):
     kw = captured[0]
     assert kw["split_penalty"] == 7.0
     assert kw["disable_fps_guessing"] is True
-    assert kw["no_split"] is False
+    assert kw["no_split"] is True
     assert kw["reference_override"] is None
 
 
