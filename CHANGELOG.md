@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **The Linux `.deb` ships everything the AppImage ships.** Bundled ffmpeg, libmpv, and both local transcription backends (faster-whisper and the Vulkan whisper.cpp engine) are included again; models download in-app as on every other platform. The stripped "lean" deb is gone - stripping the package directories never removed the pure-Python halves baked into the executable, so the app believed the engine was present and offered a Download button that could not work (the v2.9.x "Download model does nothing" report). The deb no longer depends on system ffmpeg and recommends `libvulkan1` for GPU transcription.
 - **Frequency filtering takes a range, not just a ceiling.** Settings -> Filtering now carries one "Frequency Rank Range" row with both ends: a minimum drops the words that are everywhere and already known from exposure, the maximum keeps working as before. Either end can be left open, and the row keeps the band ordered as it is edited.
 - **A preset for the note type you already use.** Settings -> Anki gained a Preset row: pick Lapis, Kiku or Senren and every field mapping is filled from that note type's own published field names, along with the two settings nobody can guess - pitch categories switch to the romaji spelling all three read, and Senren's card-type markers take their own names. The first-run wizard applies the right preset by itself when it recognizes the note type's fields.
 - **A switch for words no frequency list ranks.** "Include Words Missing from the Frequency List" decides what happens to a word carrying no rank. It is off by default, which is what a rank ceiling has always done; turning it on is what a minimum-only range usually wants, since an unranked word is no more likely to be a common one.
@@ -16,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **"Find a Feature" is now the Usage Guide, with its own button on the menu bar.** It sits right of Tools (still F1) instead of hiding inside the Tools dropdown. Stale entries were corrected along the way: the subtitle-regex entry now opens the Filtering page it actually lives on, the frequency entry describes the new rank range, and entries no longer promise controls that do not exist (a YouTube quality cap, a part-of-speech picker).
 
 ### Fixed
+- **A failed transcription-model download keeps its error message on screen.** The label used to flip back to "Not installed" milliseconds after the failure text appeared, because the post-download refresh rewrote it from on-disk state; a failed download changes nothing on disk, so the refresh is skipped and the reason stays readable.
 
 ### Removed
 

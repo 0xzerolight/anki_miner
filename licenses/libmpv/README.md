@@ -16,12 +16,12 @@ dual-licensed GPLv2+/LGPLv2.1+.
 | Linux AppImage | yes |
 | Windows installer | yes |
 | macOS bundle (arm64 + Intel) | yes |
-| `.deb` package | no — uses the system libmpv (`libmpv2`/`libmpv1`) |
+| `.deb` package | yes |
 | `pip` / `pipx` install | no — uses the system libmpv |
 
-The `.deb`, `pip`, and `pipx` installs do not contain libmpv, so the GPL
-source offer below does not apply to them. Without a system libmpv those
-installs still work; only the video preview shows a notice.
+The `pip` and `pipx` installs do not contain libmpv, so the GPL source offer
+below does not apply to them. Without a system libmpv those installs still
+work; only the video preview shows a notice.
 
 ## Upstream build sources
 

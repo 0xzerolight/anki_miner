@@ -1,7 +1,8 @@
 # Bundled FFmpeg — license and source offer
 
-Anki Miner's downloadable binaries (Linux AppImage, Windows installer, macOS
-bundle) ship with a static build of [FFmpeg](https://ffmpeg.org). These builds
+Anki Miner's downloadable binaries (Linux AppImage and `.deb`, Windows
+installer, macOS bundle) ship with a static build of
+[FFmpeg](https://ffmpeg.org). These builds
 are licensed under the **GNU General Public License, version 3** — the full text
 is in [`COPYING.GPLv3`](COPYING.GPLv3).
 
@@ -12,11 +13,11 @@ is in [`COPYING.GPLv3`](COPYING.GPLv3).
 | Linux AppImage | yes |
 | Windows installer / portable zip | yes |
 | macOS bundle | yes |
-| `.deb` package | no — uses ffmpeg from the system / PATH |
+| `.deb` package | yes |
 | `pip` / `pipx` install | no — uses ffmpeg from the system / PATH |
 
-The `.deb`, `pip`, and `pipx` installs do not contain FFmpeg, so the GPL source
-offer below does not apply to them.
+The `pip` and `pipx` installs do not contain FFmpeg, so the GPL source offer
+below does not apply to them.
 
 ## Upstream build sources
 

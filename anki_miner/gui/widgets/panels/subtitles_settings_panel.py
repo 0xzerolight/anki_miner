@@ -654,15 +654,22 @@ class SubtitlesSettingsPanel(FormPanel):
             importable = importlib.util.find_spec("onnxruntime") is not None
         return importable
 
-    def notify_asr_download_finished(self, name: str, models_root) -> None:
+    def notify_asr_download_finished(self, name: str, models_root, ok: bool = True) -> None:
         """Clear the in-flight guard and refresh the button/status after a download.
 
-        Wired to the download worker's finish callback (success or failure).
-        Re-probes the model-downloaded flag (off-thread) so the label/button
-        reflect the new on-disk state.
+        Wired to the download worker's finish callback. On success, re-probes
+        the model-downloaded flag (off-thread) so the label/button reflect the
+        new on-disk state. On failure (``ok=False``) it must NOT re-probe: the
+        worker's error message was just written to the status label, and the
+        re-probe would overwrite it with "Not installed" within milliseconds —
+        the user sees the click "do nothing". A failed download cannot have
+        changed on-disk state, so only the button is restored.
         """
         self._asr_download_active = False
         self._models_root = models_root
+        if not ok:
+            self.download_model_button.setEnabled(self._engine_available_now())
+            return
         self._refresh_state_async(name, models_root, self._cuda_libs_root)
 
     # ------------------------------------------------------------------

@@ -937,7 +937,9 @@ def _connect_asr_download(window: MainWindow, settings_tab: SettingsTab) -> None
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
-        settings_tab.subtitles_panel.notify_asr_download_finished(str(request_arg), window.get_config().asr_models_root)
+        settings_tab.subtitles_panel.notify_asr_download_finished(
+            str(request_arg), window.get_config().asr_models_root, ok=ok
+        )
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         window.background_tasks.start_asr_model_download(

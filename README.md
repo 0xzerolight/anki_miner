@@ -37,7 +37,7 @@ Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
 ### Requirements
 
 - **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (code `2055492159`)
-- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx, `.deb`, or source.
+- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx or source.
 
 Grab the download for your platform from the [latest release](https://github.com/0xzerolight/anki_miner/releases/latest):
 
@@ -46,12 +46,10 @@ Grab the download for your platform from the [latest release](https://github.com
 | Windows | `AnkiMiner-*-Setup.exe` |
 | macOS (Apple Silicon / M1-M4) | `AnkiMiner-macOS-arm64.tar.gz` |
 | macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
-| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` ² |
+| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
 ¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
-
-² Excludes local Whisper subtitle generation. Use the ASR-capable AppImage, or create a separate install with `pipx install "anki-miner[asr]"`.
 
 ### First-run notes (unsigned builds)
 
