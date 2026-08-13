@@ -26,7 +26,20 @@ def test_dead_cross_episode_filter_is_not_advertised() -> None:
 
 def test_registry_is_non_trivial() -> None:
     # Guards against an accidental truncation of the catalogue.
-    assert len(CAPABILITIES) >= 30
+    assert len(CAPABILITIES) >= 75
+
+
+def test_dialog_only_entries_live_in_tools_category() -> None:
+    # A target-less row shows no Open button, so its description must say where
+    # the feature lives; the Tools & maintenance block groups them.
+    target_less = [c for c in CAPABILITIES if c.target is None]
+    assert len(target_less) >= 10
+    assert {c.category for c in target_less} == {"Tools & maintenance"}
+
+
+def test_system_health_is_findable() -> None:
+    hits = search("health")
+    assert any(c.id == "system-health" for c in hits)
 
 
 def test_target_is_optional() -> None:

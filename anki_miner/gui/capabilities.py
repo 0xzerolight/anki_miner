@@ -768,15 +768,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "filtering"),
         keywords=("bold", "highlight", "emphasize", "target word", "sentence formatting"),
     ),
-    Capability(
-        id="restyle-mined-cards",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu."
-        ),
-        category=_CAT_TOOLS,
-        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
-    ),
     # --- Appearance & language ---------------------------------------------
     Capability(
         id="themes",
@@ -868,6 +859,106 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings"),
         keywords=("update", "new version", "upgrade", "release", "check for updates"),
+    ),
+    # --- Tools & maintenance (menu/dialog features; no Open button) --------
+    Capability(
+        id="restyle-mined-cards",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu."
+        ),
+        category=_CAT_TOOLS,
+        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
+    ),
+    Capability(
+        id="system-health",
+        title=QT_TRANSLATE_NOOP("Capabilities", "System health check"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("health", "status", "ready", "doctor", "diagnose", "checklist", "fix"),
+    ),
+    Capability(
+        id="setup-wizard",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Setup wizard"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("wizard", "first run", "onboarding", "guided setup", "start over"),
+    ),
+    Capability(
+        id="download-resources",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Download recommended resources"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("recommended", "download resources", "starter pack", "quick setup", "jitendex"),
+    ),
+    Capability(
+        id="desktop-shortcut",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Create a desktop shortcut"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Add an Anki Miner launcher to your desktop from the Tools menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("shortcut", "launcher", "desktop icon"),
+    ),
+    Capability(
+        id="export-diagnostics",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export diagnostics for a bug report"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Save a zip of logs and system details to attach to a bug report -- from the Help menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("diagnostics", "logs", "bug report", "support", "zip", "troubleshoot"),
+    ),
+    Capability(
+        id="mini-job-monitor",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mini job monitor"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pop out a small always-on-top window that tracks the current run -- from the status-bar task menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("monitor", "floating window", "always on top", "watch progress", "background run"),
+    ),
+    Capability(
+        id="session-recovery",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Crash & session recovery"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "After an unexpected exit, Anki Miner offers to restore unfinished queues and resume interrupted downloads at the next launch.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("recover", "restore", "crash", "resume download", "unfinished queue", "power loss"),
+    ),
+    Capability(
+        id="undo-run",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Undo a mining run"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Delete the notes a run just created, straight from the results dialog.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("undo", "delete notes", "revert", "rollback", "mistake", "wrong deck"),
+    ),
+    Capability(
+        id="keyboard-shortcuts",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Keyboard shortcuts"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -> About.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("shortcuts", "hotkeys", "keybindings", "keyboard", "f1"),
     ),
 )
 
