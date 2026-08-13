@@ -200,7 +200,7 @@ else
   fi
   echo
 
-  # --- 6b. .deb (mirror release.yml deb-stage strip + nfpm) -------------------
+  # --- 6b. .deb (mirror release.yml: full AppImage tree, no strip) ------------
   echo "=== .deb ==="
   if [ ! -x "$CACHE/nfpm" ]; then
     NFPM_TGZ="$CACHE/nfpm.tar.gz"
@@ -210,21 +210,7 @@ else
     chmod +x "$CACHE/nfpm"
   fi
   export VERSION
-  rm -rf dist/deb-stage
-  cp -a dist/AnkiMiner dist/deb-stage
-  rm -f dist/deb-stage/_internal/bin/ffmpeg dist/deb-stage/_internal/bin/ffprobe
-  rm -f dist/deb-stage/bin/ffmpeg dist/deb-stage/bin/ffprobe
-  rm -rf dist/deb-stage/_internal/ctranslate2 dist/deb-stage/_internal/faster_whisper \
-         dist/deb-stage/_internal/onnxruntime dist/deb-stage/_internal/av \
-         dist/deb-stage/ctranslate2 dist/deb-stage/faster_whisper \
-         dist/deb-stage/onnxruntime dist/deb-stage/av
-  find dist/deb-stage -name 'libctranslate2*.so*' -delete
-  BAD=$(find dist/deb-stage -type f \( -name 'ffmpeg' -o -name 'ffprobe' -o -name 'libctranslate2*.so*' \) ; \
-        find dist/deb-stage -type d \( -name 'ctranslate2' -o -name 'faster_whisper' \))
-  if [ -n "$BAD" ]; then
-    echo "::error::ASR/ffmpeg artifacts still present in deb stage tree:"; echo "$BAD"
-    FAILED+=("deb")
-  elif "$CACHE/nfpm" package --config packaging/nfpm.yaml --packager deb \
+  if "$CACHE/nfpm" package --config packaging/nfpm.yaml --packager deb \
         --target "dist/anki-miner_${VERSION}_amd64.deb"; then
     echo ".deb: PASS -> dist/anki-miner_${VERSION}_amd64.deb"
   else

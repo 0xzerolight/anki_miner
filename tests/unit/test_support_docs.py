@@ -25,9 +25,12 @@ def test_asr_less_frozen_install_guidance_offers_only_executable_remedies(qtbot,
     assert "pip install" not in message + " ".join(commands)
 
     installation = (ROOT / "README.md").read_text(encoding="utf-8").split("## Installation", maxsplit=1)[1]
-    assert "| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` ² |" in installation
-    assert "² Excludes local Whisper subtitle generation." in installation
-    assert "ASR-capable AppImage" in installation
+    # The .deb ships the full bundle (ASR included) — the download table must
+    # not resurrect the pre-v2.10 "excludes local Whisper" footnote for it.
+    assert "| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |" in installation
+    assert "² " not in installation
+    # The Intel-mac footnote (the one remaining ASR-less artifact) keeps the
+    # executable remedy the guidance block points at.
     assert 'pipx install "anki-miner[asr]"' in installation
 
 

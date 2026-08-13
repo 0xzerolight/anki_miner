@@ -12,27 +12,23 @@ priority: "optional"
 
 overrides:
   deb:
-    # The .deb does NOT bundle ffmpeg (see licenses/ffmpeg/README.md); it is a
-    # hard runtime requirement satisfied by the system / PATH, so depends (not
-    # recommends). The release workflow strips the bundled ffmpeg into the
-    # deb-stage tree referenced below before packaging.
-    depends:
-      - ffmpeg
-    # libmpv is a SOFT dep by design (unlike ffmpeg): without it the app runs
-    # fully, only the in-app video preview degrades to a notice. Recommends is
-    # installed by apt by default, so UX is unchanged; newer-first alternative
-    # covers Debian 12/Ubuntu 24.04+ (libmpv2) and Ubuntu 22.04 (libmpv1) —
-    # python-mpv's find_library('mpv') resolves either soname. The release
-    # workflow strips the bundled libmpv from the deb-stage tree (fail-closed
-    # verifier), same as ffmpeg; see licenses/libmpv/README.md.
+    # The .deb ships the full AppImage tree (bundled ffmpeg, libmpv, and both
+    # ASR backends) — see licenses/ffmpeg/README.md and licenses/libmpv/
+    # README.md for the GPL source offers. No hard external deps remain.
+    # libvulkan1 is the one soft dep: the bundled ggml-vulkan ASR backend
+    # deliberately excludes the Vulkan loader (auditwheel --exclude), so GPU
+    # transcription needs the system loader — without it, ASR still runs on
+    # CPU. Recommends is installed by apt by default.
     recommends:
-      - libmpv2 | libmpv1
+      - libvulkan1
 
 contents:
-  # Install the PyInstaller bundle to /opt/anki-miner/. Source is dist/deb-stage/
-  # — a copy of dist/AnkiMiner/ with the bundled GPL ffmpeg/ffprobe removed (the
-  # deb relies on system ffmpeg). The AppImage still bundles ffmpeg.
-  - src: dist/deb-stage/
+  # Install the PyInstaller bundle to /opt/anki-miner/ — the SAME tree the
+  # AppImage wraps (dist/AnkiMiner/), bundled ffmpeg/libmpv/ASR included. The
+  # pre-v2.10 stripped deb-stage is gone: stripping could not reach the PYZ
+  # inside the executable, so the app's find_spec probes saw the stripped
+  # packages anyway and advertised ASR it could not deliver.
+  - src: dist/AnkiMiner/
     dst: /opt/anki-miner/
     type: tree
 

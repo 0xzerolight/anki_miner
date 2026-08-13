@@ -1190,65 +1190,17 @@ jobs:
       - name: Build .deb package (Linux)
         if: runner.os == 'Linux'
         run: |
-          # The .deb relies on system ffmpeg (licenses/ffmpeg/README.md), so it
-          # must NOT ship the bundled GPL ffmpeg the PyInstaller tree carries.
-          # It must also NOT ship faster-whisper/ctranslate2 — the [asr] extra is
-          # installed for the whole Linux job so the AppImage onedir has the ASR
-          # libs, but the .deb must stay lean. Users switch to that AppImage or a
-          # separate pipx install; pip cannot extend the sealed .deb interpreter.
-          # Stage a copy with both ffmpeg and ASR libs stripped; the AppImage
-          # (built above) keeps everything.
-          rm -rf dist/deb-stage
-          cp -a dist/AnkiMiner dist/deb-stage
-          # Strip both onedir layouts: _internal/ (recent PyInstaller) and root.
-          # ffmpeg/ffprobe binaries:
-          rm -f dist/deb-stage/_internal/bin/ffmpeg dist/deb-stage/_internal/bin/ffprobe
-          rm -f dist/deb-stage/bin/ffmpeg dist/deb-stage/bin/ffprobe
-          # ASR native libs (ctranslate2, faster_whisper Python package dirs and
-          # their shared libs; onnxruntime and av are excluded via spec but strip
-          # defensively in case the layout ever changes).
-          rm -rf dist/deb-stage/_internal/ctranslate2
-          rm -rf dist/deb-stage/_internal/faster_whisper
-          rm -rf dist/deb-stage/_internal/onnxruntime
-          rm -rf dist/deb-stage/_internal/av
-          rm -rf dist/deb-stage/ctranslate2
-          rm -rf dist/deb-stage/faster_whisper
-          rm -rf dist/deb-stage/onnxruntime
-          rm -rf dist/deb-stage/av
-          # Also strip the ctranslate2 shared lib itself (libctranslate2.so.*).
-          find dist/deb-stage -name 'libctranslate2*.so*' -delete
-          # whisper.cpp/ggml (pywhispercpp Vulkan backend) — same rationale: the
-          # .deb is system-managed and stays lean; users who want local ASR use
-          # the AppImage or a separate pipx install. The AppImage
-          # (built above) keeps these. Strip the package dir, the _pywhispercpp
-          # extension, and every ggml/whisper shared lib (incl. ggml-vulkan),
-          # across both onedir layouts.
-          rm -rf dist/deb-stage/_internal/pywhispercpp
-          rm -rf dist/deb-stage/pywhispercpp
-          find dist/deb-stage -name '_pywhispercpp*.so' -delete
-          find dist/deb-stage -name 'libggml*.so*' -delete
-          find dist/deb-stage -name 'libwhisper*.so*' -delete
-          # libmpv — same system-managed philosophy as ffmpeg: the .deb declares
-          # Recommends: libmpv2 | libmpv1 (packaging/nfpm.yaml) and must not ship
-          # the bundled copy (licenses/libmpv/README.md documents the split).
-          find dist/deb-stage -name 'libmpv*.so*' -delete
-          # Fail closed: verify no bundled ffmpeg, ffprobe, ctranslate2/
-          # faster_whisper, pywhispercpp/ggml/whisper, or libmpv libs remain in
-          # the stage tree.
-          BAD=$(find dist/deb-stage -type f \( \
-            -name 'ffmpeg' -o -name 'ffprobe' -o \
-            -name 'libctranslate2*.so*' -o \
-            -name '_pywhispercpp*.so' -o \
-            -name 'libggml*.so*' -o -name 'libwhisper*.so*' -o \
-            -name 'libmpv*.so*' \) ; \
-            find dist/deb-stage -type d \( \
-            -name 'ctranslate2' -o -name 'faster_whisper' -o \
-            -name 'pywhispercpp' \))
-          if [ -n "$BAD" ]; then
-            echo "::error::ASR/ffmpeg artifacts still present in deb stage tree:"
-            echo "$BAD"
-            exit 1
-          fi
+          # The .deb packages the SAME full PyInstaller tree as the AppImage:
+          # bundled GPL ffmpeg, libmpv, and both ASR backends (faster-whisper/
+          # ctranslate2 + pywhispercpp/ggml-vulkan). The app is GPL-3.0-or-later,
+          # so the bundled GPL components are covered by the source offers in
+          # licenses/ffmpeg/README.md and licenses/libmpv/README.md — same as
+          # every other artifact. The pre-v2.10 lean deb (stripped ASR/ffmpeg/
+          # libmpv) is gone: stripping package dirs could not remove the
+          # pure-Python halves from the PYZ inside the executable, so find_spec
+          # probes reported ASR as present and the app offered a Download button
+          # that could never work. Bundle-parity with the AppImage means the
+          # bundled smokes above cover exactly what .deb users run.
           VERSION=${{ steps.version.outputs.version }} ./nfpm package \
             --config packaging/nfpm.yaml \
             --packager deb \
