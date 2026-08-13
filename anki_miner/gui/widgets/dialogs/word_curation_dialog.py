@@ -167,6 +167,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Determine whether each optional pane should be shown.
         ctx = media_context
         self._show_player = ctx is not None and ctx.video_file is not None and ctx.video_file.exists()
+        # Season curation (context_resolver set): the episode the player is
+        # currently showing, a cache of resolved per-episode contexts, and a
+        # generation counter guarding off-thread resolves. The cache holds
+        # plain subtitle-entry tuples for at most a season's worth of episodes
+        # — a few hundred KB — so unlike the page-image cache it needs no LRU.
+        self._displayed_media_video: Path | None = ctx.video_file if ctx is not None else None
+        self._media_ctx_cache: dict[Path, CurationMediaContext] = {}
+        if ctx is not None and ctx.video_file is not None:
+            self._media_ctx_cache[ctx.video_file] = ctx
+        self._media_swap_gen = 0
         self._show_dict = lookup_fn is not None
         # Manga page pane: gated on page_units exactly like the player gates
         # on video_file. Cache holds converted QPixmaps (GUI-thread only);
@@ -840,6 +850,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _on_clip_play_requested(self, start: float, end: float) -> None:
         if not self._show_player or not hasattr(self, "player_widget"):
             return
+        if not self._chosen_episode_displayed():
+            # Season curation: the source swap for the chosen episode is still
+            # in flight — playing now would audition this clip window against
+            # the previous episode's video.
+            self.clip_editor.set_playing(False)
+            return
         self.clip_editor.set_playing(True)
         self.player_widget.play_range(start, end)
 
@@ -953,8 +969,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         primary_action_shortcut(self, self.accept)
 
     def _toggle_play_pause(self) -> None:
-        """Space: toggle player play/pause (no-op when the player pane is hidden)."""
-        if self._show_player and hasattr(self, "player_widget"):
+        """Space: toggle player play/pause (no-op when the player pane is hidden,
+        or while a season-curation source swap is still in flight)."""
+        if self._show_player and hasattr(self, "player_widget") and self._chosen_episode_displayed():
             self.player_widget.toggle_play_pause()
 
     # ------------------------------------------------------------------
@@ -1224,7 +1241,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # overlay — see the set_source call in _create_player_widget. This handler
         # already runs from the debounce timer (outside any active event handler),
         # so the seek can be issued directly — see _on_candidate_chosen.
-        self._preview_scene(chosen.start_time)
+        self._preview_scene(chosen.start_time, chosen.video_file)
 
         # Audio clip strip: the CHOSEN variant's window, for the same reason the
         # dictionary follows the pick — the strip edits the clip this row will
@@ -1387,10 +1404,17 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         if len(candidates) > 1:
             chosen = self._chosen.get(idx, word)
+            # Season curation: when candidates span several episodes, prefix
+            # each row with its episode's filename stem so the user can tell
+            # which episode a line (and its scene) comes from.
+            multi_episode = len({c.video_file for c in candidates if c.video_file is not None}) > 1
             selected_row = 0
             for i, cand in enumerate(candidates):
-                list_item = QListWidgetItem(cand.sentence)
-                list_item.setToolTip(cand.sentence)
+                text = cand.sentence
+                if multi_episode and cand.video_file is not None:
+                    text = f"[{cand.video_file.stem}] {cand.sentence}"
+                list_item = QListWidgetItem(text)
+                list_item.setToolTip(text)
                 list_item.setFont(japanese_cell_font())
                 self.sentence_list.addItem(list_item)
                 if self._same_pick(cand, chosen):
@@ -1405,8 +1429,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     @staticmethod
     def _same_pick(a: TokenizedWord, b: TokenizedWord) -> bool:
-        """Whether two variants refer to the same example line (sentence + timing)."""
-        return a.sentence == b.sentence and a.start_time == b.start_time
+        """Whether two variants refer to the same example line.
+
+        Sentence + timing + episode: season curation can hold identical lines
+        at identical timestamps in different episodes (OP/ED lyrics), and the
+        episode is what tells them apart.
+        """
+        return a.sentence == b.sentence and a.start_time == b.start_time and a.video_file == b.video_file
 
     def _on_candidate_chosen(self, list_row: int) -> None:
         """Apply the user's sentence pick: record it, refresh the row, seek the scene."""
@@ -1439,7 +1468,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # The word-focus path already seeks from a (debounce) timer, i.e. outside
         # any active event handler; deferring here makes the two paths identical.
         start_time = chosen.start_time
-        QTimer.singleShot(0, lambda: self._preview_scene(start_time))
+        chosen_video = chosen.video_file
+        QTimer.singleShot(0, lambda: self._preview_scene(start_time, chosen_video))
 
     def _apply_pick_to_row(self, idx: int, chosen: TokenizedWord) -> None:
         """Repaint every pick-dependent cell of ``idx``'s row from ``chosen``.
@@ -1497,18 +1527,99 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.table.scrollToItem(anchor, QAbstractItemView.ScrollHint.EnsureVisible)
         self._refresh_summary()
 
-    def _preview_scene(self, start_time: float) -> None:
+    def _preview_scene(self, start_time: float, video_file: Path | None = None) -> None:
         """Preview the scene for ``start_time``: seek the player / show the page.
 
         The single funnel for both the debounced focus path and the sentence
         candidate pick path — for manga, ``int(start_time)`` is the reading
         unit index (the parser stamps ``start_time = float(unit.index)``).
+
+        ``video_file`` is the chosen variant's episode (season curation): when
+        it differs from the displayed one the player source is swapped first.
+        ``_ensure_player_source`` returning False means an off-thread context
+        resolve is in flight and will re-fire this preview itself.
         """
-        if self._show_player and hasattr(self, "player_widget"):
+        if self._show_player and hasattr(self, "player_widget") and self._ensure_player_source(video_file):
             self.player_widget.seek_seconds(start_time)
             self.player_widget.pause()
         if self._show_image:
             self._request_page_image(int(start_time))
+
+    def _ensure_player_source(self, video_file: Path | None) -> bool:
+        """Point the player at ``video_file``'s episode (season curation).
+
+        True → the player already shows (or is now synchronously loading) the
+        right episode; the caller may seek immediately, because
+        ``seek_seconds`` self-defers a pre-file-loaded seek via its pending-
+        seek mechanism. False → an off-thread resolve is in flight; its
+        callback re-fires the preview. Single-episode dialogs (no resolver)
+        always return True.
+        """
+        ctx = self._media_context
+        if video_file is None or ctx is None or ctx.context_resolver is None:
+            return True
+        if video_file == self._displayed_media_video:
+            return True
+        cached = self._media_ctx_cache.get(video_file)
+        if cached is not None:
+            self._apply_media_context(cached)
+            return True
+        resolver = ctx.context_resolver
+        self._media_swap_gen += 1
+        gen = self._media_swap_gen
+
+        def on_done(result: object) -> None:
+            new_ctx = result if isinstance(result, CurationMediaContext) else None
+            if self._closing or gen != self._media_swap_gen:
+                return
+            if new_ctx is None:
+                # Table-only degradation for this word: keep the current
+                # episode showing rather than blocking curation on media.
+                logger.warning("Season curation: no media context for %s", video_file.name)
+                return
+            self._media_ctx_cache[video_file] = new_ctx
+            self._apply_media_context(new_ctx)
+            # Re-fire the preview for the still-focused word (its chosen
+            # variant may have moved on; only seek if it still matches).
+            word, idx = self._pending_word, self._pending_index
+            if word is not None and idx is not None:
+                chosen = self._chosen.get(idx, word)
+                if chosen.video_file == video_file:
+                    self._preview_scene(chosen.start_time, video_file)
+
+        def on_error(message: str) -> None:
+            logger.warning(
+                "Season curation: media context build failed for %s: %s",
+                video_file.name,
+                message,
+            )
+
+        run_off_thread(self, lambda: resolver(video_file), on_done, on_error)
+        return False
+
+    def _apply_media_context(self, ctx: CurationMediaContext) -> None:
+        """Swap the player to ``ctx``'s episode (source + subtitle overlay)."""
+        self.player_widget.set_source(
+            ctx.video_file,  # type: ignore[arg-type]  # resolver never maps to None videos
+            ctx.subtitle_entries,
+            ctx.offset,
+            audio_track_override=ctx.audio_track_override,
+        )
+        self._displayed_media_video = ctx.video_file
+
+    def _chosen_episode_displayed(self) -> bool:
+        """Whether the player shows the focused word's episode.
+
+        Always True for single-episode dialogs. Season curation gates the
+        clip audition and Space play on this: while a source swap is still in
+        flight, playing would audition the chosen clip window against the
+        PREVIOUS episode's video.
+        """
+        word, idx = self._pending_word, self._pending_index
+        if word is None or idx is None:
+            return True
+        chosen = self._chosen.get(idx, word)
+        return chosen.video_file is None or chosen.video_file == self._displayed_media_video
 
     def _request_page_image(self, unit_index: int) -> None:
         """Show the page image (with block highlight) for ``unit_index``.
