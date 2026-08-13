@@ -112,9 +112,8 @@ def test_explanation_matches_frequency_aggregation_and_display_order(qapp, qtbot
     )
 
     assert panel._explanation_label.text() == (
-        "Every enabled source contributes. The lowest rank is used for filtering; "
-        "Frequency Sort uses the harmonic mean. This order controls how sources "
-        "are listed on the card."
+        "Every enabled source counts: filtering uses the lowest rank, Frequency "
+        "Sort the harmonic mean. Order only sets the card's source list."
     )
     row = panel._row_widget(0)
     assert row is not None

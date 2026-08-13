@@ -297,7 +297,6 @@ class SubtitlesSettingsPanel(FormPanel):
             anchor_focus=self.download_model_button,
             anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
         )
-        self._add_help(self.tr("Required before subtitle generation can run."))
 
         # Guidance shown only when faster-whisper is not installed. The engine is
         # a Python package (not a downloadable binary), so the app can't fetch it
@@ -435,7 +434,6 @@ class SubtitlesSettingsPanel(FormPanel):
                 anchor_focus=vulkan_button,
                 anchor_text=lambda: (vulkan_button.text(), vulkan_button.toolTip()),
             )
-            self._add_help(self.tr("Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan)."))
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
@@ -483,7 +481,6 @@ class SubtitlesSettingsPanel(FormPanel):
                 anchor_focus=alass_button,
                 anchor_text=lambda: (alass_button.text(), alass_button.toolTip()),
             )
-            self._add_help(self.tr("Needed for retiming unless alass is already on your PATH."))
         else:
             # macOS: no upstream v2.0.0 binary — point users at Homebrew.
             guidance = self._build_guidance(

@@ -273,11 +273,11 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
         tts_blurb = QLabel(
             self.tr(
-                "Generate spoken sentence audio for cards mined from manga and books "
-                "(these have no source audio). Sentence text is sent to the selected "
-                "online services."
+                "Add spoken audio to cards from manga and books, which have no source "
+                "audio. Sentence text is sent to the selected online services."
             )
         )
+        tts_blurb.setObjectName("helper-text")
         tts_blurb.setWordWrap(True)
         tts_layout.addWidget(tts_blurb)
 

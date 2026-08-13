@@ -298,7 +298,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         font_note_layout = QHBoxLayout(self.font_scale_restart_row)
         font_note_layout.setContentsMargins(0, 0, 0, 0)
         font_note_layout.setSpacing(SPACING.sm)
-        self.font_scale_restart_note = QLabel(self.tr("Text size will change after restart."))
+        self.font_scale_restart_note = QLabel(self.tr("Restart to apply."))
         self.font_scale_restart_note.setWordWrap(True)
         font_note_layout.addWidget(self.font_scale_restart_note)
         self.restart_now_btn = ModernButton(self.tr("Restart now"), variant="secondary")
@@ -335,11 +335,11 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # the intro explains the card behaviour, so it sits directly above.
         intro = QLabel(
             self.tr(
-                "Every theme is shown as a preview of the app. Click one to apply it live, "
-                "and star the ones you want in the top-right selector. "
-                "Press <b>Revert</b> to undo your preview."
+                "Click a theme preview to apply it live; <b>Revert</b> undoes it. "
+                "Star themes to add them to the top-right selector."
             )
         )
+        intro.setObjectName("helper-text")
         intro.setWordWrap(True)
         intro.setTextFormat(Qt.TextFormat.RichText)
         layout.addWidget(intro)

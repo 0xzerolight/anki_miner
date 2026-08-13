@@ -272,10 +272,8 @@ class FilteringSettingsPanel(FormPanel):
 
         wordsets_helper = QLabel(
             self.tr(
-                "Exclude bundled lists of Japanese proper nouns (people and place "
-                "names) from mining. Useful for shows that drop lots of character "
-                "and place names. A name you actually want is rescued by the "
-                "whitelist above."
+                "Exclude bundled lists of Japanese people and place names from "
+                "mining. Whitelisted names are still mined."
             )
         )
         wordsets_helper.setObjectName("helper-text")
