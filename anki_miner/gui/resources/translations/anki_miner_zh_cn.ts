@@ -1180,8 +1180,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>挖词前审阅单词</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>在创建卡片前，为每集显示单词选择弹窗</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1330,6 +1330,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>正在重试 %1 个失败项…</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4704,14 +4712,6 @@ Add %3 word(s) to your known list?</source>
         <translation>重新设置挖词卡片样式...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
@@ -4734,6 +4734,14 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>保存包含日志和系统信息的 zip，用于报告 Bug</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>

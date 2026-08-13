@@ -1170,7 +1170,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1320,6 +1320,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Retrying %1 failed items...</source>
         <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4674,14 +4682,6 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation type="unfinished" />
     </message>
@@ -4703,6 +4703,14 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
         <translation type="unfinished" />
     </message>
     <message>

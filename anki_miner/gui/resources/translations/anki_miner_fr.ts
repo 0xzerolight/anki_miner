@@ -1181,8 +1181,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Vérifier les mots avant l'extraction</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>Afficher la fenêtre de sélection des mots pour chaque épisode avant de créer les cartes</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1331,6 +1331,14 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>Nouvel essai de %1 éléments en échec...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4716,14 +4724,6 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Redéfinir le style des cartes extraites...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>&amp;Aide</translation>
     </message>
@@ -4746,6 +4746,14 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>Enregistrer un zip contenant les journaux et les détails du système pour un rapport de bogue</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>

@@ -1180,8 +1180,8 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Xem lại từ trước khi khai thác</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>Hiển thị cửa sổ chọn từ cho mỗi tập trước khi tạo thẻ</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1330,6 +1330,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>Đang thử lại %1 mục thất bại...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4704,14 +4712,6 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
         <translation>Tạo lại kiểu cho thẻ đã khai thác...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>&amp;Trợ giúp</translation>
     </message>
@@ -4734,6 +4734,14 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>Lưu tệp zip chứa nhật ký và thông tin hệ thống để báo lỗi</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>
