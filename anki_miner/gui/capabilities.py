@@ -52,6 +52,7 @@ _CAT_AUDIO = QT_TRANSLATE_NOOP("Capabilities", "Audio")
 _CAT_MEDIA = QT_TRANSLATE_NOOP("Capabilities", "Media: clips & screenshots")
 _CAT_CARDS = QT_TRANSLATE_NOOP("Capabilities", "Anki cards")
 _CAT_APPEARANCE = QT_TRANSLATE_NOOP("Capabilities", "Appearance & language")
+_CAT_TOOLS = QT_TRANSLATE_NOOP("Capabilities", "Tools & maintenance")
 
 
 @dataclass(frozen=True)
@@ -77,7 +78,9 @@ class Capability:
     title: str
     description: str
     category: str
-    target: CapabilityTarget
+    # None marks a menu/dialog-only feature: it is listed and searchable but
+    # offers no "Open" button, so its description must say where it lives.
+    target: CapabilityTarget | None = None
     keywords: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -198,41 +201,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("condense", "condensed audio", "dialogue only", "immersion", "passive listening", "standalone"),
     ),
     Capability(
-        id="card-backfill",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Fill missing pitch, frequency, definition and reading fields on already-mined notes.",
-        ),
-        category=_CAT_SOURCES,
-        target=CapabilityTarget("subtitles", "backfill"),
-        # The screen has been called Card Backfill, Backfill and Update Notes
-        # across releases; every one of those words stays a keyword. A rename
-        # that drops the previous name makes the screen unfindable to exactly
-        # the people who already knew it.
-        keywords=(
-            "backfill",
-            "update notes",
-            "fill fields",
-            "pitch",
-            "frequency",
-            "existing notes",
-            "existing cards",
-            "bulk update",
-            "old cards",
-        ),
-    ),
-    Capability(
-        id="restyle-mined-cards",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier."
-        ),
-        category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "anki"),
-        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
-    ),
-    Capability(
         id="analytics",
         title=QT_TRANSLATE_NOOP("Capabilities", "View mining history & stats"),
         description=QT_TRANSLATE_NOOP("Capabilities", "See what you've mined over time with history and statistics."),
@@ -249,6 +217,26 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("analytics"),
         keywords=("reset stats", "clear statistics", "wipe analytics", "erase history", "start over", "delete stats"),
+    ),
+    Capability(
+        id="youtube-cookies",
+        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube cookies / bot bypass"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Use your browser cookies to get past YouTube sign-in and bot checks."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "youtube"),
+        keywords=("cookies", "bot", "sign in", "age restricted", "login", "403", "verify"),
+    ),
+    Capability(
+        id="youtube-limits",
+        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube quality & playlist limits"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Cap video quality, max duration, and how many playlist videos are fetched."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "youtube"),
+        keywords=("playlist limit", "max videos", "duration", "quality", "resolution", "height"),
     ),
     # --- Filtering ---------------------------------------------------------
     Capability(
@@ -405,6 +393,42 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "pitch"),
         keywords=("pitch", "accent", "intonation", "heiban", "nakadaka", "downstep"),
     ),
+    Capability(
+        id="card-backfill",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Fill missing pitch, frequency, definition and reading fields on already-mined notes.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("subtitles", "backfill"),
+        # The screen has been called Card Backfill, Backfill and Update Notes
+        # across releases; every one of those words stays a keyword. A rename
+        # that drops the previous name makes the screen unfindable to exactly
+        # the people who already knew it.
+        keywords=(
+            "backfill",
+            "update notes",
+            "fill fields",
+            "pitch",
+            "frequency",
+            "existing notes",
+            "existing cards",
+            "bulk update",
+            "old cards",
+        ),
+    ),
+    Capability(
+        id="asr",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Speech-to-text (no subtitles needed)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Generate subtitles from audio with a local Whisper model when none exist.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings", "subtitles"),
+        keywords=("asr", "whisper", "speech to text", "stt", "transcribe", "no subtitles", "subtitle generation"),
+    ),
     # --- Audio -------------------------------------------------------------
     Capability(
         id="expression-audio",
@@ -507,6 +531,16 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "anki"),
         keywords=("tags", "tag", "label"),
     ),
+    Capability(
+        id="restyle-mined-cards",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier."
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
+    ),
     # --- Appearance & language ---------------------------------------------
     Capability(
         id="themes",
@@ -543,37 +577,6 @@ CAPABILITIES: tuple[Capability, ...] = (
             "different decks",
             "anime vs novels",
         ),
-    ),
-    Capability(
-        id="asr",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Speech-to-text (no subtitles needed)"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Generate subtitles from audio with a local Whisper model when none exist.",
-        ),
-        category=_CAT_SOURCES,
-        target=CapabilityTarget("settings", "subtitles"),
-        keywords=("asr", "whisper", "speech to text", "stt", "transcribe", "no subtitles", "subtitle generation"),
-    ),
-    Capability(
-        id="youtube-cookies",
-        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube cookies / bot bypass"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Use your browser cookies to get past YouTube sign-in and bot checks."
-        ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("settings", "youtube"),
-        keywords=("cookies", "bot", "sign in", "age restricted", "login", "403", "verify"),
-    ),
-    Capability(
-        id="youtube-limits",
-        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube quality & playlist limits"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Cap video quality, max duration, and how many playlist videos are fetched."
-        ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("settings", "youtube"),
-        keywords=("playlist limit", "max videos", "duration", "quality", "resolution", "height"),
     ),
 )
 

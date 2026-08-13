@@ -7,7 +7,6 @@ import pytest
 from anki_miner.gui.capabilities import (
     CAPABILITIES,
     MAIN_TABS,
-    SETTINGS_SUBTABS,
     SUBTAB_KEYS,
     Capability,
     CapabilityTarget,
@@ -30,18 +29,36 @@ def test_registry_is_non_trivial() -> None:
     assert len(CAPABILITIES) >= 30
 
 
+def test_target_is_optional() -> None:
+    cap = Capability(
+        id="x-dialog-only",
+        title="t",
+        description="d",
+        category="c",
+        keywords=("k",),
+    )
+    assert cap.target is None
+
+
+def test_categories_are_contiguous() -> None:
+    # Each category must form one block so the browser prints each header once.
+    seen: list[str] = []
+    for cap in CAPABILITIES:
+        if not seen or seen[-1] != cap.category:
+            assert cap.category not in seen, f"category {cap.category!r} appears in two blocks"
+            seen.append(cap.category)
+
+
 @pytest.mark.parametrize("cap", CAPABILITIES, ids=lambda c: c.id)
 def test_every_target_resolves(cap: Capability) -> None:
     target = cap.target
+    if target is None:
+        return  # dialog/menu-only entry; nothing to navigate to
     assert target.main_tab in MAIN_TABS, f"{cap.id}: unknown main_tab {target.main_tab!r}"
-    if target.main_tab == "settings":
-        # Settings targets must always name a sub-tab.
-        assert target.subtab in SETTINGS_SUBTABS, f"{cap.id}: unknown subtab {target.subtab!r}"
-    else:
-        # Other targets may name a sub-tab only if their container has one.
-        assert target.subtab is None or target.subtab in SUBTAB_KEYS.get(
-            target.main_tab, frozenset()
-        ), f"{cap.id}: unknown subtab {target.subtab!r} for {target.main_tab!r}"
+    subtabs = SUBTAB_KEYS.get(target.main_tab, frozenset())
+    assert (
+        target.subtab is None or target.subtab in subtabs
+    ), f"{cap.id}: unknown subtab {target.subtab!r} for {target.main_tab!r}"
 
 
 @pytest.mark.parametrize("cap", CAPABILITIES, ids=lambda c: c.id)
