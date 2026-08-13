@@ -1,8 +1,10 @@
-"""The "Find a Feature" browser (Tools menu).
+"""The Usage Guide browser (menu-bar button, F1).
 
 A searchable catalogue of everything Anki Miner can do, built to answer the
 recurring "Can it do X?" support question. Each row names a feature, describes it
 in one line, and offers an "Open" button that jumps to where the feature lives.
+Menu/dialog-only entries carry no target: they show no Open button and their
+description says where the feature lives instead.
 
 The dialog itself only *records* the chosen target; :func:`run_capability_browser`
 performs the navigation after the modal closes (close-then-navigate), so the tab
@@ -52,7 +54,7 @@ class CapabilityBrowser(QDialog):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(_tr("Find a Feature"))
+        self.setWindowTitle(_tr("Anki Miner Usage Guide"))
         self.setObjectName("capability-browser")
         self.resize(560, 600)
 
@@ -145,12 +147,13 @@ class CapabilityBrowser(QDialog):
         text_col.addWidget(desc)
         row_layout.addLayout(text_col, stretch=1)
 
-        open_button = QPushButton(_tr("Open ▸"))
-        open_button.setObjectName("capability-open")
-        # default=False so Enter in the search box doesn't fire a random row.
-        open_button.setAutoDefault(False)
-        open_button.clicked.connect(lambda _checked=False, c=cap: self._choose(c))
-        row_layout.addWidget(open_button, alignment=Qt.AlignmentFlag.AlignTop)
+        if cap.target is not None:
+            open_button = QPushButton(_tr("Open ▸"))
+            open_button.setObjectName("capability-open")
+            # default=False so Enter in the search box doesn't fire a random row.
+            open_button.setAutoDefault(False)
+            open_button.clicked.connect(lambda _checked=False, c=cap: self._choose(c))
+            row_layout.addWidget(open_button, alignment=Qt.AlignmentFlag.AlignTop)
         return row
 
     def _choose(self, cap: Capability) -> None:

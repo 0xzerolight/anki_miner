@@ -101,7 +101,7 @@ def reveal_settings(origin: QWidget, subtab: str) -> None:
     The repair inside a screen-issue banner ("Open Media Settings") has to get
     somewhere, and a tab does not hold a reference to the window that owns it.
     Resolved by duck typing against the top-level window's ``reveal_capability``
-    — the same self-healing, stable-key lookup the Find a Feature browser uses,
+    — the same self-healing, stable-key lookup the Usage Guide browser uses,
     so no screen ever learns a tab index. A window without it (a bare widget in
     a test) is a no-op, not a crash.
     """

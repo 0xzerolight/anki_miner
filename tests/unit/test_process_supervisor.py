@@ -26,6 +26,22 @@ def _pid_is_live(pid: int) -> bool:
         return False
 
 
+def _pid_dies_within(pid: int, timeout_s: float = 2.0) -> bool:
+    """Poll until ``pid`` is dead, bounded by ``timeout_s``.
+
+    killpg queues the signal and returns; the process dies asynchronously.
+    A single instant check right after run_supervised returns races the
+    scheduler and flakes under load — death within a short bound is the
+    actual contract.
+    """
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if not _pid_is_live(pid):
+            return True
+        time.sleep(0.01)
+    return not _pid_is_live(pid)
+
+
 class _FakePipe:
     def __init__(self, chunks: list[bytes]) -> None:
         self._chunks: queue.Queue[bytes] = queue.Queue()
@@ -232,7 +248,7 @@ def test_supervised_success_reaps_descendant_within_total_bound(tmp_path: Path) 
     try:
         assert result.state is SupervisedState.COMPLETED
         assert elapsed < 2.0
-        assert not _pid_is_live(child_pid)
+        assert _pid_dies_within(child_pid)
     finally:
         if _pid_is_live(child_pid):
             os.kill(child_pid, signal.SIGKILL)

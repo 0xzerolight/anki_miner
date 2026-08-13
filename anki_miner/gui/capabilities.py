@@ -1,4 +1,4 @@
-"""Curated catalogue of user-facing features for the "Find a Feature" browser.
+"""Curated catalogue of user-facing features for the Usage Guide browser.
 
 This registry exists to answer the single most common support question —
 *"Can it do X?"* — for features that already exist but are buried among the
@@ -7,9 +7,11 @@ entry (NOT introspected from config) because the value here is good phrasing and
 search synonyms, which an auto-generated list cannot provide.
 
 MAINTENANCE CONVENTION: when you add a user-facing feature or setting, add a
-``Capability`` entry here so it shows up in Tools -> Find a Feature. A test
-(``tests/unit/test_capabilities.py``) checks that every ``target`` resolves to a
-real tab/sub-tab, but nothing forces coverage of new settings -- that is on you.
+``Capability`` entry here so it shows up in the Usage Guide (menu-bar button, F1).
+A test (``tests/unit/test_capabilities.py``) checks that every ``target`` resolves
+to a real tab/sub-tab, but nothing forces coverage of new settings -- that is on
+you. Menu/dialog-only features omit ``target`` (no Open button); their
+description must say where they live.
 
 User-visible strings (``title``, ``description``, ``category``) are wrapped in
 ``QT_TRANSLATE_NOOP`` so ``pylupdate`` extracts them under the ``Capabilities``
@@ -52,6 +54,7 @@ _CAT_AUDIO = QT_TRANSLATE_NOOP("Capabilities", "Audio")
 _CAT_MEDIA = QT_TRANSLATE_NOOP("Capabilities", "Media: clips & screenshots")
 _CAT_CARDS = QT_TRANSLATE_NOOP("Capabilities", "Anki cards")
 _CAT_APPEARANCE = QT_TRANSLATE_NOOP("Capabilities", "Appearance & language")
+_CAT_TOOLS = QT_TRANSLATE_NOOP("Capabilities", "Tools & maintenance")
 
 
 @dataclass(frozen=True)
@@ -71,13 +74,15 @@ class CapabilityTarget:
 
 @dataclass(frozen=True)
 class Capability:
-    """One searchable feature entry shown in the Find a Feature browser."""
+    """One searchable feature entry shown in the Usage Guide browser."""
 
     id: str
     title: str
     description: str
     category: str
-    target: CapabilityTarget
+    # None marks a menu/dialog-only feature: it is listed and searchable but
+    # offers no "Open" button, so its description must say where it lives.
+    target: CapabilityTarget | None = None
     keywords: tuple[str, ...] = field(default_factory=tuple)
 
 
@@ -100,6 +105,28 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("batch", "folder", "bulk", "season", "multiple", "queue", "many episodes"),
     ),
     Capability(
+        id="multi-series-queue",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Queue several series at once"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Add multiple series to one batch run, each with its own video and subtitle folders and per-series subtitle offset.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("video", "batch"),
+        keywords=("multiple series", "several shows", "per-series offset", "queue series", "different folders"),
+    ),
+    Capability(
+        id="word-curator",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Review words before mining"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("video", "single"),
+        keywords=("curator", "review", "approve", "confirm", "pick words", "preview cards", "trim audio", "curation"),
+    ),
+    Capability(
         id="deck-builder",
         title=QT_TRANSLATE_NOOP("Capabilities", "Build a deck by coverage %"),
         description=QT_TRANSLATE_NOOP(
@@ -112,14 +139,22 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="deck-builder-modes",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Build a complete deck (skip per-episode filters)"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.",
+            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("deckbuilder"),
-        keywords=("bypass filters", "include known", "allow duplicates", "complete deck", "everything"),
+        keywords=(
+            "bypass filters",
+            "include known",
+            "allow duplicates",
+            "complete deck",
+            "top n",
+            "coverage target",
+            "everything",
+        ),
     ),
     Capability(
         id="youtube-mining",
@@ -168,6 +203,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("paste", "text", "clipboard", "copy paste", "raw text", "snippet", "article"),
     ),
     Capability(
+        id="subtitle-file-mining",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine subtitle files without video"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Mine vocabulary straight from subtitle files (.srt/.ass/.vtt) as text -- no video needed.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("reading", "subtitles"),
+        keywords=("subtitle only", "srt", "ass", "vtt", "no video", "script", "transcript"),
+    ),
+    Capability(
         id="subtitle-generate",
         title=QT_TRANSLATE_NOOP("Capabilities", "Generate subtitles from audio"),
         description=QT_TRANSLATE_NOOP(
@@ -186,6 +232,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("subtitles", "retime"),
         keywords=("retime", "resync", "re-time", "alass", "sync subtitles", "offset", "standalone"),
+    ),
+    Capability(
+        id="retime-workbench",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Fine-tune subtitle timing by ear"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pick a line, nudge the offset with the arrow keys, and instantly hear it to check the sync against the video.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "retime"),
+        keywords=("nudge", "manual sync", "by ear", "listen", "a/b compare", "offset preview"),
     ),
     Capability(
         id="subtitle-condense",
@@ -219,39 +276,26 @@ CAPABILITIES: tuple[Capability, ...] = (
         ),
     ),
     Capability(
-        id="card-backfill",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
+        id="condense-options",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Condense: track pickers & extra outputs"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Fill missing pitch, frequency, definition and reading fields on already-mined notes.",
+            "Pick the audio and subtitle tracks to condense, and also write condensed subtitles (.srt) and lyrics (.lrc).",
         ),
-        category=_CAT_SOURCES,
-        target=CapabilityTarget("subtitles", "backfill"),
-        # The screen has been called Card Backfill, Backfill and Update Notes
-        # across releases; every one of those words stays a keyword. A rename
-        # that drops the previous name makes the screen unfindable to exactly
-        # the people who already knew it.
-        keywords=(
-            "backfill",
-            "update notes",
-            "fill fields",
-            "pitch",
-            "frequency",
-            "existing notes",
-            "existing cards",
-            "bulk update",
-            "old cards",
-        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "condense"),
+        keywords=("audio track", "subtitle track", "lrc", "lyrics", "condensed subtitles", "track selection"),
     ),
     Capability(
-        id="restyle-mined-cards",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
+        id="condense-metadata",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Tag condensed audio with metadata"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier."
+            "Capabilities",
+            "Optionally add title, album, artist and cover art to condensed audio outputs before the run.",
         ),
-        category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "anki"),
-        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "condense"),
+        keywords=("metadata", "id3", "tags", "album", "artist", "cover art", "mp3 tags"),
     ),
     Capability(
         id="analytics",
@@ -271,6 +315,37 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("analytics"),
         keywords=("reset stats", "clear statistics", "wipe analytics", "erase history", "start over", "delete stats"),
     ),
+    Capability(
+        id="youtube-cookies",
+        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube cookies / bot bypass"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Use your browser cookies to get past YouTube sign-in and bot checks."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "youtube"),
+        keywords=("cookies", "bot", "sign in", "age restricted", "login", "403", "verify"),
+    ),
+    Capability(
+        id="youtube-limits",
+        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube duration & playlist limits"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Cap the maximum video duration and how many playlist videos are fetched."
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "youtube"),
+        keywords=("playlist limit", "max videos", "duration", "length cap", "too long"),
+    ),
+    Capability(
+        id="ytdlp-maintenance",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Keep yt-dlp up to date"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Auto-update the bundled yt-dlp downloader, update it on demand, or point at your own binary.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "youtube"),
+        keywords=("yt-dlp", "ytdlp", "update downloader", "youtube broken", "custom binary"),
+    ),
     # --- Filtering ---------------------------------------------------------
     Capability(
         id="i-plus-one",
@@ -282,11 +357,25 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="frequency-rank-filter",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Skip rare words (frequency cutoff)"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Ignore words rarer than a chosen frequency rank."),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Keep words inside a frequency band"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Skip words rarer than a maximum rank, more common than a minimum rank, or missing from your frequency lists.",
+        ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("max rank", "frequency cutoff", "common only", "rare", "threshold", "top n"),
+        keywords=(
+            "max rank",
+            "min rank",
+            "frequency cutoff",
+            "range",
+            "band",
+            "too common",
+            "too rare",
+            "unranked",
+            "missing from list",
+            "threshold",
+        ),
     ),
     Capability(
         id="known-words-db",
@@ -312,19 +401,22 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="user-known-list",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mark words as known by hand"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Curate your own list of known words that is always applied and survives cache rebuilds."
+            "Capabilities",
+            "Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("manage known words", "user list", "mark known", "custom known"),
+        keywords=("manage known words", "user list", "mark known", "custom known", "export known words", "txt"),
     ),
     Capability(
         id="kana-only-exclude",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude kana-only words"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Drop words written only in hiragana or katakana."),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Drop words written without kanji; ticking both boxes leaves a kanji-only deck."
+        ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("kana", "hiragana", "katakana", "kanji only", "script filter"),
+        keywords=("kana", "hiragana", "katakana", "kanji only", "script filter", "loanwords"),
     ),
     Capability(
         id="word-lists",
@@ -337,22 +429,14 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("blacklist", "whitelist", "word list", "allow list", "block list", "ignore list"),
     ),
     Capability(
-        id="pos-filter",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Filter by part of speech"),
+        id="sentence-length",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Limit sentence length"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Choose which word types (nouns, verbs, particles, ...) are mined."
+            "Capabilities", "Skip sentences longer than a chosen duration or character count."
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("part of speech", "pos", "nouns", "verbs", "particles", "word type", "proper noun"),
-    ),
-    Capability(
-        id="sentence-length",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Limit sentence length"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Skip sentences that are too long or too short."),
-        category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
-        keywords=("sentence length", "too long", "too short", "duration", "char limit"),
+        keywords=("sentence length", "too long", "duration", "char limit", "max length"),
     ),
     Capability(
         id="dedup",
@@ -372,8 +456,41 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Remove names, music notes, or bracketed text from subtitles before parsing.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "subtitles"),
+        target=CapabilityTarget("settings", "filtering"),
         keywords=("regex", "brackets", "music notes", "speaker labels", "clean subtitles", "strip", "parentheses"),
+    ),
+    Capability(
+        id="name-wordsets",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Skip Japanese names"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Exclude bundled name lists -- surnames, given names, places, companies and products -- from mining.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("names", "surname", "given name", "place names", "proper nouns", "jmnedict", "wordsets"),
+    ),
+    Capability(
+        id="reading-min-occurrence",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Require repeat occurrences in a book"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Only mine a word from reading material once it appears a chosen number of times in the book or volume.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("min occurrence", "occurrences", "repeated", "appears n times", "reading threshold"),
+    ),
+    Capability(
+        id="kana-variant-known",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Kana spellings count as known"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Treat the kana spelling of a word you know in kanji as known too (on by default).",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("kana variant", "kana spelling", "alternate spelling", "hiragana form", "same word"),
     ),
     # --- Dictionaries, frequency & pitch -----------------------------------
     Capability(
@@ -426,6 +543,75 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "pitch"),
         keywords=("pitch", "accent", "intonation", "heiban", "nakadaka", "downstep"),
     ),
+    Capability(
+        id="card-backfill",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Fill missing pitch, frequency, definition and reading fields on already-mined notes.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("subtitles", "backfill"),
+        # The screen has been called Card Backfill, Backfill and Update Notes
+        # across releases; every one of those words stays a keyword. A rename
+        # that drops the previous name makes the screen unfindable to exactly
+        # the people who already knew it.
+        keywords=(
+            "backfill",
+            "update notes",
+            "fill fields",
+            "pitch",
+            "frequency",
+            "existing notes",
+            "existing cards",
+            "bulk update",
+            "old cards",
+        ),
+    ),
+    Capability(
+        id="asr",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Speech-to-text (no subtitles needed)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Generate subtitles from audio with a local Whisper model when none exist.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings", "subtitles"),
+        keywords=("asr", "whisper", "speech to text", "stt", "transcribe", "no subtitles", "subtitle generation"),
+    ),
+    Capability(
+        id="dictionary-storage-folder",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Move the resource storage folder"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Relocate where dictionaries and other indexed resources are stored, restore them from disk, or reimport everything.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings", "dictionaries"),
+        keywords=("storage folder", "move", "disk", "location", "reimport", "restore from disk"),
+    ),
+    Capability(
+        id="asr-acceleration",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Speed up subtitle generation (GPU)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Install CUDA or Vulkan acceleration and the silence-skipping pack for the local Whisper model.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings", "subtitles"),
+        keywords=("gpu", "cuda", "vulkan", "acceleration", "vad", "silence", "faster whisper", "slow transcription"),
+    ),
+    Capability(
+        id="alass-tuning",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Tune subtitle alignment (alass)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.",
+        ),
+        category=_CAT_SOURCES,
+        target=CapabilityTarget("settings", "subtitles"),
+        keywords=("alass", "alignment", "split penalty", "framerate", "drift", "sync settings"),
+    ),
     # --- Audio -------------------------------------------------------------
     Capability(
         id="expression-audio",
@@ -458,6 +644,28 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "media"),
         keywords=("sentence audio", "clip audio", "recording", "bitrate", "audio format", "mp3", "opus"),
     ),
+    Capability(
+        id="sentence-tts",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Sentence audio for reading (TTS)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Synthesize spoken sentence audio for cards mined from books, manga and pasted text.",
+        ),
+        category=_CAT_AUDIO,
+        target=CapabilityTarget("settings", "audio"),
+        keywords=("tts", "text to speech", "sentence audio", "reading audio", "synthesized voice"),
+    ),
+    Capability(
+        id="custom-audio-source",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Add a custom word-audio source"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Plug your own online pronunciation-audio server into the audio chain by URL template or JSON contract.",
+        ),
+        category=_CAT_AUDIO,
+        target=CapabilityTarget("settings", "audio"),
+        keywords=("custom audio", "url template", "json source", "own server", "local audio server"),
+    ),
     # --- Media: clips & screenshots ----------------------------------------
     Capability(
         id="screenshots",
@@ -484,6 +692,17 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_MEDIA,
         target=CapabilityTarget("settings", "media"),
         keywords=("padding", "offset", "timing", "lead in", "trail", "sync", "delay"),
+    ),
+    Capability(
+        id="parallel-workers",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Tune parallel media workers"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.",
+        ),
+        category=_CAT_MEDIA,
+        target=CapabilityTarget("settings", "media"),
+        keywords=("parallel", "workers", "cpu", "ram", "performance", "speed", "slow extraction"),
     ),
     # --- Anki cards --------------------------------------------------------
     Capability(
@@ -528,6 +747,39 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "anki"),
         keywords=("tags", "tag", "label"),
     ),
+    Capability(
+        id="anki-connection",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Connect to Anki (AnkiConnect)"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Set the AnkiConnect address and test the connection to your running Anki.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("ankiconnect", "connection", "url", "port", "8765", "test connection", "cannot connect"),
+    ),
+    Capability(
+        id="note-type-preset",
+        title=QT_TRANSLATE_NOOP("Capabilities", "One-click note-type presets"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Apply a preset for a popular note type (Lapis, Kiku, Senren) that fills every field mapping for you.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("preset", "lapis", "kiku", "senren", "note type setup", "auto map fields"),
+    ),
+    Capability(
+        id="bold-target-word",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Bold the mined word in the sentence"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Wrap the mined word in bold inside the sentence fields on your cards.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("bold", "highlight", "emphasize", "target word", "sentence formatting"),
+    ),
     # --- Appearance & language ---------------------------------------------
     Capability(
         id="themes",
@@ -550,10 +802,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Settings profiles"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Keep several named snapshots of every setting and switch between them in one click.",
+            "Keep several named snapshots of every setting and switch between them from the Settings footer.",
         ),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "ui"),
+        target=CapabilityTarget("settings"),
         keywords=(
             "profile",
             "profiles",
@@ -566,35 +818,159 @@ CAPABILITIES: tuple[Capability, ...] = (
         ),
     ),
     Capability(
-        id="asr",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Speech-to-text (no subtitles needed)"),
+        id="custom-themes",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Install custom themes"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Generate subtitles from audio with a local Whisper model when none exist.",
+            "Add your own theme JSON files and preview every theme in the gallery before applying it.",
         ),
-        category=_CAT_SOURCES,
-        target=CapabilityTarget("settings", "subtitles"),
-        keywords=("asr", "whisper", "speech to text", "stt", "transcribe", "no subtitles", "subtitle generation"),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings", "ui"),
+        keywords=("custom theme", "theme json", "gallery", "install theme", "colors", "preview"),
     ),
     Capability(
-        id="youtube-cookies",
-        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube cookies / bot bypass"),
+        id="native-file-dialogs",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Use system file dialogs"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Use your browser cookies to get past YouTube sign-in and bot checks."
+            "Capabilities",
+            "Switch between Anki Miner's built-in file pickers and your operating system's native ones.",
         ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("settings", "youtube"),
-        keywords=("cookies", "bot", "sign in", "age restricted", "login", "403", "verify"),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings", "ui"),
+        keywords=("file dialog", "native picker", "browse window", "file chooser"),
     ),
     Capability(
-        id="youtube-limits",
-        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube quality & playlist limits"),
+        id="settings-search",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Search the settings"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Cap video quality, max duration, and how many playlist videos are fetched."
+            "Capabilities",
+            "Type in the search box at the top of Settings to jump straight to any control.",
         ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("settings", "youtube"),
-        keywords=("playlist limit", "max videos", "duration", "quality", "resolution", "height"),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings"),
+        keywords=("settings search", "find setting", "where is", "jump to setting"),
+    ),
+    Capability(
+        id="settings-export-import",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export / import settings"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Save every setting to a portable file, load it on another machine, or reset everything to defaults -- from the Settings footer.",
+        ),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings"),
+        keywords=("export settings", "import settings", "backup", "transfer", "reset to defaults", "portable"),
+    ),
+    Capability(
+        id="update-check",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Check for app updates"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.",
+        ),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings"),
+        keywords=("update", "new version", "upgrade", "release", "check for updates"),
+    ),
+    # --- Tools & maintenance (menu/dialog features; no Open button) --------
+    Capability(
+        id="restyle-mined-cards",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu."
+        ),
+        category=_CAT_TOOLS,
+        keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
+    ),
+    Capability(
+        id="system-health",
+        title=QT_TRANSLATE_NOOP("Capabilities", "System health check"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("health", "status", "ready", "doctor", "diagnose", "checklist", "fix"),
+    ),
+    Capability(
+        id="setup-wizard",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Setup wizard"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("wizard", "first run", "onboarding", "guided setup", "start over"),
+    ),
+    Capability(
+        id="download-resources",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Download recommended resources"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("recommended", "download resources", "starter pack", "quick setup", "jitendex"),
+    ),
+    Capability(
+        id="desktop-shortcut",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Create a desktop shortcut"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Add an Anki Miner launcher to your desktop from the Tools menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("shortcut", "launcher", "desktop icon"),
+    ),
+    Capability(
+        id="export-diagnostics",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Export diagnostics for a bug report"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Save a zip of logs and system details to attach to a bug report -- from the Help menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("diagnostics", "logs", "bug report", "support", "zip", "troubleshoot"),
+    ),
+    Capability(
+        id="mini-job-monitor",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mini job monitor"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Pop out a small always-on-top window that tracks the current run -- from the status-bar task menu.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("monitor", "floating window", "always on top", "watch progress", "background run"),
+    ),
+    Capability(
+        id="session-recovery",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Crash & session recovery"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "After an unexpected exit, Anki Miner offers to restore unfinished queues and resume interrupted downloads at the next launch.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("recover", "restore", "crash", "resume download", "unfinished queue", "power loss"),
+    ),
+    Capability(
+        id="undo-run",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Undo a mining run"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Delete the notes a run just created, straight from the results dialog.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("undo", "delete notes", "revert", "rollback", "mistake", "wrong deck"),
+    ),
+    Capability(
+        id="keyboard-shortcuts",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Keyboard shortcuts"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -> About.",
+        ),
+        category=_CAT_TOOLS,
+        keywords=("shortcuts", "hotkeys", "keybindings", "keyboard", "f1"),
     ),
 )
 

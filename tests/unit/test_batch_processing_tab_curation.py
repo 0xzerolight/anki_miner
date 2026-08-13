@@ -150,3 +150,60 @@ def test_build_curation_context_routes_through_shared_helpers(tab, facade_proces
     helper.assert_called_once_with(tab.config, video, subs, offset=4.0)
     assert media_context is sentinel_ctx
     assert lookup_fn is facade_processor.definition_service.lookup_all_offline
+
+
+def test_build_curation_context_season_map_adds_resolver(tab, facade_processor, tmp_path):
+    """Worker publishing _curation_media_map → context carries a resolver that
+    builds per-episode contexts from a SNAPSHOT of the map."""
+    subs1 = tmp_path / "ep1.ass"
+    subs2 = tmp_path / "ep2.ass"
+    subs1.touch()
+    subs2.touch()
+    ep2 = tmp_path / "ep2.mkv"
+    season_map = {
+        tmp_path / "ep1.mkv": (subs1, 4.0),
+        ep2: (subs2, 4.0),
+    }
+    tab.worker_thread = SimpleNamespace(
+        curation_processor=facade_processor,
+        _curation_video=tmp_path / "ep1.mkv",
+        _curation_subtitle=subs1,
+        _curation_offset=4.0,
+        _curation_media_map=season_map,
+    )
+    mock_parser = MagicMock()
+    mock_parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "テスト")]
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
+        media_context, _lookup_fn = tab._build_curation_context()
+        assert media_context is not None
+        resolver = media_context.context_resolver
+        assert resolver is not None
+        # Snapshot semantics: clearing the worker's map afterwards (as the
+        # worker does when the gate releases) must not affect the resolver.
+        tab.worker_thread._curation_media_map = None
+        season_map.clear()
+        resolved = resolver(ep2)
+    assert resolved is not None
+    assert resolved.video_file == ep2
+    assert resolved.offset == 4.0
+    assert resolved.context_resolver is None
+    # Unknown episode → None (table-only degradation).
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
+        assert resolver(tmp_path / "unknown.mkv") is None
+
+
+def test_build_curation_context_no_season_map_has_no_resolver(tab, facade_processor, tmp_path):
+    subs = tmp_path / "ep1.ass"
+    subs.touch()
+    tab.worker_thread = SimpleNamespace(
+        curation_processor=facade_processor,
+        _curation_video=tmp_path / "ep1.mkv",
+        _curation_subtitle=subs,
+        _curation_offset=0.0,
+    )
+    mock_parser = MagicMock()
+    mock_parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "テスト")]
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
+        media_context, _lookup_fn = tab._build_curation_context()
+    assert media_context is not None
+    assert media_context.context_resolver is None

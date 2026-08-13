@@ -115,15 +115,14 @@ def test_shortcuts_colliding_with_standard_bindings_are_gone(main_window, sequen
     assert sequence not in keys, f"{sequence} still bound; it is {standard_meaning} everywhere else"
 
 
-def test_f1_opens_the_feature_browser_not_about(main_window):
+def test_f1_opens_the_usage_guide_not_about(main_window):
     """F1 is Help on every desktop, and About is not help (D48-B)."""
     actions = {action.text(): action for action in main_window.findChildren(QAction)}
-    find_feature = next((a for text, a in actions.items() if "Find a Feature" in text), None)
     about = next((a for text, a in actions.items() if "About" in text), None)
+    guide = main_window.usage_guide_action
 
-    assert find_feature is not None, "Find a Feature action missing"
     assert about is not None, "About action missing"
-    assert find_feature.shortcut().toString(QKeySequence.SequenceFormat.PortableText) == "F1"
+    assert guide.shortcut().toString(QKeySequence.SequenceFormat.PortableText) == "F1"
     assert about.shortcut().isEmpty(), "About must not hold a shortcut of its own"
 
 

@@ -11,6 +11,14 @@ from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.processing import ProcessingResult
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.word_pool import (
+    CaptureCurationCallback,
+    MinePassStats,
+    fixed_selection,
+    merge_pools,
+    split_selection,
+)
+from anki_miner.utils.file_pairing import FilePair
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +81,10 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
+        # Season mode: episode → (subtitle, offset), published while the worker
+        # is parked at the curation gate (same attribute name as
+        # BatchQueueWorkerThread so the tab reads one shape for both workers).
+        self._curation_media_map: dict[Path, tuple[Path, float]] | None = None
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -135,52 +147,48 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             # per-episode stage sweep from progress_callback below.
             self.batch_started.emit(len(self.pairs))
 
-            for i, pair in enumerate(self.pairs, 1):
-                if self.check_cancelled():
-                    break
+            if self.curation_callback is not None:
+                # Season mode: one curator for the whole run — pre-pass every
+                # pair, review once, then mine the curated subsets.
+                results = self._run_season()
+            else:
+                for i, pair in enumerate(self.pairs, 1):
+                    if self.check_cancelled():
+                        break
 
-                self.pair_started.emit(i, pair.video.name)
+                    self.pair_started.emit(i, pair.video.name)
 
-                # Process this pair
-                try:
-                    # Mirror BatchQueueWorkerThread's _curation_* attrs so the GUI
-                    # bridge reads one attribute name across both batch workers.
-                    self._curation_video = pair.video
-                    self._curation_subtitle = pair.subtitle
-                    self._curation_offset = self.episode_processor.config.subtitle_offset
-                    # Pass the callback through so per-episode stages (extract ->
-                    # definitions -> cards) drive the composed overall bar; the
-                    # processor wraps it in a fresh StageWeightedProgress per
-                    # episode.
-                    result = self.episode_processor.process_episode(
-                        pair.video,
-                        pair.subtitle,
-                        progress_callback=self.progress_callback,
-                        curation_callback=self.curation_callback,
-                    )
-                    results.append(result)
-
-                except Exception as e:
-                    # Report error for this pair but continue.
-                    # Append a soft-failure result so the batch summary counts
-                    # it as failed (mirrors BatchQueueWorkerThread behaviour).
-                    logger.exception("ManualPairWorkerThread pair %s failed", pair.video.name)
-                    results.append(
-                        ProcessingResult(
-                            total_words_found=0,
-                            new_words_found=0,
-                            cards_created=0,
-                            errors=[str(e)],
-                            video_file=str(pair.video),
-                            subtitle_file=str(pair.subtitle),
+                    # Process this pair
+                    try:
+                        # Mirror BatchQueueWorkerThread's _curation_* attrs so the GUI
+                        # bridge reads one attribute name across both batch workers.
+                        self._curation_video = pair.video
+                        self._curation_subtitle = pair.subtitle
+                        self._curation_offset = self.episode_processor.config.subtitle_offset
+                        # Pass the callback through so per-episode stages (extract ->
+                        # definitions -> cards) drive the composed overall bar; the
+                        # processor wraps it in a fresh StageWeightedProgress per
+                        # episode.
+                        result = self.episode_processor.process_episode(
+                            pair.video,
+                            pair.subtitle,
+                            progress_callback=self.progress_callback,
+                            curation_callback=self.curation_callback,
                         )
-                    )
-                    if self.progress_callback:
-                        self.progress_callback.on_error(pair.video.name, str(e))
+                        results.append(result)
 
-                # Advance the Overall Progress bar after each pair regardless of
-                # success/failure, so it stays monotonic when a pair errors.
-                self.pair_finished.emit(i, len(self.pairs))
+                    except Exception as e:
+                        # Report error for this pair but continue.
+                        # Append a soft-failure result so the batch summary counts
+                        # it as failed (mirrors BatchQueueWorkerThread behaviour).
+                        logger.exception("ManualPairWorkerThread pair %s failed", pair.video.name)
+                        results.append(self._soft_failure(pair, e))
+                        if self.progress_callback:
+                            self.progress_callback.on_error(pair.video.name, str(e))
+
+                    # Advance the Overall Progress bar after each pair regardless of
+                    # success/failure, so it stays monotonic when a pair errors.
+                    self.pair_finished.emit(i, len(self.pairs))
 
             # Report completion
             if self.progress_callback and not self.check_cancelled():
@@ -194,3 +202,123 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             self.report_failure(e, context="ManualPairWorkerThread", on_error=self.error.emit)
+
+    def _soft_failure(self, pair, error: Exception) -> ProcessingResult:
+        """Per-pair soft-failure result (mirrors BatchQueueWorkerThread)."""
+        return ProcessingResult(
+            total_words_found=0,
+            new_words_found=0,
+            cards_created=0,
+            errors=[str(error)],
+            video_file=str(pair.video),
+            subtitle_file=str(pair.subtitle),
+        )
+
+    def _run_season(self) -> list:
+        """Season mode: one curator for the whole quick-pairs run.
+
+        Pre-pass every pair with a capture callback (words collected, zero
+        cards), show the curator ONCE with the merged pool, then mine each
+        pair's curated subset. Returns exactly one result per pre-passed pair
+        (mined, pre-pass zero-card success, or soft failure) so the receipt's
+        counts stay per-pair accurate. A cancel or curator reject returns only
+        the pre-pass soft failures accumulated so far — nothing was mined.
+
+        Progress contract: ``pair_started`` fires during both passes (status
+        label moves); ``pair_finished`` ticks only in the mine pass, the run's
+        actual mining attempts.
+        """
+        assert self.episode_processor is not None
+        assert self.curation_callback is not None
+        processor = self.episode_processor
+        total = len(self.pairs)
+
+        # --- Pre-pass: collect every pair's reviewable words (no cards). ---
+        capture = CaptureCurationCallback()
+        records: list[tuple[FilePair, ProcessingResult]] = []  # (pair, pre-pass outcome)
+
+        def _failures() -> list:
+            return [result for _pair, result in records if not result.success]
+
+        for i, pair in enumerate(self.pairs, 1):
+            if self.check_cancelled():
+                return _failures()
+            self.pair_started.emit(i, pair.video.name)
+            capture.set_episode(pair.video)
+            try:
+                result = processor.process_episode(
+                    pair.video,
+                    pair.subtitle,
+                    progress_callback=self.progress_callback,
+                    curation_callback=capture,
+                )
+            except Exception as e:  # noqa: BLE001 — per-pair guard, run continues
+                logger.exception("ManualPairWorkerThread season pre-pass pair %s failed", pair.video.name)
+                result = self._soft_failure(pair, e)
+                if self.progress_callback:
+                    self.progress_callback.on_error(pair.video.name, str(e))
+            if self.check_cancelled():
+                return _failures()
+            records.append((pair, result))
+
+        # --- One curator for the merged pool. ---
+        pool = merge_pools(capture.pools)
+        ok_pairs = [pair for pair, result in records if result.success]
+        selection: list | None = []
+        if pool and ok_pairs:
+            offset = processor.config.subtitle_offset
+            first = ok_pairs[0]
+            self._curation_video = first.video
+            self._curation_subtitle = first.subtitle
+            self._curation_offset = offset
+            self._curation_media_map = {pair.video: (pair.subtitle, offset) for pair in ok_pairs}
+            try:
+                selection = self.curation_callback(pool)
+            finally:
+                self._curation_media_map = None
+            if selection is None or self.check_cancelled():
+                return _failures()
+
+        # --- Mine pass: each pair gets its curated subset. ---
+        subsets = split_selection(selection or [])
+        strays = subsets.pop(None, None)
+        if strays and ok_pairs:
+            # Defensive: unstamped words mine from the first pair.
+            subsets.setdefault(ok_pairs[0].video, []).extend(strays)
+
+        results: list = []
+        original_stats = processor.stats_service
+        if original_stats is not None:
+            # The pre-pass already recorded one difficulty row per pair; the
+            # mine pass must not insert duplicates.
+            processor.stats_service = MinePassStats(original_stats)
+        try:
+            for i, (pair, prepass_result) in enumerate(records, 1):
+                if self.check_cancelled():
+                    break
+                subset = subsets.get(pair.video, []) if prepass_result.success else []
+                if not subset:
+                    # Pre-pass failure, or nothing selected from this pair —
+                    # the pre-pass outcome IS this pair's result.
+                    results.append(prepass_result)
+                    self.pair_finished.emit(i, total)
+                    continue
+                self.pair_started.emit(i, pair.video.name)
+                try:
+                    result = processor.process_episode(
+                        pair.video,
+                        pair.subtitle,
+                        progress_callback=self.progress_callback,
+                        # Curated objects pass through verbatim to phases 3-5.
+                        curation_callback=fixed_selection(subset),
+                    )
+                except Exception as e:  # noqa: BLE001 — per-pair guard, run continues
+                    logger.exception("ManualPairWorkerThread season mine pair %s failed", pair.video.name)
+                    result = self._soft_failure(pair, e)
+                    if self.progress_callback:
+                        self.progress_callback.on_error(pair.video.name, str(e))
+                results.append(result)
+                self.pair_finished.emit(i, total)
+        finally:
+            processor.stats_service = original_stats
+        return results

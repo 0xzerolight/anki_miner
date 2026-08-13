@@ -124,3 +124,15 @@ class TestTheDialogFitsOnARealScreen:
         original report.
         """
         assert dialog.minimumSizeHint().width() <= 1024
+
+    def test_no_flat_pixel_minimum_dominates_the_floor(self, dialog):
+        """The one part of the floor that answered to no font.
+
+        The toolbar row *is* this dialog's width floor, and the rest of that
+        row -- a label, four verbs -- is text, so the floor moves with the
+        rendered face. The search field's flat 200px minimum was a quarter of
+        the whole floor here and refused to move with it, which left nothing
+        spare for a face 20% wider than the one the 1024px budget was set on:
+        a CI runner resolving ``Sans Serif`` to such a face measured 1039px.
+        """
+        assert dialog.search_input.minimumWidth() < dialog.minimumSizeHint().width() / 6

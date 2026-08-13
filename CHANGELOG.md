@@ -10,8 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Frequency filtering takes a range, not just a ceiling.** Settings -> Filtering now carries one "Frequency Rank Range" row with both ends: a minimum drops the words that are everywhere and already known from exposure, the maximum keeps working as before. Either end can be left open, and the row keeps the band ordered as it is edited.
 - **A preset for the note type you already use.** Settings -> Anki gained a Preset row: pick Lapis, Kiku or Senren and every field mapping is filled from that note type's own published field names, along with the two settings nobody can guess - pitch categories switch to the romaji spelling all three read, and Senren's card-type markers take their own names. The first-run wizard applies the right preset by itself when it recognizes the note type's fields.
 - **A switch for words no frequency list ranks.** "Include Words Missing from the Frequency List" decides what happens to a word carrying no rank. It is off by default, which is what a rank ceiling has always done; turning it on is what a minimum-only range usually wants, since an unranked word is no more likely to be a common one.
+- **The Usage Guide covers 33 features it never listed.** Mining subtitle files without video, the word curator, the name wordsets, sentence TTS for reading, the note-type presets, GPU transcription packs, and the menu-only tools — System Health, the setup wizard, session recovery, undoing a run, the keyboard shortcuts — all show up in search now. Menu-only entries say where they live instead of offering an Open button.
 
 ### Changed
+- **"Find a Feature" is now the Usage Guide, with its own button on the menu bar.** It sits right of Tools (still F1) instead of hiding inside the Tools dropdown. Stale entries were corrected along the way: the subtitle-regex entry now opens the Filtering page it actually lives on, the frequency entry describes the new rank range, and entries no longer promise controls that do not exist (a YouTube quality cap, a part-of-speech picker).
 
 ### Fixed
 
