@@ -4,8308 +4,8571 @@
   <context>
     <name>AboutDialog</name>
     <message>
-      <source>Switch tabs</source>
-      <translation>切换标签页</translation>
+        <source>Switch tabs</source>
+        <translation>切换标签页</translation>
     </message>
     <message>
-      <source>Open Settings</source>
-      <translation>打开设置</translation>
+        <source>Open Settings</source>
+        <translation>打开设置</translation>
     </message>
     <message>
-      <source>Run this screen's main action</source>
-      <translation>运行此页面的主要操作</translation>
+        <source>Run this screen's main action</source>
+        <translation>运行此页面的主要操作</translation>
     </message>
     <message>
-      <source>Find a Feature</source>
-      <translation>查找功能</translation>
+        <source>Find a Feature</source>
+        <translation>查找功能</translation>
     </message>
     <message>
-      <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
-      <translation>自动从视频中挖出日语单词卡片存入 Anki——截图、音频和释义一应俱全。</translation>
+        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
+        <translation>自动从视频中挖出日语单词卡片存入 Anki——截图、音频和释义一应俱全。</translation>
     </message>
     <message>
-      <source>About Anki Miner</source>
-      <translation>关于 Anki Miner</translation>
+        <source>About Anki Miner</source>
+        <translation>关于 Anki Miner</translation>
     </message>
     <message>
-      <source>GitHub</source>
-      <translation>GitHub</translation>
+        <source>GitHub</source>
+        <translation>GitHub</translation>
     </message>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
     <message>
-      <source>Version %1</source>
-      <translation>版本 %1</translation>
+        <source>Version %1</source>
+        <translation>版本 %1</translation>
     </message>
     <message>
-      <source>Keyboard Shortcuts</source>
-      <translation>键盘快捷键</translation>
+        <source>Keyboard Shortcuts</source>
+        <translation>键盘快捷键</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AlassInstallWorker</name>
     <message>
-      <source>Downloading alass…</source>
-      <translation>正在下载 alass…</translation>
+        <source>Downloading alass…</source>
+        <translation>正在下载 alass…</translation>
     </message>
     <message>
-      <source>alass installed successfully.</source>
-      <translation>alass 安装成功。</translation>
+        <source>alass installed successfully.</source>
+        <translation>alass 安装成功。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AnalyticsTab</name>
     <message>
-      <source>Reset Statistics…</source>
-      <translation>重置统计数据…</translation>
+        <source>Reset Statistics…</source>
+        <translation>重置统计数据…</translation>
     </message>
     <message>
-      <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
-      <translation>删除所有记录的挖词会话和难度评分。此操作无法撤销。</translation>
+        <source>Delete every recorded mining session and difficulty score. This cannot be undone.</source>
+        <translation>删除所有记录的挖词会话和难度评分。此操作无法撤销。</translation>
     </message>
     <message>
-      <source>Refresh</source>
-      <translation>刷新</translation>
+        <source>Refresh</source>
+        <translation>刷新</translation>
     </message>
     <message>
-      <source>Analytics Tab</source>
-      <translation>分析标签页</translation>
+        <source>Analytics Tab</source>
+        <translation>分析标签页</translation>
     </message>
     <message>
-      <source>View mining statistics, series difficulty rankings, and progress milestones</source>
-      <translation>查看挖词统计、系列难度排名和进度里程碑</translation>
+        <source>View mining statistics, series difficulty rankings, and progress milestones</source>
+        <translation>查看挖词统计、系列难度排名和进度里程碑</translation>
     </message>
     <message>
-      <source>Overview</source>
-      <translation>概览</translation>
+        <source>Overview</source>
+        <translation>概览</translation>
     </message>
     <message>
-      <source>Total Cards</source>
-      <translation>卡片总数</translation>
+        <source>Total Cards</source>
+        <translation>卡片总数</translation>
     </message>
     <message>
-      <source>Sessions</source>
-      <translation>会话数</translation>
+        <source>Sessions</source>
+        <translation>会话数</translation>
     </message>
     <message>
-      <source>Series Mined</source>
-      <translation>已挖词系列</translation>
+        <source>Series Mined</source>
+        <translation>已挖词系列</translation>
     </message>
     <message>
-      <source>Avg Cards/Session</source>
-      <translation>平均卡片/会话</translation>
+        <source>Avg Cards/Session</source>
+        <translation>平均卡片/会话</translation>
     </message>
     <message>
-      <source>Recent Sessions</source>
-      <translation>近期会话</translation>
+        <source>Recent Sessions</source>
+        <translation>近期会话</translation>
     </message>
     <message>
-      <source>No sessions yet — process an episode to see your history.</source>
-      <translation>尚无会话记录——处理一集视频后即可查看历史记录。</translation>
+        <source>No sessions yet — process an episode to see your history.</source>
+        <translation>尚无会话记录——处理一集视频后即可查看历史记录。</translation>
     </message>
     <message>
-      <source>Date</source>
-      <translation>日期</translation>
+        <source>Date</source>
+        <translation>日期</translation>
     </message>
     <message>
-      <source>Series</source>
-      <translation>系列</translation>
+        <source>Series</source>
+        <translation>系列</translation>
     </message>
     <message>
-      <source>Episode</source>
-      <translation>剧集</translation>
+        <source>Episode</source>
+        <translation>剧集</translation>
     </message>
     <message>
-      <source>Words</source>
-      <translation>单词</translation>
+        <source>Words</source>
+        <translation>单词</translation>
     </message>
     <message>
-      <source>New Words</source>
-      <translation>新词</translation>
+        <source>New Words</source>
+        <translation>新词</translation>
     </message>
     <message>
-      <source>Cards</source>
-      <translation>卡片</translation>
+        <source>Cards</source>
+        <translation>卡片</translation>
     </message>
     <message>
-      <source>Series Difficulty Ranking</source>
-      <translation>系列难度排名</translation>
+        <source>Series Difficulty Ranking</source>
+        <translation>系列难度排名</translation>
     </message>
     <message>
-      <source>Share of unknown words per series — lower means easier for your current level.</source>
-      <translation>各系列的生词占比——数值越低，说明对你当前水平来说越简单。</translation>
+        <source>Share of unknown words per series — lower means easier for your current level.</source>
+        <translation>各系列的生词占比——数值越低，说明对你当前水平来说越简单。</translation>
     </message>
     <message>
-      <source>Mine multiple series to see difficulty comparisons.</source>
-      <translation>挖词多个系列以查看难度对比。</translation>
+        <source>Mine multiple series to see difficulty comparisons.</source>
+        <translation>挖词多个系列以查看难度对比。</translation>
     </message>
     <message>
-      <source>Rank</source>
-      <translation>排名</translation>
+        <source>Rank</source>
+        <translation>排名</translation>
     </message>
     <message>
-      <source>Avg Words</source>
-      <translation>平均单词数</translation>
+        <source>Avg Words</source>
+        <translation>平均单词数</translation>
     </message>
     <message>
-      <source>Avg Unknown</source>
-      <translation>平均未知数</translation>
+        <source>Avg Unknown</source>
+        <translation>平均未知数</translation>
     </message>
     <message>
-      <source>Difficulty</source>
-      <translation>难度</translation>
+        <source>Difficulty</source>
+        <translation>难度</translation>
     </message>
     <message>
-      <source>Milestones</source>
-      <translation>里程碑</translation>
+        <source>Milestones</source>
+        <translation>里程碑</translation>
     </message>
     <message>
-      <source>Analytics could not be refreshed.</source>
-      <translation>无法刷新分析数据。</translation>
+        <source>Analytics could not be refreshed.</source>
+        <translation>无法刷新分析数据。</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Reset Statistics</source>
-      <translation>重置统计数据</translation>
+        <source>Reset Statistics</source>
+        <translation>重置统计数据</translation>
     </message>
     <message>
-      <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
-      <translation>删除所有记录的挖词会话和系列难度评分？此操作无法撤销。不会影响你的 Anki 卡片、已知单词和设置。</translation>
+        <source>Delete every recorded mining session and series difficulty score? This cannot be undone. Your Anki cards, known words, and settings are not affected.</source>
+        <translation>删除所有记录的挖词会话和系列难度评分？此操作无法撤销。不会影响你的 Anki 卡片、已知单词和设置。</translation>
     </message>
     <message>
-      <source>Statistics could not be reset.</source>
-      <translation>无法重置统计数据。</translation>
+        <source>Statistics could not be reset.</source>
+        <translation>无法重置统计数据。</translation>
     </message>
     <message>
-      <source>%1 mining sessions completed</source>
-      <translation>已完成 %1 次挖词会话</translation>
+        <source>%1 mining sessions completed</source>
+        <translation>已完成 %1 次挖词会话</translation>
     </message>
     <message>
-      <source>%1 series mined</source>
-      <translation>已挖词 %1 个系列</translation>
+        <source>%1 series mined</source>
+        <translation>已挖词 %1 个系列</translation>
     </message>
     <message>
-      <source>%1 cards created</source>
-      <translation>已创建 %1 张卡片</translation>
+        <source>%1 cards created</source>
+        <translation>已创建 %1 张卡片</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AnkiConnectPage</name>
     <message>
-      <source>Connect to Anki</source>
-      <translation>连接到 Anki</translation>
+        <source>Connect to Anki</source>
+        <translation>连接到 Anki</translation>
     </message>
     <message>
-      <source>Anki Miner talks to Anki through the AnkiConnect add-on.</source>
-      <translation>Anki Miner 通过 AnkiConnect 附加组件与 Anki 通信。</translation>
+        <source>Anki Miner talks to Anki through the AnkiConnect add-on.</source>
+        <translation>Anki Miner 通过 AnkiConnect 附加组件与 Anki 通信。</translation>
     </message>
     <message>
-      <source>In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
-      <translation>在 Anki 中：工具 → 附加组件 → 获取插件…，粘贴代码 &lt;b&gt;%1&lt;/b&gt;，然后重启 Anki。</translation>
+        <source>In Anki: Tools → Add-ons → Get Add-ons…, paste the code &lt;b&gt;%1&lt;/b&gt;, then restart Anki.</source>
+        <translation>在 Anki 中：工具 → 附加组件 → 获取插件…，粘贴代码 &lt;b&gt;%1&lt;/b&gt;，然后重启 Anki。</translation>
     </message>
     <message>
-      <source>Open the AnkiConnect add-on page</source>
-      <translation>打开 AnkiConnect 附加组件页面</translation>
+        <source>Open the AnkiConnect add-on page</source>
+        <translation>打开 AnkiConnect 附加组件页面</translation>
     </message>
     <message>
-      <source>AnkiConnect URL:</source>
-      <translation>AnkiConnect URL：</translation>
+        <source>AnkiConnect URL:</source>
+        <translation>AnkiConnect URL：</translation>
     </message>
     <message>
-      <source>Recheck</source>
-      <translation>重新检查</translation>
+        <source>Recheck</source>
+        <translation>重新检查</translation>
     </message>
     <message>
-      <source>Checking connection...</source>
-      <translation>正在检查连接...</translation>
+        <source>Enter an AnkiConnect URL.</source>
+        <translation type="unfinished" />
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Checking connection...</source>
+        <translation>正在检查连接...</translation>
+    </message>
+</context><context>
     <name>AnkiProbeController</name>
     <message>
-      <source>Select a note type before fetching fields</source>
-      <translation>请先选择笔记类型再获取字段</translation>
+        <source>Select a note type before fetching fields</source>
+        <translation>请先选择笔记类型再获取字段</translation>
     </message>
     <message>
-      <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
-      <translation>无法获取牌组列表。请检查“设置”中的 AnkiConnect 地址。</translation>
+        <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation>无法获取牌组列表。请检查“设置”中的 AnkiConnect 地址。</translation>
     </message>
     <message>
-      <source>No decks came back. Check that Anki is running with the AnkiConnect add-on.</source>
-      <translation>未获取到牌组。请检查 Anki 是否正在运行且已安装 AnkiConnect 插件。</translation>
+        <source>No decks came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation>未获取到牌组。请检查 Anki 是否正在运行且已安装 AnkiConnect 插件。</translation>
     </message>
     <message>
-      <source>The deck list could not be read from Anki.</source>
-      <translation>无法从 Anki 读取牌组列表。</translation>
+        <source>The deck list could not be read from Anki.</source>
+        <translation>无法从 Anki 读取牌组列表。</translation>
     </message>
     <message>
-      <source>Cannot build AnkiService: %1</source>
-      <translation>无法构建 AnkiService：%1</translation>
+        <source>Cannot build AnkiService: %1</source>
+        <translation>无法构建 AnkiService：%1</translation>
     </message>
     <message>
-      <source>Loading decks from Anki…</source>
-      <translation>正在从 Anki 加载牌组…</translation>
+        <source>Loading decks from Anki…</source>
+        <translation>正在从 Anki 加载牌组…</translation>
     </message>
     <message>
-      <source>Loading note types from Anki…</source>
-      <translation>正在从 Anki 加载笔记类型…</translation>
+        <source>Loading note types from Anki…</source>
+        <translation>正在从 Anki 加载笔记类型…</translation>
     </message>
     <message>
-      <source>Could not load decks. Is Anki running with AnkiConnect?</source>
-      <translation>无法加载牌组。Anki 是否正在运行且启用了 AnkiConnect？</translation>
+        <source>Could not load decks. Is Anki running with AnkiConnect?</source>
+        <translation>无法加载牌组。Anki 是否正在运行且启用了 AnkiConnect？</translation>
     </message>
     <message numerus="yes">
-      <source>%n deck(s) loaded</source>
-      <translation>
-        <numerusform>已加载 %n 个牌组</numerusform>
-      </translation>
+        <source>%n deck(s) loaded</source>
+        <translation>
+            <numerusform>已加载 %n 个牌组</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Deck '%1' is not in Anki — pick one below.</source>
-      <translation>牌组“%1”不在 Anki 中——请在下方选择一个。</translation>
+        <source>Deck '%1' is not in Anki — pick one below.</source>
+        <translation>牌组“%1”不在 Anki 中——请在下方选择一个。</translation>
     </message>
     <message>
-      <source>Could not load note types. Is Anki running with AnkiConnect?</source>
-      <translation>无法加载笔记类型。Anki 是否正在运行且启用了 AnkiConnect？</translation>
+        <source>Could not load note types. Is Anki running with AnkiConnect?</source>
+        <translation>无法加载笔记类型。Anki 是否正在运行且启用了 AnkiConnect？</translation>
     </message>
     <message>
-      <source>Note type '%1' is not in Anki — pick one below.</source>
-      <translation>笔记类型“%1”不在 Anki 中——请在下方选择一个。</translation>
+        <source>Note type '%1' is not in Anki — pick one below.</source>
+        <translation>笔记类型“%1”不在 Anki 中——请在下方选择一个。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AnkiService</name>
     <message>
-      <source>Creating Anki cards</source>
-      <translation>正在创建 Anki 卡片</translation>
+        <source>Creating Anki cards</source>
+        <translation>正在创建 Anki 卡片</translation>
     </message>
     <message>
-      <source>Cards created: %1/%2</source>
-      <translation>已创建卡片：%1/%2</translation>
+        <source>Cards created: %1/%2</source>
+        <translation>已创建卡片：%1/%2</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AnkiSettingsPanel</name>
     <message>
-      <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
-      <translation>不在 Anki 中——请在 Anki 中选择或创建有效项，否则挖词会失败。</translation>
+        <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
+        <translation>不在 Anki 中——请在 Anki 中选择或创建有效项，否则挖词会失败。</translation>
     </message>
     <message>
-      <source>AnkiConnect URL</source>
-      <translation>AnkiConnect URL</translation>
+        <source>AnkiConnect URL</source>
+        <translation>AnkiConnect URL</translation>
     </message>
     <message>
-      <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
-      <translation>默认 http://localhost:8765。如果 AnkiConnect 使用其他端口，请更改。</translation>
+        <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
+        <translation>默认 http://localhost:8765。如果 AnkiConnect 使用其他端口，请更改。</translation>
     </message>
     <message>
-      <source>Card tags</source>
-      <translation>卡片标签</translation>
+        <source>Card tags</source>
+        <translation>卡片标签</translation>
     </message>
     <message>
-      <source>Space-separated tags applied to every mined card. Leave blank for no tags.</source>
-      <translation>应用到每张挖取卡片的标签，以空格分隔。留空则不加标签。</translation>
+        <source>Space-separated tags applied to every mined card. Leave blank for no tags.</source>
+        <translation>应用到每张挖取卡片的标签，以空格分隔。留空则不加标签。</translation>
     </message>
     <message>
-      <source>Test Connection</source>
-      <translation>测试连接</translation>
+        <source>Test Connection</source>
+        <translation>测试连接</translation>
     </message>
     <message>
-      <source>Anki must be running with AnkiConnect installed.</source>
-      <translation>Anki 必须正在运行并已安装 AnkiConnect。</translation>
+        <source>Anki must be running with AnkiConnect installed.</source>
+        <translation>Anki 必须正在运行并已安装 AnkiConnect。</translation>
     </message>
     <message>
-      <source>Deck Name</source>
-      <translation>牌组名称</translation>
+        <source>Deck Name</source>
+        <translation>牌组名称</translation>
     </message>
     <message>
-      <source>Select a deck…</source>
-      <translation>选择牌组…</translation>
+        <source>Select a deck…</source>
+        <translation>选择牌组…</translation>
     </message>
     <message>
-      <source>Reload the deck list from Anki</source>
-      <translation>从 Anki 重新加载牌组列表</translation>
+        <source>Reload the deck list from Anki</source>
+        <translation>从 Anki 重新加载牌组列表</translation>
     </message>
     <message>
-      <source>Target deck for new cards.</source>
-      <translation>新卡片的目标牌组。</translation>
+        <source>Target deck for new cards.</source>
+        <translation>新卡片的目标牌组。</translation>
     </message>
     <message>
-      <source>Note Type</source>
-      <translation>笔记类型</translation>
+        <source>Note Type</source>
+        <translation>笔记类型</translation>
     </message>
     <message>
-      <source>Select a note type…</source>
-      <translation>选择笔记类型…</translation>
+        <source>Select a note type…</source>
+        <translation>选择笔记类型…</translation>
     </message>
     <message>
-      <source>Reload the note type list from Anki</source>
-      <translation>从 Anki 重新加载笔记类型列表</translation>
+        <source>Reload the note type list from Anki</source>
+        <translation>从 Anki 重新加载笔记类型列表</translation>
     </message>
     <message>
-      <source>Anki note type whose fields you'll map below.</source>
-      <translation>你将在下方映射其字段的 Anki 笔记类型。</translation>
+        <source>Anki note type whose fields you'll map below.</source>
+        <translation>你将在下方映射其字段的 Anki 笔记类型。</translation>
     </message>
     <message>
-      <source>Auto-Map Fields from Note Type</source>
-      <translation>从笔记类型自动映射字段</translation>
+        <source>Preset</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
-      <translation>向 AnkiConnect 查询此笔记类型的字段并自动填充下方映射。</translation>
+        <source>Select a preset…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Card Field Mappings</source>
-      <translation>卡片字段映射</translation>
+        <source>Apply</source>
+        <translation type="unfinished">应用</translation>
     </message>
     <message>
-      <source>Map data to note fields (names must match exactly). Blank = skip.</source>
-      <translation>将数据映射到笔记字段（名称必须完全匹配）。留空 = 跳过。</translation>
+        <source>Fill every mapping below from this note type's published field names</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Expression Field</source>
-      <translation>表达字段</translation>
+        <source>Lapis, Kiku and Senren ship fixed field names. Applying overwrites the mappings below.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Stores the mined Japanese word.</source>
-      <translation>存储挖取的日语单词。</translation>
+        <source>Auto-Map Fields from Note Type</source>
+        <translation>从笔记类型自动映射字段</translation>
     </message>
     <message>
-      <source>Sentence Field</source>
-      <translation>例句字段</translation>
+        <source>Query AnkiConnect for this note type's fields and fill the mappings below automatically.</source>
+        <translation>向 AnkiConnect 查询此笔记类型的字段并自动填充下方映射。</translation>
     </message>
     <message>
-      <source>Stores the example sentence from the subtitle.</source>
-      <translation>存储来自字幕的例句。</translation>
+        <source>Card Field Mappings</source>
+        <translation>卡片字段映射</translation>
     </message>
     <message>
-      <source>Definition Field</source>
-      <translation>释义字段</translation>
+        <source>Map data to note fields (names must match exactly). Blank = skip.</source>
+        <translation>将数据映射到笔记字段（名称必须完全匹配）。留空 = 跳过。</translation>
     </message>
     <message>
-      <source>Stores the English definition from the dictionary chain.</source>
-      <translation>存储来自词典链的英语释义。</translation>
+        <source>Expression Field</source>
+        <translation>表达字段</translation>
     </message>
     <message>
-      <source>Glossary Field</source>
-      <translation>术语表字段</translation>
+        <source>Stores the mined Japanese word.</source>
+        <translation>存储挖取的日语单词。</translation>
     </message>
     <message>
-      <source>Concatenated hits from every enabled dictionary as Yomitan HTML.</source>
-      <translation>以 Yomitan HTML 格式拼接所有已启用词典的命中结果。</translation>
+        <source>Sentence Field</source>
+        <translation>例句字段</translation>
     </message>
     <message>
-      <source>Picture Field</source>
-      <translation>图片字段</translation>
+        <source>Stores the example sentence from the subtitle.</source>
+        <translation>存储来自字幕的例句。</translation>
     </message>
     <message>
-      <source>Audio Field</source>
-      <translation>音频字段</translation>
+        <source>Definition Field</source>
+        <translation>释义字段</translation>
     </message>
     <message>
-      <source>Expression Audio Field</source>
-      <translation>表达音频字段</translation>
+        <source>Stores the English definition from the dictionary chain.</source>
+        <translation>存储来自词典链的英语释义。</translation>
     </message>
     <message>
-      <source>Word pronunciation audio; blank disables. Configure sources under Audio settings.</source>
-      <translation>单词发音音频；留空则禁用。可在音频设置中配置来源。</translation>
+        <source>Glossary Field</source>
+        <translation>术语表字段</translation>
     </message>
     <message>
-      <source>Expression Furigana Field</source>
-      <translation>表达振假名字段</translation>
+        <source>Concatenated hits from every enabled dictionary as Yomitan HTML.</source>
+        <translation>以 Yomitan HTML 格式拼接所有已启用词典的命中结果。</translation>
     </message>
     <message>
-      <source>Expression Reading Field</source>
-      <translation>表达读音字段</translation>
+        <source>Picture Field</source>
+        <translation>图片字段</translation>
     </message>
     <message>
-      <source>Stores the expression as plain kana.</source>
-      <translation>以纯假名形式存储表达。</translation>
+        <source>Audio Field</source>
+        <translation>音频字段</translation>
     </message>
     <message>
-      <source>Sentence Furigana Field</source>
-      <translation>例句振假名字段</translation>
+        <source>Expression Audio Field</source>
+        <translation>表达音频字段</translation>
     </message>
     <message>
-      <source>Sentence Reading Field</source>
-      <translation>例句读音字段</translation>
+        <source>Word pronunciation audio; blank disables. Configure sources under Audio settings.</source>
+        <translation>单词发音音频；留空则禁用。可在音频设置中配置来源。</translation>
     </message>
     <message>
-      <source>Stores the sentence as plain kana.</source>
-      <translation>以纯假名形式存储例句。</translation>
+        <source>Expression Furigana Field</source>
+        <translation>表达振假名字段</translation>
     </message>
     <message>
-      <source>Auxiliary Data Fields</source>
-      <translation>辅助数据字段</translation>
+        <source>Expression Reading Field</source>
+        <translation>表达读音字段</translation>
     </message>
     <message>
-      <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
-      <translation>音调字段需要在“设置 → 音调”中指定来源。留空 = 跳过。</translation>
+        <source>Stores the expression as plain kana.</source>
+        <translation>以纯假名形式存储表达。</translation>
     </message>
     <message>
-      <source>Pitch Position Field</source>
-      <translation>音调位置字段</translation>
+        <source>Sentence Furigana Field</source>
+        <translation>例句振假名字段</translation>
     </message>
     <message>
-      <source>Pitch Category Field</source>
-      <translation>音调类别字段</translation>
+        <source>Sentence Reading Field</source>
+        <translation>例句读音字段</translation>
     </message>
     <message>
-      <source>Japanese (平板/頭高/中高/尾高/起伏)</source>
-      <translation>日语（平板/頭高/中高/尾高/起伏）</translation>
+        <source>Stores the sentence as plain kana.</source>
+        <translation>以纯假名形式存储例句。</translation>
     </message>
     <message>
-      <source>Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)</source>
-      <translation>罗马字（heiban/atamadaka/nakadaka/odaka/kifuku）</translation>
+        <source>Auxiliary Data Fields</source>
+        <translation>辅助数据字段</translation>
     </message>
     <message>
-      <source>Pitch Category Format</source>
-      <translation>音调类别格式</translation>
+        <source>Pitch fields need a source in Settings → Pitch Accent. Blank = skip.</source>
+        <translation>音调字段需要在“设置 → 音调”中指定来源。留空 = 跳过。</translation>
     </message>
     <message>
-      <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
-      <translation>罗马字匹配 Yomitan/Lapis CSS；日语用于旧版笔记。</translation>
+        <source>Pitch Position Field</source>
+        <translation>音调位置字段</translation>
     </message>
     <message>
-      <source>Pitch Graph Field</source>
-      <translation>音调图字段</translation>
+        <source>Pitch Category Field</source>
+        <translation>音调类别字段</translation>
     </message>
     <message>
-      <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
-      <translation>存储 SVG 音调图（Yomitan 风格）。</translation>
+        <source>Japanese (平板/頭高/中高/尾高/起伏)</source>
+        <translation>日语（平板/頭高/中高/尾高/起伏）</translation>
     </message>
     <message>
-      <source>Pitch Text Field</source>
-      <translation>音调文本字段</translation>
+        <source>Romaji (heiban/atamadaka/nakadaka/odaka/kifuku)</source>
+        <translation>罗马字（heiban/atamadaka/nakadaka/odaka/kifuku）</translation>
     </message>
     <message>
-      <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
-      <translation>存储带上划线标注的音调读音（Yomitan 风格）。</translation>
+        <source>Pitch Category Format</source>
+        <translation>音调类别格式</translation>
     </message>
     <message>
-      <source>Frequency Field</source>
-      <translation>词频字段</translation>
+        <source>Romaji matches Yomitan/Lapis CSS; Japanese for legacy notes.</source>
+        <translation>罗马字匹配 Yomitan/Lapis CSS；日语用于旧版笔记。</translation>
     </message>
     <message>
-      <source>Stores the per-source frequency breakdown (all sources).</source>
-      <translation>存储按来源分列的词频明细（所有来源）。</translation>
+        <source>Pitch Graph Field</source>
+        <translation>音调图字段</translation>
     </message>
     <message>
-      <source>Frequency Sort Field</source>
-      <translation>词频排序字段</translation>
+        <source>Stores the SVG pitch accent graph (Yomitan-style).</source>
+        <translation>存储 SVG 音调图（Yomitan 风格）。</translation>
     </message>
     <message>
-      <source>Stores the single frequency rank used for sorting (one number).</source>
-      <translation>存储用于排序的单一词频排名（一个数字）。</translation>
+        <source>Pitch Text Field</source>
+        <translation>音调文本字段</translation>
     </message>
     <message>
-      <source>Source Field</source>
-      <translation>来源字段</translation>
+        <source>Stores the overline-annotated pitch reading (Yomitan-style).</source>
+        <translation>存储带上划线标注的音调读音（Yomitan 风格）。</translation>
     </message>
     <message>
-      <source>Stores the show/episode and timestamp the word came from. Blank = skip.</source>
-      <translation>存储单词来源的剧集/节目及时间戳。留空 = 跳过。</translation>
+        <source>Frequency Field</source>
+        <translation>词频字段</translation>
     </message>
     <message>
-      <source>Card Type</source>
-      <translation>卡片类型</translation>
+        <source>Stores the per-source frequency breakdown (all sources).</source>
+        <translation>存储按来源分列的词频明细（所有来源）。</translation>
     </message>
     <message>
-      <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
-      <translation>针对 JP Mining Note 风格的笔记类型：在标记字段中盖上一个“x”，使每张挖取卡片都以所选类型呈现。若你的笔记类型没有此类字段，请保留“无”。</translation>
+        <source>Frequency Sort Field</source>
+        <translation>词频排序字段</translation>
     </message>
     <message>
-      <source>None (disabled)</source>
-      <translation>无（已禁用）</translation>
+        <source>Stores the single frequency rank used for sorting (one number).</source>
+        <translation>存储用于排序的单一词频排名（一个数字）。</translation>
     </message>
     <message>
-      <source>Word + Sentence</source>
-      <translation>单词 + 例句</translation>
+        <source>Source Field</source>
+        <translation>来源字段</translation>
     </message>
     <message>
-      <source>Click</source>
-      <translation>点击</translation>
+        <source>Stores the show/episode and timestamp the word came from. Blank = skip.</source>
+        <translation>存储单词来源的剧集/节目及时间戳。留空 = 跳过。</translation>
     </message>
     <message>
-      <source>Sentence</source>
-      <translation>例句</translation>
+        <source>Card Type</source>
+        <translation>卡片类型</translation>
     </message>
     <message>
-      <source>Audio</source>
-      <translation>音频</translation>
+        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
+        <translation>针对 JP Mining Note 风格的笔记类型：在标记字段中盖上一个“x”，使每张挖取卡片都以所选类型呈现。若你的笔记类型没有此类字段，请保留“无”。</translation>
     </message>
     <message>
-      <source>Default Card Type</source>
-      <translation>默认卡片类型</translation>
+        <source>None (disabled)</source>
+        <translation>无（已禁用）</translation>
     </message>
     <message>
-      <source>Which marker field gets the “x”. None leaves cards untouched.</source>
-      <translation>哪个标记字段获得“x”。选择“无”则不改动卡片。</translation>
+        <source>Word + Sentence</source>
+        <translation>单词 + 例句</translation>
     </message>
     <message>
-      <source>Customize marker field names</source>
-      <translation>自定义标记字段名称</translation>
+        <source>Click</source>
+        <translation>点击</translation>
     </message>
     <message>
-      <source>Word + Sentence:</source>
-      <translation>单词 + 例句：</translation>
+        <source>Sentence</source>
+        <translation>例句</translation>
     </message>
     <message>
-      <source>Click:</source>
-      <translation>点击：</translation>
+        <source>Audio</source>
+        <translation>音频</translation>
     </message>
     <message>
-      <source>Sentence:</source>
-      <translation>例句：</translation>
+        <source>Default Card Type</source>
+        <translation>默认卡片类型</translation>
     </message>
     <message>
-      <source>Audio:</source>
-      <translation>音频：</translation>
+        <source>Which marker field gets the “x”. None leaves cards untouched.</source>
+        <translation>哪个标记字段获得“x”。选择“无”则不改动卡片。</translation>
     </message>
     <message>
-      <source>Refresh</source>
-      <translation>刷新</translation>
+        <source>Customize marker field names</source>
+        <translation>自定义标记字段名称</translation>
     </message>
     <message>
-      <source>Connected</source>
-      <translation>已连接</translation>
+        <source>Word + Sentence:</source>
+        <translation>单词 + 例句：</translation>
     </message>
     <message>
-      <source>Connected to AnkiConnect</source>
-      <translation>已连接到 AnkiConnect</translation>
+        <source>Click:</source>
+        <translation>点击：</translation>
     </message>
     <message>
-      <source>Not connected</source>
-      <translation>未连接</translation>
+        <source>Sentence:</source>
+        <translation>例句：</translation>
     </message>
     <message>
-      <source>Not connected to AnkiConnect</source>
-      <translation>未连接到 AnkiConnect</translation>
+        <source>Audio:</source>
+        <translation>音频：</translation>
     </message>
     <message>
-      <source>Checking...</source>
-      <translation>正在检查...</translation>
+        <source>Refresh</source>
+        <translation>刷新</translation>
     </message>
     <message>
-      <source>Checking connection...</source>
-      <translation>正在检查连接...</translation>
+        <source>Connected</source>
+        <translation>已连接</translation>
     </message>
     <message>
-      <source>Unknown</source>
-      <translation>未知</translation>
+        <source>Connected to AnkiConnect</source>
+        <translation>已连接到 AnkiConnect</translation>
     </message>
     <message>
-      <source>Connection status unknown</source>
-      <translation>连接状态未知</translation>
+        <source>Not connected</source>
+        <translation>未连接</translation>
     </message>
     <message>
-      <source>Deck exists</source>
-      <translation>牌组存在</translation>
+        <source>Not connected to AnkiConnect</source>
+        <translation>未连接到 AnkiConnect</translation>
     </message>
     <message>
-      <source>Deck not found</source>
-      <translation>未找到牌组</translation>
+        <source>Checking...</source>
+        <translation>正在检查...</translation>
     </message>
     <message>
-      <source>Note type exists</source>
-      <translation>笔记类型存在</translation>
+        <source>Checking connection...</source>
+        <translation>正在检查连接...</translation>
     </message>
     <message>
-      <source>Note type not found</source>
-      <translation>未找到笔记类型</translation>
+        <source>Unknown</source>
+        <translation>未知</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Connection status unknown</source>
+        <translation>连接状态未知</translation>
+    </message>
+    <message>
+        <source>Deck exists</source>
+        <translation>牌组存在</translation>
+    </message>
+    <message>
+        <source>Deck not found</source>
+        <translation>未找到牌组</translation>
+    </message>
+    <message>
+        <source>Note type exists</source>
+        <translation>笔记类型存在</translation>
+    </message>
+    <message>
+        <source>Note type not found</source>
+        <translation>未找到笔记类型</translation>
+    </message>
+    <message>
+        <source>Pick a preset first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Applied %1 — %2 field mappings, romaji pitch categories.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>App</name>
     <message>
-      <source>Anki Miner Is Already Running</source>
-      <translation>Anki Miner 已在运行</translation>
+        <source>Anki Miner Is Already Running</source>
+        <translation>Anki Miner 已在运行</translation>
     </message>
     <message>
-      <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
+        <source>Another copy of Anki Miner appears to be running. Running two copies at once can corrupt the known-words and statistics databases.
 
 Continue anyway?</source>
-      <translation>似乎有另一个 Anki Miner 实例正在运行。同时运行两个实例可能会损坏已知单词数据库和统计数据库。
+        <translation>似乎有另一个 Anki Miner 实例正在运行。同时运行两个实例可能会损坏已知单词数据库和统计数据库。
 
 仍要继续吗？</translation>
     </message>
     <message>
-      <source>Continue anyway</source>
-      <translation>仍要继续</translation>
+        <source>Continue anyway</source>
+        <translation>仍要继续</translation>
     </message>
     <message>
-      <source>Quit</source>
-      <translation>退出</translation>
+        <source>Quit</source>
+        <translation>退出</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
-      <source>Downloading %1…</source>
-      <translation>正在下载 %1…</translation>
+        <source>Downloading %1…</source>
+        <translation>正在下载 %1…</translation>
     </message>
     <message>
-      <source>%1 downloaded successfully.</source>
-      <translation>%1 下载成功。</translation>
+        <source>%1 downloaded successfully.</source>
+        <translation>%1 下载成功。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
+    <name>AudioClipEditor</name>
+    <message>
+        <source>Drag either end to trim this word's audio clip; double-click to restore the default. Only this word is affected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stop the clip preview</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play just this clip</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 s</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudioPackImportFlow</name>
     <message>
-      <source>That folder could not be scanned.</source>
-      <translation>无法扫描该文件夹。</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>无法扫描该文件夹。</translation>
     </message>
     <message>
-      <source>Choose audio pack folder</source>
-      <translation>选择音频包文件夹</translation>
+        <source>Choose audio pack folder</source>
+        <translation>选择音频包文件夹</translation>
     </message>
     <message>
-      <source>No recognisable audio packs were found in:
+        <source>No recognisable audio packs were found in:
 %1
 
 Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (speaker subdirectories), JPod legacy ({reading} - {expression} stems).</source>
-      <translation>在以下位置未找到可识别的音频包：
+        <translation>在以下位置未找到可识别的音频包：
 %1
 
 支持的格式：AJT（index.json + media/）、NHK16（entries.json + audio/）、Forvo（发音者子目录）、JPod 旧版（{reading} - {expression} 词干）。</translation>
     </message>
     <message>
-      <source>Pack %1 of %2: %3</source>
-      <translation>第 %1 / %2 个音频包：%3</translation>
+        <source>Pack %1 of %2: %3</source>
+        <translation>第 %1 / %2 个音频包：%3</translation>
     </message>
     <message>
-      <source>Imported %1 audio pack(s):</source>
-      <translation>已导入 %1 个音频包：</translation>
+        <source>Imported %1 audio pack(s):</source>
+        <translation>已导入 %1 个音频包：</translation>
     </message>
     <message>
-      <source>Failed:</source>
-      <translation>失败：</translation>
+        <source>Failed:</source>
+        <translation>失败：</translation>
     </message>
     <message>
-      <source>Cancelled before remaining packs.</source>
-      <translation>在处理剩余音频包前已取消。</translation>
+        <source>Cancelled before remaining packs.</source>
+        <translation>在处理剩余音频包前已取消。</translation>
     </message>
     <message>
-      <source>Audio Packs Added</source>
-      <translation>已添加音频包</translation>
+        <source>Audio Packs Added</source>
+        <translation>已添加音频包</translation>
     </message>
     <message>
-      <source>Done.</source>
-      <translation>完成。</translation>
+        <source>Done.</source>
+        <translation>完成。</translation>
     </message>
     <message>
-      <source>The import finished, but the settings could not be updated.</source>
-      <translation>导入已完成，但无法更新设置。</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>导入已完成，但无法更新设置。</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>The audio pack could not be imported.</source>
-      <translation>无法导入音频包。</translation>
+        <source>The audio pack could not be imported.</source>
+        <translation>无法导入音频包。</translation>
     </message>
     <message>
-      <source>The import worker finished without a completion result.</source>
-      <translation>导入工作线程结束，但未返回完成结果。</translation>
+        <source>The import worker finished without a completion result.</source>
+        <translation>导入工作线程结束，但未返回完成结果。</translation>
     </message>
     <message>
-      <source>Choose audio pack folder to re-import</source>
-      <translation>选择要重新导入的音频包文件夹</translation>
+        <source>Choose audio pack folder to re-import</source>
+        <translation>选择要重新导入的音频包文件夹</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Audio Pack Re-imported</source>
-      <translation>音频包已重新导入</translation>
+        <source>Audio Pack Re-imported</source>
+        <translation>音频包已重新导入</translation>
     </message>
     <message>
-      <source>Re-imported %1 successfully.</source>
-      <translation>已成功重新导入 %1。</translation>
+        <source>Re-imported %1 successfully.</source>
+        <translation>已成功重新导入 %1。</translation>
     </message>
     <message>
-      <source>Re-importing audio pack…</source>
-      <translation>正在重新导入音频包…</translation>
+        <source>Re-importing audio pack…</source>
+        <translation>正在重新导入音频包…</translation>
     </message>
     <message>
-      <source>The audio pack could not be re-imported.</source>
-      <translation>无法重新导入音频包。</translation>
+        <source>The audio pack could not be re-imported.</source>
+        <translation>无法重新导入音频包。</translation>
     </message>
     <message>
-      <source>Another import is still finishing. Wait for it to finish and try again.</source>
-      <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
-      <source>Loading…</source>
-      <translation>正在加载…</translation>
+        <source>Loading…</source>
+        <translation>正在加载…</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Installed audio packs could not be checked.</source>
-      <translation>无法检查已安装的音频包。</translation>
+        <source>Installed audio packs could not be checked.</source>
+        <translation>无法检查已安装的音频包。</translation>
     </message>
     <message>
-      <source>The audio pack was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-      <translation>已从链中移除音频包，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
+        <source>The audio pack was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已从链中移除音频包，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
     </message>
     <message>
-      <source>%1 could not be removed. Its files are intact — try again.</source>
-      <translation>无法移除 %1。其文件保持完好——请重试。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>无法移除 %1。其文件保持完好——请重试。</translation>
     </message>
     <message>
-      <source>%1 was only partly removed. Re-import or repair this audio pack before retrying.</source>
-      <translation>%1 仅被部分移除。请重新导入或修复此音频包后再重试。</translation>
+        <source>%1 was only partly removed. Re-import or repair this audio pack before retrying.</source>
+        <translation>%1 仅被部分移除。请重新导入或修复此音频包后再重试。</translation>
     </message>
     <message>
-      <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-      <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
     </message>
     <message>
-      <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
-      <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
     </message>
     <message>
-      <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
-      <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
     </message>
     <message>
-      <source>Active Audio Sources</source>
-      <translation>活动音频来源</translation>
+        <source>Active Audio Sources</source>
+        <translation>活动音频来源</translation>
     </message>
     <message>
-      <source>Retry missing audio</source>
-      <translation>重试缺失的音频</translation>
+        <source>Retry missing audio</source>
+        <translation>重试缺失的音频</translation>
     </message>
     <message>
-      <source>Re-try words JapanesePod101 had no audio for on the next run</source>
-      <translation>在下次运行时重新尝试获取 JapanesePod101 没有音频的单词</translation>
+        <source>Re-try words JapanesePod101 had no audio for on the next run</source>
+        <translation>在下次运行时重新尝试获取 JapanesePod101 没有音频的单词</translation>
     </message>
     <message>
-      <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
-      <translation>按从上到下的顺序尝试来源——第一个包含该单词音频的来源会被采用。</translation>
+        <source>Restore from Disk</source>
+        <translation type="unfinished">从磁盘恢复</translation>
     </message>
     <message>
-      <source>Add audio source…</source>
-      <translation>添加音频来源…</translation>
+        <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Remove audio source</source>
-      <translation>移除音频来源</translation>
+        <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
+        <translation>按从上到下的顺序尝试来源——第一个包含该单词音频的来源会被采用。</translation>
     </message>
     <message>
-      <source>Remove the selected audio source</source>
-      <translation>移除所选音频来源</translation>
+        <source>Add audio source…</source>
+        <translation>添加音频来源…</translation>
     </message>
     <message>
-      <source>Move up</source>
-      <translation>上移</translation>
+        <source>Remove audio source</source>
+        <translation>移除音频来源</translation>
     </message>
     <message>
-      <source>Move up in priority</source>
-      <translation>提高优先级</translation>
+        <source>Remove the selected audio source</source>
+        <translation>移除所选音频来源</translation>
     </message>
     <message>
-      <source>Move down</source>
-      <translation>下移</translation>
+        <source>Move up</source>
+        <translation>上移</translation>
     </message>
     <message>
-      <source>Move down in priority</source>
-      <translation>降低优先级</translation>
+        <source>Move up in priority</source>
+        <translation>提高优先级</translation>
     </message>
     <message>
-      <source>Audio Pack…</source>
-      <translation>音频包…</translation>
+        <source>Move down</source>
+        <translation>下移</translation>
     </message>
     <message>
-      <source>Online Source…</source>
-      <translation>在线来源…</translation>
+        <source>Move down in priority</source>
+        <translation>降低优先级</translation>
     </message>
     <message>
-      <source>Sentence Audio (Reading Sources)</source>
-      <translation>句子音频（阅读来源）</translation>
+        <source>Audio Pack…</source>
+        <translation>音频包…</translation>
     </message>
     <message>
-      <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-      <translation>为从漫画和书籍挖词的卡片生成朗读句子音频（这些内容没有源音频）。句子文本会发送到所选的在线服务。</translation>
+        <source>Online Source…</source>
+        <translation>在线来源…</translation>
     </message>
     <message>
-      <source>Generate TTS sentence audio</source>
-      <translation>生成 TTS 句子音频</translation>
+        <source>Sentence Audio (Reading Sources)</source>
+        <translation>句子音频（阅读来源）</translation>
     </message>
     <message>
-      <source>Google Translate TTS (tried first)</source>
-      <translation>Google 翻译 TTS（优先尝试）</translation>
+        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
+        <translation>为从漫画和书籍挖词的卡片生成朗读句子音频（这些内容没有源音频）。句子文本会发送到所选的在线服务。</translation>
     </message>
     <message>
-      <source>Naver Papago (fallback)</source>
-      <translation>Naver Papago（备用）</translation>
+        <source>Generate TTS sentence audio</source>
+        <translation>生成 TTS 句子音频</translation>
     </message>
     <message>
-      <source>Select at least one service.</source>
-      <translation>请至少选择一项服务。</translation>
+        <source>Google Translate TTS (tried first)</source>
+        <translation>Google 翻译 TTS（优先尝试）</translation>
     </message>
     <message>
-      <source>Google Translate (synthetic TTS)</source>
-      <translation>Google 翻译（合成 TTS）</translation>
+        <source>Naver Papago (fallback)</source>
+        <translation>Naver Papago（备用）</translation>
     </message>
     <message>
-      <source>Custom JSON</source>
-      <translation>自定义 JSON</translation>
+        <source>Select at least one service.</source>
+        <translation>请至少选择一项服务。</translation>
     </message>
     <message>
-      <source>Custom URL</source>
-      <translation>自定义 URL</translation>
+        <source>Google Translate (synthetic TTS)</source>
+        <translation>Google 翻译（合成 TTS）</translation>
     </message>
     <message>
-      <source>JapanesePod101 (online)</source>
-      <translation>JapanesePod101（在线）</translation>
+        <source>Custom JSON</source>
+        <translation>自定义 JSON</translation>
     </message>
     <message>
-      <source>%1 entries</source>
-      <translation>%1 个条目</translation>
+        <source>Custom URL</source>
+        <translation>自定义 URL</translation>
     </message>
     <message>
-      <source>⚠ re-import required (app upgrade)</source>
-      <translation>⚠ 需要重新导入（应用升级）</translation>
+        <source>JapanesePod101 (online)</source>
+        <translation>JapanesePod101（在线）</translation>
     </message>
     <message>
-      <source>⚠ folder missing — re-import</source>
-      <translation>⚠ 文件夹缺失 — 请重新导入</translation>
+        <source>%1 entries</source>
+        <translation>%1 个条目</translation>
     </message>
     <message>
-      <source>Enabled</source>
-      <translation>已启用</translation>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ 需要重新导入（应用升级）</translation>
     </message>
     <message>
-      <source>Enable %1</source>
-      <translation>启用 %1</translation>
+        <source>⚠ pack missing — re-import</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Enable or disable %1</source>
-      <translation>启用或禁用 %1</translation>
+        <source>⚠ folder missing — re-import</source>
+        <translation>⚠ 文件夹缺失 — 请重新导入</translation>
     </message>
     <message>
-      <source>Remove audio pack</source>
-      <translation>移除音频包</translation>
+        <source>Enabled</source>
+        <translation>已启用</translation>
     </message>
     <message>
-      <source>Remove '%1' from the audio chain?
+        <source>Enable %1</source>
+        <translation>启用 %1</translation>
+    </message>
+    <message>
+        <source>Enable or disable %1</source>
+        <translation>启用或禁用 %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">重新导入</translation>
+    </message>
+    <message>
+        <source>Removal of %1 was not saved. The source is unchanged — try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove audio pack</source>
+        <translation>移除音频包</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the audio chain?
 
 Only the index files are deleted — your original audio files are untouched.
 This cannot be undone. You would need to re-import to use this pack again.</source>
-      <translation>从音频链中移除“%1”？
+        <translation>从音频链中移除“%1”？
 
 仅删除索引文件——你的原始音频文件不受影响。
 此操作无法撤销。你需要重新导入才能再次使用此音频包。</translation>
     </message>
     <message>
-      <source>Remove '%1' from the audio chain?
+        <source>Remove '%1' from the audio chain?
 
 Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-      <translation>要将 “%1” 从音频链中移除吗？
+        <translation>要将 “%1” 从音频链中移除吗？
 
 磁盘上的索引文件将保持不变，因为无法确认该文件夹属于 Anki Miner。</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Re-import…</source>
-      <translation>重新导入…</translation>
+        <source>Re-import…</source>
+        <translation>重新导入…</translation>
     </message>
     <message>
-      <source>Remove</source>
-      <translation>移除</translation>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AudioTracksDialog</name>
     <message>
-      <source>Audio Track</source>
-      <translation>音轨</translation>
+        <source>Audio Track</source>
+        <translation>音轨</translation>
     </message>
     <message>
-      <source>No audio tracks found in this file.</source>
-      <translation>此文件中未找到音轨。</translation>
+        <source>No audio tracks found in this file.</source>
+        <translation>此文件中未找到音轨。</translation>
     </message>
     <message>
-      <source>This file has only one audio track.</source>
-      <translation>此文件只有一条音轨。</translation>
+        <source>This file has only one audio track.</source>
+        <translation>此文件只有一条音轨。</translation>
     </message>
     <message>
-      <source>Auto-detect (currently: Track %1 — %2)</source>
-      <translation>自动检测（当前：音轨 %1 — %2）</translation>
+        <source>Auto-detect (currently: Track %1 — %2)</source>
+        <translation>自动检测（当前：音轨 %1 — %2）</translation>
     </message>
     <message>
-      <source>Auto-detect (no Japanese track found — will use first track)</source>
-      <translation>自动检测（未找到日语音轨 — 将使用第一条音轨）</translation>
+        <source>Auto-detect (no Japanese track found — will use first track)</source>
+        <translation>自动检测（未找到日语音轨 — 将使用第一条音轨）</translation>
     </message>
     <message>
-      <source>Apply</source>
-      <translation>应用</translation>
+        <source>Apply</source>
+        <translation>应用</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AudiobookQueueItemWidget</name>
     <message>
-      <source>%1 cards</source>
-      <translation>%1 张卡片</translation>
+        <source>%1 cards</source>
+        <translation>%1 张卡片</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>AudiobookTab</name>
     <message>
-      <source>Mining unavailable — services not initialized.</source>
-      <translation>挖词不可用 — 服务未初始化。</translation>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>挖词不可用 — 服务未初始化。</translation>
     </message>
     <message>
-      <source>%1 run starting — %2 items.</source>
-      <translation>%1 运行开始 — %2 项。</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 运行开始 — %2 项。</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Audio queue</source>
-      <translation>音频队列</translation>
+        <source>Audio queue</source>
+        <translation>音频队列</translation>
     </message>
     <message>
-      <source>Attempt %1 of %2 · retrying in %3s</source>
-      <translation>第 %1/%2 次尝试 · 将在 %3 秒后重试</translation>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation>第 %1/%2 次尝试 · 将在 %3 秒后重试</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Queue done: %1 succeeded, %2 failed.</source>
-      <translation>队列完成：%1 成功，%2 失败。</translation>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>队列完成：%1 成功，%2 失败。</translation>
     </message>
     <message>
-      <source>Mining %1 of %2: %3</source>
-      <translation>正在挖词 %2 中的第 %1 项：%3</translation>
+        <source>Mining %1 of %2: %3</source>
+        <translation>正在挖词 %2 中的第 %1 项：%3</translation>
     </message>
     <message>
-      <source>Mined %1: %2 cards.</source>
-      <translation>已挖词 %1：%2 张卡片。</translation>
+        <source>Mined %1: %2 cards.</source>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
-      <source>Cancelled %1.</source>
-      <translation>已取消 %1。</translation>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
     </message>
     <message>
-      <source>Failed %1: %2.</source>
-      <translation>失败 %1：%2。</translation>
+        <source>Failed %1: %2.</source>
+        <translation>失败 %1：%2。</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Complete — %1 succeeded</source>
-      <translation>完成——%1 成功</translation>
+        <source>Complete — %1 succeeded</source>
+        <translation>完成——%1 成功</translation>
     </message>
     <message>
-      <source>Complete — %1 succeeded, %2 failed</source>
-      <translation>完成——%1 成功，%2 失败</translation>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>完成——%1 成功，%2 失败</translation>
     </message>
     <message>
-      <source>Audio File:</source>
-      <translation>音频文件：</translation>
+        <source>Audio File:</source>
+        <translation>音频文件：</translation>
     </message>
     <message>
-      <source>Subtitle File:</source>
-      <translation>字幕文件：</translation>
+        <source>Subtitle File:</source>
+        <translation>字幕文件：</translation>
     </message>
     <message>
-      <source>This field takes an audio file.</source>
-      <translation>此字段需要音频文件。</translation>
+        <source>This field takes an audio file.</source>
+        <translation>此字段需要音频文件。</translation>
     </message>
     <message>
-      <source>This field takes a subtitle file.</source>
-      <translation>此字段需要字幕文件。</translation>
+        <source>This field takes a subtitle file.</source>
+        <translation>此字段需要字幕文件。</translation>
     </message>
     <message>
-      <source>Add</source>
-      <translation>添加</translation>
+        <source>Add</source>
+        <translation>添加</translation>
     </message>
     <message>
-      <source>Add the audio + subtitle pair to the queue.</source>
-      <translation>将音频 + 字幕对添加到队列。</translation>
+        <source>Add the audio + subtitle pair to the queue.</source>
+        <translation>将音频 + 字幕对添加到队列。</translation>
     </message>
     <message>
-      <source>Pick an audio file and its subtitle above, then click Add.</source>
-      <translation>在上方选择一个音频文件及其字幕，然后点击“添加”。</translation>
+        <source>Pick an audio file and its subtitle above, then click Add.</source>
+        <translation>在上方选择一个音频文件及其字幕，然后点击“添加”。</translation>
     </message>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup for each audio file before creating cards.</source>
-      <translation>在创建卡片前，为每个音频文件显示单词选择弹窗。</translation>
+        <source>Show the word-selection popup for each audio file before creating cards.</source>
+        <translation>在创建卡片前，为每个音频文件显示单词选择弹窗。</translation>
     </message>
     <message>
-      <source>Mine every queued item into Anki cards.</source>
-      <translation>将队列中每一项挖词为 Anki 卡片。</translation>
+        <source>Mine every queued item into Anki cards.</source>
+        <translation>将队列中每一项挖词为 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Clear</source>
-      <translation>清空</translation>
+        <source>Clear</source>
+        <translation>清空</translation>
     </message>
     <message>
-      <source>Remove every queued item that is not currently mining.</source>
-      <translation>移除队列中所有当前未在挖词的项。</translation>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation>移除队列中所有当前未在挖词的项。</translation>
     </message>
     <message>
-      <source>Cancel the active run.</source>
-      <translation>取消当前运行。</translation>
+        <source>Cancel the active run.</source>
+        <translation>取消当前运行。</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>audiobooks</source>
-      <translation>有声书</translation>
+        <source>audiobooks</source>
+        <translation>有声书</translation>
     </message>
     <message>
-      <source>Audio file not found: %1</source>
-      <translation>未找到音频文件：%1</translation>
+        <source>Audio file not found: %1</source>
+        <translation>未找到音频文件：%1</translation>
     </message>
     <message>
-      <source>(none selected)</source>
-      <translation>（未选择）</translation>
+        <source>(none selected)</source>
+        <translation>（未选择）</translation>
     </message>
     <message>
-      <source>Subtitle file not found: %1</source>
-      <translation>未找到字幕文件：%1</translation>
+        <source>Subtitle file not found: %1</source>
+        <translation>未找到字幕文件：%1</translation>
     </message>
     <message>
-      <source>File not found: %1</source>
-      <translation>未找到文件：%1</translation>
+        <source>File not found: %1</source>
+        <translation>未找到文件：%1</translation>
     </message>
     <message>
-      <source>Interrupted when Anki Miner closed</source>
-      <translation>Anki Miner 关闭时中断</translation>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation>Anki Miner 关闭时中断</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>BatchProcessingTab</name>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup for each episode before creating cards</source>
-      <translation>在创建卡片前，为每集显示单词选择弹窗</translation>
+        <source>Show the word-selection popup for each episode before creating cards</source>
+        <translation>在创建卡片前，为每集显示单词选择弹窗</translation>
     </message>
     <message>
-      <source>Overall Progress</source>
-      <translation>总进度</translation>
+        <source>Overall Progress</source>
+        <translation>总进度</translation>
     </message>
     <message>
-      <source>Retry Failed</source>
-      <translation>重试失败项</translation>
+        <source>Retry Failed</source>
+        <translation>重试失败项</translation>
     </message>
     <message>
-      <source>Quick Processing</source>
-      <translation>快速处理</translation>
+        <source>Quick Processing</source>
+        <translation>快速处理</translation>
     </message>
     <message>
-      <source>Video Folder:</source>
-      <translation>视频文件夹：</translation>
+        <source>Video Folder:</source>
+        <translation>视频文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Folder:</source>
-      <translation>字幕文件夹：</translation>
+        <source>Subtitle Folder:</source>
+        <translation>字幕文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Offset:</source>
-      <translation>字幕偏移：</translation>
+        <source>Subtitle Offset:</source>
+        <translation>字幕偏移：</translation>
     </message>
     <message>
-      <source> seconds</source>
-      <translation> 秒</translation>
+        <source> seconds</source>
+        <translation> 秒</translation>
     </message>
     <message>
-      <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
-      <translation>调整所有剧集的字幕时间（正值 = 延后，负值 = 提前）</translation>
+        <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation>调整所有剧集的字幕时间（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
-      <source>Process Folder</source>
-      <translation>处理文件夹</translation>
+        <source>Process Folder</source>
+        <translation>处理文件夹</translation>
     </message>
     <message>
-      <source>Process every episode pair found in the selected folders</source>
-      <translation>处理所选文件夹中找到的每个剧集对</translation>
+        <source>Process every episode pair found in the selected folders</source>
+        <translation>处理所选文件夹中找到的每个剧集对</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel processing</source>
-      <translation>取消处理</translation>
+        <source>Cancel processing</source>
+        <translation>取消处理</translation>
     </message>
     <message>
-      <source>Choose existing video and subtitle folders.</source>
-      <translation>选择已有的视频和字幕文件夹。</translation>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation>选择已有的视频和字幕文件夹。</translation>
     </message>
     <message>
-      <source>No subtitle file could be matched to any video file in those folders.</source>
-      <translation>无法将这些文件夹中的任何字幕文件与视频文件匹配。</translation>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
+        <translation>无法将这些文件夹中的任何字幕文件与视频文件匹配。</translation>
     </message>
     <message>
-      <source>episodes</source>
-      <translation>剧集</translation>
+        <source>episodes</source>
+        <translation>剧集</translation>
     </message>
     <message>
-      <source>Starting batch processing of %1 episodes...</source>
-      <translation>正在开始批量处理 %1 集…</translation>
+        <source>Starting batch processing of %1 episodes...</source>
+        <translation>正在开始批量处理 %1 集…</translation>
     </message>
     <message>
-      <source>Batch mining</source>
-      <translation>批量挖词</translation>
+        <source>Batch mining</source>
+        <translation>批量挖词</translation>
     </message>
     <message>
-      <source>%1 was skipped: its folders no longer exist.</source>
-      <translation>已跳过 %1：其文件夹已不存在。</translation>
+        <source>%1 was skipped: its folders no longer exist.</source>
+        <translation>已跳过 %1：其文件夹已不存在。</translation>
     </message>
     <message>
-      <source>%1 was skipped: it is missing a folder.</source>
-      <translation>已跳过 %1：缺少文件夹。</translation>
+        <source>%1 was skipped: it is missing a folder.</source>
+        <translation>已跳过 %1：缺少文件夹。</translation>
     </message>
     <message>
-      <source>series</source>
-      <translation>系列</translation>
+        <source>series</source>
+        <translation>系列</translation>
     </message>
     <message>
-      <source>No valid series in the queue to process.</source>
-      <translation>队列中没有可处理的有效系列。</translation>
+        <source>No valid series in the queue to process.</source>
+        <translation>队列中没有可处理的有效系列。</translation>
     </message>
     <message>
-      <source>Starting queue processing (%1 series)...</source>
-      <translation>正在开始队列处理（%1 个系列）…</translation>
+        <source>Starting queue processing (%1 series)...</source>
+        <translation>正在开始队列处理（%1 个系列）…</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Starting queue processing...</source>
-      <translation>正在开始队列处理…</translation>
+        <source>Starting queue processing...</source>
+        <translation>正在开始队列处理…</translation>
     </message>
     <message>
-      <source>Starting batch processing...</source>
-      <translation>正在开始批量处理…</translation>
+        <source>Starting batch processing...</source>
+        <translation>正在开始批量处理…</translation>
     </message>
     <message>
-      <source>Episode %1/%2: %3</source>
-      <translation>剧集 %1/%2：%3</translation>
+        <source>Episode %1/%2: %3</source>
+        <translation>剧集 %1/%2：%3</translation>
     </message>
     <message>
-      <source>Processing series: %1</source>
-      <translation>正在处理系列：%1</translation>
+        <source>Processing series: %1</source>
+        <translation>正在处理系列：%1</translation>
     </message>
     <message>
-      <source>Series %1/%2: %3</source>
-      <translation>系列 %1/%2：%3</translation>
+        <source>Series %1/%2: %3</source>
+        <translation>系列 %1/%2：%3</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Complete — %1 cards created</source>
-      <translation>完成——已创建 %1 张卡片</translation>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Folder not found: %1</source>
-      <translation>未找到文件夹：%1</translation>
+        <source>Complete — %1 cards created</source>
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Interrupted when Anki Miner closed</source>
-      <translation>Anki Miner 关闭时中断</translation>
+        <source>Folder not found: %1</source>
+        <translation>未找到文件夹：%1</translation>
     </message>
     <message>
-      <source>No Items to Retry</source>
-      <translation>无可重试项</translation>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation>Anki Miner 关闭时中断</translation>
     </message>
     <message>
-      <source>No failed items eligible for retry.</source>
-      <translation>没有符合重试条件的失败项。</translation>
+        <source>No Items to Retry</source>
+        <translation>无可重试项</translation>
     </message>
     <message>
-      <source>Retrying %1 failed items...</source>
-      <translation>正在重试 %1 个失败项…</translation>
+        <source>No failed items eligible for retry.</source>
+        <translation>没有符合重试条件的失败项。</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Retrying %1 failed items...</source>
+        <translation>正在重试 %1 个失败项…</translation>
+    </message>
+</context><context>
     <name>Capabilities</name>
     <message>
-      <source>Mining workflows</source>
-      <translation>挖词工作流</translation>
+        <source>Mining workflows</source>
+        <translation>挖词工作流</translation>
     </message>
     <message>
-      <source>Filtering: what gets mined</source>
-      <translation>过滤：挖取哪些内容</translation>
+        <source>Filtering: what gets mined</source>
+        <translation>过滤：挖取哪些内容</translation>
     </message>
     <message>
-      <source>Dictionaries, frequency &amp; pitch</source>
-      <translation>词典、词频与音调</translation>
+        <source>Dictionaries, frequency &amp; pitch</source>
+        <translation>词典、词频与音调</translation>
     </message>
     <message>
-      <source>Audio</source>
-      <translation>音频</translation>
+        <source>Audio</source>
+        <translation>音频</translation>
     </message>
     <message>
-      <source>Media: clips &amp; screenshots</source>
-      <translation>媒体：片段与截图</translation>
+        <source>Media: clips &amp; screenshots</source>
+        <translation>媒体：片段与截图</translation>
     </message>
     <message>
-      <source>Anki cards</source>
-      <translation>Anki 卡片</translation>
+        <source>Anki cards</source>
+        <translation>Anki 卡片</translation>
     </message>
     <message>
-      <source>Appearance &amp; language</source>
-      <translation>外观与语言</translation>
+        <source>Appearance &amp; language</source>
+        <translation>外观与语言</translation>
     </message>
     <message>
-      <source>Mine a single episode</source>
-      <translation>挖取单集</translation>
+        <source>Mine a single episode</source>
+        <translation>挖取单集</translation>
     </message>
     <message>
-      <source>Mine vocabulary from one video paired with its subtitle file.</source>
-      <translation>从一个视频及其配对的字幕文件中挖取词汇。</translation>
+        <source>Mine vocabulary from one video paired with its subtitle file.</source>
+        <translation>从一个视频及其配对的字幕文件中挖取词汇。</translation>
     </message>
     <message>
-      <source>Batch-mine a whole folder</source>
-      <translation>批量挖取整个文件夹</translation>
+        <source>Batch-mine a whole folder</source>
+        <translation>批量挖取整个文件夹</translation>
     </message>
     <message>
-      <source>Queue an entire folder of episodes and mine them in one run.</source>
-      <translation>将整个文件夹的剧集加入队列，一次运行全部挖取。</translation>
+        <source>Queue an entire folder of episodes and mine them in one run.</source>
+        <translation>将整个文件夹的剧集加入队列，一次运行全部挖取。</translation>
     </message>
     <message>
-      <source>Build a deck by coverage %</source>
-      <translation>按覆盖率 % 构建牌组</translation>
+        <source>Build a deck by coverage %</source>
+        <translation>按覆盖率 % 构建牌组</translation>
     </message>
     <message>
-      <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
-      <translation>构建按词频排序的牌组，覆盖整个语料库中所选的百分比。</translation>
+        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
+        <translation>构建按词频排序的牌组，覆盖整个语料库中所选的百分比。</translation>
     </message>
     <message>
-      <source>Build a complete deck (skip per-episode filters)</source>
-      <translation>构建完整牌组（跳过逐集过滤）</translation>
+        <source>Build a complete deck (skip per-episode filters)</source>
+        <translation>构建完整牌组（跳过逐集过滤）</translation>
     </message>
     <message>
-      <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
-      <translation>牌组构建器可绕过 i+1/词频/单词列表过滤器并允许重复，以实现完整覆盖。</translation>
+        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
+        <translation>牌组构建器可绕过 i+1/词频/单词列表过滤器并允许重复，以实现完整覆盖。</translation>
     </message>
     <message>
-      <source>Mine from YouTube</source>
-      <translation>从 YouTube 挖词</translation>
+        <source>Mine from YouTube</source>
+        <translation>从 YouTube 挖词</translation>
     </message>
     <message>
-      <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
-      <translation>直接从 YouTube 网址或播放列表挖词 -- 无需本地文件。</translation>
+        <source>Mine straight from a YouTube URL or playlist -- no local files needed.</source>
+        <translation>直接从 YouTube 网址或播放列表挖词 -- 无需本地文件。</translation>
     </message>
     <message>
-      <source>Mine from an audiobook</source>
-      <translation>从有声书挖词</translation>
+        <source>Mine from an audiobook</source>
+        <translation>从有声书挖词</translation>
     </message>
     <message>
-      <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
-      <translation>使用有声书或音频文件的文字稿从中挖取词汇。</translation>
+        <source>Mine vocabulary from an audiobook or audio file using its transcript.</source>
+        <translation>使用有声书或音频文件的文字稿从中挖取词汇。</translation>
     </message>
     <message>
-      <source>Mine from manga</source>
-      <translation>从漫画挖词</translation>
+        <source>Mine from manga</source>
+        <translation>从漫画挖词</translation>
     </message>
     <message>
-      <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-      <translation>从用 mokuro 处理过的漫画卷中挖取词汇。</translation>
+        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <translation>从用 mokuro 处理过的漫画卷中挖取词汇。</translation>
     </message>
     <message>
-      <source>Mine from novels</source>
-      <translation>从小说挖词</translation>
+        <source>Mine from novels</source>
+        <translation>从小说挖词</translation>
     </message>
     <message>
-      <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
-      <translation>从小说和其他文本（EPUB、青空文库、纯文本）中挖取词汇。</translation>
+        <source>Mine vocabulary from novels and other text (EPUB, Aozora, plain text).</source>
+        <translation>从小说和其他文本（EPUB、青空文库、纯文本）中挖取词汇。</translation>
     </message>
     <message>
-      <source>Mine pasted text</source>
-      <translation>从粘贴文本中挖词</translation>
+        <source>Mine pasted text</source>
+        <translation>从粘贴文本中挖词</translation>
     </message>
     <message>
-      <source>Paste any Japanese text and mine it straight into Anki cards.</source>
-      <translation>粘贴任意日语文本，直接挖词生成 Anki 卡片。</translation>
+        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
+        <translation>粘贴任意日语文本，直接挖词生成 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Generate subtitles from audio</source>
-      <translation>从音频生成字幕</translation>
+        <source>Generate subtitles from audio</source>
+        <translation>从音频生成字幕</translation>
     </message>
     <message>
-      <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
-      <translation>使用本地 Whisper 模型从音频创建字幕——作为独立工具。</translation>
+        <source>Create subtitles from audio with a local Whisper model -- as a standalone tool.</source>
+        <translation>使用本地 Whisper 模型从音频创建字幕——作为独立工具。</translation>
     </message>
     <message>
-      <source>Re-time existing subtitles</source>
-      <translation>重新校准现有字幕</translation>
+        <source>Re-time existing subtitles</source>
+        <translation>重新校准现有字幕</translation>
     </message>
     <message>
-      <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
-      <translation>根据视频重新同步现有字幕——作为独立工具。</translation>
+        <source>Re-sync existing subtitles against the video -- as a standalone tool.</source>
+        <translation>根据视频重新同步现有字幕——作为独立工具。</translation>
     </message>
     <message>
-      <source>Condense audio from subtitles</source>
-      <translation>从字幕压缩音频</translation>
+        <source>Condense audio from subtitles</source>
+        <translation>从字幕压缩音频</translation>
     </message>
     <message>
-      <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
-      <translation>从视频或音频文件及其字幕构建仅含对白的压缩音频。</translation>
+        <source>Build dialogue-only condensed audio from a video or audio file and its subtitles.</source>
+        <translation>从视频或音频文件及其字幕构建仅含对白的压缩音频。</translation>
     </message>
     <message>
-      <source>Fill missing fields on existing notes</source>
-      <translation>补全已有笔记中的缺失字段</translation>
+        <source>Fill missing fields on existing notes</source>
+        <translation>补全已有笔记中的缺失字段</translation>
     </message>
     <message>
-      <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
-      <translation>补全已挖词生成的笔记中缺失的音调、词频、释义和读音字段。</translation>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
+        <translation>补全已挖词生成的笔记中缺失的音调、词频、释义和读音字段。</translation>
     </message>
     <message>
-      <source>Restyle mined cards</source>
-      <translation>重新设置挖词卡片样式</translation>
+        <source>Restyle mined cards</source>
+        <translation>重新设置挖词卡片样式</translation>
     </message>
     <message>
-      <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
-      <translation>将最新的 Anki Miner 样式重新应用到你之前挖出的卡片。</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
+        <translation>将最新的 Anki Miner 样式重新应用到你之前挖出的卡片。</translation>
     </message>
     <message>
-      <source>View mining history &amp; stats</source>
-      <translation>查看挖词历史与统计</translation>
+        <source>View mining history &amp; stats</source>
+        <translation>查看挖词历史与统计</translation>
     </message>
     <message>
-      <source>See what you've mined over time with history and statistics.</source>
-      <translation>通过历史和统计查看你一段时间内挖取的内容。</translation>
+        <source>See what you've mined over time with history and statistics.</source>
+        <translation>通过历史和统计查看你一段时间内挖取的内容。</translation>
     </message>
     <message>
-      <source>Reset mining statistics</source>
-      <translation>重置挖词统计数据</translation>
+        <source>Reset mining statistics</source>
+        <translation>重置挖词统计数据</translation>
     </message>
     <message>
-      <source>Clear every recorded session and difficulty score to start counting again.</source>
-      <translation>清除所有记录的会话和难度评分，重新开始统计。</translation>
+        <source>Clear every recorded session and difficulty score to start counting again.</source>
+        <translation>清除所有记录的会话和难度评分，重新开始统计。</translation>
     </message>
     <message>
-      <source>i+1 sentence mining</source>
-      <translation>i+1 句子挖词</translation>
+        <source>i+1 sentence mining</source>
+        <translation>i+1 句子挖词</translation>
     </message>
     <message>
-      <source>Mine only sentences that contain exactly one unknown word.</source>
-      <translation>仅挖取恰好包含一个未知单词的句子。</translation>
+        <source>Mine only sentences that contain exactly one unknown word.</source>
+        <translation>仅挖取恰好包含一个未知单词的句子。</translation>
     </message>
     <message>
-      <source>Skip rare words (frequency cutoff)</source>
-      <translation>跳过生僻词（词频截断）</translation>
+        <source>Skip rare words (frequency cutoff)</source>
+        <translation>跳过生僻词（词频截断）</translation>
     </message>
     <message>
-      <source>Ignore words rarer than a chosen frequency rank.</source>
-      <translation>忽略比所选词频排名更生僻的单词。</translation>
+        <source>Ignore words rarer than a chosen frequency rank.</source>
+        <translation>忽略比所选词频排名更生僻的单词。</translation>
     </message>
     <message>
-      <source>Skip words you already know</source>
-      <translation>跳过你已知的单词</translation>
+        <source>Skip words you already know</source>
+        <translation>跳过你已知的单词</translation>
     </message>
     <message>
-      <source>Skip words already in your Anki collection or previously mined.</source>
-      <translation>跳过已存在于你的 Anki 收藏或此前已挖过的单词。</translation>
+        <source>Skip words already in your Anki collection or previously mined.</source>
+        <translation>跳过已存在于你的 Anki 收藏或此前已挖过的单词。</translation>
     </message>
     <message>
-      <source>Exclude specific Anki decks from 'known'</source>
-      <translation>将特定 Anki 牌组排除在“已知”之外</translation>
+        <source>Exclude specific Anki decks from 'known'</source>
+        <translation>将特定 Anki 牌组排除在“已知”之外</translation>
     </message>
     <message>
-      <source>Stop chosen decks from counting as known so their words can still be mined.</source>
-      <translation>让所选牌组不计为已知，使其中的单词仍可被挖取。</translation>
+        <source>Stop chosen decks from counting as known so their words can still be mined.</source>
+        <translation>让所选牌组不计为已知，使其中的单词仍可被挖取。</translation>
     </message>
     <message>
-      <source>Mark words as known by hand</source>
-      <translation>手动标记单词为已知</translation>
+        <source>Mark words as known by hand</source>
+        <translation>手动标记单词为已知</translation>
     </message>
     <message>
-      <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
-      <translation>整理你自己的已知单词列表，该列表始终生效并在缓存重建后保留。</translation>
+        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
+        <translation>整理你自己的已知单词列表，该列表始终生效并在缓存重建后保留。</translation>
     </message>
     <message>
-      <source>Exclude kana-only words</source>
-      <translation>排除纯假名单词</translation>
+        <source>Exclude kana-only words</source>
+        <translation>排除纯假名单词</translation>
     </message>
     <message>
-      <source>Drop words written only in hiragana or katakana.</source>
-      <translation>丢弃仅由平假名或片假名书写的单词。</translation>
+        <source>Drop words written only in hiragana or katakana.</source>
+        <translation>丢弃仅由平假名或片假名书写的单词。</translation>
     </message>
     <message>
-      <source>Blacklist / whitelist words</source>
-      <translation>黑名单 / 白名单单词</translation>
+        <source>Blacklist / whitelist words</source>
+        <translation>黑名单 / 白名单单词</translation>
     </message>
     <message>
-      <source>Force-skip or force-allow specific words with your own block/allow lists.</source>
-      <translation>用你自己的屏蔽/允许列表强制跳过或强制允许特定单词。</translation>
+        <source>Force-skip or force-allow specific words with your own block/allow lists.</source>
+        <translation>用你自己的屏蔽/允许列表强制跳过或强制允许特定单词。</translation>
     </message>
     <message>
-      <source>Only words seen across N episodes</source>
-      <translation>仅出现在 N 集以上的单词</translation>
+        <source>Filter by part of speech</source>
+        <translation>按词性过滤</translation>
     </message>
     <message>
-      <source>In batch and deck builds, mine only words that appear in at least N episodes.</source>
-      <translation>在批量和牌组构建中，仅挖取至少出现在 N 集中的单词。</translation>
+        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
+        <translation>选择挖取哪些词类（名词、动词、助词……）。</translation>
     </message>
     <message>
-      <source>Filter by part of speech</source>
-      <translation>按词性过滤</translation>
+        <source>Limit sentence length</source>
+        <translation>限制句子长度</translation>
     </message>
     <message>
-      <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
-      <translation>选择挖取哪些词类（名词、动词、助词……）。</translation>
+        <source>Skip sentences that are too long or too short.</source>
+        <translation>跳过过长或过短的句子。</translation>
     </message>
     <message>
-      <source>Limit sentence length</source>
-      <translation>限制句子长度</translation>
+        <source>Avoid duplicate cards</source>
+        <translation>避免重复卡片</translation>
     </message>
     <message>
-      <source>Skip sentences that are too long or too short.</source>
-      <translation>跳过过长或过短的句子。</translation>
+        <source>Skip making a second card for a word you've already mined this run.</source>
+        <translation>跳过为本次运行中已挖取过的单词创建第二张卡片。</translation>
     </message>
     <message>
-      <source>Avoid duplicate cards</source>
-      <translation>避免重复卡片</translation>
+        <source>Strip junk from subtitles (regex)</source>
+        <translation>从字幕中剔除杂质（正则）</translation>
     </message>
     <message>
-      <source>Skip making a second card for a word you've already mined this run.</source>
-      <translation>跳过为本次运行中已挖取过的单词创建第二张卡片。</translation>
+        <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
+        <translation>在解析前从字幕中移除人名、音符或方括号文本。</translation>
     </message>
     <message>
-      <source>Strip junk from subtitles (regex)</source>
-      <translation>从字幕中剔除杂质（正则）</translation>
+        <source>Use &amp; order multiple dictionaries</source>
+        <translation>使用并排序多个词典</translation>
     </message>
     <message>
-      <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
-      <translation>在解析前从字幕中移除人名、音符或方括号文本。</translation>
+        <source>Add, reorder, and enable/disable the dictionaries used for definitions.</source>
+        <translation>添加、重新排序并启用/禁用用于释义的词典。</translation>
     </message>
     <message>
-      <source>Use &amp; order multiple dictionaries</source>
-      <translation>使用并排序多个词典</translation>
+        <source>Import a Yomitan dictionary</source>
+        <translation>导入 Yomitan 词典</translation>
     </message>
     <message>
-      <source>Add, reorder, and enable/disable the dictionaries used for definitions.</source>
-      <translation>添加、重新排序并启用/禁用用于释义的词典。</translation>
+        <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
+        <translation>将你自己的 Yomitan 格式词典 zip 添加为释义来源。</translation>
     </message>
     <message>
-      <source>Import a Yomitan dictionary</source>
-      <translation>导入 Yomitan 词典</translation>
+        <source>Jisho.org online fallback</source>
+        <translation>Jisho.org 在线回退</translation>
     </message>
     <message>
-      <source>Add your own Yomitan-format dictionary zip as a definition source.</source>
-      <translation>将你自己的 Yomitan 格式词典 zip 添加为释义来源。</translation>
+        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>当离线词典没有词条时回退到 Jisho.org。</translation>
     </message>
     <message>
-      <source>Jisho.org online fallback</source>
-      <translation>Jisho.org 在线回退</translation>
+        <source>Add frequency lists</source>
+        <translation>添加词频列表</translation>
     </message>
     <message>
-      <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-      <translation>当离线词典没有词条时回退到 Jisho.org。</translation>
+        <source>Add and order multiple frequency lists used for ranking and the frequency field.</source>
+        <translation>添加并排序多个用于排名和词频字段的词频列表。</translation>
     </message>
     <message>
-      <source>Add frequency lists</source>
-      <translation>添加词频列表</translation>
+        <source>Pitch accent on cards</source>
+        <translation>卡片上的音调</translation>
     </message>
     <message>
-      <source>Add and order multiple frequency lists used for ranking and the frequency field.</source>
-      <translation>添加并排序多个用于排名和词频字段的词频列表。</translation>
+        <source>Add pitch-accent information to your cards (numeric or romaji).</source>
+        <translation>为卡片添加音调信息（数字或罗马字）。</translation>
     </message>
     <message>
-      <source>Pitch accent on cards</source>
-      <translation>卡片上的音调</translation>
+        <source>Word pronunciation audio</source>
+        <translation>单词发音音频</translation>
     </message>
     <message>
-      <source>Add pitch-accent information to your cards (numeric or romaji).</source>
-      <translation>为卡片添加音调信息（数字或罗马字）。</translation>
+        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
+        <translation>从音频包、JPod101 或文字转语音为卡片附加母语单词音频。</translation>
     </message>
     <message>
-      <source>Word pronunciation audio</source>
-      <translation>单词发音音频</translation>
+        <source>Import local audio packs</source>
+        <translation>导入本地音频包</translation>
     </message>
     <message>
-      <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-      <translation>从音频包、JPod101 或文字转语音为卡片附加母语单词音频。</translation>
+        <source>Use your own local-audio-yomichan packs as a word-pronunciation source.</source>
+        <translation>使用你自己的 local-audio-yomichan 包作为单词发音来源。</translation>
     </message>
     <message>
-      <source>Import local audio packs</source>
-      <translation>导入本地音频包</translation>
+        <source>Sentence audio from the video</source>
+        <translation>来自视频的句子音频</translation>
     </message>
     <message>
-      <source>Use your own local-audio-yomichan packs as a word-pronunciation source.</source>
-      <translation>使用你自己的 local-audio-yomichan 包作为单词发音来源。</translation>
+        <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
+        <translation>将口述的句子提取为音频片段；调整其格式和比特率。</translation>
     </message>
     <message>
-      <source>Sentence audio from the video</source>
-      <translation>来自视频的句子音频</translation>
+        <source>Screenshots on cards</source>
+        <translation>卡片上的截图</translation>
     </message>
     <message>
-      <source>Extract the spoken sentence as an audio clip; tune its format and bitrate.</source>
-      <translation>将口述的句子提取为音频片段；调整其格式和比特率。</translation>
+        <source>Capture a still frame from the scene to put on the card.</source>
+        <translation>从场景中捕获一个静止帧放到卡片上。</translation>
     </message>
     <message>
-      <source>Screenshots on cards</source>
-      <translation>卡片上的截图</translation>
+        <source>Animated clips (GIF/WebP)</source>
+        <translation>动态片段（GIF/WebP）</translation>
     </message>
     <message>
-      <source>Capture a still frame from the scene to put on the card.</source>
-      <translation>从场景中捕获一个静止帧放到卡片上。</translation>
+        <source>Use a short animated clip instead of a still screenshot.</source>
+        <translation>使用短的动态片段代替静止截图。</translation>
     </message>
     <message>
-      <source>Animated clips (GIF/WebP)</source>
-      <translation>动态片段（GIF/WebP）</translation>
+        <source>Pad or shift audio/screenshot timing</source>
+        <translation>填充或偏移音频/截图时间</translation>
     </message>
     <message>
-      <source>Use a short animated clip instead of a still screenshot.</source>
-      <translation>使用短的动态片段代替静止截图。</translation>
+        <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
+        <translation>添加填充或偏移量，使音频和截图与对白对齐。</translation>
     </message>
     <message>
-      <source>Pad or shift audio/screenshot timing</source>
-      <translation>填充或偏移音频/截图时间</translation>
+        <source>Map data to your note fields</source>
+        <translation>将数据映射到你的笔记字段</translation>
     </message>
     <message>
-      <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
-      <translation>添加填充或偏移量，使音频和截图与对白对齐。</translation>
+        <source>Choose which note-type field receives the word, sentence, definition, audio, etc.</source>
+        <translation>选择哪个笔记类型字段接收单词、句子、释义、音频等。</translation>
     </message>
     <message>
-      <source>Map data to your note fields</source>
-      <translation>将数据映射到你的笔记字段</translation>
+        <source>Choose target deck &amp; note type</source>
+        <translation>选择目标牌组与笔记类型</translation>
     </message>
     <message>
-      <source>Choose which note-type field receives the word, sentence, definition, audio, etc.</source>
-      <translation>选择哪个笔记类型字段接收单词、句子、释义、音频等。</translation>
+        <source>Pick which Anki deck and note type new cards are created in.</source>
+        <translation>选择在哪个 Anki 牌组和笔记类型中创建新卡片。</translation>
     </message>
     <message>
-      <source>Choose target deck &amp; note type</source>
-      <translation>选择目标牌组与笔记类型</translation>
+        <source>Card styling / CSS</source>
+        <translation>卡片样式 / CSS</translation>
     </message>
     <message>
-      <source>Pick which Anki deck and note type new cards are created in.</source>
-      <translation>选择在哪个 Anki 牌组和笔记类型中创建新卡片。</translation>
+        <source>Apply a built-in card style or your own CSS.</source>
+        <translation>应用内置卡片样式或你自己的 CSS。</translation>
     </message>
     <message>
-      <source>Card styling / CSS</source>
-      <translation>卡片样式 / CSS</translation>
+        <source>Furigana / readings</source>
+        <translation>注音假名 / 读音</translation>
     </message>
     <message>
-      <source>Apply a built-in card style or your own CSS.</source>
-      <translation>应用内置卡片样式或你自己的 CSS。</translation>
+        <source>Include the reading (furigana) for the word on your cards.</source>
+        <translation>在卡片上包含单词的读音（注音假名）。</translation>
     </message>
     <message>
-      <source>Furigana / readings</source>
-      <translation>注音假名 / 读音</translation>
+        <source>Auto-tag mined notes</source>
+        <translation>自动为挖取的笔记加标签</translation>
     </message>
     <message>
-      <source>Include the reading (furigana) for the word on your cards.</source>
-      <translation>在卡片上包含单词的读音（注音假名）。</translation>
+        <source>Add tags to every note Anki Miner creates.</source>
+        <translation>为 Anki Miner 创建的每条笔记添加标签。</translation>
     </message>
     <message>
-      <source>Auto-tag mined notes</source>
-      <translation>自动为挖取的笔记加标签</translation>
+        <source>Themes, dark mode, fonts &amp; zoom</source>
+        <translation>主题、深色模式、字体与缩放</translation>
     </message>
     <message>
-      <source>Add tags to every note Anki Miner creates.</source>
-      <translation>为 Anki Miner 创建的每条笔记添加标签。</translation>
+        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
+        <translation>切换浅色/深色主题并调整字体比例和界面缩放。</translation>
     </message>
     <message>
-      <source>Themes, dark mode, fonts &amp; zoom</source>
-      <translation>主题、深色模式、字体与缩放</translation>
+        <source>Change the app language</source>
+        <translation>更改应用语言</translation>
     </message>
     <message>
-      <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
-      <translation>切换浅色/深色主题并调整字体比例和界面缩放。</translation>
+        <source>Switch the interface to another language.</source>
+        <translation>将界面切换为另一种语言。</translation>
     </message>
     <message>
-      <source>Change the app language</source>
-      <translation>更改应用语言</translation>
+        <source>Settings profiles</source>
+        <translation>设置配置文件</translation>
     </message>
     <message>
-      <source>Switch the interface to another language.</source>
-      <translation>将界面切换为另一种语言。</translation>
+        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
+        <translation>保存所有设置的多个命名快照，并一键切换。</translation>
     </message>
     <message>
-      <source>Settings profiles</source>
-      <translation>设置配置文件</translation>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation>语音转文字（无需字幕）</translation>
     </message>
     <message>
-      <source>Keep several named snapshots of every setting and switch between them in one click.</source>
-      <translation>保存所有设置的多个命名快照，并一键切换。</translation>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation>当没有字幕时，使用本地 Whisper 模型从音频生成字幕。</translation>
     </message>
     <message>
-      <source>Speech-to-text (no subtitles needed)</source>
-      <translation>语音转文字（无需字幕）</translation>
+        <source>YouTube cookies / bot bypass</source>
+        <translation>YouTube cookies / 机器人绕过</translation>
     </message>
     <message>
-      <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
-      <translation>当没有字幕时，使用本地 Whisper 模型从音频生成字幕。</translation>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation>使用你的浏览器 cookies 越过 YouTube 登录和机器人检查。</translation>
     </message>
     <message>
-      <source>YouTube cookies / bot bypass</source>
-      <translation>YouTube cookies / 机器人绕过</translation>
+        <source>YouTube quality &amp; playlist limits</source>
+        <translation>YouTube 画质与播放列表限制</translation>
     </message>
     <message>
-      <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
-      <translation>使用你的浏览器 cookies 越过 YouTube 登录和机器人检查。</translation>
+        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
+        <translation>限制视频画质、最大时长以及获取多少个播放列表视频。</translation>
     </message>
-    <message>
-      <source>YouTube quality &amp; playlist limits</source>
-      <translation>YouTube 画质与播放列表限制</translation>
-    </message>
-    <message>
-      <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
-      <translation>限制视频画质、最大时长以及获取多少个播放列表视频。</translation>
-    </message>
-  </context>
-  <context>
+</context><context>
     <name>CardBackfillTab</name>
     <message>
-      <source>Card Backfill</source>
-      <translation>卡片字段补全</translation>
+        <source>Card Backfill</source>
+        <translation>卡片字段补全</translation>
     </message>
     <message>
-      <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
-      <translation>使用当前安装的词典、词频来源和音调数据，补全此前挖词生成的笔记中的缺失字段。对于非常大的集合，请按牌组运行。覆盖模式可能需要随后重新应用样式以刷新卡片样式。</translation>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
+        <translation>使用当前安装的词典、词频来源和音调数据，补全此前挖词生成的笔记中的缺失字段。对于非常大的集合，请按牌组运行。覆盖模式可能需要随后重新应用样式以刷新卡片样式。</translation>
     </message>
     <message>
-      <source>Deck:</source>
-      <translation>牌组：</translation>
+        <source>Deck:</source>
+        <translation>牌组：</translation>
     </message>
     <message>
-      <source>All decks</source>
-      <translation>所有牌组</translation>
+        <source>All decks</source>
+        <translation>所有牌组</translation>
     </message>
     <message>
-      <source>Fields to fill</source>
-      <translation>要补全的字段</translation>
+        <source>Fields to fill</source>
+        <translation>要补全的字段</translation>
     </message>
     <message>
-      <source>Pitch accent (graph + text)</source>
-      <translation>音调（图形＋文本）</translation>
+        <source>Pitch accent (graph + text)</source>
+        <translation>音调（图形＋文本）</translation>
     </message>
     <message>
-      <source>Frequency (display + sort)</source>
-      <translation>词频（显示值＋排序值）</translation>
+        <source>Frequency (display + sort)</source>
+        <translation>词频（显示值＋排序值）</translation>
     </message>
     <message>
-      <source>Definitions</source>
-      <translation>释义</translation>
+        <source>Definitions</source>
+        <translation>释义</translation>
     </message>
     <message>
-      <source>Glossary</source>
-      <translation>术语表</translation>
+        <source>Glossary</source>
+        <translation>术语表</translation>
     </message>
     <message>
-      <source>Reading + furigana</source>
-      <translation>读音＋振假名</translation>
+        <source>Reading + furigana</source>
+        <translation>读音＋振假名</translation>
     </message>
     <message>
-      <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
-      <translation>根据现有读音补全振假名，或根据振假名补全读音；不会生成新的读音。</translation>
+        <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation>根据现有读音补全振假名，或根据振假名补全读音；不会生成新的读音。</translation>
     </message>
     <message>
-      <source>Overwrite existing values</source>
-      <translation>覆盖现有值</translation>
+        <source>Overwrite existing values</source>
+        <translation>覆盖现有值</translation>
     </message>
     <message>
-      <source>Scan Anki (read-only)</source>
-      <translation>扫描 Anki（只读）</translation>
+        <source>Scan Anki (read-only)</source>
+        <translation>扫描 Anki（只读）</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Expression</source>
-      <translation>表达</translation>
+        <source>Expression</source>
+        <translation>表达</translation>
     </message>
     <message>
-      <source>Field</source>
-      <translation>字段</translation>
+        <source>Field</source>
+        <translation>字段</translation>
     </message>
     <message>
-      <source>Current</source>
-      <translation>当前值</translation>
+        <source>Current</source>
+        <translation>当前值</translation>
     </message>
     <message>
-      <source>New</source>
-      <translation>新值</translation>
+        <source>New</source>
+        <translation>新值</translation>
     </message>
     <message>
-      <source>Update Notes in Anki</source>
-      <translation>更新 Anki 中的笔记</translation>
+        <source>Update Notes in Anki</source>
+        <translation>更新 Anki 中的笔记</translation>
     </message>
     <message>
-      <source>Card Backfill works on the selected Anki deck.</source>
-      <translation>卡片补全适用于所选的 Anki 牌组。</translation>
+        <source>Card Backfill works on the selected Anki deck.</source>
+        <translation>卡片补全适用于所选的 Anki 牌组。</translation>
     </message>
     <message>
-      <source>Map this field in Settings → Anki</source>
-      <translation>请在设置 → Anki 中映射此字段</translation>
+        <source>Map this field in Settings → Anki</source>
+        <translation>请在设置 → Anki 中映射此字段</translation>
     </message>
     <message>
-      <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
-      <translation>无法从 Anki 获取牌组名称——将扫描所有牌组。</translation>
+        <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
+        <translation>无法从 Anki 获取牌组名称——将扫描所有牌组。</translation>
     </message>
     <message>
-      <source>Select at least one field group to fill.</source>
-      <translation>请至少选择一组要补全的字段。</translation>
+        <source>Select at least one field group to fill.</source>
+        <translation>请至少选择一组要补全的字段。</translation>
     </message>
     <message>
-      <source>Card backfill scan</source>
-      <translation>卡片补全扫描</translation>
+        <source>Card backfill scan</source>
+        <translation>卡片补全扫描</translation>
     </message>
     <message>
-      <source>Scanning…</source>
-      <translation>正在扫描…</translation>
+        <source>Scanning…</source>
+        <translation>正在扫描…</translation>
     </message>
     <message>
-      <source>(formatted content)</source>
-      <translation>（已格式化内容）</translation>
+        <source>(formatted content)</source>
+        <translation>（已格式化内容）</translation>
     </message>
     <message>
-      <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-      <translation>没有匹配的笔记——牌组“{deck}”中的笔记类型“{note_type}”。请检查设置 → Anki。</translation>
+        <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
+        <translation>没有匹配的笔记——牌组“{deck}”中的笔记类型“{note_type}”。请检查设置 → Anki。</translation>
     </message>
     <message>
-      <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-      <translation>没有匹配的笔记——笔记类型“{note_type}”。请检查设置 → Anki。</translation>
+        <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
+        <translation>没有匹配的笔记——笔记类型“{note_type}”。请检查设置 → Anki。</translation>
     </message>
     <message>
-      <source>{fields} field(s) across {notes} note(s) will be filled.</source>
-      <translation>将补全 {notes} 条笔记中的 {fields} 个字段。</translation>
+        <source>{fields} field(s) across {notes} note(s) will be filled.</source>
+        <translation>将补全 {notes} 条笔记中的 {fields} 个字段。</translation>
     </message>
     <message>
-      <source>Showing first {rows} rows.</source>
-      <translation>显示前 {rows} 行。</translation>
+        <source>Showing first {rows} rows.</source>
+        <translation>显示前 {rows} 行。</translation>
     </message>
     <message>
-      <source>Nothing to fill — all selected fields already have values.</source>
-      <translation>无需补全——所选字段均已有值。</translation>
+        <source>No new values were found for the selected fields.</source>
+        <translation>未找到所选字段的新值。</translation>
     </message>
     <message>
-      <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
-      <translation>无需覆盖——新计算的值与现有内容相同。</translation>
+        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
+        <translation>无需覆盖——新计算的值与现有内容相同。</translation>
     </message>
     <message>
-      <source>Nothing to overwrite — the existing pitch was kept, see below.</source>
-      <translation>无需覆盖——保留了现有音调，详见下方。</translation>
+        <source>Nothing to overwrite — the existing pitch was kept, see below.</source>
+        <translation>无需覆盖——保留了现有音调，详见下方。</translation>
     </message>
     <message>
-      <source>No new values were found for the selected fields.</source>
-      <translation>未找到所选字段的新值。</translation>
+        <source>{count} field value(s) already up to date (identical to the computed value).</source>
+        <translation>已有 {count} 个字段值是最新的（与计算值相同）。</translation>
     </message>
     <message>
-      <source>{count} field value(s) already up to date (identical to the computed value).</source>
-      <translation>已有 {count} 个字段值是最新的（与计算值相同）。</translation>
+        <source>{count} pitch field(s) kept — the reading could only be guessed from the word alone, so overwriting could have applied the wrong homograph's accent. Map an Expression Reading or Furigana field to overwrite them.</source>
+        <translation>保留了 {count} 个音调字段——只能根据单词本身猜测读音，覆盖可能会应用错误同形词的音调。映射“表达式读音”或“振假名”字段即可覆盖它们。</translation>
     </message>
     <message>
-      <source>{count} pitch field(s) kept — the reading could only be guessed from the word alone, so overwriting could have applied the wrong homograph's accent. Map an Expression Reading or Furigana field to overwrite them.</source>
-      <translation>保留了 {count} 个音调字段——只能根据单词本身猜测读音，覆盖可能会应用错误同形词的音调。映射“表达式读音”或“振假名”字段即可覆盖它们。</translation>
+        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
+        <translation>有 {count} 个排序值使用了表示未找到词频的占位值 9999999。</translation>
     </message>
     <message>
-      <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-      <translation>有 {count} 个排序值使用了表示未找到词频的占位值 9999999。</translation>
+        <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
+        <translation>此笔记类型上不存在（映射已过期）：{fields}。请在设置 → Anki 的字段映射中修正。</translation>
     </message>
     <message>
-      <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-      <translation>此笔记类型上不存在（映射已过期）：{fields}。请在设置 → Anki 的字段映射中修正。</translation>
+        <source>Skipped (resource not loaded): {fields}.</source>
+        <translation>已跳过（资源未加载）：{fields}。</translation>
     </message>
     <message>
-      <source>Skipped (resource not loaded): {fields}.</source>
-      <translation>已跳过（资源未加载）：{fields}。</translation>
+        <source>{count} note(s) skipped — empty Expression field.</source>
+        <translation>已跳过 {count} 条笔记——表达字段为空。</translation>
     </message>
     <message>
-      <source>{count} note(s) skipped — empty Expression field.</source>
-      <translation>已跳过 {count} 条笔记——表达字段为空。</translation>
+        <source>Settings changed since this scan; re-scan before applying.</source>
+        <translation>设置在本次扫描后已更改，请先重新扫描再应用。</translation>
     </message>
     <message>
-      <source>Settings changed since this scan; re-scan before applying.</source>
-      <translation>设置在本次扫描后已更改，请先重新扫描再应用。</translation>
+        <source>Update notes in Anki?</source>
+        <translation>更新 Anki 中的笔记？</translation>
     </message>
     <message>
-      <source>Update notes in Anki?</source>
-      <translation>更新 Anki 中的笔记？</translation>
-    </message>
-    <message>
-      <source>Close Anki's card browser and note editors first.
+        <source>Close Anki's card browser and note editors first.
 
 This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continue?</source>
-      <translation>请先关闭 Anki 的卡片浏览器和笔记编辑器。
+        <translation>请先关闭 Anki 的卡片浏览器和笔记编辑器。
 
 此操作将修改 {notes} 条笔记（{fields} 个字段），并添加标签 {tag}。是否继续？</translation>
     </message>
     <message>
-      <source>Card backfill</source>
-      <translation>卡片补全</translation>
+        <source>Card backfill</source>
+        <translation>卡片补全</translation>
     </message>
     <message>
-      <source>Applying…</source>
-      <translation>正在应用…</translation>
+        <source>Applying…</source>
+        <translation>正在应用…</translation>
     </message>
     <message>
-      <source>Filled {fields} field(s) on {notes} note(s). Tagged {tag}.</source>
-      <translation>已补全 {notes} 条笔记中的 {fields} 个字段，并添加标签 {tag}。</translation>
+        <source>Filled {fields} field(s) on {notes} note(s).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>{count} skipped — changed or deleted since the scan.</source>
-      <translation>已跳过 {count} 条——自扫描后已更改或删除。</translation>
+        <source>Tagged {tag}.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Tagging failed for some notes (see log).</source>
-      <translation>部分笔记添加标签失败（请查看日志）。</translation>
+        <source>{count} skipped — changed or deleted since the scan.</source>
+        <translation>已跳过 {count} 条——自扫描后已更改或删除。</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Tagging failed for some notes (see log).</source>
+        <translation>部分笔记添加标签失败（请查看日志）。</translation>
     </message>
     <message>
-      <source>Cancelled.</source>
-      <translation>已取消。</translation>
+        <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
+        <translation type="unfinished" />
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation>已取消。</translation>
+    </message>
+</context><context>
+    <name>CondenseMetadataDialog</name>
+    <message>
+        <source>Condensed Audio Metadata</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Artist:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply to all rows</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Genre:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condensed Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Artwork:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>File</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Track #</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Title</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Album</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Artist</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>CondenseTab</name>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>Done</source>
-      <translation>完成</translation>
+        <source>Done</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Done: </source>
-      <translation>完成：</translation>
+        <source>Done: </source>
+        <translation>完成：</translation>
     </message>
     <message>
-      <source>Skipped</source>
-      <translation>已跳过</translation>
+        <source>Skipped</source>
+        <translation>已跳过</translation>
     </message>
     <message>
-      <source>Skipped: </source>
-      <translation>已跳过：</translation>
+        <source>Skipped: </source>
+        <translation>已跳过：</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Some files could not be condensed.</source>
-      <translation>无法压缩部分文件。</translation>
+        <source>Some files could not be condensed.</source>
+        <translation>无法压缩部分文件。</translation>
     </message>
     <message>
-      <source>Complete — %1 files processed</source>
-      <translation>完成——已处理 %1 个文件</translation>
+        <source>Complete — %1 files processed</source>
+        <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
-      <source>Select Output Folder</source>
-      <translation>选择输出文件夹</translation>
+        <source>Select Output Folder</source>
+        <translation>选择输出文件夹</translation>
     </message>
     <message>
-      <source>Next to source</source>
-      <translation>源文件旁</translation>
+        <source>Next to source</source>
+        <translation>源文件旁</translation>
     </message>
     <message>
-      <source>Audio condensing</source>
-      <translation>音频压缩</translation>
+        <source>Audio condensing</source>
+        <translation>音频压缩</translation>
     </message>
     <message>
-      <source>Input</source>
-      <translation>输入</translation>
+        <source>Input</source>
+        <translation>输入</translation>
     </message>
     <message>
-      <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
-      <translation>未找到 ffmpeg；请安装它或在设置中设置其路径以启用压缩。</translation>
+        <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
+        <translation>未找到 ffmpeg；请安装它或在设置中设置其路径以启用压缩。</translation>
     </message>
     <message>
-      <source>Condense a video or audio file down to just its spoken dialogue.</source>
-      <translation>将视频或音频文件压缩为仅含口语对白。</translation>
+        <source>Condense a video or audio file down to just its spoken dialogue.</source>
+        <translation>将视频或音频文件压缩为仅含口语对白。</translation>
     </message>
     <message>
-      <source>Mode:</source>
-      <translation>模式：</translation>
+        <source>Mode:</source>
+        <translation>模式：</translation>
     </message>
     <message>
-      <source>Single File</source>
-      <translation>单个文件</translation>
+        <source>Single File</source>
+        <translation>单个文件</translation>
     </message>
     <message>
-      <source>Condense one selected media file.</source>
-      <translation>压缩选定的一个媒体文件。</translation>
+        <source>Condense one selected media file.</source>
+        <translation>压缩选定的一个媒体文件。</translation>
     </message>
     <message>
-      <source>Folder</source>
-      <translation>文件夹</translation>
+        <source>Folder</source>
+        <translation>文件夹</translation>
     </message>
     <message>
-      <source>Condense every media file in a selected folder.</source>
-      <translation>压缩选定文件夹中的每个媒体文件。</translation>
+        <source>Condense every media file in a selected folder.</source>
+        <translation>压缩选定文件夹中的每个媒体文件。</translation>
     </message>
     <message>
-      <source>Media File:</source>
-      <translation>媒体文件：</translation>
+        <source>Media File:</source>
+        <translation>媒体文件：</translation>
     </message>
     <message>
-      <source>This field takes a video or audio file.</source>
-      <translation>此字段需要视频或音频文件。</translation>
+        <source>This field takes a video or audio file.</source>
+        <translation>此字段需要视频或音频文件。</translation>
     </message>
     <message>
-      <source>Subtitle File:</source>
-      <translation>字幕文件：</translation>
+        <source>Subtitle File:</source>
+        <translation>字幕文件：</translation>
     </message>
     <message>
-      <source>This field takes a subtitle file.</source>
-      <translation>此字段需要字幕文件。</translation>
+        <source>This field takes a subtitle file.</source>
+        <translation>此字段需要字幕文件。</translation>
     </message>
     <message>
-      <source>Leave empty to auto-detect (sibling file or embedded track).</source>
-      <translation>留空以自动检测（同名相邻文件或内嵌轨道）。</translation>
+        <source>Leave empty to auto-detect (sibling file or embedded track).</source>
+        <translation>留空以自动检测（同名相邻文件或内嵌轨道）。</translation>
     </message>
     <message>
-      <source>Audio track:</source>
-      <translation>音轨：</translation>
+        <source>Audio track:</source>
+        <translation>音轨：</translation>
     </message>
     <message>
-      <source>Japanese (auto-detect)</source>
-      <translation>日语（自动检测）</translation>
+        <source>Japanese (auto-detect)</source>
+        <translation>日语（自动检测）</translation>
     </message>
     <message>
-      <source>Choose…</source>
-      <translation>选择…</translation>
+        <source>Choose…</source>
+        <translation>选择…</translation>
     </message>
     <message>
-      <source>Choose which audio track to condense.</source>
-      <translation>选择要压缩的音轨。</translation>
+        <source>Choose which audio track to condense.</source>
+        <translation>选择要压缩的音轨。</translation>
     </message>
     <message>
-      <source>Subtitle track:</source>
-      <translation>字幕轨道：</translation>
+        <source>Subtitle track:</source>
+        <translation>字幕轨道：</translation>
     </message>
     <message>
-      <source>Auto (external → embedded Japanese)</source>
-      <translation>自动（外部 → 内嵌日语）</translation>
+        <source>Auto (external → embedded Japanese)</source>
+        <translation>自动（外部 → 内嵌日语）</translation>
     </message>
     <message>
-      <source>Choose which embedded subtitle track to condense against.</source>
-      <translation>选择要据以压缩的内嵌字幕轨道。</translation>
+        <source>Choose which embedded subtitle track to condense against.</source>
+        <translation>选择要据以压缩的内嵌字幕轨道。</translation>
     </message>
     <message>
-      <source>Media Folder:</source>
-      <translation>媒体文件夹：</translation>
+        <source>Media Folder:</source>
+        <translation>媒体文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Folder:</source>
-      <translation>字幕文件夹：</translation>
+        <source>Subtitle Folder:</source>
+        <translation>字幕文件夹：</translation>
     </message>
     <message>
-      <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
-      <translation>可选。设置后，媒体将按剧集编号与字幕配对；否则每个文件自动检测。</translation>
+        <source>Optional. When set, media is paired to subtitles by episode number; otherwise each file auto-detects.</source>
+        <translation>可选。设置后，媒体将按剧集编号与字幕配对；否则每个文件自动检测。</translation>
     </message>
     <message>
-      <source>Options</source>
-      <translation>选项</translation>
+        <source>Options</source>
+        <translation>选项</translation>
     </message>
     <message>
-      <source>Padding:</source>
-      <translation>填充：</translation>
+        <source>Padding:</source>
+        <translation>填充：</translation>
     </message>
     <message>
-      <source> ms</source>
-      <translation> 毫秒</translation>
+        <source> ms</source>
+        <translation> 毫秒</translation>
     </message>
     <message>
-      <source>Silence kept on each side of every dialogue line before merging.</source>
-      <translation>合并前，在每行对白两侧保留的静音。</translation>
+        <source>Silence kept on each side of every dialogue line before merging.</source>
+        <translation>合并前，在每行对白两侧保留的静音。</translation>
     </message>
     <message>
-      <source>Offset:</source>
-      <translation>偏移：</translation>
+        <source>Offset:</source>
+        <translation>偏移：</translation>
     </message>
     <message>
-      <source>Shift every subtitle cue by this amount before condensing.</source>
-      <translation>压缩前将每条字幕提示按此量平移。</translation>
+        <source>Shift every subtitle cue by this amount before condensing.</source>
+        <translation>压缩前将每条字幕提示按此量平移。</translation>
     </message>
     <message>
-      <source>Format:</source>
-      <translation>格式：</translation>
+        <source>Format:</source>
+        <translation>格式：</translation>
     </message>
     <message>
-      <source>Also write condensed subtitles (SRT + LRC)</source>
-      <translation>同时写出压缩字幕（SRT + LRC）</translation>
+        <source>Also write condensed subtitles (SRT + LRC)</source>
+        <translation>同时写出压缩字幕（SRT + LRC）</translation>
     </message>
     <message>
-      <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
-      <translation>在压缩音频旁写出时间映射的 .srt 和 .lrc 文件。</translation>
+        <source>Write time-mapped .srt and .lrc files alongside the condensed audio.</source>
+        <translation>在压缩音频旁写出时间映射的 .srt 和 .lrc 文件。</translation>
     </message>
     <message>
-      <source>Output</source>
-      <translation>输出</translation>
+        <source>Tag output files (title, album, artist…)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Output:</source>
-      <translation>输出：</translation>
+        <source>Review and edit music-library metadata for each output before condensing starts.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Choose Folder…</source>
-      <translation>选择文件夹…</translation>
+        <source>Output</source>
+        <translation>输出</translation>
     </message>
     <message>
-      <source>Reset</source>
-      <translation>重置</translation>
+        <source>Output:</source>
+        <translation>输出：</translation>
     </message>
     <message>
-      <source>Overwrite existing condensed files</source>
-      <translation>覆盖现有的压缩文件</translation>
+        <source>Choose Folder…</source>
+        <translation>选择文件夹…</translation>
     </message>
     <message>
-      <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
-      <translation>取消勾选时，已存在压缩音频的文件将被跳过，而非覆盖。</translation>
+        <source>Reset</source>
+        <translation>重置</translation>
     </message>
     <message>
-      <source>Condense Audio</source>
-      <translation>压缩音频</translation>
+        <source>Overwrite existing condensed files</source>
+        <translation>覆盖现有的压缩文件</translation>
     </message>
     <message>
-      <source>Open Media Settings</source>
-      <translation>打开媒体设置</translation>
+        <source>When unchecked, files whose condensed audio already exists are skipped, not overwritten.</source>
+        <translation>取消勾选时，已存在压缩音频的文件将被跳过，而非覆盖。</translation>
     </message>
     <message>
-      <source>Choose a media file first.</source>
-      <translation>请先选择媒体文件。</translation>
+        <source>Condense Audio</source>
+        <translation>压缩音频</translation>
     </message>
     <message>
-      <source>That media file no longer exists.</source>
-      <translation>该媒体文件已不存在。</translation>
+        <source>Open Media Settings</source>
+        <translation>打开媒体设置</translation>
     </message>
     <message>
-      <source>No Audio Tracks</source>
-      <translation>无音轨</translation>
+        <source>Choose a media file first.</source>
+        <translation>请先选择媒体文件。</translation>
     </message>
     <message>
-      <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-      <translation>未检测到音轨。请检查是否已安装 ffprobe 且文件包含音频。</translation>
+        <source>That media file no longer exists.</source>
+        <translation>该媒体文件已不存在。</translation>
     </message>
     <message>
-      <source>Track %1</source>
-      <translation>音轨 %1</translation>
+        <source>No Audio Tracks</source>
+        <translation>无音轨</translation>
     </message>
     <message>
-      <source>Audio tracks could not be read.</source>
-      <translation>无法读取音轨。</translation>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation>未检测到音轨。请检查是否已安装 ffprobe 且文件包含音频。</translation>
     </message>
     <message>
-      <source>No Subtitle Tracks</source>
-      <translation>无字幕轨道</translation>
+        <source>Track %1</source>
+        <translation>音轨 %1</translation>
     </message>
     <message>
-      <source>No embedded subtitle tracks detected in this file.</source>
-      <translation>此文件中未检测到内嵌字幕轨道。</translation>
+        <source>Audio tracks could not be read.</source>
+        <translation>无法读取音轨。</translation>
     </message>
     <message>
-      <source>Subtitle tracks could not be read.</source>
-      <translation>无法读取字幕轨道。</translation>
+        <source>No Subtitle Tracks</source>
+        <translation>无字幕轨道</translation>
     </message>
     <message>
-      <source>Output directory is not writable: </source>
-      <translation>输出目录不可写：</translation>
+        <source>No embedded subtitle tracks detected in this file.</source>
+        <translation>此文件中未检测到内嵌字幕轨道。</translation>
     </message>
     <message>
-      <source>Choose a media file before condensing.</source>
-      <translation>请在压缩前选择媒体文件。</translation>
+        <source>Subtitle tracks could not be read.</source>
+        <translation>无法读取字幕轨道。</translation>
     </message>
     <message>
-      <source>That subtitle file no longer exists.</source>
-      <translation>该字幕文件已不存在。</translation>
+        <source>Multiple media files would write to the same output file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Choose a media folder before condensing.</source>
-      <translation>请在压缩前选择媒体文件夹。</translation>
+        <source>Output directory is not writable: </source>
+        <translation>输出目录不可写：</translation>
     </message>
     <message>
-      <source>That media folder no longer exists.</source>
-      <translation>该媒体文件夹已不存在。</translation>
+        <source>Choose a media file before condensing.</source>
+        <translation>请在压缩前选择媒体文件。</translation>
     </message>
     <message>
-      <source>That subtitle folder no longer exists.</source>
-      <translation>该字幕文件夹已不存在。</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>该字幕文件已不存在。</translation>
     </message>
     <message>
-      <source>No media files were found in that folder.</source>
-      <translation>该文件夹中未找到媒体文件。</translation>
+        <source>Choose a media folder before condensing.</source>
+        <translation>请在压缩前选择媒体文件夹。</translation>
     </message>
     <message>
-      <source>Matched %1 of %2 media files.</source>
-      <translation>已匹配 %2 个媒体文件中的 %1 个。</translation>
+        <source>That media folder no longer exists.</source>
+        <translation>该媒体文件夹已不存在。</translation>
     </message>
     <message>
-      <source>Warning: %1 media file(s) could not be matched.</source>
-      <translation>警告：%1 个媒体文件无法匹配。</translation>
+        <source>That subtitle folder no longer exists.</source>
+        <translation>该字幕文件夹已不存在。</translation>
     </message>
     <message>
-      <source>No subtitle file could be matched to any media file in those folders.</source>
-      <translation>无法将这些文件夹中的任何字幕文件与媒体文件匹配。</translation>
+        <source>No media files were found in that folder.</source>
+        <translation>该文件夹中未找到媒体文件。</translation>
     </message>
     <message>
-      <source>Condensing file %1 of %2</source>
-      <translation>正在压缩第 %1 个文件，共 %2 个</translation>
+        <source>Matched %1 of %2 media files.</source>
+        <translation>已匹配 %2 个媒体文件中的 %1 个。</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Warning: %1 media file(s) could not be matched.</source>
+        <translation>警告：%1 个媒体文件无法匹配。</translation>
+    </message>
+    <message>
+        <source>No subtitle file could be matched to any media file in those folders.</source>
+        <translation>无法将这些文件夹中的任何字幕文件与媒体文件匹配。</translation>
+    </message>
+    <message>
+        <source>Condensing file %1 of %2</source>
+        <translation>正在压缩第 %1 个文件，共 %2 个</translation>
+    </message>
+</context><context>
     <name>CondenseWorker</name>
     <message>
-      <source>Skipped, exists</source>
-      <translation>已跳过，已存在</translation>
+        <source>Skipped, exists</source>
+        <translation>已跳过，已存在</translation>
     </message>
     <message>
-      <source>Condensing: %1%</source>
-      <translation>正在压缩：%1%</translation>
+        <source>Condensing: %1%</source>
+        <translation>正在压缩：%1%</translation>
     </message>
     <message>
-      <source>Audio done; subtitle write failed: %1</source>
-      <translation>音频已完成；字幕写入失败：%1</translation>
+        <source>Audio done; subtitle write failed: %1; tagging failed: %2</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Done</source>
-      <translation>完成</translation>
+        <source>Audio done; subtitle write failed: %1</source>
+        <translation>音频已完成；字幕写入失败：%1</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Audio done; tagging failed: %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>No subtitle source found for %1</source>
-      <translation>未找到 %1 的字幕源</translation>
+        <source>Done</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Subtitle track %1 not found in %2</source>
-      <translation>在 %2 中未找到字幕轨道 %1</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
-      <translation>%2 中只有基于图像的字幕（%1），无法压缩</translation>
+        <source>No subtitle source found for %1</source>
+        <translation>未找到 %1 的字幕源</translation>
     </message>
     <message>
-      <source>Failed to extract embedded subtitle from %1</source>
-      <translation>从 %1 提取内嵌字幕失败</translation>
+        <source>Subtitle track %1 not found in %2</source>
+        <translation>在 %2 中未找到字幕轨道 %1</translation>
     </message>
     <message>
-      <source>No dialogue lines found in %1</source>
-      <translation>在 %1 中未找到对白行</translation>
+        <source>Only image-based subtitles (%1) in %2, which can't be condensed</source>
+        <translation>%2 中只有基于图像的字幕（%1），无法压缩</translation>
     </message>
     <message>
-      <source>Condensing failed for %1</source>
-      <translation>%1 压缩失败</translation>
+        <source>Failed to extract embedded subtitle from %1</source>
+        <translation>从 %1 提取内嵌字幕失败</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>No dialogue lines found in %1</source>
+        <translation>在 %1 中未找到对白行</translation>
+    </message>
+    <message>
+        <source>Condensing failed for %1</source>
+        <translation>%1 压缩失败</translation>
+    </message>
+</context><context>
     <name>CudaPackDownloadWorker</name>
     <message>
-      <source>%1 (%2%)</source>
-      <translation>%1 (%2%)</translation>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
     </message>
     <message>
-      <source>Downloading GPU libraries…</source>
-      <translation>正在下载 GPU 库…</translation>
+        <source>Downloading GPU libraries…</source>
+        <translation>正在下载 GPU 库…</translation>
     </message>
     <message>
-      <source>GPU libraries installed successfully.</source>
-      <translation>GPU 库安装成功。</translation>
+        <source>GPU libraries installed successfully.</source>
+        <translation>GPU 库安装成功。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>CurrentJobStrip</name>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Finishing %1</source>
-      <translation>正在完成 %1</translation>
+        <source>Finishing %1</source>
+        <translation>正在完成 %1</translation>
     </message>
     <message>
-      <source>Finishing the current item</source>
-      <translation>正在完成当前项目</translation>
+        <source>Finishing the current item</source>
+        <translation>正在完成当前项目</translation>
     </message>
     <message>
-      <source>%1 / %2</source>
-      <translation>%1 / %2</translation>
+        <source>%1 / %2</source>
+        <translation>%1 / %2</translation>
     </message>
     <message>
-      <source>%1 (%2 of %3)</source>
-      <translation>%1（第 %2 项，共 %3 项）</translation>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1（第 %2 项，共 %3 项）</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>DeckBuilderTab</name>
     <message>
-      <source>Video Folder:</source>
-      <translation>视频文件夹：</translation>
+        <source>Video Folder:</source>
+        <translation>视频文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Folder:</source>
-      <translation>字幕文件夹：</translation>
+        <source>Subtitle Folder:</source>
+        <translation>字幕文件夹：</translation>
     </message>
     <message>
-      <source>Deck Name:</source>
-      <translation>牌组名称：</translation>
+        <source>Deck Name:</source>
+        <translation>牌组名称：</translation>
     </message>
     <message>
-      <source>Word Selection:</source>
-      <translation>单词选择：</translation>
+        <source>Word Selection:</source>
+        <translation>单词选择：</translation>
     </message>
     <message>
-      <source>Input</source>
-      <translation>输入</translation>
+        <source>Input</source>
+        <translation>输入</translation>
     </message>
     <message>
-      <source>Select folder with video files…</source>
-      <translation>选择包含视频文件的文件夹…</translation>
+        <source>Select folder with video files…</source>
+        <translation>选择包含视频文件的文件夹…</translation>
     </message>
     <message>
-      <source>Select folder with subtitle files…</source>
-      <translation>选择包含字幕文件的文件夹…</translation>
+        <source>Select folder with subtitle files…</source>
+        <translation>选择包含字幕文件的文件夹…</translation>
     </message>
     <message>
-      <source>Deck Settings</source>
-      <translation>牌组设置</translation>
+        <source>Deck Settings</source>
+        <translation>牌组设置</translation>
     </message>
     <message>
-      <source>Enter deck name…</source>
-      <translation>输入牌组名称…</translation>
+        <source>Enter deck name…</source>
+        <translation>输入牌组名称…</translation>
     </message>
     <message>
-      <source>All vocabulary</source>
-      <translation>全部词汇</translation>
+        <source>All vocabulary</source>
+        <translation>全部词汇</translation>
     </message>
     <message>
-      <source>Top N words</source>
-      <translation>前 N 个单词</translation>
+        <source>Top N words</source>
+        <translation>前 N 个单词</translation>
     </message>
     <message>
-      <source>Target coverage %</source>
-      <translation>目标覆盖率 %</translation>
+        <source>Target coverage %</source>
+        <translation>目标覆盖率 %</translation>
     </message>
     <message>
-      <source> words</source>
-      <translation> 个单词</translation>
+        <source> words</source>
+        <translation> 个单词</translation>
     </message>
     <message>
-      <source>Include the N most-frequent lemmas</source>
-      <translation>包含最高频的 N 个原形</translation>
+        <source>Include the N most-frequent lemmas</source>
+        <translation>包含最高频的 N 个原形</translation>
     </message>
     <message>
-      <source>Include enough words to cover this percentage of tokens</source>
-      <translation>包含足够多的单词以覆盖此百分比的词元</translation>
+        <source>Include enough words to cover this percentage of tokens</source>
+        <translation>包含足够多的单词以覆盖此百分比的词元</translation>
     </message>
     <message>
-      <source>Skip words already in my Anki collection</source>
-      <translation>跳过我 Anki 收藏中已有的单词</translation>
+        <source>Skip words already in my Anki collection</source>
+        <translation>跳过我 Anki 收藏中已有的单词</translation>
     </message>
     <message>
-      <source>Checked: skip your known words; unchecked: mine every word.</source>
-      <translation>勾选：跳过已知单词；不勾选：挖取所有单词。</translation>
+        <source>Checked: skip your known words; unchecked: mine every word.</source>
+        <translation>勾选：跳过已知单词；不勾选：挖取所有单词。</translation>
     </message>
     <message>
-      <source>Actions</source>
-      <translation>操作</translation>
+        <source>Actions</source>
+        <translation>操作</translation>
     </message>
     <message>
-      <source>Preview</source>
-      <translation>预览</translation>
+        <source>Preview</source>
+        <translation>预览</translation>
     </message>
     <message>
-      <source>Analyze the corpus and preview which words will be included</source>
-      <translation>分析语料库并预览将被包含的单词</translation>
+        <source>Analyze the corpus and preview which words will be included</source>
+        <translation>分析语料库并预览将被包含的单词</translation>
     </message>
     <message>
-      <source>Build Deck</source>
-      <translation>构建牌组</translation>
+        <source>Build Deck</source>
+        <translation>构建牌组</translation>
     </message>
     <message>
-      <source>Create the Anki cards for the previewed word list</source>
-      <translation>为预览的单词列表创建 Anki 卡片</translation>
+        <source>Create the Anki cards for the previewed word list</source>
+        <translation>为预览的单词列表创建 Anki 卡片</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel the current operation</source>
-      <translation>取消当前操作</translation>
+        <source>Cancel the current operation</source>
+        <translation>取消当前操作</translation>
     </message>
     <message>
-      <source>Results</source>
-      <translation>结果</translation>
+        <source>Results</source>
+        <translation>结果</translation>
     </message>
     <message>
-      <source>Total tokens:</source>
-      <translation>词元总数：</translation>
+        <source>Total tokens:</source>
+        <translation>词元总数：</translation>
     </message>
     <message>
-      <source>Unique lemmas:</source>
-      <translation>唯一原形数：</translation>
+        <source>Unique lemmas:</source>
+        <translation>唯一原形数：</translation>
     </message>
     <message>
-      <source>Candidate words:</source>
-      <translation>候选单词：</translation>
+        <source>Candidate words:</source>
+        <translation>候选单词：</translation>
     </message>
     <message>
-      <source>Projected coverage:</source>
-      <translation>预计覆盖率：</translation>
+        <source>Projected coverage:</source>
+        <translation>预计覆盖率：</translation>
     </message>
     <message>
-      <source>Known (skipped):</source>
-      <translation>已知（已跳过）：</translation>
+        <source>Known (skipped):</source>
+        <translation>已知（已跳过）：</translation>
     </message>
     <message>
-      <source>Cards to create:</source>
-      <translation>待创建卡片：</translation>
+        <source>Cards to create:</source>
+        <translation>待创建卡片：</translation>
     </message>
     <message>
-      <source>Select both the video folder and subtitle folder first.</source>
-      <translation>请先选择视频文件夹和字幕文件夹。</translation>
+        <source>Select both the video folder and subtitle folder first.</source>
+        <translation>请先选择视频文件夹和字幕文件夹。</translation>
     </message>
     <message>
-      <source>Video folder not found: %1</source>
-      <translation>未找到视频文件夹：%1</translation>
+        <source>Video folder not found: %1</source>
+        <translation>未找到视频文件夹：%1</translation>
     </message>
     <message>
-      <source>Subtitle folder not found: %1</source>
-      <translation>未找到字幕文件夹：%1</translation>
+        <source>Subtitle folder not found: %1</source>
+        <translation>未找到字幕文件夹：%1</translation>
     </message>
     <message>
-      <source>Enter a deck name before previewing.</source>
-      <translation>预览前请输入牌组名称。</translation>
+        <source>Enter a deck name before previewing.</source>
+        <translation>预览前请输入牌组名称。</translation>
     </message>
     <message>
-      <source>No video/subtitle pairs found. Check the folders.</source>
-      <translation>未找到视频/字幕配对。请检查文件夹。</translation>
+        <source>No video/subtitle pairs found. Check the folders.</source>
+        <translation>未找到视频/字幕配对。请检查文件夹。</translation>
     </message>
     <message>
-      <source>Analyzing corpus…</source>
-      <translation>正在分析语料库…</translation>
+        <source>Analyzing corpus…</source>
+        <translation>正在分析语料库…</translation>
     </message>
     <message>
-      <source>Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed.</source>
-      <translation>预览就绪——%1 张卡片，约 %2% 覆盖率。点击“构建牌组”继续。</translation>
+        <source>Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed.</source>
+        <translation>预览就绪——%1 张卡片，约 %2% 覆盖率。点击“构建牌组”继续。</translation>
     </message>
     <message>
-      <source>Building deck '%1'…</source>
-      <translation>正在构建牌组“%1”…</translation>
+        <source>Building deck '%1'…</source>
+        <translation>正在构建牌组“%1”…</translation>
     </message>
     <message>
-      <source>Episode %1/%2: %3</source>
-      <translation>剧集 %1/%2：%3</translation>
+        <source>Episode %1/%2: %3</source>
+        <translation>剧集 %1/%2：%3</translation>
     </message>
     <message>
-      <source>Processing: %1</source>
-      <translation>正在处理：%1</translation>
+        <source>Processing: %1</source>
+        <translation>正在处理：%1</translation>
     </message>
     <message>
-      <source>  %1: %2 card(s) created</source>
-      <translation>  %1：已创建 %2 张卡片</translation>
+        <source>  %1: %2 card(s) created</source>
+        <translation>  %1：已创建 %2 张卡片</translation>
     </message>
     <message>
-      <source>Done! Created %1 cards (~%2% target coverage) in deck '%3'.</source>
-      <translation>完成！已在牌组“%3”中创建 %1 张卡片（约 %2% 目标覆盖率）。</translation>
+        <source>Done! Created %1 cards (~%2% target coverage) in deck '%3'.</source>
+        <translation>完成！已在牌组“%3”中创建 %1 张卡片（约 %2% 目标覆盖率）。</translation>
     </message>
     <message>
-      <source>Complete — %1 cards created</source>
-      <translation>完成——已创建 %1 张卡片</translation>
+        <source>Complete — %1 cards created</source>
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Error: %1</source>
-      <translation>错误：%1</translation>
+        <source>Error: %1</source>
+        <translation>错误：%1</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>DeckPage</name>
     <message>
-      <source>Choose a Deck</source>
-      <translation>选择牌组</translation>
+        <source>Choose a Deck</source>
+        <translation>选择牌组</translation>
     </message>
     <message>
-      <source>Mined cards go into this deck.</source>
-      <translation>挖词的卡片将进入此牌组。</translation>
+        <source>Mined cards go into this deck.</source>
+        <translation>挖词的卡片将进入此牌组。</translation>
     </message>
     <message>
-      <source>Refresh</source>
-      <translation>刷新</translation>
+        <source>Refresh</source>
+        <translation>刷新</translation>
     </message>
     <message>
-      <source>Could not load decks. Is Anki running with AnkiConnect?</source>
-      <translation>无法加载牌组。Anki 是否正在运行且启用了 AnkiConnect？</translation>
+        <source>Could not load decks. Is Anki running with AnkiConnect?</source>
+        <translation>无法加载牌组。Anki 是否正在运行且启用了 AnkiConnect？</translation>
     </message>
     <message>
-      <source>Pick a deck.</source>
-      <translation>选择一个牌组。</translation>
+        <source>Pick a deck.</source>
+        <translation>选择一个牌组。</translation>
     </message>
     <message>
-      <source>No such deck. Create it in Anki, then press Refresh.</source>
-      <translation>没有此牌组。请在 Anki 中创建后按“刷新”。</translation>
+        <source>No such deck. Create it in Anki, then press Refresh.</source>
+        <translation>没有此牌组。请在 Anki 中创建后按“刷新”。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>DefinitionService</name>
     <message>
-      <source>Fetching definitions</source>
-      <translation>正在获取释义</translation>
+        <source>Fetching definitions</source>
+        <translation>正在获取释义</translation>
     </message>
     <message>
-      <source>Definition found: %1</source>
-      <translation>已找到释义：%1</translation>
+        <source>Definition found: %1</source>
+        <translation>已找到释义：%1</translation>
     </message>
     <message>
-      <source>No definition: %1</source>
-      <translation>无释义：%1</translation>
+        <source>No definition: %1</source>
+        <translation>无释义：%1</translation>
     </message>
     <message>
-      <source>Fetching glossary entries</source>
-      <translation>正在获取词汇表条目</translation>
+        <source>Fetching glossary entries</source>
+        <translation>正在获取词汇表条目</translation>
     </message>
     <message>
-      <source>Glossary found: %1</source>
-      <translation>已找到词汇表：%1</translation>
+        <source>Glossary found: %1</source>
+        <translation>已找到词汇表：%1</translation>
     </message>
     <message>
-      <source>No glossary: %1</source>
-      <translation>无词汇表：%1</translation>
+        <source>No glossary: %1</source>
+        <translation>无词汇表：%1</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>DictionaryImportFlow</name>
     <message>
-      <source>Skipped %1 malformed entries.</source>
-      <translation>已跳过 %1 个格式错误的条目。</translation>
+        <source>Skipped %1 malformed entries.</source>
+        <translation>已跳过 %1 个格式错误的条目。</translation>
     </message>
     <message>
-      <source>%1 media file(s) could not be imported.</source>
-      <translation>%1 个媒体文件无法导入。</translation>
+        <source>%1 media file(s) could not be imported.</source>
+        <translation>%1 个媒体文件无法导入。</translation>
     </message>
     <message>
-      <source>Choose Yomitan dictionary zip</source>
-      <translation>选择 Yomitan 词典 zip</translation>
+        <source>Choose Yomitan dictionary zip</source>
+        <translation>选择 Yomitan 词典 zip</translation>
     </message>
     <message>
-      <source>Yomitan zip (*.zip)</source>
-      <translation>Yomitan zip (*.zip)</translation>
+        <source>Yomitan zip (*.zip)</source>
+        <translation>Yomitan zip (*.zip)</translation>
     </message>
     <message>
-      <source>Dictionary added</source>
-      <translation>已添加词典</translation>
+        <source>Dictionary added</source>
+        <translation>已添加词典</translation>
     </message>
     <message>
-      <source>Imported %1 (%2 entries)</source>
-      <translation>已导入 %1（%2 个条目）</translation>
+        <source>Imported %1 (%2 entries)</source>
+        <translation>已导入 %1（%2 个条目）</translation>
     </message>
     <message>
-      <source>The import finished, but the settings could not be updated.</source>
-      <translation>导入已完成，但无法更新设置。</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>导入已完成，但无法更新设置。</translation>
     </message>
     <message>
-      <source>Importing dictionary…</source>
-      <translation>正在导入词典…</translation>
+        <source>Importing dictionary…</source>
+        <translation>正在导入词典…</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>The dictionary could not be imported.</source>
-      <translation>无法导入词典。</translation>
+        <source>The dictionary could not be imported.</source>
+        <translation>无法导入词典。</translation>
     </message>
     <message>
-      <source>Another import is still finishing. Wait for it to finish and try again.</source>
-      <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>The import worker finished without a completion result.</source>
-      <translation>导入工作线程结束，但未返回完成结果。</translation>
+        <source>The import worker finished without a completion result.</source>
+        <translation>导入工作线程结束，但未返回完成结果。</translation>
     </message>
     <message>
-      <source>That folder could not be scanned.</source>
-      <translation>无法扫描该文件夹。</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>无法扫描该文件夹。</translation>
     </message>
     <message>
-      <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
-      <translation>未找到 “%1” 的可恢复来源。请恢复其已保存的 source.zip 或已配置的 JMdict XML 文件后重试。</translation>
+        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
+        <translation>未找到 “%1” 的可恢复来源。请恢复其已保存的 source.zip 或已配置的 JMdict XML 文件后重试。</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Dictionary re-imported</source>
-      <translation>词典已重新导入</translation>
+        <source>Dictionary re-imported</source>
+        <translation>词典已重新导入</translation>
     </message>
     <message>
-      <source>Re-imported %1 (%2 entries)</source>
-      <translation>已重新导入 %1（%2 个条目）</translation>
+        <source>Re-imported %1 (%2 entries)</source>
+        <translation>已重新导入 %1（%2 个条目）</translation>
     </message>
     <message>
-      <source>Re-importing dictionary…</source>
-      <translation>正在重新导入词典…</translation>
+        <source>Re-importing dictionary…</source>
+        <translation>正在重新导入词典…</translation>
     </message>
     <message>
-      <source>The dictionary could not be re-imported.</source>
-      <translation>无法重新导入词典。</translation>
+        <source>The dictionary could not be re-imported.</source>
+        <translation>无法重新导入词典。</translation>
     </message>
     <message>
-      <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-      <translation>%1 处没有 JMdict XML。请从 EDRDG 下载并放置于此。</translation>
+        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
+        <translation>%1 处没有 JMdict XML。请从 EDRDG 下载并放置于此。</translation>
     </message>
     <message>
-      <source>Reimporting JMdict…</source>
-      <translation>正在重新导入 JMdict…</translation>
+        <source>Reimporting JMdict…</source>
+        <translation>正在重新导入 JMdict…</translation>
     </message>
     <message>
-      <source>The dictionaries could not be re-imported.</source>
-      <translation>无法重新导入词典。</translation>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>无法重新导入词典。</translation>
     </message>
     <message>
-      <source>No dictionaries eligible for automatic repair were found.
+        <source>No dictionaries eligible for automatic repair were found.
 
 Skipped (not eligible for automatic repair; use per-row Re-import…):
 </source>
-      <translation>未找到符合自动修复条件的词典。
+        <translation>未找到符合自动修复条件的词典。
 
 已跳过（不符合自动修复条件；请使用各行的“重新导入…”）：
 </translation>
     </message>
     <message>
-      <source>No dictionaries in the chain.</source>
-      <translation>链中没有词典。</translation>
+        <source>No dictionaries in the chain.</source>
+        <translation>链中没有词典。</translation>
     </message>
     <message>
-      <source>Nothing to reimport</source>
-      <translation>无需重新导入</translation>
+        <source>Nothing to reimport</source>
+        <translation>无需重新导入</translation>
     </message>
     <message>
-      <source>Dictionary %1 of %2: %3</source>
-      <translation>词典 %1 / %2：%3</translation>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>词典 %1 / %2：%3</translation>
     </message>
     <message>
-      <source>Reimported %1 dictionary/dictionaries:</source>
-      <translation>已重新导入 %1 个词典：</translation>
+        <source>Reimported %1 dictionary/dictionaries:</source>
+        <translation>已重新导入 %1 个词典：</translation>
     </message>
     <message>
-      <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
-      <translation>已跳过（不符合自动修复条件；请使用各行的“重新导入…”）：</translation>
+        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
+        <translation>已跳过（不符合自动修复条件；请使用各行的“重新导入…”）：</translation>
     </message>
     <message>
-      <source>Failed:</source>
-      <translation>失败：</translation>
+        <source>Failed:</source>
+        <translation>失败：</translation>
     </message>
     <message>
-      <source>Cancelled before remaining dictionaries.</source>
-      <translation>在处理剩余词典前已取消。</translation>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>在处理剩余词典前已取消。</translation>
     </message>
     <message>
-      <source>Reimport All</source>
-      <translation>重新导入全部</translation>
+        <source>Reimport All</source>
+        <translation>重新导入全部</translation>
     </message>
     <message>
-      <source>Done.</source>
-      <translation>完成。</translation>
+        <source>Done.</source>
+        <translation>完成。</translation>
     </message>
     <message>
-      <source>Nothing to restore</source>
-      <translation>无内容可恢复</translation>
+        <source>Nothing to restore</source>
+        <translation>无内容可恢复</translation>
     </message>
     <message>
-      <source>All on-disk dictionaries are already listed.</source>
-      <translation>所有磁盘上的词典都已列出。</translation>
+        <source>All on-disk dictionaries are already listed.</source>
+        <translation>所有磁盘上的词典都已列出。</translation>
     </message>
     <message>
-      <source>Found dictionaries on disk that aren't in your list:
+        <source>Found dictionaries on disk that aren't in your list:
 
 </source>
-      <translation>在磁盘上发现不在你列表中的词典：
+        <translation>在磁盘上发现不在你列表中的词典：
 
 </translation>
     </message>
     <message>
-      <source>Add them to the dictionary list?</source>
-      <translation>将它们添加到词典列表？</translation>
+        <source>Add them to the dictionary list?</source>
+        <translation>将它们添加到词典列表？</translation>
     </message>
     <message>
-      <source>Restore from Disk</source>
-      <translation>从磁盘恢复</translation>
+        <source>Restore from Disk</source>
+        <translation>从磁盘恢复</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>DictionarySettingsPanel</name>
     <message>
-      <source>Loading…</source>
-      <translation>正在加载…</translation>
+        <source>Loading…</source>
+        <translation>正在加载…</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Installed dictionaries could not be checked.</source>
-      <translation>无法检查已安装的词典。</translation>
+        <source>Installed dictionaries could not be checked.</source>
+        <translation>无法检查已安装的词典。</translation>
     </message>
     <message>
-      <source>The dictionary was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-      <translation>已从链中移除词典，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
+        <source>The dictionary was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已从链中移除词典，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
     </message>
     <message>
-      <source>%1 could not be removed. Its files are intact — try again.</source>
-      <translation>无法移除 %1。其文件保持完好——请重试。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>无法移除 %1。其文件保持完好——请重试。</translation>
     </message>
     <message>
-      <source>%1 was only partly removed. Re-import or repair this dictionary before retrying.</source>
-      <translation>%1 仅被部分移除。请重新导入或修复此词典后再重试。</translation>
+        <source>%1 was only partly removed. Re-import or repair this dictionary before retrying.</source>
+        <translation>%1 仅被部分移除。请重新导入或修复此词典后再重试。</translation>
     </message>
     <message>
-      <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-      <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
     </message>
     <message>
-      <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
-      <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
     </message>
     <message>
-      <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
-      <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
     </message>
     <message>
-      <source>Select dictionary storage folder...</source>
-      <translation>选择词典存储文件夹...</translation>
+        <source>Select dictionary storage folder...</source>
+        <translation>选择词典存储文件夹...</translation>
     </message>
     <message>
-      <source>Reset to default</source>
-      <translation>重置为默认</translation>
+        <source>Reset to default</source>
+        <translation>重置为默认</translation>
     </message>
     <message>
-      <source>Storage Folder</source>
-      <translation>存储文件夹</translation>
+        <source>Storage Folder</source>
+        <translation>存储文件夹</translation>
     </message>
     <message>
-      <source>Where indexed dictionaries are stored. Existing dictionaries at the old location are not moved automatically.</source>
-      <translation>已索引词典的存储位置。旧位置的现有词典不会自动移动。</translation>
+        <source>Where indexed dictionaries are stored. Existing dictionaries at the old location are not moved automatically.</source>
+        <translation>已索引词典的存储位置。旧位置的现有词典不会自动移动。</translation>
     </message>
     <message>
-      <source>Active Dictionaries</source>
-      <translation>活动词典</translation>
+        <source>Active Dictionaries</source>
+        <translation>活动词典</translation>
     </message>
     <message>
-      <source>Reimport All</source>
-      <translation>重新导入全部</translation>
+        <source>Reimport All</source>
+        <translation>重新导入全部</translation>
     </message>
     <message>
-      <source>Restore from Disk</source>
-      <translation>从磁盘恢复</translation>
+        <source>Restore from Disk</source>
+        <translation>从磁盘恢复</translation>
     </message>
     <message>
-      <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
-      <translation>重新添加存储文件夹中发现但不在上方列表中的词典（例如设置重置后）。无需重新导入。</translation>
+        <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
+        <translation>重新添加存储文件夹中发现但不在上方列表中的词典（例如设置重置后）。无需重新导入。</translation>
     </message>
     <message>
-      <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
-      <translation>按从上到下的顺序尝试词典——第一个包含该单词条目的词典会被采用，其释义将填入 MainDefinition 字段。</translation>
+        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
+        <translation>按从上到下的顺序尝试词典——第一个包含该单词条目的词典会被采用，其释义将填入 MainDefinition 字段。</translation>
     </message>
     <message>
-      <source>Add dictionary…</source>
-      <translation>添加词典…</translation>
+        <source>Add dictionary…</source>
+        <translation>添加词典…</translation>
     </message>
     <message>
-      <source>Remove dictionary</source>
-      <translation>移除词典</translation>
+        <source>Remove dictionary</source>
+        <translation>移除词典</translation>
     </message>
     <message>
-      <source>Remove the selected dictionary and delete its files</source>
-      <translation>移除所选词典并删除其文件</translation>
+        <source>Remove the selected dictionary and delete its files</source>
+        <translation>移除所选词典并删除其文件</translation>
     </message>
     <message>
-      <source>Move up</source>
-      <translation>上移</translation>
+        <source>Move up</source>
+        <translation>上移</translation>
     </message>
     <message>
-      <source>Move up in priority</source>
-      <translation>提升优先级</translation>
+        <source>Move up in priority</source>
+        <translation>提升优先级</translation>
     </message>
     <message>
-      <source>Move down</source>
-      <translation>下移</translation>
+        <source>Move down</source>
+        <translation>下移</translation>
     </message>
     <message>
-      <source>Move down in priority</source>
-      <translation>降低优先级</translation>
+        <source>Move down in priority</source>
+        <translation>降低优先级</translation>
     </message>
     <message>
-      <source>%1 entries</source>
-      <translation>%1 个条目</translation>
+        <source>%1 entries</source>
+        <translation>%1 个条目</translation>
     </message>
     <message>
-      <source>not installed</source>
-      <translation>未安装</translation>
+        <source>not installed</source>
+        <translation>未安装</translation>
     </message>
     <message>
-      <source>⚠ missing — re-import</source>
-      <translation>⚠ 缺失 — 请重新导入</translation>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 缺失 — 请重新导入</translation>
     </message>
     <message>
-      <source>Jisho (online fallback)</source>
-      <translation>Jisho（在线回退）</translation>
+        <source>Jisho (online fallback)</source>
+        <translation>Jisho（在线回退）</translation>
     </message>
     <message>
-      <source>online</source>
-      <translation>在线</translation>
+        <source>online</source>
+        <translation>在线</translation>
     </message>
     <message>
-      <source>⚠ rate-limited, slower</source>
-      <translation>⚠ 有速率限制，较慢</translation>
+        <source>⚠ rate-limited, slower</source>
+        <translation>⚠ 有速率限制，较慢</translation>
     </message>
     <message>
-      <source>⚠ re-import to refresh</source>
-      <translation>⚠ 请重新导入以刷新</translation>
+        <source>⚠ re-import to refresh</source>
+        <translation>⚠ 请重新导入以刷新</translation>
     </message>
     <message>
-      <source>Enabled</source>
-      <translation>已启用</translation>
+        <source>Enabled</source>
+        <translation>已启用</translation>
     </message>
     <message>
-      <source>Enable %1</source>
-      <translation>启用 %1</translation>
+        <source>Enable %1</source>
+        <translation>启用 %1</translation>
     </message>
     <message>
-      <source>Enable or disable %1</source>
-      <translation>启用或禁用 %1</translation>
+        <source>Enable or disable %1</source>
+        <translation>启用或禁用 %1</translation>
     </message>
     <message>
-      <source>Re-import</source>
-      <translation>重新导入</translation>
+        <source>Re-import</source>
+        <translation>重新导入</translation>
     </message>
     <message>
-      <source>Remove '%1' and delete its files from disk?
+        <source>Remove '%1' and delete its files from disk?
 
 This cannot be undone. You would need to reimport from the source zip.</source>
-      <translation>移除“%1”并从磁盘删除其文件？
+        <translation>移除“%1”并从磁盘删除其文件？
 
 此操作无法撤销。你需要从来源 zip 重新导入。</translation>
     </message>
     <message>
-      <source>Remove '%1' from the dictionary list?
+        <source>Remove '%1' from the dictionary list?
 
 Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-      <translation>要将 “%1” 从词典列表中移除吗？
+        <translation>要将 “%1” 从词典列表中移除吗？
 
 磁盘上的文件将保持不变，因为无法确认该文件夹属于 Anki Miner。</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Re-import…</source>
-      <translation>重新导入…</translation>
+        <source>Re-import…</source>
+        <translation>重新导入…</translation>
     </message>
     <message>
-      <source>Remove</source>
-      <translation>移除</translation>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>DonePage</name>
     <message>
-      <source>Ready to Mine</source>
-      <translation>准备挖词</translation>
+        <source>Ready to Mine</source>
+        <translation>准备挖词</translation>
     </message>
     <message>
-      <source>A last check of everything mining needs. You can change it later in Settings.</source>
-      <translation>最后检查一次挖词所需的全部项目。你可稍后在“设置”中更改。</translation>
+        <source>A last check of everything mining needs. You can change it later in Settings.</source>
+        <translation>最后检查一次挖词所需的全部项目。你可稍后在“设置”中更改。</translation>
     </message>
     <message>
-      <source>Checking your setup...</source>
-      <translation>正在检查你的设置…</translation>
+        <source>Recheck</source>
+        <translation type="unfinished">重新检查</translation>
     </message>
     <message>
-      <source>Could not check your setup: </source>
-      <translation>无法检查你的设置：</translation>
+        <source>Checking your setup...</source>
+        <translation>正在检查你的设置…</translation>
     </message>
     <message>
-      <source>Yes</source>
-      <translation>是</translation>
+        <source>Could not check your setup: </source>
+        <translation>无法检查你的设置：</translation>
     </message>
     <message>
-      <source>No</source>
-      <translation>否</translation>
+        <source>Yes</source>
+        <translation>是</translation>
     </message>
     <message>
-      <source>AnkiConnect reachable: &lt;b&gt;%1&lt;/b&gt;</source>
-      <translation>AnkiConnect 可访问：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>No</source>
+        <translation>否</translation>
     </message>
     <message>
-      <source>Deck '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
-      <translation>牌组“%1”存在：&lt;b&gt;%2&lt;/b&gt;</translation>
+        <source>AnkiConnect reachable: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation>AnkiConnect 可访问：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
     <message>
-      <source>Note type '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
-      <translation>笔记类型“%1”存在：&lt;b&gt;%2&lt;/b&gt;</translation>
+        <source>Deck '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
+        <translation>牌组“%1”存在：&lt;b&gt;%2&lt;/b&gt;</translation>
     </message>
     <message>
-      <source>Every mapped field exists: &lt;b&gt;%1&lt;/b&gt;</source>
-      <translation>所有映射的字段均存在：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Note type '%1' exists: &lt;b&gt;%2&lt;/b&gt;</source>
+        <translation>笔记类型“%1”存在：&lt;b&gt;%2&lt;/b&gt;</translation>
     </message>
     <message>
-      <source>Offline dictionary ready: &lt;b&gt;%1&lt;/b&gt;</source>
-      <translation>离线词典已就绪：&lt;b&gt;%1&lt;/b&gt;</translation>
+        <source>Every mapped field exists: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation>所有映射的字段均存在：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Offline dictionary ready: &lt;b&gt;%1&lt;/b&gt;</source>
+        <translation>离线词典已就绪：&lt;b&gt;%1&lt;/b&gt;</translation>
+    </message>
+</context><context>
     <name>EnhancedDialog</name>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>EpisodeProcessor</name>
     <message>
-      <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
-      <translation>单词音频来源连接/证书失败——本次运行跳过音频，将在下次运行时重试</translation>
+        <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
+        <translation>单词音频来源连接/证书失败——本次运行跳过音频，将在下次运行时重试</translation>
     </message>
     <message>
-      <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
-      <translation>单词音频来源反复返回服务器错误——本次运行跳过音频，将在下次运行时重试</translation>
+        <source>Word-audio source returned repeated server errors — audio skipped this run, will retry next run</source>
+        <translation>单词音频来源反复返回服务器错误——本次运行跳过音频，将在下次运行时重试</translation>
     </message>
     <message>
-      <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
-      <translation>单词音频来源返回了非音频响应（可能被限流）——本次运行跳过音频，将在下次运行时重试</translation>
+        <source>Word-audio source returned non-audio responses (likely rate-limited) — audio skipped this run, will retry next run</source>
+        <translation>单词音频来源返回了非音频响应（可能被限流）——本次运行跳过音频，将在下次运行时重试</translation>
     </message>
     <message>
-      <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
-      <translation>句子音频 TTS 连接/证书失败——本次运行跳过句子音频，下次运行将重试</translation>
+        <source>Sentence-audio TTS connection/certificate failure — sentence audio skipped this run, will retry next run</source>
+        <translation>句子音频 TTS 连接/证书失败——本次运行跳过句子音频，下次运行将重试</translation>
     </message>
     <message>
-      <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
-      <translation>句子音频 TTS 反复返回服务器错误——本次运行跳过句子音频，下次运行将重试</translation>
+        <source>Sentence-audio TTS returned repeated server errors — sentence audio skipped this run, will retry next run</source>
+        <translation>句子音频 TTS 反复返回服务器错误——本次运行跳过句子音频，下次运行将重试</translation>
     </message>
     <message>
-      <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
-      <translation>句子音频 TTS 返回非音频响应（可能被限速）——本次运行跳过句子音频，下次运行将重试</translation>
+        <source>Sentence-audio TTS returned non-audio responses (likely rate-limited) — sentence audio skipped this run, will retry next run</source>
+        <translation>句子音频 TTS 返回非音频响应（可能被限速）——本次运行跳过句子音频，下次运行将重试</translation>
     </message>
     <message>
-      <source>Fetching expression audio</source>
-      <translation>正在获取表达音频</translation>
+        <source>Fetching expression audio</source>
+        <translation>正在获取表达音频</translation>
     </message>
     <message>
-      <source>Expression audio: %1</source>
-      <translation>表达音频：%1</translation>
+        <source>Expression audio: %1</source>
+        <translation>表达音频：%1</translation>
     </message>
     <message>
-      <source>Expression audio: %1/%2 available</source>
-      <translation>表达音频：%1/%2 可用</translation>
+        <source>Expression audio: %1/%2 available</source>
+        <translation>表达音频：%1/%2 可用</translation>
     </message>
     <message>
-      <source>Generating sentence audio</source>
-      <translation>正在生成句子音频</translation>
+        <source>Generating sentence audio</source>
+        <translation>正在生成句子音频</translation>
     </message>
     <message>
-      <source>Sentence audio: %1</source>
-      <translation>句子音频：%1</translation>
+        <source>Sentence audio: %1</source>
+        <translation>句子音频：%1</translation>
     </message>
     <message>
-      <source>Sentence audio: %1/%2 sentences</source>
-      <translation>句子音频：%1/%2 个句子</translation>
+        <source>Sentence audio: %1/%2 sentences</source>
+        <translation>句子音频：%1/%2 个句子</translation>
     </message>
     <message>
-      <source>All %1 new word(s) were removed by active filters — no cards created</source>
-      <translation>全部 %1 个新单词已被启用的过滤器移除——未创建卡片</translation>
+        <source>All %1 new word(s) were removed by active filters — no cards created</source>
+        <translation>全部 %1 个新单词已被启用的过滤器移除——未创建卡片</translation>
     </message>
     <message>
-      <source>No cards created. Every word is already in Anki.</source>
-      <translation>未创建卡片。所有单词均已在 Anki 中。</translation>
+        <source>No cards created. Every word is already in Anki.</source>
+        <translation>未创建卡片。所有单词均已在 Anki 中。</translation>
     </message>
     <message>
-      <source>Ambiguous reading review required for %1 word(s); current readings kept</source>
-      <translation>%1 个单词需要审核歧义读音；已保留当前读音</translation>
+        <source>Ambiguous reading review required for %1 word(s); current readings kept</source>
+        <translation>%1 个单词需要审核歧义读音；已保留当前读音</translation>
     </message>
     <message>
-      <source>Parsing subtitles</source>
-      <translation>正在解析字幕</translation>
+        <source>Parsing subtitles</source>
+        <translation>正在解析字幕</translation>
     </message>
     <message>
-      <source>Subtitles: %1</source>
-      <translation>字幕：%1</translation>
+        <source>Subtitles: %1</source>
+        <translation>字幕：%1</translation>
     </message>
     <message numerus="yes">
-      <source>Found %n unique word(s)</source>
-      <translation>
-        <numerusform>找到 %n 个唯一单词</numerusform>
-      </translation>
+        <source>Found %n unique word(s)</source>
+        <translation>
+            <numerusform>找到 %n 个唯一单词</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Frequency data: %1/%2 words ranked</source>
-      <translation>词频数据：%1/%2 个单词已排名</translation>
+        <source>Frequency data: %1/%2 words ranked</source>
+        <translation>词频数据：%1/%2 个单词已排名</translation>
     </message>
     <message>
-      <source>Filtering against known vocabulary</source>
-      <translation>正在根据已知词汇过滤</translation>
+        <source>Filtering against known vocabulary</source>
+        <translation>正在根据已知词汇过滤</translation>
     </message>
     <message>
-      <source>Known-words filter bypassed (include everything mode)</source>
-      <translation>已绕过已知单词过滤器（包含全部模式）</translation>
+        <source>Known-words filter bypassed (include everything mode)</source>
+        <translation>已绕过已知单词过滤器（包含全部模式）</translation>
     </message>
     <message>
-      <source>Known word DB synced: %1 new words (%2 total)</source>
-      <translation>已知单词数据库已同步：%1 个新单词（共 %2 个）</translation>
+        <source>Known word DB synced: %1 new words (%2 total)</source>
+        <translation>已知单词数据库已同步：%1 个新单词（共 %2 个）</translation>
     </message>
     <message numerus="yes">
-      <source>%n new word(s) to mine</source>
-      <translation>
-        <numerusform>%n 个待挖词的新单词</numerusform>
-      </translation>
+        <source>%n new word(s) to mine</source>
+        <translation>
+            <numerusform>%n 个待挖词的新单词</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Comprehension: %1% of words already known</source>
-      <translation>理解度：%1% 的单词已知</translation>
+        <source>Comprehension: %1% of words already known</source>
+        <translation>理解度：%1% 的单词已知</translation>
     </message>
     <message numerus="yes">
-      <source>All %n word(s) from this subtitle are already in Anki — no new cards created</source>
-      <translation>
-        <numerusform>此字幕中的全部 %n 个单词都已存在于 Anki 中——未创建新卡片</numerusform>
-      </translation>
+        <source>All %n word(s) from this subtitle are already in Anki — no new cards created</source>
+        <translation>
+            <numerusform>此字幕中的全部 %n 个单词都已存在于 Anki 中——未创建新卡片</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Skipped %1 words with no definition found: %2%3</source>
-      <translation>已跳过 %1 个未找到释义的单词：%2%3</translation>
+        <source>Skipped %1 words with no definition found: %2%3</source>
+        <translation>已跳过 %1 个未找到释义的单词：%2%3</translation>
     </message>
     <message>
-      <source>Frequency filter: removed %1 words outside top %2</source>
-      <translation>词频过滤器：移除了 %1 个不在前 %2 内的单词</translation>
+        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
+        <translation>已设置词频截断但未加载词频源——截断被忽略（请在设置中添加词频源）。</translation>
     </message>
     <message>
-      <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
-      <translation>已设置词频截断但未加载词频源——截断被忽略（请在设置中添加词频源）。</translation>
+        <source>Word list filter: removed %1 words</source>
+        <translation>单词列表过滤器：移除了 %1 个单词</translation>
     </message>
     <message>
-      <source>Word list filter: removed %1 words</source>
-      <translation>单词列表过滤器：移除了 %1 个单词</translation>
+        <source>Script-type filter: removed %1 %2 words</source>
+        <translation>文字类型过滤器：移除了 %1 个 %2 单词</translation>
     </message>
     <message>
-      <source>Script-type filter: removed %1 %2 words</source>
-      <translation>文字类型过滤器：移除了 %1 个 %2 单词</translation>
+        <source>Name wordset filter: removed %1 words</source>
+        <translation>人名词集过滤器：移除了 %1 个单词</translation>
     </message>
     <message>
-      <source>Name wordset filter: removed %1 words</source>
-      <translation>人名词集过滤器：移除了 %1 个单词</translation>
+        <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
+        <translation>句子去重：移除了 %1 个重复句子的单词</translation>
     </message>
     <message>
-      <source>Cross-episode filter: removed %1 words appearing in fewer than %2 episodes</source>
-      <translation>跨剧集过滤器：移除了 %1 个出现在少于 %2 个剧集中的单词</translation>
+        <source>i+1 filter: kept %1/%2 words (%3%)</source>
+        <translation>i+1 过滤器：保留了 %1/%2 个单词（%3%）</translation>
     </message>
     <message>
-      <source>Sentence deduplication: removed %1 duplicate-sentence words</source>
-      <translation>句子去重：移除了 %1 个重复句子的单词</translation>
-    </message>
-    <message>
-      <source>i+1 filter: kept %1/%2 words (%3%)</source>
-      <translation>i+1 过滤器：保留了 %1/%2 个单词（%3%）</translation>
-    </message>
-    <message>
-      <source>Sentence length filter: removed %1 words (cap: %2)</source>
-      <translation>句子长度过滤器：移除了 %1 个单词（上限：%2）</translation>
+        <source>Sentence length filter: removed %1 words (cap: %2)</source>
+        <translation>句子长度过滤器：移除了 %1 个单词（上限：%2）</translation>
     </message>
     <message numerus="yes">
-      <source>Whitelist: force-included %n word(s)</source>
-      <translation>
-        <numerusform>白名单：强制包含 %n 个单词</numerusform>
-      </translation>
+        <source>Whitelist: force-included %n word(s)</source>
+        <translation>
+            <numerusform>白名单：强制包含 %n 个单词</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Collapsed %1 duplicate-expression word(s)</source>
-      <translation>合并了 %1 个重复表达的单词</translation>
+        <source>Collapsed %1 duplicate-expression word(s)</source>
+        <translation>合并了 %1 个重复表达的单词</translation>
     </message>
     <message>
-      <source>Extracting media</source>
-      <translation>正在提取媒体</translation>
+        <source>Skipped %1 word(s) already carded under another spelling</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
-      <translation>动画截图使用 WebP——此 ffmpeg 构建没有 AVIF (libsvtav1) 编码器。</translation>
+        <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
-      <translation>动画截图不可用——此 ffmpeg 构建没有 AVIF 或 WebP 编码器；请在设置中切换为静态截图。</translation>
+        <source>Frequency filter: removed %1 words more common than rank %2</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Fetching definitions</source>
-      <translation>正在获取释义</translation>
+        <source>Frequency filter: removed %1 words outside top %2</source>
+        <translation>词频过滤器：移除了 %1 个不在前 %2 内的单词</translation>
+    </message>
+    <message>
+        <source>Extracting media</source>
+        <translation>正在提取媒体</translation>
+    </message>
+    <message>
+        <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
+        <translation>动画截图使用 WebP——此 ffmpeg 构建没有 AVIF (libsvtav1) 编码器。</translation>
+    </message>
+    <message>
+        <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
+        <translation>动画截图不可用——此 ffmpeg 构建没有 AVIF 或 WebP 编码器；请在设置中切换为静态截图。</translation>
+    </message>
+    <message>
+        <source>Fetching definitions</source>
+        <translation>正在获取释义</translation>
     </message>
     <message numerus="yes">
-      <source>Found %n definition(s)</source>
-      <translation>
-        <numerusform>找到 %n 条释义</numerusform>
-      </translation>
+        <source>Found %n definition(s)</source>
+        <translation>
+            <numerusform>找到 %n 条释义</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Pitch accent data: %1/%2 words</source>
-      <translation>音调数据：%1/%2 个单词</translation>
+        <source>Pitch accent data: %1/%2 words</source>
+        <translation>音调数据：%1/%2 个单词</translation>
     </message>
     <message>
-      <source>Creating Anki cards</source>
-      <translation>正在创建 Anki 卡片</translation>
+        <source>Creating Anki cards</source>
+        <translation>正在创建 Anki 卡片</translation>
     </message>
     <message numerus="yes">
-      <source>Successfully created %n card(s)</source>
-      <translation>
-        <numerusform>成功创建 %n 张卡片</numerusform>
-      </translation>
+        <source>Successfully created %n card(s)</source>
+        <translation>
+            <numerusform>成功创建 %n 张卡片</numerusform>
+        </translation>
     </message>
     <message numerus="yes">
-      <source>%n media file(s) could not be stored in Anki — those cards have no audio or screenshot</source>
-      <translation>
-        <numerusform>有 %n 个媒体文件未能存入 Anki——对应卡片没有音频或截图</numerusform>
-      </translation>
+        <source>%n media file(s) could not be stored in Anki — those cards have no audio or screenshot</source>
+        <translation>
+            <numerusform>有 %n 个媒体文件未能存入 Anki——对应卡片没有音频或截图</numerusform>
+        </translation>
     </message>
     <message numerus="yes">
-      <source>Skipped %n word(s) Anki flagged as duplicates (same Expression)</source>
-      <translation>
-        <numerusform>已跳过 %n 个被 Anki 标记为重复的单词（Expression 相同）</numerusform>
-      </translation>
+        <source>Skipped %n word(s) Anki flagged as duplicates (same Expression)</source>
+        <translation>
+            <numerusform>已跳过 %n 个被 Anki 标记为重复的单词（Expression 相同）</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Error: %1</source>
-      <translation>错误：%1</translation>
+        <source>Error: %1</source>
+        <translation>错误：%1</translation>
     </message>
     <message>
-      <source>Unexpected error: %1</source>
-      <translation>意外错误：%1</translation>
+        <source>Unexpected error: %1</source>
+        <translation>意外错误：%1</translation>
     </message>
     <message>
-      <source>No words selected for card creation</source>
-      <translation>未选择用于创建卡片的单词</translation>
+        <source>No words selected for card creation</source>
+        <translation>未选择用于创建卡片的单词</translation>
     </message>
     <message numerus="yes">
-      <source>Mining %n selected word(s)</source>
-      <translation>
-        <numerusform>正在挖取 %n 个已选单词</numerusform>
-      </translation>
+        <source>Mining %n selected word(s)</source>
+        <translation>
+            <numerusform>正在挖取 %n 个已选单词</numerusform>
+        </translation>
     </message>
     <message>
-      <source>No words found in subtitles</source>
-      <translation>字幕中未找到单词</translation>
+        <source>No words found in subtitles</source>
+        <translation>字幕中未找到单词</translation>
     </message>
     <message>
-      <source>No media extracted successfully</source>
-      <translation>未成功提取任何媒体</translation>
+        <source>No media extracted successfully</source>
+        <translation>未成功提取任何媒体</translation>
     </message>
     <message numerus="yes">
-      <source>Extracted media for %n word(s)</source>
-      <translation>
-        <numerusform>已为 %n 个单词提取媒体</numerusform>
-      </translation>
+        <source>Extracted media for %n word(s)</source>
+        <translation>
+            <numerusform>已为 %n 个单词提取媒体</numerusform>
+        </translation>
     </message>
     <message numerus="yes">
-      <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
-      <translation>
-        <numerusform>运行在创建 %n 张卡片后失败；这些卡片仍保留在 Anki 中，可以撤销。</numerusform>
-      </translation>
+        <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
+        <translation>
+            <numerusform>运行在创建 %n 张卡片后失败；这些卡片仍保留在 Anki 中，可以撤销。</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Preparing card images</source>
-      <translation>正在准备卡片图像</translation>
+        <source>Preparing card images</source>
+        <translation>正在准备卡片图像</translation>
     </message>
     <message>
-      <source>Preparing page images</source>
-      <translation>正在准备页面图像</translation>
+        <source>Preparing page images</source>
+        <translation>正在准备页面图像</translation>
     </message>
     <message>
-      <source>Card image: %1</source>
-      <translation>卡片图像：%1</translation>
+        <source>Card image: %1</source>
+        <translation>卡片图像：%1</translation>
     </message>
     <message>
-      <source>Page image: %1</source>
-      <translation>页面图像：%1</translation>
+        <source>Page image: %1</source>
+        <translation>页面图像：%1</translation>
     </message>
     <message>
-      <source>Skipped unsafe image archive %1 — its cards have no page image</source>
-      <translation>已跳过不安全的图像归档 %1——其卡片没有页面图像</translation>
+        <source>Skipped unsafe image archive %1 — its cards have no page image</source>
+        <translation>已跳过不安全的图像归档 %1——其卡片没有页面图像</translation>
     </message>
     <message>
-      <source>Skipped corrupt image archive %1 — its cards have no page image</source>
-      <translation>已跳过损坏的图像归档 %1——其卡片没有页面图像</translation>
+        <source>Skipped corrupt image archive %1 — its cards have no page image</source>
+        <translation>已跳过损坏的图像归档 %1——其卡片没有页面图像</translation>
     </message>
     <message>
-      <source>Skipped unreadable page image %1 — its card has no picture</source>
-      <translation>已跳过无法读取的页面图像 %1——其卡片没有图片</translation>
+        <source>Skipped unreadable page image %1 — its card has no picture</source>
+        <translation>已跳过无法读取的页面图像 %1——其卡片没有图片</translation>
     </message>
     <message>
-      <source>Parsing text</source>
-      <translation>正在解析文本</translation>
+        <source>Parsing text</source>
+        <translation>正在解析文本</translation>
     </message>
     <message>
-      <source>Text: %1</source>
-      <translation>文本：%1</translation>
+        <source>Text: %1</source>
+        <translation>文本：%1</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ExportDialog</name>
     <message>
-      <source>Export Words</source>
-      <translation>导出单词</translation>
+        <source>Export Words</source>
+        <translation>导出单词</translation>
     </message>
     <message>
-      <source>Export Format</source>
-      <translation>导出格式</translation>
+        <source>Export Format</source>
+        <translation>导出格式</translation>
     </message>
     <message>
-      <source>CSV (.csv)</source>
-      <translation>CSV (.csv)</translation>
+        <source>CSV (.csv)</source>
+        <translation>CSV (.csv)</translation>
     </message>
     <message>
-      <source>TSV (.tsv)</source>
-      <translation>TSV (.tsv)</translation>
+        <source>TSV (.tsv)</source>
+        <translation>TSV (.tsv)</translation>
     </message>
     <message>
-      <source>Vocabulary List (.txt)</source>
-      <translation>词汇列表 (.txt)</translation>
+        <source>Vocabulary List (.txt)</source>
+        <translation>词汇列表 (.txt)</translation>
     </message>
     <message>
-      <source>List format:</source>
-      <translation>列表格式：</translation>
+        <source>List format:</source>
+        <translation>列表格式：</translation>
     </message>
     <message>
-      <source>Plain (one word per line)</source>
-      <translation>纯文本（每行一个单词）</translation>
+        <source>Plain (one word per line)</source>
+        <translation>纯文本（每行一个单词）</translation>
     </message>
     <message>
-      <source>%1 words</source>
-      <translation>%1 个单词</translation>
+        <source>%1 words</source>
+        <translation>%1 个单词</translation>
     </message>
     <message>
-      <source>, %1 with definitions</source>
-      <translation>，%1 个带释义</translation>
+        <source>, %1 with definitions</source>
+        <translation>，%1 个带释义</translation>
     </message>
     <message>
-      <source>, %1 with media</source>
-      <translation>，%1 个带媒体</translation>
+        <source>, %1 with media</source>
+        <translation>，%1 个带媒体</translation>
     </message>
     <message>
-      <source>Select output file...</source>
-      <translation>选择输出文件...</translation>
+        <source>Select output file...</source>
+        <translation>选择输出文件...</translation>
     </message>
     <message>
-      <source>Browse...</source>
-      <translation>浏览...</translation>
+        <source>Browse...</source>
+        <translation>浏览...</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Export</source>
-      <translation>导出</translation>
+        <source>Export</source>
+        <translation>导出</translation>
     </message>
     <message>
-      <source>Export Complete</source>
-      <translation>导出完成</translation>
+        <source>Export Complete</source>
+        <translation>导出完成</translation>
     </message>
     <message>
-      <source>Successfully exported %1 words to:
+        <source>Successfully exported %1 words to:
 %2</source>
-      <translation>已成功导出 %1 个单词到：
+        <translation>已成功导出 %1 个单词到：
 %2</translation>
     </message>
     <message>
-      <source>The export could not be written.</source>
-      <translation>无法写入导出文件。</translation>
+        <source>The export could not be written.</source>
+        <translation>无法写入导出文件。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>FileSelector</name>
     <message>
-      <source>Select file...</source>
-      <translation>选择文件…</translation>
+        <source>Select file...</source>
+        <translation>选择文件…</translation>
     </message>
     <message>
-      <source>Select folder...</source>
-      <translation>选择文件夹…</translation>
+        <source>Select folder...</source>
+        <translation>选择文件夹…</translation>
     </message>
     <message>
-      <source>Browse...</source>
-      <translation>浏览…</translation>
+        <source>Browse...</source>
+        <translation>浏览…</translation>
     </message>
     <message>
-      <source>file</source>
-      <translation>文件</translation>
+        <source>file</source>
+        <translation>文件</translation>
     </message>
     <message>
-      <source>folder</source>
-      <translation>文件夹</translation>
+        <source>folder</source>
+        <translation>文件夹</translation>
     </message>
     <message>
-      <source>Select a %1 by typing path, browsing, or dragging</source>
-      <translation>通过输入路径、浏览或拖动的方式选择%1</translation>
+        <source>Select a %1 by typing path, browsing, or dragging</source>
+        <translation>通过输入路径、浏览或拖动的方式选择%1</translation>
     </message>
     <message>
-      <source>%1 path</source>
-      <translation>%1路径</translation>
+        <source>%1 path</source>
+        <translation>%1路径</translation>
     </message>
     <message>
-      <source>Path to %1. Type or paste a path, or use browse button</source>
-      <translation>%1的路径。输入或粘贴路径，或使用浏览按钮</translation>
+        <source>Path to %1. Type or paste a path, or use browse button</source>
+        <translation>%1的路径。输入或粘贴路径，或使用浏览按钮</translation>
     </message>
     <message>
-      <source>Browse for %1</source>
-      <translation>浏览%1</translation>
+        <source>Browse for %1</source>
+        <translation>浏览%1</translation>
     </message>
     <message>
-      <source>Opens file dialog to select %1</source>
-      <translation>打开文件对话框以选择%1</translation>
+        <source>Opens file dialog to select %1</source>
+        <translation>打开文件对话框以选择%1</translation>
     </message>
     <message>
-      <source>Select %1</source>
-      <translation>选择 %1</translation>
+        <source>Select %1</source>
+        <translation>选择 %1</translation>
     </message>
     <message>
-      <source>No file selected</source>
-      <translation>未选择文件</translation>
+        <source>No file selected</source>
+        <translation>未选择文件</translation>
     </message>
     <message>
-      <source>No folder selected</source>
-      <translation>未选择文件夹</translation>
+        <source>No folder selected</source>
+        <translation>未选择文件夹</translation>
     </message>
     <message>
-      <source>Not installed</source>
-      <translation>未安装</translation>
+        <source>Not installed</source>
+        <translation>未安装</translation>
     </message>
     <message>
-      <source>File not found. Choose an existing file.</source>
-      <translation>未找到文件。请选择已有文件。</translation>
+        <source>File not found. Choose an existing file.</source>
+        <translation>未找到文件。请选择已有文件。</translation>
     </message>
     <message>
-      <source>Folder not found. Choose an existing folder.</source>
-      <translation>未找到文件夹。请选择已有文件夹。</translation>
+        <source>Folder not found. Choose an existing folder.</source>
+        <translation>未找到文件夹。请选择已有文件夹。</translation>
     </message>
     <message>
-      <source>Only files and folders can be dropped here.</source>
-      <translation>这里只能拖放文件和文件夹。</translation>
+        <source>Only files and folders can be dropped here.</source>
+        <translation>这里只能拖放文件和文件夹。</translation>
     </message>
     <message>
-      <source>Drop one item at a time.</source>
-      <translation>每次只能拖放一个项目。</translation>
+        <source>Drop one item at a time.</source>
+        <translation>每次只能拖放一个项目。</translation>
     </message>
     <message>
-      <source>Only local files can be dropped here.</source>
-      <translation>这里只能拖放本地文件。</translation>
+        <source>Only local files can be dropped here.</source>
+        <translation>这里只能拖放本地文件。</translation>
     </message>
     <message>
-      <source>That is a folder; this field takes a file.</source>
-      <translation>这是文件夹；此字段需要文件。</translation>
+        <source>That is a folder; this field takes a file.</source>
+        <translation>这是文件夹；此字段需要文件。</translation>
     </message>
     <message>
-      <source>That is a file; this field takes a folder.</source>
-      <translation>这是文件；此字段需要文件夹。</translation>
+        <source>That is a file; this field takes a folder.</source>
+        <translation>这是文件；此字段需要文件夹。</translation>
     </message>
     <message>
-      <source>Drop %1 here</source>
-      <translation>将 %1 拖放到此处</translation>
+        <source>Drop %1 here</source>
+        <translation>将 %1 拖放到此处</translation>
     </message>
     <message>
-      <source>Drop the file here</source>
-      <translation>将文件拖放到此处</translation>
+        <source>Drop the file here</source>
+        <translation>将文件拖放到此处</translation>
     </message>
     <message>
-      <source>Drop the folder here</source>
-      <translation>将文件夹拖放到此处</translation>
+        <source>Drop the folder here</source>
+        <translation>将文件夹拖放到此处</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>FilteringSettingsPanel</name>
     <message>
-      <source>Word Frequency</source>
-      <translation>词频</translation>
+        <source>Word Frequency</source>
+        <translation>词频</translation>
     </message>
     <message>
-      <source>No limit</source>
-      <translation>无限制</translation>
+        <source>No minimum</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Max Frequency Rank</source>
-      <translation>最大词频排名</translation>
+        <source>Skip words more common than this rank - the ones already learned from exposure.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Words missing from the frequency list are excluded</source>
-      <translation>不在词频列表中的单词将被排除</translation>
+        <source>No limit</source>
+        <translation>无限制</translation>
     </message>
     <message>
-      <source>No frequency source is loaded — this cutoff is ignored. Add a frequency source in the Dictionaries tab.</source>
-      <translation>未加载词频源——此截断被忽略。请在“词典”标签页中添加词频源。</translation>
+        <source>Skip words rarer than this rank.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Known Words Database</source>
-      <translation>已知单词数据库</translation>
+        <source>to</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Use Local Known Words Database</source>
-      <translation>使用本地已知单词数据库</translation>
+        <source>Frequency Rank Range</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Treat Kana Spellings of Known Words as Known</source>
-      <translation>将已知单词的假名拼写视为已知</translation>
+        <source>Mine only words ranked inside this band. Rank 1 is the most common word.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-      <translation>当字幕以假名拼写某个单词（例如 うなずく），而该词的汉字词典形式（頷く）已存在于您的收藏或已知单词列表中时，将跳过该单词，而不会创建第二张卡片。汉字拼写永远不会以这种方式合并。</translation>
+        <source>Include Words Missing from the Frequency List</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Rebuild Known Words DB</source>
-      <translation>重建已知单词数据库</translation>
+        <source>Keep words that no loaded frequency source ranks. Off by default: a word with no rank cannot be shown to fall inside the band.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Clear the local known-words cache so it re-syncs from Anki on the next run. Needed for deck exclusions below to take effect when the local cache is enabled.</source>
-      <translation>清除本地已知单词缓存，以便下次运行时从 Anki 重新同步。启用本地缓存时，下方的牌组排除需要此操作才能生效。</translation>
+        <source>No frequency source is loaded, so this range is ignored.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Manage Known Words…</source>
-      <translation>管理已知单词…</translation>
+        <source>Open Frequency settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
-      <translation>查看、移除、导出或重置你从生词整理器添加到本地已知单词列表中的单词。</translation>
+        <source>Known Words Database</source>
+        <translation>已知单词数据库</translation>
     </message>
     <message>
-      <source>Excluded Decks</source>
-      <translation>排除的牌组</translation>
+        <source>Use Local Known Words Database</source>
+        <translation>使用本地已知单词数据库</translation>
     </message>
     <message>
-      <source>Words in these decks (and their subdecks) stay mineable — not treated as already known.</source>
-      <translation>这些牌组（及其子牌组）中的单词仍可挖取——不会被视为已知单词。</translation>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>将已知单词的假名拼写视为已知</translation>
     </message>
     <message>
-      <source>Add Deck…</source>
-      <translation>添加牌组…</translation>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>当字幕以假名拼写某个单词（例如 うなずく），而该词的汉字词典形式（頷く）已存在于您的收藏或已知单词列表中时，将跳过该单词，而不会创建第二张卡片。汉字拼写永远不会以这种方式合并。</translation>
     </message>
     <message>
-      <source>Remove</source>
-      <translation>移除</translation>
+        <source>Rebuild Known Words DB</source>
+        <translation>重建已知单词数据库</translation>
     </message>
     <message>
-      <source>Word Lists</source>
-      <translation>单词列表</translation>
+        <source>Clear the local known-words cache so it re-syncs from Anki on the next run. Needed for deck exclusions below to take effect when the local cache is enabled.</source>
+        <translation>清除本地已知单词缓存，以便下次运行时从 Anki 重新同步。启用本地缓存时，下方的牌组排除需要此操作才能生效。</translation>
     </message>
     <message>
-      <source>Select blacklist file...</source>
-      <translation>选择黑名单文件…</translation>
+        <source>Manage Known Words…</source>
+        <translation>管理已知单词…</translation>
     </message>
     <message>
-      <source>Blacklist File</source>
-      <translation>黑名单文件</translation>
+        <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
+        <translation>查看、移除、导出或重置你从生词整理器添加到本地已知单词列表中的单词。</translation>
     </message>
     <message>
-      <source>Text file with one word per line to always skip</source>
-      <translation>每行一个单词的文本文件，这些单词将始终被跳过</translation>
+        <source>Excluded Decks</source>
+        <translation>排除的牌组</translation>
     </message>
     <message>
-      <source>Enable Blacklist</source>
-      <translation>启用黑名单</translation>
+        <source>Words in these decks (and their subdecks) stay mineable — not treated as already known.</source>
+        <translation>这些牌组（及其子牌组）中的单词仍可挖取——不会被视为已知单词。</translation>
     </message>
     <message>
-      <source>Select whitelist file...</source>
-      <translation>选择白名单文件…</translation>
+        <source>Add Deck…</source>
+        <translation>添加牌组…</translation>
     </message>
     <message>
-      <source>Whitelist File</source>
-      <translation>白名单文件</translation>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
     <message>
-      <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
-      <translation>每行一个单词的文本文件，用于强制包含，绕过词频、字符、长度和其他过滤器。单词仍必须有词典条目，且尚未在 Anki 或你的已知单词列表中。</translation>
+        <source>Word Lists</source>
+        <translation>单词列表</translation>
     </message>
     <message>
-      <source>Enable Whitelist</source>
-      <translation>启用白名单</translation>
+        <source>Select blacklist file...</source>
+        <translation>选择黑名单文件…</translation>
     </message>
     <message>
-      <source>Name Wordsets</source>
-      <translation>人名词集</translation>
+        <source>Blacklist File</source>
+        <translation>黑名单文件</translation>
     </message>
     <message>
-      <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-      <translation>将内置的日语专有名词列表（人名和地名）排除在挖掘之外。适用于出现大量角色名和地名的节目。上方白名单可挽救你确实需要的名称。</translation>
+        <source>Text file with one word per line to always skip</source>
+        <translation>每行一个单词的文本文件，这些单词将始终被跳过</translation>
     </message>
     <message>
-      <source>%1 (%2)</source>
-      <translation>%1 （%2）</translation>
+        <source>Enable Blacklist</source>
+        <translation>启用黑名单</translation>
     </message>
     <message>
-      <source>Exclude the bundled '%1' wordset (%2 entries) from mining.</source>
-      <translation>将内置的“%1”词集（%2 条）排除在挖掘之外。</translation>
+        <source>Select whitelist file...</source>
+        <translation>选择白名单文件…</translation>
     </message>
     <message>
-      <source>Subtitle Text Filtering</source>
-      <translation>字幕文本过滤</translation>
+        <source>Whitelist File</source>
+        <translation>白名单文件</translation>
     </message>
     <message>
-      <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-      <translation>移除字幕标注（音效字幕、说话人标签、行内振假名）</translation>
+        <source>Text file with one word per line to force-include, bypassing frequency, script, length and other filters. A word must still have a dictionary entry and not already be in Anki or your known-words list.</source>
+        <translation>每行一个单词的文本文件，用于强制包含，绕过词频、字符、长度和其他过滤器。单词仍必须有词典条目，且尚未在 Anki 或你的已知单词列表中。</translation>
     </message>
     <message>
-      <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-      <translation>挖词前移除非对话字幕标注：整行音效，如 (電話)；开头的说话人标签，如 (Tanaka)；以及行内振假名，如 瀕死(ひんし)。默认开启；下方的正则过滤器仍会叠加生效。</translation>
+        <source>Enable Whitelist</source>
+        <translation>启用白名单</translation>
     </message>
     <message>
-      <source>Skip katakana-stylized subtitle cues</source>
-      <translation>跳过以片假名呈现的字幕提示</translation>
+        <source>Name Wordsets</source>
+        <translation>人名词集</translation>
     </message>
     <message>
-      <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
-      <translation>若整个字幕提示包含片假名但不含平假名，则跳过该提示。仅用于将说话者对白以片假名呈现的来源；仅含有效外来词的提示也会被跳过。默认关闭。</translation>
+        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
+        <translation>将内置的日语专有名词列表（人名和地名）排除在挖掘之外。适用于出现大量角色名和地名的节目。上方白名单可挽救你确实需要的名称。</translation>
     </message>
     <message>
-      <source>Regex Filter</source>
-      <translation>正则过滤器</translation>
+        <source>%1 (%2)</source>
+        <translation>%1 （%2）</translation>
     </message>
     <message>
-      <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-      <translation>在挖掘前对字幕文本进行匹配并移除（或替换）的 Python 正则表达式。适用于剥离说话人姓名如 (Tanaka) 或声音描述如 [door]。用 | 组合多个选项。可在 https://regex101.com 测试模式。</translation>
+        <source>Exclude the bundled '%1' wordset (%2 entries) from mining.</source>
+        <translation>将内置的“%1”词集（%2 条）排除在挖掘之外。</translation>
     </message>
     <message>
-      <source>(empty = delete match)</source>
-      <translation>（留空 = 删除匹配项）</translation>
+        <source>Subtitle Text Filtering</source>
+        <translation>字幕文本过滤</translation>
     </message>
     <message>
-      <source>Replacement</source>
-      <translation>替换内容</translation>
+        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
+        <translation>移除字幕标注（音效字幕、说话人标签、行内振假名）</translation>
     </message>
     <message>
-      <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
-      <translation>插入替换每个匹配项（留空则删除该匹配项）。请使用 Python 的反向引用 \1 \2，而非 asbplayer 的 $1 $2。</translation>
+        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
+        <translation>挖词前移除非对话字幕标注：整行音效，如 (電話)；开头的说话人标签，如 (Tanaka)；以及行内振假名，如 瀕死(ひんし)。默认开启；下方的正则过滤器仍会叠加生效。</translation>
     </message>
     <message>
-      <source>Enable Subtitle Regex Filter</source>
-      <translation>启用字幕正则过滤器</translation>
+        <source>Skip katakana-stylized subtitle cues</source>
+        <translation>跳过以片假名呈现的字幕提示</translation>
     </message>
     <message>
-      <source>Parens (Tanaka)</source>
-      <translation>圆括号 (Tanaka)</translation>
+        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
+        <translation>若整个字幕提示包含片假名但不含平假名，则跳过该提示。仅用于将说话者对白以片假名呈现的来源；仅含有效外来词的提示也会被跳过。默认关闭。</translation>
     </message>
     <message>
-      <source>Brackets [SFX]</source>
-      <translation>方括号 [SFX]</translation>
+        <source>Regex Filter</source>
+        <translation>正则过滤器</translation>
     </message>
     <message>
-      <source>Music ♪♬</source>
-      <translation>音乐 ♪♬</translation>
+        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
+        <translation>在挖掘前对字幕文本进行匹配并移除（或替换）的 Python 正则表达式。适用于剥离说话人姓名如 (Tanaka) 或声音描述如 [door]。用 | 组合多个选项。可在 https://regex101.com 测试模式。</translation>
     </message>
     <message>
-      <source>Speaker: prefix</source>
-      <translation>说话人：前缀</translation>
+        <source>(empty = delete match)</source>
+        <translation>（留空 = 删除匹配项）</translation>
     </message>
     <message>
-      <source>Presets</source>
-      <translation>预设</translation>
+        <source>Replacement</source>
+        <translation>替换内容</translation>
     </message>
     <message>
-      <source>Click to append a built-in pattern to the regex field above.</source>
-      <translation>点击将内置模式追加到上方的正则字段。</translation>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation>插入替换每个匹配项（留空则删除该匹配项）。请使用 Python 的反向引用 \1 \2，而非 asbplayer 的 $1 $2。</translation>
     </message>
     <message>
-      <source>Deduplication</source>
-      <translation>去重</translation>
+        <source>Enable Subtitle Regex Filter</source>
+        <translation>启用字幕正则过滤器</translation>
     </message>
     <message>
-      <source>Deduplicate by Sentence</source>
-      <translation>按句子去重</translation>
+        <source>Parens (Tanaka)</source>
+        <translation>圆括号 (Tanaka)</translation>
     </message>
     <message>
-      <source>Skips duplicate example sentences.</source>
-      <translation>跳过重复的例句。</translation>
+        <source>Brackets [SFX]</source>
+        <translation>方括号 [SFX]</translation>
     </message>
     <message>
-      <source>Script Type</source>
-      <translation>文字类型</translation>
+        <source>Music ♪♬</source>
+        <translation>音乐 ♪♬</translation>
     </message>
     <message>
-      <source>Exclude Hiragana-Only Words</source>
-      <translation>排除纯平假名单词</translation>
+        <source>Speaker: prefix</source>
+        <translation>说话人：前缀</translation>
     </message>
     <message>
-      <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
-      <translation>跳过完全用平假名书写的词（如 する、これ），包括 すごーい 这类长音写法。让牌组集中于含汉字的词汇。</translation>
+        <source>Presets</source>
+        <translation>预设</translation>
     </message>
     <message>
-      <source>Exclude Katakana-Only Words</source>
-      <translation>排除纯片假名单词</translation>
+        <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation>点击将内置模式追加到上方的正则字段。</translation>
     </message>
     <message>
-      <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
-      <translation>跳过完全用片假名书写的词（如 コーヒー）。同时勾选两项，也会跳过混用两种假名的词（サボる、ヤバい）。</translation>
+        <source>Deduplication</source>
+        <translation>去重</translation>
     </message>
     <message>
-      <source>i+1 Sentence Filter</source>
-      <translation>i+1 句子过滤器</translation>
+        <source>Deduplicate by Sentence</source>
+        <translation>按句子去重</translation>
     </message>
     <message>
-      <source>Only Mine i+1 Sentences</source>
-      <translation>仅挖掘 i+1 句子</translation>
+        <source>Skips duplicate example sentences.</source>
+        <translation>跳过重复的例句。</translation>
     </message>
     <message>
-      <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-      <translation>仅挖取恰好含有一个生词的句子中的单词（i+1）；此设置会覆盖句子去重规则。</translation>
+        <source>Script Type</source>
+        <translation>文字类型</translation>
     </message>
     <message>
-      <source>Sentence Length</source>
-      <translation>句子长度</translation>
+        <source>Exclude Hiragana-Only Words</source>
+        <translation>排除纯平假名单词</translation>
     </message>
     <message>
-      <source>Enable Sentence Length Filter</source>
-      <translation>启用句子长度过滤器</translation>
+        <source>Skip words written entirely in hiragana (e.g. する, これ), including long-vowel spellings like すごーい. Focuses the deck on kanji vocabulary.</source>
+        <translation>跳过完全用平假名书写的词（如 する、これ），包括 すごーい 这类长音写法。让牌组集中于含汉字的词汇。</translation>
     </message>
     <message>
-      <source>Drop words whose example sentence exceeds the audio-duration or character caps below. Either cap set to 0 means no limit for that dimension. Reduces deck size and speeds up reviews.</source>
-      <translation>丢弃例句超过下方音频时长或字符数上限的单词。任一上限设为 0 表示该维度无限制。可减小牌组体积并加快复习。</translation>
+        <source>Exclude Katakana-Only Words</source>
+        <translation>排除纯片假名单词</translation>
     </message>
     <message>
-      <source> s</source>
-      <translation> 秒</translation>
+        <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+        <translation>跳过完全用片假名书写的词（如 コーヒー）。同时勾选两项，也会跳过混用两种假名的词（サボる、ヤバい）。</translation>
     </message>
     <message>
-      <source>Max Sentence Duration</source>
-      <translation>最大句子时长</translation>
+        <source>i+1 Sentence Filter</source>
+        <translation>i+1 句子过滤器</translation>
     </message>
     <message>
-      <source>Drops cards whose example sentence audio is longer than this many seconds. Set to 0 for no limit.</source>
-      <translation>丢弃例句音频超过此秒数的卡片。设为 0 表示无限制。</translation>
+        <source>Only Mine i+1 Sentences</source>
+        <translation>仅挖掘 i+1 句子</translation>
     </message>
     <message>
-      <source>Max Sentence Characters</source>
-      <translation>最大句子字符数</translation>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation>仅挖取恰好含有一个生词的句子中的单词（i+1）；此设置会覆盖句子去重规则。</translation>
     </message>
     <message>
-      <source>Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit.</source>
-      <translation>丢弃句子文本超过此字符数的卡片。设为 0 表示无限制。</translation>
+        <source>Sentence Length</source>
+        <translation>句子长度</translation>
     </message>
     <message>
-      <source>Reading</source>
-      <translation>读音</translation>
+        <source>Enable Sentence Length Filter</source>
+        <translation>启用句子长度过滤器</translation>
     </message>
     <message>
-      <source>Off</source>
-      <translation>关闭</translation>
+        <source>Drop words whose example sentence exceeds the audio-duration or character caps below. Either cap set to 0 means no limit for that dimension. Reduces deck size and speeds up reviews.</source>
+        <translation>丢弃例句超过下方音频时长或字符数上限的单词。任一上限设为 0 表示该维度无限制。可减小牌组体积并加快复习。</translation>
     </message>
     <message>
-      <source>Minimum Word Occurrences</source>
-      <translation>最少单词出现次数</translation>
+        <source> s</source>
+        <translation> 秒</translation>
     </message>
     <message>
-      <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
-      <translation>一个单词在一本书或一卷中必须出现的最少次数才会被挖取。1 = 无最小值（过滤器关闭）。</translation>
+        <source>Max Sentence Duration</source>
+        <translation>最大句子时长</translation>
     </message>
     <message>
-      <source>Card Formatting</source>
-      <translation>卡片格式</translation>
+        <source>Drops cards whose example sentence audio is longer than this many seconds. Set to 0 for no limit.</source>
+        <translation>丢弃例句音频超过此秒数的卡片。设为 0 表示无限制。</translation>
     </message>
     <message>
-      <source>Bold target word in sentence</source>
-      <translation>在句子中加粗目标单词</translation>
+        <source>Max Sentence Characters</source>
+        <translation>最大句子字符数</translation>
     </message>
     <message>
-      <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-      <translation>在 Sentence 和 SentenceFurigana 字段中将挖出的单词用 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包裹。匹配基于挖出词素在 MeCab 中的精确跨度，因此句子中重复出现的表层形式只会加粗实际挖出的那一处。</translation>
+        <source>Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit.</source>
+        <translation>丢弃句子文本超过此字符数的卡片。设为 0 表示无限制。</translation>
     </message>
     <message>
-      <source>Exclude Deck</source>
-      <translation>排除牌组</translation>
+        <source>Reading</source>
+        <translation>读音</translation>
     </message>
     <message>
-      <source>Deck to exclude from known-words detection:</source>
-      <translation>从已知单词检测中排除的牌组：</translation>
+        <source>Off</source>
+        <translation>关闭</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Minimum Word Occurrences</source>
+        <translation>最少单词出现次数</translation>
+    </message>
+    <message>
+        <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
+        <translation>一个单词在一本书或一卷中必须出现的最少次数才会被挖取。1 = 无最小值（过滤器关闭）。</translation>
+    </message>
+    <message>
+        <source>Card Formatting</source>
+        <translation>卡片格式</translation>
+    </message>
+    <message>
+        <source>Bold target word in sentence</source>
+        <translation>在句子中加粗目标单词</translation>
+    </message>
+    <message>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>在 Sentence 和 SentenceFurigana 字段中将挖出的单词用 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包裹。匹配基于挖出词素在 MeCab 中的精确跨度，因此句子中重复出现的表层形式只会加粗实际挖出的那一处。</translation>
+    </message>
+    <message>
+        <source>Exclude Deck</source>
+        <translation>排除牌组</translation>
+    </message>
+    <message>
+        <source>Deck to exclude from known-words detection:</source>
+        <translation>从已知单词检测中排除的牌组：</translation>
+    </message>
+</context><context>
     <name>FrequencyImportFlow</name>
     <message>
-      <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-      <translation> 这是基于单词的来源；其级别标签会显示在卡片上，但不影响词频排名过滤。</translation>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> 这是基于单词的来源；其级别标签会显示在卡片上，但不影响词频排名过滤。</translation>
     </message>
     <message>
-      <source>Choose frequency source</source>
-      <translation>选择词频来源</translation>
+        <source>Choose frequency source</source>
+        <translation>选择词频来源</translation>
     </message>
     <message>
-      <source> (skipped %1 malformed entries)</source>
-      <translation> （已跳过 %1 个格式错误的条目）</translation>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳过 %1 个格式错误的条目）</translation>
     </message>
     <message>
-      <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-      <translation> 这是基于出现次数的来源；其计数已转换为排名。</translation>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> 这是基于出现次数的来源；其计数已转换为排名。</translation>
     </message>
     <message>
-      <source>Frequency Source Added</source>
-      <translation>已添加词频来源</translation>
+        <source>Frequency Source Added</source>
+        <translation>已添加词频来源</translation>
     </message>
     <message>
-      <source>Imported %1 entries from '%2'.</source>
-      <translation>已从“%2”导入 %1 条。</translation>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>已从“%2”导入 %1 条。</translation>
     </message>
     <message>
-      <source>The import finished, but the settings could not be updated.</source>
-      <translation>导入已完成，但无法更新设置。</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>导入已完成，但无法更新设置。</translation>
     </message>
     <message>
-      <source>Importing frequency source…</source>
-      <translation>正在导入词频来源…</translation>
+        <source>Importing frequency source…</source>
+        <translation>正在导入词频来源…</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>The frequency source could not be imported.</source>
-      <translation>无法导入词频来源。</translation>
+        <source>The frequency source could not be imported.</source>
+        <translation>无法导入词频来源。</translation>
     </message>
     <message>
-      <source>Another import is still finishing. Wait for it to finish and try again.</source>
-      <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>The import worker finished without a completion result.</source>
-      <translation>导入工作线程结束，但未返回完成结果。</translation>
+        <source>The import worker finished without a completion result.</source>
+        <translation>导入工作线程结束，但未返回完成结果。</translation>
     </message>
     <message>
-      <source>That folder could not be scanned.</source>
-      <translation>无法扫描该文件夹。</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>无法扫描该文件夹。</translation>
     </message>
     <message>
-      <source>Choose frequency source to re-import</source>
-      <translation>选择要重新导入的词频来源</translation>
+        <source>Choose frequency source to re-import</source>
+        <translation>选择要重新导入的词频来源</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Frequency Source Re-imported</source>
-      <translation>已重新导入词频来源</translation>
+        <source>Frequency Source Re-imported</source>
+        <translation>已重新导入词频来源</translation>
     </message>
     <message>
-      <source>Re-imported %1 successfully.</source>
-      <translation>已成功重新导入 %1。</translation>
+        <source>Re-imported %1 successfully.</source>
+        <translation>已成功重新导入 %1。</translation>
     </message>
     <message>
-      <source>Re-importing frequency source…</source>
-      <translation>正在重新导入词频来源…</translation>
+        <source>Re-importing frequency source…</source>
+        <translation>正在重新导入词频来源…</translation>
     </message>
     <message>
-      <source>The frequency source could not be re-imported.</source>
-      <translation>无法重新导入词频来源。</translation>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>无法重新导入词频来源。</translation>
     </message>
     <message>
-      <source>Frequency source (%1);;All Files (*)</source>
-      <translation>词频来源 (%1);;所有文件 (*)</translation>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>词频来源 (%1);;所有文件 (*)</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
-      <source>Loading…</source>
-      <translation>正在加载…</translation>
+        <source>Loading…</source>
+        <translation>正在加载…</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Installed frequency sources could not be checked.</source>
-      <translation>无法检查已安装的词频来源。</translation>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>无法检查已安装的词频来源。</translation>
     </message>
     <message>
-      <source>The frequency source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-      <translation>已从链中移除词频来源，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
+        <source>The frequency source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已从链中移除词频来源，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
     </message>
     <message>
-      <source>%1 could not be removed. Its files are intact — try again.</source>
-      <translation>无法移除 %1。其文件保持完好——请重试。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>无法移除 %1。其文件保持完好——请重试。</translation>
     </message>
     <message>
-      <source>%1 was only partly removed. Re-import or repair this frequency source before retrying.</source>
-      <translation>%1 仅被部分移除。请重新导入或修复此词频来源后再重试。</translation>
+        <source>%1 was only partly removed. Re-import or repair this frequency source before retrying.</source>
+        <translation>%1 仅被部分移除。请重新导入或修复此词频来源后再重试。</translation>
     </message>
     <message>
-      <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-      <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
     </message>
     <message>
-      <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
-      <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
     </message>
     <message>
-      <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
-      <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
     </message>
     <message>
-      <source>Active Frequency Sources</source>
-      <translation>启用的词频来源</translation>
+        <source>Active Frequency Sources</source>
+        <translation>启用的词频来源</translation>
     </message>
     <message>
-      <source>Sources are layered additively — the best (lowest) rank across all enabled sources wins. Top entry breaks ties first.</source>
-      <translation>来源以叠加方式分层——所有启用来源中最佳（最低）的排名胜出。顶部条目优先打破平局。</translation>
+        <source>Restore from Disk</source>
+        <translation type="unfinished">从磁盘恢复</translation>
     </message>
     <message>
-      <source>Add frequency source…</source>
-      <translation>添加词频来源…</translation>
+        <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Remove frequency source</source>
-      <translation>移除词频来源</translation>
+        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Remove the selected frequency source</source>
-      <translation>移除所选词频来源</translation>
+        <source>Add frequency source…</source>
+        <translation>添加词频来源…</translation>
     </message>
     <message>
-      <source>Move up</source>
-      <translation>上移</translation>
+        <source>Remove frequency source</source>
+        <translation>移除词频来源</translation>
     </message>
     <message>
-      <source>Move up (breaks rank ties first)</source>
-      <translation>上移（优先打破排名平局）</translation>
+        <source>Remove the selected frequency source</source>
+        <translation>移除所选词频来源</translation>
     </message>
     <message>
-      <source>Move down</source>
-      <translation>下移</translation>
+        <source>Move up</source>
+        <translation>上移</translation>
     </message>
     <message>
-      <source>word-based</source>
-      <translation>基于单词</translation>
+        <source>Move up in the card's source list</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Level labels are shown on the card but not used for frequency filtering.</source>
-      <translation>级别标签显示在卡片上，但不用于词频过滤。</translation>
+        <source>Move down</source>
+        <translation>下移</translation>
     </message>
     <message>
-      <source>%1 entries</source>
-      <translation>%1 个条目</translation>
+        <source>word-based</source>
+        <translation>基于单词</translation>
     </message>
     <message>
-      <source>Enabled</source>
-      <translation>已启用</translation>
+        <source>Level labels are shown on the card but not used for frequency filtering.</source>
+        <translation>级别标签显示在卡片上，但不用于词频过滤。</translation>
     </message>
     <message>
-      <source>Enable %1</source>
-      <translation>启用 %1</translation>
+        <source>%1 entries</source>
+        <translation>%1 个条目</translation>
     </message>
     <message>
-      <source>Enable or disable %1</source>
-      <translation>启用或禁用 %1</translation>
+        <source>Enabled</source>
+        <translation>已启用</translation>
     </message>
     <message>
-      <source>⚠ missing — re-import</source>
-      <translation>⚠ 缺失 — 请重新导入</translation>
+        <source>Enable %1</source>
+        <translation>启用 %1</translation>
     </message>
     <message>
-      <source>Remove '%1' from the frequency chain?
+        <source>Enable or disable %1</source>
+        <translation>启用或禁用 %1</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 缺失 — 请重新导入</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the frequency chain?
 
 Only the index files are deleted.
 This cannot be undone. You would need to re-import to use this source again.</source>
-      <translation>要从词频链中移除“%1”吗？
+        <translation>要从词频链中移除“%1”吗？
 
 仅删除索引文件。
 此操作无法撤销。若要再次使用此来源，你需要重新导入。</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Remove '%1' from the frequency chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Re-import…</source>
-      <translation>重新导入…</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Remove</source>
-      <translation>移除</translation>
+        <source>Re-import…</source>
+        <translation>重新导入…</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+</context><context>
     <name>GUIPresenter</name>
     <message>
-      <source>Step %1 of %2 — %3</source>
-      <translation>第 %1 步，共 %2 步——%3</translation>
+        <source>Step %1 of %2 — %3</source>
+        <translation>第 %1 步，共 %2 步——%3</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>HeaderWidget</name>
     <message>
-      <source>Settings profile:</source>
-      <translation>设置配置文件：</translation>
+        <source>Settings profile:</source>
+        <translation>设置配置文件：</translation>
     </message>
     <message>
-      <source>Settings profile</source>
-      <translation>设置配置文件</translation>
+        <source>Settings profile</source>
+        <translation>设置配置文件</translation>
     </message>
     <message>
-      <source>Switches every Anki Miner setting to the selected profile.</source>
-      <translation>将所有 Anki Miner 设置切换到所选配置文件。</translation>
+        <source>Switches every Anki Miner setting to the selected profile.</source>
+        <translation>将所有 Anki Miner 设置切换到所选配置文件。</translation>
     </message>
     <message>
-      <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
-      <translation>当前设置配置文件。切换会替换所有设置；选择“管理配置文件…”可添加、重命名或移除它们。</translation>
+        <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
+        <translation>当前设置配置文件。切换会替换所有设置；选择“管理配置文件…”可添加、重命名或移除它们。</translation>
     </message>
     <message>
-      <source>Theme:</source>
-      <translation>主题：</translation>
+        <source>Theme:</source>
+        <translation>主题：</translation>
     </message>
     <message>
-      <source>Theme</source>
-      <translation>主题</translation>
+        <source>Theme</source>
+        <translation>主题</translation>
     </message>
     <message>
-      <source>Browse all %1 themes…</source>
-      <translation>浏览全部 %1 个主题…</translation>
+        <source>Browse all %1 themes…</source>
+        <translation>浏览全部 %1 个主题…</translation>
     </message>
     <message>
-      <source>Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.</source>
-      <translation>当前主题。此列表显示你的收藏；选择“浏览全部主题…”可查看预览。</translation>
+        <source>Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.</source>
+        <translation>当前主题。此列表显示你的收藏；选择“浏览全部主题…”可查看预览。</translation>
     </message>
     <message>
-      <source>Manage profiles…</source>
-      <translation>管理配置文件…</translation>
+        <source>Manage profiles…</source>
+        <translation>管理配置文件…</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>InlineReceipt</name>
     <message>
-      <source>View details</source>
-      <translation>查看详情</translation>
+        <source>View details</source>
+        <translation>查看详情</translation>
     </message>
     <message>
-      <source>Copy summary</source>
-      <translation>复制摘要</translation>
+        <source>Copy summary</source>
+        <translation>复制摘要</translation>
     </message>
     <message>
-      <source>Dismiss</source>
-      <translation>关闭</translation>
+        <source>Dismiss</source>
+        <translation>关闭</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
-      <source>Manage Known Words</source>
-      <translation>管理已知单词</translation>
+        <source>Manage Known Words</source>
+        <translation>管理已知单词</translation>
     </message>
     <message>
-      <source>Local Known Words</source>
-      <translation>本地已知单词</translation>
+        <source>Local Known Words</source>
+        <translation>本地已知单词</translation>
     </message>
     <message>
-      <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-      <translation>你从单词整理器添加的单词——每次运行时都会被忽略，缓存重建后仍会保留，并可导出以重新导入 jiten.moe。导入支持 jpdb、Migaku 和 AnkiMorphs 的导出文件或纯文本单词列表。</translation>
+        <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
+        <translation>你从单词整理器添加的单词——每次运行时都会被忽略，缓存重建后仍会保留，并可导出以重新导入 jiten.moe。导入支持 jpdb、Migaku 和 AnkiMorphs 的导出文件或纯文本单词列表。</translation>
     </message>
     <message>
-      <source>Filter…</source>
-      <translation>过滤…</translation>
+        <source>Filter…</source>
+        <translation>过滤…</translation>
     </message>
     <message>
-      <source>Remove Selected</source>
-      <translation>移除所选</translation>
+        <source>Remove Selected</source>
+        <translation>移除所选</translation>
     </message>
     <message>
-      <source>Import…</source>
-      <translation>导入…</translation>
+        <source>Import…</source>
+        <translation>导入…</translation>
     </message>
     <message>
-      <source>Export…</source>
-      <translation>导出…</translation>
+        <source>Export…</source>
+        <translation>导出…</translation>
     </message>
     <message>
-      <source>Reset User List</source>
-      <translation>重置用户列表</translation>
+        <source>Reset User List</source>
+        <translation>重置用户列表</translation>
     </message>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
     <message>
-      <source>%1 user word(s) · %2 cached from Anki</source>
-      <translation>%1 个用户单词 · %2 个从 Anki 缓存</translation>
+        <source>%1 user word(s) · %2 cached from Anki</source>
+        <translation>%1 个用户单词 · %2 个从 Anki 缓存</translation>
     </message>
     <message>
-      <source>jpdb review export</source>
-      <translation>jpdb 复习导出</translation>
+        <source>jpdb review export</source>
+        <translation>jpdb 复习导出</translation>
     </message>
     <message>
-      <source>Migaku word export</source>
-      <translation>Migaku 单词导出</translation>
+        <source>Migaku word export</source>
+        <translation>Migaku 单词导出</translation>
     </message>
     <message>
-      <source>Migaku legacy add-on backup</source>
-      <translation>Migaku 旧版插件备份</translation>
+        <source>Migaku legacy add-on backup</source>
+        <translation>Migaku 旧版插件备份</translation>
     </message>
     <message>
-      <source>AnkiMorphs known morphs</source>
-      <translation>AnkiMorphs 已知词素</translation>
+        <source>AnkiMorphs known morphs</source>
+        <translation>AnkiMorphs 已知词素</translation>
     </message>
     <message>
-      <source>Migaku word export (CSV)</source>
-      <translation>Migaku 单词导出（CSV）</translation>
+        <source>Migaku word export (CSV)</source>
+        <translation>Migaku 单词导出（CSV）</translation>
     </message>
     <message>
-      <source>plain word list</source>
-      <translation>纯文本单词列表</translation>
+        <source>plain word list</source>
+        <translation>纯文本单词列表</translation>
     </message>
     <message>
-      <source>Import Known Words</source>
-      <translation>导入已知单词</translation>
+        <source>Import Known Words</source>
+        <translation>导入已知单词</translation>
     </message>
     <message>
-      <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
-      <translation>已知单词列表 (*.csv *.txt *.json);;所有文件 (*)</translation>
+        <source>Known word lists (*.csv *.txt *.json);;All Files (*)</source>
+        <translation>已知单词列表 (*.csv *.txt *.json);;所有文件 (*)</translation>
     </message>
     <message>
-      <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
+        <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
 
 Add %3 word(s) to your known list?</source>
-      <translation>检测到：%1——该文件不含已知/学习中状态；将导入全部 %2 个条目。
+        <translation>检测到：%1——该文件不含已知/学习中状态；将导入全部 %2 个条目。
 
 要将 %3 个单词添加到你的已知列表吗？</translation>
     </message>
     <message>
-      <source>Detected: %1 — %2 entries, %3 qualify as known.
+        <source>Detected: %1 — %2 entries, %3 qualify as known.
 
 Add %3 word(s) to your known list?</source>
-      <translation>检测到：%1——共 %2 个条目，其中 %3 个符合已知条件。
+        <translation>检测到：%1——共 %2 个条目，其中 %3 个符合已知条件。
 
 要将 %3 个单词添加到你的已知列表吗？</translation>
     </message>
     <message>
-      <source>Import Complete</source>
-      <translation>导入完成</translation>
+        <source>Import Complete</source>
+        <translation>导入完成</translation>
     </message>
     <message>
-      <source>Added %1 word(s) to your list. %2 were already in it.</source>
-      <translation>已将 %1 个单词添加到你的列表，另有 %2 个已在列表中。</translation>
+        <source>Added %1 word(s) to your list. %2 were already in it.</source>
+        <translation>已将 %1 个单词添加到你的列表，另有 %2 个已在列表中。</translation>
     </message>
     <message>
-      <source>Detected: %1 — but no entries in this file qualify as known.</source>
-      <translation>检测到：%1——但该文件中没有符合已知条件的条目。</translation>
+        <source>Detected: %1 — but no entries in this file qualify as known.</source>
+        <translation>检测到：%1——但该文件中没有符合已知条件的条目。</translation>
     </message>
     <message>
-      <source>The file could not be read.</source>
-      <translation>无法读取该文件。</translation>
+        <source>The file could not be read.</source>
+        <translation>无法读取该文件。</translation>
     </message>
     <message>
-      <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
-      <translation>无法识别文件格式。支持：jpdb 复习导出（JSON）、Migaku 单词导出（JSON/CSV）、AnkiMorphs 已知词素（CSV）、纯文本单词列表（每行一个单词）。</translation>
+        <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
+        <translation>无法识别文件格式。支持：jpdb 复习导出（JSON）、Migaku 单词导出（JSON/CSV）、AnkiMorphs 已知词素（CSV）、纯文本单词列表（每行一个单词）。</translation>
     </message>
     <message>
-      <source>That file could not be read.</source>
-      <translation>无法读取该文件。</translation>
+        <source>That file could not be read.</source>
+        <translation>无法读取该文件。</translation>
     </message>
     <message>
-      <source>Export Complete</source>
-      <translation>导出完成</translation>
+        <source>Export Complete</source>
+        <translation>导出完成</translation>
     </message>
     <message>
-      <source>Exported %1 word(s) to:
+        <source>Exported %1 word(s) to:
 %2</source>
-      <translation>已导出 %1 个单词到：
+        <translation>已导出 %1 个单词到：
 %2</translation>
     </message>
     <message>
-      <source>Export Known Words</source>
-      <translation>导出已知单词</translation>
+        <source>Export Known Words</source>
+        <translation>导出已知单词</translation>
     </message>
     <message>
-      <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
-      <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
+        <source>The known words list could not be exported.</source>
+        <translation type="unfinished" />
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Retry</source>
+        <translation type="unfinished">重试</translation>
+    </message>
+    <message>
+        <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
+        <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
+    </message>
+</context><context>
     <name>LogWidget</name>
     <message>
-      <source>Scroll to the newest line and resume following it.</source>
-      <translation>滚动到最新一行并继续跟随。</translation>
+        <source>Scroll to the newest line and resume following it.</source>
+        <translation>滚动到最新一行并继续跟随。</translation>
     </message>
     <message>
-      <source>Activity Log</source>
-      <translation>活动日志</translation>
+        <source>Activity Log</source>
+        <translation>活动日志</translation>
     </message>
     <message>
-      <source>Copy visible</source>
-      <translation>复制可见内容</translation>
+        <source>Copy visible</source>
+        <translation>复制可见内容</translation>
     </message>
     <message>
-      <source>Copy only the lines currently shown.</source>
-      <translation>仅复制当前显示的行。</translation>
+        <source>Copy only the lines currently shown.</source>
+        <translation>仅复制当前显示的行。</translation>
     </message>
     <message>
-      <source>Copy all</source>
-      <translation>全部复制</translation>
+        <source>Copy all</source>
+        <translation>全部复制</translation>
     </message>
     <message>
-      <source>Copy every retained line, ignoring the filters.</source>
-      <translation>复制所有保留的行，忽略过滤器。</translation>
+        <source>Copy every retained line, ignoring the filters.</source>
+        <translation>复制所有保留的行，忽略过滤器。</translation>
     </message>
     <message>
-      <source>Save run log…</source>
-      <translation>保存运行日志…</translation>
+        <source>Save run log…</source>
+        <translation>保存运行日志…</translation>
     </message>
     <message>
-      <source>Write every retained line to a UTF-8 text file.</source>
-      <translation>将所有保留的行写入 UTF-8 文本文件。</translation>
+        <source>Write every retained line to a UTF-8 text file.</source>
+        <translation>将所有保留的行写入 UTF-8 文本文件。</translation>
     </message>
     <message>
-      <source>Clear</source>
-      <translation>清除</translation>
+        <source>Clear</source>
+        <translation>清除</translation>
     </message>
     <message>
-      <source>Clear all log messages</source>
-      <translation>清除所有日志消息</translation>
+        <source>Clear all log messages</source>
+        <translation>清除所有日志消息</translation>
     </message>
     <message>
-      <source>All</source>
-      <translation>全部</translation>
+        <source>All</source>
+        <translation>全部</translation>
     </message>
     <message>
-      <source>Info</source>
-      <translation>信息</translation>
+        <source>Info</source>
+        <translation>信息</translation>
     </message>
     <message>
-      <source>Warnings</source>
-      <translation>警告</translation>
+        <source>Warnings</source>
+        <translation>警告</translation>
     </message>
     <message>
-      <source>Errors</source>
-      <translation>错误</translation>
+        <source>Errors</source>
+        <translation>错误</translation>
     </message>
     <message>
-      <source>Show every line.</source>
-      <translation>显示所有行。</translation>
+        <source>Show every line.</source>
+        <translation>显示所有行。</translation>
     </message>
     <message>
-      <source>Show progress and success lines.</source>
-      <translation>显示进度和成功行。</translation>
+        <source>Show progress and success lines.</source>
+        <translation>显示进度和成功行。</translation>
     </message>
     <message>
-      <source>Show warnings only.</source>
-      <translation>仅显示警告。</translation>
+        <source>Show warnings only.</source>
+        <translation>仅显示警告。</translation>
     </message>
     <message>
-      <source>Show errors only.</source>
-      <translation>仅显示错误。</translation>
+        <source>Show errors only.</source>
+        <translation>仅显示错误。</translation>
     </message>
     <message>
-      <source>Search…</source>
-      <translation>搜索…</translation>
+        <source>Search…</source>
+        <translation>搜索…</translation>
     </message>
     <message>
-      <source>Lines shown of lines retained.</source>
-      <translation>显示的行数/保留的行数。</translation>
+        <source>Lines shown of lines retained.</source>
+        <translation>显示的行数/保留的行数。</translation>
     </message>
     <message>
-      <source>Pause follow</source>
-      <translation>暂停跟随</translation>
+        <source>Pause follow</source>
+        <translation>暂停跟随</translation>
     </message>
     <message>
-      <source>Stop scrolling to the newest line while you read.</source>
-      <translation>阅读时停止滚动到最新一行。</translation>
+        <source>Stop scrolling to the newest line while you read.</source>
+        <translation>阅读时停止滚动到最新一行。</translation>
     </message>
     <message>
-      <source>%1 of %2</source>
-      <translation>%1 / %2</translation>
+        <source>%1 of %2</source>
+        <translation>%1 / %2</translation>
     </message>
     <message>
-      <source>↓ %1 new — Jump to latest</source>
-      <translation>↓ %1 条新消息——跳转到最新</translation>
+        <source>↓ %1 new — Jump to latest</source>
+        <translation>↓ %1 条新消息——跳转到最新</translation>
     </message>
     <message>
-      <source>Save Run Log</source>
-      <translation>保存运行日志</translation>
+        <source>Save Run Log</source>
+        <translation>保存运行日志</translation>
     </message>
     <message>
-      <source>Saved run log to %1</source>
-      <translation>运行日志已保存到 %1</translation>
+        <source>Saved run log to %1</source>
+        <translation>运行日志已保存到 %1</translation>
     </message>
     <message>
-      <source>Could not save the run log: %1</source>
-      <translation>无法保存运行日志：%1</translation>
+        <source>Could not save the run log: %1</source>
+        <translation>无法保存运行日志：%1</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>MainWindow</name>
     <message>
-      <source>Open Log Folder</source>
-      <translation>打开日志文件夹</translation>
+        <source>Open Log Folder</source>
+        <translation>打开日志文件夹</translation>
     </message>
     <message>
-      <source>Video</source>
-      <translation>视频</translation>
+        <source>Video</source>
+        <translation>视频</translation>
     </message>
     <message>
-      <source>Deck Builder</source>
-      <translation>牌组构建器</translation>
+        <source>Deck Builder</source>
+        <translation>牌组构建器</translation>
     </message>
     <message>
-      <source>Audiobooks</source>
-      <translation>有声书</translation>
+        <source>Audiobooks</source>
+        <translation>有声书</translation>
     </message>
     <message>
-      <source>Reading</source>
-      <translation>阅读</translation>
+        <source>Reading</source>
+        <translation>阅读</translation>
     </message>
     <message>
-      <source>Analytics</source>
-      <translation>分析</translation>
+        <source>Analytics</source>
+        <translation>分析</translation>
     </message>
     <message>
-      <source>Utilities</source>
-      <translation>工具</translation>
+        <source>Utilities</source>
+        <translation>工具</translation>
     </message>
     <message>
-      <source>Settings</source>
-      <translation>设置</translation>
+        <source>Settings</source>
+        <translation>设置</translation>
     </message>
     <message>
-      <source>Anki Miner updated</source>
-      <translation>Anki Miner 已更新</translation>
+        <source>Anki Miner updated</source>
+        <translation>Anki Miner 已更新</translation>
     </message>
     <message>
-      <source>Updated to v%1.&lt;br&gt;&lt;br&gt;See what's new: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;release notes&lt;/a&gt;</source>
-      <translation>已更新至 v%1。&lt;br&gt;&lt;br&gt;查看新增内容：&lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;发布说明&lt;/a&gt;</translation>
+        <source>Updated to v%1.&lt;br&gt;&lt;br&gt;See what's new: &lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;release notes&lt;/a&gt;</source>
+        <translation>已更新至 v%1。&lt;br&gt;&lt;br&gt;查看新增内容：&lt;a href="https://github.com/0xzerolight/anki_miner/releases/latest"&gt;发布说明&lt;/a&gt;</translation>
     </message>
     <message>
-      <source>Anki Miner Main Window</source>
-      <translation>Anki Miner 主窗口</translation>
+        <source>Anki Miner Main Window</source>
+        <translation>Anki Miner 主窗口</translation>
     </message>
     <message>
-      <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
-      <translation>日语词汇挖词工具，从视频字幕中提取生词并制作 Anki 卡片</translation>
+        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
+        <translation>日语词汇挖词工具，从视频字幕中提取生词并制作 Anki 卡片</translation>
     </message>
     <message>
-      <source>Main Tabs</source>
-      <translation>主标签页</translation>
+        <source>Main Tabs</source>
+        <translation>主标签页</translation>
     </message>
     <message>
-      <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-      <translation>在视频、牌组构建器、有声书、阅读、分析、工具和设置之间导航</translation>
+        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <translation>在视频、牌组构建器、有声书、阅读、分析、工具和设置之间导航</translation>
     </message>
     <message>
-      <source>Application Header</source>
-      <translation>应用程序标题栏</translation>
+        <source>Application Header</source>
+        <translation>应用程序标题栏</translation>
     </message>
     <message>
-      <source>Application title and theme selector</source>
-      <translation>应用程序标题和主题选择器</translation>
+        <source>Application title and theme selector</source>
+        <translation>应用程序标题和主题选择器</translation>
     </message>
     <message>
-      <source>Status Bar</source>
-      <translation>状态栏</translation>
+        <source>Status Bar</source>
+        <translation>状态栏</translation>
     </message>
     <message>
-      <source>Shows current operation, statistics, and system status</source>
-      <translation>显示当前操作、统计信息和系统状态</translation>
+        <source>Shows current operation, statistics, and system status</source>
+        <translation>显示当前操作、统计信息和系统状态</translation>
     </message>
     <message>
-      <source>&amp;Tools</source>
-      <translation>工具(&amp;T)</translation>
+        <source>&amp;Tools</source>
+        <translation>工具(&amp;T)</translation>
     </message>
     <message>
-      <source>Create Desktop Shortcut...</source>
-      <translation>创建桌面快捷方式…</translation>
+        <source>Create Desktop Shortcut...</source>
+        <translation>创建桌面快捷方式…</translation>
     </message>
     <message>
-      <source>Download Recommended Resources...</source>
-      <translation>下载推荐资源…</translation>
+        <source>Download Recommended Resources...</source>
+        <translation>下载推荐资源…</translation>
     </message>
     <message>
-      <source>Find a Feature...</source>
-      <translation>查找功能…</translation>
+        <source>Find a Feature...</source>
+        <translation>查找功能…</translation>
     </message>
     <message>
-      <source>Setup Wizard...</source>
-      <translation>设置向导…</translation>
+        <source>Setup Wizard...</source>
+        <translation>设置向导…</translation>
     </message>
     <message>
-      <source>Restyle Mined Cards...</source>
-      <translation>重新设置挖词卡片样式...</translation>
+        <source>Restyle Mined Cards...</source>
+        <translation>重新设置挖词卡片样式...</translation>
     </message>
     <message>
-      <source>&amp;Help</source>
-      <translation>帮助(&amp;H)</translation>
+        <source>&amp;Help</source>
+        <translation>帮助(&amp;H)</translation>
     </message>
     <message>
-      <source>About Anki Miner</source>
-      <translation>关于 Anki Miner</translation>
+        <source>About Anki Miner</source>
+        <translation>关于 Anki Miner</translation>
     </message>
     <message>
-      <source>Check for Updates</source>
-      <translation>检查更新</translation>
+        <source>Check for Updates</source>
+        <translation>检查更新</translation>
     </message>
     <message>
-      <source>Open the log folder in your file manager</source>
-      <translation>在文件管理器中打开日志文件夹</translation>
+        <source>Open the log folder in your file manager</source>
+        <translation>在文件管理器中打开日志文件夹</translation>
     </message>
     <message>
-      <source>Export Diagnostics…</source>
-      <translation>导出诊断信息…</translation>
+        <source>Export Diagnostics…</source>
+        <translation>导出诊断信息…</translation>
     </message>
     <message>
-      <source>Save a zip with logs and system details for a bug report</source>
-      <translation>保存包含日志和系统信息的 zip，用于报告 Bug</translation>
+        <source>Save a zip with logs and system details for a bug report</source>
+        <translation>保存包含日志和系统信息的 zip，用于报告 Bug</translation>
     </message>
     <message>
-      <source>Report a Bug / Suggest a Feature</source>
-      <translation>报告 Bug / 建议功能</translation>
+        <source>Report a Bug / Suggest a Feature</source>
+        <translation>报告 Bug / 建议功能</translation>
     </message>
     <message>
-      <source>Report a bug or suggest a feature on GitHub</source>
-      <translation>在 GitHub 上报告 Bug 或建议功能</translation>
+        <source>Report a bug or suggest a feature on GitHub</source>
+        <translation>在 GitHub 上报告 Bug 或建议功能</translation>
     </message>
     <message>
-      <source>⭐ Star - help the project</source>
-      <translation>⭐ 星标 - 支持本项目</translation>
+        <source>⭐ Star - help the project</source>
+        <translation>⭐ 星标 - 支持本项目</translation>
     </message>
     <message>
-      <source>Star the project on GitHub</source>
-      <translation>在 GitHub 上为本项目加星标</translation>
+        <source>Star the project on GitHub</source>
+        <translation>在 GitHub 上为本项目加星标</translation>
     </message>
     <message>
-      <source>Join Discord</source>
-      <translation>加入 Discord</translation>
+        <source>Join Discord</source>
+        <translation>加入 Discord</translation>
     </message>
     <message>
-      <source>Join the community on Discord</source>
-      <translation>在 Discord 上加入社区</translation>
+        <source>Join the community on Discord</source>
+        <translation>在 Discord 上加入社区</translation>
     </message>
     <message>
-      <source>The desktop shortcut could not be created.</source>
-      <translation>无法创建桌面快捷方式。</translation>
+        <source>The desktop shortcut could not be created.</source>
+        <translation>无法创建桌面快捷方式。</translation>
     </message>
     <message>
-      <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
-      <translation>启动时的 JMdict 迁移仍在停止中。请等待其完成后重试。</translation>
+        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
+        <translation>启动时的 JMdict 迁移仍在停止中。请等待其完成后重试。</translation>
     </message>
     <message>
-      <source>Export Diagnostics</source>
-      <translation>导出诊断信息</translation>
+        <source>Export Diagnostics</source>
+        <translation>导出诊断信息</translation>
     </message>
     <message>
-      <source>Zip Archives (*.zip);;All Files (*)</source>
-      <translation>Zip 压缩包 (*.zip);;所有文件 (*)</translation>
+        <source>Zip Archives (*.zip);;All Files (*)</source>
+        <translation>Zip 压缩包 (*.zip);;所有文件 (*)</translation>
     </message>
     <message>
-      <source>Diagnostics written to %1</source>
-      <translation>诊断信息已写入 %1</translation>
+        <source>Diagnostics written to %1</source>
+        <translation>诊断信息已写入 %1</translation>
     </message>
     <message>
-      <source>Diagnostics could not be exported.</source>
-      <translation>无法导出诊断信息。</translation>
+        <source>Diagnostics could not be exported.</source>
+        <translation>无法导出诊断信息。</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Desktop Shortcut</source>
-      <translation>桌面快捷方式</translation>
+        <source>Desktop Shortcut</source>
+        <translation>桌面快捷方式</translation>
     </message>
     <message>
-      <source>Shortcut created.</source>
-      <translation>快捷方式已创建。</translation>
+        <source>Shortcut created.</source>
+        <translation>快捷方式已创建。</translation>
     </message>
     <message>
-      <source>Restyle Mined Cards</source>
-      <translation>重新设置挖词卡片样式</translation>
+        <source>Downloaded resources were left inactive because their storage folder changed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
+        <source>Open Settings</source>
+        <translation>打开设置</translation>
+    </message>
+    <message>
+        <source>Restyle Mined Cards</source>
+        <translation>重新设置挖词卡片样式</translation>
+    </message>
+    <message>
+        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
 
 Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
 
 Continue?</source>
-      <translation>重新对你挖取的卡片应用最新的内置样式，使其与新卡片一致。可安全地重新运行；它绝不会移除卡片内容。
+        <translation>重新对你挖取的卡片应用最新的内置样式，使其与新卡片一致。可安全地重新运行；它绝不会移除卡片内容。
 
 请先关闭 Anki 的卡片浏览器和任何打开的笔记编辑器——编辑打开的笔记可能丢失未保存的修改。
 
 是否继续？</translation>
     </message>
     <message>
-      <source>Restyling cannot start: the Anki field mapping is not usable.</source>
-      <translation>无法开始重新应用样式：Anki 字段映射不可用。</translation>
+        <source>Restyling cannot start: the Anki field mapping is not usable.</source>
+        <translation>无法开始重新应用样式：Anki 字段映射不可用。</translation>
     </message>
     <message>
-      <source>Open Anki Settings</source>
-      <translation>打开 Anki 设置</translation>
+        <source>Open Anki Settings</source>
+        <translation>打开 Anki 设置</translation>
     </message>
     <message>
-      <source>Restyling mined cards…</source>
-      <translation>正在重新设置挖词卡片样式…</translation>
+        <source>Restyling mined cards…</source>
+        <translation>正在重新设置挖词卡片样式…</translation>
     </message>
     <message>
-      <source>Restyling mined cards… %1/%2</source>
-      <translation>正在重新设置挖词卡片样式… %1/%2</translation>
+        <source>Restyling mined cards… %1/%2</source>
+        <translation>正在重新设置挖词卡片样式… %1/%2</translation>
     </message>
     <message>
-      <source>Restyle complete</source>
-      <translation>样式重设完成</translation>
+        <source>Restyle incomplete</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
-      <translation>已重新设置 %1 张卡片的样式。（已扫描 %2 张；%3 张已是最新。）</translation>
+        <source>%1 note update(s) were not confirmed; run Restyle again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Restyle failed</source>
-      <translation>样式重设失败</translation>
+        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
+        <translation>已重新设置 %1 张卡片的样式。（已扫描 %2 张；%3 张已是最新。）</translation>
     </message>
     <message>
-      <source>The mined cards could not be restyled.</source>
-      <translation>无法重新应用已挖词生成的卡片的样式。</translation>
+        <source>Restyle complete</source>
+        <translation>样式重设完成</translation>
     </message>
     <message>
-      <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
-      <translation>以下词典在应用升级后需要重新导入（其索引格式已更改）：</translation>
+        <source>Restyle failed</source>
+        <translation>样式重设失败</translation>
     </message>
     <message>
-      <source>Mining is blocked for them until you do. Re-import them now?</source>
-      <translation>在你完成重新导入之前，这些词典将无法用于挖词。是否立即重新导入？</translation>
+        <source>The mined cards could not be restyled.</source>
+        <translation>无法重新应用已挖词生成的卡片的样式。</translation>
     </message>
     <message>
-      <source>Dictionaries need re-importing</source>
-      <translation>词典需要重新导入</translation>
+        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
+        <translation>以下词典在应用升级后需要重新导入（其索引格式已更改）：</translation>
     </message>
     <message>
-      <source>System validation passed</source>
-      <translation>系统校验通过</translation>
+        <source>Mining is blocked for them until you do. Re-import them now?</source>
+        <translation>在你完成重新导入之前，这些词典将无法用于挖词。是否立即重新导入？</translation>
     </message>
     <message>
-      <source>Some system checks need attention.</source>
-      <translation>部分系统检查需要注意。</translation>
+        <source>Dictionaries need re-importing</source>
+        <translation>词典需要重新导入</translation>
     </message>
     <message>
-      <source>Open Settings</source>
-      <translation>打开设置</translation>
+        <source>System validation passed</source>
+        <translation>系统校验通过</translation>
     </message>
     <message>
-      <source>Anki note-type fields are misconfigured; check Settings.</source>
-      <translation>Anki 笔记类型字段配置有误；请检查设置。</translation>
+        <source>Some system checks need attention.</source>
+        <translation>部分系统检查需要注意。</translation>
     </message>
     <message>
-      <source>Validation already running</source>
-      <translation>校验已在运行</translation>
+        <source>Anki note-type fields are misconfigured; check Settings.</source>
+        <translation>Anki 笔记类型字段配置有误；请检查设置。</translation>
     </message>
     <message>
-      <source>Running system validation...</source>
-      <translation>正在运行系统校验…</translation>
+        <source>Validation already running</source>
+        <translation>校验已在运行</translation>
     </message>
     <message>
-      <source>System check failed. Try again.</source>
-      <translation>系统检查失败。请重试。</translation>
+        <source>Running system validation...</source>
+        <translation>正在运行系统校验…</translation>
     </message>
     <message>
-      <source>Migrating JMdict to SQLite…</source>
-      <translation>正在将 JMdict 迁移到 SQLite…</translation>
+        <source>System check failed. Try again.</source>
+        <translation>系统检查失败。请重试。</translation>
     </message>
     <message>
-      <source>JMdict ready (%1 entries)</source>
-      <translation>JMdict 就绪（%1 条）</translation>
+        <source>Migrating JMdict to SQLite…</source>
+        <translation>正在将 JMdict 迁移到 SQLite…</translation>
     </message>
     <message>
-      <source>Version %1 is available.</source>
-      <translation>版本 %1 可用。</translation>
+        <source>JMdict ready (%1 entries)</source>
+        <translation>JMdict 就绪（%1 条）</translation>
     </message>
     <message>
-      <source>Running %1. No newer release was reported.</source>
-      <translation>正在运行 %1。未报告有更新版本。</translation>
+        <source>Version %1 is available.</source>
+        <translation>版本 %1 可用。</translation>
     </message>
     <message>
-      <source>Manga</source>
-      <translation>漫画</translation>
+        <source>Running %1. No newer release was reported.</source>
+        <translation>正在运行 %1。未报告有更新版本。</translation>
     </message>
     <message>
-      <source>Novels</source>
-      <translation>小说</translation>
+        <source>The update check failed; try again later.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Subtitle Files</source>
-      <translation>字幕文件</translation>
+        <source>Manga</source>
+        <translation>漫画</translation>
     </message>
     <message>
-      <source>Text</source>
-      <translation>文本</translation>
+        <source>Novels</source>
+        <translation>小说</translation>
     </message>
     <message>
-      <source>Generate</source>
-      <translation>生成</translation>
+        <source>Subtitle Files</source>
+        <translation>字幕文件</translation>
     </message>
     <message>
-      <source>Retime</source>
-      <translation>重新计时</translation>
+        <source>Text</source>
+        <translation>文本</translation>
     </message>
     <message>
-      <source>Condense</source>
-      <translation>压缩</translation>
+        <source>Generate</source>
+        <translation>生成</translation>
     </message>
     <message>
-      <source>Card Backfill</source>
-      <translation>卡片字段补全</translation>
+        <source>Retime</source>
+        <translation>重新计时</translation>
     </message>
     <message>
-      <source>Single</source>
-      <translation>单个</translation>
+        <source>Condense</source>
+        <translation>压缩</translation>
     </message>
     <message>
-      <source>Batch</source>
-      <translation>批量</translation>
+        <source>Card Backfill</source>
+        <translation>卡片字段补全</translation>
     </message>
     <message>
-      <source>YouTube</source>
-      <translation>YouTube</translation>
+        <source>Single</source>
+        <translation>单个</translation>
     </message>
     <message>
-      <source>Failed to create desktop shortcut.</source>
-      <translation>创建桌面快捷方式失败。</translation>
+        <source>Batch</source>
+        <translation>批量</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
+    </message>
+    <message>
+        <source>Failed to create desktop shortcut.</source>
+        <translation>创建桌面快捷方式失败。</translation>
+    </message>
+</context><context>
     <name>MediaExtractorService</name>
     <message>
-      <source>Extracting media</source>
-      <translation>正在提取媒体</translation>
+        <source>Extracting media</source>
+        <translation>正在提取媒体</translation>
     </message>
     <message>
-      <source>Extracting media: %1</source>
-      <translation>正在提取媒体：%1</translation>
+        <source>Extracting media: %1</source>
+        <translation>正在提取媒体：%1</translation>
     </message>
     <message>
-      <source>audio extraction failed</source>
-      <translation>音频提取失败</translation>
+        <source>audio extraction failed</source>
+        <translation>音频提取失败</translation>
     </message>
     <message>
-      <source>No audio: %1</source>
-      <translation>无音频：%1</translation>
+        <source>No audio: %1</source>
+        <translation>无音频：%1</translation>
     </message>
     <message>
-      <source>No screenshot: %1</source>
-      <translation>无截图：%1</translation>
+        <source>No screenshot: %1</source>
+        <translation>无截图：%1</translation>
     </message>
     <message>
-      <source>media extraction failed — see log</source>
-      <translation>媒体提取失败——请查看日志</translation>
+        <source>media extraction failed — see log</source>
+        <translation>媒体提取失败——请查看日志</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>MediaSettingsPanel</name>
     <message>
-      <source>Audio Format</source>
-      <translation>音频格式</translation>
+        <source>Audio Format</source>
+        <translation>音频格式</translation>
     </message>
     <message>
-      <source>MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).</source>
-      <translation>MP3：通用兼容性。Opus：同等质量下文件更小（需要带 libopus 的 ffmpeg）。</translation>
+        <source>MP3: universal compatibility. Opus: smaller files at equivalent quality (needs ffmpeg with libopus).</source>
+        <translation>MP3：通用兼容性。Opus：同等质量下文件更小（需要带 libopus 的 ffmpeg）。</translation>
     </message>
     <message>
-      <source> kbps</source>
-      <translation> kbps</translation>
+        <source> kbps</source>
+        <translation> kbps</translation>
     </message>
     <message>
-      <source>Audio Bitrate</source>
-      <translation>音频比特率</translation>
+        <source>Audio Bitrate</source>
+        <translation>音频比特率</translation>
     </message>
     <message>
-      <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
-      <translation>越高 = 质量越好，文件越大。Opus 用 64-96 kbps 或 MP3 用 128-192 kbps 是不错的默认值。</translation>
+        <source>Higher = better quality, larger files. 64-96 kbps Opus or 128-192 kbps MP3 are good defaults.</source>
+        <translation>越高 = 质量越好，文件越大。Opus 用 64-96 kbps 或 MP3 用 128-192 kbps 是不错的默认值。</translation>
     </message>
     <message>
-      <source> seconds</source>
-      <translation> 秒</translation>
+        <source> seconds</source>
+        <translation> 秒</translation>
     </message>
     <message>
-      <source>Audio Padding</source>
-      <translation>音频填充</translation>
+        <source>Audio Padding</source>
+        <translation>音频填充</translation>
     </message>
     <message>
-      <source>Extra time before and after the subtitle.</source>
-      <translation>字幕前后额外添加的时间。</translation>
+        <source>Extra time before and after the subtitle.</source>
+        <translation>字幕前后额外添加的时间。</translation>
     </message>
     <message>
-      <source>Screenshot Offset</source>
-      <translation>截图偏移</translation>
+        <source>Screenshot Offset</source>
+        <translation>截图偏移</translation>
     </message>
     <message>
-      <source>Measured from the subtitle start time.</source>
-      <translation>从字幕开始时间起计算。</translation>
+        <source>Measured from the subtitle start time.</source>
+        <translation>从字幕开始时间起计算。</translation>
     </message>
     <message>
-      <source>Max Parallel Workers</source>
-      <translation>最大并行工作线程数</translation>
+        <source>Max Parallel Workers</source>
+        <translation>最大并行工作线程数</translation>
     </message>
     <message>
-      <source>Higher = faster, but uses more CPU and memory.</source>
-      <translation>越高 = 越快，但占用更多 CPU 和内存。</translation>
+        <source>Higher = faster, but uses more CPU and memory.</source>
+        <translation>越高 = 越快，但占用更多 CPU 和内存。</translation>
     </message>
     <message>
-      <source>Enable animated screenshots</source>
-      <translation>启用动态截图</translation>
+        <source>Enable animated screenshots</source>
+        <translation>启用动态截图</translation>
     </message>
     <message>
-      <source>Capture a short video clip instead of a static frame. Larger files, slower encode; not all Anki clients render animated AVIF/WebP.</source>
-      <translation>截取一小段视频片段而非静态帧。文件更大、编码更慢；并非所有 Anki 客户端都能渲染动态 AVIF/WebP。</translation>
+        <source>Capture a short video clip instead of a static frame. Larger files, slower encode; not all Anki clients render animated AVIF/WebP.</source>
+        <translation>截取一小段视频片段而非静态帧。文件更大、编码更慢；并非所有 Anki 客户端都能渲染动态 AVIF/WebP。</translation>
     </message>
     <message>
-      <source>Animated Screenshots</source>
-      <translation>动态截图</translation>
+        <source>Animated Screenshots</source>
+        <translation>动态截图</translation>
     </message>
     <message>
-      <source>Animated Format</source>
-      <translation>动态格式</translation>
+        <source>Animated Format</source>
+        <translation>动态格式</translation>
     </message>
     <message>
-      <source>AVIF: smaller files; WebP: broader Anki client support</source>
-      <translation>AVIF：文件更小；WebP：Anki 客户端支持更广</translation>
+        <source>AVIF: smaller files; WebP: broader Anki client support</source>
+        <translation>AVIF：文件更小；WebP：Anki 客户端支持更广</translation>
     </message>
     <message>
-      <source>Match audio duration</source>
-      <translation>匹配音频时长</translation>
+        <source>Match audio duration</source>
+        <translation>匹配音频时长</translation>
     </message>
     <message>
-      <source>Animated clip spans the audio clip's time range. Overrides Clip Duration.</source>
-      <translation>动态片段的时间范围与音频片段一致。会覆盖片段时长。</translation>
+        <source>Animated clip spans the audio clip's time range. Overrides Clip Duration.</source>
+        <translation>动态片段的时间范围与音频片段一致。会覆盖片段时长。</translation>
     </message>
     <message>
-      <source>Match Audio Duration</source>
-      <translation>匹配音频时长</translation>
+        <source>Match Audio Duration</source>
+        <translation>匹配音频时长</translation>
     </message>
     <message>
-      <source>Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on.</source>
-      <translation>片段长度，上限为字幕时长。若开启“匹配音频时长”则忽略。</translation>
+        <source>Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on.</source>
+        <translation>片段长度，上限为字幕时长。若开启“匹配音频时长”则忽略。</translation>
     </message>
     <message>
-      <source>Clip Duration</source>
-      <translation>片段时长</translation>
+        <source>Clip Duration</source>
+        <translation>片段时长</translation>
     </message>
     <message>
-      <source>Frames per second for animated clips</source>
-      <translation>动态片段的每秒帧数</translation>
+        <source>Frames per second for animated clips</source>
+        <translation>动态片段的每秒帧数</translation>
     </message>
     <message>
-      <source>FPS</source>
-      <translation>FPS</translation>
+        <source>FPS</source>
+        <translation>FPS</translation>
     </message>
     <message>
-      <source> px</source>
-      <translation> px</translation>
+        <source> px</source>
+        <translation> px</translation>
     </message>
     <message>
-      <source>Height</source>
-      <translation>高度</translation>
+        <source>Height</source>
+        <translation>高度</translation>
     </message>
     <message>
-      <source>Output height; aspect ratio preserved</source>
-      <translation>输出高度；保持宽高比</translation>
+        <source>Output height; aspect ratio preserved</source>
+        <translation>输出高度；保持宽高比</translation>
     </message>
     <message>
-      <source>0 = smallest file, 100 = best quality</source>
-      <translation>0 = 文件最小，100 = 质量最好</translation>
+        <source>0 = smallest file, 100 = best quality</source>
+        <translation>0 = 文件最小，100 = 质量最好</translation>
     </message>
     <message>
-      <source>Quality</source>
-      <translation>质量</translation>
+        <source>Quality</source>
+        <translation>质量</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>MiniJobMonitor</name>
     <message>
-      <source>Job monitor</source>
-      <translation>任务监视器</translation>
+        <source>Job monitor</source>
+        <translation>任务监视器</translation>
     </message>
     <message>
-      <source>Nothing is running</source>
-      <translation>没有正在运行的任务</translation>
+        <source>Nothing is running</source>
+        <translation>没有正在运行的任务</translation>
     </message>
     <message>
-      <source>Job to watch</source>
-      <translation>要监视的任务</translation>
+        <source>Job to watch</source>
+        <translation>要监视的任务</translation>
     </message>
     <message>
-      <source>Keep above other windows</source>
-      <translation>置于其他窗口之上</translation>
+        <source>Keep above other windows</source>
+        <translation>置于其他窗口之上</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Show main window</source>
-      <translation>显示主窗口</translation>
+        <source>Show main window</source>
+        <translation>显示主窗口</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>MiningTabBase</name>
     <message>
-      <source>Failed: %1 — %2</source>
-      <translation>失败：%1 — %2</translation>
+        <source>Failed: %1 — %2</source>
+        <translation>失败：%1 — %2</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ModernButton</name>
     <message>
-      <source>Button</source>
-      <translation>按钮</translation>
+        <source>Button</source>
+        <translation>按钮</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>NoteTypePage</name>
     <message>
-      <source>Choose a Note Type</source>
-      <translation>选择笔记类型</translation>
+        <source>Choose a Note Type</source>
+        <translation>选择笔记类型</translation>
     </message>
     <message>
-      <source>Pick the Anki note type whose fields will hold mined data.</source>
-      <translation>选择字段将用于存放挖词数据的 Anki 笔记类型。</translation>
+        <source>Pick the Anki note type whose fields will hold mined data.</source>
+        <translation>选择字段将用于存放挖词数据的 Anki 笔记类型。</translation>
     </message>
     <message>
-      <source>Refresh</source>
-      <translation>刷新</translation>
+        <source>Refresh</source>
+        <translation>刷新</translation>
     </message>
     <message>
-      <source>Auto-Map Fields from Note Type</source>
-      <translation>根据笔记类型自动映射字段</translation>
+        <source>Auto-Map Fields from Note Type</source>
+        <translation>根据笔记类型自动映射字段</translation>
     </message>
     <message>
-      <source>No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki.</source>
-      <translation>未找到字段。请确保 Anki 正在运行，且笔记类型名称与 Anki 中的拼写完全一致。</translation>
+        <source>No fields found. Make sure Anki is running and the note type name is spelled exactly as in Anki.</source>
+        <translation>未找到字段。请确保 Anki 正在运行，且笔记类型名称与 Anki 中的拼写完全一致。</translation>
     </message>
     <message>
-      <source>This note type does not look set up for Japanese mining (no obvious word/sentence fields). Import a recommended mining note type in Anki, then &lt;a href="%1"&gt;recheck&lt;/a&gt;. See: &lt;a href="%1"&gt;recommended note type&lt;/a&gt;.</source>
-      <translation>此笔记类型看起来不适合日语挖词（未发现明显的单词/句子字段）。请在 Anki 中导入推荐的挖词笔记类型，然后&lt;a href="%1"&gt;重新检查&lt;/a&gt;。参见：&lt;a href="%1"&gt;推荐笔记类型&lt;/a&gt;。</translation>
+        <source>This note type does not look set up for Japanese mining (no obvious word/sentence fields). Import a recommended mining note type in Anki, then &lt;a href="%1"&gt;recheck&lt;/a&gt;. See: &lt;a href="%1"&gt;recommended note type&lt;/a&gt;.</source>
+        <translation>此笔记类型看起来不适合日语挖词（未发现明显的单词/句子字段）。请在 Anki 中导入推荐的挖词笔记类型，然后&lt;a href="%1"&gt;重新检查&lt;/a&gt;。参见：&lt;a href="%1"&gt;推荐笔记类型&lt;/a&gt;。</translation>
     </message>
     <message>
-      <source>Mapped: %1
+        <source>Recognized %1 — mapped %2 fields. You can fine-tune these later in Settings → Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mapped: %1
 You can fine-tune these later in Settings → Anki.</source>
-      <translation>已映射：%1
+        <translation>已映射：%1
 稍后可在 设置 → Anki 中微调。</translation>
     </message>
     <message>
-      <source>No fields could be auto-mapped.</source>
-      <translation>没有可自动映射的字段。</translation>
+        <source>No fields could be auto-mapped.</source>
+        <translation>没有可自动映射的字段。</translation>
     </message>
     <message>
-      <source>Checking note type fields...</source>
-      <translation>正在检查笔记类型字段...</translation>
+        <source>Checking note type fields...</source>
+        <translation>正在检查笔记类型字段...</translation>
     </message>
     <message>
-      <source>Could not check note type fields: </source>
-      <translation>无法检查笔记类型字段：</translation>
+        <source>Could not check note type fields: </source>
+        <translation>无法检查笔记类型字段：</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>OnnxPackDownloadWorker</name>
     <message>
-      <source>%1 (%2%)</source>
-      <translation>%1 (%2%)</translation>
+        <source>%1 (%2%)</source>
+        <translation>%1 (%2%)</translation>
     </message>
     <message>
-      <source>Downloading silence-removal library…</source>
-      <translation>正在下载静音移除库…</translation>
+        <source>Downloading silence-removal library…</source>
+        <translation>正在下载静音移除库…</translation>
     </message>
     <message>
-      <source>Silence-removal library installed successfully.</source>
-      <translation>静音移除库安装成功。</translation>
+        <source>Silence-removal library installed successfully.</source>
+        <translation>静音移除库安装成功。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>PitchImportFlow</name>
     <message>
-      <source>Choose pitch accent source</source>
-      <translation>选择音调来源</translation>
+        <source>Choose pitch accent source</source>
+        <translation>选择音调来源</translation>
     </message>
     <message>
-      <source> (skipped %1 malformed entries)</source>
-      <translation> （已跳过 %1 个格式错误的条目）</translation>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳过 %1 个格式错误的条目）</translation>
     </message>
     <message>
-      <source>Pitch Source Added</source>
-      <translation>已添加音调来源</translation>
+        <source>Pitch Source Added</source>
+        <translation>已添加音调来源</translation>
     </message>
     <message>
-      <source>Imported %1 entries from '%2'.</source>
-      <translation>已从“%2”导入 %1 条。</translation>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>已从“%2”导入 %1 条。</translation>
     </message>
     <message>
-      <source>The import finished, but the settings could not be updated.</source>
-      <translation>导入已完成，但无法更新设置。</translation>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>导入已完成，但无法更新设置。</translation>
     </message>
     <message>
-      <source>Importing pitch source…</source>
-      <translation>正在导入音调来源…</translation>
+        <source>Importing pitch source…</source>
+        <translation>正在导入音调来源…</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>The pitch source could not be imported.</source>
-      <translation>无法导入音调来源。</translation>
+        <source>The pitch source could not be imported.</source>
+        <translation>无法导入音调来源。</translation>
     </message>
     <message>
-      <source>Another import is still finishing. Wait for it to finish and try again.</source>
-      <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>The import worker finished without a completion result.</source>
-      <translation>导入工作线程结束，但未返回完成结果。</translation>
+        <source>The import worker finished without a completion result.</source>
+        <translation>导入工作线程结束，但未返回完成结果。</translation>
     </message>
     <message>
-      <source>That folder could not be scanned.</source>
-      <translation>无法扫描该文件夹。</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>无法扫描该文件夹。</translation>
     </message>
     <message>
-      <source>Choose pitch source to re-import</source>
-      <translation>选择要重新导入的音调来源</translation>
+        <source>Choose pitch source to re-import</source>
+        <translation>选择要重新导入的音调来源</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Pitch Source Re-imported</source>
-      <translation>已重新导入音调来源</translation>
+        <source>Pitch Source Re-imported</source>
+        <translation>已重新导入音调来源</translation>
     </message>
     <message>
-      <source>Re-imported %1 successfully.</source>
-      <translation>已成功重新导入 %1。</translation>
+        <source>Re-imported %1 successfully.</source>
+        <translation>已成功重新导入 %1。</translation>
     </message>
     <message>
-      <source>Re-importing pitch source…</source>
-      <translation>正在重新导入音调来源…</translation>
+        <source>Re-importing pitch source…</source>
+        <translation>正在重新导入音调来源…</translation>
     </message>
     <message>
-      <source>The pitch source could not be re-imported.</source>
-      <translation>无法重新导入音调来源。</translation>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>无法重新导入音调来源。</translation>
     </message>
     <message>
-      <source>Pitch accent source (%1);;All Files (*)</source>
-      <translation>音调来源（%1）;;所有文件 (*)</translation>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>音调来源（%1）;;所有文件 (*)</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
-      <source>Loading…</source>
-      <translation>正在加载…</translation>
+        <source>Loading…</source>
+        <translation>正在加载…</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Installed pitch accent sources could not be checked.</source>
-      <translation>无法检查已安装的音调来源。</translation>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>无法检查已安装的音调来源。</translation>
     </message>
     <message>
-      <source>The pitch source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-      <translation>已从链中移除音调来源，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
+        <source>The pitch source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
+        <translation>已从链中移除音调来源，但因无法确认该文件夹属于 Anki Miner，文件仍保留在原处。</translation>
     </message>
     <message>
-      <source>%1 could not be removed. Its files are intact — try again.</source>
-      <translation>无法移除 %1。其文件保持完好——请重试。</translation>
+        <source>%1 could not be removed. Its files are intact — try again.</source>
+        <translation>无法移除 %1。其文件保持完好——请重试。</translation>
     </message>
     <message>
-      <source>%1 was only partly removed. Re-import or repair this pitch source before retrying.</source>
-      <translation>%1 仅被部分移除。请重新导入或修复此音调来源后再重试。</translation>
+        <source>%1 was only partly removed. Re-import or repair this pitch source before retrying.</source>
+        <translation>%1 仅被部分移除。请重新导入或修复此音调来源后再重试。</translation>
     </message>
     <message>
-      <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-      <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
+        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
+        <translation>%1 的设置更新失败后无法还原。请重启 Anki Miner 后再重试。</translation>
     </message>
     <message>
-      <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
-      <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
+        <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
+        <translation>已移除 %1，但 Anki Miner 无法刷新它。移除操作已保存，重启后仍会生效。</translation>
     </message>
     <message>
-      <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
-      <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
+        <source>%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup.</source>
+        <translation>已移除 %1，但无法删除其残留文件夹。将在启动时重试清理。</translation>
     </message>
     <message>
-      <source>Active Pitch Accent Sources</source>
-      <translation>已启用的音调来源</translation>
+        <source>Active Pitch Accent Sources</source>
+        <translation>已启用的音调来源</translation>
     </message>
     <message>
-      <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-      <translation>按从上到下的顺序检查来源——第一个包含该单词音调条目的来源会被采用。较低的来源仅补全较高来源缺失的单词。</translation>
+        <source>Restore from Disk</source>
+        <translation type="unfinished">从磁盘恢复</translation>
     </message>
     <message>
-      <source>Add pitch source…</source>
-      <translation>添加音调来源…</translation>
+        <source>Re-add pitch sources found in the storage folder that aren't in the list above. No re-import needed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Remove pitch source</source>
-      <translation>移除音调来源</translation>
+        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
+        <translation>按从上到下的顺序检查来源——第一个包含该单词音调条目的来源会被采用。较低的来源仅补全较高来源缺失的单词。</translation>
     </message>
     <message>
-      <source>Remove the selected pitch accent source</source>
-      <translation>移除所选音调来源</translation>
+        <source>Add pitch source…</source>
+        <translation>添加音调来源…</translation>
     </message>
     <message>
-      <source>Move up</source>
-      <translation>上移</translation>
+        <source>Remove pitch source</source>
+        <translation>移除音调来源</translation>
     </message>
     <message>
-      <source>Move up (wins lookups first)</source>
-      <translation>上移（优先查找）</translation>
+        <source>Remove the selected pitch accent source</source>
+        <translation>移除所选音调来源</translation>
     </message>
     <message>
-      <source>Move down</source>
-      <translation>下移</translation>
+        <source>Move up</source>
+        <translation>上移</translation>
     </message>
     <message>
-      <source>%1 entries</source>
-      <translation>%1 个条目</translation>
+        <source>Move up (wins lookups first)</source>
+        <translation>上移（优先查找）</translation>
     </message>
     <message>
-      <source>Enabled</source>
-      <translation>已启用</translation>
+        <source>Move down</source>
+        <translation>下移</translation>
     </message>
     <message>
-      <source>Enable %1</source>
-      <translation>启用 %1</translation>
+        <source>%1 entries</source>
+        <translation>%1 个条目</translation>
     </message>
     <message>
-      <source>Enable or disable %1</source>
-      <translation>启用或禁用 %1</translation>
+        <source>Enabled</source>
+        <translation>已启用</translation>
     </message>
     <message>
-      <source>⚠ missing — re-import</source>
-      <translation>⚠ 缺失 — 请重新导入</translation>
+        <source>Enable %1</source>
+        <translation>启用 %1</translation>
     </message>
     <message>
-      <source>Remove '%1' from the pitch accent chain?
+        <source>Enable or disable %1</source>
+        <translation>启用或禁用 %1</translation>
+    </message>
+    <message>
+        <source>⚠ missing — re-import</source>
+        <translation>⚠ 缺失 — 请重新导入</translation>
+    </message>
+    <message>
+        <source>Remove '%1' from the pitch accent chain?
 
 Only the index files are deleted.
 This cannot be undone. You would need to re-import to use this source again.</source>
-      <translation>从音调链中移除“%1”？
+        <translation>从音调链中移除“%1”？
 
 仅删除索引文件。
 此操作无法撤销。若要再次使用此来源，需要重新导入。</translation>
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Remove '%1' from the pitch accent chain?
+
+Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Re-import…</source>
-      <translation>重新导入…</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Remove</source>
-      <translation>移除</translation>
+        <source>Re-import…</source>
+        <translation>重新导入…</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+</context><context>
     <name>PlaylistAddController</name>
     <message>
-      <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-      <translation>不是有效的 YouTube 网址或视频 id。请粘贴 youtube.com / youtu.be 链接。</translation>
+        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
+        <translation>不是有效的 YouTube 网址或视频 id。请粘贴 youtube.com / youtu.be 链接。</translation>
     </message>
     <message>
-      <source>A playlist is already being added — wait for it to finish.</source>
-      <translation>已有一个播放列表正在添加 — 请等待其完成。</translation>
+        <source>A playlist is already being added — wait for it to finish.</source>
+        <translation>已有一个播放列表正在添加 — 请等待其完成。</translation>
     </message>
     <message>
-      <source>Resolving playlist…</source>
-      <translation>正在解析播放列表…</translation>
+        <source>Resolving playlist…</source>
+        <translation>正在解析播放列表…</translation>
     </message>
     <message>
-      <source>Playlist resolve failed: %1</source>
-      <translation>播放列表解析失败：%1</translation>
+        <source>Playlist resolve failed: %1</source>
+        <translation>播放列表解析失败：%1</translation>
     </message>
     <message>
-      <source>Playlist add cancelled.</source>
-      <translation>已取消添加播放列表。</translation>
+        <source>Playlist add cancelled.</source>
+        <translation>已取消添加播放列表。</translation>
     </message>
     <message>
-      <source>more than %1</source>
-      <translation>超过 %1</translation>
+        <source>more than %1</source>
+        <translation>超过 %1</translation>
     </message>
     <message>
-      <source>Add Playlist</source>
-      <translation>添加播放列表</translation>
+        <source>Add Playlist</source>
+        <translation>添加播放列表</translation>
     </message>
     <message>
-      <source>This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?</source>
-      <translation>此视频属于播放列表“%1”（%2 个视频）。仅添加此视频，还是全部添加？</translation>
+        <source>This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?</source>
+        <translation>此视频属于播放列表“%1”（%2 个视频）。仅添加此视频，还是全部添加？</translation>
     </message>
     <message>
-      <source>Just this video</source>
-      <translation>仅此视频</translation>
+        <source>Just this video</source>
+        <translation>仅此视频</translation>
     </message>
     <message>
-      <source>Add first %1 of %2</source>
-      <translation>添加前 %1 个（共 %2 个）</translation>
+        <source>Add first %1 of %2</source>
+        <translation>添加前 %1 个（共 %2 个）</translation>
     </message>
     <message>
-      <source>Add all %1</source>
-      <translation>全部添加 %1 个</translation>
+        <source>Add all %1</source>
+        <translation>全部添加 %1 个</translation>
     </message>
     <message>
-      <source>Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?</source>
-      <translation>播放列表“%1”有 %2 个视频 — 超过配置的上限（%3）。添加前 %3 个？</translation>
+        <source>Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?</source>
+        <translation>播放列表“%1”有 %2 个视频 — 超过配置的上限（%3）。添加前 %3 个？</translation>
     </message>
     <message>
-      <source>Add first %1</source>
-      <translation>添加前 %1 个</translation>
+        <source>Add first %1</source>
+        <translation>添加前 %1 个</translation>
     </message>
     <message>
-      <source>Skipped %1 already-queued video(s).</source>
-      <translation>已跳过 %1 个已在队列中的视频。</translation>
+        <source>Skipped %1 already-queued video(s).</source>
+        <translation>已跳过 %1 个已在队列中的视频。</translation>
     </message>
     <message>
-      <source>No new videos to add from playlist '%1'.</source>
-      <translation>播放列表“%1”没有可添加的新视频。</translation>
+        <source>No new videos to add from playlist '%1'.</source>
+        <translation>播放列表“%1”没有可添加的新视频。</translation>
     </message>
     <message>
-      <source>Added %1 videos from playlist '%2'.</source>
-      <translation>已从播放列表“%2”添加 %1 个视频。</translation>
+        <source>Added %1 videos from playlist '%2'.</source>
+        <translation>已从播放列表“%2”添加 %1 个视频。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ProfileController</name>
     <message>
-      <source>Language</source>
-      <translation>语言</translation>
+        <source>Language</source>
+        <translation>语言</translation>
     </message>
     <message>
-      <source>Interface scale</source>
-      <translation>界面缩放</translation>
+        <source>Interface scale</source>
+        <translation>界面缩放</translation>
     </message>
     <message>
-      <source>Text size</source>
-      <translation>文字大小</translation>
+        <source>Text size</source>
+        <translation>文字大小</translation>
     </message>
     <message>
-      <source>Statistics database</source>
-      <translation>统计数据库</translation>
+        <source>Statistics database</source>
+        <translation>统计数据库</translation>
     </message>
     <message>
-      <source>Log file</source>
-      <translation>日志文件</translation>
+        <source>Log file</source>
+        <translation>日志文件</translation>
     </message>
     <message>
-      <source>Recovered settings</source>
-      <translation>已恢复的设置</translation>
+        <source>Recovered settings</source>
+        <translation>已恢复的设置</translation>
     </message>
     <message>
-      <source>Recovered settings %1</source>
-      <translation>已恢复的设置 %1</translation>
+        <source>Recovered settings %1</source>
+        <translation>已恢复的设置 %1</translation>
     </message>
     <message>
-      <source>Could not create the profile '%1': %2</source>
-      <translation>无法创建配置文件“%1”：%2</translation>
+        <source>Could not create the profile '%1': %2</source>
+        <translation>无法创建配置文件“%1”：%2</translation>
     </message>
     <message>
-      <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
-      <translation>无法保存当前配置文件“%1”：%2。未进行切换。</translation>
+        <source>The new profile '%1' (%2) remains because cleanup failed: %3. Delete it manually.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Could not read the profile file %1: %2. Nothing was switched.</source>
-      <translation>无法读取配置文件 %1：%2。未进行切换。</translation>
+        <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
+        <translation>无法保存当前配置文件“%1”：%2。未进行切换。</translation>
     </message>
     <message>
-      <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
-      <translation>已切换到“%1”，但无法完全刷新运行中的窗口：%2。如有显示异常，请重启 Anki Miner。</translation>
+        <source>Could not read the profile file %1: %2. Nothing was switched.</source>
+        <translation>无法读取配置文件 %1：%2。未进行切换。</translation>
     </message>
     <message>
-      <source>Restart Anki Miner to apply: %1</source>
-      <translation>重启 Anki Miner 以应用：%1</translation>
+        <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
+        <translation>已切换到“%1”，但无法完全刷新运行中的窗口：%2。如有显示异常，请重启 Anki Miner。</translation>
     </message>
     <message>
-      <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
-      <translation>设置仍在保存，或正在更改词典。请稍后重试。</translation>
+        <source>Restart Anki Miner to apply: %1</source>
+        <translation>重启 Anki Miner 以应用：%1</translation>
     </message>
     <message>
-      <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
-      <translation>挖词或卡片补全仍在使用词典。请停止后再重试。</translation>
+        <source>Settings are still being saved, or a dictionary change is in progress. Try again in a moment.</source>
+        <translation>设置仍在保存，或正在更改词典。请稍后重试。</translation>
     </message>
     <message>
-      <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
-      <translation>无法应用配置文件“%1”：%2。当前设置未更改。</translation>
+        <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
+        <translation>挖词或卡片补全仍在使用词典。请停止后再重试。</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
+        <translation>无法应用配置文件“%1”：%2。当前设置未更改。</translation>
+    </message>
+</context><context>
     <name>ProfileManagerDialog</name>
     <message>
-      <source>Settings Profiles</source>
-      <translation>设置配置文件</translation>
+        <source>Settings Profiles</source>
+        <translation>设置配置文件</translation>
     </message>
     <message>
-      <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
-      <translation>配置文件是所有设置的完整快照——词典、过滤器、媒体、Anki 字段和外观。切换前会将当前设置保存回当前配置文件，然后一次性替换所有设置。</translation>
+        <source>A profile is a complete snapshot of every setting — dictionaries, filters, media, Anki fields, appearance. Switching swaps all of them at once, after saving your current settings back into the active profile.</source>
+        <translation>配置文件是所有设置的完整快照——词典、过滤器、媒体、Anki 字段和外观。切换前会将当前设置保存回当前配置文件，然后一次性替换所有设置。</translation>
     </message>
     <message>
-      <source>New from Current…</source>
-      <translation>根据当前设置新建…</translation>
+        <source>New from Current…</source>
+        <translation>根据当前设置新建…</translation>
     </message>
     <message>
-      <source>Save the settings you are using now as a new profile and switch to it.</source>
-      <translation>将当前使用的设置保存为新配置文件并切换到它。</translation>
+        <source>Save the settings you are using now as a new profile and switch to it.</source>
+        <translation>将当前使用的设置保存为新配置文件并切换到它。</translation>
     </message>
     <message>
-      <source>Rename…</source>
-      <translation>重命名…</translation>
+        <source>Rename…</source>
+        <translation>重命名…</translation>
     </message>
     <message>
-      <source>Delete</source>
-      <translation>删除</translation>
+        <source>Delete</source>
+        <translation>删除</translation>
     </message>
     <message>
-      <source>Switch To</source>
-      <translation>切换到</translation>
+        <source>Switch To</source>
+        <translation>切换到</translation>
     </message>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
     <message>
-      <source>%1 (active)</source>
-      <translation>%1（当前）</translation>
+        <source>%1 (active)</source>
+        <translation>%1（当前）</translation>
     </message>
     <message>
-      <source>New Profile</source>
-      <translation>新建配置文件</translation>
+        <source>New Profile</source>
+        <translation>新建配置文件</translation>
     </message>
     <message>
-      <source>Name for the new profile:</source>
-      <translation>新配置文件的名称：</translation>
+        <source>Name for the new profile:</source>
+        <translation>新配置文件的名称：</translation>
     </message>
     <message>
-      <source>Rename Profile</source>
-      <translation>重命名配置文件</translation>
+        <source>Rename Profile</source>
+        <translation>重命名配置文件</translation>
     </message>
     <message>
-      <source>New name for '%1':</source>
-      <translation>“%1”的新名称：</translation>
+        <source>New name for '%1':</source>
+        <translation>“%1”的新名称：</translation>
     </message>
     <message>
-      <source>The profile could not be renamed.</source>
-      <translation>无法重命名配置文件。</translation>
+        <source>The profile could not be renamed.</source>
+        <translation>无法重命名配置文件。</translation>
     </message>
     <message>
-      <source>Delete Profile</source>
-      <translation>删除配置文件</translation>
+        <source>Delete Profile</source>
+        <translation>删除配置文件</translation>
     </message>
     <message>
-      <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
-      <translation>删除配置文件“%1”？其保存的设置无法恢复。</translation>
+        <source>Delete the profile '%1'? Its saved settings cannot be recovered.</source>
+        <translation>删除配置文件“%1”？其保存的设置无法恢复。</translation>
     </message>
     <message>
-      <source>The profile could not be deleted.</source>
-      <translation>无法删除配置文件。</translation>
+        <source>The profile could not be deleted.</source>
+        <translation>无法删除配置文件。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ProgressWidget</name>
     <message>
-      <source>Ready</source>
-      <translation>就绪</translation>
+        <source>Ready</source>
+        <translation>就绪</translation>
     </message>
     <message>
-      <source>ETA ~</source>
-      <translation>剩余 ~</translation>
+        <source>ETA ~</source>
+        <translation>剩余 ~</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>QueueControlsBar</name>
     <message>
-      <source>%1 queued · %2 ready · %3 failed · %4 complete</source>
-      <translation>%1 个已排队 · %2 个就绪 · %3 个失败 · %4 个完成</translation>
+        <source>%1 queued · %2 ready · %3 failed · %4 complete</source>
+        <translation>%1 个已排队 · %2 个就绪 · %3 个失败 · %4 个完成</translation>
     </message>
     <message>
-      <source>Pause after current item</source>
-      <translation>在当前项目后暂停</translation>
+        <source>Pause after current item</source>
+        <translation>在当前项目后暂停</translation>
     </message>
     <message>
-      <source>Queue locked while processing.</source>
-      <translation>处理期间队列已锁定。</translation>
+        <source>Queue locked while processing.</source>
+        <translation>处理期间队列已锁定。</translation>
     </message>
     <message>
-      <source>Resume</source>
-      <translation>继续</translation>
+        <source>Resume</source>
+        <translation>继续</translation>
     </message>
     <message>
-      <source>Paused after %1 of %2</source>
-      <translation>在第 %1 项（共 %2 项）后暂停</translation>
+        <source>Paused after %1 of %2</source>
+        <translation>在第 %1 项（共 %2 项）后暂停</translation>
     </message>
     <message>
-      <source>All</source>
-      <translation>全部</translation>
+        <source>All</source>
+        <translation>全部</translation>
     </message>
     <message>
-      <source>Ready</source>
-      <translation>就绪</translation>
+        <source>Ready</source>
+        <translation>就绪</translation>
     </message>
     <message>
-      <source>Running</source>
-      <translation>运行中</translation>
+        <source>Running</source>
+        <translation>运行中</translation>
     </message>
     <message>
-      <source>Failed</source>
-      <translation>失败</translation>
+        <source>Failed</source>
+        <translation>失败</translation>
     </message>
     <message>
-      <source>Complete</source>
-      <translation>完成</translation>
+        <source>Complete</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Search the queue…</source>
-      <translation>搜索队列…</translation>
+        <source>Search the queue…</source>
+        <translation>搜索队列…</translation>
     </message>
     <message>
-      <source>Run selected</source>
-      <translation>运行所选项</translation>
+        <source>Run selected</source>
+        <translation>运行所选项</translation>
     </message>
     <message>
-      <source>Mine the selected rows, in list order.</source>
-      <translation>按列表顺序挖词所选行。</translation>
+        <source>Mine the selected rows, in list order.</source>
+        <translation>按列表顺序挖词所选行。</translation>
     </message>
     <message>
-      <source>Retry selected</source>
-      <translation>重试所选项</translation>
+        <source>Retry selected</source>
+        <translation>重试所选项</translation>
     </message>
     <message>
-      <source>Return the selected failed rows to Ready and mine them again.</source>
-      <translation>将所选失败行恢复为“就绪”并再次挖词。</translation>
+        <source>Return the selected failed rows to Ready and mine them again.</source>
+        <translation>将所选失败行恢复为“就绪”并再次挖词。</translation>
     </message>
     <message>
-      <source>Remove selected</source>
-      <translation>移除所选项</translation>
+        <source>Remove selected</source>
+        <translation>移除所选项</translation>
     </message>
     <message>
-      <source>Drop the selected rows from the queue.</source>
-      <translation>从队列中移除所选行。</translation>
+        <source>Drop the selected rows from the queue.</source>
+        <translation>从队列中移除所选行。</translation>
     </message>
     <message>
-      <source>Stop cleanly once the item being mined is finished.</source>
-      <translation>当前挖词项目完成后正常停止。</translation>
+        <source>Stop cleanly once the item being mined is finished.</source>
+        <translation>当前挖词项目完成后正常停止。</translation>
     </message>
     <message>
-      <source>Finish current, then stop</source>
-      <translation>完成当前项目后停止</translation>
+        <source>Finish current, then stop</source>
+        <translation>完成当前项目后停止</translation>
     </message>
     <message>
-      <source>Let the current item finish, then end the run.</source>
-      <translation>让当前项目完成后结束运行。</translation>
+        <source>Let the current item finish, then end the run.</source>
+        <translation>让当前项目完成后结束运行。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>QueueItemWidget</name>
     <message>
-      <source>Edit</source>
-      <translation>编辑</translation>
+        <source>Edit</source>
+        <translation>编辑</translation>
     </message>
     <message>
-      <source>Edit video and subtitle folders</source>
-      <translation>编辑视频和字幕文件夹</translation>
+        <source>Edit video and subtitle folders</source>
+        <translation>编辑视频和字幕文件夹</translation>
     </message>
     <message>
-      <source>Remove</source>
-      <translation>移除</translation>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
     <message>
-      <source>Remove from queue</source>
-      <translation>从队列中移除</translation>
+        <source>Remove from queue</source>
+        <translation>从队列中移除</translation>
     </message>
     <message>
-      <source>Pending</source>
-      <translation>待处理</translation>
+        <source>Pending</source>
+        <translation>待处理</translation>
     </message>
     <message>
-      <source>Processing</source>
-      <translation>处理中</translation>
+        <source>Processing</source>
+        <translation>处理中</translation>
     </message>
     <message>
-      <source>Complete</source>
-      <translation>完成</translation>
+        <source>Complete</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Error</source>
-      <translation>错误</translation>
+        <source>Error</source>
+        <translation>错误</translation>
     </message>
     <message>
-      <source>No video folder selected</source>
-      <translation>未选择视频文件夹</translation>
+        <source>No video folder selected</source>
+        <translation>未选择视频文件夹</translation>
     </message>
     <message>
-      <source>No subtitle folder selected</source>
-      <translation>未选择字幕文件夹</translation>
+        <source>No subtitle folder selected</source>
+        <translation>未选择字幕文件夹</translation>
     </message>
     <message>
-      <source> • Offset: %1</source>
-      <translation> • 偏移：%1</translation>
+        <source> • Offset: %1</source>
+        <translation> • 偏移：%1</translation>
     </message>
     <message>
-      <source>%1 episodes • %2 cards created</source>
-      <translation>%1 集 • 已创建 %2 张卡片</translation>
+        <source>%1 episodes • %2 cards created</source>
+        <translation>%1 集 • 已创建 %2 张卡片</translation>
     </message>
     <message>
-      <source>%1 episodes • Ready to process</source>
-      <translation>%1 集 • 准备处理</translation>
+        <source>%1 episodes • Ready to process</source>
+        <translation>%1 集 • 准备处理</translation>
     </message>
     <message>
-      <source>Not configured</source>
-      <translation>未配置</translation>
+        <source>Not configured</source>
+        <translation>未配置</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>QueueMiningProgressAdapter</name>
     <message>
-      <source>Stage %1 of %2</source>
-      <translation>第 %1 阶段，共 %2 阶段</translation>
+        <source>Stage %1 of %2</source>
+        <translation>第 %1 阶段，共 %2 阶段</translation>
     </message>
     <message>
-      <source>%1 (%2 of %3)</source>
-      <translation>%1（第 %2 项，共 %3 项）</translation>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1（第 %2 项，共 %3 项）</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>QueuePanel</name>
     <message>
-      <source>Multi-Series Queue</source>
-      <translation>多剧集队列</translation>
+        <source>Multi-Series Queue</source>
+        <translation>多剧集队列</translation>
     </message>
     <message>
-      <source>Add Series</source>
-      <translation>添加剧集</translation>
+        <source>Add Series</source>
+        <translation>添加剧集</translation>
     </message>
     <message>
-      <source>Process Queue</source>
-      <translation>处理队列</translation>
+        <source>Process Queue</source>
+        <translation>处理队列</translation>
     </message>
     <message>
-      <source>Process all series in queue</source>
-      <translation>处理队列中的所有剧集</translation>
+        <source>Process all series in queue</source>
+        <translation>处理队列中的所有剧集</translation>
     </message>
     <message>
-      <source>Clear All</source>
-      <translation>清空全部</translation>
+        <source>Clear All</source>
+        <translation>清空全部</translation>
     </message>
     <message>
-      <source>Remove all items from queue</source>
-      <translation>从队列中移除所有项目</translation>
+        <source>Remove all items from queue</source>
+        <translation>从队列中移除所有项目</translation>
     </message>
     <message>
-      <source>Enter a name for series #%1:</source>
-      <translation>为剧集 #%1 输入名称：</translation>
+        <source>Enter a name for series #%1:</source>
+        <translation>为剧集 #%1 输入名称：</translation>
     </message>
     <message>
-      <source>Series %1</source>
-      <translation>剧集 %1</translation>
+        <source>Series %1</source>
+        <translation>剧集 %1</translation>
     </message>
     <message>
-      <source>Edit: %1</source>
-      <translation>编辑：%1</translation>
+        <source>Edit: %1</source>
+        <translation>编辑：%1</translation>
     </message>
     <message>
-      <source>Video Folder:</source>
-      <translation>视频文件夹：</translation>
+        <source>Video Folder:</source>
+        <translation>视频文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Folder:</source>
-      <translation>字幕文件夹：</translation>
+        <source>Subtitle Folder:</source>
+        <translation>字幕文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Offset:</source>
-      <translation>字幕偏移：</translation>
+        <source>Subtitle Offset:</source>
+        <translation>字幕偏移：</translation>
     </message>
     <message>
-      <source> seconds</source>
-      <translation> 秒</translation>
+        <source>Choose existing video and subtitle folders.</source>
+        <translation type="unfinished">选择已有的视频和字幕文件夹。</translation>
     </message>
     <message>
-      <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
-      <translation>调整字幕时间（正值 = 延后，负值 = 提前）</translation>
+        <source> seconds</source>
+        <translation> 秒</translation>
     </message>
     <message>
-      <source>Empty Queue</source>
-      <translation>队列为空</translation>
+        <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
+        <translation>调整字幕时间（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
-      <source>Queue is already empty.</source>
-      <translation>队列已经为空。</translation>
+        <source>Empty Queue</source>
+        <translation>队列为空</translation>
     </message>
     <message>
-      <source>Clear Queue</source>
-      <translation>清空队列</translation>
+        <source>Queue is already empty.</source>
+        <translation>队列已经为空。</translation>
     </message>
     <message>
-      <source>Remove all %1 series from the queue?</source>
-      <translation>从队列中移除全部 %1 个剧集？</translation>
+        <source>Clear Queue</source>
+        <translation>清空队列</translation>
     </message>
     <message>
-      <source>Queue is empty</source>
-      <translation>队列为空</translation>
+        <source>Remove all %1 series from the queue?</source>
+        <translation>从队列中移除全部 %1 个剧集？</translation>
     </message>
     <message>
-      <source>%1 series - %2 episodes - %3 cards created</source>
-      <translation>%1 个剧集 - %2 集 - 已创建 %3 张卡片</translation>
+        <source>Queue is empty</source>
+        <translation>队列为空</translation>
     </message>
     <message>
-      <source>%1 series - %2 episodes - Ready to process</source>
-      <translation>%1 个剧集 - %2 集 - 准备处理</translation>
+        <source>%1 series - %2 episodes - %3 cards created</source>
+        <translation>%1 个剧集 - %2 集 - 已创建 %3 张卡片</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>%1 series - %2 episodes - Ready to process</source>
+        <translation>%1 个剧集 - %2 集 - 准备处理</translation>
+    </message>
+</context><context>
     <name>QueueRow</name>
     <message>
-      <source>Ready</source>
-      <translation>就绪</translation>
+        <source>Ready</source>
+        <translation>就绪</translation>
     </message>
     <message>
-      <source>Running</source>
-      <translation>运行中</translation>
+        <source>Running</source>
+        <translation>运行中</translation>
     </message>
     <message>
-      <source>Failed</source>
-      <translation>失败</translation>
+        <source>Failed</source>
+        <translation>失败</translation>
     </message>
     <message>
-      <source>Complete</source>
-      <translation>完成</translation>
+        <source>Complete</source>
+        <translation>完成</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ReadingMangaTab</name>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前先审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup for each volume before creating cards.</source>
-      <translation>在创建卡片前，为每卷显示单词选择弹窗。</translation>
+        <source>Show the word-selection popup for each volume before creating cards.</source>
+        <translation>在创建卡片前，为每卷显示单词选择弹窗。</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>volumes</source>
-      <translation>卷</translation>
+        <source>volumes</source>
+        <translation>卷</translation>
     </message>
     <message>
-      <source>Volume</source>
-      <translation>卷</translation>
+        <source>Volume</source>
+        <translation>卷</translation>
     </message>
     <message>
-      <source>Volume File:</source>
-      <translation>卷文件：</translation>
+        <source>Volume File:</source>
+        <translation>卷文件：</translation>
     </message>
     <message>
-      <source>Manga</source>
-      <translation>漫画</translation>
+        <source>Manga</source>
+        <translation>漫画</translation>
     </message>
     <message>
-      <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
-      <translation>.mokuro 卷，或其旁边或内部包含 .mokuro 的 .cbz/.zip 压缩包。无需解压。</translation>
+        <source>A .mokuro volume, or a .cbz/.zip archive with its .mokuro beside or inside it. No extraction needed.</source>
+        <translation>.mokuro 卷，或其旁边或内部包含 .mokuro 的 .cbz/.zip 压缩包。无需解压。</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Mine the selected volume into Anki cards.</source>
-      <translation>将所选卷中的内容挖词并创建 Anki 卡片。</translation>
+        <source>Mine the selected volume into Anki cards.</source>
+        <translation>将所选卷中的内容挖词并创建 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Manga Folder</source>
-      <translation>漫画文件夹</translation>
+        <source>Manga Folder</source>
+        <translation>漫画文件夹</translation>
     </message>
     <message>
-      <source>Folder:</source>
-      <translation>文件夹：</translation>
+        <source>Folder:</source>
+        <translation>文件夹：</translation>
     </message>
     <message>
-      <source>A folder with one manga volume, or a series folder of many volumes.</source>
-      <translation>包含单卷漫画的文件夹，或包含多卷的系列文件夹。</translation>
+        <source>A folder with one manga volume, or a series folder of many volumes.</source>
+        <translation>包含单卷漫画的文件夹，或包含多卷的系列文件夹。</translation>
     </message>
     <message>
-      <source>Mine Folder</source>
-      <translation>挖取文件夹</translation>
+        <source>Mine Folder</source>
+        <translation>挖取文件夹</translation>
     </message>
     <message>
-      <source>Mine the selected folder's volume(s) into Anki cards.</source>
-      <translation>将所选文件夹的卷挖取为 Anki 卡片。</translation>
+        <source>Mine the selected folder's volume(s) into Anki cards.</source>
+        <translation>将所选文件夹的卷挖取为 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel the active run.</source>
-      <translation>取消正在进行的运行。</translation>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
-      <source>Novels are mined in the Novels tab.</source>
-      <translation>小说在“小说”标签页中挖取。</translation>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation>小说在“小说”标签页中挖取。</translation>
     </message>
     <message>
-      <source>Subtitle files are mined in the Subtitles tab.</source>
-      <translation>字幕文件在“字幕”标签页中挖取。</translation>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation>字幕文件在“字幕”标签页中挖取。</translation>
     </message>
     <message>
-      <source>Select a .mokuro, .cbz, or .zip volume first.</source>
-      <translation>请先选择 .mokuro、.cbz 或 .zip 卷。</translation>
+        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
+        <translation>请先选择 .mokuro、.cbz 或 .zip 卷。</translation>
     </message>
     <message>
-      <source>Select a manga folder first.</source>
-      <translation>请先选择一个漫画文件夹。</translation>
+        <source>Select a manga folder first.</source>
+        <translation>请先选择一个漫画文件夹。</translation>
     </message>
     <message>
-      <source>Starting…</source>
-      <translation>正在启动…</translation>
+        <source>Could not process %1: %2</source>
+        <translation type="unfinished">无法处理 %1：%2</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Skipped unreadable manga volume(s): %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Volume %1/%2: %3</source>
-      <translation>第 %1/%2 卷：%3</translation>
+        <source>Starting…</source>
+        <translation>正在启动…</translation>
     </message>
     <message>
-      <source>Mined %1: %2 cards.</source>
-      <translation>已挖词 %1：%2 张卡片。</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancelled %1.</source>
-      <translation>已取消 %1。</translation>
+        <source>Volume %1/%2: %3</source>
+        <translation>第 %1/%2 卷：%3</translation>
     </message>
     <message>
-      <source>Failed %1: %2.</source>
-      <translation>失败 %1：%2。</translation>
+        <source>Mined %1: %2 cards.</source>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
-      <source>Done: %1 succeeded, %2 failed.</source>
-      <translation>完成：%1 成功，%2 失败。</translation>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Failed %1: %2.</source>
+        <translation>失败 %1：%2。</translation>
+    </message>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>完成：%1 成功，%2 失败。</translation>
+    </message>
+</context><context>
     <name>ReadingNovelsTab</name>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前先审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup before creating cards.</source>
-      <translation>在创建卡片前显示单词选择弹窗。</translation>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>在创建卡片前显示单词选择弹窗。</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>books</source>
-      <translation>书籍</translation>
+        <source>books</source>
+        <translation>书籍</translation>
     </message>
     <message>
-      <source>Novel</source>
-      <translation>小说</translation>
+        <source>Novel</source>
+        <translation>小说</translation>
     </message>
     <message>
-      <source>Book File:</source>
-      <translation>书籍文件：</translation>
+        <source>Book File:</source>
+        <translation>书籍文件：</translation>
     </message>
     <message>
-      <source>Books</source>
-      <translation>书籍</translation>
+        <source>Books</source>
+        <translation>书籍</translation>
     </message>
     <message>
-      <source>Select an .epub or .txt book to mine.</source>
-      <translation>选择要挖取的 .epub 或 .txt 书籍。</translation>
+        <source>Select an .epub or .txt book to mine.</source>
+        <translation>选择要挖取的 .epub 或 .txt 书籍。</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Mine the selected book into Anki cards.</source>
-      <translation>将所选书籍挖取为 Anki 卡片。</translation>
+        <source>Mine the selected book into Anki cards.</source>
+        <translation>将所选书籍挖取为 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Book Folder</source>
-      <translation>书籍文件夹</translation>
+        <source>Book Folder</source>
+        <translation>书籍文件夹</translation>
     </message>
     <message>
-      <source>Folder:</source>
-      <translation>文件夹：</translation>
+        <source>Folder:</source>
+        <translation>文件夹：</translation>
     </message>
     <message>
-      <source>A folder of .epub or .txt books; each book is mined separately.</source>
-      <translation>包含 .epub 或 .txt 书籍的文件夹；每本书单独挖取。</translation>
+        <source>A folder of .epub or .txt books; each book is mined separately.</source>
+        <translation>包含 .epub 或 .txt 书籍的文件夹；每本书单独挖取。</translation>
     </message>
     <message>
-      <source>Mine Folder</source>
-      <translation>挖取文件夹</translation>
+        <source>Mine Folder</source>
+        <translation>挖取文件夹</translation>
     </message>
     <message>
-      <source>Mine every book in the selected folder, one after another.</source>
-      <translation>依次挖取所选文件夹中的每本书。</translation>
+        <source>Mine every book in the selected folder, one after another.</source>
+        <translation>依次挖取所选文件夹中的每本书。</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel the active run.</source>
-      <translation>取消正在进行的运行。</translation>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
-      <source>Manga is mined in the Manga tab.</source>
-      <translation>漫画在“漫画”标签页中挖取。</translation>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation>漫画在“漫画”标签页中挖取。</translation>
     </message>
     <message>
-      <source>Subtitle files are mined in the Subtitles tab.</source>
-      <translation>字幕文件在“字幕”标签页中挖取。</translation>
+        <source>Subtitle files are mined in the Subtitles tab.</source>
+        <translation>字幕文件在“字幕”标签页中挖取。</translation>
     </message>
     <message>
-      <source>Select a valid .epub or .txt book first.</source>
-      <translation>请先选择一个有效的 .epub 或 .txt 书籍。</translation>
+        <source>Select a valid .epub or .txt book first.</source>
+        <translation>请先选择一个有效的 .epub 或 .txt 书籍。</translation>
     </message>
     <message>
-      <source>Select a folder containing .epub or .txt books first.</source>
-      <translation>请先选择一个包含 .epub 或 .txt 书籍的文件夹。</translation>
+        <source>Select a folder containing .epub or .txt books first.</source>
+        <translation>请先选择一个包含 .epub 或 .txt 书籍的文件夹。</translation>
     </message>
     <message>
-      <source>Starting…</source>
-      <translation>正在启动…</translation>
+        <source>Starting…</source>
+        <translation>正在启动…</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Book %1/%2: %3</source>
-      <translation>第 %1/%2 本：%3</translation>
+        <source>Book %1/%2: %3</source>
+        <translation>第 %1/%2 本：%3</translation>
     </message>
     <message>
-      <source>Mining: %1</source>
-      <translation>正在挖词：%1</translation>
+        <source>Mining: %1</source>
+        <translation>正在挖词：%1</translation>
     </message>
     <message>
-      <source>Mined %1: %2 cards.</source>
-      <translation>已挖词 %1：%2 张卡片。</translation>
+        <source>Mined %1: %2 cards.</source>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
-      <source>Cancelled %1.</source>
-      <translation>已取消 %1。</translation>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
     </message>
     <message>
-      <source>Failed %1: %2.</source>
-      <translation>失败 %1：%2。</translation>
+        <source>Failed %1: %2.</source>
+        <translation>失败 %1：%2。</translation>
     </message>
     <message>
-      <source>Done: %1 succeeded, %2 failed.</source>
-      <translation>完成：%1 成功，%2 失败。</translation>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation>完成：%1 成功，%2 失败。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ReadingSubtitlesTab</name>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前先审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup for each file before creating cards.</source>
-      <translation>在创建卡片前，为每个文件显示单词选择弹窗。</translation>
+        <source>Show the word-selection popup for each file before creating cards.</source>
+        <translation>在创建卡片前，为每个文件显示单词选择弹窗。</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>subtitle files</source>
-      <translation>字幕文件</translation>
+        <source>subtitle files</source>
+        <translation>字幕文件</translation>
     </message>
     <message>
-      <source>Subtitle Files</source>
-      <translation>字幕文件</translation>
+        <source>Subtitle Files</source>
+        <translation>字幕文件</translation>
     </message>
     <message>
-      <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
-      <translation>将字幕文件作为文本挖取——不从视频提取截图或音频。</translation>
+        <source>Mines subtitle files as text — no screenshots or audio extracted from video.</source>
+        <translation>将字幕文件作为文本挖取——不从视频提取截图或音频。</translation>
     </message>
     <message>
-      <source>Subtitle files to mine, one card run per file, in list order.</source>
-      <translation>要挖取的字幕文件，按列表顺序每个文件运行一次挖词。</translation>
+        <source>Subtitle files to mine, one card run per file, in list order.</source>
+        <translation>要挖取的字幕文件，按列表顺序每个文件运行一次挖词。</translation>
     </message>
     <message>
-      <source>Add Files…</source>
-      <translation>添加文件…</translation>
+        <source>Add Files…</source>
+        <translation>添加文件…</translation>
     </message>
     <message>
-      <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
-      <translation>将字幕文件（.srt、.ass、.ssa、.vtt）添加到列表。</translation>
+        <source>Add subtitle files (.srt, .ass, .ssa, .vtt) to the list.</source>
+        <translation>将字幕文件（.srt、.ass、.ssa、.vtt）添加到列表。</translation>
     </message>
     <message>
-      <source>Remove Selected</source>
-      <translation>移除所选</translation>
+        <source>Remove Selected</source>
+        <translation>移除所选</translation>
     </message>
     <message>
-      <source>Clear</source>
-      <translation>清空</translation>
+        <source>Clear</source>
+        <translation>清空</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Mine the listed subtitle files into Anki cards.</source>
-      <translation>将列出的字幕文件挖取为 Anki 卡片。</translation>
+        <source>Mine the listed subtitle files into Anki cards.</source>
+        <translation>将列出的字幕文件挖取为 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel the active run.</source>
-      <translation>取消正在进行的运行。</translation>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
-      <source>File not found: %1</source>
-      <translation>未找到文件：%1</translation>
+        <source>File not found: %1</source>
+        <translation>未找到文件：%1</translation>
     </message>
     <message>
-      <source>Add Subtitle Files</source>
-      <translation>添加字幕文件</translation>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation type="unfinished">Anki Miner 关闭时中断</translation>
     </message>
     <message>
-      <source>Subtitles</source>
-      <translation>字幕</translation>
+        <source>Add Subtitle Files</source>
+        <translation>添加字幕文件</translation>
     </message>
     <message>
-      <source>Manga is mined in the Manga tab.</source>
-      <translation>漫画在“漫画”标签页中挖取。</translation>
+        <source>Subtitles</source>
+        <translation>字幕</translation>
     </message>
     <message>
-      <source>Novels are mined in the Novels tab.</source>
-      <translation>小说在“小说”标签页中挖取。</translation>
+        <source>Manga is mined in the Manga tab.</source>
+        <translation>漫画在“漫画”标签页中挖取。</translation>
     </message>
     <message>
-      <source>Add at least one subtitle file first.</source>
-      <translation>请先至少添加一个字幕文件。</translation>
+        <source>Novels are mined in the Novels tab.</source>
+        <translation>小说在“小说”标签页中挖取。</translation>
     </message>
     <message>
-      <source>Starting…</source>
-      <translation>正在启动…</translation>
+        <source>Add at least one subtitle file first.</source>
+        <translation>请先至少添加一个字幕文件。</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Starting…</source>
+        <translation>正在启动…</translation>
     </message>
     <message>
-      <source>File %1/%2: %3</source>
-      <translation>文件 %1/%2：%3</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Mined %1: %2 cards.</source>
-      <translation>已挖词 %1：%2 张卡片。</translation>
+        <source>File %1/%2: %3</source>
+        <translation>文件 %1/%2：%3</translation>
     </message>
     <message>
-      <source>Cancelled %1.</source>
-      <translation>已取消 %1。</translation>
+        <source>Mined %1: %2 cards.</source>
+        <translation>已挖词 %1：%2 张卡片。</translation>
     </message>
     <message>
-      <source>Failed %1: %2.</source>
-      <translation>失败 %1：%2。</translation>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
     </message>
     <message>
-      <source>Finished %1 subtitle files.</source>
-      <translation>已完成 %1 个字幕文件。</translation>
+        <source>Failed %1: %2.</source>
+        <translation>失败 %1：%2。</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Done: %1 succeeded, %2 failed.</source>
+        <translation type="unfinished">完成：%1 成功，%2 失败。</translation>
+    </message>
+</context><context>
     <name>ReadingTab</name>
     <message>
-      <source>Mining unavailable — services not initialized.</source>
-      <translation>无法挖词——服务未初始化。</translation>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>无法挖词——服务未初始化。</translation>
     </message>
     <message>
-      <source>%1 run starting — %2 items.</source>
-      <translation>%1 运行开始——%2 个项。</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 运行开始——%2 个项。</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Attempt %1 of %2 · retrying in %3s</source>
-      <translation>第 %1/%2 次尝试 · 将在 %3 秒后重试</translation>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation>第 %1/%2 次尝试 · 将在 %3 秒后重试</translation>
     </message>
     <message>
-      <source>Could not process %1: %2</source>
-      <translation>无法处理 %1：%2</translation>
+        <source>Could not process %1: %2</source>
+        <translation>无法处理 %1：%2</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Complete — %1 cards created</source>
-      <translation>完成——已创建 %1 张卡片</translation>
+        <source>Complete — %1 cards created</source>
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Manga mining</source>
-      <extracomment>Name this run carries away from this screen.</extracomment>
-      <translation>漫画挖词</translation>
+        <source>Manga mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>漫画挖词</translation>
     </message>
     <message>
-      <source>Novel mining</source>
-      <extracomment>Name this run carries away from this screen.</extracomment>
-      <translation>小说挖词</translation>
+        <source>Novel mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>小说挖词</translation>
     </message>
     <message>
-      <source>Subtitle mining</source>
-      <extracomment>Name this run carries away from this screen.</extracomment>
-      <translation>字幕挖词</translation>
+        <source>Subtitle mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>字幕挖词</translation>
     </message>
     <message>
-      <source>Text mining</source>
-      <extracomment>Name this run carries away from this screen.</extracomment>
-      <translation>文本挖词</translation>
+        <source>Text mining</source>
+        <extracomment>Name this run carries away from this screen.</extracomment>
+        <translation>文本挖词</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ReadingTextTab</name>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前先审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup before creating cards.</source>
-      <translation>在创建卡片前显示单词选择弹窗。</translation>
+        <source>Show the word-selection popup before creating cards.</source>
+        <translation>在创建卡片前显示单词选择弹窗。</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>Pasted Text</source>
-      <translation>粘贴文本</translation>
+        <source>Pasted Text</source>
+        <translation>粘贴文本</translation>
     </message>
     <message>
-      <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-      <translation>粘贴日语文本并挖词生成 Anki 卡片——不含截图和音频。</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <translation>粘贴日语文本并挖词生成 Anki 卡片——不含截图和音频。</translation>
     </message>
     <message>
-      <source>Paste text here…</source>
-      <translation>在此粘贴文本…</translation>
+        <source>Paste text here…</source>
+        <translation>在此粘贴文本…</translation>
     </message>
     <message>
-      <source>Drop or paste text here; files are not supported.</source>
-      <translation>将文本拖放或粘贴到此处；不支持文件。</translation>
+        <source>Drop or paste text here; files are not supported.</source>
+        <translation>将文本拖放或粘贴到此处；不支持文件。</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Mine the pasted text into Anki cards.</source>
-      <translation>将粘贴的文本挖词生成 Anki 卡片。</translation>
+        <source>Mine the pasted text into Anki cards.</source>
+        <translation>将粘贴的文本挖词生成 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel the active run.</source>
-      <translation>取消正在进行的运行。</translation>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
-      <source>Paste some text first.</source>
-      <translation>请先粘贴文本。</translation>
+        <source>Paste some text first.</source>
+        <translation>请先粘贴文本。</translation>
     </message>
     <message>
-      <source>Starting…</source>
-      <translation>正在启动…</translation>
+        <source>Starting…</source>
+        <translation>正在启动…</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Mining pasted text…</source>
-      <translation>正在从粘贴文本中挖词…</translation>
+        <source>Mining pasted text…</source>
+        <translation>正在从粘贴文本中挖词…</translation>
     </message>
     <message>
-      <source>Mined %1 cards.</source>
-      <translation>已挖出 %1 张卡片。</translation>
+        <source>Mined %1 cards.</source>
+        <translation>已挖出 %1 张卡片。</translation>
     </message>
     <message>
-      <source>Cancelled.</source>
-      <translation>已取消。</translation>
+        <source>Cancelled.</source>
+        <translation>已取消。</translation>
     </message>
     <message>
-      <source>Failed: %1.</source>
-      <translation>失败：%1。</translation>
+        <source>Failed: %1.</source>
+        <translation>失败：%1。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>RecoveryController</name>
     <message>
-      <source>Pick up where you left off?</source>
-      <translation>从上次中断处继续？</translation>
+        <source>Pick up where you left off?</source>
+        <translation>从上次中断处继续？</translation>
     </message>
     <message>
-      <source>Nothing starts on its own — restored rows wait for you.</source>
-      <translation>不会自动开始——恢复的行将等待你操作。</translation>
+        <source>Nothing starts on its own — restored rows wait for you.</source>
+        <translation>不会自动开始——恢复的行将等待你操作。</translation>
     </message>
     <message>
-      <source>Restore</source>
-      <translation>恢复</translation>
+        <source>Restore</source>
+        <translation>恢复</translation>
     </message>
     <message>
-      <source>Discard</source>
-      <translation>丢弃</translation>
+        <source>Discard</source>
+        <translation>丢弃</translation>
     </message>
     <message>
-      <source>Resume %1? %2 already saved</source>
-      <translation>继续 %1？已保存 %2</translation>
+        <source>Resume %1? %2 already saved</source>
+        <translation>继续 %1？已保存 %2</translation>
     </message>
     <message>
-      <source>Restore previous queue? %1 items</source>
-      <translation>恢复之前的队列？%1 个项目</translation>
+        <source>Restore previous queue? %1 items</source>
+        <translation>恢复之前的队列？%1 个项目</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
-      <source>Starting download…</source>
-      <translation>正在开始下载…</translation>
+        <source>Starting download…</source>
+        <translation>正在开始下载…</translation>
     </message>
     <message>
-      <source>Verifying and installing…</source>
-      <translation>正在验证并安装…</translation>
+        <source>Verifying and installing…</source>
+        <translation>正在验证并安装…</translation>
     </message>
     <message>
-      <source>%1 downloaded · Verifying and installing…</source>
-      <translation>已下载 %1 · 正在验证并安装…</translation>
+        <source>%1 downloaded · Verifying and installing…</source>
+        <translation>已下载 %1 · 正在验证并安装…</translation>
     </message>
     <message>
-      <source>Building index · %1 entries</source>
-      <translation>正在构建索引 · %1 个条目</translation>
+        <source>Building index · %1 entries</source>
+        <translation>正在构建索引 · %1 个条目</translation>
     </message>
     <message>
-      <source>Activating</source>
-      <translation>正在激活</translation>
+        <source>Activating</source>
+        <translation>正在激活</translation>
     </message>
     <message>
-      <source>Imported, but not active — Retry setup</source>
-      <translation>已导入，但未激活——重试设置</translation>
+        <source>Imported, but not active — Retry setup</source>
+        <translation>已导入，但未激活——重试设置</translation>
     </message>
     <message>
-      <source>Resource Download Cancelled (Some Resources Installed)</source>
-      <translation>资源下载已取消（部分资源已安装）</translation>
+        <source>Resource Download Cancelled (Some Resources Installed)</source>
+        <translation>资源下载已取消（部分资源已安装）</translation>
     </message>
     <message>
-      <source>Resource Download Cancelled</source>
-      <translation>资源下载已取消</translation>
+        <source>Resource Download Cancelled</source>
+        <translation>资源下载已取消</translation>
     </message>
     <message>
-      <source>Resources Installed</source>
-      <translation>资源已安装</translation>
+        <source>Resources Installed</source>
+        <translation>资源已安装</translation>
     </message>
     <message>
-      <source>Resources Partially Installed</source>
-      <translation>资源部分安装</translation>
+        <source>Resources Partially Installed</source>
+        <translation>资源部分安装</translation>
     </message>
     <message>
-      <source>Resource Download Failed</source>
-      <translation>资源下载失败</translation>
+        <source>Resource Download Failed</source>
+        <translation>资源下载失败</translation>
     </message>
     <message>
-      <source>✓ %1 — %2</source>
-      <translation>✓ %1 — %2</translation>
+        <source>✓ %1 — %2</source>
+        <translation>✓ %1 — %2</translation>
     </message>
     <message>
-      <source>   Replaced older copy: %1</source>
-      <translation>   已替换旧副本：%1</translation>
+        <source>   Replaced older copy: %1</source>
+        <translation>   已替换旧副本：%1</translation>
     </message>
     <message>
-      <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
-      <translation>   无法移除旧副本：%1——请通过“设置 → 词典”移除它</translation>
+        <source>   Could not remove older copy: %1 — remove it via Settings → Dictionaries</source>
+        <translation>   无法移除旧副本：%1——请通过“设置 → 词典”移除它</translation>
     </message>
     <message>
-      <source>✗ %1 — %2
+        <source>✗ %1 — %2
    Download manually: %3</source>
-      <translation>✗ %1 — %2
+        <translation>✗ %1 — %2
    手动下载：%3</translation>
     </message>
     <message>
-      <source>Some resources were installed before cancellation.</source>
-      <translation>取消前已安装部分资源。</translation>
+        <source>Some resources were installed before cancellation.</source>
+        <translation>取消前已安装部分资源。</translation>
     </message>
     <message>
-      <source>No resources were installed.</source>
-      <translation>未安装任何资源。</translation>
+        <source>No resources were installed.</source>
+        <translation>未安装任何资源。</translation>
     </message>
     <message>
-      <source>Resource items not processed: %1.</source>
-      <translation>未处理的资源项：%1。</translation>
+        <source>Resource items not processed: %1.</source>
+        <translation>未处理的资源项：%1。</translation>
     </message>
     <message>
-      <source>No resources were processed.</source>
-      <translation>未处理任何资源。</translation>
+        <source>No resources were processed.</source>
+        <translation>未处理任何资源。</translation>
     </message>
     <message>
-      <source>Recommended Resources</source>
-      <translation>推荐资源</translation>
+        <source>Recommended Resources</source>
+        <translation>推荐资源</translation>
     </message>
     <message>
-      <source>Resources are downloaded from their original sources; their licenses apply.</source>
-      <translation>资源从其原始来源下载；适用其各自的许可协议。</translation>
+        <source>Resources are downloaded from their original sources; their licenses apply.</source>
+        <translation>资源从其原始来源下载；适用其各自的许可协议。</translation>
     </message>
     <message>
-      <source>Hide</source>
-      <translation>隐藏</translation>
+        <source>Hide</source>
+        <translation>隐藏</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Retry setup</source>
-      <translation>重试设置</translation>
+        <source>Retry setup</source>
+        <translation>重试设置</translation>
     </message>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Download Blocked</source>
-      <translation>下载被阻止</translation>
+        <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-      <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引资源正被挖词、启动预热或卡片回填任务使用。请等待当前任务完成后重试。</translation>
     </message>
     <message>
-      <source>Recommended resources</source>
-      <translation>推荐资源</translation>
+        <source>Recommended resources</source>
+        <translation>推荐资源</translation>
     </message>
     <message>
-      <source>The download worker finished without a completion result.</source>
-      <translation>下载工作线程结束，但未返回完成结果。</translation>
+        <source>The download worker finished without a completion result.</source>
+        <translation>下载工作线程结束，但未返回完成结果。</translation>
     </message>
     <message>
-      <source>%1 entries</source>
-      <translation>%1 个条目</translation>
+        <source>Indexed resources became busy before installation; existing resources were left unchanged.</source>
+        <translation type="unfinished" />
     </message>
-  </context>
-  <context>
+    <message>
+        <source>%1 entries</source>
+        <translation>%1 个条目</translation>
+    </message>
+</context><context>
     <name>ResourcesPage</name>
     <message>
-      <source>Recommended Resources</source>
-      <translation>推荐资源</translation>
+        <source>Recommended Resources</source>
+        <translation>推荐资源</translation>
     </message>
     <message>
-      <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-      <translation>词频和音调为可选项。词典为必需项。</translation>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>词频和音调为可选项。词典为必需项。</translation>
     </message>
     <message>
-      <source>What are these resources?</source>
-      <translation>这些资源是什么？</translation>
+        <source>What are these resources?</source>
+        <translation>这些资源是什么？</translation>
     </message>
     <message>
-      <source>Download recommended resources</source>
-      <translation>下载推荐资源</translation>
+        <source>Download recommended resources</source>
+        <translation>下载推荐资源</translation>
     </message>
     <message>
-      <source>Checking for an offline dictionary...</source>
-      <translation>正在检查离线词典…</translation>
+        <source>Checking for an offline dictionary...</source>
+        <translation>正在检查离线词典…</translation>
     </message>
     <message>
-      <source>Could not check the offline dictionary: </source>
-      <translation>无法检查离线词典：</translation>
+        <source>Could not check the offline dictionary: </source>
+        <translation>无法检查离线词典：</translation>
     </message>
     <message>
-      <source>Dictionary ready: %1</source>
-      <translation>词典已就绪：%1</translation>
+        <source>Dictionary ready: %1</source>
+        <translation>词典已就绪：%1</translation>
     </message>
     <message>
-      <source>Download cancelled. Some resources were installed before cancellation.</source>
-      <translation>下载已取消。取消前已安装部分资源。</translation>
+        <source>Download cancelled. Some resources were installed before cancellation.</source>
+        <translation>下载已取消。取消前已安装部分资源。</translation>
     </message>
     <message>
-      <source>Download cancelled. No resources were installed.</source>
-      <translation>下载已取消。未安装任何资源。</translation>
+        <source>Download cancelled. No resources were installed.</source>
+        <translation>下载已取消。未安装任何资源。</translation>
     </message>
     <message>
-      <source>Imported, but not active — Retry setup</source>
-      <translation>已导入，但未激活——重试设置</translation>
+        <source>Imported, but not active — Retry setup</source>
+        <translation>已导入，但未激活——重试设置</translation>
     </message>
     <message>
-      <source>Some resources were installed; some failed.</source>
-      <translation>部分资源安装成功，部分失败。</translation>
+        <source>Some resources were installed; some failed.</source>
+        <translation>部分资源安装成功，部分失败。</translation>
     </message>
     <message>
-      <source>No resources were installed.</source>
-      <translation>未安装任何资源。</translation>
+        <source>No resources were installed.</source>
+        <translation>未安装任何资源。</translation>
     </message>
     <message>
-      <source>Resources installed.</source>
-      <translation>资源已安装。</translation>
+        <source>Resources installed.</source>
+        <translation>资源已安装。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ResultCopy</name>
     <message>
-      <source>No cards created.</source>
-      <translation>未创建卡片。</translation>
+        <source>No cards created.</source>
+        <translation>未创建卡片。</translation>
     </message>
     <message>
-      <source>Created %1 card in '%2'</source>
-      <translation>已在“%2”中创建 %1 张卡片</translation>
+        <source>Created %1 card in '%2'</source>
+        <translation>已在“%2”中创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Created %1 cards in '%2'</source>
-      <translation>已在“%2”中创建 %1 张卡片</translation>
+        <source>Created %1 cards in '%2'</source>
+        <translation>已在“%2”中创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Created %1 card</source>
-      <translation>已创建 %1 张卡片</translation>
+        <source>Created %1 card</source>
+        <translation>已创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Created %1 cards</source>
-      <translation>已创建 %1 张卡片</translation>
+        <source>Created %1 cards</source>
+        <translation>已创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>No cards created. Every word is already in Anki.</source>
-      <translation>未创建卡片。所有单词均已在 Anki 中。</translation>
+        <source>No cards created. Every word is already in Anki.</source>
+        <translation>未创建卡片。所有单词均已在 Anki 中。</translation>
     </message>
     <message>
-      <source>Copied</source>
-      <translation>已复制</translation>
+        <source>Copied</source>
+        <translation>已复制</translation>
     </message>
     <message>
-      <source>Mining complete — %1 %2, %3 notes added in %4</source>
-      <translation>挖词完成——%1 %2，已在 %4 中添加 %3 条笔记</translation>
+        <source>Mining complete — %1 %2, %3 notes added in %4</source>
+        <translation>挖词完成——%1 %2，已在 %4 中添加 %3 条笔记</translation>
     </message>
     <message>
-      <source>Mining complete — %1 notes added in %2</source>
-      <translation>挖词完成——已在 %2 中添加 %1 条笔记</translation>
+        <source>Mining complete — %1 notes added in %2</source>
+        <translation>挖词完成——已在 %2 中添加 %1 条笔记</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Finished with errors</source>
-      <translation>完成但有错误</translation>
+        <source>Finished with errors</source>
+        <translation>完成但有错误</translation>
     </message>
     <message>
-      <source>Mining failed</source>
-      <translation>挖词失败</translation>
+        <source>Mining failed</source>
+        <translation>挖词失败</translation>
     </message>
     <message>
-      <source>%1 — %2 of %3 %4 completed; %5 notes added in %6</source>
-      <translation>%1——已完成 %2/%3 %4；已在 %6 中添加 %5 条笔记</translation>
+        <source>%1 — %2 of %3 %4 completed; %5 notes added in %6</source>
+        <translation>%1——已完成 %2/%3 %4；已在 %6 中添加 %5 条笔记</translation>
     </message>
     <message>
-      <source>%1 — %2 notes added in %3</source>
-      <translation>%1——已在 %3 中添加 %2 条笔记</translation>
+        <source>%1 — %2 notes added in %3</source>
+        <translation>%1——已在 %3 中添加 %2 条笔记</translation>
     </message>
     <message>
-      <source>(asleep time excluded)</source>
-      <translation>（不含休眠时间）</translation>
+        <source>(asleep time excluded)</source>
+        <translation>（不含休眠时间）</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ResultsDialog</name>
     <message>
-      <source>Processing Results</source>
-      <translation>处理结果</translation>
+        <source>Processing Results</source>
+        <translation>处理结果</translation>
     </message>
     <message>
-      <source>Completed with Errors</source>
-      <translation>完成，但有错误</translation>
+        <source>Cancelled</source>
+        <translation type="unfinished">已取消</translation>
     </message>
     <message>
-      <source>Words Discovered</source>
-      <translation>发现的单词</translation>
+        <source>Finished with errors</source>
+        <translation type="unfinished">完成但有错误</translation>
     </message>
     <message>
-      <source>New Words</source>
-      <translation>新单词</translation>
+        <source>Mining failed</source>
+        <translation type="unfinished">挖词失败</translation>
     </message>
     <message>
-      <source>Cards Created</source>
-      <translation>已创建卡片</translation>
+        <source>Completed with Errors</source>
+        <translation>完成，但有错误</translation>
     </message>
     <message>
-      <source>Processing Time</source>
-      <translation>处理时间</translation>
+        <source>Words Discovered</source>
+        <translation>发现的单词</translation>
     </message>
     <message>
-      <source>Processing Rate</source>
-      <translation>处理速率</translation>
+        <source>New Words</source>
+        <translation>新单词</translation>
     </message>
     <message>
-      <source>Comprehension</source>
-      <translation>理解度</translation>
+        <source>Cards Created</source>
+        <translation>已创建卡片</translation>
     </message>
     <message>
-      <source>Errors Occurred</source>
-      <translation>发生错误</translation>
+        <source>Processing Time</source>
+        <translation>处理时间</translation>
     </message>
     <message>
-      <source>Undo (%1 notes)</source>
-      <translation>撤销（%1 条笔记）</translation>
+        <source>Processing Rate</source>
+        <translation>处理速率</translation>
     </message>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Comprehension</source>
+        <translation>理解度</translation>
     </message>
     <message>
-      <source>Confirm Undo</source>
-      <translation>确认撤销</translation>
+        <source>Errors Occurred</source>
+        <translation>发生错误</translation>
     </message>
     <message>
-      <source>Delete %1 notes from Anki? This cannot be undone.</source>
-      <translation>从 Anki 中删除 %1 条笔记？此操作无法撤销。</translation>
+        <source>Undo (%1 notes)</source>
+        <translation>撤销（%1 条笔记）</translation>
     </message>
     <message>
-      <source>Undoing…</source>
-      <translation>正在撤销…</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
     <message>
-      <source>Undone (%1 notes deleted)</source>
-      <translation>已撤销（已删除 %1 条笔记）</translation>
+        <source>Confirm Undo</source>
+        <translation>确认撤销</translation>
     </message>
     <message>
-      <source>Undo Failed</source>
-      <translation>撤销失败</translation>
+        <source>Delete %1 notes from Anki? This cannot be undone.</source>
+        <translation>从 Anki 中删除 %1 条笔记？此操作无法撤销。</translation>
     </message>
     <message>
-      <source>Failed to delete notes. Check that Anki is running.</source>
-      <translation>删除笔记失败。请检查 Anki 是否正在运行。</translation>
+        <source>Undoing…</source>
+        <translation>正在撤销…</translation>
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Undone (%1 notes deleted)</source>
+        <translation>已撤销（已删除 %1 条笔记）</translation>
+    </message>
+    <message>
+        <source>Undo Failed</source>
+        <translation>撤销失败</translation>
+    </message>
+    <message>
+        <source>Failed to delete notes. Check that Anki is running.</source>
+        <translation>删除笔记失败。请检查 Anki 是否正在运行。</translation>
+    </message>
+</context><context>
+    <name>RetimeReferenceDialog</name>
+    <message>
+        <source>Subtitle track %1 - %2 - %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio track %1 - %2 - %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> - image-based, cannot be used</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Alignment Reference</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This file has no audio or subtitle tracks to align against.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This file has only one track to align against.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto (currently: track %1 - %2)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto - best embedded subtitle track, or audio if there is none</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation type="unfinished">应用</translation>
+    </message>
+</context><context>
     <name>ScreenIssueBanner</name>
     <message>
-      <source>Details</source>
-      <translation>详情</translation>
+        <source>Details</source>
+        <translation>详情</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
-      <source>Search settings</source>
-      <translation>搜索设置</translation>
+        <source>Search settings</source>
+        <translation>搜索设置</translation>
     </message>
     <message>
-      <source>No matching settings.</source>
-      <translation>没有匹配的设置。</translation>
+        <source>No matching settings.</source>
+        <translation>没有匹配的设置。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SettingsTab</name>
     <message>
-      <source>Check for updates on startup</source>
-      <translation>启动时检查更新</translation>
+        <source>Check for updates on startup</source>
+        <translation>启动时检查更新</translation>
     </message>
     <message>
-      <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
-      <translation>启用后，Anki Miner 会在启动时向 GitHub 查询新版本。</translation>
+        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
+        <translation>启用后，Anki Miner 会在启动时向 GitHub 查询新版本。</translation>
     </message>
     <message>
-      <source>Reset to Defaults…</source>
-      <translation>恢复默认设置…</translation>
+        <source>Reset to Defaults…</source>
+        <translation>恢复默认设置…</translation>
     </message>
     <message>
-      <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
-      <translation>将设置恢复为默认值。已安装的词典、音频、词频列表和主题将保留。</translation>
+        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
+        <translation>将设置恢复为默认值。已安装的词典、音频、词频列表和主题将保留。</translation>
     </message>
     <message>
-      <source>Settings Profiles…</source>
-      <translation>设置配置文件…</translation>
+        <source>Settings Profiles…</source>
+        <translation>设置配置文件…</translation>
     </message>
     <message>
-      <source>Keep several complete settings snapshots and switch between them.</source>
-      <translation>保存多个完整设置快照并在其间切换。</translation>
+        <source>Keep several complete settings snapshots and switch between them.</source>
+        <translation>保存多个完整设置快照并在其间切换。</translation>
     </message>
     <message>
-      <source>Export Settings…</source>
-      <translation>导出设置…</translation>
+        <source>Export Settings…</source>
+        <translation>导出设置…</translation>
     </message>
     <message>
-      <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
-      <translation>保存可移植的设置文件（不含特定于机器的路径和资源）。</translation>
+        <source>Save a portable settings file (machine-specific paths and resources excluded).</source>
+        <translation>保存可移植的设置文件（不含特定于机器的路径和资源）。</translation>
     </message>
     <message>
-      <source>Import Settings…</source>
-      <translation>导入设置…</translation>
+        <source>Import Settings…</source>
+        <translation>导入设置…</translation>
     </message>
     <message>
-      <source>Apply settings from an exported file; anything not in the file is kept.</source>
-      <translation>从导出的文件应用设置；文件中没有的内容保持不变。</translation>
+        <source>Apply settings from an exported file; anything not in the file is kept.</source>
+        <translation>从导出的文件应用设置；文件中没有的内容保持不变。</translation>
     </message>
     <message>
-      <source>Cards</source>
-      <translation>卡片</translation>
+        <source>Cards</source>
+        <translation>卡片</translation>
     </message>
     <message>
-      <source>Cards &amp; Anki</source>
-      <translation>卡片和 Anki</translation>
+        <source>Cards &amp; Anki</source>
+        <translation>卡片和 Anki</translation>
     </message>
     <message>
-      <source>Card Media</source>
-      <translation>卡片媒体</translation>
+        <source>Card Media</source>
+        <translation>卡片媒体</translation>
     </message>
     <message>
-      <source>Resources</source>
-      <translation>资源</translation>
+        <source>Resources</source>
+        <translation>资源</translation>
     </message>
     <message>
-      <source>Dictionaries</source>
-      <translation>词典</translation>
+        <source>Dictionaries</source>
+        <translation>词典</translation>
     </message>
     <message>
-      <source>Audio</source>
-      <translation>音频</translation>
+        <source>Audio</source>
+        <translation>音频</translation>
     </message>
     <message>
-      <source>Frequency</source>
-      <translation>词频</translation>
+        <source>Frequency</source>
+        <translation>词频</translation>
     </message>
     <message>
-      <source>Pitch Accent</source>
-      <translation>音调</translation>
+        <source>Pitch Accent</source>
+        <translation>音调</translation>
     </message>
     <message>
-      <source>Mining</source>
-      <translation>挖词</translation>
+        <source>Mining</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>Filtering</source>
-      <translation>过滤</translation>
+        <source>Filtering</source>
+        <translation>过滤</translation>
     </message>
     <message>
-      <source>Integrations</source>
-      <translation>集成</translation>
+        <source>Integrations</source>
+        <translation>集成</translation>
     </message>
     <message>
-      <source>YouTube</source>
-      <translation>YouTube</translation>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
     </message>
     <message>
-      <source>Transcription &amp; Alignment</source>
-      <translation>转写和对齐</translation>
+        <source>Transcription &amp; Alignment</source>
+        <translation>转写和对齐</translation>
     </message>
     <message>
-      <source>App</source>
-      <translation>应用</translation>
+        <source>App</source>
+        <translation>应用</translation>
     </message>
     <message>
-      <source>Appearance &amp; Language</source>
-      <translation>外观和语言</translation>
+        <source>Appearance &amp; Language</source>
+        <translation>外观和语言</translation>
     </message>
     <message>
-      <source>Updating yt-dlp…</source>
-      <translation>正在更新 yt-dlp…</translation>
+        <source>The audio packs could not be restored.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Downloading…</source>
-      <translation>正在下载…</translation>
+        <source>Installed audio packs could not be checked.</source>
+        <translation type="unfinished">无法检查已安装的音频包。</translation>
     </message>
     <message>
-      <source>yt-dlp could not be updated. Check your connection and try again.</source>
-      <translation>无法更新 yt-dlp。请检查网络连接后重试。</translation>
+        <source>The frequency sources could not be restored.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Settings</source>
-      <translation>设置</translation>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation type="unfinished">无法检查已安装的词频来源。</translation>
     </message>
     <message>
-      <source>dictionary folder (Dictionaries)</source>
-      <translation>词典文件夹（词典）</translation>
+        <source>The pitch accent sources could not be restored.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>cookies file (YouTube)</source>
-      <translation>cookies 文件（YouTube）</translation>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation type="unfinished">无法检查已安装的音调来源。</translation>
     </message>
     <message>
-      <source>subtitle regex (Filtering)</source>
-      <translation>字幕正则表达式（过滤）</translation>
+        <source>Updating yt-dlp…</source>
+        <translation>正在更新 yt-dlp…</translation>
     </message>
     <message>
-      <source>⚠ Saved — kept previous: %1</source>
-      <translation>⚠ 已保存——保留了先前的：%1</translation>
+        <source>Downloading…</source>
+        <translation>正在下载…</translation>
     </message>
     <message>
-      <source>✓ Saved</source>
-      <translation>✓ 已保存</translation>
+        <source>yt-dlp could not be updated. Check your connection and try again.</source>
+        <translation>无法更新 yt-dlp。请检查网络连接后重试。</translation>
     </message>
     <message>
-      <source>Settings could not be exported.</source>
-      <translation>无法导出设置。</translation>
+        <source>Settings</source>
+        <translation>设置</translation>
     </message>
     <message>
-      <source>Retry</source>
-      <translation>重试</translation>
+        <source>dictionary folder (Dictionaries)</source>
+        <translation>词典文件夹（词典）</translation>
     </message>
     <message>
-      <source>Settings Exported</source>
-      <translation>设置已导出</translation>
+        <source>cookies file (YouTube)</source>
+        <translation>cookies 文件（YouTube）</translation>
     </message>
     <message>
-      <source>Portable settings written to %1.</source>
-      <translation>可移植设置已写入 %1。</translation>
+        <source>subtitle regex (Filtering)</source>
+        <translation>字幕正则表达式（过滤）</translation>
     </message>
     <message>
-      <source>Export Settings</source>
-      <translation>导出设置</translation>
+        <source>⚠ Saved — kept previous: %1</source>
+        <translation>⚠ 已保存——保留了先前的：%1</translation>
     </message>
     <message>
-      <source>JSON Files (*.json);;All Files (*)</source>
-      <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
+        <source>✓ Saved</source>
+        <translation>✓ 已保存</translation>
     </message>
     <message>
-      <source>Import Settings</source>
-      <translation>导入设置</translation>
+        <source>Settings could not be exported.</source>
+        <translation>无法导出设置。</translation>
     </message>
     <message>
-      <source>Import Settings?</source>
-      <translation>导入设置？</translation>
+        <source>Retry</source>
+        <translation>重试</translation>
     </message>
     <message>
-      <source>Apply settings from %1?
+        <source>Settings Exported</source>
+        <translation>设置已导出</translation>
+    </message>
+    <message>
+        <source>Portable settings written to %1.</source>
+        <translation>可移植设置已写入 %1。</translation>
+    </message>
+    <message>
+        <source>Export Settings</source>
+        <translation>导出设置</translation>
+    </message>
+    <message>
+        <source>JSON Files (*.json);;All Files (*)</source>
+        <translation>JSON 文件 (*.json);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Import Settings</source>
+        <translation>导入设置</translation>
+    </message>
+    <message>
+        <source>Import Settings?</source>
+        <translation>导入设置？</translation>
+    </message>
+    <message>
+        <source>Apply settings from %1?
 
 Imported values override your current settings; anything not in the file is kept.</source>
-      <translation>从 %1 应用设置？
+        <translation>从 %1 应用设置？
 
 导入的值会覆盖你当前的设置；文件中没有的内容保持不变。</translation>
     </message>
     <message>
-      <source>Settings could not be imported.</source>
-      <translation>无法导入设置。</translation>
+        <source>Settings could not be imported.</source>
+        <translation>无法导入设置。</translation>
     </message>
     <message>
-      <source>The imported subtitle regex filter was rejected; your previous filter was kept.</source>
-      <translation>导入的字幕正则表达式过滤器被拒绝；已保留之前的过滤器。</translation>
+        <source>The imported subtitle regex filter was rejected; your previous filter was kept.</source>
+        <translation>导入的字幕正则表达式过滤器被拒绝；已保留之前的过滤器。</translation>
     </message>
     <message>
-      <source>Invalid imported fields were ignored; current values were kept: %1</source>
-      <translation>已忽略无效的导入字段，并保留了当前值：%1</translation>
+        <source>Invalid imported fields were ignored; current values were kept: %1</source>
+        <translation>已忽略无效的导入字段，并保留了当前值：%1</translation>
     </message>
     <message>
-      <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
-      <translation>已禁用 yt-dlp 自动更新（设置从旧版本导入）。</translation>
+        <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
+        <translation>已禁用 yt-dlp 自动更新（设置从旧版本导入）。</translation>
     </message>
     <message>
-      <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
-      <translation>版本 2.8.3 的设置已保守地映射到架构 2。</translation>
+        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
+        <translation>版本 2.8.3 的设置已保守地映射到架构 2。</translation>
     </message>
     <message>
-      <source>Settings Imported</source>
-      <translation>设置已导入</translation>
+        <source>Settings Imported</source>
+        <translation>设置已导入</translation>
     </message>
     <message>
-      <source>✓ Imported</source>
-      <translation>✓ 已导入</translation>
+        <source>✓ Imported</source>
+        <translation>✓ 已导入</translation>
     </message>
     <message>
-      <source>Reset Settings</source>
-      <translation>重置设置</translation>
+        <source>Reset Settings</source>
+        <translation>重置设置</translation>
     </message>
     <message>
-      <source>Reset all settings to their defaults?
+        <source>Reset all settings to their defaults?
 
 Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
-      <translation>要将所有设置恢复为默认值吗？
+        <translation>要将所有设置恢复为默认值吗？
 
 已安装的词典、音频、词频列表和主题将保留。</translation>
     </message>
     <message>
-      <source>✓ Reset to defaults</source>
-      <translation>✓ 已恢复默认设置</translation>
+        <source>✓ Reset to defaults</source>
+        <translation>✓ 已恢复默认设置</translation>
     </message>
     <message>
-      <source>Retry missing expression audio</source>
-      <translation>重试缺失的表达音频</translation>
+        <source>Retry missing expression audio</source>
+        <translation>重试缺失的表达音频</translation>
     </message>
     <message>
-      <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
-      <translation>已清除 %1 个缺失音频标记。这些单词将在下次挖词运行时重试。</translation>
+        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
+        <translation>已清除 %1 个缺失音频标记。这些单词将在下次挖词运行时重试。</translation>
     </message>
     <message>
-      <source>The missing-audio markers could not be cleared.</source>
-      <translation>无法清除缺失音频标记。</translation>
+        <source>The missing-audio markers could not be cleared.</source>
+        <translation>无法清除缺失音频标记。</translation>
     </message>
     <message>
-      <source>Rebuild Known Words DB</source>
-      <translation>重建已知单词数据库</translation>
+        <source>Rebuild Known Words DB</source>
+        <translation>重建已知单词数据库</translation>
     </message>
     <message>
-      <source>Clear the local known-words cache? It will re-sync from Anki on the next mining run, applying your current deck exclusions. Words you added yourself from the Word Curator are kept.</source>
-      <translation>清除本地已知单词缓存？下次挖词运行时将从 Anki 重新同步，并应用你当前的牌组排除设置。你在单词整理器中自行添加的单词会予以保留。</translation>
+        <source>Clear the local known-words cache? It will re-sync from Anki on the next mining run, applying your current deck exclusions. Words you added yourself from the Word Curator are kept.</source>
+        <translation>清除本地已知单词缓存？下次挖词运行时将从 Anki 重新同步，并应用你当前的牌组排除设置。你在单词整理器中自行添加的单词会予以保留。</translation>
     </message>
     <message>
-      <source>The known-words cache could not be cleared.</source>
-      <translation>无法清除已知单词缓存。</translation>
+        <source>Cleared %1 cached word(s). The cache will rebuild on the next run.</source>
+        <translation>已清除 %1 个缓存单词。缓存将在下次运行时重建。</translation>
     </message>
     <message>
-      <source>Cleared %1 cached word(s). The cache will rebuild on the next run.</source>
-      <translation>已清除 %1 个缓存单词。缓存将在下次运行时重建。</translation>
+        <source>The known-words cache could not be cleared.</source>
+        <translation>无法清除已知单词缓存。</translation>
     </message>
     <message>
-      <source>The known words list could not be opened.</source>
-      <translation>无法打开已知单词列表。</translation>
+        <source>The known words list could not be opened.</source>
+        <translation>无法打开已知单词列表。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SetupWizard</name>
     <message>
-      <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
-      <translation>是否立即下载推荐的词频列表、音调数据和词典？</translation>
+        <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
+        <translation>是否立即下载推荐的词频列表、音调数据和词典？</translation>
     </message>
     <message>
-      <source>Anki Miner Setup</source>
-      <translation>Anki Miner 设置</translation>
+        <source>Anki Miner Setup</source>
+        <translation>Anki Miner 设置</translation>
     </message>
     <message>
-      <source>Skip Setup</source>
-      <translation>跳过设置</translation>
+        <source>Skip Setup</source>
+        <translation>跳过设置</translation>
     </message>
     <message>
-      <source>Open Video Mining</source>
-      <translation>打开视频挖词</translation>
+        <source>Open Video Mining</source>
+        <translation>打开视频挖词</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SingleEpisodeTab</name>
     <message>
-      <source>Actions</source>
-      <translation>操作</translation>
+        <source>Actions</source>
+        <translation>操作</translation>
     </message>
     <message>
-      <source>Process Episode</source>
-      <translation>处理剧集</translation>
+        <source>Process Episode</source>
+        <translation>处理剧集</translation>
     </message>
     <message>
-      <source>Create Anki cards from the episode</source>
-      <translation>从剧集创建 Anki 卡片</translation>
+        <source>Create Anki cards from the episode</source>
+        <translation>从剧集创建 Anki 卡片</translation>
     </message>
     <message>
-      <source>Test Timing</source>
-      <translation>测试时间轴</translation>
+        <source>Test Timing</source>
+        <translation>测试时间轴</translation>
     </message>
     <message>
-      <source>Preview video with subtitles to adjust timing offset</source>
-      <translation>预览带字幕的视频以调整时间偏移</translation>
+        <source>Preview video with subtitles to adjust timing offset</source>
+        <translation>预览带字幕的视频以调整时间偏移</translation>
     </message>
     <message>
-      <source>Tracks</source>
-      <translation>音轨</translation>
+        <source>Tracks</source>
+        <translation>音轨</translation>
     </message>
     <message>
-      <source>Manually choose which audio track to use for this episode</source>
-      <translation>为本剧集手动选择使用的音轨</translation>
+        <source>Manually choose which audio track to use for this episode</source>
+        <translation>为本剧集手动选择使用的音轨</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancel processing</source>
-      <translation>取消处理</translation>
+        <source>Cancel processing</source>
+        <translation>取消处理</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>Episode Mining Tab</source>
-      <translation>剧集挖词标签页</translation>
+        <source>Episode Mining Tab</source>
+        <translation>剧集挖词标签页</translation>
     </message>
     <message>
-      <source>Process a single video episode to create vocabulary flashcards</source>
-      <translation>处理单个视频剧集以制作词汇卡片</translation>
+        <source>Process a single video episode to create vocabulary flashcards</source>
+        <translation>处理单个视频剧集以制作词汇卡片</translation>
     </message>
     <message>
-      <source>File Selection</source>
-      <translation>文件选择</translation>
+        <source>File Selection</source>
+        <translation>文件选择</translation>
     </message>
     <message>
-      <source>Recent Files:</source>
-      <translation>最近文件：</translation>
+        <source>Recent Files:</source>
+        <translation>最近文件：</translation>
     </message>
     <message>
-      <source>Video File:</source>
-      <translation>视频文件：</translation>
+        <source>Video File:</source>
+        <translation>视频文件：</translation>
     </message>
     <message>
-      <source>Subtitle File:</source>
-      <translation>字幕文件：</translation>
+        <source>Subtitle File:</source>
+        <translation>字幕文件：</translation>
     </message>
     <message>
-      <source>Card Source:</source>
-      <translation>卡片来源：</translation>
+        <source>Card Source:</source>
+        <translation>卡片来源：</translation>
     </message>
     <message>
-      <source>Subtitle Offset:</source>
-      <translation>字幕偏移：</translation>
+        <source>Subtitle Offset:</source>
+        <translation>字幕偏移：</translation>
     </message>
     <message>
-      <source>Select recent file pair...</source>
-      <translation>选择最近的文件配对...</translation>
+        <source>Select recent file pair...</source>
+        <translation>选择最近的文件配对...</translation>
     </message>
     <message>
-      <source>Video title shown on cards</source>
-      <translation>卡片上显示的视频标题</translation>
+        <source>Video title shown on cards</source>
+        <translation>卡片上显示的视频标题</translation>
     </message>
     <message>
-      <source>Source title stored on cards; changing it does not change analytics grouping</source>
-      <translation>存储在卡片上的来源标题；更改它不会更改分析分组</translation>
+        <source>Source title stored on cards; changing it does not change analytics grouping</source>
+        <translation>存储在卡片上的来源标题；更改它不会更改分析分组</translation>
     </message>
     <message>
-      <source>Card source</source>
-      <translation>卡片来源</translation>
+        <source>Card source</source>
+        <translation>卡片来源</translation>
     </message>
     <message>
-      <source> seconds</source>
-      <translation> 秒</translation>
+        <source> seconds</source>
+        <translation> 秒</translation>
     </message>
     <message>
-      <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
-      <translation>调整字幕时间轴（正值 = 延后，负值 = 提前）</translation>
+        <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
+        <translation>调整字幕时间轴（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
-      <source>Choose a video file first.</source>
-      <translation>请先选择视频文件。</translation>
+        <source>Choose a video file first.</source>
+        <translation>请先选择视频文件。</translation>
     </message>
     <message>
-      <source>That video file no longer exists.</source>
-      <translation>该视频文件已不存在。</translation>
+        <source>That video file no longer exists.</source>
+        <translation>该视频文件已不存在。</translation>
     </message>
     <message>
-      <source>No Audio Tracks</source>
-      <translation>无音轨</translation>
+        <source>No Audio Tracks</source>
+        <translation>无音轨</translation>
     </message>
     <message>
-      <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-      <translation>未检测到音轨。请确认已安装 ffprobe 且文件包含音频。</translation>
+        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
+        <translation>未检测到音轨。请确认已安装 ffprobe 且文件包含音频。</translation>
     </message>
     <message>
-      <source>Audio tracks could not be read.</source>
-      <translation>无法读取音轨。</translation>
+        <source>Audio tracks could not be read.</source>
+        <translation>无法读取音轨。</translation>
     </message>
     <message>
-      <source>Open Media Settings</source>
-      <translation>打开媒体设置</translation>
+        <source>Open Media Settings</source>
+        <translation>打开媒体设置</translation>
     </message>
     <message>
-      <source>Choose both a video file and a subtitle file.</source>
-      <translation>请选择视频文件和字幕文件。</translation>
+        <source>Choose both a video file and a subtitle file.</source>
+        <translation>请选择视频文件和字幕文件。</translation>
     </message>
     <message>
-      <source>That subtitle file no longer exists.</source>
-      <translation>该字幕文件已不存在。</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>该字幕文件已不存在。</translation>
     </message>
     <message>
-      <source>No Subtitles</source>
-      <translation>无字幕</translation>
+        <source>No Subtitles</source>
+        <translation>无字幕</translation>
     </message>
     <message>
-      <source>No subtitle entries found in the file.</source>
-      <translation>文件中未找到字幕条目。</translation>
+        <source>No subtitle entries found in the file.</source>
+        <translation>文件中未找到字幕条目。</translation>
     </message>
     <message>
-      <source>The subtitles could not be read. Check the file format.</source>
-      <translation>无法读取字幕。请检查文件格式。</translation>
+        <source>The subtitles could not be read. Check the file format.</source>
+        <translation>无法读取字幕。请检查文件格式。</translation>
     </message>
     <message>
-      <source>Single episode</source>
-      <translation>单集</translation>
+        <source>Single episode</source>
+        <translation>单集</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Complete — %1 cards created</source>
-      <translation>完成——已创建 %1 张卡片</translation>
+        <source>Complete — %1 cards created</source>
+        <translation>完成——已创建 %1 张卡片</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>StatusBarWidget</name>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Running tasks</source>
-      <translation>运行中的任务</translation>
+        <source>Running tasks</source>
+        <translation>运行中的任务</translation>
     </message>
     <message>
-      <source>Show what is running and go to it</source>
-      <translation>显示正在运行的任务并转到该任务</translation>
+        <source>Show what is running and go to it</source>
+        <translation>显示正在运行的任务并转到该任务</translation>
     </message>
     <message>
-      <source>Ready</source>
-      <translation>就绪</translation>
+        <source>Ready</source>
+        <translation>就绪</translation>
     </message>
     <message numerus="yes">
-      <source>%n card(s) this session</source>
-      <translation>
-        <numerusform>本次会话 %n 张卡片</numerusform>
-      </translation>
+        <source>%n card(s) this session</source>
+        <translation>
+            <numerusform>本次会话 %n 张卡片</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Click to view detailed system validation</source>
-      <translation>点击查看详细的系统验证</translation>
+        <source>Click to view detailed system validation</source>
+        <translation>点击查看详细的系统验证</translation>
     </message>
     <message numerus="yes">
-      <source>%n task(s)</source>
-      <translation>
-        <numerusform>%n 个任务</numerusform>
-      </translation>
+        <source>%n task(s)</source>
+        <translation>
+            <numerusform>%n 个任务</numerusform>
+        </translation>
     </message>
     <message>
-      <source>Open mini monitor</source>
-      <translation>打开迷你监视器</translation>
+        <source>Open mini monitor</source>
+        <translation>打开迷你监视器</translation>
     </message>
     <message>
-      <source>Checking AnkiConnect…</source>
-      <translation>正在检查 AnkiConnect…</translation>
+        <source>Checking AnkiConnect…</source>
+        <translation>正在检查 AnkiConnect…</translation>
     </message>
     <message>
-      <source>AnkiConnect is connected</source>
-      <translation>AnkiConnect 已连接</translation>
+        <source>AnkiConnect is connected</source>
+        <translation>AnkiConnect 已连接</translation>
     </message>
     <message>
-      <source>AnkiConnect is not connected</source>
-      <translation>AnkiConnect 未连接</translation>
+        <source>AnkiConnect is not connected</source>
+        <translation>AnkiConnect 未连接</translation>
     </message>
     <message>
-      <source>Checking ffmpeg…</source>
-      <translation>正在检查 ffmpeg…</translation>
+        <source>Checking ffmpeg…</source>
+        <translation>正在检查 ffmpeg…</translation>
     </message>
     <message>
-      <source>ffmpeg is available</source>
-      <translation>ffmpeg 可用</translation>
+        <source>ffmpeg is available</source>
+        <translation>ffmpeg 可用</translation>
     </message>
     <message>
-      <source>ffmpeg is not available</source>
-      <translation>ffmpeg 不可用</translation>
+        <source>ffmpeg is not available</source>
+        <translation>ffmpeg 不可用</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitleCreationTab</name>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>Done</source>
-      <translation>完成</translation>
+        <source>Done</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Done: </source>
-      <translation>完成：</translation>
+        <source>Done: </source>
+        <translation>完成：</translation>
     </message>
     <message>
-      <source>Skipped</source>
-      <translation>已跳过</translation>
+        <source>Skipped</source>
+        <translation>已跳过</translation>
     </message>
     <message>
-      <source>Skipped: </source>
-      <translation>已跳过：</translation>
+        <source>Skipped: </source>
+        <translation>已跳过：</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Some files could not be transcribed.</source>
-      <translation>无法转写部分文件。</translation>
+        <source>Some files could not be transcribed.</source>
+        <translation>无法转写部分文件。</translation>
     </message>
     <message>
-      <source>Complete — %1 files processed</source>
-      <translation>完成——已处理 %1 个文件</translation>
+        <source>Complete — %1 files processed</source>
+        <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
-      <source>Select Output Folder</source>
-      <translation>选择输出文件夹</translation>
+        <source>Select Output Folder</source>
+        <translation>选择输出文件夹</translation>
     </message>
     <message>
-      <source>Next to source video</source>
-      <translation>源视频旁边</translation>
+        <source>Next to source media</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Subtitle generation</source>
-      <translation>字幕生成</translation>
+        <source>Subtitle generation</source>
+        <translation>字幕生成</translation>
     </message>
     <message>
-      <source>Input</source>
-      <translation>输入</translation>
+        <source>Input</source>
+        <translation>输入</translation>
     </message>
     <message>
-      <source>Language:</source>
-      <translation>语言：</translation>
+        <source>Language:</source>
+        <translation>语言：</translation>
     </message>
     <message>
-      <source>Japanese</source>
-      <translation>日语</translation>
+        <source>Japanese</source>
+        <translation>日语</translation>
     </message>
     <message>
-      <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-      <translation>转写尚未就绪。请打开“设置 → 转写和对齐”完成设置。</translation>
+        <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
+        <translation>转写尚未就绪。请打开“设置 → 转写和对齐”完成设置。</translation>
     </message>
     <message>
-      <source>Mode:</source>
-      <translation>模式：</translation>
+        <source>Mode:</source>
+        <translation>模式：</translation>
     </message>
     <message>
-      <source>Single File</source>
-      <translation>单个文件</translation>
+        <source>Single File</source>
+        <translation>单个文件</translation>
     </message>
     <message>
-      <source>Transcribe one selected video file.</source>
-      <translation>转写单个选定的视频文件。</translation>
+        <source>Transcribe one selected video or audio file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Folder</source>
-      <translation>文件夹</translation>
+        <source>Folder</source>
+        <translation>文件夹</translation>
     </message>
     <message>
-      <source>Transcribe every video file in a selected folder.</source>
-      <translation>转写选定文件夹中的每个视频文件。</translation>
+        <source>Transcribe every video or audio file in a selected folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Video File:</source>
-      <translation>视频文件：</translation>
+        <source>Video or Audio File:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>This field takes a video file.</source>
-      <translation>此字段需要视频文件。</translation>
+        <source>This field takes a video or audio file.</source>
+        <translation type="unfinished">此字段需要视频或音频文件。</translation>
     </message>
     <message>
-      <source>Video Folder:</source>
-      <translation>视频文件夹：</translation>
+        <source>Video or Audio Folder:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Output</source>
-      <translation>输出</translation>
+        <source>Output</source>
+        <translation>输出</translation>
     </message>
     <message>
-      <source>Generated .srt files are saved next to each source video unless you choose a folder.</source>
-      <translation>除非你选择文件夹，否则生成的 .srt 文件将保存在各源视频旁边。</translation>
+        <source>Generated .srt files are saved next to each source file unless you choose a folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Output:</source>
-      <translation>输出：</translation>
+        <source>Output:</source>
+        <translation>输出：</translation>
     </message>
     <message>
-      <source>Choose Folder…</source>
-      <translation>选择文件夹…</translation>
+        <source>Choose Folder…</source>
+        <translation>选择文件夹…</translation>
     </message>
     <message>
-      <source>Reset</source>
-      <translation>重置</translation>
+        <source>Reset</source>
+        <translation>重置</translation>
     </message>
     <message>
-      <source>Overwrite existing SRT files</source>
-      <translation>覆盖已有的 SRT 文件</translation>
+        <source>Overwrite existing SRT files</source>
+        <translation>覆盖已有的 SRT 文件</translation>
     </message>
     <message>
-      <source>When unchecked, videos that already have an .srt file are skipped, not overwritten.</source>
-      <translation>未勾选时，已有 .srt 文件的视频将被跳过，而不会被覆盖。</translation>
+        <source>When unchecked, media files that already have an .srt file are skipped, not overwritten.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Generate Subtitles</source>
-      <translation>生成字幕</translation>
+        <source>Generate Subtitles</source>
+        <translation>生成字幕</translation>
     </message>
     <message>
-      <source>Output directory is not writable: </source>
-      <translation>输出目录不可写：</translation>
+        <source>Output directory is not writable: </source>
+        <translation>输出目录不可写：</translation>
     </message>
     <message>
-      <source>The transcription model %1 is not installed. Open Settings → Transcription &amp; Alignment to install it.</source>
-      <translation>未安装转写模型 %1。请打开“设置 → 转写和对齐”进行安装。</translation>
+        <source>The transcription model %1 is not installed. Open Settings → Transcription &amp; Alignment to install it.</source>
+        <translation>未安装转写模型 %1。请打开“设置 → 转写和对齐”进行安装。</translation>
     </message>
     <message>
-      <source>Open Transcription Settings</source>
-      <translation>打开转写设置</translation>
+        <source>Open Transcription Settings</source>
+        <translation>打开转写设置</translation>
     </message>
     <message>
-      <source>Choose a video file before generating subtitles.</source>
-      <translation>请在生成字幕前选择视频文件。</translation>
+        <source>Choose a video or audio file before generating subtitles.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>That video file no longer exists.</source>
-      <translation>该视频文件已不存在。</translation>
+        <source>That media file no longer exists.</source>
+        <translation type="unfinished">该媒体文件已不存在。</translation>
     </message>
     <message>
-      <source>Choose a folder before generating subtitles.</source>
-      <translation>请在生成字幕前选择文件夹。</translation>
+        <source>Choose a folder before generating subtitles.</source>
+        <translation>请在生成字幕前选择文件夹。</translation>
     </message>
     <message>
-      <source>That folder no longer exists.</source>
-      <translation>该文件夹已不存在。</translation>
+        <source>That folder no longer exists.</source>
+        <translation>该文件夹已不存在。</translation>
     </message>
     <message>
-      <source>No video files were found in that folder.</source>
-      <translation>该文件夹中未找到视频文件。</translation>
+        <source>That folder could not be read.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Transcribing file %1 of %2</source>
-      <translation>正在转写第 %1 / %2 个文件</translation>
+        <source>No video or audio files were found in that folder.</source>
+        <translation type="unfinished" />
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Transcribing file %1 of %2</source>
+        <translation>正在转写第 %1 / %2 个文件</translation>
+    </message>
+</context><context>
     <name>SubtitleGenWorker</name>
     <message>
-      <source>Skipped, exists</source>
-      <translation>已跳过，文件已存在</translation>
+        <source>Skipped, exists</source>
+        <translation>已跳过，文件已存在</translation>
     </message>
     <message>
-      <source>Extracting audio: %1</source>
-      <translation>正在提取音频：%1</translation>
+        <source>Extracting audio: %1</source>
+        <translation>正在提取音频：%1</translation>
     </message>
     <message>
-      <source>Transcribing: %1%</source>
-      <translation>正在转写：%1%</translation>
+        <source>Transcribing: %1%</source>
+        <translation>正在转写：%1%</translation>
     </message>
     <message>
-      <source>Done</source>
-      <translation>完成</translation>
+        <source>Done</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>No speech detected in %1</source>
-      <translation>%1 中未检测到语音</translation>
+        <source>No speech detected in %1</source>
+        <translation>%1 中未检测到语音</translation>
     </message>
     <message>
-      <source>Audio extraction failed for %1</source>
-      <translation>%1 的音频提取失败</translation>
+        <source>Audio extraction failed for %1</source>
+        <translation>%1 的音频提取失败</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitlePlayerWidget</name>
     <message>
-      <source>Play</source>
-      <translation>播放</translation>
+        <source>Play</source>
+        <translation>播放</translation>
     </message>
     <message>
-      <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
-      <translation>视频预览不可用：无法在此电脑上加载内置的视频组件（libmpv）。请尝试重新安装 Anki Miner；如果问题仍然存在，请反馈问题并附上位于 %USERPROFILE%\.anki_miner\anki_miner.log 的日志文件。</translation>
+        <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
+        <translation>视频预览不可用：无法在此电脑上加载内置的视频组件（libmpv）。请尝试重新安装 Anki Miner；如果问题仍然存在，请反馈问题并附上位于 %USERPROFILE%\.anki_miner\anki_miner.log 的日志文件。</translation>
     </message>
     <message>
-      <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
-      <translation>视频预览需要 mpv（libmpv）。捆绑版本已内置；在 Linux 上请通过包管理器安装（例如 libmpv2），在 macOS 上通过 Homebrew 安装（brew install mpv）。</translation>
+        <source>Video preview requires mpv (libmpv). Bundled builds include it; on Linux install it from your package manager (e.g. libmpv2), on macOS via Homebrew (brew install mpv).</source>
+        <translation>视频预览需要 mpv（libmpv）。捆绑版本已内置；在 Linux 上请通过包管理器安装（例如 libmpv2），在 macOS 上通过 Homebrew 安装（brew install mpv）。</translation>
     </message>
     <message>
-      <source>Video preview is turned off by %1. Audio still plays.</source>
-      <translation>视频预览已被 %1 关闭。音频仍会播放。</translation>
+        <source>Video preview is turned off by %1. Audio still plays.</source>
+        <translation>视频预览已被 %1 关闭。音频仍会播放。</translation>
     </message>
     <message>
-      <source>playback failed</source>
-      <translation>播放失败</translation>
+        <source>playback failed</source>
+        <translation>播放失败</translation>
     </message>
     <message>
-      <source>Pause</source>
-      <translation>暂停</translation>
+        <source>Pause</source>
+        <translation>暂停</translation>
     </message>
     <message>
-      <source>Video error: %1</source>
-      <translation>视频错误：%1</translation>
+        <source>Video error: %1</source>
+        <translation>视频错误：%1</translation>
     </message>
     <message>
-      <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
-      <translation>此显示器不支持视频预览。音频和字幕仍可播放。</translation>
+        <source>Video preview is unavailable on this display. Audio and subtitles still play.</source>
+        <translation>此显示器不支持视频预览。音频和字幕仍可播放。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitleRetimeTab</name>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>Done</source>
-      <translation>完成</translation>
+        <source>Done</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Done: </source>
-      <translation>完成：</translation>
+        <source>Done: </source>
+        <translation>完成：</translation>
     </message>
     <message>
-      <source>Skipped</source>
-      <translation>已跳过</translation>
+        <source>Skipped</source>
+        <translation>已跳过</translation>
     </message>
     <message>
-      <source>Skipped: </source>
-      <translation>已跳过：</translation>
+        <source>Skipped: </source>
+        <translation>已跳过：</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Some files could not be retimed.</source>
-      <translation>无法重新计时部分文件。</translation>
+        <source>Some files could not be retimed.</source>
+        <translation>无法重新计时部分文件。</translation>
     </message>
     <message>
-      <source>Complete — %1 files processed</source>
-      <translation>完成——已处理 %1 个文件</translation>
+        <source>Complete — %1 files processed</source>
+        <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
-      <source>Select Output Folder</source>
-      <translation>选择输出文件夹</translation>
+        <source>Select Output Folder</source>
+        <translation>选择输出文件夹</translation>
     </message>
     <message>
-      <source>Next to source video</source>
-      <translation>与源视频同一位置</translation>
+        <source>Next to source video</source>
+        <translation>与源视频同一位置</translation>
     </message>
     <message>
-      <source>Subtitle retiming</source>
-      <translation>字幕重新计时</translation>
+        <source>Subtitle retiming</source>
+        <translation>字幕重新计时</translation>
     </message>
     <message>
-      <source>Input</source>
-      <translation>输入</translation>
+        <source>Input</source>
+        <translation>输入</translation>
     </message>
     <message>
-      <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-      <translation>未找到 alass；请安装它或在设置中指定其路径以启用重新计时。</translation>
+        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
+        <translation>未找到 alass；请安装它或在设置中指定其路径以启用重新计时。</translation>
     </message>
     <message>
-      <source>Resync a subtitle file to its video by matching audio.</source>
-      <translation>通过匹配音频，将字幕文件与视频重新同步。</translation>
+        <source>Resync a subtitle file to its video by matching audio.</source>
+        <translation>通过匹配音频，将字幕文件与视频重新同步。</translation>
     </message>
     <message>
-      <source>Mode:</source>
-      <translation>模式：</translation>
+        <source>Mode:</source>
+        <translation>模式：</translation>
     </message>
     <message>
-      <source>Single File</source>
-      <translation>单个文件</translation>
+        <source>Single File</source>
+        <translation>单个文件</translation>
     </message>
     <message>
-      <source>Retime one subtitle file against one video.</source>
-      <translation>将单个字幕文件对齐到单个视频。</translation>
+        <source>Retime one subtitle file against one video.</source>
+        <translation>将单个字幕文件对齐到单个视频。</translation>
     </message>
     <message>
-      <source>Folder</source>
-      <translation>文件夹</translation>
+        <source>Folder</source>
+        <translation>文件夹</translation>
     </message>
     <message>
-      <source>Retime a folder of subtitles, paired to videos by episode number.</source>
-      <translation>将一个文件夹的字幕按剧集编号与视频配对后重新计时。</translation>
+        <source>Retime a folder of subtitles, paired to videos by episode number.</source>
+        <translation>将一个文件夹的字幕按剧集编号与视频配对后重新计时。</translation>
     </message>
     <message>
-      <source>Video File:</source>
-      <translation>视频文件：</translation>
+        <source>Video File:</source>
+        <translation>视频文件：</translation>
     </message>
     <message>
-      <source>This field takes a video file.</source>
-      <translation>此字段需要视频文件。</translation>
+        <source>This field takes a video file.</source>
+        <translation>此字段需要视频文件。</translation>
     </message>
     <message>
-      <source>Subtitle File:</source>
-      <translation>字幕文件：</translation>
+        <source>Subtitle File:</source>
+        <translation>字幕文件：</translation>
     </message>
     <message>
-      <source>This field takes a subtitle file.</source>
-      <translation>此字段需要字幕文件。</translation>
+        <source>This field takes a subtitle file.</source>
+        <translation>此字段需要字幕文件。</translation>
     </message>
     <message>
-      <source>Audio track:</source>
-      <translation>音轨：</translation>
+        <source>Align against:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Japanese (auto-detect)</source>
-      <translation>日语（自动检测）</translation>
+        <source>Change…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Tracks…</source>
-      <translation>音轨…</translation>
+        <source>Choose which embedded track to align the subtitle against.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Choose which audio track to align the subtitle against.</source>
-      <translation>选择将字幕对齐到哪条音轨。</translation>
+        <source>Video Folder:</source>
+        <translation>视频文件夹：</translation>
     </message>
     <message>
-      <source>Video Folder:</source>
-      <translation>视频文件夹：</translation>
+        <source>Subtitle Folder:</source>
+        <translation>字幕文件夹：</translation>
     </message>
     <message>
-      <source>Subtitle Folder:</source>
-      <translation>字幕文件夹：</translation>
+        <source>Output</source>
+        <translation>输出</translation>
     </message>
     <message>
-      <source>Output</source>
-      <translation>输出</translation>
+        <source>Output:</source>
+        <translation>输出：</translation>
     </message>
     <message>
-      <source>Output:</source>
-      <translation>输出：</translation>
+        <source>Choose Folder…</source>
+        <translation>选择文件夹…</translation>
     </message>
     <message>
-      <source>Choose Folder…</source>
-      <translation>选择文件夹…</translation>
+        <source>Reset</source>
+        <translation>重置</translation>
     </message>
     <message>
-      <source>Reset</source>
-      <translation>重置</translation>
+        <source>Overwrite existing subtitle files</source>
+        <translation>覆盖已有的字幕文件</translation>
     </message>
     <message>
-      <source>Overwrite existing subtitle files</source>
-      <translation>覆盖已有的字幕文件</translation>
+        <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
+        <translation>未勾选时，输出字幕已存在的配对会被跳过，而不会被覆盖。</translation>
     </message>
     <message>
-      <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
-      <translation>未勾选时，输出字幕已存在的配对会被跳过，而不会被覆盖。</translation>
+        <source>Split penalty, frame-rate correction and single-offset mode:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Correct frame-rate differences</source>
-      <translation>校正帧率差异</translation>
+        <source>Alignment Settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Enable only for subtitles from a different-framerate release.</source>
-      <translation>仅在字幕来自不同帧率版本时启用。</translation>
+        <source>Retime Subtitles</source>
+        <translation>重新计时字幕</translation>
     </message>
     <message>
-      <source>Single offset only (no split)</source>
-      <translation>仅单一偏移（不分段）</translation>
+        <source>Auto - embedded subtitles, or audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Shift the entire subtitle by one offset; never cut it into separately-timed segments.</source>
-      <translation>以单一偏移整体平移字幕；绝不将其切分为独立计时的片段。</translation>
+        <source>Choose a video file first.</source>
+        <translation>请先选择视频文件。</translation>
     </message>
     <message>
-      <source>Split penalty:</source>
-      <translation>分段惩罚值：</translation>
+        <source>That video file no longer exists.</source>
+        <translation>该视频文件已不存在。</translation>
     </message>
     <message>
-      <source>Lower values create more cut points for ad breaks. Useful range 1–20; default 7.</source>
-      <translation>值越低，广告间断的切点越多。有效范围 1–20；默认 7。</translation>
+        <source>No Tracks</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Retime Subtitles</source>
-      <translation>重新计时字幕</translation>
+        <source>No audio or subtitle tracks detected. Check that ffprobe is installed.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Choose a video file first.</source>
-      <translation>请先选择视频文件。</translation>
+        <source>Subtitle track %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>That video file no longer exists.</source>
-      <translation>该视频文件已不存在。</translation>
+        <source>Audio track %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>No Audio Tracks</source>
-      <translation>无音轨</translation>
+        <source>Tracks could not be read.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-      <translation>未检测到音轨。请检查是否已安装 ffprobe 且文件包含音频。</translation>
+        <source>Open Media Settings</source>
+        <translation>打开媒体设置</translation>
     </message>
     <message>
-      <source>Track %1</source>
-      <translation>音轨 %1</translation>
+        <source>Output directory is not writable: </source>
+        <translation>输出目录不可写：</translation>
     </message>
     <message>
-      <source>Audio tracks could not be read.</source>
-      <translation>无法读取音轨。</translation>
+        <source>Choose a video file before retiming subtitles.</source>
+        <translation>请在重新计时字幕前选择视频文件。</translation>
     </message>
     <message>
-      <source>Open Media Settings</source>
-      <translation>打开媒体设置</translation>
+        <source>Choose a subtitle file before retiming subtitles.</source>
+        <translation>请在重新计时字幕前选择字幕文件。</translation>
     </message>
     <message>
-      <source>Output directory is not writable: </source>
-      <translation>输出目录不可写：</translation>
+        <source>That subtitle file no longer exists.</source>
+        <translation>该字幕文件已不存在。</translation>
     </message>
     <message>
-      <source>Choose a video file before retiming subtitles.</source>
-      <translation>请在重新计时字幕前选择视频文件。</translation>
+        <source>Choose a video folder before retiming subtitles.</source>
+        <translation>请在重新计时字幕前选择视频文件夹。</translation>
     </message>
     <message>
-      <source>Choose a subtitle file before retiming subtitles.</source>
-      <translation>请在重新计时字幕前选择字幕文件。</translation>
+        <source>Choose a subtitle folder before retiming subtitles.</source>
+        <translation>请在重新计时字幕前选择字幕文件夹。</translation>
     </message>
     <message>
-      <source>That subtitle file no longer exists.</source>
-      <translation>该字幕文件已不存在。</translation>
+        <source>That video folder no longer exists.</source>
+        <translation>该视频文件夹已不存在。</translation>
     </message>
     <message>
-      <source>Choose a video folder before retiming subtitles.</source>
-      <translation>请在重新计时字幕前选择视频文件夹。</translation>
+        <source>That subtitle folder no longer exists.</source>
+        <translation>该字幕文件夹已不存在。</translation>
     </message>
     <message>
-      <source>Choose a subtitle folder before retiming subtitles.</source>
-      <translation>请在重新计时字幕前选择字幕文件夹。</translation>
+        <source>That video folder could not be read.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>That video folder no longer exists.</source>
-      <translation>该视频文件夹已不存在。</translation>
+        <source>Matched %1 of %2 video files.</source>
+        <translation>已匹配 %2 个视频文件中的 %1 个。</translation>
     </message>
     <message>
-      <source>That subtitle folder no longer exists.</source>
-      <translation>该字幕文件夹已不存在。</translation>
+        <source>Warning: %1 video file(s) could not be matched.</source>
+        <translation>警告：有 %1 个视频文件无法匹配。</translation>
     </message>
     <message>
-      <source>Matched %1 of %2 video files.</source>
-      <translation>已匹配 %2 个视频文件中的 %1 个。</translation>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
+        <translation>无法将这些文件夹中的任何字幕文件与视频文件匹配。</translation>
     </message>
     <message>
-      <source>Warning: %1 video file(s) could not be matched.</source>
-      <translation>警告：有 %1 个视频文件无法匹配。</translation>
+        <source>Retiming file %1 of %2</source>
+        <translation>正在重新计时第 %1 个文件（共 %2 个）</translation>
     </message>
-    <message>
-      <source>No subtitle file could be matched to any video file in those folders.</source>
-      <translation>无法将这些文件夹中的任何字幕文件与视频文件匹配。</translation>
-    </message>
-    <message>
-      <source>Retiming file %1 of %2</source>
-      <translation>正在重新计时第 %1 个文件（共 %2 个）</translation>
-    </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-      <source>Output equals input; enable Overwrite to retime in place</source>
-      <translation>输出与输入相同；启用“覆盖”以就地重新校准</translation>
+        <source>Output equals input; enable Overwrite to retime in place</source>
+        <translation>输出与输入相同；启用“覆盖”以就地重新校准</translation>
     </message>
     <message>
-      <source>Skipped, exists</source>
-      <translation>已跳过，已存在</translation>
+        <source>Skipped, exists</source>
+        <translation>已跳过，已存在</translation>
     </message>
     <message>
-      <source>Done</source>
-      <translation>完成</translation>
+        <source>Done</source>
+        <translation>完成</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Retiming failed for %1</source>
-      <translation>重新计时 %1 失败</translation>
+        <source>Retiming failed for %1</source>
+        <translation>重新计时 %1 失败</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitleTracksDialog</name>
     <message>
-      <source>Subtitle Track</source>
-      <translation>字幕轨道</translation>
+        <source>Subtitle Track</source>
+        <translation>字幕轨道</translation>
     </message>
     <message>
-      <source>No subtitle tracks found in this file.</source>
-      <translation>此文件中未找到字幕轨道。</translation>
+        <source>No subtitle tracks found in this file.</source>
+        <translation>此文件中未找到字幕轨道。</translation>
     </message>
     <message>
-      <source>This file has only one subtitle track.</source>
-      <translation>此文件只有一个字幕轨道。</translation>
+        <source>This file has only one subtitle track.</source>
+        <translation>此文件只有一个字幕轨道。</translation>
     </message>
     <message>
-      <source>Auto-detect (currently: Track %1 — %2)</source>
-      <translation>自动检测（当前：字幕轨道 %1 — %2）</translation>
+        <source>Auto-detect (currently: Track %1 — %2)</source>
+        <translation>自动检测（当前：字幕轨道 %1 — %2）</translation>
     </message>
     <message>
-      <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
-      <translation>自动检测（未找到日语字幕轨道——将使用第一个文本轨道）</translation>
+        <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
+        <translation>自动检测（未找到日语字幕轨道——将使用第一个文本轨道）</translation>
     </message>
     <message>
-      <source>Apply</source>
-      <translation>应用</translation>
+        <source>Apply</source>
+        <translation>应用</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitleViewer</name>
     <message>
-      <source>Subtitle Timing Viewer</source>
-      <translation>字幕计时查看器</translation>
+        <source>Subtitle Timing Viewer</source>
+        <translation>字幕计时查看器</translation>
     </message>
     <message>
-      <source>Space plays and pauses · Left and Right nudge 100 ms · A compares the original · Ctrl+Enter applies</source>
-      <translation>空格键播放/暂停 · 左右方向键微调 100 ms · A 键对比原始字幕 · Ctrl+Enter 应用</translation>
+        <source>Space plays and pauses · Left and Right nudge 100 ms · A compares the original · Ctrl+Enter applies</source>
+        <translation>空格键播放/暂停 · 左右方向键微调 100 ms · A 键对比原始字幕 · Ctrl+Enter 应用</translation>
     </message>
     <message>
-      <source>Align automatically</source>
-      <translation>自动对齐</translation>
+        <source>Align automatically</source>
+        <translation>自动对齐</translation>
     </message>
     <message>
-      <source>Hand this video and subtitle to the Retime tool, which matches them by audio.</source>
-      <translation>将此视频和字幕交给重新计时工具，它会根据音频匹配它们。</translation>
+        <source>Hand this video and subtitle to the Retime tool, which matches them by audio.</source>
+        <translation>将此视频和字幕交给重新计时工具，它会根据音频匹配它们。</translation>
     </message>
     <message>
-      <source>Offset:</source>
-      <translation>偏移：</translation>
+        <source>Offset:</source>
+        <translation>偏移：</translation>
     </message>
     <message>
-      <source>Positive = subtitles later, Negative = subtitles earlier</source>
-      <translation>正值 = 字幕延后，负值 = 字幕提前</translation>
+        <source>Positive = subtitles later, Negative = subtitles earlier</source>
+        <translation>正值 = 字幕延后，负值 = 字幕提前</translation>
     </message>
     <message>
-      <source>Compare original (A)</source>
-      <translation>对比原始字幕（A）</translation>
+        <source>Compare original (A)</source>
+        <translation>对比原始字幕（A）</translation>
     </message>
     <message>
-      <source>Play the selected line at its original timing, to hear the difference.</source>
-      <translation>以原始时间播放所选行，以听出差异。</translation>
+        <source>Play the selected line at its original timing, to hear the difference.</source>
+        <translation>以原始时间播放所选行，以听出差异。</translation>
     </message>
     <message>
-      <source>Apply Offset</source>
-      <translation>应用偏移</translation>
+        <source>Apply Offset</source>
+        <translation>应用偏移</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Original %1 s</source>
-      <translation>原始 %1 秒</translation>
+        <source>Original %1 s</source>
+        <translation>原始 %1 秒</translation>
     </message>
     <message>
-      <source>Offset %1 s</source>
-      <translation>偏移 %1 秒</translation>
+        <source>Offset %1 s</source>
+        <translation>偏移 %1 秒</translation>
     </message>
     <message>
-      <source>Loading video…</source>
-      <translation>正在加载视频…</translation>
+        <source>Loading video…</source>
+        <translation>正在加载视频…</translation>
     </message>
     <message>
-      <source>This video could not be played. The offset can still be set by hand.</source>
-      <translation>无法播放此视频。仍可手动设置偏移。</translation>
+        <source>This video could not be played. The offset can still be set by hand.</source>
+        <translation>无法播放此视频。仍可手动设置偏移。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>SubtitlesSettingsPanel</name>
     <message>
-      <source>Transcription &amp; Alignment</source>
-      <translation>转写和对齐</translation>
+        <source>Transcription &amp; Alignment</source>
+        <translation>转写和对齐</translation>
     </message>
     <message>
-      <source>Speech-to-text</source>
-      <translation>语音转文字</translation>
+        <source>Speech-to-text</source>
+        <translation>语音转文字</translation>
     </message>
     <message>
-      <source>ASR model</source>
-      <translation>ASR 模型</translation>
+        <source>ASR model</source>
+        <translation>ASR 模型</translation>
     </message>
     <message>
-      <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-      <translation>选择用于生成字幕的 Whisper 模型。“large-v3”准确度最高；“small”更快但准确度较低。</translation>
+        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
+        <translation>选择用于生成字幕的 Whisper 模型。“large-v3”准确度最高；“small”更快但准确度较低。</translation>
     </message>
     <message>
-      <source>ASR device</source>
-      <translation>ASR 设备</translation>
+        <source>ASR device</source>
+        <translation>ASR 设备</translation>
     </message>
     <message>
-      <source>Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack.</source>
-      <translation>自动模式在可用时使用 GPU，否则使用 CPU；使用 GPU 需要 NVIDIA 显卡及加速包。</translation>
+        <source>Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack.</source>
+        <translation>自动模式在可用时使用 GPU，否则使用 CPU；使用 GPU 需要 NVIDIA 显卡及加速包。</translation>
     </message>
     <message>
-      <source>Download model</source>
-      <translation>下载模型</translation>
+        <source>Download model</source>
+        <translation>下载模型</translation>
     </message>
     <message>
-      <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-      <translation>将所选 Whisper 模型权重下载到 Anki Miner 的 ASR 模型文件夹。运行字幕生成前必须完成。</translation>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>将所选 Whisper 模型权重下载到 Anki Miner 的 ASR 模型文件夹。运行字幕生成前必须完成。</translation>
     </message>
     <message>
-      <source>Model download</source>
-      <translation>模型下载</translation>
+        <source>Model download</source>
+        <translation>模型下载</translation>
     </message>
     <message>
-      <source>Required before subtitle generation can run.</source>
-      <translation>运行字幕生成前必须完成。</translation>
+        <source>Required before subtitle generation can run.</source>
+        <translation>运行字幕生成前必须完成。</translation>
     </message>
     <message>
-      <source>Transcription add-ons (optional)</source>
-      <translation>转写附加组件（可选）</translation>
+        <source>Transcription add-ons (optional)</source>
+        <translation>转写附加组件（可选）</translation>
     </message>
     <message>
-      <source>Download GPU acceleration</source>
-      <translation>下载 GPU 加速</translation>
+        <source>Download GPU acceleration</source>
+        <translation>下载 GPU 加速</translation>
     </message>
     <message>
-      <source>Download the cuDNN + cuBLAS GPU libraries into Anki Miner's folder. Required for GPU (CUDA) transcription on bundled installs.</source>
-      <translation>将 cuDNN + cuBLAS GPU 库下载到 Anki Miner 的文件夹。打包安装上进行 GPU（CUDA）转写时必需。</translation>
+        <source>Download the cuDNN + cuBLAS GPU libraries into Anki Miner's folder. Required for GPU (CUDA) transcription on bundled installs.</source>
+        <translation>将 cuDNN + cuBLAS GPU 库下载到 Anki Miner 的文件夹。打包安装上进行 GPU（CUDA）转写时必需。</translation>
     </message>
     <message>
-      <source>GPU acceleration</source>
-      <translation>GPU 加速</translation>
+        <source>GPU acceleration</source>
+        <translation>GPU 加速</translation>
     </message>
     <message>
-      <source>Faster transcription on NVIDIA GPUs (CUDA).</source>
-      <translation>在 NVIDIA GPU（CUDA）上更快转写。</translation>
+        <source>Faster transcription on NVIDIA GPUs (CUDA).</source>
+        <translation>在 NVIDIA GPU（CUDA）上更快转写。</translation>
     </message>
     <message>
-      <source>Download silence removal</source>
-      <translation>下载静音移除</translation>
+        <source>Download silence removal</source>
+        <translation>下载静音移除</translation>
     </message>
     <message>
-      <source>Download the silence-removal (VAD) library into Anki Miner's folder. It prevents silence and music being transcribed as garbage text.</source>
-      <translation>将静音移除（VAD）库下载到 Anki Miner 的文件夹。它可防止静音和音乐被转写为无意义文字。</translation>
+        <source>Download the silence-removal (VAD) library into Anki Miner's folder. It prevents silence and music being transcribed as garbage text.</source>
+        <translation>将静音移除（VAD）库下载到 Anki Miner 的文件夹。它可防止静音和音乐被转写为无意义文字。</translation>
     </message>
     <message>
-      <source>Silence removal</source>
-      <translation>静音移除</translation>
+        <source>Silence removal</source>
+        <translation>静音移除</translation>
     </message>
     <message>
-      <source>Skips music and silence so they are not transcribed as garbage.</source>
-      <translation>跳过音乐和静音，使其不被转写为无意义文字。</translation>
+        <source>Skips music and silence so they are not transcribed as garbage.</source>
+        <translation>跳过音乐和静音，使其不被转写为无意义文字。</translation>
     </message>
     <message>
-      <source>Download Vulkan model</source>
-      <translation>下载 Vulkan 模型</translation>
+        <source>Download Vulkan model</source>
+        <translation>下载 Vulkan 模型</translation>
     </message>
     <message>
-      <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-      <translation>将 whisper.cpp ggml 模型和 Silero VAD 下载到 Anki Miner 的文件夹。在 AMD/Intel/NVIDIA 显卡上进行 GPU（Vulkan）转写时必需。</translation>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation>将 whisper.cpp ggml 模型和 Silero VAD 下载到 Anki Miner 的文件夹。在 AMD/Intel/NVIDIA 显卡上进行 GPU（Vulkan）转写时必需。</translation>
     </message>
     <message>
-      <source>Vulkan model</source>
-      <translation>Vulkan 模型</translation>
+        <source>Vulkan model</source>
+        <translation>Vulkan 模型</translation>
     </message>
     <message>
-      <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-      <translation>在 AMD、Intel 或 NVIDIA GPU（Vulkan）上更快转写。</translation>
+        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
+        <translation>在 AMD、Intel 或 NVIDIA GPU（Vulkan）上更快转写。</translation>
     </message>
     <message>
-      <source>Alignment</source>
-      <translation>对齐</translation>
+        <source>Alignment</source>
+        <translation>对齐</translation>
     </message>
     <message>
-      <source>Optional: path to the alass executable</source>
-      <translation>可选：alass 可执行文件的路径</translation>
+        <source>Optional: path to the alass executable</source>
+        <translation>可选：alass 可执行文件的路径</translation>
     </message>
     <message>
-      <source>alass binary</source>
-      <translation>alass 二进制文件</translation>
+        <source>alass binary</source>
+        <translation>alass 二进制文件</translation>
     </message>
     <message>
-      <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
-      <translation>可选：用于字幕重新计时的 alass 可执行文件路径。留空则使用已下载、已打包或 PATH 中的 alass。</translation>
+        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
+        <translation>可选：用于字幕重新计时的 alass 可执行文件路径。留空则使用已下载、已打包或 PATH 中的 alass。</translation>
     </message>
     <message>
-      <source>Download alass</source>
-      <translation>下载 alass</translation>
+        <source>Download alass</source>
+        <translation>下载 alass</translation>
     </message>
     <message>
-      <source>Download the alass subtitle-alignment binary into Anki Miner's bin folder. Required for subtitle retiming unless alass is already on your PATH.</source>
-      <translation>将 alass 字幕对齐二进制文件下载到 Anki Miner 的 bin 文件夹。除非 alass 已在你的 PATH 中，否则字幕重新计时需要它。</translation>
+        <source>Download the alass subtitle-alignment binary into Anki Miner's bin folder. Required for subtitle retiming unless alass is already on your PATH.</source>
+        <translation>将 alass 字幕对齐二进制文件下载到 Anki Miner 的 bin 文件夹。除非 alass 已在你的 PATH 中，否则字幕重新计时需要它。</translation>
     </message>
     <message>
-      <source>alass download</source>
-      <translation>alass 下载</translation>
+        <source>alass download</source>
+        <translation>alass 下载</translation>
     </message>
     <message>
-      <source>Needed for retiming unless alass is already on your PATH.</source>
-      <translation>除非 alass 已在你的 PATH 中，否则重新计时需要它。</translation>
+        <source>Needed for retiming unless alass is already on your PATH.</source>
+        <translation>除非 alass 已在你的 PATH 中，否则重新计时需要它。</translation>
     </message>
     <message>
-      <source>No alass binary is published for macOS. Install it with Homebrew:</source>
-      <translation>macOS 没有发布 alass 二进制文件。请使用 Homebrew 安装：</translation>
+        <source>No alass binary is published for macOS. Install it with Homebrew:</source>
+        <translation>macOS 没有发布 alass 二进制文件。请使用 Homebrew 安装：</translation>
     </message>
     <message>
-      <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
-      <translation>生成字幕需要 faster-whisper 引擎。请使用以下命令安装：</translation>
+        <source>Split penalty</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Copy</source>
-      <translation>复制</translation>
+        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Installed</source>
-      <translation>已安装</translation>
+        <source>Correct frame-rate differences</source>
+        <translation type="unfinished">校正帧率差异</translation>
     </message>
     <message>
-      <source>Not installed</source>
-      <translation>未安装</translation>
+        <source>Frame rate</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>GPU acceleration is not available on this platform.</source>
-      <translation>此平台不支持 GPU 加速。</translation>
+        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
-      <translation>未检测到 NVIDIA GPU。GPU 加速需要 NVIDIA 显卡。</translation>
+        <source>Shift by a single offset only</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Silence removal is available.</source>
-      <translation>静音移除可用。</translation>
+        <source>Single offset</source>
+        <translation type="unfinished" />
     </message>
     <message>
-      <source>Silence removal is not available on this platform.</source>
-      <translation>此平台不支持静音移除。</translation>
+        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
+        <translation type="unfinished" />
     </message>
-  </context>
-  <context>
+    <message>
+        <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
+        <translation>生成字幕需要 faster-whisper 引擎。请使用以下命令安装：</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>已安装</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安装</translation>
+    </message>
+    <message>
+        <source>GPU acceleration is not available on this platform.</source>
+        <translation>此平台不支持 GPU 加速。</translation>
+    </message>
+    <message>
+        <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
+        <translation>未检测到 NVIDIA GPU。GPU 加速需要 NVIDIA 显卡。</translation>
+    </message>
+    <message>
+        <source>Silence removal is available.</source>
+        <translation>静音移除可用。</translation>
+    </message>
+    <message>
+        <source>Silence removal is not available on this platform.</source>
+        <translation>此平台不支持静音移除。</translation>
+    </message>
+</context><context>
     <name>SystemHealthWindow</name>
     <message>
-      <source>System Health</source>
-      <translation>系统健康状况</translation>
+        <source>System Health</source>
+        <translation>系统健康状况</translation>
     </message>
     <message>
-      <source>What Anki Miner needs in order to mine, and whether it has it.</source>
-      <translation>Anki Miner 挖词所需的项目，以及它们是否可用。</translation>
+        <source>What Anki Miner needs in order to mine, and whether it has it.</source>
+        <translation>Anki Miner 挖词所需的项目，以及它们是否可用。</translation>
     </message>
     <message>
-      <source>Re-check now</source>
-      <translation>立即重新检查</translation>
+        <source>Re-check now</source>
+        <translation>立即重新检查</translation>
     </message>
     <message>
-      <source>Export diagnostics…</source>
-      <translation>导出诊断信息…</translation>
+        <source>Export diagnostics…</source>
+        <translation>导出诊断信息…</translation>
     </message>
     <message>
-      <source>Ready</source>
-      <translation>就绪</translation>
+        <source>Ready</source>
+        <translation>就绪</translation>
     </message>
     <message>
-      <source>Needs attention</source>
-      <translation>需要注意</translation>
+        <source>Needs attention</source>
+        <translation>需要注意</translation>
     </message>
     <message>
-      <source>Not working</source>
-      <translation>不可用</translation>
+        <source>Not working</source>
+        <translation>不可用</translation>
     </message>
     <message>
-      <source>Unknown</source>
-      <translation>未知</translation>
+        <source>Unknown</source>
+        <translation>未知</translation>
     </message>
     <message>
-      <source>Not checked yet</source>
-      <translation>尚未检查</translation>
+        <source>Not checked yet</source>
+        <translation>尚未检查</translation>
     </message>
     <message>
-      <source>Checked %1</source>
-      <translation>已检查 %1</translation>
+        <source>Checked %1</source>
+        <translation>已检查 %1</translation>
     </message>
     <message>
-      <source>Where cards go</source>
-      <translation>卡片保存位置</translation>
+        <source>Where cards go</source>
+        <translation>卡片保存位置</translation>
     </message>
     <message>
-      <source>Media tools</source>
-      <translation>媒体工具</translation>
+        <source>Media tools</source>
+        <translation>媒体工具</translation>
     </message>
     <message>
-      <source>Language resources</source>
-      <translation>语言资源</translation>
+        <source>Language resources</source>
+        <translation>语言资源</translation>
     </message>
     <message>
-      <source>Optional features</source>
-      <translation>可选功能</translation>
+        <source>Optional features</source>
+        <translation>可选功能</translation>
     </message>
     <message>
-      <source>Updates</source>
-      <translation>更新</translation>
+        <source>Updates</source>
+        <translation>更新</translation>
     </message>
     <message>
-      <source>AnkiConnect</source>
-      <translation>AnkiConnect</translation>
+        <source>AnkiConnect</source>
+        <translation>AnkiConnect</translation>
     </message>
     <message>
-      <source>Deck</source>
-      <translation>牌组</translation>
+        <source>Deck</source>
+        <translation>牌组</translation>
     </message>
     <message>
-      <source>Note type</source>
-      <translation>笔记类型</translation>
+        <source>Note type</source>
+        <translation>笔记类型</translation>
     </message>
     <message>
-      <source>Field mapping</source>
-      <translation>字段映射</translation>
+        <source>Field mapping</source>
+        <translation>字段映射</translation>
     </message>
     <message>
-      <source>ffmpeg</source>
-      <translation>ffmpeg</translation>
+        <source>ffmpeg</source>
+        <translation>ffmpeg</translation>
     </message>
     <message>
-      <source>ffprobe</source>
-      <translation>ffprobe</translation>
+        <source>ffprobe</source>
+        <translation>ffprobe</translation>
     </message>
     <message>
-      <source>Offline dictionary</source>
-      <translation>离线词典</translation>
+        <source>Offline dictionary</source>
+        <translation>离线词典</translation>
     </message>
     <message>
-      <source>yt-dlp (YouTube mining)</source>
-      <translation>yt-dlp（YouTube 挖词）</translation>
+        <source>yt-dlp (YouTube mining)</source>
+        <translation>yt-dlp（YouTube 挖词）</translation>
     </message>
     <message>
-      <source>alass (subtitle retiming)</source>
-      <translation>alass（字幕重新计时）</translation>
+        <source>alass (subtitle retiming)</source>
+        <translation>alass（字幕重新计时）</translation>
     </message>
     <message>
-      <source>Anki Miner updates</source>
-      <translation>Anki Miner 更新</translation>
+        <source>Anki Miner updates</source>
+        <translation>Anki Miner 更新</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ThemeCard</name>
     <message>
-      <source>Active</source>
-      <translation>活动</translation>
+        <source>Active</source>
+        <translation>活动</translation>
     </message>
     <message>
-      <source>Unfavorite</source>
-      <translation>取消收藏</translation>
+        <source>Unfavorite</source>
+        <translation>取消收藏</translation>
     </message>
     <message>
-      <source>Favorite</source>
-      <translation>收藏</translation>
+        <source>Favorite</source>
+        <translation>收藏</translation>
     </message>
     <message>
-      <source>Click to add to / remove from favorites.</source>
-      <translation>点击以添加到收藏 / 从收藏中移除。</translation>
+        <source>Click to add to / remove from favorites.</source>
+        <translation>点击以添加到收藏 / 从收藏中移除。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ThemeGalleryWidget</name>
     <message>
-      <source>Favorite all %1 %2 variants.</source>
-      <translation>收藏全部 %1 个 %2 变体。</translation>
+        <source>Favorite all %1 %2 variants.</source>
+        <translation>收藏全部 %1 个 %2 变体。</translation>
     </message>
     <message>
-      <source>Unfavorite all %1 %2 variants.</source>
-      <translation>取消收藏全部 %1 个 %2 变体。</translation>
+        <source>Unfavorite all %1 %2 variants.</source>
+        <translation>取消收藏全部 %1 个 %2 变体。</translation>
     </message>
     <message>
-      <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
-      <translation>%2 个 %3 变体中已收藏 %1 个。点击以全部收藏。</translation>
+        <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
+        <translation>%2 个 %3 变体中已收藏 %1 个。点击以全部收藏。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>ThemePage</name>
     <message>
-      <source>Pick a Look</source>
-      <translation>选择外观</translation>
+        <source>Pick a Look</source>
+        <translation>选择外观</translation>
     </message>
     <message>
-      <source>Click a theme to try it. You can change it any time in Settings.</source>
-      <translation>点击主题即可试用。你可随时在“设置”中更改。</translation>
+        <source>Click a theme to try it. You can change it any time in Settings.</source>
+        <translation>点击主题即可试用。你可随时在“设置”中更改。</translation>
     </message>
     <message>
-      <source>See all %1 themes…</source>
-      <translation>查看全部 %1 个主题…</translation>
+        <source>See all %1 themes…</source>
+        <translation>查看全部 %1 个主题…</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>UISettingsPanel</name>
     <message>
-      <source>Language</source>
-      <translation>语言</translation>
+        <source>Language</source>
+        <translation>语言</translation>
     </message>
     <message>
-      <source>Restart to apply.</source>
-      <translation>重启后生效。</translation>
+        <source>Restart to apply.</source>
+        <translation>重启后生效。</translation>
     </message>
     <message>
-      <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
-      <translation>缩放整个界面——文字、间距和控件。重启后生效。</translation>
+        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
+        <translation>缩放整个界面——文字、间距和控件。重启后生效。</translation>
     </message>
     <message>
-      <source>Zoom</source>
-      <translation>缩放</translation>
+        <source>Zoom</source>
+        <translation>缩放</translation>
     </message>
     <message>
-      <source>%1%</source>
-      <translation>%1%</translation>
+        <source>%1%</source>
+        <translation>%1%</translation>
     </message>
     <message>
-      <source>Scale all UI text. Applies after restart.</source>
-      <translation>缩放所有 UI 文本。重启后生效。</translation>
+        <source>Scale all UI text. Applies after restart.</source>
+        <translation>缩放所有 UI 文本。重启后生效。</translation>
     </message>
     <message>
-      <source>Text size</source>
-      <translation>文字大小</translation>
+        <source>Text size</source>
+        <translation>文字大小</translation>
     </message>
     <message>
-      <source>Text size will change after restart.</source>
-      <translation>重启后文字大小将更改。</translation>
+        <source>Text size will change after restart.</source>
+        <translation>重启后文字大小将更改。</translation>
     </message>
     <message>
-      <source>Restart now</source>
-      <translation>立即重启</translation>
+        <source>Restart now</source>
+        <translation>立即重启</translation>
     </message>
     <message>
-      <source>Later</source>
-      <translation>稍后</translation>
+        <source>Later</source>
+        <translation>稍后</translation>
     </message>
     <message>
-      <source>Use system file dialogs</source>
-      <translation>使用系统文件对话框</translation>
+        <source>Use system file dialogs</source>
+        <translation>使用系统文件对话框</translation>
     </message>
     <message>
-      <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-      <translation>使用操作系统的原生文件选择器。关闭此选项可改用应用内置选择器，它遵循应用主题，且在所有平台上外观一致。</translation>
+        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
+        <translation>使用操作系统的原生文件选择器。关闭此选项可改用应用内置选择器，它遵循应用主题，且在所有平台上外观一致。</translation>
     </message>
     <message>
-      <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-      <translation>每个主题都会显示为应用预览。点击即可实时应用，并在右上角选择器中为想要的主题加星标。按 &lt;b&gt;还原&lt;/b&gt; 撤销预览。</translation>
+        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <translation>每个主题都会显示为应用预览。点击即可实时应用，并在右上角选择器中为想要的主题加星标。按 &lt;b&gt;还原&lt;/b&gt; 撤销预览。</translation>
     </message>
     <message>
-      <source>Open themes folder</source>
-      <translation>打开主题文件夹</translation>
+        <source>Open themes folder</source>
+        <translation>打开主题文件夹</translation>
     </message>
     <message>
-      <source>Revert</source>
-      <translation>还原</translation>
+        <source>Revert</source>
+        <translation>还原</translation>
     </message>
     <message>
-      <source>Restore the theme that was active when this tab was opened.</source>
-      <translation>恢复打开此标签页时处于活动状态的主题。</translation>
+        <source>Restore the theme that was active when this tab was opened.</source>
+        <translation>恢复打开此标签页时处于活动状态的主题。</translation>
     </message>
     <message>
-      <source>button labels %1:1</source>
-      <translation>按钮标签 %1:1</translation>
+        <source>button labels %1:1</source>
+        <translation>按钮标签 %1:1</translation>
     </message>
     <message>
-      <source>button labels could not be measured</source>
-      <translation>无法测量按钮标签</translation>
+        <source>button labels could not be measured</source>
+        <translation>无法测量按钮标签</translation>
     </message>
     <message>
-      <source>muted text %1:1</source>
-      <translation>弱化文本 %1:1</translation>
+        <source>muted text %1:1</source>
+        <translation>弱化文本 %1:1</translation>
     </message>
     <message>
-      <source>muted text could not be measured</source>
-      <translation>无法测量弱化文本</translation>
+        <source>muted text could not be measured</source>
+        <translation>无法测量弱化文本</translation>
     </message>
     <message>
-      <source>cards against the page %1:1</source>
-      <translation>卡片与页面的对比度 %1:1</translation>
+        <source>cards against the page %1:1</source>
+        <translation>卡片与页面的对比度 %1:1</translation>
     </message>
     <message>
-      <source>cards against the page could not be measured</source>
-      <translation>无法测量卡片与页面的对比度</translation>
+        <source>cards against the page could not be measured</source>
+        <translation>无法测量卡片与页面的对比度</translation>
     </message>
     <message>
-      <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
-      <translation>低对比度，完全按主题作者的原样显示：%1。</translation>
+        <source>Low contrast, shown exactly as the theme author wrote it: %1.</source>
+        <translation>低对比度，完全按主题作者的原样显示：%1。</translation>
     </message>
     <message>
-      <source>Open %1; drop theme JSON files here to install on next launch.</source>
-      <translation>打开 %1；将主题 JSON 文件放入此处，下次启动时即可安装。</translation>
+        <source>Open %1; drop theme JSON files here to install on next launch.</source>
+        <translation>打开 %1；将主题 JSON 文件放入此处，下次启动时即可安装。</translation>
     </message>
     <message>
-      <source>The themes folder could not be opened.</source>
-      <translation>无法打开主题文件夹。</translation>
+        <source>The themes folder could not be opened.</source>
+        <translation>无法打开主题文件夹。</translation>
     </message>
     <message>
-      <source>Open Parent Folder</source>
-      <translation>打开父文件夹</translation>
+        <source>Open Parent Folder</source>
+        <translation>打开父文件夹</translation>
     </message>
     <message>
-      <source>Could not restart automatically. Close and reopen Anki Miner to apply it.</source>
-      <translation>无法自动重启。请关闭并重新打开 Anki Miner 以应用更改。</translation>
+        <source>Could not restart automatically. Close and reopen Anki Miner to apply it.</source>
+        <translation>无法自动重启。请关闭并重新打开 Anki Miner 以应用更改。</translation>
     </message>
     <message>
-      <source>The Anki Miner executable could not be located from this process.</source>
-      <translation>无法从此进程定位 Anki Miner 可执行文件。</translation>
+        <source>The Anki Miner executable could not be located from this process.</source>
+        <translation>无法从此进程定位 Anki Miner 可执行文件。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>UpdateBanner</name>
     <message>
-      <source>Skip this version</source>
-      <translation>跳过此版本</translation>
+        <source>Skip this version</source>
+        <translation>跳过此版本</translation>
     </message>
     <message>
-      <source>Close</source>
-      <translation>关闭</translation>
+        <source>Close</source>
+        <translation>关闭</translation>
     </message>
     <message>
-      <source>Anki Miner v%1 is available!</source>
-      <translation>Anki Miner v%1 已可用！</translation>
+        <source>Anki Miner v%1 is available!</source>
+        <translation>Anki Miner v%1 已可用！</translation>
     </message>
     <message>
-      <source>View release</source>
-      <translation>查看发布版本</translation>
+        <source>View release</source>
+        <translation>查看发布版本</translation>
     </message>
     <message>
-      <source>Download .deb</source>
-      <translation>下载 .deb</translation>
+        <source>Download .deb</source>
+        <translation>下载 .deb</translation>
     </message>
     <message>
-      <source>Download AppImage</source>
-      <translation>下载 AppImage</translation>
+        <source>Download AppImage</source>
+        <translation>下载 AppImage</translation>
     </message>
     <message>
-      <source>Download installer</source>
-      <translation>下载安装程序</translation>
+        <source>Download installer</source>
+        <translation>下载安装程序</translation>
     </message>
     <message>
-      <source>Download archive</source>
-      <translation>下载压缩包</translation>
+        <source>Download archive</source>
+        <translation>下载压缩包</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>VulkanModelDownloadWorker</name>
     <message>
-      <source>%1 (%2%)</source>
-      <translation>%1（%2%）</translation>
+        <source>%1 (%2%)</source>
+        <translation>%1（%2%）</translation>
     </message>
     <message>
-      <source>Downloading Vulkan model…</source>
-      <translation>正在下载 Vulkan 模型…</translation>
+        <source>Downloading Vulkan model…</source>
+        <translation>正在下载 Vulkan 模型…</translation>
     </message>
     <message>
-      <source>Vulkan model installed successfully.</source>
-      <translation>Vulkan 模型安装成功。</translation>
+        <source>Vulkan model installed successfully.</source>
+        <translation>Vulkan 模型安装成功。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>WordCurationDialog</name>
     <message>
-      <source>Word Curation</source>
-      <translation>单词整理</translation>
+        <source>Word Curation</source>
+        <translation>单词整理</translation>
     </message>
     <message>
-      <source>Select words for card creation</source>
-      <translation>选择用于创建卡片的单词</translation>
+        <source>Select words for card creation</source>
+        <translation>选择用于创建卡片的单词</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Confirm Selection</source>
-      <translation>确认所选</translation>
+        <source>Confirm Selection</source>
+        <translation>确认所选</translation>
     </message>
     <message>
-      <source>Search:</source>
-      <translation>搜索：</translation>
+        <source>Search:</source>
+        <translation>搜索：</translation>
     </message>
     <message>
-      <source>Filter by any field...</source>
-      <translation>按任意字段过滤...</translation>
+        <source>Filter by any field...</source>
+        <translation>按任意字段过滤...</translation>
     </message>
     <message>
-      <source>Add to Known Words</source>
-      <translation>添加到已知单词</translation>
+        <source>Add to Known Words</source>
+        <translation>添加到已知单词</translation>
     </message>
     <message>
-      <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
-      <translation>将高亮行标记为“已知 · 待确认”。确认会保存它们；取消会丢弃它们。</translation>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>将高亮行标记为“已知 · 待确认”。确认会保存它们；取消会丢弃它们。</translation>
     </message>
     <message>
-      <source>Word (mined)</source>
-      <translation>单词（已挖词）</translation>
+        <source>Word (mined)</source>
+        <translation>单词（已挖词）</translation>
     </message>
     <message>
-      <source>Form in subtitle</source>
-      <translation>字幕中的形态</translation>
+        <source>Form in subtitle</source>
+        <translation>字幕中的形态</translation>
     </message>
     <message>
-      <source>Reading</source>
-      <translation>读音</translation>
+        <source>Reading</source>
+        <translation>读音</translation>
     </message>
     <message>
-      <source>Sentence</source>
-      <translation>句子</translation>
+        <source>Sentence</source>
+        <translation>句子</translation>
     </message>
     <message>
-      <source>Freq. Rank</source>
-      <translation>词频排名</translation>
+        <source>Freq. Rank</source>
+        <translation>词频排名</translation>
     </message>
     <message>
-      <source>Occurrences</source>
-      <translation>出现次数</translation>
+        <source>Occurrences</source>
+        <translation>出现次数</translation>
     </message>
     <message>
-      <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-      <translation>S 包含/排除 · 空格播放/暂停 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
+        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S 包含/排除 · 空格播放/暂停 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
     </message>
     <message>
-      <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-      <translation>S 包含/排除 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
+        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S 包含/排除 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
     </message>
     <message>
-      <source>Sentences</source>
-      <translation>句子</translation>
+        <source>Sentences</source>
+        <translation>句子</translation>
     </message>
     <message>
-      <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
-      <translation>选择此单词挖词所用的句子（及场景）。仅在单词重复出现时显示。</translation>
+        <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
+        <translation>选择此单词挖词所用的句子（及场景）。仅在单词重复出现时显示。</translation>
     </message>
     <message>
-      <source>%1
+        <source>%1
 
 (%2 sentences available — focus the row, then pick one under “Sentences”)</source>
-      <translation>%1
+        <translation>%1
 
 （有 %2 个句子可用——聚焦该行，然后在“句子”下选择一个）</translation>
     </message>
     <message>
-      <source>No page image for this word</source>
-      <translation>此单词没有页面图像</translation>
+        <source>No page image for this word</source>
+        <translation>此单词没有页面图像</translation>
     </message>
     <message>
-      <source>Could not load page image</source>
-      <translation>无法加载页面图像</translation>
+        <source>Could not load page image</source>
+        <translation>无法加载页面图像</translation>
     </message>
     <message>
-      <source>Copy word</source>
-      <translation>复制单词</translation>
+        <source>Copy word</source>
+        <translation>复制单词</translation>
     </message>
     <message>
-      <source>Copy sentence</source>
-      <translation>复制句子</translation>
+        <source>Copy sentence</source>
+        <translation>复制句子</translation>
     </message>
     <message>
-      <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>
-      <translation>无法保存你的已知单词，因此未创建卡片。再次确认以重试，或取消以丢弃待确认标记。</translation>
+        <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>
+        <translation>无法保存你的已知单词，因此未创建卡片。再次确认以重试，或取消以丢弃待确认标记。</translation>
     </message>
     <message>
-      <source>Known · pending</source>
-      <translation>已知 · 待确认</translation>
+        <source>Known · pending</source>
+        <translation>已知 · 待确认</translation>
     </message>
     <message>
-      <source>Include visible (%1)</source>
-      <translation>包含可见项（%1）</translation>
+        <source>Include visible (%1)</source>
+        <translation>包含可见项（%1）</translation>
     </message>
     <message>
-      <source>Exclude visible (%1)</source>
-      <translation>排除可见项（%1）</translation>
+        <source>Exclude visible (%1)</source>
+        <translation>排除可见项（%1）</translation>
     </message>
     <message>
-      <source>Include highlighted (%1)</source>
-      <translation>包含高亮项（%1）</translation>
+        <source>Include highlighted (%1)</source>
+        <translation>包含高亮项（%1）</translation>
     </message>
     <message>
-      <source>Word %1 of %2 · %3 included · %4 shown of %5</source>
-      <translation>第 %1 个单词，共 %2 个 · 已包含 %3 个 · 显示 %4/%5 个</translation>
+        <source>Word %1 of %2 · %3 included · %4 shown of %5</source>
+        <translation>第 %1 个单词，共 %2 个 · 已包含 %3 个 · 显示 %4/%5 个</translation>
     </message>
     <message>
-      <source>%1 included · %2 shown of %3</source>
-      <translation>已包含 %1 个 · 显示 %2/%3 个</translation>
+        <source>%1 included · %2 shown of %3</source>
+        <translation>已包含 %1 个 · 显示 %2/%3 个</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>WorkflowActionBar</name>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>%1 (%2 of %3)</source>
-      <translation>%1（第 %2 项，共 %3 项）</translation>
+        <source>%1 (%2 of %3)</source>
+        <translation>%1（第 %2 项，共 %3 项）</translation>
     </message>
     <message>
-      <source>Activity</source>
-      <translation>活动</translation>
+        <source>Activity</source>
+        <translation>活动</translation>
     </message>
     <message>
-      <source>Show the run log for this screen.</source>
-      <translation>显示此页面的运行日志。</translation>
+        <source>Show the run log for this screen.</source>
+        <translation>显示此页面的运行日志。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>YouTubeFetcher</name>
     <message>
-      <source>Downloading video</source>
-      <translation>正在下载视频</translation>
+        <source>Downloading video</source>
+        <translation>正在下载视频</translation>
     </message>
     <message>
-      <source>Merging audio and video</source>
-      <translation>正在合并音频和视频</translation>
+        <source>Merging audio and video</source>
+        <translation>正在合并音频和视频</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>YouTubeQueueItemWidget</name>
     <message>
-      <source>Manual JA subs</source>
-      <translation>手动日语字幕</translation>
+        <source>Manual JA subs</source>
+        <translation>手动日语字幕</translation>
     </message>
     <message>
-      <source>Auto JA subs</source>
-      <translation>自动日语字幕</translation>
+        <source>Auto JA subs</source>
+        <translation>自动日语字幕</translation>
     </message>
     <message>
-      <source>Checking</source>
-      <translation>正在检查</translation>
+        <source>Checking</source>
+        <translation>正在检查</translation>
     </message>
     <message>
-      <source>%1 cards</source>
-      <translation>%1 张卡片</translation>
+        <source>%1 cards</source>
+        <translation>%1 张卡片</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>YouTubeQueueWorker</name>
     <message>
-      <source>%1 · %2%</source>
-      <translation>%1 · %2%</translation>
+        <source>%1 · %2%</source>
+        <translation>%1 · %2%</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>YouTubeSettingsPanel</name>
     <message>
-      <source>Cookies from browser</source>
-      <translation>来自浏览器的 Cookie</translation>
+        <source>Cookies from browser</source>
+        <translation>来自浏览器的 Cookie</translation>
     </message>
     <message>
-      <source>Pick a browser whose cookies yt-dlp should reuse. Leave as 'None' unless YouTube is blocking anonymous fetches.</source>
-      <translation>选择一个浏览器，yt-dlp 将复用其 Cookie。除非 YouTube 阻止匿名抓取，否则保持为“无”。</translation>
+        <source>Pick a browser whose cookies yt-dlp should reuse. Leave as 'None' unless YouTube is blocking anonymous fetches.</source>
+        <translation>选择一个浏览器，yt-dlp 将复用其 Cookie。除非 YouTube 阻止匿名抓取，否则保持为“无”。</translation>
     </message>
     <message>
-      <source>Optional: path to an exported cookies.txt...</source>
-      <translation>可选：导出的 cookies.txt 的路径…</translation>
+        <source>Optional: path to an exported cookies.txt...</source>
+        <translation>可选：导出的 cookies.txt 的路径…</translation>
     </message>
     <message>
-      <source>Cookies file</source>
-      <translation>Cookie 文件</translation>
+        <source>Cookies file</source>
+        <translation>Cookie 文件</translation>
     </message>
     <message>
-      <source>Overrides the browser dropdown. Keep the file private — it holds your YouTube login.</source>
-      <translation>会覆盖浏览器下拉选择。请对该文件保密——其中包含你的 YouTube 登录信息。</translation>
+        <source>Overrides the browser dropdown. Keep the file private — it holds your YouTube login.</source>
+        <translation>会覆盖浏览器下拉选择。请对该文件保密——其中包含你的 YouTube 登录信息。</translation>
     </message>
     <message>
-      <source> minutes</source>
-      <translation> 分钟</translation>
+        <source> minutes</source>
+        <translation> 分钟</translation>
     </message>
     <message>
-      <source>YouTube max duration</source>
-      <translation>YouTube 最大时长</translation>
+        <source>YouTube max duration</source>
+        <translation>YouTube 最大时长</translation>
     </message>
     <message>
-      <source>Videos longer than this are rejected before fetching.</source>
-      <translation>超过此时长的视频会在抓取前被拒绝。</translation>
+        <source>Videos longer than this are rejected before fetching.</source>
+        <translation>超过此时长的视频会在抓取前被拒绝。</translation>
     </message>
     <message>
-      <source>Playlist max videos</source>
-      <translation>播放列表最大视频数</translation>
+        <source>Playlist max videos</source>
+        <translation>播放列表最大视频数</translation>
     </message>
     <message>
-      <source>When adding a playlist, at most this many videos are queued.</source>
-      <translation>添加播放列表时，最多加入队列这么多视频。</translation>
+        <source>When adding a playlist, at most this many videos are queued.</source>
+        <translation>添加播放列表时，最多加入队列这么多视频。</translation>
     </message>
     <message>
-      <source>Keep yt-dlp up to date automatically</source>
-      <translation>自动保持 yt-dlp 为最新版本</translation>
+        <source>Keep yt-dlp up to date automatically</source>
+        <translation>自动保持 yt-dlp 为最新版本</translation>
     </message>
     <message>
-      <source>Auto-update</source>
-      <translation>自动更新</translation>
+        <source>Auto-update</source>
+        <translation>自动更新</translation>
     </message>
     <message>
-      <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
-      <translation>启动时每天检查一次，并下载到 Anki Miner 自己的文件夹。关闭此选项最终会导致 YouTube 挖词无法工作。</translation>
+        <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
+        <translation>启动时每天检查一次，并下载到 Anki Miner 自己的文件夹。关闭此选项最终会导致 YouTube 挖词无法工作。</translation>
     </message>
     <message>
-      <source>Optional: path to your own yt-dlp executable...</source>
-      <translation>可选：你自己的 yt-dlp 可执行文件路径…</translation>
+        <source>Optional: path to your own yt-dlp executable...</source>
+        <translation>可选：你自己的 yt-dlp 可执行文件路径…</translation>
     </message>
     <message>
-      <source>yt-dlp location</source>
-      <translation>yt-dlp 位置</translation>
+        <source>yt-dlp location</source>
+        <translation>yt-dlp 位置</translation>
     </message>
     <message>
-      <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
-      <translation>覆盖自动检测。除非需要特定构建版本，否则请留空。</translation>
+        <source>Overrides automatic detection. Leave empty unless you need a specific build.</source>
+        <translation>覆盖自动检测。除非需要特定构建版本，否则请留空。</translation>
     </message>
     <message>
-      <source>Update yt-dlp now</source>
-      <translation>立即更新 yt-dlp</translation>
+        <source>Update yt-dlp now</source>
+        <translation>立即更新 yt-dlp</translation>
     </message>
     <message>
-      <source>Download the latest yt-dlp into Anki Miner's own folder. Keeping yt-dlp current is what fixes most 'YouTube broke' errors.</source>
-      <translation>将最新的 yt-dlp 下载到 Anki Miner 自己的文件夹。保持 yt-dlp 为最新版本可以修复大多数“YouTube 出错”的问题。</translation>
+        <source>Download the latest yt-dlp into Anki Miner's own folder. Keeping yt-dlp current is what fixes most 'YouTube broke' errors.</source>
+        <translation>将最新的 yt-dlp 下载到 Anki Miner 自己的文件夹。保持 yt-dlp 为最新版本可以修复大多数“YouTube 出错”的问题。</translation>
     </message>
     <message>
-      <source>yt-dlp</source>
-      <translation>yt-dlp</translation>
+        <source>yt-dlp</source>
+        <translation>yt-dlp</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>YouTubeTab</name>
     <message>
-      <source>Mining unavailable — services not initialized.</source>
-      <translation>无法挖词——服务未初始化。</translation>
+        <source>Mining unavailable — services not initialized.</source>
+        <translation>无法挖词——服务未初始化。</translation>
     </message>
     <message>
-      <source>%1 run starting — %2 items.</source>
-      <translation>%1 运行开始——%2 个项。</translation>
+        <source>%1 run starting — %2 items.</source>
+        <translation>%1 运行开始——%2 个项。</translation>
     </message>
     <message>
-      <source>Mine</source>
-      <translation>挖词</translation>
+        <source>Mine</source>
+        <translation>挖词</translation>
     </message>
     <message>
-      <source>YouTube queue</source>
-      <translation>YouTube 队列</translation>
+        <source>YouTube queue</source>
+        <translation>YouTube 队列</translation>
     </message>
     <message>
-      <source>Attempt %1 of %2 · retrying in %3s</source>
-      <translation>第 %1/%2 次尝试 · 将在 %3 秒后重试</translation>
+        <source>Attempt %1 of %2 · retrying in %3s</source>
+        <translation>第 %1/%2 次尝试 · 将在 %3 秒后重试</translation>
     </message>
     <message>
-      <source>Cancelling…</source>
-      <translation>正在取消…</translation>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
     </message>
     <message>
-      <source>Cancel</source>
-      <translation>取消</translation>
+        <source>Cancel</source>
+        <translation>取消</translation>
     </message>
     <message>
-      <source>Queue done: %1 succeeded, %2 failed.</source>
-      <translation>队列完成：%1 成功，%2 失败。</translation>
+        <source>Queue done: %1 succeeded, %2 failed.</source>
+        <translation>队列完成：%1 成功，%2 失败。</translation>
     </message>
     <message>
-      <source>Mining %1 of %2: %3</source>
-      <translation>正在挖词 %1 / %2：%3</translation>
+        <source>Mining %1 of %2: %3</source>
+        <translation>正在挖词 %1 / %2：%3</translation>
     </message>
     <message>
-      <source>Mined %1: %2 cards (attempts=%3).</source>
-      <translation>已挖词 %1：%2 张卡片（尝试次数=%3）。</translation>
+        <source>Mined %1: %2 cards (attempts=%3).</source>
+        <translation>已挖词 %1：%2 张卡片（尝试次数=%3）。</translation>
     </message>
     <message>
-      <source>Cancelled %1.</source>
-      <translation>已取消 %1。</translation>
+        <source>Cancelled %1.</source>
+        <translation>已取消 %1。</translation>
     </message>
     <message>
-      <source>Failed %1: %2 (attempts=%3).</source>
-      <translation>失败 %1：%2（尝试次数=%3）。</translation>
+        <source>Failed %1: %2 (attempts=%3).</source>
+        <translation>失败 %1：%2（尝试次数=%3）。</translation>
     </message>
     <message>
-      <source>Cancelled</source>
-      <translation>已取消</translation>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
     </message>
     <message>
-      <source>Failed — see log</source>
-      <translation>失败——请查看日志</translation>
+        <source>Failed — see log</source>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
-      <source>Complete — %1 succeeded</source>
-      <translation>完成——%1 成功</translation>
+        <source>Complete — %1 succeeded</source>
+        <translation>完成——%1 成功</translation>
     </message>
     <message>
-      <source>Complete — %1 succeeded, %2 failed</source>
-      <translation>完成——%1 成功，%2 失败</translation>
+        <source>Complete — %1 succeeded, %2 failed</source>
+        <translation>完成——%1 成功，%2 失败</translation>
     </message>
     <message>
-      <source>Add</source>
-      <translation>添加</translation>
+        <source>Add</source>
+        <translation>添加</translation>
     </message>
     <message>
-      <source>Add the URL to the queue and probe its metadata.</source>
-      <translation>将 URL 添加到队列并探测其元数据。</translation>
+        <source>Add the URL to the queue and probe its metadata.</source>
+        <translation>将 URL 添加到队列并探测其元数据。</translation>
     </message>
     <message>
-      <source>Paste a YouTube URL above and click Add.</source>
-      <translation>在上方粘贴 YouTube URL 并点击“添加”。</translation>
+        <source>Paste a YouTube URL above and click Add.</source>
+        <translation>在上方粘贴 YouTube URL 并点击“添加”。</translation>
     </message>
     <message>
-      <source>Review words before mining</source>
-      <translation>挖词前先审阅单词</translation>
+        <source>Review words before mining</source>
+        <translation>挖词前先审阅单词</translation>
     </message>
     <message>
-      <source>Show the word-selection popup for each video before creating cards.</source>
-      <translation>在创建卡片前，为每个视频显示单词选择弹窗。</translation>
+        <source>Show the word-selection popup for each video before creating cards.</source>
+        <translation>在创建卡片前，为每个视频显示单词选择弹窗。</translation>
     </message>
     <message>
-      <source>Mine every READY item in the queue into Anki cards.</source>
-      <translation>将队列中每个 READY 项挖词为 Anki 卡片。</translation>
+        <source>Mine every READY item in the queue into Anki cards.</source>
+        <translation>将队列中每个 READY 项挖词为 Anki 卡片。</translation>
     </message>
     <message>
-      <source>Clear</source>
-      <translation>清空</translation>
+        <source>Clear</source>
+        <translation>清空</translation>
     </message>
     <message>
-      <source>Remove every queued item that is not currently mining.</source>
-      <translation>移除当前未在挖词的每个队列项。</translation>
+        <source>Remove every queued item that is not currently mining.</source>
+        <translation>移除当前未在挖词的每个队列项。</translation>
     </message>
     <message>
-      <source>Cancel the active run.</source>
-      <translation>取消正在进行的运行。</translation>
+        <source>Cancel the active run.</source>
+        <translation>取消正在进行的运行。</translation>
     </message>
     <message>
-      <source>Progress</source>
-      <translation>进度</translation>
+        <source>Progress</source>
+        <translation>进度</translation>
     </message>
     <message>
-      <source>videos</source>
-      <translation>视频</translation>
+        <source>videos</source>
+        <translation>视频</translation>
     </message>
     <message>
-      <source>Interrupted when Anki Miner closed</source>
-      <translation>Anki Miner 关闭时中断</translation>
+        <source>Interrupted when Anki Miner closed</source>
+        <translation>Anki Miner 关闭时中断</translation>
     </message>
     <message>
-      <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
-      <translation>将 YouTube 链接拖放到此处。可在“视频”和“有声书”标签页中对本地文件进行挖词。</translation>
+        <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
+        <translation>将 YouTube 链接拖放到此处。可在“视频”和“有声书”标签页中对本地文件进行挖词。</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>_AddSourceDialog</name>
     <message>
-      <source>Add Audio Source</source>
-      <translation>添加音频来源</translation>
+        <source>Add Audio Source</source>
+        <translation>添加音频来源</translation>
     </message>
     <message>
-      <source>Source type:</source>
-      <translation>来源类型：</translation>
+        <source>Source type:</source>
+        <translation>来源类型：</translation>
     </message>
     <message>
-      <source>URL template (use {term} and {reading}):</source>
-      <translation>URL 模板（使用 {term} 和 {reading}）：</translation>
+        <source>URL template (use {term} and {reading}):</source>
+        <translation>URL 模板（使用 {term} 和 {reading}）：</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>_HealthRow</name>
     <message>
-      <source>Fix</source>
-      <translation>修复</translation>
+        <source>Fix</source>
+        <translation>修复</translation>
     </message>
-  </context>
-  <context>
+</context><context>
     <name>app</name>
     <message>
-      <source>Anki Miner — Unexpected Error</source>
-      <translation>Anki Miner — 意外错误</translation>
+        <source>Anki Miner — Unexpected Error</source>
+        <translation>Anki Miner — 意外错误</translation>
     </message>
     <message>
-      <source>%1: %2
+        <source>%1: %2
 
 Version: %3
 Platform: %4
 Log file: %5</source>
-      <translation>%1：%2
+        <translation>%1：%2
 
 版本：%3
 平台：%4
 日志文件：%5</translation>
     </message>
-  </context>
-</TS>
+</context></TS>
