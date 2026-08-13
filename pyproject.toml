@@ -53,6 +53,9 @@ dependencies = [
     # charset-normalizer detector fallback (external non-UTF-8 subtitle files).
     # Previously only a transitive requests dep; declared explicitly now.
     "charset-normalizer>=3.4.0",
+    # Runtime: services/audio_tagger.py writes ID3/VorbisComment tags + embedded
+    # artwork into condensed audio outputs (Issue #113). Pure-Python.
+    "mutagen>=1.47.0",
     # Runtime: video preview backend (python-mpv, one pure-Python ctypes file).
     # `import mpv` dlopens libmpv at IMPORT time, so every import must go
     # through anki_miner/utils/mpv_loader.py — never import mpv directly.

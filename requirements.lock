@@ -61,6 +61,7 @@ lxml==6.1.1
 markdown-it-py==4.2.0
 mdurl==0.1.2
 mpv==1.0.8
+mutagen==1.48.1
 numpy==2.5.0
 onnxruntime==1.27.0
 packaging==26.2
