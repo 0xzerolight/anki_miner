@@ -109,6 +109,12 @@ class CurationMediaContext:
     #: built where the config is in scope. The audio clip strip needs it to
     #: show the user the window that would be cut without an edit.
     audio_padding: float = 0.3
+    #: Season curation (batch tab): resolves another episode's video to its own
+    #: media context so the player can follow cross-episode word focus. Pure
+    #: and thread-safe over a snapshot (never the live worker) — the dialog
+    #: calls it off the GUI thread. ``None`` (every single-episode caller)
+    #: keeps the player pinned to ``video_file``.
+    context_resolver: Callable[[Path], CurationMediaContext | None] | None = None
 
 
 class WordCurationDialog(ScreenIssueHost, QDialog):
