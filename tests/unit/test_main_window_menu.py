@@ -131,12 +131,12 @@ def _tools_menu(window):
     raise AssertionError("Tools menu not found on menu bar")
 
 
-def test_usage_guide_sits_between_tools_and_help(main_window):
-    """The Usage Guide is its own top-level menu-bar item, after Tools, before Help."""
+def test_usage_guide_sits_after_help(main_window):
+    """The Usage Guide is its own top-level menu-bar item, to the right of Help."""
     menu_bar = main_window.menuBar()
     assert menu_bar is not None
     texts = [a.text() for a in menu_bar.actions()]
-    assert texts.index("&Tools") < texts.index("Usage Guide") < texts.index("&Help")
+    assert texts.index("&Tools") < texts.index("&Help") < texts.index("Usage Guide")
 
 
 def test_usage_guide_is_a_plain_action_on_non_native_bars(main_window):
