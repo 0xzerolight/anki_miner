@@ -29,7 +29,6 @@ from anki_miner.services.dictionary.storage import (
     read_meta_cached,
     read_tags,
     row_is_common,
-    sequence_terms,
     terms_exist,
     terms_readings,
     write_meta,
@@ -211,7 +210,6 @@ class TestReadingNormalization:
             assert terms_exist(conn, [decomposed]) == {decomposed}
             assert terms_readings(conn, [decomposed]) == {decomposed: [composed]}
             assert exact_term_sequences(conn, [(decomposed, decomposed)]) == {(composed, composed): {1}}
-            assert sequence_terms(conn, [(1, decomposed)]) == {(1, composed): {composed}}
             assert attest_detail(conn, [decomposed], include_readings=True)[decomposed]
         finally:
             conn.close()
@@ -1179,72 +1177,6 @@ class TestExactTermSequences:
                 ("橋", "はし"): {1258040},
                 ("箸", "はし"): {1496060},
             }
-        finally:
-            conn.close()
-
-
-class TestSequenceTerms:
-    def test_expands_a_sequence_to_its_alias_spellings(self, tmp_path: Path):
-        db_path = tmp_path / "aliases.sqlite"
-        create_index(db_path)
-        bulk_insert(
-            db_path,
-            [
-                DictRow(term="よそ見", reading="よそみ", content="<div>a</div>", sequence=1544190),
-                DictRow(term="余所見", reading="よそみ", content="<div>b</div>", sequence=1544190),
-                DictRow(term="肉じゃが", reading="にくじゃが", content="<div>c</div>", sequence=2035530),
-                DictRow(term="肉ジャガ", reading="ニクジャガ", content="<div>d</div>", sequence=2035530),
-                DictRow(term="出でる", reading="いでる", content="<div>e</div>", sequence=2534980),
-            ],
-        )
-        conn = open_readonly(db_path)
-        try:
-            assert sequence_terms(conn, [(1544190, "ヨソミ"), (2035530, "にくじゃが")]) == {
-                (1544190, "よそみ"): {"よそ見", "余所見"},
-                (2035530, "にくじゃが"): {"肉じゃが", "肉ジャガ"},
-            }
-        finally:
-            conn.close()
-
-    def test_reading_is_part_of_the_key_not_just_a_sequence_filter(self, tmp_path: Path):
-        """A shared sequence must not let one reading claim the other's spellings.
-
-        辛い is からい and つらい under one JMdict entry; expanding on sequence
-        alone would collapse two words a learner keeps apart.
-        """
-        db_path = tmp_path / "readings.sqlite"
-        create_index(db_path)
-        bulk_insert(
-            db_path,
-            [
-                DictRow(term="辛い", reading="からい", content="<div>spicy</div>", sequence=1552120),
-                DictRow(term="鹹い", reading="からい", content="<div>salty</div>", sequence=1552120),
-                DictRow(term="辛い", reading="つらい", content="<div>painful</div>", sequence=1552120),
-            ],
-        )
-        conn = open_readonly(db_path)
-        try:
-            assert sequence_terms(conn, [(1552120, "からい")]) == {
-                (1552120, "からい"): {"辛い", "鹹い"},
-            }
-        finally:
-            conn.close()
-
-    def test_unknown_and_malformed_identities_contribute_nothing(self, tmp_path: Path):
-        db_path = tmp_path / "sparse.sqlite"
-        create_index(db_path)
-        bulk_insert(
-            db_path,
-            [
-                DictRow(term="よそ見", reading="よそみ", content="<div>a</div>", sequence=1544190),
-                DictRow(term="名無し", reading="", content="<div>nameless</div>", sequence=999),
-            ],
-        )
-        conn = open_readonly(db_path)
-        try:
-            assert sequence_terms(conn, []) == {}
-            assert sequence_terms(conn, [(1544190, "")]) == {}
-            assert sequence_terms(conn, [(4242424, "よそみ"), (999, "ななし")]) == {}
         finally:
             conn.close()
 

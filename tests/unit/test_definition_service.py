@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.services.definition_service import (
@@ -1298,71 +1298,6 @@ class TestOfflineTermIdentities:
                 ("second-dict", 20, "よそみ"),
             },
             ("余所見", "よそみ"): {("second-dict", 20, "よそみ")},
-        }
-
-
-class TestOfflineIdentityTerms:
-    def test_expands_identities_back_to_alias_spellings_per_dictionary(self, test_config, tmp_path: Path):
-        first_db = tmp_path / "first.sqlite"
-        create_index(first_db)
-        bulk_insert(
-            first_db,
-            [DictRow(term="よそ見", reading="よそみ", content="<div>a</div>", sequence=10)],
-        )
-        write_meta(first_db, {"schema_version": str(SCHEMA_VERSION), "source_name": "First"})
-        first = IndexedDictProvider("first-dict", first_db)
-
-        second_db = tmp_path / "second.sqlite"
-        create_index(second_db)
-        bulk_insert(
-            second_db,
-            [
-                DictRow(term="よそ見", reading="よそみ", content="<div>b</div>", sequence=20),
-                DictRow(term="余所見", reading="よそみ", content="<div>c</div>", sequence=20),
-            ],
-        )
-        write_meta(second_db, {"schema_version": str(SCHEMA_VERSION), "source_name": "Second"})
-        second = IndexedDictProvider("second-dict", second_db)
-        service = DefinitionService(test_config, providers=[first, second])
-
-        # Sequence 20 belongs to second-dict. first-dict must not be asked to
-        # resolve it: a sequence number only means something inside its own
-        # dictionary, and 20 there would be an unrelated entry.
-        assert service.offline_identity_terms({("first-dict", 10, "よそみ"), ("second-dict", 20, "よそみ")}) == {
-            ("first-dict", 10, "よそみ"): {"よそ見"},
-            ("second-dict", 20, "よそみ"): {"よそ見", "余所見"},
-        }
-
-    def test_provider_without_the_probe_or_raising_contributes_nothing(self, test_config, tmp_path: Path):
-        db_path = tmp_path / "real.sqlite"
-        create_index(db_path)
-        bulk_insert(
-            db_path,
-            [
-                DictRow(term="よそ見", reading="よそみ", content="<div>a</div>", sequence=20),
-                DictRow(term="余所見", reading="よそみ", content="<div>b</div>", sequence=20),
-            ],
-        )
-        write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "Real"})
-        real = IndexedDictProvider("real-dict", db_path)
-
-        legacy = Mock()
-        legacy.is_online = False
-        legacy.is_available.return_value = True
-        legacy.name = "legacy"
-        del legacy.sequence_terms  # no such probe on older providers
-
-        angry = Mock()
-        angry.is_online = False
-        angry.is_available.return_value = True
-        angry.name = "angry"
-        angry.dict_id = "angry-dict"
-        angry.sequence_terms.side_effect = RuntimeError("boom")
-
-        service = DefinitionService(test_config, providers=[legacy, angry, real])
-
-        assert service.offline_identity_terms({("real-dict", 20, "よそみ"), ("angry-dict", 20, "よそみ")}) == {
-            ("real-dict", 20, "よそみ"): {"よそ見", "余所見"}
         }
 
 
