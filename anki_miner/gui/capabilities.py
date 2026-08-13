@@ -115,14 +115,22 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="deck-builder-modes",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Build a complete deck (skip per-episode filters)"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.",
+            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("deckbuilder"),
-        keywords=("bypass filters", "include known", "allow duplicates", "complete deck", "everything"),
+        keywords=(
+            "bypass filters",
+            "include known",
+            "allow duplicates",
+            "complete deck",
+            "top n",
+            "coverage target",
+            "everything",
+        ),
     ),
     Capability(
         id="youtube-mining",
@@ -230,13 +238,13 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="youtube-limits",
-        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube quality & playlist limits"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "YouTube duration & playlist limits"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Cap video quality, max duration, and how many playlist videos are fetched."
+            "Capabilities", "Cap the maximum video duration and how many playlist videos are fetched."
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("settings", "youtube"),
-        keywords=("playlist limit", "max videos", "duration", "quality", "resolution", "height"),
+        keywords=("playlist limit", "max videos", "duration", "length cap", "too long"),
     ),
     # --- Filtering ---------------------------------------------------------
     Capability(
@@ -249,11 +257,25 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="frequency-rank-filter",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Skip rare words (frequency cutoff)"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Ignore words rarer than a chosen frequency rank."),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Keep words inside a frequency band"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Skip words rarer than a maximum rank, more common than a minimum rank, or missing from your frequency lists.",
+        ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("max rank", "frequency cutoff", "common only", "rare", "threshold", "top n"),
+        keywords=(
+            "max rank",
+            "min rank",
+            "frequency cutoff",
+            "range",
+            "band",
+            "too common",
+            "too rare",
+            "unranked",
+            "missing from list",
+            "threshold",
+        ),
     ),
     Capability(
         id="known-words-db",
@@ -279,19 +301,22 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="user-known-list",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mark words as known by hand"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Curate your own list of known words that is always applied and survives cache rebuilds."
+            "Capabilities",
+            "Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("manage known words", "user list", "mark known", "custom known"),
+        keywords=("manage known words", "user list", "mark known", "custom known", "export known words", "txt"),
     ),
     Capability(
         id="kana-only-exclude",
         title=QT_TRANSLATE_NOOP("Capabilities", "Exclude kana-only words"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Drop words written only in hiragana or katakana."),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Drop words written without kanji; ticking both boxes leaves a kanji-only deck."
+        ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("kana", "hiragana", "katakana", "kanji only", "script filter"),
+        keywords=("kana", "hiragana", "katakana", "kanji only", "script filter", "loanwords"),
     ),
     Capability(
         id="word-lists",
@@ -304,22 +329,14 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("blacklist", "whitelist", "word list", "allow list", "block list", "ignore list"),
     ),
     Capability(
-        id="pos-filter",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Filter by part of speech"),
+        id="sentence-length",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Limit sentence length"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Choose which word types (nouns, verbs, particles, ...) are mined."
+            "Capabilities", "Skip sentences longer than a chosen duration or character count."
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
-        keywords=("part of speech", "pos", "nouns", "verbs", "particles", "word type", "proper noun"),
-    ),
-    Capability(
-        id="sentence-length",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Limit sentence length"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Skip sentences that are too long or too short."),
-        category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
-        keywords=("sentence length", "too long", "too short", "duration", "char limit"),
+        keywords=("sentence length", "too long", "duration", "char limit", "max length"),
     ),
     Capability(
         id="dedup",
@@ -339,7 +356,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Remove names, music notes, or bracketed text from subtitles before parsing.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "subtitles"),
+        target=CapabilityTarget("settings", "filtering"),
         keywords=("regex", "brackets", "music notes", "speaker labels", "clean subtitles", "strip", "parentheses"),
     ),
     # --- Dictionaries, frequency & pitch -----------------------------------
@@ -535,10 +552,9 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="restyle-mined-cards",
         title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier."
+            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu."
         ),
-        category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "anki"),
+        category=_CAT_TOOLS,
         keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
     ),
     # --- Appearance & language ---------------------------------------------
@@ -563,10 +579,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Settings profiles"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Keep several named snapshots of every setting and switch between them in one click.",
+            "Keep several named snapshots of every setting and switch between them from the Settings footer.",
         ),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "ui"),
+        target=CapabilityTarget("settings"),
         keywords=(
             "profile",
             "profiles",

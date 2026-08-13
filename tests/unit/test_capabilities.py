@@ -85,14 +85,26 @@ def test_search_matches_title() -> None:
 
 
 def test_search_matches_description() -> None:
-    hits = search("hiragana or katakana")
+    hits = search("without kanji")
     assert any(c.id == "kana-only-exclude" for c in hits)
 
 
-def test_restyle_mined_cards_is_findable() -> None:
+def test_pos_filter_is_not_advertised() -> None:
+    # allowed_pos/excluded_subtypes are config-file-only; the guide covers the GUI.
+    assert all(cap.id != "pos-filter" for cap in CAPABILITIES)
+
+
+def test_restyle_mined_cards_is_dialog_only() -> None:
+    # It is a Tools-menu action; there is no tab that hosts a Restyle control.
     hits = search("restyle mined cards")
     capability = next(c for c in hits if c.id == "restyle-mined-cards")
-    assert capability.target == CapabilityTarget("settings", "anki")
+    assert capability.target is None
+
+
+def test_subtitle_regex_targets_filtering() -> None:
+    # The regex presets live on the Filtering panel, not Transcription & Alignment.
+    capability = next(c for c in CAPABILITIES if c.id == "subtitle-regex")
+    assert capability.target == CapabilityTarget("settings", "filtering")
 
 
 def test_search_preserves_registry_order() -> None:
