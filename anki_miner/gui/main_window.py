@@ -436,24 +436,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         assert restyle_action is not None
         restyle_action.triggered.connect(self._restyle_mined_cards)
 
-        # Usage Guide -- a top-level menu-bar button, not a dropdown. F1 is help
-        # everywhere, and "which screen does this?" is the help question this
-        # application can actually answer (D48-B). A menu-less top-level QAction
-        # is silently dropped from native menu bars (macOS, Linux global menu),
-        # so those platforms get a one-action menu instead.
-        if menu_bar.isNativeMenuBar():
-            guide_menu = menu_bar.addMenu(self.tr("Usage Guide"))
-            assert guide_menu is not None
-            guide_action = guide_menu.addAction(self.tr("Open Usage Guide..."))
-            assert guide_action is not None
-            guide_action.setMenuRole(QAction.MenuRole.NoRole)
-        else:
-            guide_action = menu_bar.addAction(self.tr("Usage Guide"))
-            assert guide_action is not None
-        guide_action.setShortcut(QKeySequence(HELP_SEQUENCE))
-        guide_action.triggered.connect(self._run_capability_browser_tool)
-        self.usage_guide_action = guide_action
-
         # Help menu
         help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
@@ -482,6 +464,25 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.export_diagnostics_action = export_diagnostics_action
         export_diagnostics_action.setToolTip(self.tr("Save a zip with logs and system details for a bug report"))
         export_diagnostics_action.triggered.connect(self._export_diagnostics)
+
+        # Usage Guide -- a top-level menu-bar button, not a dropdown, placed
+        # after Help. F1 is help everywhere, and "which screen does this?" is
+        # the help question this application can actually answer (D48-B). A
+        # menu-less top-level QAction is silently dropped from native menu bars
+        # (macOS, Linux global menu), so those platforms get a one-action menu
+        # instead.
+        if menu_bar.isNativeMenuBar():
+            guide_menu = menu_bar.addMenu(self.tr("Usage Guide"))
+            assert guide_menu is not None
+            guide_action = guide_menu.addAction(self.tr("Open Usage Guide..."))
+            assert guide_action is not None
+            guide_action.setMenuRole(QAction.MenuRole.NoRole)
+        else:
+            guide_action = menu_bar.addAction(self.tr("Usage Guide"))
+            assert guide_action is not None
+        guide_action.setShortcut(QKeySequence(HELP_SEQUENCE))
+        guide_action.triggered.connect(self._run_capability_browser_tool)
+        self.usage_guide_action = guide_action
 
         # Top-right corner of the menu bar holds a small button bar. A QMenuBar
         # allows only one corner widget per corner, so both buttons live inside
