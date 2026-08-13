@@ -19,6 +19,33 @@ class EpisodeInfo:
         return self.file_path.name
 
 
+def _strip_technical_tokens(name: str) -> str:
+    """Strip technical metadata that confuses episode-number regexes.
+
+    Resolution tokens like "1280x720" otherwise get parsed as
+    season=1280, episode=720 by the NxN pattern (Issue #36).
+    """
+    name = re.sub(r"\d{3,4}[xX]\d{3,4}", "", name)
+    # Use explicit non-alphanumeric boundaries rather than \b: \b does not
+    # fire between an underscore and a digit (both are word chars), so
+    # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex
+    # silently skipped but the lookahead form would mine as episode 720.
+    name = re.sub(r"(?<![0-9A-Za-z])\d{3,4}[pi](?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
+    # Strip release-encoding tags whose embedded digits otherwise win the
+    # trailing-number fallback (Issue #80): video codec (x264/x265/h264/
+    # h265/av1/vp9), color bit-depth (10-bit/8bit), and the 8-hex CRC32
+    # checksum fansub groups append, e.g. "[3EEAABE6]". In the standard
+    # "[Group] Title - 03 - EpTitle [BD 1080p x265 10-bit][3EEAABE6]" format
+    # the real episode ("- 03 -") otherwise loses to "265", "10", or a
+    # checksum digit, collapsing distinct episodes onto one number and
+    # mispairing them. All three strips are required: any one left in leaves
+    # a different trailing junk number that re-triggers the collision.
+    name = re.sub(r"(?<![0-9A-Za-z])(?:[xh]\.?26[45]|av1|vp9)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"(?<![0-9A-Za-z])\d{1,2}[\s._-]?bit(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
+    name = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", name)
+    return name
+
+
 class EpisodeNumberExtractor:
     """Extract episode numbers from filenames using regex patterns."""
 
@@ -65,31 +92,7 @@ class EpisodeNumberExtractor:
         Returns:
             EpisodeInfo if episode number found, None otherwise
         """
-        filename = file_path.stem  # Remove extension
-
-        # Strip technical metadata that confuses episode-number regexes.
-        # Resolution tokens like "1280x720" otherwise get parsed as
-        # season=1280, episode=720 by the NxN pattern (Issue #36).
-        filename = re.sub(r"\d{3,4}[xX]\d{3,4}", "", filename)
-        # Use explicit non-alphanumeric boundaries rather than \b: \b does not
-        # fire between an underscore and a digit (both are word chars), so
-        # "Show_03_720p" kept "720p" — which the old consuming BARE_NUMBER regex
-        # silently skipped but the lookahead form would mine as episode 720.
-        filename = re.sub(r"(?<![0-9A-Za-z])\d{3,4}[pi](?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE)
-        # Strip release-encoding tags whose embedded digits otherwise win the
-        # trailing-number fallback (Issue #80): video codec (x264/x265/h264/
-        # h265/av1/vp9), color bit-depth (10-bit/8bit), and the 8-hex CRC32
-        # checksum fansub groups append, e.g. "[3EEAABE6]". In the standard
-        # "[Group] Title - 03 - EpTitle [BD 1080p x265 10-bit][3EEAABE6]" format
-        # the real episode ("- 03 -") otherwise loses to "265", "10", or a
-        # checksum digit, collapsing distinct episodes onto one number and
-        # mispairing them. All three strips are required: any one left in leaves
-        # a different trailing junk number that re-triggers the collision.
-        filename = re.sub(
-            r"(?<![0-9A-Za-z])(?:[xh]\.?26[45]|av1|vp9)(?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE
-        )
-        filename = re.sub(r"(?<![0-9A-Za-z])\d{1,2}[\s._-]?bit(?![0-9A-Za-z])", "", filename, flags=re.IGNORECASE)
-        filename = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", filename)
+        filename = _strip_technical_tokens(file_path.stem)
 
         for pattern, extractor in cls.PATTERNS:
             match = re.search(pattern, filename)
@@ -184,3 +187,61 @@ class EpisodeMatcher:
         pairs.sort(key=lambda p: p[2])
         # Return without the cached episode number
         return [(p[0], p[1]) for p in pairs]
+
+
+_BRACKET_GROUP = re.compile(r"\[[^\]]*\]")
+_SOURCE_TOKENS = re.compile(
+    r"\b(?:WEB(?:-?DL|Rip)?|Blu-?Ray|BD(?:Rip)?|HDTV|DVDRip|AMZN|NF|CR)\b",
+    re.IGNORECASE,
+)
+# Space before the dash is required so in-word hyphens ("Re-Start") survive.
+_RELEASE_GROUP_TAIL = re.compile(r"\s-\s*\w+\s*$")
+_EDGE_SEPARATORS = " -._"
+
+
+@dataclass(frozen=True)
+class ParsedMediaName:
+    """Series/episode fields parsed from a release-style media filename."""
+
+    series: str | None
+    season: int | None
+    episode: int | None
+    episode_title: str | None
+
+
+def parse_media_filename(path: Path) -> ParsedMediaName:
+    """Parse series / season / episode / episode-title from a media filename.
+
+    Heuristic, for pre-filling editable metadata fields (Issue #113) — a miss
+    returns None fields, never raises. Reuses ``EpisodeNumberExtractor.PATTERNS``
+    for the episode marker and splits series (before the marker) from episode
+    title (after it, with release tags stripped).
+    """
+    stem = path.stem
+    # Scene-style names separate words with dots/underscores instead of spaces.
+    if " " not in stem and re.search(r"[._]", stem):
+        stem = re.sub(r"[._]+", " ", stem)
+    cleaned = _BRACKET_GROUP.sub(" ", stem)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+
+    for pattern, extractor in EpisodeNumberExtractor.PATTERNS:
+        match = re.search(pattern, cleaned)
+        if match:
+            season, episode = extractor(match)
+            series = cleaned[: match.start()].strip(_EDGE_SEPARATORS)
+            title = _clean_episode_title(cleaned[match.end() :])
+            return ParsedMediaName(series or None, season, episode, title or None)
+
+    info = EpisodeNumberExtractor.extract_episode_info(path)
+    if info is not None:
+        return ParsedMediaName(None, info.season_number, info.episode_number, None)
+    return ParsedMediaName(None, None, None, None)
+
+
+def _clean_episode_title(tail: str) -> str:
+    tail = _strip_technical_tokens(tail)
+    tail = _SOURCE_TOKENS.sub(" ", tail)
+    tail = re.sub(r"\(\s*\)", " ", tail)  # parens emptied by the strips above
+    tail = re.sub(r"\s{2,}", " ", tail).strip(_EDGE_SEPARATORS)
+    tail = _RELEASE_GROUP_TAIL.sub("", tail)
+    return tail.strip(_EDGE_SEPARATORS)
