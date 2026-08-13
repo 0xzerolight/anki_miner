@@ -28,6 +28,7 @@ from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -67,6 +68,8 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return AudiobookTab(config, MagicMock(), MagicMock())
     if name == "backfill":
         return CardBackfillTab(config)
+    if name == "deckfilter":
+        return DeckFilterTab(config)
     if name in {"condense", "generate", "retime"}:
         return {"condense": CondenseTab, "generate": SubtitleCreationTab, "retime": SubtitleRetimeTab}[name](config)
     return {
@@ -90,6 +93,7 @@ SCREENS = [
     "generate",
     "retime",
     "backfill",
+    "deckfilter",
 ]
 
 
@@ -141,6 +145,8 @@ def screen(request, qtbot, test_config: AnkiMinerConfig):
         stack.enter_context(patch("anki_miner.gui.utils.service_factory.create_episode_processor", MagicMock()))
         stack.enter_context(patch("anki_miner.gui.widgets.backfill_tab.AnkiService"))
         stack.enter_context(patch("anki_miner.gui.widgets.backfill_tab.FetchDecksWorker"))
+        stack.enter_context(patch("anki_miner.gui.widgets.deck_filter_tab.AnkiService"))
+        stack.enter_context(patch("anki_miner.gui.widgets.deck_filter_tab.FetchDecksWorker"))
         widget = _build(request.param, test_config)
         qtbot.addWidget(widget)
         widget.resize(1000, 800)

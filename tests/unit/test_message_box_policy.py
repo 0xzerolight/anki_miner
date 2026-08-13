@@ -62,6 +62,7 @@ LEDGER: dict[str, str] = {
     "gui/main_window.py::MainWindow._on_stale_dicts_scanned": "choice",
     "gui/widgets/analytics_tab.py::AnalyticsTab._on_reset_clicked": "confirm",
     "gui/widgets/backfill_tab.py::CardBackfillTab._start_apply": "confirm",
+    "gui/widgets/deck_filter_tab.py::DeckFilterTab._start_apply": "confirm",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_import_parsed": "confirm",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_reset": "confirm",
     "gui/widgets/dialogs/profile_manager_dialog.py::ProfileManagerDialog._on_delete": "confirm",

@@ -1344,6 +1344,7 @@ def compose_main_window(
         subtitles_tab.retime_tab,
         subtitles_tab.condense_tab,
         subtitles_tab.backfill_tab,
+        subtitles_tab.deck_filter_tab,
     ):
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------

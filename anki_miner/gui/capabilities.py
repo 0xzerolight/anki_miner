@@ -41,7 +41,7 @@ SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
-    "subtitles": frozenset({"generate", "retime", "condense", "backfill"}),
+    "subtitles": frozenset({"generate", "retime", "condense", "backfill", "deckfilter"}),
 }
 
 # Display categories (deduped; translated at display time).
@@ -196,6 +196,27 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("subtitles", "condense"),
         keywords=("condense", "condensed audio", "dialogue only", "immersion", "passive listening", "standalone"),
+    ),
+    Capability(
+        id="deck-filter",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Filter a premade deck into a new deck"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Copy the notes of a premade Anki deck that survive your filters — known words, "
+            "frequency band, blacklist, script type — into a new deck. The source deck is not modified.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("subtitles", "deckfilter"),
+        keywords=(
+            "deck filter",
+            "premade deck",
+            "shared deck",
+            "core deck",
+            "filter deck",
+            "copy notes",
+            "known words",
+            "morphman",
+        ),
     ),
     Capability(
         id="card-backfill",

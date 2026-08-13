@@ -44,6 +44,7 @@ from anki_miner.gui.widgets.base.sizing import (
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
+from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
@@ -77,6 +78,7 @@ PAGES = (
     AudiobookTab,
     AnalyticsTab,
     CardBackfillTab,
+    DeckFilterTab,
     DeckBuilderTab,
 )
 
@@ -101,6 +103,7 @@ def _build_page(name: str, config):
         "AudiobookTab": lambda: AudiobookTab(config, None, MagicMock()),
         "AnalyticsTab": lambda: AnalyticsTab(MagicMock()),
         "CardBackfillTab": lambda: CardBackfillTab(config),
+        "DeckFilterTab": lambda: DeckFilterTab(config),
         "DeckBuilderTab": lambda: DeckBuilderTab(config, MagicMock(), MagicMock()),
     }
     return builders[name]()
@@ -121,6 +124,7 @@ def quiet_show(monkeypatch):
     monkeypatch.setattr(SettingsTab, "showEvent", lambda self, event: QWidget.showEvent(self, event))
     monkeypatch.setattr(AnalyticsTab, "refresh_data", lambda self, *a, **k: None)
     monkeypatch.setattr(CardBackfillTab, "_load_decks", lambda self, *a, **k: None)
+    monkeypatch.setattr(DeckFilterTab, "_load_decks", lambda self, *a, **k: None)
 
 
 def _scrolled_page(kind: PageWidth, *, content_minimum: int = 0):
