@@ -27,8 +27,9 @@ def _usable_offline_dictionary(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(DefinitionService, "has_usable_offline_provider", _has_usable_offline_provider)
 
 
-def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
-    cb = MagicMock(name="curation_callback")
+def test_curation_attrs_use_item_offset_at_curator_time(tmp_path):
+    """Season mode: the curator fires once per item, with the item's offset and
+    first pair published on the worker while the bridge is parked."""
     captured = []
 
     pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
@@ -36,17 +37,25 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
     proc = MagicMock()
 
     def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
+        curated = [] if curation_callback is None else curation_callback([_make_curation_word()])
+        return ProcessingResult(
+            total_words_found=1,
+            new_words_found=len(curated or []),
+            cards_created=len(curated or []),
+        )
+
+    proc.process_episode.side_effect = fake_process
+
+    def cb(pool):
         captured.append(
             {
                 "offset": worker._curation_offset,
                 "video": worker._curation_video,
                 "processor": worker.curation_processor,
-                "callback": curation_callback,
+                "pool": list(pool),
             }
         )
-        return SimpleNamespace(cards_created=0)
-
-    proc.process_episode.side_effect = fake_process
+        return []
 
     item = QueueItem(
         video_folder=tmp_path / "video",
@@ -73,11 +82,26 @@ def test_curation_attrs_use_item_offset_and_callback_forwarded(tmp_path):
     ):
         worker.run()
 
-    assert captured, "process_episode was not called"
+    assert captured, "curation callback was not invoked"
+    assert len(captured) == 1
     assert captured[0]["offset"] == 3.0
     assert captured[0]["video"] == pair.video
     assert captured[0]["processor"] is proc
-    assert captured[0]["callback"] is cb
+    assert [w.surface for w in captured[0]["pool"]] == ["食べる"]
+
+
+def _make_curation_word():
+    from anki_miner.models.word import TokenizedWord
+
+    return TokenizedWord(
+        surface="食べる",
+        lemma="食べる",
+        reading="たべる",
+        sentence="文",
+        start_time=1.0,
+        end_time=3.0,
+        duration=2.0,
+    )
 
 
 # ---------------------------------------------------------------------------

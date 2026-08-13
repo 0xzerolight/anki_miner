@@ -7,7 +7,7 @@ from dataclasses import replace
 from functools import partial
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import (
@@ -23,6 +23,13 @@ from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+from anki_miner.services.word_pool import (
+    CaptureCurationCallback,
+    MinePassStats,
+    merge_pools,
+    split_selection,
+)
+from anki_miner.utils.file_pairing import FilePair
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +96,10 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
+        # Season mode: episode → (subtitle, offset) for every pre-passed pair,
+        # published while the worker is parked at the curation gate so the tab
+        # can build per-episode media contexts; cleared once the gate releases.
+        self._curation_media_map: dict[Path, tuple[Path, float]] | None = None
         # The series this run will process, frozen at run() start.
         self._run_items: list[QueueItem] = []
         self._init_boundary_controls()
@@ -295,47 +306,55 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
                 interrupted = False
                 failed_pairs: list[tuple[str, str]] = []  # (video name, first error)
-                for pair, pair_key in pending_pairs:
-                    if self.check_cancelled():
-                        interrupted = True
-                        break
+                if self.curation_callback is not None:
+                    # Season mode: one curator for the whole item — pre-pass
+                    # every pair, review once, then mine. Replaces the per-pair
+                    # loop below; the terminal-status block after it is shared.
+                    cards_for_item, failed_pairs, interrupted = self._process_item_pairs_season(
+                        item, episode_processor, pending_pairs, committed_pair_keys
+                    )
+                else:
+                    for pair, pair_key in pending_pairs:
+                        if self.check_cancelled():
+                            interrupted = True
+                            break
 
-                    self._curation_video = pair.video
-                    self._curation_subtitle = pair.subtitle
-                    self._curation_offset = item.subtitle_offset
-                    try:
-                        result = episode_processor.process_episode(
-                            pair.video,
-                            pair.subtitle,
-                            progress_callback=self.progress_callback,
-                            curation_callback=self.curation_callback,
-                        )
-                    except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
-                        # Per-pair guard: process_episode now runs the card-target
-                        # preflight (Issue #52) OUTSIDE its own try, so it can raise
-                        # SetupError/AnkiConnectionError. Without this guard a single
-                        # transient AnkiConnect blip aborted the item's remaining pairs
-                        # AND dropped cards already created for earlier pairs from the
-                        # count. Record the failure and continue (mirrors
-                        # ManualPairWorkerThread's per-pair except).
-                        logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
-                        failed_pairs.append((pair.video.name, str(e)))
+                        self._curation_video = pair.video
+                        self._curation_subtitle = pair.subtitle
+                        self._curation_offset = item.subtitle_offset
+                        try:
+                            result = episode_processor.process_episode(
+                                pair.video,
+                                pair.subtitle,
+                                progress_callback=self.progress_callback,
+                                curation_callback=self.curation_callback,
+                            )
+                        except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
+                            # Per-pair guard: process_episode now runs the card-target
+                            # preflight (Issue #52) OUTSIDE its own try, so it can raise
+                            # SetupError/AnkiConnectionError. Without this guard a single
+                            # transient AnkiConnect blip aborted the item's remaining pairs
+                            # AND dropped cards already created for earlier pairs from the
+                            # count. Record the failure and continue (mirrors
+                            # ManualPairWorkerThread's per-pair except).
+                            logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
+                            failed_pairs.append((pair.video.name, str(e)))
+                            pairs_done += 1
+                            self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
+                            continue
+                        cards_for_item += result.cards_created
+                        if result.success:
+                            committed_pair_keys.add(pair_key)
                         pairs_done += 1
                         self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
-                        continue
-                    cards_for_item += result.cards_created
-                    if result.success:
-                        committed_pair_keys.add(pair_key)
-                    pairs_done += 1
-                    self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
-                    if self.check_cancelled():
-                        interrupted = True
-                        break
-                    if not result.success:
-                        # process_episode also returns soft failures as results with
-                        # errors populated; surface them per-item so the GUI marks the
-                        # item ERROR and offers retry (Issue #51).
-                        failed_pairs.append((pair.video.name, result.errors[0]))
+                        if self.check_cancelled():
+                            interrupted = True
+                            break
+                        if not result.success:
+                            # process_episode also returns soft failures as results with
+                            # errors populated; surface them per-item so the GUI marks the
+                            # item ERROR and offers retry (Issue #51).
+                            failed_pairs.append((pair.video.name, result.errors[0]))
 
                 # Partial successes still count toward the queue total (cards
                 # created before a cancel exist in Anki).
@@ -369,3 +388,146 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 self.item_failed.emit(item.id, str(e), cards_for_item)
 
         return total_cards
+
+    def _process_item_pairs_season(
+        self,
+        item: QueueItem,
+        episode_processor: EpisodeProcessor,
+        pending_pairs: list[tuple[FilePair, tuple[Path, Path]]],
+        committed_pair_keys: set[tuple[Path, Path]],
+    ) -> tuple[int, list[tuple[str, str]], bool]:
+        """Season mode: one curator for the whole series item.
+
+        Pre-pass every pending pair through ``process_episode`` with a capture
+        callback (words collected, zero cards), show the curator ONCE with the
+        merged season pool, then mine each episode's curated subset. Returns
+        ``(cards_for_item, failed_pairs, interrupted)`` for the caller's shared
+        terminal-status block.
+
+        The whole season item is one boundary unit: Pause / Finish-current
+        still land only between items, and every ``committed_pair_keys`` write
+        happens after the curator returns — a cancel at (or before) the
+        curator leaves the item fully PENDING, so a retry re-pre-passes every
+        uncommitted pair.
+
+        Progress contract: ``item_pairs_progress`` ticks only in the mine pass
+        (concluded mining attempts — the bar's documented meaning); the
+        pre-pass narrates through the presenter + per-episode stage sweeps.
+        """
+        pairs_total = len(pending_pairs)
+        pairs_done = 0
+        cards_for_item = 0
+        failed_pairs: list[tuple[str, str]] = []
+
+        # --- Pre-pass: collect every episode's reviewable words (no cards). ---
+        self.presenter.show_info(
+            QCoreApplication.translate(
+                "BatchQueueWorkerThread",
+                "Collecting words from %n episode(s) for review...",
+                "",
+                pairs_total,
+            )
+        )
+        capture = CaptureCurationCallback()
+        prepass_ok: list[tuple[FilePair, tuple[Path, Path]]] = []
+        for pair, pair_key in pending_pairs:
+            if self.check_cancelled():
+                return cards_for_item, failed_pairs, True
+            capture.set_episode(pair.video)
+            try:
+                result = episode_processor.process_episode(
+                    pair.video,
+                    pair.subtitle,
+                    progress_callback=self.progress_callback,
+                    curation_callback=capture,
+                )
+            except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
+                logger.exception("BatchQueueWorker season pre-pass pair %s failed", pair.video.name)
+                failed_pairs.append((pair.video.name, str(e)))
+                continue
+            if self.check_cancelled():
+                return cards_for_item, failed_pairs, True
+            if not result.success:
+                failed_pairs.append((pair.video.name, result.errors[0]))
+                continue
+            prepass_ok.append((pair, pair_key))
+
+        pool = merge_pools(capture.pools)
+        if not pool or not prepass_ok:
+            # Nothing to review anywhere: the pre-passed episodes ARE this
+            # item's outcome (zero-card successes), no curator to show.
+            for _pair, pair_key in prepass_ok:
+                committed_pair_keys.add(pair_key)
+                pairs_done += 1
+                self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
+            return cards_for_item, failed_pairs, False
+
+        # --- One curator for the merged season pool. ---
+        first_pair = prepass_ok[0][0]
+        self._curation_video = first_pair.video
+        self._curation_subtitle = first_pair.subtitle
+        self._curation_offset = item.subtitle_offset
+        self._curation_media_map = {pair.video: (pair.subtitle, item.subtitle_offset) for pair, _key in prepass_ok}
+        try:
+            assert self.curation_callback is not None  # season mode precondition
+            selection = self.curation_callback(pool)
+        finally:
+            self._curation_media_map = None
+        if selection is None or self.check_cancelled():
+            # Reject cancels the whole run (the bridge already called
+            # cancel()); nothing committed, item returns to PENDING.
+            return cards_for_item, failed_pairs, True
+
+        # --- Mine pass: each episode gets its curated subset. ---
+        subsets = split_selection(selection)
+        strays = subsets.pop(None, None)
+        if strays:
+            # Defensive: unstamped words mine from the first episode.
+            subsets.setdefault(first_pair.video, []).extend(strays)
+
+        original_stats = episode_processor.stats_service
+        if original_stats is not None:
+            # The pre-pass already recorded one difficulty row per episode;
+            # the mine pass must not insert duplicates.
+            episode_processor.stats_service = MinePassStats(original_stats)
+        try:
+            for pair, pair_key in prepass_ok:
+                if self.check_cancelled():
+                    return cards_for_item, failed_pairs, True
+                subset = subsets.get(pair.video, [])
+                if not subset:
+                    # User selected nothing from this episode — the pre-pass
+                    # zero-card success stands; mirror per-episode [] = skip.
+                    committed_pair_keys.add(pair_key)
+                    pairs_done += 1
+                    self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
+                    continue
+                try:
+                    result = episode_processor.process_episode(
+                        pair.video,
+                        pair.subtitle,
+                        progress_callback=self.progress_callback,
+                        # Curated objects pass through verbatim to phases 3-5:
+                        # chosen sentence, clip_override and times are already
+                        # this episode's (same offset both passes).
+                        curation_callback=lambda words, _subset=subset: _subset,
+                    )
+                except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
+                    logger.exception("BatchQueueWorker season mine pair %s failed", pair.video.name)
+                    failed_pairs.append((pair.video.name, str(e)))
+                    pairs_done += 1
+                    self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
+                    continue
+                cards_for_item += result.cards_created
+                if result.success:
+                    committed_pair_keys.add(pair_key)
+                pairs_done += 1
+                self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
+                if self.check_cancelled():
+                    return cards_for_item, failed_pairs, True
+                if not result.success:
+                    failed_pairs.append((pair.video.name, result.errors[0]))
+        finally:
+            episode_processor.stats_service = original_stats
+
+        return cards_for_item, failed_pairs, False
