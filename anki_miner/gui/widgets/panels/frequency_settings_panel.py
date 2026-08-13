@@ -139,9 +139,8 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
                 # frequency layers every enabled source, while order controls
                 # only the source list rendered on cards.
                 explanation=self.tr(
-                    "Every enabled source contributes. The lowest rank is used for filtering; "
-                    "Frequency Sort uses the harmonic mean. This order controls how sources "
-                    "are listed on the card."
+                    "Every enabled source counts: filtering uses the lowest rank, Frequency "
+                    "Sort the harmonic mean. Order only sets the card's source list."
                 ),
                 add=self.tr("Add frequency source…"),
                 remove=self.tr("Remove frequency source"),

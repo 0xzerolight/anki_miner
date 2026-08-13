@@ -535,8 +535,8 @@
         <translation>Tipo de Cartão</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
-        <translation>Para tipos de nota no estilo JP Mining Note: marque um “x” em um campo marcador para que cada cartão minerado seja renderizado como o tipo escolhido. Deixe “Nenhum” se o seu tipo de nota não tiver esses campos.</translation>
+        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
+        <translation>Para tipos de nota no estilo JP Mining Note: um “x” em um campo marcador seleciona como cada cartão minerado é renderizado.</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -891,8 +891,8 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Áudio de frase (fontes de leitura)</translation>
     </message>
     <message>
-        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation>Gera áudio falado das frases para cartões minerados de mangás e livros (que não têm áudio de origem). O texto da frase é enviado aos serviços online selecionados.</translation>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>Adicione áudio falado aos cartões de mangá e livros, que não possuem áudio de origem. O texto da frase é enviado aos serviços online selecionados.</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
@@ -1652,14 +1652,6 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip captions &amp; speaker tags</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove sound-effect captions, speaker labels and inline furigana from subtitles before parsing.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3159,8 +3151,8 @@ Ignorados (não elegíveis para reparo automático; use Reimportar… por linha)
         <translation>Readicionar dicionários encontrados na pasta de armazenamento que não estão na lista acima (por exemplo, após uma redefinição de configurações). Nenhuma reimportação necessária.</translation>
     </message>
     <message>
-        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
-        <translation>Os dicionários são tentados de cima para baixo — o primeiro com uma entrada para uma palavra será usado, e sua definição preencherá o campo MainDefinition.</translation>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
+        <translation>Tentados de cima para baixo — o primeiro dicionário com uma entrada para a palavra vence e preenche MainDefinition.</translation>
     </message>
     <message>
         <source>Add dictionary…</source>
@@ -3846,14 +3838,6 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <translation>Usar Banco de Dados Local de Palavras Conhecidas</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>Tratar Grafias em Kana de Palavras Conhecidas como Conhecidas</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>Quando uma legenda grafa uma palavra em kana (ex.: うなずく) e a forma de dicionário em kanji (頷く) já está na sua coleção ou lista de palavras conhecidas, ela é ignorada em vez de criar um segundo cartão. Grafias em kanji nunca são mescladas dessa forma.</translation>
-    </message>
-    <message>
         <source>Rebuild Known Words DB</source>
         <translation>Reconstruir BD de Palavras Conhecidas</translation>
     </message>
@@ -3926,8 +3910,8 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <translation>Conjuntos de Nomes</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>Exclui listas integradas de substantivos próprios japoneses (nomes de pessoas e lugares) da mineração. Útil para séries que despejam muitos nomes de personagens e lugares. Um nome que você realmente quer é resgatado pela lista de permissões acima.</translation>
+        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
+        <translation>Exclua listas incluídas de nomes de pessoas e lugares japoneses da mineração. Nomes na whitelist ainda são minerados.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -3940,22 +3924,6 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Filtragem de Texto das Legendas</translation>
-    </message>
-    <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation>Remover anotações das legendas (legendas de efeitos sonoros, marcações de falantes, furigana em linha)</translation>
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation>Remova anotações de legenda que não sejam diálogos antes da mineração: efeitos sonoros ocupando a linha inteira, como (電話), marcações iniciais de falantes, como (Tanaka), e furigana em linha, como 瀕死(ひんし). Ativado por padrão; o filtro regex abaixo ainda é aplicado em conjunto.</translation>
-    </message>
-    <message>
-        <source>Skip katakana-stylized subtitle cues</source>
-        <translation>Ignorar marcas de legenda estilizadas em katakana</translation>
-    </message>
-    <message>
-        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
-        <translation>Ignorar uma marca de legenda inteira quando ela contiver katakana, mas não hiragana. Use apenas em fontes que estilizam o diálogo de um falante em katakana; marcas válidas compostas apenas de estrangeirismos também serão ignoradas. Desativado por padrão.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -4036,6 +4004,14 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
         <translation>Ignorar palavras escritas inteiramente em katakana (ex.: コーヒー). Marque as duas caixas para ignorar também palavras que misturam os dois silabários kana (サボる, ヤバい).</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>Tratar Grafias em Kana de Palavras Conhecidas como Conhecidas</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>Quando uma legenda grafa uma palavra em kana (ex.: うなずく) e a forma de dicionário em kanji (頷く) já está na sua coleção ou lista de palavras conhecidas, ela é ignorada em vez de criar um segundo cartão. Grafias em kanji nunca são mescladas dessa forma.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -4254,8 +4230,8 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
-        <translation type="unfinished" />
+        <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
+        <translation>Toda fonte ativada conta: a filtragem usa a classificação mais baixa, Frequency Sort a média harmônica. A ordem só define a lista de fontes do cartão.</translation>
     </message>
     <message>
         <source>Add frequency source…</source>
@@ -5372,8 +5348,8 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-        <translation>As fontes são verificadas de cima para baixo — a primeira fonte com uma entrada de acento tonal para uma palavra será usada. As fontes inferiores preenchem apenas as palavras ausentes nas superiores.</translation>
+        <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
+        <translation>Verificadas de cima para baixo — a primeira fonte com uma entrada de acento tonal para a palavra vence.</translation>
     </message>
     <message>
         <source>Add pitch source…</source>
@@ -7976,10 +7952,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Download do modelo</translation>
     </message>
     <message>
-        <source>Required before subtitle generation can run.</source>
-        <translation>Necessário antes de a geração de legendas poder ser executada.</translation>
-    </message>
-    <message>
         <source>Transcription add-ons (optional)</source>
         <translation>Complementos de transcrição (opcional)</translation>
     </message>
@@ -8028,10 +8000,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Modelo Vulkan</translation>
     </message>
     <message>
-        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation>Transcrição mais rápida em GPUs AMD, Intel ou NVIDIA (Vulkan).</translation>
-    </message>
-    <message>
         <source>Alignment</source>
         <translation>Alinhamento</translation>
     </message>
@@ -8058,10 +8026,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>alass download</source>
         <translation>Download do alass</translation>
-    </message>
-    <message>
-        <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation>Necessário para o reajuste de tempo, a menos que o alass já esteja no seu PATH.</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -8314,10 +8278,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Tamanho do texto</translation>
     </message>
     <message>
-        <source>Text size will change after restart.</source>
-        <translation>O tamanho do texto mudará após reiniciar.</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>Reiniciar agora</translation>
     </message>
@@ -8334,8 +8294,8 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Use os seletores de arquivo nativos do sistema operacional. Desative isto para usar o seletor integrado do aplicativo, que segue o tema do aplicativo e tem a mesma aparência em todas as plataformas.</translation>
     </message>
     <message>
-        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Cada tema é exibido como uma prévia do aplicativo. Clique em um para aplicá-lo ao vivo e favorite os que quiser no seletor do canto superior direito. Pressione &lt;b&gt;Reverter&lt;/b&gt; para desfazer sua prévia.</translation>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
+        <translation>Clique na pré-visualização de um tema para aplicá-lo ao vivo; &lt;b&gt;Reverter&lt;/b&gt; desfaz. Marque temas com estrela para adicioná-los ao seletor no canto superior direito.</translation>
     </message>
     <message>
         <source>Open themes folder</source>

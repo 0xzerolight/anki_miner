@@ -471,17 +471,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "filtering"),
         keywords=("kana variant", "kana spelling", "alternate spelling", "hiragana form", "same word"),
     ),
-    Capability(
-        id="subtitle-annotation-strip",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Strip captions & speaker tags"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Remove sound-effect captions, speaker labels and inline furigana from subtitles before parsing.",
-        ),
-        category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
-        keywords=("sfx", "captions", "speaker labels", "hearing impaired", "closed captions", "annotations"),
-    ),
     # --- Dictionaries, frequency & pitch -----------------------------------
     Capability(
         id="dictionary-chain",

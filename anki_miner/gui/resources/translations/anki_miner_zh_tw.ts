@@ -534,8 +534,8 @@
         <translation>卡片類型</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
-        <translation>適用於 JP Mining Note 風格的筆記類型：在標記欄位中蓋上「x」，使每張採集的卡片以所選類型呈現。若你的筆記類型沒有這類欄位，請保留「無」。</translation>
+        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
+        <translation>適用於 JP Mining Note 樣式的筆記類型：標記欄位中的 “x” 決定每張採集卡片的渲染方式。</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -890,8 +890,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>句子音訊（閱讀來源）</translation>
     </message>
     <message>
-        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation>為從漫畫和書籍採集的卡片產生朗讀句子音訊（這些沒有原始音訊）。句子文字會傳送至所選的線上服務。</translation>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>為漫畫與書籍等沒有原始音訊的來源，於卡片新增朗讀音訊。例句文字將傳送至所選的線上服務。</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
@@ -1651,14 +1651,6 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip captions &amp; speaker tags</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove sound-effect captions, speaker labels and inline furigana from subtitles before parsing.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3158,8 +3150,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>重新加入儲存資料夾中找到但不在上方清單的字典（例如設定重設後）。無需重新匯入。</translation>
     </message>
     <message>
-        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
-        <translation>字典會由上而下嘗試 — 第一個含有該單字條目的字典會被採用，其釋義會填入 MainDefinition 欄位。</translation>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
+        <translation>由上而下依序嘗試 — 第一個找到該詞條目的字典勝出，並填入 MainDefinition。</translation>
     </message>
     <message>
         <source>Add dictionary…</source>
@@ -3834,14 +3826,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>使用本機已知單字資料庫</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>將已知單字的假名拼寫視為已知</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>當字幕以假名拼寫單字（例如 うなずく），而該單字的漢字字典形（頷く）已在您的收藏或已知單字清單中時，則略過該單字，而不建立第二張卡片。漢字拼寫絕不會以此方式合併。</translation>
-    </message>
-    <message>
         <source>Rebuild Known Words DB</source>
         <translation>重建已知單字資料庫</translation>
     </message>
@@ -3914,8 +3898,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>名稱單字集</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>從採集中排除內建的日文專有名詞清單（人名與地名）。適合會出現大量角色與地名的節目。若某個名稱你確實想要，可用上方的白名單救回。</translation>
+        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
+        <translation>從採集中排除內建的日本人名與地名清單。已列入白名單的名稱仍會被採集。</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -3928,22 +3912,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>字幕文字篩選</translation>
-    </message>
-    <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation>移除字幕註解（音效字幕、說話者標籤、行內振假名）</translation>
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation>採集前移除非對話的字幕註解：例如整行音效(電話)、開頭的說話者標籤 (Tanaka)，以及行內振假名瀕死(ひんし)。預設開啟；下方的正規表示式篩選器仍會接續套用。</translation>
-    </message>
-    <message>
-        <source>Skip katakana-stylized subtitle cues</source>
-        <translation>略過以片假名呈現的字幕提示</translation>
-    </message>
-    <message>
-        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
-        <translation>當整個字幕提示含有片假名但沒有平假名時略過。僅適用於以片假名呈現說話者對白的來源；有效的純外來語提示也會被略過。預設為關閉。</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -4024,6 +3992,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
         <translation>略過完全以片假名書寫的詞（如 コーヒー）。同時勾選兩項，也會略過混用兩種假名的詞（サボる、ヤバい）。</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>將已知單字的假名拼寫視為已知</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>當字幕以假名拼寫單字（例如 うなずく），而該單字的漢字字典形（頷く）已在您的收藏或已知單字清單中時，則略過該單字，而不建立第二張卡片。漢字拼寫絕不會以此方式合併。</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -4242,8 +4218,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
-        <translation type="unfinished" />
+        <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
+        <translation>每個已啟用的來源皆列入計算：篩選使用最低排名，Frequency Sort 使用調和平均數。順序僅決定卡片的來源清單。</translation>
     </message>
     <message>
         <source>Add frequency source…</source>
@@ -5360,8 +5336,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-        <translation>來源會由上而下檢查 — 第一個含有該單字高低音調條目的來源會被採用。較下方的來源僅填入上方來源遺漏的單字。</translation>
+        <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
+        <translation>由上而下依序檢查 — 第一個找到該詞高低音調條目的來源勝出。</translation>
     </message>
     <message>
         <source>Add pitch source…</source>
@@ -7962,10 +7938,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>模型下載</translation>
     </message>
     <message>
-        <source>Required before subtitle generation can run.</source>
-        <translation>字幕產生執行前必須先下載。</translation>
-    </message>
-    <message>
         <source>Transcription add-ons (optional)</source>
         <translation>轉錄附加元件（選用）</translation>
     </message>
@@ -8014,10 +7986,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Vulkan 模型</translation>
     </message>
     <message>
-        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation>在 AMD、Intel 或 NVIDIA GPU（Vulkan）上加快轉錄速度。</translation>
-    </message>
-    <message>
         <source>Alignment</source>
         <translation>對齊</translation>
     </message>
@@ -8044,10 +8012,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>alass download</source>
         <translation>alass 下載</translation>
-    </message>
-    <message>
-        <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation>除非 alass 已在您的 PATH 中，否則重新校時需要它。</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -8300,10 +8264,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>文字大小</translation>
     </message>
     <message>
-        <source>Text size will change after restart.</source>
-        <translation>文字大小將在重新啟動後變更。</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>立即重新啟動</translation>
     </message>
@@ -8320,8 +8280,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>使用作業系統的原生檔案選擇器。關閉此選項可改用應用程式內建選擇器，它會遵循應用程式主題，且在每個平台上外觀一致。</translation>
     </message>
     <message>
-        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>每個主題都會顯示為應用程式預覽。點選即可即時套用，並為想要顯示在右上角選擇器的主題加星號。按 &lt;b&gt;還原&lt;/b&gt; 可復原預覽。</translation>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
+        <translation>點選主題預覽即可即時套用；&lt;b&gt;還原&lt;/b&gt;可復原變更。將主題加上星號即可加入右上角的選擇器。</translation>
     </message>
     <message>
         <source>Open themes folder</source>

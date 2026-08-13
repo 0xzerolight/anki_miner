@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import zipfile
-from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -167,20 +166,6 @@ def test_process_reading_receives_loaded_document(make_worker, mock_processor, f
 
     call = mock_processor.process_reading.call_args
     assert call.args == (doc,)
-
-
-def test_load_receives_annotation_opt_out(make_worker, test_config, fake_load):
-    config = replace(test_config, strip_subtitle_annotations=False)
-    item = _make_item("ep01", kind="subtitle")
-    worker = make_worker(items=[item], config=config)
-
-    worker.run()
-
-    fake_load.assert_called_once_with(
-        item.source,
-        strip_subtitle_annotations=False,
-        cancel_check=worker.check_cancelled,
-    )
 
 
 def test_load_receives_worker_cancel_check(make_worker, fake_load):

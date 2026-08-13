@@ -534,7 +534,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
+        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -885,7 +885,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1641,14 +1641,6 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip captions &amp; speaker tags</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove sound-effect captions, speaker labels and inline furigana from subtitles before parsing.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3141,7 +3133,7 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3812,14 +3804,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Rebuild Known Words DB</source>
         <translation type="unfinished" />
     </message>
@@ -3892,7 +3876,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
+        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3905,22 +3889,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Subtitle Text Filtering</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Skip katakana-stylized subtitle cues</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4001,6 +3969,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4220,7 +4196,7 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
+        <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5325,7 +5301,7 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
+        <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7919,10 +7895,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Required before subtitle generation can run.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Transcription add-ons (optional)</source>
         <translation type="unfinished" />
     </message>
@@ -7971,10 +7943,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Alignment</source>
         <translation type="unfinished" />
     </message>
@@ -8000,10 +7968,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>alass download</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Needed for retiming unless alass is already on your PATH.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8257,10 +8221,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Text size will change after restart.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Restart now</source>
         <translation type="unfinished" />
     </message>
@@ -8277,7 +8237,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation type="unfinished" />
     </message>
     <message>

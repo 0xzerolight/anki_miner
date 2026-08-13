@@ -534,8 +534,8 @@
         <translation>Tipe Kartu</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
-        <translation>Untuk tipe catatan bergaya JP Mining Note: stempelkan “x” ke bidang penanda agar setiap kartu hasil mining ditampilkan sebagai tipe yang dipilih. Biarkan “None” jika tipe catatan Anda tidak memiliki bidang seperti itu.</translation>
+        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
+        <translation>Untuk tipe catatan bergaya JP Mining Note: “x” pada bidang penanda menentukan cara setiap kartu hasil mining dirender.</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -890,8 +890,8 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Audio Kalimat (Sumber Bacaan)</translation>
     </message>
     <message>
-        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation>Buat audio kalimat lisan untuk kartu yang di-mining dari manga dan buku (yang tidak memiliki audio sumber). Teks kalimat dikirim ke layanan daring yang dipilih.</translation>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>Tambahkan audio lisan ke kartu dari manga dan buku, yang tidak memiliki audio sumber. Teks kalimat dikirim ke layanan daring yang dipilih.</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
@@ -1651,14 +1651,6 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip captions &amp; speaker tags</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove sound-effect captions, speaker labels and inline furigana from subtitles before parsing.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3158,8 +3150,8 @@ Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang…
         <translation>Tambahkan kembali kamus yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas (mis. setelah pengaturan disetel ulang). Tidak perlu impor ulang.</translation>
     </message>
     <message>
-        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
-        <translation>Kamus dicoba dari atas ke bawah — yang pertama memiliki entri untuk suatu kata akan dipakai, dan definisinya mengisi bidang MainDefinition.</translation>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
+        <translation>Dicoba dari atas ke bawah — kamus pertama yang memiliki entri untuk suatu kata menang dan mengisi MainDefinition.</translation>
     </message>
     <message>
         <source>Add dictionary…</source>
@@ -3834,14 +3826,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Gunakan Basis Data Kata yang Dikenal Lokal</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>Anggap Ejaan Kana dari Kata yang Dikenal sebagai Dikenal</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>Ketika subtitel mengeja kata dalam kana (misalnya うなずく) dan bentuk kamus kanji-nya (頷く) sudah ada di koleksi Anda atau daftar kata yang dikenal, kata tersebut dilewati alih-alih dibuatkan kartu kedua. Ejaan kanji tidak pernah digabungkan dengan cara ini.</translation>
-    </message>
-    <message>
         <source>Rebuild Known Words DB</source>
         <translation>Bangun Ulang DB Kata yang Dikenal</translation>
     </message>
@@ -3914,8 +3898,8 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Kumpulan Kata Nama</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>Kecualikan daftar bawaan nama diri Jepang (nama orang dan nama tempat) dari mining. Berguna untuk tayangan yang banyak memuat nama tokoh dan tempat. Nama yang benar-benar Anda inginkan dapat diselamatkan oleh daftar putih di atas.</translation>
+        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
+        <translation>Kecualikan daftar bawaan nama orang dan tempat Jepang dari mining. Nama pada daftar putih tetap di-mining.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -3928,22 +3912,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Pemfilteran Teks Subtitel</translation>
-    </message>
-    <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation>Hapus anotasi subtitel (teks efek suara, tag pembicara, furigana sebaris)</translation>
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation>Hapus anotasi subtitel nondialog sebelum mining: efek suara sebaris penuh seperti (電話), tag pembicara di awal seperti (Tanaka), dan furigana sebaris seperti 瀕死(ひんし). Aktif secara bawaan; filter regex di bawah tetap diterapkan sebagai tambahan.</translation>
-    </message>
-    <message>
-        <source>Skip katakana-stylized subtitle cues</source>
-        <translation>Lewati baris subtitel bergaya katakana</translation>
-    </message>
-    <message>
-        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
-        <translation>Buang seluruh baris subtitel jika berisi katakana tetapi tidak ada hiragana. Gunakan hanya untuk sumber yang menata dialog penutur dalam katakana; baris subtitel sah yang hanya berisi kata serapan juga dibuang. Nonaktif secara bawaan.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -4024,6 +3992,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
         <translation>Lewati kata yang ditulis sepenuhnya dengan katakana (mis. コーヒー). Centang kedua kotak untuk melewati juga kata yang mencampur kedua aksara kana (サボる, ヤバい).</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>Anggap Ejaan Kana dari Kata yang Dikenal sebagai Dikenal</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>Ketika subtitel mengeja kata dalam kana (misalnya うなずく) dan bentuk kamus kanji-nya (頷く) sudah ada di koleksi Anda atau daftar kata yang dikenal, kata tersebut dilewati alih-alih dibuatkan kartu kedua. Ejaan kanji tidak pernah digabungkan dengan cara ini.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -4242,8 +4218,8 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
-        <translation type="unfinished" />
+        <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
+        <translation>Setiap sumber yang diaktifkan diperhitungkan: penyaringan memakai peringkat terendah, Frequency Sort memakai rata-rata harmonik. Urutan hanya menentukan daftar sumber pada kartu.</translation>
     </message>
     <message>
         <source>Add frequency source…</source>
@@ -5360,8 +5336,8 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-        <translation>Sumber diperiksa dari atas ke bawah — sumber pertama yang memiliki entri aksen nada untuk suatu kata akan dipakai. Sumber di bawah hanya mengisi kata yang tidak ditemukan sumber di atas.</translation>
+        <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
+        <translation>Diperiksa dari atas ke bawah — sumber pertama yang memiliki entri aksen nada untuk suatu kata menang.</translation>
     </message>
     <message>
         <source>Add pitch source…</source>
@@ -7962,10 +7938,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Unduhan model</translation>
     </message>
     <message>
-        <source>Required before subtitle generation can run.</source>
-        <translation>Diperlukan sebelum pembuatan subtitel dapat dijalankan.</translation>
-    </message>
-    <message>
         <source>Transcription add-ons (optional)</source>
         <translation>Pengaya transkripsi (opsional)</translation>
     </message>
@@ -8014,10 +7986,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Model Vulkan</translation>
     </message>
     <message>
-        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation>Transkripsi lebih cepat pada GPU AMD, Intel, atau NVIDIA (Vulkan).</translation>
-    </message>
-    <message>
         <source>Alignment</source>
         <translation>Penyelarasan</translation>
     </message>
@@ -8044,10 +8012,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>alass download</source>
         <translation>Unduhan alass</translation>
-    </message>
-    <message>
-        <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation>Diperlukan untuk penyesuaian waktu kecuali alass sudah ada di PATH Anda.</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -8300,10 +8264,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Ukuran teks</translation>
     </message>
     <message>
-        <source>Text size will change after restart.</source>
-        <translation>Ukuran teks akan berubah setelah dimulai ulang.</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>Mulai ulang sekarang</translation>
     </message>
@@ -8320,8 +8280,8 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Gunakan pemilih berkas bawaan sistem operasi. Nonaktifkan ini untuk menggunakan pemilih bawaan aplikasi, yang mengikuti tema aplikasi dan tampak sama pada setiap platform.</translation>
     </message>
     <message>
-        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Setiap tema ditampilkan sebagai pratinjau aplikasi. Klik satu untuk menerapkannya langsung, dan bintangi yang Anda inginkan di pemilih kanan atas. Tekan &lt;b&gt;Kembalikan&lt;/b&gt; untuk membatalkan pratinjau.</translation>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
+        <translation>Klik pratinjau tema untuk menerapkannya secara langsung; &lt;b&gt;Kembalikan&lt;/b&gt; membatalkannya. Beri bintang pada tema untuk menambahkannya ke pemilih di kanan atas.</translation>
     </message>
     <message>
         <source>Open themes folder</source>

@@ -93,7 +93,7 @@ class TestRestartToApply:
         # The running process is untouched: this is the whole point of D39b-A.
         assert Theme.get_font_scale() == pytest.approx(1.0)
         assert panel.font_scale_restart_row.isVisible() or not panel.isVisible()
-        assert panel.font_scale_restart_note.text() == "Text size will change after restart."
+        assert panel.font_scale_restart_note.text() == "Restart to apply."
 
     def test_activated_signal_drives_the_same_path(self, panel: UISettingsPanel) -> None:
         captured: list[float] = []

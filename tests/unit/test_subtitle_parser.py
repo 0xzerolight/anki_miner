@@ -2792,11 +2792,12 @@ class TestSubtitleRegexFilter:
             subtitle_regex_filter=r"\([^)]*\)",
             subtitle_regex_replacement="",
             use_subtitle_regex_filter=False,
-            # Isolate the regex filter from the default-ON structural strip (U1),
-            # which would otherwise peel the leading (田中) speaker tag itself.
-            strip_subtitle_annotations=False,
         )
-        sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) 今日はいい天気", 0, 2000)])
+        # Mid-line kanji-content paren group: untouched by all three structural
+        # strip passes (furigana needs kana content, whole-line needs a
+        # group-only line, speaker needs line-start), so only the regex filter
+        # could remove it.
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("今日は(公式)いい天気", 0, 2000)])
         with (
             patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
@@ -2805,7 +2806,7 @@ class TestSubtitleRegexFilter:
             entries = service.parse_raw_entries(sub_file)
 
         # Filter disabled: full text survives.
-        assert entries[0][2] == "(田中) 今日はいい天気"
+        assert entries[0][2] == "今日は(公式)いい天気"
 
     def test_strips_parens_from_raw_entries(self, tmp_path):
         config = AnkiMinerConfig(
@@ -2858,11 +2859,11 @@ class TestSubtitleRegexFilter:
             subtitle_regex_filter=r"\((.*?)\)",
             subtitle_regex_replacement=r"\1",
             use_subtitle_regex_filter=True,
-            # Isolate the regex backref path from the default-ON structural strip
-            # (U1), which would peel the leading (田中) before the regex runs.
-            strip_subtitle_annotations=False,
         )
-        sub_file, mock_subs = self._patch_subs(tmp_path, [("(田中) こんにちは", 0, 2000)])
+        # Mid-line kanji-content paren group survives the structural strip
+        # (see test_disabled_filter_passes_text_through), so the backref
+        # substitution is what unwraps it.
+        sub_file, mock_subs = self._patch_subs(tmp_path, [("今日は(公式)いい天気", 0, 2000)])
         with (
             patch("anki_miner.services.subtitle_parser.get_shared_tagger"),
             patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
@@ -2871,7 +2872,7 @@ class TestSubtitleRegexFilter:
             entries = service.parse_raw_entries(sub_file)
 
         # Parens dropped, inner content kept.
-        assert entries[0][2] == "田中 こんにちは"
+        assert entries[0][2] == "今日は公式いい天気"
 
     def test_invalid_regex_disables_filter_without_crashing(self, tmp_path, caplog):
         # Unbalanced paren is a re.error. Parser must construct cleanly and the
@@ -2979,55 +2980,20 @@ class TestSubtitleRegexFilter:
         assert entries[0][2] == "歌う こんにちは"
 
 
-class TestKanaStylizedCueFilter:
-    @pytest.mark.parametrize(
-        "cue",
-        [
-            "見テ分カレ！",
-            "コレガ夏油ノ言ッテイタ...",
-            "コレ１本編ムノニ 俺ノ国ノ術師ガ",
-            "ヒットアンドアウェイニ徹シテ...",
-            "ダカラ影武者ノ１人デモ...",
-            "ノルママデ アト12分強",
-            "俺ラハ足止メデショ",
-            "死ンダラ祟ルゾ 夏油！",
-        ],
-    )
-    def test_enabled_drops_cues_with_katakana_and_no_hiragana(self, tmp_path, cue):
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            skip_kana_stylized_cues=True,
-        )
-        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
-            service = SubtitleParserService(config)
-
-        assert service._clean_line_text(cue) == ""
+class TestKatakanaOnlyCuesPreserved:
+    """Katakana-stylized cue skipping was removed: a cue with katakana and
+    no hiragana always passes _clean_line_text unchanged."""
 
     @pytest.mark.parametrize(
         "cue",
-        [
-            "ツナ",
-            "ツナマヨ",
-            "肉ジャガ",
-            "ヒットアンドアウェイ",
-        ],
+        ["見テ分カレ！", "死ンダラ祟ルゾ 夏油！", "ツナマヨ", "肉ジャガ", "ヒットアンドアウェイ"],
     )
-    def test_default_off_preserves_valid_false_positives(self, tmp_path, cue):
+    def test_katakana_only_cue_passes_through(self, tmp_path, cue):
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(config)
 
         assert service._clean_line_text(cue) == cue
-
-    def test_enabled_keeps_cue_containing_hiragana(self, tmp_path):
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            skip_kana_stylized_cues=True,
-        )
-        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
-            service = SubtitleParserService(config)
-
-        assert service._clean_line_text("ツナマヨが好き") == "ツナマヨが好き"
 
 
 # ---------------------------------------------------------------------------
@@ -5991,17 +5957,13 @@ class TestCompoundMergeAttestGate:
 
 
 class TestAnnotationStripping:
-    """Default-ON structural strip of SFX captions / speaker tags / inline
-    furigana at the parser choke point (config.strip_subtitle_annotations)."""
+    """Always-on structural strip of SFX captions / speaker tags / inline
+    furigana at the parser choke point."""
 
     @staticmethod
     def _keyed_tagger():
-        """Fake tagger returning tokens by exact input text.
-
-        Covers both the stripped form the tagger sees when stripping is ON and
-        the raw annotation form it sees when stripping is OFF, so the two runs
-        exercise the same tagger.
-        """
+        """Fake tagger returning tokens by exact input text (the stripped forms
+        the tagger sees)."""
 
         def tokenize(text):
             table = {
@@ -6011,19 +5973,9 @@ class TestAnnotationStripping:
                     _make_token("を", "助詞"),
                     _make_token("読む", "動詞", lemma="読む", kana="ヨム"),
                 ],
-                # Annotation line, STRIPPED form (stripping ON): only the filler
-                # ん… survives, which is not mineable.
+                # Annotation line, STRIPPED form: only the filler ん… survives,
+                # which is not mineable.
                 "ん…": [
-                    _make_token("ん", "感動詞", lemma="ん", kana="ン"),
-                    _make_token("…", "補助記号"),
-                ],
-                # Annotation line, RAW form (stripping OFF): the speaker-tag
-                # name 旬 tokenizes as a mineable 名詞 — the junk we kill.
-                "（水篠(みずしの) 旬(しゅん)）ん…": [
-                    _make_token("水篠", "名詞", pos2="固有名詞", lemma="水篠", kana="ミズシノ"),
-                    _make_token("みずしの", "名詞", pos2="普通名詞", lemma="みずしの", kana="ミズシノ"),
-                    _make_token("旬", "名詞", pos2="普通名詞", lemma="旬", kana="シュン"),
-                    _make_token("しゅん", "名詞", pos2="普通名詞", lemma="しゅん", kana="シュン"),
                     _make_token("ん", "感動詞", lemma="ん", kana="ン"),
                     _make_token("…", "補助記号"),
                 ],
@@ -6084,25 +6036,6 @@ class TestAnnotationStripping:
         assert "しゅん" not in readings and "ずし" not in readings
         assert "読む" in lemmas  # legit dialogue survives
 
-    def test_config_off_is_byte_identical_old_behavior(self, tmp_path):
-        """Stripping OFF: the raw annotation line reaches the tagger unchanged,
-        so 旬 IS mined — proving the strip (not something else) removes it."""
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            strip_subtitle_annotations=False,
-        )
-        sub_file = tmp_path / "t.ass"
-        sub_file.write_text("x", encoding="utf-8")
-
-        subs = self._subs("（水篠(みずしの) 旬(しゅん)）ん…")
-        service, cm = self._make_service(config, self._keyed_tagger(), subs)
-        try:
-            words = service.parse_subtitle_file(sub_file)
-        finally:
-            cm.stop()
-
-        assert "旬" in {w.surface for w in words}
-
     def test_emitted_sentence_is_the_stripped_text(self, test_config, tmp_path):
         """The Sentence stored on the card is the STRIPPED line, with the inline
         furigana gone (no leftover (ひんし))."""
@@ -6136,25 +6069,6 @@ class TestAnnotationStripping:
 
         assert len(entries) == 1
         assert entries[0][2] == "瀕死の重傷"
-
-    def test_parse_raw_entries_no_strip_when_off(self, tmp_path):
-        """Display path leaves the annotation intact when stripping is OFF."""
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            strip_subtitle_annotations=False,
-        )
-        sub_file = tmp_path / "t.ass"
-        sub_file.write_text("x", encoding="utf-8")
-
-        subs = self._subs("瀕死(ひんし)の重傷")
-        service, cm = self._make_service(config, self._keyed_tagger(), subs)
-        try:
-            entries = service.parse_raw_entries(sub_file)
-        finally:
-            cm.stop()
-
-        assert len(entries) == 1
-        assert entries[0][2] == "瀕死(ひんし)の重傷"
 
     def test_whole_line_caption_yields_no_words(self, test_config, tmp_path):
         """A pure SFX caption line strips to empty and is skipped entirely on

@@ -534,8 +534,8 @@
         <translation>カードタイプ</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
-        <translation>JP Mining Note 系のノートタイプ向け：マーカーフィールドに「x」を打刻し、マイニングした各カードを選択したタイプとして表示します。該当するフィールドがないノートタイプの場合は「なし」のままにしてください。</translation>
+        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
+        <translation>JP Mining Note 形式のノートタイプでは、マーカーフィールド内の「x」がマイニングされた各カードの表示形式を選択します。</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -890,8 +890,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>文章音声（読みソース）</translation>
     </message>
     <message>
-        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation>マンガや書籍からマイニングしたカード（元の音声がありません）用に、読み上げた文章音声を生成します。文章テキストは選択したオンラインサービスに送信されます。</translation>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>漫画や書籍など、音声ソースがないカードに読み上げ音声を追加します。文章のテキストは選択したオンラインサービスに送信されます。</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
@@ -1651,14 +1651,6 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Strip captions &amp; speaker tags</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove sound-effect captions, speaker labels and inline furigana from subtitles before parsing.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3158,8 +3150,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>上のリストにない、保存フォルダ内で見つかった辞書を再追加します（設定のリセット後など）。再インポートは不要です。</translation>
     </message>
     <message>
-        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
-        <translation>辞書は上から順に試行されます — 単語の項目がある最初の辞書が使用され、その語義が MainDefinition フィールドに入力されます。</translation>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
+        <translation>上から順に試され、単語の項目がある最初の辞書が採用され、MainDefinition に反映されます。</translation>
     </message>
     <message>
         <source>Add dictionary…</source>
@@ -3834,14 +3826,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>ローカルの既知単語データベースを使用</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>既知単語のかな表記を既知として扱う</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>字幕が単語をかなで表記していて（例：うなずく）、その漢字の辞書形（頷く）がすでにコレクションまたは既知単語リストにある場合、2枚目のカードを作成せずにスキップします。漢字表記がこの方法で統合されることはありません。</translation>
-    </message>
-    <message>
         <source>Rebuild Known Words DB</source>
         <translation>既知単語DBを再構築</translation>
     </message>
@@ -3914,8 +3898,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>固有名詞ワードセット</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>同梱された日本語の固有名詞（人名・地名）のリストをマイニングから除外します。登場人物名や地名が多く出てくる作品に便利です。実際に必要な名前は上記のホワイトリストに追加することで対象に含められます。</translation>
+        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
+        <translation>同梱の日本人名・地名リストをマイニング対象から除外します。ホワイトリストに登録された名前は引き続きマイニングされます。</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -3928,22 +3912,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>字幕テキストのフィルタリング</translation>
-    </message>
-    <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation>字幕注釈を削除（効果音字幕、話者タグ、インラインふりがな）</translation>
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation>マイニング前に、セリフ以外の字幕注釈を削除します。行全体の効果音（例：(電話)）、先頭の話者タグ（例：(Tanaka)）、インラインふりがな（例：瀕死(ひんし)）が対象です。既定でオンです。下の正規表現フィルターも重ねて適用されます。</translation>
-    </message>
-    <message>
-        <source>Skip katakana-stylized subtitle cues</source>
-        <translation>カタカナ表記の字幕キューをスキップ</translation>
-    </message>
-    <message>
-        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
-        <translation>カタカナを含み、ひらがなを含まない字幕キュー全体を除外します。話者の台詞をカタカナで表記するソースにのみ使用してください。有効な外来語のみのキューも除外されます。デフォルトではオフです。</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -4024,6 +3992,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
         <translation>カタカナだけで書かれた語（コーヒー など）をスキップします。両方にチェックすると、2つの仮名が混ざった語（サボる、ヤバい）もスキップします。</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>既知単語のかな表記を既知として扱う</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>字幕が単語をかなで表記していて（例：うなずく）、その漢字の辞書形（頷く）がすでにコレクションまたは既知単語リストにある場合、2枚目のカードを作成せずにスキップします。漢字表記がこの方法で統合されることはありません。</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -4242,8 +4218,8 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
-        <translation type="unfinished" />
+        <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
+        <translation>有効なソースはすべて反映されます。フィルタリングには最も低い順位が使用され、Frequency Sort には調和平均が使用されます。順序はカードのソースリストを決めるだけです。</translation>
     </message>
     <message>
         <source>Add frequency source…</source>
@@ -5360,8 +5336,8 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-        <translation>ソースは上から順に確認されます — 単語のピッチ項目がある最初のソースが使用されます。下位のソースは上位のソースにない単語のみを補完します。</translation>
+        <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
+        <translation>上から順に確認され、単語のピッチアクセント項目がある最初のソースが採用されます。</translation>
     </message>
     <message>
         <source>Add pitch source…</source>
@@ -7962,10 +7938,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>モデルのダウンロード</translation>
     </message>
     <message>
-        <source>Required before subtitle generation can run.</source>
-        <translation>字幕生成を実行する前に必要です。</translation>
-    </message>
-    <message>
         <source>Transcription add-ons (optional)</source>
         <translation>文字起こしアドオン（任意）</translation>
     </message>
@@ -8014,10 +7986,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Vulkan モデル</translation>
     </message>
     <message>
-        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation>AMD、Intel、または NVIDIA の GPU（Vulkan）でより高速な文字起こしができます。</translation>
-    </message>
-    <message>
         <source>Alignment</source>
         <translation>整列</translation>
     </message>
@@ -8044,10 +8012,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>alass download</source>
         <translation>alass のダウンロード</translation>
-    </message>
-    <message>
-        <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation>alass が既に PATH にある場合を除き、リタイミングに必要です。</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -8300,10 +8264,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>文字サイズ</translation>
     </message>
     <message>
-        <source>Text size will change after restart.</source>
-        <translation>テキストサイズは再起動後に変更されます。</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>今すぐ再起動</translation>
     </message>
@@ -8320,8 +8280,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>オペレーティングシステム標準のファイル選択画面を使用します。オフにすると、アプリのテーマに従い、すべてのプラットフォームで同じ見た目の内蔵選択画面を使用します。</translation>
     </message>
     <message>
-        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>各テーマはアプリのプレビューとして表示されます。クリックしてすぐに適用し、右上の選択欄で使いたいものには星を付けます。プレビューを元に戻すには &lt;b&gt;元に戻す&lt;/b&gt; を押してください。</translation>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
+        <translation>テーマのプレビューをクリックすると即座に適用され、&lt;b&gt;復元&lt;/b&gt;で元に戻せます。テーマにスターを付けると、右上のセレクターに追加されます。</translation>
     </message>
     <message>
         <source>Open themes folder</source>

@@ -138,11 +138,7 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
         self._restore_btn.clicked.connect(self.restore_requested.emit)
         container = self._build_chain_container(
             ChainListLabels(
-                explanation=self.tr(
-                    "Sources are checked top to bottom — the first source with a pitch "
-                    "entry for a word wins. Lower sources only fill words the higher "
-                    "ones miss."
-                ),
+                explanation=self.tr("Checked top to bottom — the first source with a pitch entry for a word wins."),
                 add=self.tr("Add pitch source…"),
                 remove=self.tr("Remove pitch source"),
                 remove_tooltip=self.tr("Remove the selected pitch accent source"),
