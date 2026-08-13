@@ -475,6 +475,17 @@ def _cuda_device_count() -> int:
         return 0
 
 
+class _Ct2CudaUnavailable(Exception):
+    """CT2's CUDA attempt failed (build or first decode) and the caller asked to know.
+
+    Raised only when ``raise_on_cuda_failure`` is set — i.e. for device='auto',
+    where the engine cascade committed to CT2 on CUDA-device *presence* alone and
+    the caller wants to reconsider the whisper.cpp (Vulkan) route before settling
+    for the slow CT2 CPU decode (e.g. another app holds the VRAM, or cuDNN is
+    missing). Never escapes ``transcribe``.
+    """
+
+
 def _resolve_model(
     requested_device: str,
     cuda_libs_root: Path | None,
@@ -482,6 +493,8 @@ def _resolve_model(
     model_name: str,
     models_root: Path,
     cpu_threads: int,
+    *,
+    raise_on_cuda_failure: bool = False,
 ) -> tuple[Any, str]:
     """Construct a WhisperModel honouring *requested_device* with a CPU fallback.
 
@@ -527,6 +540,8 @@ def _resolve_model(
         )
         return model, "cuda"
     except Exception as exc:  # noqa: BLE001  (CUDA libs may be missing/incompatible)
+        if raise_on_cuda_failure:
+            raise _Ct2CudaUnavailable(str(exc)) from exc
         if requested_device == "cuda":
             logger.warning(
                 "ASR: device='cuda' requested but CUDA initialisation failed (%s); "
@@ -630,18 +645,60 @@ def transcribe(
             # now-unavailable option is dropped to 'auto' by the load_from_config
             # hygiene); strictly >= the old forced-CPU behaviour.
             ct2_device = "auto" if device == "vulkan" else device
-            results = _transcribe_ct2(
-                audio,
-                model_name=model_name,
-                models_root=models_root,
-                duration_s=duration_s,
-                cancel_event=cancel_event,
-                progress_cb=progress_cb,
-                device=ct2_device,
-                cuda_libs_root=cuda_libs_root,
-                onnx_pack_root=onnx_pack_root,
-                ct2_model_session=ct2_model_session,
-            )
+            try:
+                results = _transcribe_ct2(
+                    audio,
+                    model_name=model_name,
+                    models_root=models_root,
+                    duration_s=duration_s,
+                    cancel_event=cancel_event,
+                    progress_cb=progress_cb,
+                    device=ct2_device,
+                    cuda_libs_root=cuda_libs_root,
+                    onnx_pack_root=onnx_pack_root,
+                    ct2_model_session=ct2_model_session,
+                    # Only 'auto' reconsiders: it committed to CT2 on CUDA-device
+                    # PRESENCE alone, before knowing CUDA can initialise (another
+                    # app may own the VRAM; cuDNN may be absent). Explicit
+                    # cpu/cuda keep their established CT2-only fallback.
+                    raise_on_cuda_failure=device == "auto",
+                )
+            except _Ct2CudaUnavailable as exc:
+                if _use_whisper_cpp_engine("vulkan", model_name, models_root):
+                    logger.warning(
+                        "ASR: CUDA unusable (%s); retrying on whisper.cpp (Vulkan) before CPU.",
+                        exc,
+                    )
+                    if ct2_model_session is not None:
+                        # Later queue files skip the doomed CUDA attempt; a
+                        # per-file cpp failure still re-decodes on CT2 CPU
+                        # inside _transcribe_cpp.
+                        ct2_model_session.backend = "cpp"
+                    results = _transcribe_cpp(
+                        audio,
+                        model_name=model_name,
+                        models_root=models_root,
+                        duration_s=duration_s,
+                        cancel_event=cancel_event,
+                        progress_cb=progress_cb,
+                        cuda_libs_root=cuda_libs_root,
+                        onnx_pack_root=onnx_pack_root,
+                        ct2_model_session=ct2_model_session,
+                    )
+                else:
+                    logger.warning("ASR: CUDA unusable (%s) and no whisper.cpp route; using CPU.", exc)
+                    results = _transcribe_ct2(
+                        audio,
+                        model_name=model_name,
+                        models_root=models_root,
+                        duration_s=duration_s,
+                        cancel_event=cancel_event,
+                        progress_cb=progress_cb,
+                        device="cpu",
+                        cuda_libs_root=cuda_libs_root,
+                        onnx_pack_root=onnx_pack_root,
+                        ct2_model_session=ct2_model_session,
+                    )
 
     log_summary(
         logger,
@@ -802,6 +859,7 @@ def _transcribe_ct2(
     cuda_libs_root: Path | None,
     onnx_pack_root: Path | None,
     ct2_model_session: Ct2ModelSession | None = None,
+    raise_on_cuda_failure: bool = False,
 ) -> list[tuple[float, float, str]]:
     """The faster-whisper (ctranslate2) transcription path — unchanged behaviour.
 
@@ -809,6 +867,10 @@ def _transcribe_ct2(
     fallback (construction failure and deferred CUDA-runtime failure both rebuild
     on CPU). Extracted verbatim from the original ``transcribe`` body so the
     cpu/cuda paths stay byte-for-byte behaviourally identical.
+
+    With ``raise_on_cuda_failure`` both CUDA failure sites raise
+    :class:`_Ct2CudaUnavailable` instead of rebuilding on CPU, so ``transcribe``
+    can reconsider the whisper.cpp route first (device='auto' only).
     """
     whisper_model_cls = _engine.get_whisper_model_cls()
     cpu_threads = min(4, os.cpu_count() or 4)
@@ -823,6 +885,7 @@ def _transcribe_ct2(
             model_name,
             models_root,
             cpu_threads,
+            raise_on_cuda_failure=raise_on_cuda_failure,
         )
         if ct2_model_session is not None:
             ct2_model_session.model = model
@@ -877,6 +940,13 @@ def _transcribe_ct2(
         try:
             first = next(segments_iter, _PEEK_EMPTY)
         except Exception as exc:  # noqa: BLE001  (deferred CUDA runtime failure)
+            if raise_on_cuda_failure:
+                # Drop the constructed-but-unusable CUDA model so the caller's
+                # retry (cpp, or CT2 CPU) never reuses it via the session.
+                if ct2_model_session is not None:
+                    ct2_model_session.model = None
+                    ct2_model_session.device_used = None
+                raise _Ct2CudaUnavailable(str(exc)) from exc
             logger.warning("ASR: CUDA inference failed (%s); falling back to CPU.", exc)
             model, device_used = _resolve_model(
                 "cpu",
