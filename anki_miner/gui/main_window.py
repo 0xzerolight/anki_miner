@@ -906,7 +906,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def reveal_capability(self, target: "CapabilityTarget") -> None:
         """Bring the tab that hosts ``target`` to the front (and its sub-tab).
 
-        Called by the Find a Feature browser. No-ops silently if the tab can't be
+        Called by the Usage Guide browser. No-ops silently if the tab can't be
         found (e.g. an optional tab was not registered) so a stale catalogue entry
         never crashes the UI.
         """

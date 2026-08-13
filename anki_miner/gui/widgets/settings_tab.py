@@ -485,7 +485,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         Populates ``self.nav_list`` and ``self.pages`` together and records the
         stable key → page index map in ``_subtab_index``, which callers
-        (``MainWindow.reveal_capability``, the Find a Feature browser, the theme
+        (``MainWindow.reveal_capability``, the Usage Guide browser, the theme
         shortcut) address settings by. Display names are presentation only: no
         navigation path reads a row's text.
 

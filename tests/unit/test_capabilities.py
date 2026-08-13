@@ -1,4 +1,4 @@
-"""Registry integrity + search behaviour for the Find a Feature catalogue."""
+"""Registry integrity + search behaviour for the Usage Guide catalogue."""
 
 from __future__ import annotations
 

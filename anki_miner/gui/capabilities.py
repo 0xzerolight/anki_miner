@@ -1,4 +1,4 @@
-"""Curated catalogue of user-facing features for the "Find a Feature" browser.
+"""Curated catalogue of user-facing features for the Usage Guide browser.
 
 This registry exists to answer the single most common support question —
 *"Can it do X?"* — for features that already exist but are buried among the
@@ -7,9 +7,11 @@ entry (NOT introspected from config) because the value here is good phrasing and
 search synonyms, which an auto-generated list cannot provide.
 
 MAINTENANCE CONVENTION: when you add a user-facing feature or setting, add a
-``Capability`` entry here so it shows up in Tools -> Find a Feature. A test
-(``tests/unit/test_capabilities.py``) checks that every ``target`` resolves to a
-real tab/sub-tab, but nothing forces coverage of new settings -- that is on you.
+``Capability`` entry here so it shows up in the Usage Guide (menu-bar button, F1).
+A test (``tests/unit/test_capabilities.py``) checks that every ``target`` resolves
+to a real tab/sub-tab, but nothing forces coverage of new settings -- that is on
+you. Menu/dialog-only features omit ``target`` (no Open button); their
+description must say where they live.
 
 User-visible strings (``title``, ``description``, ``category``) are wrapped in
 ``QT_TRANSLATE_NOOP`` so ``pylupdate`` extracts them under the ``Capabilities``
@@ -72,7 +74,7 @@ class CapabilityTarget:
 
 @dataclass(frozen=True)
 class Capability:
-    """One searchable feature entry shown in the Find a Feature browser."""
+    """One searchable feature entry shown in the Usage Guide browser."""
 
     id: str
     title: str

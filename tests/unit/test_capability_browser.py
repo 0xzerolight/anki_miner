@@ -1,4 +1,4 @@
-"""The Find a Feature browser dialog: filtering + selection + navigation."""
+"""The Usage Guide browser dialog: filtering + selection + navigation."""
 
 from __future__ import annotations
 
