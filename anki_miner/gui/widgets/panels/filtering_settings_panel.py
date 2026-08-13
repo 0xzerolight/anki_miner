@@ -171,20 +171,6 @@ class FilteringSettingsPanel(FormPanel):
         self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
         self.add_field("", self.use_known_words_db_checkbox)
 
-        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
-        # the kanji dictionary form (頷く) is already carded. Script-gated in
-        # WordFilterService.filter_unknown; kanji variants never fold.
-        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
-        self.match_kana_variants_checkbox.setToolTip(
-            self.tr(
-                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
-                "dictionary form (頷く) is already in your collection or known list, "
-                "skip it instead of creating a second card. Kanji spellings are "
-                "never merged this way."
-            )
-        )
-        self.add_field("", self.match_kana_variants_checkbox)
-
         # Rebuild button: clears the local cache so deck exclusions take effect.
         # The cache is additive (never removes), so a deck synced before being
         # excluded would otherwise stay cached forever (Issue #38).
@@ -286,10 +272,8 @@ class FilteringSettingsPanel(FormPanel):
 
         wordsets_helper = QLabel(
             self.tr(
-                "Exclude bundled lists of Japanese proper nouns (people and place "
-                "names) from mining. Useful for shows that drop lots of character "
-                "and place names. A name you actually want is rescued by the "
-                "whitelist above."
+                "Exclude bundled lists of Japanese people and place names from "
+                "mining. Whitelisted names are still mined."
             )
         )
         wordsets_helper.setObjectName("helper-text")
@@ -311,32 +295,6 @@ class FilteringSettingsPanel(FormPanel):
 
         # Subtitle Text Filtering section (Issue #8)
         self.add_section(self.tr("Subtitle Text Filtering"))
-
-        # Structural annotation strip (Task U1, default ON). Runs before the
-        # user regex below; kills SFX captions, speaker tags and inline furigana.
-        self.strip_subtitle_annotations_checkbox = QCheckBox(
-            self.tr("Strip subtitle annotations (SFX captions, speaker tags, inline furigana)")
-        )
-        self.add_field(
-            "",
-            self.strip_subtitle_annotations_checkbox,
-            helper=self.tr(
-                "Remove non-dialogue subtitle annotations before mining: full-line sound "
-                "effects like (電話), leading speaker tags like (Tanaka), and inline furigana "
-                "like 瀕死(ひんし). On by default; the regex filter below still composes on top."
-            ),
-        )
-
-        self.skip_kana_stylized_cues_checkbox = QCheckBox(self.tr("Skip katakana-stylized subtitle cues"))
-        self.add_field(
-            "",
-            self.skip_kana_stylized_cues_checkbox,
-            helper=self.tr(
-                "Drop an entire subtitle cue when it contains katakana but no hiragana. "
-                "Use only for sources that style a speaker's dialogue in katakana; valid "
-                "loanword-only cues are also dropped. Off by default."
-            ),
-        )
 
         self.subtitle_regex_edit = QLineEdit()
         self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
@@ -423,6 +381,20 @@ class FilteringSettingsPanel(FormPanel):
                 "to also skip words mixing the two kana scripts (サボる, ヤバい)."
             ),
         )
+
+        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
+        # the kanji dictionary form (頷く) is already carded. Script-gated in
+        # WordFilterService.filter_unknown; kanji variants never fold.
+        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
+        self.match_kana_variants_checkbox.setToolTip(
+            self.tr(
+                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
+                "dictionary form (頷く) is already in your collection or known list, "
+                "skip it instead of creating a second card. Kanji spellings are "
+                "never merged this way."
+            )
+        )
+        self.add_field("", self.match_kana_variants_checkbox)
 
         # i+1 Sentence Filter section
         self.add_section(self.tr("i+1 Sentence Filter"))
@@ -718,22 +690,6 @@ class FilteringSettingsPanel(FormPanel):
         """Set the subtitle regex filter checkbox."""
         self.use_subtitle_regex_checkbox.setChecked(value)
 
-    def get_skip_kana_stylized_cues(self) -> bool:
-        """Return whether katakana-stylized subtitle cues are skipped."""
-        return self.skip_kana_stylized_cues_checkbox.isChecked()
-
-    def set_skip_kana_stylized_cues(self, value: bool) -> None:
-        """Set the katakana-stylized cue skip checkbox."""
-        self.skip_kana_stylized_cues_checkbox.setChecked(value)
-
-    def get_strip_subtitle_annotations(self) -> bool:
-        """Return whether structural annotation stripping is enabled."""
-        return self.strip_subtitle_annotations_checkbox.isChecked()
-
-    def set_strip_subtitle_annotations(self, value: bool) -> None:
-        """Set the strip-subtitle-annotations checkbox."""
-        self.strip_subtitle_annotations_checkbox.setChecked(value)
-
     # --- Deduplication ---
 
     def get_deduplicate_sentences(self) -> bool:
@@ -878,8 +834,6 @@ class FilteringSettingsPanel(FormPanel):
         self.set_subtitle_regex_filter(config.subtitle_regex_filter)
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
-        self.set_skip_kana_stylized_cues(config.skip_kana_stylized_cues)
-        self.set_strip_subtitle_annotations(config.strip_subtitle_annotations)
         self.set_deduplicate_sentences(config.deduplicate_sentences)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
@@ -917,8 +871,6 @@ class FilteringSettingsPanel(FormPanel):
             subtitle_regex_filter=self.get_subtitle_regex_filter(),
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
-            skip_kana_stylized_cues=self.get_skip_kana_stylized_cues(),
-            strip_subtitle_annotations=self.get_strip_subtitle_annotations(),
             deduplicate_sentences=self.get_deduplicate_sentences(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),

@@ -303,15 +303,6 @@ class TestParseTextUnitsSubtitleCleanup:
         assert {w.sentence for w in words} == {"猫が好き\n犬が眠る"}
         assert "案内" not in {w.mined_form for w in words}
 
-    def test_strip_off_switch_leaves_annotations(self, tmp_path):
-        """strip_subtitle_annotations=False disables the strip even under cleanup
-        (the existing off-switch is the escape hatch — no new gate)."""
-        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media", strip_subtitle_annotations=False)
-        service = SubtitleParserService(config)
-        units = [ReadingUnit(text="（旬）猫が魚を食べる", index=0, location_label="0:01")]
-        words, _i, _c = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
-        assert any("旬" in w.sentence for w in words)  # tag NOT peeled
-
     def test_regex_filter_double_gated(self, tmp_path):
         """The user regex applies only when use_subtitle_regex_filter AND a
         non-empty pattern are both set (mirrors the video path's double gate)."""
@@ -349,39 +340,6 @@ class TestParseTextUnitsSubtitleCleanup:
         assert [_strip_timing(w) for w in default_words] == [_strip_timing(w) for w in explicit_words]
         # The paren furigana survives on the book path (no subtitle cleanup).
         assert all("(" in w.sentence for w in default_words)
-
-    def test_kana_stylized_skip_matches_video_and_reading_subtitle_paths(self, tmp_path):
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            skip_kana_stylized_cues=True,
-        )
-        service = SubtitleParserService(config)
-        cue = "死ンダラ祟ルゾ 夏油！"
-        units = [ReadingUnit(text=cue, index=0, location_label="0:01")]
-        subtitle_file = tmp_path / "stylized.srt"
-        subtitle_file.write_text(
-            f"1\n00:00:01,000 --> 00:00:03,000\n{cue}\n",
-            encoding="utf-8",
-        )
-
-        video_words = service.parse_subtitle_file(subtitle_file)
-        subtitle_words, subtitle_index, subtitle_counts = service.parse_text_units(
-            units,
-            want_line_index=True,
-            subtitle_cleanup=True,
-        )
-        text_words, _text_index, text_counts = service.parse_text_units(
-            units,
-            want_line_index=False,
-            subtitle_cleanup=False,
-        )
-
-        assert video_words == []
-        assert subtitle_words == []
-        assert subtitle_index == []
-        assert subtitle_counts == Counter()
-        assert text_words
-        assert text_counts
 
 
 class TestReadingPathDecorationStrip:

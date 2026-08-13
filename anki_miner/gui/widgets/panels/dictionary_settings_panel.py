@@ -202,8 +202,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         container = self._build_chain_container(
             ChainListLabels(
                 explanation=self.tr(
-                    "Dictionaries are tried top to bottom — the first one with an entry "
-                    "for a word wins, and its definition fills the MainDefinition field."
+                    "Tried top to bottom — the first dictionary with an entry for a word "
+                    "wins and fills MainDefinition."
                 ),
                 add=self.tr("Add dictionary…"),
                 remove=self.tr("Remove dictionary"),

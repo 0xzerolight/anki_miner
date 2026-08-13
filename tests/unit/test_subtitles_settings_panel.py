@@ -1182,25 +1182,25 @@ def test_addons_section_heading_present(qtbot):
 
 
 def test_help_lines_present(qtbot, monkeypatch):
-    """Each per-download description line is rendered as helper-text; the section
-    intros were removed (headings are self-explanatory)."""
+    """The CUDA/VAD state-carrier description lines render as helper-text; the
+    section intros and the pure tooltip-duplicate rows were removed."""
     _enable_vulkan(monkeypatch)
     monkeypatch.setattr(f"{_PANEL_MOD}.alass_installer.alass_install_supported", lambda: True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     texts = _help_texts(panel)
     for expected in (
-        "Required before subtitle generation can run.",
         "Faster transcription on NVIDIA GPUs (CUDA).",
         "Skips music and silence so they are not transcribed as garbage.",
-        "Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).",
-        "Needed for retiming unless alass is already on your PATH.",
     ):
         assert expected in texts
     for removed in (
         "Generate subtitles from audio when a file has none.",
         "Optional. Speed and accuracy extras — skip if unsure.",
         "Retime existing subtitles to match the audio.",
+        "Required before subtitle generation can run.",
+        "Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).",
+        "Needed for retiming unless alass is already on your PATH.",
     ):
         assert removed not in texts
 

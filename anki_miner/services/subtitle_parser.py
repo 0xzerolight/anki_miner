@@ -84,8 +84,6 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
-    "skip_kana_stylized_cues",
-    "strip_subtitle_annotations",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -109,14 +107,6 @@ _LINE_CACHE_MAX_FILES: int = 256
 # keeps a whole-corpus Deck Builder run from growing without limit (mirrors the
 # compound matcher's existence cache).
 _FRONT_CACHE_CAP: int = 200_000
-
-_HIRAGANA_CUE_RE = re.compile(r"[ぁ-ゟ]")
-_KATAKANA_CUE_RE = re.compile(r"[゠-ヿ]")
-
-
-def _is_kana_stylized_cue(text: str) -> bool:
-    """Whether a normalized cue has katakana but no hiragana."""
-    return _KATAKANA_CUE_RE.search(text) is not None and _HIRAGANA_CUE_RE.search(text) is None
 
 
 # Term-OR-reading offline existence probe (DefinitionService.has_offline_definitions:
@@ -620,13 +610,6 @@ class SubtitleParserService:
         text. Whitespace is renormalized because regex deletion can leave double
         spaces behind.
         """
-        # Deliberate Yomitan divergence: interactive lookup has a human-selected
-        # scan point; batch mining does not. For sources with a known katakana-
-        # dialogue convention, fail closed on the whole cue instead of trusting
-        # MeCab's plausible-looking fragments. Opt-in because loanword-only cues
-        # are indistinguishable by script and are sacrificed too.
-        if self.config.skip_kana_stylized_cues and _is_kana_stylized_cue(text):
-            return ""
         if self._filter_pattern is None:
             return text
         filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)
@@ -636,14 +619,14 @@ class SubtitleParserService:
         """Full per-line text pipeline shared by the mining and display paths.
 
         Order: markup strip → JP normalization → per-physical-line annotation
-        strip (gated on ``config.strip_subtitle_annotations``, default ON) →
-        whitespace collapse → ``_apply_text_filter``. Applied identically
+        strip (always on) → whitespace collapse → ``_apply_text_filter``.
+        Applied identically
         by ``_iter_parsed_lines`` (mining) and ``parse_raw_entries`` (display) so
         the shown cue text matches what mining tokenizes. A line that collapses
         to empty is skipped by each caller's existing ``if not text: continue``
         guard.
         """
-        cleaned = clean_subtitle_text(raw_text, strip_annotations=self.config.strip_subtitle_annotations)
+        cleaned = clean_subtitle_text(raw_text)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path):
@@ -1452,11 +1435,10 @@ class SubtitleParserService:
             # subtitle-cue kind only (subtitle_cleanup).
             text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
             if subtitle_cleanup:
-                # Reading→Subtitles per-cue cleanup remains gated here for
-                # synthetic ReadingUnit callers and is idempotent when the
-                # config-fed loader already stripped the cue.
-                if self.config.strip_subtitle_annotations:
-                    text = strip_inline_annotations(text)
+                # Reading→Subtitles per-cue cleanup remains here for synthetic
+                # ReadingUnit callers and is idempotent when the loader already
+                # stripped the cue.
+                text = strip_inline_annotations(text)
                 text = self._apply_text_filter(text)
                 if not text:
                     continue

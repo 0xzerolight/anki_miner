@@ -469,8 +469,7 @@ class AnkiSettingsPanel(FormPanel):
 
         card_type_helper = QLabel(
             self.tr(
-                "For JP Mining Note-style note types: stamp an “x” into a marker field so every mined "
-                "card renders as the chosen type. Leave “None” if your note type has no such fields."
+                "For JP Mining Note-style note types: an “x” in a marker field selects " "how each mined card renders."
             )
         )
         card_type_helper.setObjectName("helper-text")

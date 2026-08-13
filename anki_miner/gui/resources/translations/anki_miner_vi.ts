@@ -534,8 +534,8 @@
         <translation>Loại thẻ</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: stamp an “x” into a marker field so every mined card renders as the chosen type. Leave “None” if your note type has no such fields.</source>
-        <translation>Đối với các loại ghi chú kiểu JP Mining Note: đóng dấu “x” vào một trường đánh dấu để mọi thẻ đã khai thác hiển thị dưới dạng loại đã chọn. Để “None” nếu loại ghi chú của bạn không có các trường như vậy.</translation>
+        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
+        <translation>Đối với loại ghi chú kiểu JP Mining Note: “x” trong trường đánh dấu chọn cách hiển thị mỗi thẻ được khai thác.</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -890,8 +890,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Âm thanh câu (nguồn đọc)</translation>
     </message>
     <message>
-        <source>Generate spoken sentence audio for cards mined from manga and books (these have no source audio). Sentence text is sent to the selected online services.</source>
-        <translation>Tạo âm thanh câu được đọc cho thẻ khai thác từ manga và sách (những nguồn này không có âm thanh gốc). Nội dung câu được gửi đến các dịch vụ trực tuyến đã chọn.</translation>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>Thêm âm thanh giọng nói vào thẻ từ manga và sách, vốn không có âm thanh nguồn. Văn bản câu được gửi đến các dịch vụ trực tuyến đã chọn.</translation>
     </message>
     <message>
         <source>Generate TTS sentence audio</source>
@@ -2890,8 +2890,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Thêm lại các từ điển tìm thấy trong thư mục lưu trữ nhưng không có trong danh sách ở trên (ví dụ sau khi đặt lại cài đặt). Không cần nhập lại.</translation>
     </message>
     <message>
-        <source>Dictionaries are tried top to bottom — the first one with an entry for a word wins, and its definition fills the MainDefinition field.</source>
-        <translation>Các từ điển được thử từ trên xuống — từ điển đầu tiên có mục từ cho một từ sẽ được dùng, và định nghĩa của nó điền vào trường MainDefinition.</translation>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
+        <translation>Được thử từ trên xuống dưới — từ điển đầu tiên có mục từ cho một từ sẽ thắng và điền vào MainDefinition.</translation>
     </message>
     <message>
         <source>Add dictionary…</source>
@@ -3566,14 +3566,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Dùng CSDL từ đã biết cục bộ</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>Coi cách viết kana của từ đã biết là đã biết</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>Khi phụ đề viết một từ bằng kana (ví dụ: うなずく) và dạng từ điển bằng kanji (頷く) đã có trong bộ sưu tập hoặc danh sách từ đã biết, bỏ qua từ đó thay vì tạo thêm thẻ thứ hai. Cách viết kanji không bao giờ được gộp theo cách này.</translation>
-    </message>
-    <message>
         <source>Rebuild Known Words DB</source>
         <translation>Xây dựng lại CSDL từ đã biết</translation>
     </message>
@@ -3646,8 +3638,8 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Tập từ tên riêng</translation>
     </message>
     <message>
-        <source>Exclude bundled lists of Japanese proper nouns (people and place names) from mining. Useful for shows that drop lots of character and place names. A name you actually want is rescued by the whitelist above.</source>
-        <translation>Loại trừ các danh sách tên riêng tiếng Nhật đi kèm (tên người và địa danh) khỏi việc khai thác. Hữu ích cho các chương trình có nhiều tên nhân vật và địa danh. Một tên bạn thực sự muốn có thể được cứu bằng danh sách trắng ở trên.</translation>
+        <source>Exclude bundled lists of Japanese people and place names from mining. Whitelisted names are still mined.</source>
+        <translation>Loại trừ các danh sách tên người và địa danh Nhật Bản đi kèm khỏi khai thác. Tên trong danh sách trắng vẫn được khai thác.</translation>
     </message>
     <message>
         <source>%1 (%2)</source>
@@ -3660,22 +3652,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Subtitle Text Filtering</source>
         <translation>Lọc văn bản phụ đề</translation>
-    </message>
-    <message>
-        <source>Strip subtitle annotations (SFX captions, speaker tags, inline furigana)</source>
-        <translation>Loại bỏ chú thích phụ đề (chú thích hiệu ứng âm thanh, nhãn người nói, furigana nội dòng)</translation>
-    </message>
-    <message>
-        <source>Remove non-dialogue subtitle annotations before mining: full-line sound effects like (電話), leading speaker tags like (Tanaka), and inline furigana like 瀕死(ひんし). On by default; the regex filter below still composes on top.</source>
-        <translation>Loại bỏ chú thích phụ đề không phải lời thoại trước khi khai thác: hiệu ứng âm thanh chiếm toàn dòng như (電話), nhãn người nói ở đầu dòng như (Tanaka), và furigana nội dòng như 瀕死(ひんし). Bật theo mặc định; bộ lọc Regex bên dưới vẫn được áp dụng thêm sau đó.</translation>
-    </message>
-    <message>
-        <source>Skip katakana-stylized subtitle cues</source>
-        <translation>Bỏ qua câu phụ đề cách điệu bằng katakana</translation>
-    </message>
-    <message>
-        <source>Drop an entire subtitle cue when it contains katakana but no hiragana. Use only for sources that style a speaker's dialogue in katakana; valid loanword-only cues are also dropped. Off by default.</source>
-        <translation>Loại bỏ toàn bộ câu phụ đề khi chứa katakana nhưng không có hiragana. Chỉ dùng cho nguồn cách điệu lời thoại của người nói bằng katakana; các câu hợp lệ chỉ gồm từ mượn cũng bị loại bỏ. Mặc định tắt.</translation>
     </message>
     <message>
         <source>Regex Filter</source>
@@ -3756,6 +3732,14 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Skip words written entirely in katakana (e.g. コーヒー). Tick both boxes to also skip words mixing the two kana scripts (サボる, ヤバい).</source>
         <translation>Bỏ qua các từ viết hoàn toàn bằng katakana (ví dụ コーヒー). Đánh dấu cả hai ô để bỏ qua cả những từ pha trộn hai bảng kana (サボる, ヤバい).</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>Coi cách viết kana của từ đã biết là đã biết</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>Khi phụ đề viết một từ bằng kana (ví dụ: うなずく) và dạng từ điển bằng kanji (頷く) đã có trong bộ sưu tập hoặc danh sách từ đã biết, bỏ qua từ đó thay vì tạo thêm thẻ thứ hai. Cách viết kanji không bao giờ được gộp theo cách này.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -3974,8 +3958,8 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every enabled source contributes. The lowest rank is used for filtering; Frequency Sort uses the harmonic mean. This order controls how sources are listed on the card.</source>
-        <translation type="unfinished" />
+        <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
+        <translation>Mọi nguồn được bật đều được tính: lọc dùng hạng thấp nhất, Frequency Sort dùng trung bình điều hòa. Thứ tự chỉ thiết lập danh sách nguồn của thẻ.</translation>
     </message>
     <message>
         <source>Add frequency source…</source>
@@ -5088,8 +5072,8 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sources are checked top to bottom — the first source with a pitch entry for a word wins. Lower sources only fill words the higher ones miss.</source>
-        <translation>Các nguồn được kiểm tra từ trên xuống — nguồn đầu tiên có mục trọng âm cho một từ sẽ được dùng. Các nguồn thấp hơn chỉ điền những từ mà nguồn cao hơn bỏ sót.</translation>
+        <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
+        <translation>Được kiểm tra từ trên xuống dưới — nguồn đầu tiên có mục trọng âm cao độ cho một từ sẽ thắng.</translation>
     </message>
     <message>
         <source>Add pitch source…</source>
@@ -7690,10 +7674,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Tải mô hình</translation>
     </message>
     <message>
-        <source>Required before subtitle generation can run.</source>
-        <translation>Bắt buộc trước khi có thể chạy tạo phụ đề.</translation>
-    </message>
-    <message>
         <source>Transcription add-ons (optional)</source>
         <translation>Phần bổ sung phiên âm (tùy chọn)</translation>
     </message>
@@ -7742,10 +7722,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Mô hình Vulkan</translation>
     </message>
     <message>
-        <source>Faster transcription on AMD, Intel, or NVIDIA GPUs (Vulkan).</source>
-        <translation>Phiên âm nhanh hơn trên GPU AMD, Intel hoặc NVIDIA (Vulkan).</translation>
-    </message>
-    <message>
         <source>Alignment</source>
         <translation>Căn chỉnh</translation>
     </message>
@@ -7772,10 +7748,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>alass download</source>
         <translation>Tải alass</translation>
-    </message>
-    <message>
-        <source>Needed for retiming unless alass is already on your PATH.</source>
-        <translation>Cần cho chỉnh lại thời gian trừ khi alass đã có trên PATH của bạn.</translation>
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
@@ -8028,10 +8000,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Cỡ chữ</translation>
     </message>
     <message>
-        <source>Text size will change after restart.</source>
-        <translation>Cỡ chữ sẽ thay đổi sau khi khởi động lại.</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>Khởi động lại ngay</translation>
     </message>
@@ -8048,8 +8016,8 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Dùng trình chọn tệp gốc của hệ điều hành. Tắt tùy chọn này để thay bằng trình chọn tích hợp của ứng dụng, theo chủ đề ứng dụng và có cùng diện mạo trên mọi nền tảng.</translation>
     </message>
     <message>
-        <source>Every theme is shown as a preview of the app. Click one to apply it live, and star the ones you want in the top-right selector. Press &lt;b&gt;Revert&lt;/b&gt; to undo your preview.</source>
-        <translation>Mỗi chủ đề hiển thị dưới dạng xem trước của ứng dụng. Nhấp một chủ đề để áp dụng trực tiếp và đánh dấu sao các chủ đề muốn dùng trong bộ chọn góc trên bên phải. Nhấn &lt;b&gt;Hoàn nguyên&lt;/b&gt; để hủy xem trước.</translation>
+        <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
+        <translation>Nhấp vào bản xem trước giao diện để áp dụng ngay; &lt;b&gt;Hoàn tác&lt;/b&gt; sẽ hủy áp dụng. Gắn sao cho giao diện để thêm chúng vào bộ chọn ở góc trên bên phải.</translation>
     </message>
     <message>
         <source>Open themes folder</source>

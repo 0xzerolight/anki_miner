@@ -45,44 +45,34 @@ def strip_subtitle_markup(text: str) -> str:
     return text
 
 
-def clean_subtitle_text(text: str, *, strip_annotations: bool = False) -> str:
+def clean_subtitle_text(text: str) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
     Markup stripping runs first, then one ``html.unescape`` pass, then
     :func:`normalize_for_tokenization` (halfwidth katakana → fullwidth, NFC combining-mark
-    composition, CJK-compat and radical NFKD folding) and the minimal kanji-variant map (𠮟 → 叱). When
-    annotation stripping is enabled, physical lines stay separate through
-    normalization and are stripped before whitespace is flattened. The returned
-    string *is* the text MeCab tokenizes and the stored card sentence, so token
-    offsets, dedup keys, and script-type filters all see one normalized form.
+    composition, CJK-compat and radical NFKD folding) and the minimal kanji-variant map
+    (𠮟 → 叱). Physical lines stay separate through normalization and are
+    annotation-stripped (:func:`strip_inline_annotations`) before whitespace is
+    flattened. The returned string *is* the text MeCab tokenizes and the stored
+    card sentence, so token offsets, dedup keys, and script-type filters all see
+    one normalized form.
 
     Args:
         text: Raw subtitle text with possible formatting tags
-        strip_annotations: Strip annotations per physical line after normalization
 
     Returns:
-        Cleaned, normalized text without formatting tags
+        Cleaned, normalized text without formatting tags or annotations
     """
-    if strip_annotations:
-        # Preserve physical lines until the gated post-normalization strip;
-        # strip_subtitle_markup normally flattens ASS/SSA \N and \n to spaces.
-        text = re.sub(r"\\[nN]|\r\n?", "\n", text)
+    # Preserve physical lines until the post-normalization annotation strip;
+    # strip_subtitle_markup normally flattens ASS/SSA \N and \n to spaces.
+    text = re.sub(r"\\[nN]|\r\n?", "\n", text)
     text = strip_subtitle_markup(text)
     text = html.unescape(text)
-
-    # Preserve the pre-annotation behavior exactly when the opt-in is disabled.
-    if not strip_annotations:
-        text = " ".join(text.split())
-
     # Japanese pre-tokenization normalization (see anki_miner.utils.ja_normalize).
     text = normalize_for_tokenization(text)
     text = standardize_kanji_variants(text)
-
-    if strip_annotations:
-        text = strip_inline_annotations(text)
-        text = " ".join(text.split())
-
-    return text.strip()
+    text = strip_inline_annotations(text)
+    return " ".join(text.split())
 
 
 # Structural subtitle-annotation stripping (Task U1). ``strip_inline_annotations``
