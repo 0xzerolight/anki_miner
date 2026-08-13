@@ -107,6 +107,23 @@ def test_subtitle_regex_targets_filtering() -> None:
     assert capability.target == CapabilityTarget("settings", "filtering")
 
 
+def test_subtitle_file_mining_is_findable() -> None:
+    hits = search("srt")
+    capability = next(c for c in hits if c.id == "subtitle-file-mining")
+    assert capability.target == CapabilityTarget("reading", "subtitles")
+
+
+def test_word_curator_is_findable() -> None:
+    hits = search("curator")
+    assert any(c.id == "word-curator" for c in hits)
+
+
+def test_name_wordsets_is_findable() -> None:  # audit AP3-010
+    hits = search("surname")
+    capability = next(c for c in hits if c.id == "name-wordsets")
+    assert capability.target == CapabilityTarget("settings", "filtering")
+
+
 def test_search_preserves_registry_order() -> None:
     hits = search("mine")
     order = [c.id for c in CAPABILITIES]
