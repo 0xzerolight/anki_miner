@@ -692,10 +692,7 @@ def test_load_dispatches_to_source_module(kind: str, monkeypatch: pytest.MonkeyP
     result = detector.load(ref)
 
     assert result is sentinel
-    if kind == "subtitle":
-        fake_load.assert_called_once_with(ref, strip_annotations=False)
-    else:
-        fake_load.assert_called_once_with(ref)
+    fake_load.assert_called_once_with(ref)
 
 
 @pytest.mark.parametrize("kind", ["mokuro", "epub", "txt", "subtitle", "text"])
@@ -717,10 +714,7 @@ def test_load_forwards_cancel_check_to_source_module(kind: str, monkeypatch: pyt
 
     detector.load(ref, cancel_check=cancel_check)
 
-    if kind == "subtitle":
-        fake_load.assert_called_once_with(ref, strip_annotations=False, cancel_check=cancel_check)
-    else:
-        fake_load.assert_called_once_with(ref, cancel_check=cancel_check)
+    fake_load.assert_called_once_with(ref, cancel_check=cancel_check)
 
 
 def test_load_does_not_import_sibling_modules():

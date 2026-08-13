@@ -84,7 +84,6 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
-    "strip_subtitle_annotations",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
@@ -620,14 +619,14 @@ class SubtitleParserService:
         """Full per-line text pipeline shared by the mining and display paths.
 
         Order: markup strip → JP normalization → per-physical-line annotation
-        strip (gated on ``config.strip_subtitle_annotations``, default ON) →
-        whitespace collapse → ``_apply_text_filter``. Applied identically
+        strip (always on) → whitespace collapse → ``_apply_text_filter``.
+        Applied identically
         by ``_iter_parsed_lines`` (mining) and ``parse_raw_entries`` (display) so
         the shown cue text matches what mining tokenizes. A line that collapses
         to empty is skipped by each caller's existing ``if not text: continue``
         guard.
         """
-        cleaned = clean_subtitle_text(raw_text, strip_annotations=self.config.strip_subtitle_annotations)
+        cleaned = clean_subtitle_text(raw_text)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path):
@@ -1436,11 +1435,10 @@ class SubtitleParserService:
             # subtitle-cue kind only (subtitle_cleanup).
             text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
             if subtitle_cleanup:
-                # Reading→Subtitles per-cue cleanup remains gated here for
-                # synthetic ReadingUnit callers and is idempotent when the
-                # config-fed loader already stripped the cue.
-                if self.config.strip_subtitle_annotations:
-                    text = strip_inline_annotations(text)
+                # Reading→Subtitles per-cue cleanup remains here for synthetic
+                # ReadingUnit callers and is idempotent when the loader already
+                # stripped the cue.
+                text = strip_inline_annotations(text)
                 text = self._apply_text_filter(text)
                 if not text:
                     continue

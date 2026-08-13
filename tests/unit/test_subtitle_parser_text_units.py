@@ -303,15 +303,6 @@ class TestParseTextUnitsSubtitleCleanup:
         assert {w.sentence for w in words} == {"猫が好き\n犬が眠る"}
         assert "案内" not in {w.mined_form for w in words}
 
-    def test_strip_off_switch_leaves_annotations(self, tmp_path):
-        """strip_subtitle_annotations=False disables the strip even under cleanup
-        (the existing off-switch is the escape hatch — no new gate)."""
-        config = AnkiMinerConfig(media_temp_folder=tmp_path / "media", strip_subtitle_annotations=False)
-        service = SubtitleParserService(config)
-        units = [ReadingUnit(text="（旬）猫が魚を食べる", index=0, location_label="0:01")]
-        words, _i, _c = service.parse_text_units(units, want_line_index=False, subtitle_cleanup=True)
-        assert any("旬" in w.sentence for w in words)  # tag NOT peeled
-
     def test_regex_filter_double_gated(self, tmp_path):
         """The user regex applies only when use_subtitle_regex_filter AND a
         non-empty pattern are both set (mirrors the video path's double gate)."""

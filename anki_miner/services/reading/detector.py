@@ -163,7 +163,6 @@ def detect(
 def load(
     ref: ReadingSourceRef,
     *,
-    strip_subtitle_annotations: bool = False,
     cancel_check: Callable[[], bool] | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
@@ -190,12 +189,8 @@ def load(
     if ref.kind == "subtitle":
         from . import subtitle_source
 
-        if cancel_check is None:
-            return subtitle_source.load(ref, strip_annotations=strip_subtitle_annotations)
-        return subtitle_source.load(
-            ref,
-            strip_annotations=strip_subtitle_annotations,
-            cancel_check=cancel_check,
+        return (
+            subtitle_source.load(ref) if cancel_check is None else subtitle_source.load(ref, cancel_check=cancel_check)
         )
     if ref.kind == "text":
         from . import text_source
