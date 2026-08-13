@@ -369,8 +369,19 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(self.tr("Filter by any field..."))
         self.search_input.textChanged.connect(self._on_search_changed)
-        self.search_input.setMinimumWidth(200)
-        controls_layout.addWidget(self.search_input)
+        # The field takes a share of the row's surplus instead of demanding a
+        # flat 200px. This row IS the dialog's width floor, and everything else
+        # in it -- the label, the four verbs -- is text, so the floor tracks the
+        # rendered face: 815px here, 991px on a CI runner whose 'Sans Serif'
+        # resolves ~20% wider, which put the whole curator past a 1024px screen
+        # without a line of layout changing. A flat 200 was the one part of that
+        # floor answering to nothing, so it is measured through the font too and
+        # the field grows with the window instead.
+        # The cap keeps a filter box from spanning half a maximised window once
+        # it is allowed to grow at all.
+        self.search_input.setMinimumWidth(self.fontMetrics().height() * 5)
+        self.search_input.setMaximumWidth(self.fontMetrics().height() * 16)
+        controls_layout.addWidget(self.search_input, 1)
 
         controls_layout.addSpacing(16)
 
