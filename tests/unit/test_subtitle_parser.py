@@ -2979,55 +2979,20 @@ class TestSubtitleRegexFilter:
         assert entries[0][2] == "歌う こんにちは"
 
 
-class TestKanaStylizedCueFilter:
-    @pytest.mark.parametrize(
-        "cue",
-        [
-            "見テ分カレ！",
-            "コレガ夏油ノ言ッテイタ...",
-            "コレ１本編ムノニ 俺ノ国ノ術師ガ",
-            "ヒットアンドアウェイニ徹シテ...",
-            "ダカラ影武者ノ１人デモ...",
-            "ノルママデ アト12分強",
-            "俺ラハ足止メデショ",
-            "死ンダラ祟ルゾ 夏油！",
-        ],
-    )
-    def test_enabled_drops_cues_with_katakana_and_no_hiragana(self, tmp_path, cue):
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            skip_kana_stylized_cues=True,
-        )
-        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
-            service = SubtitleParserService(config)
-
-        assert service._clean_line_text(cue) == ""
+class TestKatakanaOnlyCuesPreserved:
+    """Katakana-stylized cue skipping was removed: a cue with katakana and
+    no hiragana always passes _clean_line_text unchanged."""
 
     @pytest.mark.parametrize(
         "cue",
-        [
-            "ツナ",
-            "ツナマヨ",
-            "肉ジャガ",
-            "ヒットアンドアウェイ",
-        ],
+        ["見テ分カレ！", "死ンダラ祟ルゾ 夏油！", "ツナマヨ", "肉ジャガ", "ヒットアンドアウェイ"],
     )
-    def test_default_off_preserves_valid_false_positives(self, tmp_path, cue):
+    def test_katakana_only_cue_passes_through(self, tmp_path, cue):
         config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
         with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
             service = SubtitleParserService(config)
 
         assert service._clean_line_text(cue) == cue
-
-    def test_enabled_keeps_cue_containing_hiragana(self, tmp_path):
-        config = AnkiMinerConfig(
-            media_temp_folder=tmp_path / "media",
-            skip_kana_stylized_cues=True,
-        )
-        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
-            service = SubtitleParserService(config)
-
-        assert service._clean_line_text("ツナマヨが好き") == "ツナマヨが好き"
 
 
 # ---------------------------------------------------------------------------

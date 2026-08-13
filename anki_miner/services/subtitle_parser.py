@@ -84,7 +84,6 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
-    "skip_kana_stylized_cues",
     "strip_subtitle_annotations",
 )
 
@@ -109,14 +108,6 @@ _LINE_CACHE_MAX_FILES: int = 256
 # keeps a whole-corpus Deck Builder run from growing without limit (mirrors the
 # compound matcher's existence cache).
 _FRONT_CACHE_CAP: int = 200_000
-
-_HIRAGANA_CUE_RE = re.compile(r"[ぁ-ゟ]")
-_KATAKANA_CUE_RE = re.compile(r"[゠-ヿ]")
-
-
-def _is_kana_stylized_cue(text: str) -> bool:
-    """Whether a normalized cue has katakana but no hiragana."""
-    return _KATAKANA_CUE_RE.search(text) is not None and _HIRAGANA_CUE_RE.search(text) is None
 
 
 # Term-OR-reading offline existence probe (DefinitionService.has_offline_definitions:
@@ -620,13 +611,6 @@ class SubtitleParserService:
         text. Whitespace is renormalized because regex deletion can leave double
         spaces behind.
         """
-        # Deliberate Yomitan divergence: interactive lookup has a human-selected
-        # scan point; batch mining does not. For sources with a known katakana-
-        # dialogue convention, fail closed on the whole cue instead of trusting
-        # MeCab's plausible-looking fragments. Opt-in because loanword-only cues
-        # are indistinguishable by script and are sacrificed too.
-        if self.config.skip_kana_stylized_cues and _is_kana_stylized_cue(text):
-            return ""
         if self._filter_pattern is None:
             return text
         filtered = self._filter_pattern.sub(self.config.subtitle_regex_replacement, text)

@@ -327,17 +327,6 @@ class FilteringSettingsPanel(FormPanel):
             ),
         )
 
-        self.skip_kana_stylized_cues_checkbox = QCheckBox(self.tr("Skip katakana-stylized subtitle cues"))
-        self.add_field(
-            "",
-            self.skip_kana_stylized_cues_checkbox,
-            helper=self.tr(
-                "Drop an entire subtitle cue when it contains katakana but no hiragana. "
-                "Use only for sources that style a speaker's dialogue in katakana; valid "
-                "loanword-only cues are also dropped. Off by default."
-            ),
-        )
-
         self.subtitle_regex_edit = QLineEdit()
         self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
         self.add_field(
@@ -718,14 +707,6 @@ class FilteringSettingsPanel(FormPanel):
         """Set the subtitle regex filter checkbox."""
         self.use_subtitle_regex_checkbox.setChecked(value)
 
-    def get_skip_kana_stylized_cues(self) -> bool:
-        """Return whether katakana-stylized subtitle cues are skipped."""
-        return self.skip_kana_stylized_cues_checkbox.isChecked()
-
-    def set_skip_kana_stylized_cues(self, value: bool) -> None:
-        """Set the katakana-stylized cue skip checkbox."""
-        self.skip_kana_stylized_cues_checkbox.setChecked(value)
-
     def get_strip_subtitle_annotations(self) -> bool:
         """Return whether structural annotation stripping is enabled."""
         return self.strip_subtitle_annotations_checkbox.isChecked()
@@ -878,7 +859,6 @@ class FilteringSettingsPanel(FormPanel):
         self.set_subtitle_regex_filter(config.subtitle_regex_filter)
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
-        self.set_skip_kana_stylized_cues(config.skip_kana_stylized_cues)
         self.set_strip_subtitle_annotations(config.strip_subtitle_annotations)
         self.set_deduplicate_sentences(config.deduplicate_sentences)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
@@ -917,7 +897,6 @@ class FilteringSettingsPanel(FormPanel):
             subtitle_regex_filter=self.get_subtitle_regex_filter(),
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
-            skip_kana_stylized_cues=self.get_skip_kana_stylized_cues(),
             strip_subtitle_annotations=self.get_strip_subtitle_annotations(),
             deduplicate_sentences=self.get_deduplicate_sentences(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),

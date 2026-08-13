@@ -99,7 +99,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         subtitle_regex_filter=r"\([^)]*\)",
         subtitle_regex_replacement="",
         use_subtitle_regex_filter=True,
-        skip_kana_stylized_cues=True,
         strip_subtitle_annotations=False,  # default is True
         deduplicate_sentences=False,
         exclude_hiragana_only_words=True,
@@ -159,7 +158,6 @@ _SAVE_PATH_FIELDS = frozenset(
         "subtitle_regex_filter",
         "subtitle_regex_replacement",
         "use_subtitle_regex_filter",
-        "skip_kana_stylized_cues",
         "strip_subtitle_annotations",
         "deduplicate_sentences",
         "exclude_hiragana_only_words",
@@ -302,7 +300,6 @@ class TestSavePathRoundTrip:
             "subtitle_regex_filter",
             "subtitle_regex_replacement",
             "use_subtitle_regex_filter",
-            "skip_kana_stylized_cues",
             "strip_subtitle_annotations",
             "deduplicate_sentences",
             "exclude_hiragana_only_words",
