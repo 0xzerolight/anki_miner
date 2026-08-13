@@ -17,7 +17,7 @@
     </message>
     <message>
         <source>Usage Guide</source>
-        <translation type="unfinished" />
+        <translation>使い方ガイド</translation>
     </message>
     <message>
         <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
@@ -219,7 +219,7 @@
     </message>
     <message>
         <source>Enter an AnkiConnect URL.</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect の URL を入力してください。</translation>
     </message>
     <message>
         <source>Checking connection...</source>
@@ -351,23 +351,23 @@
     </message>
     <message>
         <source>Preset</source>
-        <translation type="unfinished" />
+        <translation>プリセット</translation>
     </message>
     <message>
         <source>Select a preset…</source>
-        <translation type="unfinished" />
+        <translation>プリセットを選択…</translation>
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished">適用</translation>
+        <translation>適用</translation>
     </message>
     <message>
         <source>Fill every mapping below from this note type's published field names</source>
-        <translation type="unfinished" />
+        <translation>このノートタイプが公開しているフィールド名で、以下の割り当てをすべて入力します</translation>
     </message>
     <message>
         <source>Lapis, Kiku and Senren ship fixed field names. Applying overwrites the mappings below.</source>
-        <translation type="unfinished" />
+        <translation>Lapis、Kiku、Senren は固定のフィールド名を使用します。適用すると以下の割り当てが上書きされます。</translation>
     </message>
     <message>
         <source>Auto-Map Fields from Note Type</source>
@@ -639,11 +639,11 @@
     </message>
     <message>
         <source>Pick a preset first.</source>
-        <translation type="unfinished" />
+        <translation>先にプリセットを選択してください。</translation>
     </message>
     <message>
         <source>Applied %1 — %2 field mappings, romaji pitch categories.</source>
-        <translation type="unfinished" />
+        <translation>%1 を適用しました — %2 件のフィールド割り当て、ローマ字表記のピッチ区分。</translation>
     </message>
 </context><context>
     <name>App</name>
@@ -681,19 +681,19 @@ Continue anyway?</source>
     <name>AudioClipEditor</name>
     <message>
         <source>Drag either end to trim this word's audio clip; double-click to restore the default. Only this word is affected.</source>
-        <translation type="unfinished" />
+        <translation>両端をドラッグしてこの単語の音声クリップをトリミングします。ダブルクリックで既定に戻せます。影響するのはこの単語だけです。</translation>
     </message>
     <message>
         <source>Stop the clip preview</source>
-        <translation type="unfinished" />
+        <translation>クリップのプレビューを停止</translation>
     </message>
     <message>
         <source>Play just this clip</source>
-        <translation type="unfinished" />
+        <translation>このクリップだけを再生</translation>
     </message>
     <message>
         <source>%1 s</source>
-        <translation type="unfinished" />
+        <translation>%1 秒</translation>
     </message>
 </context><context>
     <name>AudioPackImportFlow</name>
@@ -839,11 +839,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Restore from Disk</source>
-        <translation type="unfinished">ディスクから復元</translation>
+        <translation>ディスクから復元</translation>
     </message>
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダーにあるが上の一覧にない音声パックを再追加します。再インポートは不要です。</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -935,7 +935,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>⚠ pack missing — re-import</source>
-        <translation type="unfinished" />
+        <translation>⚠ パックが見つかりません — 再インポートしてください</translation>
     </message>
     <message>
         <source>⚠ folder missing — re-import</source>
@@ -955,11 +955,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">再インポート</translation>
+        <translation>再インポート</translation>
     </message>
     <message>
         <source>Removal of %1 was not saved. The source is unchanged — try again.</source>
-        <translation type="unfinished" />
+        <translation>%1 の削除は保存されませんでした。ソースは変更されていません — もう一度お試しください。</translation>
     </message>
     <message>
         <source>Remove audio pack</source>
@@ -1181,7 +1181,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Show the word-selection popup once per series, covering every episode's words</source>
-        <translation type="unfinished" />
+        <translation>シリーズごとに1回、単語選択のポップアップを表示し、全エピソードの単語をまとめて確認します</translation>
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1305,7 +1305,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished" />
+        <translation>エラーが発生して完了しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
@@ -1335,8 +1335,8 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>BatchQueueWorkerThread</name>
     <message numerus="yes">
         <source>Collecting words from %n episode(s) for review...</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>%n 件のエピソードから確認用の単語を収集しています…</numerusform>
         </translation>
     </message>
 </context><context>
@@ -1371,7 +1371,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Tools &amp; maintenance</source>
-        <translation type="unfinished" />
+        <translation>ツールとメンテナンス</translation>
     </message>
     <message>
         <source>Mine a single episode</source>
@@ -1391,19 +1391,19 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Queue several series at once</source>
-        <translation type="unfinished" />
+        <translation>複数のシリーズを一度にキューへ追加</translation>
     </message>
     <message>
         <source>Add multiple series to one batch run, each with its own video and subtitle folders and per-series subtitle offset.</source>
-        <translation type="unfinished" />
+        <translation>複数のシリーズを1回の一括実行にまとめて追加できます。各シリーズは個別の動画・字幕フォルダーとシリーズごとの字幕オフセットを持てます。</translation>
     </message>
     <message>
         <source>Review words before mining</source>
-        <translation type="unfinished">マイニング前に単語を確認</translation>
+        <translation>マイニング前に単語を確認</translation>
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
-        <translation type="unfinished" />
+        <translation>カードを作成する前に、単語ごとに承認・却下を選び、例文とシーンを選び、音声をトリミングし、既知としてマークできます。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -1415,11 +1415,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Deck Builder modes (all / top N / coverage %)</source>
-        <translation type="unfinished" />
+        <translation>デッキビルダーのモード（すべて／上位N件／カバー率%）</translation>
     </message>
     <message>
         <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation type="unfinished" />
+        <translation>デッキビルダーはエピソードごとのフィルターと重複チェックを常にスキップします。すべての単語、上位N件、またはカバー率の目標を選び、必要に応じて既知単語を除外できます。</translation>
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -1463,11 +1463,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mine subtitle files without video</source>
-        <translation type="unfinished" />
+        <translation>動画なしで字幕ファイルからマイニング</translation>
     </message>
     <message>
         <source>Mine vocabulary straight from subtitle files (.srt/.ass/.vtt) as text -- no video needed.</source>
-        <translation type="unfinished" />
+        <translation>字幕ファイル（.srt/.ass/.vtt）からテキストとして直接語彙をマイニングします — 動画は不要です。</translation>
     </message>
     <message>
         <source>Generate subtitles from audio</source>
@@ -1487,11 +1487,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fine-tune subtitle timing by ear</source>
-        <translation type="unfinished" />
+        <translation>耳で確認しながら字幕タイミングを微調整</translation>
     </message>
     <message>
         <source>Pick a line, nudge the offset with the arrow keys, and instantly hear it to check the sync against the video.</source>
-        <translation type="unfinished" />
+        <translation>行を選び、矢印キーでオフセットを微調整し、即座に再生して動画との同期を確認できます。</translation>
     </message>
     <message>
         <source>Condense audio from subtitles</source>
@@ -1503,27 +1503,27 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Filter a premade deck into a new deck</source>
-        <translation type="unfinished" />
+        <translation>既存デッキをフィルターして新しいデッキへ</translation>
     </message>
     <message>
         <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation type="unfinished" />
+        <translation>既存の Anki デッキのノートのうち、フィルター（既知単語、頻度帯、ブラックリスト、文字種）を通過したものを新しいデッキにコピーします。元のデッキは変更されません。</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
-        <translation type="unfinished" />
+        <translation>凝縮：トラック選択と追加出力</translation>
     </message>
     <message>
         <source>Pick the audio and subtitle tracks to condense, and also write condensed subtitles (.srt) and lyrics (.lrc).</source>
-        <translation type="unfinished" />
+        <translation>凝縮する音声・字幕トラックを選択し、凝縮字幕（.srt）と歌詞ファイル（.lrc）も同時に出力できます。</translation>
     </message>
     <message>
         <source>Tag condensed audio with metadata</source>
-        <translation type="unfinished" />
+        <translation>凝縮音声にメタデータでタグ付け</translation>
     </message>
     <message>
         <source>Optionally add title, album, artist and cover art to condensed audio outputs before the run.</source>
-        <translation type="unfinished" />
+        <translation>実行前に、凝縮音声の出力へタイトル・アルバム・アーティスト・カバーアートを任意で追加できます。</translation>
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1551,19 +1551,19 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>YouTube duration &amp; playlist limits</source>
-        <translation type="unfinished" />
+        <translation>YouTube の再生時間・プレイリスト上限</translation>
     </message>
     <message>
         <source>Cap the maximum video duration and how many playlist videos are fetched.</source>
-        <translation type="unfinished" />
+        <translation>動画の最大再生時間と、プレイリストから取得する動画数の上限を設定します。</translation>
     </message>
     <message>
         <source>Keep yt-dlp up to date</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp を最新に保つ</translation>
     </message>
     <message>
         <source>Auto-update the bundled yt-dlp downloader, update it on demand, or point at your own binary.</source>
-        <translation type="unfinished" />
+        <translation>同梱の yt-dlp ダウンローダーを自動更新するか、必要なときに更新するか、独自のバイナリを指定できます。</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -1575,11 +1575,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Keep words inside a frequency band</source>
-        <translation type="unfinished" />
+        <translation>頻度帯の範囲内の単語のみを残す</translation>
     </message>
     <message>
         <source>Skip words rarer than a maximum rank, more common than a minimum rank, or missing from your frequency lists.</source>
-        <translation type="unfinished" />
+        <translation>最大ランクより希少な単語、最小ランクより一般的な単語、または頻度リストに存在しない単語をスキップします。</translation>
     </message>
     <message>
         <source>Skip words you already know</source>
@@ -1603,7 +1603,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.</source>
-        <translation type="unfinished" />
+        <translation>自分だけの既知単語リストを管理できます — 常に適用され、キャッシュの再構築後も保持され、プレーンテキストとしてエクスポートできます。</translation>
     </message>
     <message>
         <source>Exclude kana-only words</source>
@@ -1611,7 +1611,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Drop words written without kanji; ticking both boxes leaves a kanji-only deck.</source>
-        <translation type="unfinished" />
+        <translation>漢字を含まずに書かれた単語を除外します。両方のチェックを入れると、漢字のみのデッキになります。</translation>
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -1627,7 +1627,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Skip sentences longer than a chosen duration or character count.</source>
-        <translation type="unfinished" />
+        <translation>選んだ再生時間または文字数を超える文をスキップします。</translation>
     </message>
     <message>
         <source>Avoid duplicate cards</source>
@@ -1647,27 +1647,27 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Skip Japanese names</source>
-        <translation type="unfinished" />
+        <translation>日本語の人名をスキップ</translation>
     </message>
     <message>
         <source>Exclude bundled name lists -- surnames, given names, places, companies and products -- from mining.</source>
-        <translation type="unfinished" />
+        <translation>同梱の名称リスト（姓、名、地名、会社名、商品名）をマイニング対象から除外します。</translation>
     </message>
     <message>
         <source>Require repeat occurrences in a book</source>
-        <translation type="unfinished" />
+        <translation>書籍内での複数回出現を必須にする</translation>
     </message>
     <message>
         <source>Only mine a word from reading material once it appears a chosen number of times in the book or volume.</source>
-        <translation type="unfinished" />
+        <translation>読み物の単語は、書籍または巻の中で選んだ回数だけ出現した場合にのみマイニングします。</translation>
     </message>
     <message>
         <source>Kana spellings count as known</source>
-        <translation type="unfinished" />
+        <translation>かな表記も既知として扱う</translation>
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
-        <translation type="unfinished" />
+        <translation>漢字で既知の単語のかな表記も既知として扱います（既定でオン）。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -1727,27 +1727,27 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Move the resource storage folder</source>
-        <translation type="unfinished" />
+        <translation>リソースの保存フォルダーを移動</translation>
     </message>
     <message>
         <source>Relocate where dictionaries and other indexed resources are stored, restore them from disk, or reimport everything.</source>
-        <translation type="unfinished" />
+        <translation>辞書などのインデックス済みリソースの保存場所を変更したり、ディスクから復元したり、すべてを再インポートしたりできます。</translation>
     </message>
     <message>
         <source>Speed up subtitle generation (GPU)</source>
-        <translation type="unfinished" />
+        <translation>字幕生成を高速化（GPU）</translation>
     </message>
     <message>
         <source>Install CUDA or Vulkan acceleration and the silence-skipping pack for the local Whisper model.</source>
-        <translation type="unfinished" />
+        <translation>ローカルの Whisper モデル向けに、CUDA または Vulkan アクセラレーションと無音スキップパックをインストールします。</translation>
     </message>
     <message>
         <source>Tune subtitle alignment (alass)</source>
-        <translation type="unfinished" />
+        <translation>字幕アライメントを調整（alass）</translation>
     </message>
     <message>
         <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation type="unfinished" />
+        <translation>リタイミングに使う alass アライナーを設定します：分割ペナルティ、フレームレート補正、単一オフセットモード。</translation>
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -1775,19 +1775,19 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Sentence audio for reading (TTS)</source>
-        <translation type="unfinished" />
+        <translation>読み物用の文章音声（TTS）</translation>
     </message>
     <message>
         <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation type="unfinished" />
+        <translation>書籍・マンガ・貼り付けたテキストからマイニングしたカード向けに、読み上げ文章音声を合成します。</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
-        <translation type="unfinished" />
+        <translation>カスタム単語音声ソースを追加</translation>
     </message>
     <message>
         <source>Plug your own online pronunciation-audio server into the audio chain by URL template or JSON contract.</source>
-        <translation type="unfinished" />
+        <translation>URL テンプレートまたは JSON 仕様で、独自のオンライン発音音声サーバーを音声チェーンに組み込めます。</translation>
     </message>
     <message>
         <source>Screenshots on cards</source>
@@ -1815,11 +1815,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Tune parallel media workers</source>
-        <translation type="unfinished" />
+        <translation>並列メディアワーカーを調整</translation>
     </message>
     <message>
         <source>Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.</source>
-        <translation type="unfinished" />
+        <translation>同時に実行するメディア抽出ジョブの数を選び、速度と CPU・メモリ使用量のバランスを調整します。</translation>
     </message>
     <message>
         <source>Map data to your note fields</source>
@@ -1863,27 +1863,27 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Connect to Anki (AnkiConnect)</source>
-        <translation type="unfinished" />
+        <translation>Anki に接続（AnkiConnect）</translation>
     </message>
     <message>
         <source>Set the AnkiConnect address and test the connection to your running Anki.</source>
-        <translation type="unfinished" />
+        <translation>AnkiConnect のアドレスを設定し、起動中の Anki への接続をテストします。</translation>
     </message>
     <message>
         <source>One-click note-type presets</source>
-        <translation type="unfinished" />
+        <translation>ワンクリックのノートタイププリセット</translation>
     </message>
     <message>
         <source>Apply a preset for a popular note type (Lapis, Kiku, Senren) that fills every field mapping for you.</source>
-        <translation type="unfinished" />
+        <translation>人気のノートタイプ（Lapis、Kiku、Senren）向けのプリセットを適用すると、フィールドの割り当てがすべて自動で入力されます。</translation>
     </message>
     <message>
         <source>Bold the mined word in the sentence</source>
-        <translation type="unfinished" />
+        <translation>例文中のマイニング単語を太字にする</translation>
     </message>
     <message>
         <source>Wrap the mined word in bold inside the sentence fields on your cards.</source>
-        <translation type="unfinished" />
+        <translation>カードの例文フィールド内で、マイニングした単語を太字で囲みます。</translation>
     </message>
     <message>
         <source>Themes, dark mode, fonts &amp; zoom</source>
@@ -1907,47 +1907,47 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Keep several named snapshots of every setting and switch between them from the Settings footer.</source>
-        <translation type="unfinished" />
+        <translation>すべての設定に名前付きスナップショットを複数保持し、設定画面のフッターから切り替えられます。</translation>
     </message>
     <message>
         <source>Install custom themes</source>
-        <translation type="unfinished" />
+        <translation>カスタムテーマをインストール</translation>
     </message>
     <message>
         <source>Add your own theme JSON files and preview every theme in the gallery before applying it.</source>
-        <translation type="unfinished" />
+        <translation>独自のテーマ JSON ファイルを追加し、適用前にギャラリーですべてのテーマをプレビューできます。</translation>
     </message>
     <message>
         <source>Use system file dialogs</source>
-        <translation type="unfinished">システムのファイルダイアログを使用</translation>
+        <translation>システムのファイルダイアログを使用</translation>
     </message>
     <message>
         <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
-        <translation type="unfinished" />
+        <translation>Anki Miner 内蔵のファイル選択ダイアログと、OS 標準のものを切り替えます。</translation>
     </message>
     <message>
         <source>Search the settings</source>
-        <translation type="unfinished" />
+        <translation>設定を検索</translation>
     </message>
     <message>
         <source>Type in the search box at the top of Settings to jump straight to any control.</source>
-        <translation type="unfinished" />
+        <translation>設定画面上部の検索ボックスに入力すると、目的の項目へ直接ジャンプできます。</translation>
     </message>
     <message>
         <source>Export / import settings</source>
-        <translation type="unfinished" />
+        <translation>設定のエクスポート／インポート</translation>
     </message>
     <message>
         <source>Save every setting to a portable file, load it on another machine, or reset everything to defaults -- from the Settings footer.</source>
-        <translation type="unfinished" />
+        <translation>すべての設定を持ち運び可能なファイルに保存したり、別のマシンで読み込んだり、すべてを既定値に戻したりできます — 設定画面のフッターから。</translation>
     </message>
     <message>
         <source>Check for app updates</source>
-        <translation type="unfinished" />
+        <translation>アプリの更新を確認</translation>
     </message>
     <message>
         <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
-        <translation type="unfinished" />
+        <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認したり、設定画面のフッターで起動時の自動確認を切り替えたりできます。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -1955,79 +1955,79 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
-        <translation type="unfinished" />
+        <translation>以前マイニングしたカードに、最新の Anki Miner スタイルを再適用します — ツールメニューから。</translation>
     </message>
     <message>
         <source>System health check</source>
-        <translation type="unfinished" />
+        <translation>システムの状態を確認</translation>
     </message>
     <message>
         <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.</source>
-        <translation type="unfinished" />
+        <translation>Anki、ffmpeg、リソースの準備状況をワンクリックの修正機能とともに確認できます — ステータスバーのバッジから開きます。</translation>
     </message>
     <message>
         <source>Setup wizard</source>
-        <translation type="unfinished" />
+        <translation>セットアップウィザード</translation>
     </message>
     <message>
         <source>Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.</source>
-        <translation type="unfinished" />
+        <translation>テーマ、Anki 接続、デッキ、ノートタイプ、リソースなど、初回セットアップのガイドを再実行できます — ツールメニューから。</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
-        <translation type="unfinished">推奨リソースをダウンロード</translation>
+        <translation>推奨リソースをダウンロード</translation>
     </message>
     <message>
         <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation type="unfinished" />
+        <translation>ツールメニューからワンクリックで、厳選された辞書・頻度リスト・ピッチアクセントデータを取得できます。</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>
-        <translation type="unfinished" />
+        <translation>デスクトップショートカットを作成</translation>
     </message>
     <message>
         <source>Add an Anki Miner launcher to your desktop from the Tools menu.</source>
-        <translation type="unfinished" />
+        <translation>ツールメニューから、デスクトップに Anki Miner の起動ショートカットを追加します。</translation>
     </message>
     <message>
         <source>Export diagnostics for a bug report</source>
-        <translation type="unfinished" />
+        <translation>バグ報告用に診断情報をエクスポート</translation>
     </message>
     <message>
         <source>Save a zip of logs and system details to attach to a bug report -- from the Help menu.</source>
-        <translation type="unfinished" />
+        <translation>ログとシステム情報を zip にまとめて保存し、バグ報告に添付できます — ヘルプメニューから。</translation>
     </message>
     <message>
         <source>Mini job monitor</source>
-        <translation type="unfinished" />
+        <translation>ミニジョブモニター</translation>
     </message>
     <message>
         <source>Pop out a small always-on-top window that tracks the current run -- from the status-bar task menu.</source>
-        <translation type="unfinished" />
+        <translation>現在の実行状況を追跡する常に最前面の小さなウィンドウを表示します — ステータスバーのタスクメニューから。</translation>
     </message>
     <message>
         <source>Crash &amp; session recovery</source>
-        <translation type="unfinished" />
+        <translation>クラッシュ・セッション復元</translation>
     </message>
     <message>
         <source>After an unexpected exit, Anki Miner offers to restore unfinished queues and resume interrupted downloads at the next launch.</source>
-        <translation type="unfinished" />
+        <translation>予期しない終了の後、次回起動時に未完了のキューを復元し、中断したダウンロードを再開できるよう提案します。</translation>
     </message>
     <message>
         <source>Undo a mining run</source>
-        <translation type="unfinished" />
+        <translation>マイニング実行を取り消す</translation>
     </message>
     <message>
         <source>Delete the notes a run just created, straight from the results dialog.</source>
-        <translation type="unfinished" />
+        <translation>結果ダイアログから直接、実行で作成されたノートを削除できます。</translation>
     </message>
     <message>
         <source>Keyboard shortcuts</source>
-        <translation type="unfinished" />
+        <translation>キーボードショートカット</translation>
     </message>
     <message>
         <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation type="unfinished" />
+        <translation>Ctrl+1〜7 でタブを切り替え、Ctrl+, で設定を開き、Ctrl+Enter で画面のメインアクションを実行し、F1 でこのガイドを開きます — 完全な一覧はヘルプ → 概要にあります。</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -2213,11 +2213,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Filled {fields} field(s) on {notes} note(s).</source>
-        <translation type="unfinished" />
+        <translation>{notes} 件のノートで {fields} 個のフィールドを入力しました。</translation>
     </message>
     <message>
         <source>Tagged {tag}.</source>
-        <translation type="unfinished" />
+        <translation>{tag} をタグ付けしました。</translation>
     </message>
     <message>
         <source>{count} skipped — changed or deleted since the scan.</source>
@@ -2229,7 +2229,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>{count} 件のノート更新が Anki で確認できませんでした。再試行するには再スキャンしてください。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -2243,47 +2243,47 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <name>CondenseMetadataDialog</name>
     <message>
         <source>Condensed Audio Metadata</source>
-        <translation type="unfinished" />
+        <translation>凝縮音声のメタデータ</translation>
     </message>
     <message>
         <source>Artist:</source>
-        <translation type="unfinished" />
+        <translation>アーティスト:</translation>
     </message>
     <message>
         <source>Apply to all rows</source>
-        <translation type="unfinished" />
+        <translation>すべての行に適用</translation>
     </message>
     <message>
         <source>Genre:</source>
-        <translation type="unfinished" />
+        <translation>ジャンル:</translation>
     </message>
     <message>
         <source>Condensed Audio</source>
-        <translation type="unfinished" />
+        <translation>凝縮音声</translation>
     </message>
     <message>
         <source>Artwork:</source>
-        <translation type="unfinished" />
+        <translation>アートワーク:</translation>
     </message>
     <message>
         <source>File</source>
-        <translation type="unfinished" />
+        <translation>ファイル</translation>
     </message>
     <message>
         <source>Track #</source>
-        <translation type="unfinished" />
+        <translation>トラック番号</translation>
     </message>
     <message>
         <source>Title</source>
-        <translation type="unfinished" />
+        <translation>タイトル</translation>
     </message>
     <message>
         <source>Album</source>
-        <translation type="unfinished" />
+        <translation>アルバム</translation>
     </message>
     <message>
         <source>Artist</source>
-        <translation type="unfinished" />
+        <translation>アーティスト</translation>
     </message>
 </context><context>
     <name>CondenseTab</name>
@@ -2473,11 +2473,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Tag output files (title, album, artist…)</source>
-        <translation type="unfinished" />
+        <translation>出力ファイルにタグ付け（タイトル、アルバム、アーティストなど…）</translation>
     </message>
     <message>
         <source>Review and edit music-library metadata for each output before condensing starts.</source>
-        <translation type="unfinished" />
+        <translation>凝縮処理を開始する前に、各出力の音楽ライブラリ用メタデータを確認・編集します。</translation>
     </message>
     <message>
         <source>Output</source>
@@ -2549,7 +2549,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
-        <translation type="unfinished" />
+        <translation>複数のメディアファイルが同じ出力ファイルに書き込まれます。</translation>
     </message>
     <message>
         <source>Output directory is not writable: </source>
@@ -2607,7 +2607,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Audio done; subtitle write failed: %1; tagging failed: %2</source>
-        <translation type="unfinished" />
+        <translation>音声は完了；字幕の書き込みに失敗: %1；タグ付けに失敗: %2</translation>
     </message>
     <message>
         <source>Audio done; subtitle write failed: %1</source>
@@ -2615,7 +2615,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Audio done; tagging failed: %1</source>
-        <translation type="unfinished" />
+        <translation>音声は完了；タグ付けに失敗: %1</translation>
     </message>
     <message>
         <source>Done</source>
@@ -2883,227 +2883,227 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <name>DeckFilterTab</name>
     <message>
         <source>Deck Filter</source>
-        <translation type="unfinished" />
+        <translation>デッキフィルター</translation>
     </message>
     <message>
         <source>Copy the worth-learning part of a premade deck into a new deck. Notes are kept or dropped by your filters — known words, frequency band, blacklist, script type and name wordsets (Settings → Filtering). The source deck is not modified.</source>
-        <translation type="unfinished" />
+        <translation>既存デッキの学習価値があるノートだけを新しいデッキにコピーします。ノートの採否はフィルター（既知単語、頻度帯、ブラックリスト、文字種、名称ワードセット）で決まります（設定 → フィルタリング）。元のデッキは変更されません。</translation>
     </message>
     <message>
         <source>Source deck:</source>
-        <translation type="unfinished" />
+        <translation>元のデッキ:</translation>
     </message>
     <message>
         <source>Select a deck…</source>
-        <translation type="unfinished">デッキを選択…</translation>
+        <translation>デッキを選択…</translation>
     </message>
     <message>
         <source>Word field:</source>
-        <translation type="unfinished" />
+        <translation>単語フィールド:</translation>
     </message>
     <message>
         <source>(first field)</source>
-        <translation type="unfinished" />
+        <translation>（最初のフィールド）</translation>
     </message>
     <message>
         <source>Reading field:</source>
-        <translation type="unfinished" />
+        <translation>読みフィールド:</translation>
     </message>
     <message>
         <source>(none — generate)</source>
-        <translation type="unfinished" />
+        <translation>（なし — 生成）</translation>
     </message>
     <message>
         <source>New deck:</source>
-        <translation type="unfinished" />
+        <translation>新しいデッキ:</translation>
     </message>
     <message>
         <source>Name for the filtered deck</source>
-        <translation type="unfinished" />
+        <translation>フィルター後のデッキの名前</translation>
     </message>
     <message>
         <source>Scan deck (read-only)</source>
-        <translation type="unfinished" />
+        <translation>デッキをスキャン（読み取り専用）</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">キャンセル</translation>
+        <translation>キャンセル</translation>
     </message>
     <message>
         <source>Expression</source>
-        <translation type="unfinished">表現</translation>
+        <translation>表現</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation type="unfinished">読み</translation>
+        <translation>読み</translation>
     </message>
     <message>
         <source>Freq. rank</source>
-        <translation type="unfinished" />
+        <translation>頻度ランク</translation>
     </message>
     <message>
         <source>Copy Notes to New Deck</source>
-        <translation type="unfinished" />
+        <translation>ノートを新しいデッキへコピー</translation>
     </message>
     <message>
         <source>Deck Filter works on a deck already in Anki — pick it above.</source>
-        <translation type="unfinished" />
+        <translation>デッキフィルターは、Anki に既にあるデッキに対して動作します — 上で選択してください。</translation>
     </message>
     <message>
         <source>known words</source>
-        <translation type="unfinished" />
+        <translation>既知単語</translation>
     </message>
     <message>
         <source>frequency band</source>
-        <translation type="unfinished" />
+        <translation>頻度帯</translation>
     </message>
     <message>
         <source>blacklist</source>
-        <translation type="unfinished" />
+        <translation>ブラックリスト</translation>
     </message>
     <message>
         <source>whitelist (force-include)</source>
-        <translation type="unfinished" />
+        <translation>ホワイトリスト（強制的に含める）</translation>
     </message>
     <message>
         <source>script type</source>
-        <translation type="unfinished" />
+        <translation>文字種</translation>
     </message>
     <message>
         <source>name wordsets</source>
-        <translation type="unfinished" />
+        <translation>名称ワードセット</translation>
     </message>
     <message>
         <source>Active filters: {filters}.</source>
-        <translation type="unfinished" />
+        <translation>有効なフィルター: {filters}。</translation>
     </message>
     <message>
         <source>Couldn't fetch deck names from Anki — is Anki running?</source>
-        <translation type="unfinished" />
+        <translation>Anki からデッキ名を取得できませんでした — Anki は起動していますか？</translation>
     </message>
     <message>
         <source>{deck} (Filtered)</source>
-        <translation type="unfinished" />
+        <translation>{deck}（フィルター後）</translation>
     </message>
     <message>
         <source>Couldn't read the deck: </source>
-        <translation type="unfinished" />
+        <translation>デッキを読み取れませんでした: </translation>
     </message>
     <message>
         <source>The selected deck has no notes.</source>
-        <translation type="unfinished" />
+        <translation>選択したデッキにノートがありません。</translation>
     </message>
     <message>
         <source>{count} note(s) in the deck.</source>
-        <translation type="unfinished" />
+        <translation>デッキ内のノート数: {count} 件。</translation>
     </message>
     <message>
         <source>Pick the source deck first.</source>
-        <translation type="unfinished" />
+        <translation>先に元のデッキを選択してください。</translation>
     </message>
     <message>
         <source>Name the new deck first.</source>
-        <translation type="unfinished" />
+        <translation>先に新しいデッキの名前を入力してください。</translation>
     </message>
     <message>
         <source>The new deck needs a different name than the source deck.</source>
-        <translation type="unfinished" />
+        <translation>新しいデッキには元のデッキと異なる名前が必要です。</translation>
     </message>
     <message>
         <source>Deck filter scan</source>
-        <translation type="unfinished" />
+        <translation>デッキフィルターのスキャン</translation>
     </message>
     <message>
         <source>Scanning…</source>
-        <translation type="unfinished">スキャン中…</translation>
+        <translation>スキャン中…</translation>
     </message>
     <message>
         <source>empty word field</source>
-        <translation type="unfinished" />
+        <translation>単語フィールドが空</translation>
     </message>
     <message>
         <source>not Japanese</source>
-        <translation type="unfinished" />
+        <translation>日本語ではない</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>
-        <translation type="unfinished" />
+        <translation>デッキ内で重複</translation>
     </message>
     <message>
         <source>already known or carded</source>
-        <translation type="unfinished" />
+        <translation>既に既知またはカード化済み</translation>
     </message>
     <message>
         <source>no frequency rank</source>
-        <translation type="unfinished" />
+        <translation>頻度ランクなし</translation>
     </message>
     <message>
         <source>outside the frequency band</source>
-        <translation type="unfinished" />
+        <translation>頻度帯の範囲外</translation>
     </message>
     <message>
         <source>blacklisted</source>
-        <translation type="unfinished" />
+        <translation>ブラックリスト登録済み</translation>
     </message>
     <message>
         <source>name (wordset)</source>
-        <translation type="unfinished" />
+        <translation>名称（ワードセット）</translation>
     </message>
     <message>
         <source>No notes found in deck "{deck}".</source>
-        <translation type="unfinished" />
+        <translation>デッキ「{deck}」にノートが見つかりません。</translation>
     </message>
     <message>
         <source>{kept} of {scanned} note(s) will be copied.</source>
-        <translation type="unfinished" />
+        <translation>{scanned} 件中 {kept} 件のノートがコピーされます。</translation>
     </message>
     <message>
         <source>Dropped — {reasons}.</source>
-        <translation type="unfinished" />
+        <translation>除外 — {reasons}。</translation>
     </message>
     <message>
         <source>{count} kept by whitelist.</source>
-        <translation type="unfinished" />
+        <translation>ホワイトリストにより {count} 件を保持。</translation>
     </message>
     <message>
         <source>Showing first {rows} rows.</source>
-        <translation type="unfinished">先頭の {rows} 行を表示しています。</translation>
+        <translation>先頭の {rows} 行を表示しています。</translation>
     </message>
     <message>
         <source>Settings changed since this scan; re-scan before copying.</source>
-        <translation type="unfinished" />
+        <translation>このスキャン以降に設定が変更されました。コピーする前に再スキャンしてください。</translation>
     </message>
     <message>
         <source>Copy notes to a new deck?</source>
-        <translation type="unfinished" />
+        <translation>ノートを新しいデッキへコピーしますか？</translation>
     </message>
     <message>
         <source>This will create deck "{deck}" and copy {notes} note(s) into it, tagged {tag}. The source deck is not modified. Continue?</source>
-        <translation type="unfinished" />
+        <translation>デッキ「{deck}」を作成し、{notes} 件のノートを {tag} のタグを付けてコピーします。元のデッキは変更されません。続行しますか？</translation>
     </message>
     <message>
         <source>Deck filter copy</source>
-        <translation type="unfinished" />
+        <translation>デッキフィルターのコピー</translation>
     </message>
     <message>
         <source>Copying…</source>
-        <translation type="unfinished" />
+        <translation>コピー中…</translation>
     </message>
     <message>
         <source>Copied {count} note(s) into "{deck}".</source>
-        <translation type="unfinished" />
+        <translation>{count} 件のノートを「{deck}」へコピーしました。</translation>
     </message>
     <message>
         <source>{count} note(s) were not accepted by Anki (see log).</source>
-        <translation type="unfinished" />
+        <translation>{count} 件のノートが Anki に受け付けられませんでした（ログを確認してください）。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">キャンセル中…</translation>
+        <translation>キャンセル中…</translation>
     </message>
     <message>
         <source>Cancelled.</source>
-        <translation type="unfinished">キャンセルしました。</translation>
+        <translation>キャンセルしました。</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -3507,7 +3507,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Recheck</source>
-        <translation type="unfinished">再確認</translation>
+        <translation>再確認</translation>
     </message>
     <message>
         <source>Checking your setup...</source>
@@ -3703,15 +3703,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation type="unfinished" />
+        <translation>別の表記で既にカード化済みのため %1 件の単語をスキップしました</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
-        <translation type="unfinished" />
+        <translation>頻度フィルター: ランク %2〜%3 の範囲外の単語を %1 件除去しました</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words more common than rank %2</source>
-        <translation type="unfinished" />
+        <translation>頻度フィルター: ランク %2 より一般的な単語を %1 件除去しました</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside top %2</source>
@@ -4017,11 +4017,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>No minimum</source>
-        <translation type="unfinished" />
+        <translation>最小値なし</translation>
     </message>
     <message>
         <source>Skip words more common than this rank - the ones already learned from exposure.</source>
-        <translation type="unfinished" />
+        <translation>このランクより一般的な単語をスキップします — 触れているうちに既に習得済みの単語です。</translation>
     </message>
     <message>
         <source>No limit</source>
@@ -4029,35 +4029,35 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Skip words rarer than this rank.</source>
-        <translation type="unfinished" />
+        <translation>このランクより希少な単語をスキップします。</translation>
     </message>
     <message>
         <source>to</source>
-        <translation type="unfinished" />
+        <translation>〜</translation>
     </message>
     <message>
         <source>Frequency Rank Range</source>
-        <translation type="unfinished" />
+        <translation>頻度ランクの範囲</translation>
     </message>
     <message>
         <source>Mine only words ranked inside this band. Rank 1 is the most common word.</source>
-        <translation type="unfinished" />
+        <translation>この範囲内にランクされた単語のみをマイニングします。ランク1が最も一般的な単語です。</translation>
     </message>
     <message>
         <source>Include Words Missing from the Frequency List</source>
-        <translation type="unfinished" />
+        <translation>頻度リストにない単語を含める</translation>
     </message>
     <message>
         <source>Keep words that no loaded frequency source ranks. Off by default: a word with no rank cannot be shown to fall inside the band.</source>
-        <translation type="unfinished" />
+        <translation>読み込まれたどの頻度ソースにもランクされていない単語を保持します。既定ではオフです — ランクのない単語は範囲内にあると判定できないためです。</translation>
     </message>
     <message>
         <source>No frequency source is loaded, so this range is ignored.</source>
-        <translation type="unfinished" />
+        <translation>頻度ソースが読み込まれていないため、この範囲は無視されます。</translation>
     </message>
     <message>
         <source>Open Frequency settings</source>
-        <translation type="unfinished" />
+        <translation>頻度設定を開く</translation>
     </message>
     <message>
         <source>Known Words Database</source>
@@ -4453,11 +4453,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Restore from Disk</source>
-        <translation type="unfinished">ディスクから復元</translation>
+        <translation>ディスクから復元</translation>
     </message>
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダーにあるが上の一覧にない頻度ソースを再追加します。再インポートは不要です。</translation>
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4481,7 +4481,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Move up in the card's source list</source>
-        <translation type="unfinished" />
+        <translation>カードのソース一覧内で上に移動</translation>
     </message>
     <message>
         <source>Move down</source>
@@ -4529,7 +4529,9 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <source>Remove '%1' from the frequency chain?
 
 Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation type="unfinished" />
+        <translation>「%1」を頻度チェーンから削除しますか？
+
+このフォルダーが Anki Miner のものであると確認できなかったため、ディスク上のインデックスファイルはそのまま残されます。</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
@@ -4731,11 +4733,11 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>The known words list could not be exported.</source>
-        <translation type="unfinished" />
+        <translation>既知単語リストをエクスポートできませんでした。</translation>
     </message>
     <message>
         <source>Retry</source>
-        <translation type="unfinished">再試行</translation>
+        <translation>再試行</translation>
     </message>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
@@ -4971,11 +4973,11 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Usage Guide</source>
-        <translation type="unfinished" />
+        <translation>使い方ガイド</translation>
     </message>
     <message>
         <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
+        <translation>使い方ガイドを開く...</translation>
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>
@@ -5039,7 +5041,7 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Downloaded resources were left inactive because their storage folder changed.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダーが変更されたため、ダウンロード済みのリソースは無効のままになっています。</translation>
     </message>
     <message>
         <source>Open Settings</source>
@@ -5079,11 +5081,11 @@ Continue?</source>
     </message>
     <message>
         <source>Restyle incomplete</source>
-        <translation type="unfinished" />
+        <translation>スタイルの再適用が未完了</translation>
     </message>
     <message>
         <source>%1 note update(s) were not confirmed; run Restyle again.</source>
-        <translation type="unfinished" />
+        <translation>%1 件のノート更新が確認できませんでした。もう一度スタイルの再適用を実行してください。</translation>
     </message>
     <message>
         <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
@@ -5155,7 +5157,7 @@ Continue?</source>
     </message>
     <message>
         <source>The update check failed; try again later.</source>
-        <translation type="unfinished" />
+        <translation>更新の確認に失敗しました。しばらくしてからもう一度お試しください。</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -5191,7 +5193,7 @@ Continue?</source>
     </message>
     <message>
         <source>Deck Filter</source>
-        <translation type="unfinished" />
+        <translation>デッキフィルター</translation>
     </message>
     <message>
         <source>Single</source>
@@ -5419,7 +5421,7 @@ Continue?</source>
     </message>
     <message>
         <source>Recognized %1 — mapped %2 fields. You can fine-tune these later in Settings → Anki.</source>
-        <translation type="unfinished" />
+        <translation>%1 を認識しました — %2 個のフィールドを割り当てました。詳細は後で設定 → Anki で調整できます。</translation>
     </message>
     <message>
         <source>Mapped: %1
@@ -5575,11 +5577,11 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Restore from Disk</source>
-        <translation type="unfinished">ディスクから復元</translation>
+        <translation>ディスクから復元</translation>
     </message>
     <message>
         <source>Re-add pitch sources found in the storage folder that aren't in the list above. No re-import needed.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダーにあるが上の一覧にないピッチソースを再追加します。再インポートは不要です。</translation>
     </message>
     <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
@@ -5643,7 +5645,9 @@ This cannot be undone. You would need to re-import to use this source again.</so
         <source>Remove '%1' from the pitch accent chain?
 
 Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation type="unfinished" />
+        <translation>「%1」をピッチアクセントチェーンから削除しますか？
+
+このフォルダーが Anki Miner のものであると確認できなかったため、ディスク上のインデックスファイルはそのまま残されます。</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
@@ -5759,7 +5763,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>The new profile '%1' (%2) remains because cleanup failed: %3. Delete it manually.</source>
-        <translation type="unfinished" />
+        <translation>新しいプロファイル「%1」（%2）はクリーンアップに失敗したため残っています: %3。手動で削除してください。</translation>
     </message>
     <message>
         <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
@@ -6071,7 +6075,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
-        <translation type="unfinished">既存の動画フォルダと字幕フォルダを選択してください。</translation>
+        <translation>既存の動画フォルダと字幕フォルダを選択してください。</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -6215,11 +6219,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Could not process %1: %2</source>
-        <translation type="unfinished">%1 を処理できませんでした: %2</translation>
+        <translation>%1 を処理できませんでした: %2</translation>
     </message>
     <message>
         <source>Skipped unreadable manga volume(s): %1</source>
-        <translation type="unfinished" />
+        <translation>読み取れないマンガの巻をスキップしました: %1</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -6435,7 +6439,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>
-        <translation type="unfinished">Anki Miner の終了により中断されました</translation>
+        <translation>Anki Miner の終了により中断されました</translation>
     </message>
     <message>
         <source>Add Subtitle Files</source>
@@ -6483,7 +6487,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Done: %1 succeeded, %2 failed.</source>
-        <translation type="unfinished">完了: %1 件成功、%2 件失敗。</translation>
+        <translation>完了: %1 件成功、%2 件失敗。</translation>
     </message>
 </context><context>
     <name>ReadingTab</name>
@@ -6753,7 +6757,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Resource settings are busy or could not be saved. Wait for the active task and try again.</source>
-        <translation type="unfinished" />
+        <translation>リソース設定がビジー状態か、保存できませんでした。実行中のタスクの完了を待ってから再試行してください。</translation>
     </message>
     <message>
         <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
@@ -6769,7 +6773,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Indexed resources became busy before installation; existing resources were left unchanged.</source>
-        <translation type="unfinished" />
+        <translation>インストール前にインデックス済みリソースがビジー状態になったため、既存のリソースは変更されませんでした。</translation>
     </message>
     <message>
         <source>%1 entries</source>
@@ -6899,15 +6903,15 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">キャンセルされました</translation>
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>Finished with errors</source>
-        <translation type="unfinished">エラーを伴って完了</translation>
+        <translation>エラーを伴って完了</translation>
     </message>
     <message>
         <source>Mining failed</source>
-        <translation type="unfinished">マイニングに失敗しました</translation>
+        <translation>マイニングに失敗しました</translation>
     </message>
     <message>
         <source>Completed with Errors</source>
@@ -6977,39 +6981,39 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>RetimeReferenceDialog</name>
     <message>
         <source>Subtitle track %1 - %2 - %3</source>
-        <translation type="unfinished" />
+        <translation>字幕トラック %1 - %2 - %3</translation>
     </message>
     <message>
         <source>Audio track %1 - %2 - %3</source>
-        <translation type="unfinished" />
+        <translation>音声トラック %1 - %2 - %3</translation>
     </message>
     <message>
         <source> - image-based, cannot be used</source>
-        <translation type="unfinished" />
+        <translation> - 画像ベースのため使用できません</translation>
     </message>
     <message>
         <source>Alignment Reference</source>
-        <translation type="unfinished" />
+        <translation>アライメント基準</translation>
     </message>
     <message>
         <source>This file has no audio or subtitle tracks to align against.</source>
-        <translation type="unfinished" />
+        <translation>このファイルには、位置合わせに使える音声トラックも字幕トラックもありません。</translation>
     </message>
     <message>
         <source>This file has only one track to align against.</source>
-        <translation type="unfinished" />
+        <translation>このファイルには、位置合わせに使えるトラックが1つしかありません。</translation>
     </message>
     <message>
         <source>Auto (currently: track %1 - %2)</source>
-        <translation type="unfinished" />
+        <translation>自動（現在: トラック %1 - %2）</translation>
     </message>
     <message>
         <source>Auto - best embedded subtitle track, or audio if there is none</source>
-        <translation type="unfinished" />
+        <translation>自動 - 内蔵字幕トラックのうち最適なもの、なければ音声</translation>
     </message>
     <message>
         <source>Apply</source>
-        <translation type="unfinished">適用</translation>
+        <translation>適用</translation>
     </message>
 </context><context>
     <name>ScreenIssueBanner</name>
@@ -7131,27 +7135,27 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>The audio packs could not be restored.</source>
-        <translation type="unfinished" />
+        <translation>音声パックを復元できませんでした。</translation>
     </message>
     <message>
         <source>Installed audio packs could not be checked.</source>
-        <translation type="unfinished">インストール済みの音声パックを確認できませんでした。</translation>
+        <translation>インストール済みの音声パックを確認できませんでした。</translation>
     </message>
     <message>
         <source>The frequency sources could not be restored.</source>
-        <translation type="unfinished" />
+        <translation>頻度ソースを復元できませんでした。</translation>
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
-        <translation type="unfinished">インストール済みの頻度ソースを確認できませんでした。</translation>
+        <translation>インストール済みの頻度ソースを確認できませんでした。</translation>
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
-        <translation type="unfinished" />
+        <translation>ピッチアクセントソースを復元できませんでした。</translation>
     </message>
     <message>
         <source>Installed pitch accent sources could not be checked.</source>
-        <translation type="unfinished">インストール済みのピッチアクセントソースを確認できませんでした。</translation>
+        <translation>インストール済みのピッチアクセントソースを確認できませんでした。</translation>
     </message>
     <message>
         <source>Updating yt-dlp…</source>
@@ -7599,7 +7603,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Next to source media</source>
-        <translation type="unfinished" />
+        <translation>元のメディアの隣</translation>
     </message>
     <message>
         <source>Subtitle generation</source>
@@ -7631,7 +7635,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Transcribe one selected video or audio file.</source>
-        <translation type="unfinished" />
+        <translation>選択した1つの動画または音声ファイルを文字起こしします。</translation>
     </message>
     <message>
         <source>Folder</source>
@@ -7639,19 +7643,19 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Transcribe every video or audio file in a selected folder.</source>
-        <translation type="unfinished" />
+        <translation>選択したフォルダー内のすべての動画・音声ファイルを文字起こしします。</translation>
     </message>
     <message>
         <source>Video or Audio File:</source>
-        <translation type="unfinished" />
+        <translation>動画または音声ファイル:</translation>
     </message>
     <message>
         <source>This field takes a video or audio file.</source>
-        <translation type="unfinished">このフィールドには動画または音声ファイルを指定します。</translation>
+        <translation>このフィールドには動画または音声ファイルを指定します。</translation>
     </message>
     <message>
         <source>Video or Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>動画または音声フォルダー:</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7659,7 +7663,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Generated .srt files are saved next to each source file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>フォルダーを選択しない限り、生成された .srt ファイルは各ソースファイルの隣に保存されます。</translation>
     </message>
     <message>
         <source>Output:</source>
@@ -7679,7 +7683,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>When unchecked, media files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>チェックを外すと、既に .srt ファイルがあるメディアファイルは上書きされずスキップされます。</translation>
     </message>
     <message>
         <source>Generate Subtitles</source>
@@ -7699,11 +7703,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Choose a video or audio file before generating subtitles.</source>
-        <translation type="unfinished" />
+        <translation>字幕を生成する前に、動画または音声ファイルを選択してください。</translation>
     </message>
     <message>
         <source>That media file no longer exists.</source>
-        <translation type="unfinished">そのメディアファイルは存在しなくなっています。</translation>
+        <translation>そのメディアファイルは存在しなくなっています。</translation>
     </message>
     <message>
         <source>Choose a folder before generating subtitles.</source>
@@ -7715,11 +7719,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>That folder could not be read.</source>
-        <translation type="unfinished" />
+        <translation>そのフォルダーを読み取れませんでした。</translation>
     </message>
     <message>
         <source>No video or audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>そのフォルダーに動画・音声ファイルが見つかりませんでした。</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -7897,15 +7901,15 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Align against:</source>
-        <translation type="unfinished" />
+        <translation>位置合わせ対象:</translation>
     </message>
     <message>
         <source>Change…</source>
-        <translation type="unfinished" />
+        <translation>変更…</translation>
     </message>
     <message>
         <source>Choose which embedded track to align the subtitle against.</source>
-        <translation type="unfinished" />
+        <translation>字幕の位置合わせに使う内蔵トラックを選択します。</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -7941,11 +7945,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation type="unfinished" />
+        <translation>分割ペナルティ、フレームレート補正、単一オフセットモード:</translation>
     </message>
     <message>
         <source>Alignment Settings</source>
-        <translation type="unfinished" />
+        <translation>アライメント設定</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -7953,7 +7957,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Auto - embedded subtitles, or audio</source>
-        <translation type="unfinished" />
+        <translation>自動 - 内蔵字幕、なければ音声</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -7965,23 +7969,23 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>No Tracks</source>
-        <translation type="unfinished" />
+        <translation>トラックなし</translation>
     </message>
     <message>
         <source>No audio or subtitle tracks detected. Check that ffprobe is installed.</source>
-        <translation type="unfinished" />
+        <translation>音声・字幕トラックが検出されませんでした。ffprobe がインストールされているか確認してください。</translation>
     </message>
     <message>
         <source>Subtitle track %1</source>
-        <translation type="unfinished" />
+        <translation>字幕トラック %1</translation>
     </message>
     <message>
         <source>Audio track %1</source>
-        <translation type="unfinished" />
+        <translation>音声トラック %1</translation>
     </message>
     <message>
         <source>Tracks could not be read.</source>
-        <translation type="unfinished" />
+        <translation>トラックを読み取れませんでした。</translation>
     </message>
     <message>
         <source>Open Media Settings</source>
@@ -8021,7 +8025,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>That video folder could not be read.</source>
-        <translation type="unfinished" />
+        <translation>その動画フォルダーを読み取れませんでした。</translation>
     </message>
     <message>
         <source>Matched %1 of %2 video files.</source>
@@ -8265,39 +8269,39 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Split penalty</source>
-        <translation type="unfinished" />
+        <translation>分割ペナルティ</translation>
     </message>
     <message>
         <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation type="unfinished" />
+        <translation>字幕を別々のタイミングのセグメントに分割することへの、位置合わせの消極度です。値を小さくするとCM区切りなどの分割点が増えます。実用的な範囲は1〜20、既定値は7です。</translation>
     </message>
     <message>
         <source>Correct frame-rate differences</source>
-        <translation type="unfinished">フレームレートの違いを補正</translation>
+        <translation>フレームレートの違いを補正</translation>
     </message>
     <message>
         <source>Frame rate</source>
-        <translation type="unfinished" />
+        <translation>フレームレート</translation>
     </message>
     <message>
         <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation type="unfinished" />
+        <translation>フレームレートの異なるリリースの字幕にのみ有効にしてください。単にオフセットがずれているだけの字幕にかけると、タイミングが引き伸ばされて悪化します。</translation>
     </message>
     <message>
         <source>Shift by a single offset only</source>
-        <translation type="unfinished" />
+        <translation>単一のオフセットのみでシフト</translation>
     </message>
     <message>
         <source>Single offset</source>
-        <translation type="unfinished" />
+        <translation>単一オフセット</translation>
     </message>
     <message>
         <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation type="unfinished" />
+        <translation>字幕全体を一定量だけシフトし、別々のタイミングのセグメントに分割しません。CM区切りがほとんどない日本語メディアに適しています。セグメント分割による位置合わせを許可するにはチェックを外してください。</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
-        <translation type="unfinished" />
+        <translation>字幕生成には faster-whisper エンジンが必要です。このパッケージ版アプリには ASR を追加できません。ASR対応の AppImage を使用するか、以下のコマンドを実行してから、別途 pipx でインストールした Anki Miner を起動してください:</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
