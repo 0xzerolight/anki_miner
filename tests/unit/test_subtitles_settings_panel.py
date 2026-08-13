@@ -798,6 +798,38 @@ def test_notify_asr_download_finished_reprobes_model(qtbot, tmp_path, monkeypatc
     assert panel.model_status_label.text().lower() == "installed"
 
 
+def test_notify_asr_download_failure_keeps_error_status(qtbot, tmp_path, monkeypatch):
+    """A FAILED download must leave its error message on the status label.
+
+    The success path re-probes and rewrites the label from on-disk state; doing
+    that after a failure overwrites the just-written error text with
+    "Not installed" within milliseconds, which reads as "the button did
+    nothing". On-disk state cannot have changed on a failure, so ok=False only
+    clears the in-flight guard and re-enables the button.
+    """
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)
+    monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: False)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.cuda_pack_supported", lambda: True)
+    monkeypatch.setattr(f"{_PANEL_MOD}.cuda_pack_installer.is_installed", lambda root: False)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_model="small", asr_models_root=tmp_path, cuda_libs_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    panel._on_download_clicked()
+    assert panel._asr_download_active
+    panel.set_model_status("Download failed: connection reset")
+
+    panel.notify_asr_download_finished("small", tmp_path, ok=False)
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._asr_download_active
+    assert panel.download_model_button.isEnabled()
+    assert panel.model_status_label.text() == "Download failed: connection reset"
+
+
 def test_notify_alass_download_finished_reprobes_install(qtbot, tmp_path, monkeypatch):
     monkeypatch.setattr(f"{_PANEL_MOD}._engine.available", lambda: True)
     monkeypatch.setattr(f"{_PANEL_MOD}._engine.cuda_device_count", lambda: 0)

@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **"Find a Feature" is now the Usage Guide, with its own button on the menu bar.** It sits right of Tools (still F1) instead of hiding inside the Tools dropdown. Stale entries were corrected along the way: the subtitle-regex entry now opens the Filtering page it actually lives on, the frequency entry describes the new rank range, and entries no longer promise controls that do not exist (a YouTube quality cap, a part-of-speech picker).
 
 ### Fixed
+- **A failed transcription-model download keeps its error message on screen.** The label used to flip back to "Not installed" milliseconds after the failure text appeared, because the post-download refresh rewrote it from on-disk state; a failed download changes nothing on disk, so the refresh is skipped and the reason stays readable.
 
 ### Removed
 
