@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.models.word import TokenizedWord
@@ -133,6 +134,21 @@ class CaptureCurationCallback:
             stamp_episode(words, self._episode)
         self.pools.append(words)
         return []
+
+
+def fixed_selection(subset: list[TokenizedWord]) -> Callable[[list], list]:
+    """Mine-pass curation callback: return ``subset`` verbatim.
+
+    ``_run_curation`` consumes the callback's return directly, so the curated
+    objects (chosen sentence, ``clip_override``, episode timings) pass through
+    to phases 3-5 untouched.
+    """
+
+    def _callback(words: list) -> list:
+        del words
+        return subset
+
+    return _callback
 
 
 class MinePassStats(StatsService):

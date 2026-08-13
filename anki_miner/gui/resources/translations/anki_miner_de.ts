@@ -1336,8 +1336,9 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     <name>BatchQueueWorkerThread</name>
     <message numerus="yes">
         <source>Collecting words from %n episode(s) for review...</source>
-        <translation type="unfinished">
-            <numerusform />
+        <translation>
+            <numerusform>Wörter aus %n Episode werden zur Überprüfung gesammelt...</numerusform>
+            <numerusform>Wörter aus %n Episoden werden zur Überprüfung gesammelt...</numerusform>
         </translation>
     </message>
 </context><context>

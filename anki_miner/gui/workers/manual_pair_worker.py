@@ -14,6 +14,7 @@ from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.word_pool import (
     CaptureCurationCallback,
     MinePassStats,
+    fixed_selection,
     merge_pools,
     split_selection,
 )
@@ -309,7 +310,7 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                         pair.subtitle,
                         progress_callback=self.progress_callback,
                         # Curated objects pass through verbatim to phases 3-5.
-                        curation_callback=lambda words, _subset=subset: _subset,
+                        curation_callback=fixed_selection(subset),
                     )
                 except Exception as e:  # noqa: BLE001 — per-pair guard, run continues
                     logger.exception("ManualPairWorkerThread season mine pair %s failed", pair.video.name)

@@ -26,6 +26,7 @@ from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 from anki_miner.services.word_pool import (
     CaptureCurationCallback,
     MinePassStats,
+    fixed_selection,
     merge_pools,
     split_selection,
 )
@@ -510,7 +511,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         # Curated objects pass through verbatim to phases 3-5:
                         # chosen sentence, clip_override and times are already
                         # this episode's (same offset both passes).
-                        curation_callback=lambda words, _subset=subset: _subset,
+                        curation_callback=fixed_selection(subset),
                     )
                 except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                     logger.exception("BatchQueueWorker season mine pair %s failed", pair.video.name)
