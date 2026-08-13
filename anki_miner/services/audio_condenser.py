@@ -45,6 +45,7 @@ from typing import TYPE_CHECKING
 import pysubs2
 
 from anki_miner.services.asr.srt_writer import segments_to_srt
+from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.audio_track_detector import is_japanese_language_tag, list_subtitle_streams
@@ -768,7 +769,9 @@ class CondenseResult:
     the joined codec list for a :attr:`CondenseStatus.BITMAP_ONLY` message.
     ``sidecar_error`` is the raw exception string when the audio succeeded but the
     optional condensed SRT/LRC sidecar write failed (non-fatal — the worker
-    surfaces it as a warning on an otherwise-successful result).
+    surfaces it as a warning on an otherwise-successful result). ``tag_error``
+    is the same contract for the optional metadata write (Issue #113): the
+    audio is complete on disk, only the tags are missing.
     ``failure_reason`` is the short one-line ffmpeg diagnosis behind a
     :attr:`CondenseStatus.CONDENSE_FAILED` — that status covers a launch failure,
     a nonzero exit and a timeout alike, so without it the user sees three
@@ -780,6 +783,7 @@ class CondenseResult:
     codecs: str | None = None
     sidecar_error: str | None = None
     failure_reason: str | None = None
+    tag_error: str | None = None
 
 
 def condense_one(
@@ -796,6 +800,7 @@ def condense_one(
     audio_track_override: int | None = None,
     subtitle_track_override: int | None = None,
     write_subs: bool = False,
+    metadata: TrackMetadata | None = None,
     progress_cb: Callable[[int], None] | None = None,
     cancel_event: threading.Event | None = None,
 ) -> CondenseResult:
@@ -809,8 +814,10 @@ def condense_one(
     2. Load → shift (once, by *offset_ms*) → filter → build padded keep-periods.
        Zero periods → :attr:`CondenseStatus.NO_DIALOGUE`.
     3. Run the single-pass ffmpeg condense (progress forwarded via *progress_cb*).
-    4. On success, optionally write condensed SRT/LRC sidecars (best-effort — a
-       failure is reported via ``sidecar_error``, never as a failed result).
+    4. On success, optionally write condensed SRT/LRC sidecars and, when
+       *metadata* is given, tag the finished audio (both best-effort — failures
+       are reported via ``sidecar_error`` / ``tag_error``, never as a failed
+       result).
 
     The extracted embedded-subtitle temp file (when one was created) is always
     deleted here before returning. :class:`EncoderUnavailableError` from the
@@ -850,7 +857,10 @@ def condense_one(
             )
 
         sidecar_error = _write_condensed_subs(filtered, periods, out_audio) if write_subs else None
-        return CondenseResult(CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error)
+        tag_error = _apply_tags(out_audio, metadata) if metadata is not None else None
+        return CondenseResult(
+            CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error, tag_error=tag_error
+        )
     finally:
         # Delete the extracted embedded-subtitle temp file (external / sibling
         # subs are user-owned and never touched). Runs on every path, including
@@ -955,6 +965,20 @@ def _write_condensed_subs(filtered_events: list[Event], periods: list[Period], o
     except Exception as exc:  # noqa: BLE001 — sidecar failure must never fail an already-written audio
         logger.warning("condense_one: condensed subtitle write failed for %s: %s", out_audio, exc)
         return str(exc)
+
+
+def _apply_tags(out_audio: Path, metadata: TrackMetadata) -> str | None:
+    """Best-effort metadata write (Issue #113); the audio is already complete on disk.
+
+    Returns None on success, or the raw error string for the worker to wrap in
+    a translated warning — same contract as ``_write_condensed_subs``.
+    """
+    try:
+        tag_audio_file(out_audio, metadata)
+    except TaggingError as exc:
+        logger.warning("condense_one: tagging failed for %s: %s", out_audio, exc)
+        return str(exc)
+    return None
 
 
 def _is_cancelled(cancel_event: threading.Event | None) -> bool:

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import unicodedata
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pysubs2
 import pytest
@@ -27,6 +28,7 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseWorker,
 )
 from anki_miner.services.audio_condenser import EncoderUnavailableError, FfmpegStepFailure
+from anki_miner.services.audio_tagger import TrackMetadata
 from anki_miner.utils.audio_track_detector import SubtitleStream
 
 # ---------------------------------------------------------------------------
@@ -985,3 +987,107 @@ def test_offset_shifts_periods(qapp, tmp_path):
 
     # 1000-2000 shifted +1000 → 2000-3000, no padding.
     assert service.condense_calls[0]["periods"] == [(2000, 3000)]
+
+
+# ---------------------------------------------------------------------------
+# Metadata tagging (Issue #113)
+# ---------------------------------------------------------------------------
+
+
+def test_metadata_forwarded_to_condense_one(qapp, tmp_path, monkeypatch):
+    """CondenseItem.metadata reaches condense_one as the metadata kwarg."""
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+    meta = TrackMetadata(title="T", track=1)
+
+    captured: dict = {}
+
+    def fake_condense_one(service, cfg, m, external_sub, out_audio, **kwargs):
+        captured.update(kwargs)
+        return ac.CondenseResult(ac.CondenseStatus.SUCCESS, out_audio=out_audio)
+
+    monkeypatch.setattr("anki_miner.gui.workers.condense_worker.condense_one", fake_condense_one)
+
+    worker = _make_worker([CondenseItem(media, sub, metadata=meta)], config, service=_FakeService())
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert captured["metadata"] is meta
+    assert cap["finished"][0][2] is None
+
+
+def test_default_item_has_no_metadata(qapp, tmp_path, monkeypatch):
+    """Items built without metadata forward None (byte-identical legacy behavior)."""
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+
+    captured: dict = {}
+
+    def fake_condense_one(service, cfg, m, external_sub, out_audio, **kwargs):
+        captured.update(kwargs)
+        return ac.CondenseResult(ac.CondenseStatus.SUCCESS, out_audio=out_audio)
+
+    monkeypatch.setattr("anki_miner.gui.workers.condense_worker.condense_one", fake_condense_one)
+
+    worker = _make_worker([CondenseItem(media, sub)], config, service=_FakeService())
+    _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert captured["metadata"] is None
+
+
+def test_tag_error_surfaces_as_warning(qapp, tmp_path, monkeypatch):
+    """A tag failure is non-fatal: audio succeeds, warning surfaced in progress."""
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+
+    monkeypatch.setattr(ac, "tag_audio_file", MagicMock(side_effect=ac.TaggingError("no header")))
+
+    service = _FakeService()
+    worker = _make_worker([CondenseItem(media, sub, metadata=TrackMetadata(title="T"))], config, service=service)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    idx, out, err = cap["finished"][0]
+    assert out == tmp_path / "ep01_condensed.mp3"  # audio still succeeded
+    assert err is None
+    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
+    assert "no header" in final_msg
+
+
+def test_sidecar_and_tag_errors_both_surfaced(qapp, tmp_path, monkeypatch):
+    """Both best-effort failures land in one warning message."""
+    config = _make_config(tmp_path)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+
+    def _boom(events, path):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(ac, "write_condensed_srt", _boom)
+    monkeypatch.setattr(ac, "tag_audio_file", MagicMock(side_effect=ac.TaggingError("no header")))
+
+    worker = _make_worker(
+        [CondenseItem(media, sub, metadata=TrackMetadata(title="T"))],
+        config,
+        service=_FakeService(),
+        write_subs=True,
+    )
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    idx, out, err = cap["finished"][0]
+    assert err is None
+    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
+    assert "disk full" in final_msg and "no header" in final_msg

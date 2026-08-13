@@ -161,6 +161,7 @@ class AnkiMinerConfig:
     condenser_bitrate_kbps: int = 96  # kbps; mp3/opus only (flac ignores)
     condenser_filtered_chars: str = "♪♫♬♩〜～"  # Cues consisting only of these are dropped
     condenser_write_subtitles: bool = False  # Also write condensed .srt + .lrc sidecars
+    condenser_tag_outputs: bool = False  # Show the pre-run metadata editor and tag outputs (Issue #113)
 
     # Animated screenshot settings (opt-in; static JPEG remains default)
     screenshot_animated: bool = False

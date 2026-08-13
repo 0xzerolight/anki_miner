@@ -1,8 +1,15 @@
 """Tests for episode_matcher module."""
 
+from pathlib import Path
+
 import pytest
 
-from anki_miner.utils.episode_matcher import EpisodeMatcher, EpisodeNumberExtractor
+from anki_miner.utils.episode_matcher import (
+    EpisodeMatcher,
+    EpisodeNumberExtractor,
+    ParsedMediaName,
+    parse_media_filename,
+)
 
 
 class TestEpisodeNumberExtractor:
@@ -600,3 +607,59 @@ class TestEpisodeMatcher:
         pairs = EpisodeMatcher.match_by_episode_number([video], [subtitle])
 
         assert len(pairs) == 0
+
+
+class TestParseMediaFilename:
+    """Tests for parse_media_filename (Issue #113 metadata pre-fill)."""
+
+    def test_sonarr_full_scheme(self):
+        parsed = parse_media_filename(
+            Path(
+                "Gals Can't Be Kind to Otaku!! (2026) - S01E01 - Can a Gal Be Kind to Otaku? "
+                "[WEBRip-1080p][10bit][AV1][Opus 2.0][JA]-Trix.mkv"
+            )
+        )
+        assert parsed == ParsedMediaName(
+            series="Gals Can't Be Kind to Otaku!! (2026)",
+            season=1,
+            episode=1,
+            episode_title="Can a Gal Be Kind to Otaku?",
+        )
+
+    def test_fansub_scheme_no_episode_title(self):
+        parsed = parse_media_filename(Path("[SubsPlease] Show Title - 03 (1080p) [ABCD1234].mkv"))
+        assert parsed == ParsedMediaName(series="Show Title", season=None, episode=3, episode_title=None)
+
+    def test_scene_dotted_name(self):
+        parsed = parse_media_filename(Path("Show.S02E05.Episode.Name.1080p.WEB.x264-GROUP.mkv"))
+        assert parsed == ParsedMediaName(series="Show", season=2, episode=5, episode_title="Episode Name")
+
+    def test_numeric_series_title(self):
+        parsed = parse_media_filename(Path("86 - 03.mkv"))
+        assert parsed == ParsedMediaName(series="86", season=None, episode=3, episode_title=None)
+
+    def test_bare_number_only(self):
+        parsed = parse_media_filename(Path("03.mkv"))
+        assert parsed == ParsedMediaName(series=None, season=None, episode=3, episode_title=None)
+
+    def test_movie_no_episode_marker(self):
+        parsed = parse_media_filename(Path("Movie (2020).mkv"))
+        assert parsed == ParsedMediaName(series=None, season=None, episode=None, episode_title=None)
+
+    def test_nxn_pattern_with_title(self):
+        parsed = parse_media_filename(Path("Show 1x04 - Pilot.mkv"))
+        assert parsed == ParsedMediaName(series="Show", season=1, episode=4, episode_title="Pilot")
+
+    def test_fansub_v2_suffix(self):
+        parsed = parse_media_filename(Path("Show - 01v2 [1080p].mkv"))
+        assert parsed == ParsedMediaName(series="Show", season=None, episode=1, episode_title=None)
+
+    def test_underscore_name_no_number(self):
+        parsed = parse_media_filename(Path("lecture_audio.mp3"))
+        assert parsed == ParsedMediaName(series=None, season=None, episode=None, episode_title=None)
+
+    def test_hyphenated_title_word_survives(self):
+        # Trailing release-group strip requires a space before the dash;
+        # an in-word hyphen must not be eaten.
+        parsed = parse_media_filename(Path("Show - 01 - Re-Start.mkv"))
+        assert parsed.episode_title == "Re-Start"
