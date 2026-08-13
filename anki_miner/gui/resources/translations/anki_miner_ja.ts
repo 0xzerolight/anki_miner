@@ -1502,6 +1502,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>動画または音声ファイルとその字幕から、セリフのみの凝縮音声を作成します。</translation>
     </message>
     <message>
+        <source>Filter a premade deck into a new deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Condense: track pickers &amp; extra outputs</source>
         <translation type="unfinished" />
     </message>
@@ -2870,6 +2878,232 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Cancelled</source>
         <translation>キャンセルされました</translation>
+    </message>
+</context><context>
+    <name>DeckFilterTab</name>
+    <message>
+        <source>Deck Filter</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Notes are kept or dropped by your filters — known words, frequency band, blacklist, script type and name wordsets (Settings → Filtering). The source deck is not modified.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Source deck:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select a deck…</source>
+        <translation type="unfinished">デッキを選択…</translation>
+    </message>
+    <message>
+        <source>Word field:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(first field)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading field:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(none — generate)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>New deck:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name for the filtered deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scan deck (read-only)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Expression</source>
+        <translation type="unfinished">表現</translation>
+    </message>
+    <message>
+        <source>Reading</source>
+        <translation type="unfinished">読み</translation>
+    </message>
+    <message>
+        <source>Freq. rank</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy Notes to New Deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Filter works on a deck already in Anki — pick it above.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>known words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>frequency band</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>blacklist</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>whitelist (force-include)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>script type</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>name wordsets</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Active filters: {filters}.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't fetch deck names from Anki — is Anki running?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{deck} (Filtered)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't read the deck: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The selected deck has no notes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} note(s) in the deck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick the source deck first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name the new deck first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The new deck needs a different name than the source deck.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck filter scan</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scanning…</source>
+        <translation type="unfinished">スキャン中…</translation>
+    </message>
+    <message>
+        <source>empty word field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>not Japanese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>duplicate within the deck</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>already known or carded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>no frequency rank</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>outside the frequency band</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>blacklisted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>name (wordset)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No notes found in deck "{deck}".</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{kept} of {scanned} note(s) will be copied.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dropped — {reasons}.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} kept by whitelist.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Showing first {rows} rows.</source>
+        <translation type="unfinished">先頭の {rows} 行を表示しています。</translation>
+    </message>
+    <message>
+        <source>Settings changed since this scan; re-scan before copying.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copy notes to a new deck?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This will create deck "{deck}" and copy {notes} note(s) into it, tagged {tag}. The source deck is not modified. Continue?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck filter copy</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copying…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Copied {count} note(s) into "{deck}".</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} note(s) were not accepted by Anki (see log).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled.</source>
+        <translation type="unfinished">キャンセルしました。</translation>
     </message>
 </context><context>
     <name>DeckPage</name>
@@ -4954,6 +5188,10 @@ Continue?</source>
     <message>
         <source>Card Backfill</source>
         <translation>カードの一括補完</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>

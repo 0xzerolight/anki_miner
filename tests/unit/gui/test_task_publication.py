@@ -22,6 +22,7 @@ from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -42,6 +43,7 @@ PUBLISHING_SCREENS = [
     (SubtitleRetimeTab, "tools.retime", ("subtitles", "retime")),
     (CondenseTab, "tools.condense", ("subtitles", "condense")),
     (CardBackfillTab, "tools.backfill", ("subtitles", "backfill")),
+    (DeckFilterTab, "tools.deckfilter", ("subtitles", "deckfilter")),
 ]
 
 

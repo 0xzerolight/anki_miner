@@ -66,9 +66,9 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly four tabs."""
+    """Inner QTabWidget must have exactly five tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 4
+    assert tab._inner_tabs.count() == 5
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
@@ -78,6 +78,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(1) == "Retime"
     assert tab._inner_tabs.tabText(2) == "Condense"
     assert tab._inner_tabs.tabText(3) == "Card Backfill"
+    assert tab._inner_tabs.tabText(4) == "Deck Filter"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -104,6 +105,12 @@ def test_backfill_tab_is_fourth(qtbot, tmp_path):
     assert tab._inner_tabs.widget(3) is tab.backfill_tab
 
 
+def test_deck_filter_tab_is_fifth(qtbot, tmp_path):
+    """deck_filter_tab is the widget at index 4."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(4) is tab.deck_filter_tab
+
+
 def test_the_sub_tab_underline_slides(qtbot, tmp_path):
     """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -115,7 +122,9 @@ def test_the_sub_tab_underline_slides(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(("key", "expected_index"), [("generate", 0), ("retime", 1), ("backfill", 3)])
+@pytest.mark.parametrize(
+    ("key", "expected_index"), [("generate", 0), ("retime", 1), ("backfill", 3), ("deckfilter", 4)]
+)
 def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab._inner_tabs.setCurrentIndex(1 if expected_index == 0 else 0)
@@ -139,7 +148,7 @@ def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", ["generate", "retime", "condense", "backfill"])
+@pytest.mark.parametrize("key", ["generate", "retime", "condense", "backfill", "deckfilter"])
 def test_current_subtab_key_round_trips_with_open_subtab(qtbot, tmp_path, key):
     tab = _make_tab(_make_config(tmp_path), qtbot)
 

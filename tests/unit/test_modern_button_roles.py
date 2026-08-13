@@ -363,6 +363,7 @@ class TestCallSiteRoles:
         [
             "backfill_tab.py",
             "condense_tab.py",
+            "deck_filter_tab.py",
             "reading_manga_tab.py",
             "reading_novels_tab.py",
             "subtitle_creation_tab.py",

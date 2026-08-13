@@ -4357,3 +4357,153 @@ class TestTransientTransportClassification:
 
     def test_unrelated_exception_is_not_transient(self):
         assert is_transient_anki_transport_error(RuntimeError("nope")) is False
+
+
+class TestGetVocabularyExcludingDeck:
+    """get_vocabulary_excluding_deck negates the source deck and skips the cache."""
+
+    def test_query_appends_negated_deck(self, test_config):
+        """The findNotes query is the vocab query plus a negated, escaped deck."""
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, excluded_decks=("RTK",)))
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "食べる"}}}]],
+        ) as mock_pa:
+            result = service.get_vocabulary_excluding_deck("Core_2k")
+
+        assert result == {"食べる"}
+        first_call = mock_pa.call_args_list[0]
+        assert first_call.args[1] == "findNotes"
+        assert first_call.kwargs["params"] == {"query": 'deck:* -deck:"RTK" -deck:"Core\\_2k"'}
+
+    def test_does_not_read_or_write_vocab_cache(self, test_config):
+        """The session vocab cache is for _build_vocab_query's shape only."""
+        service = AnkiService(test_config)
+        service._existing_vocab_cache = {"cached"}
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1], [{"fields": {"word": {"value": "違う"}}}]],
+        ):
+            result = service.get_vocabulary_excluding_deck("Premade")
+
+        assert result == {"違う"}
+        assert service._existing_vocab_cache == {"cached"}
+
+    def test_transport_failure_raises_never_degrades(self, test_config):
+        """An empty degraded set would wrongly keep the whole source deck."""
+        service = AnkiService(test_config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("boom"),
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.get_vocabulary_excluding_deck("Premade")
+
+    def test_empty_deck_query_returns_empty_set(self, test_config):
+        service = AnkiService(test_config)
+
+        with patch("anki_miner.services.anki_service.post_action", side_effect=[[]]):
+            assert service.get_vocabulary_excluding_deck("Premade") == set()
+
+
+class TestAddNotesRaw:
+    """add_notes_raw posts caller-built notes with the write-provenance dance."""
+
+    @staticmethod
+    def _note(word):
+        return {
+            "deckName": "Filtered",
+            "modelName": "Basic",
+            "fields": {"Front": word},
+            "tags": ["anki-miner::deckfilter"],
+            "options": {"allowDuplicate": True, "duplicateScope": "deck"},
+        }
+
+    def test_posts_notes_verbatim_and_returns_aligned_ids(self, test_config):
+        service = AnkiService(test_config)
+        notes = [self._note("一"), self._note("二")]
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[101, None]],
+        ) as mock_pa:
+            result = service.add_notes_raw(notes)
+
+        assert result == [101, None]
+        call = mock_pa.call_args_list[0]
+        assert call.args[1] == "addNotes"
+        assert call.kwargs["params"] == {"notes": notes}
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+    def test_chunks_at_100(self, test_config):
+        service = AnkiService(test_config)
+        notes = [self._note(str(i)) for i in range(150)]
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[1] * 100, [2] * 50],
+        ) as mock_pa:
+            result = service.add_notes_raw(notes)
+
+        assert len(result) == 150
+        assert len(mock_pa.call_args_list) == 2
+        assert len(mock_pa.call_args_list[0].kwargs["params"]["notes"]) == 100
+        assert len(mock_pa.call_args_list[1].kwargs["params"]["notes"]) == 50
+
+    def test_all_null_restores_prior_state(self, test_config):
+        """An all-duplicate chunk must not erase NO_NOTE_WRITE."""
+        service = AnkiService(test_config)
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[None, None]],
+        ):
+            result = service.add_notes_raw([self._note("一"), self._note("二")])
+
+        assert result == [None, None]
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+    def test_all_null_does_not_downgrade_confirmed(self, test_config):
+        """A later all-null chunk cannot erase an earlier confirmed write."""
+        service = AnkiService(test_config)
+
+        with patch(
+            "anki_miner.services.anki_service.post_action",
+            side_effect=[[7], [None]],
+        ):
+            service.add_notes_raw([self._note("一")])
+            service.add_notes_raw([self._note("二")])
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_CONFIRMED
+
+    def test_transport_failure_leaves_uncertain(self, test_config):
+        """A request that escapes mid-flight blocks automatic retry."""
+        service = AnkiService(test_config)
+
+        with (
+            patch(
+                "anki_miner.services.anki_service.post_action",
+                side_effect=AnkiConnectionError("reset"),
+            ),
+            pytest.raises(AnkiConnectionError),
+        ):
+            service.add_notes_raw([self._note("一")])
+
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
+
+    def test_empty_input_no_post(self, test_config):
+        service = AnkiService(test_config)
+
+        with patch("anki_miner.services.anki_service.post_action") as mock_pa:
+            assert service.add_notes_raw([]) == []
+
+        mock_pa.assert_not_called()
+        assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE

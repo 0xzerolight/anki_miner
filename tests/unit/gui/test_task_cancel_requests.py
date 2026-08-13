@@ -123,6 +123,7 @@ def _publishing_screens():
     from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
     from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
     from anki_miner.gui.widgets.condense_tab import CondenseTab
+    from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
     from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
     from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
     from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -145,6 +146,7 @@ def _publishing_screens():
         SubtitleCreationTab,
         SubtitleRetimeTab,
         CardBackfillTab,
+        DeckFilterTab,
     )
 
 

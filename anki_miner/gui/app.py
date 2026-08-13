@@ -1344,6 +1344,7 @@ def compose_main_window(
         subtitles_tab.retime_tab,
         subtitles_tab.condense_tab,
         subtitles_tab.backfill_tab,
+        subtitles_tab.deck_filter_tab,
     ):
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------
@@ -1442,6 +1443,26 @@ def _drain_deferred_deletes(app: QApplication, *, max_passes: int = 8) -> None:
             )
     finally:
         app.removeEventFilter(watcher)
+
+
+def _destroy_window_before_exit(app: QApplication, window: MainWindow) -> None:
+    """Destroy the widget tree deterministically before interpreter exit.
+
+    A merely *closed* MainWindow keeps its whole widget tree alive until
+    PyQt/sip's interpreter-exit wrapper cleanup walks the C++/Python object
+    map and deletes the Python-owned QObjects itself. That walk is not safe
+    against the cascades those deletions trigger (deleting the window deletes
+    every child, each removal mutating the map mid-iteration), and whether it
+    crashes is allocation-layout luck: the failure-path comment in
+    ``_schedule_installer_smoke`` already records that an unrelated no-op
+    addition anywhere in the import graph can surface it (SIGSEGV in
+    ``cleanup_qobject``; reconfirmed with gdb + ``MALLOC_PERTURB_`` when the
+    Deck Filter tab tipped it over on the success path too). Deleting the
+    window while the event loop machinery still works, then draining the
+    deferred-delete cascade, leaves the exit-time walk nothing to cascade.
+    """
+    window.deleteLater()
+    _drain_deferred_deletes(app)
 
 
 def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
@@ -1771,7 +1792,7 @@ def main():
         # initial, empty one); left pending, PyQt/sip's interpreter-exit
         # wrapper cleanup walks into one and segfaults (SIGSEGV in
         # cleanup_qobject, confirmed with gdb). See _drain_deferred_deletes.
-        _drain_deferred_deletes(app)
+        _destroy_window_before_exit(app, window)
         sys.exit(smoke_result)
 
     # Install the main-thread stall watchdog: a heartbeat QTimer + daemon
@@ -1791,6 +1812,7 @@ def main():
     # after the loop has returned and this process is done with its stores.
     exit_code = app.exec()
     _relaunch_if_requested(app)
+    _destroy_window_before_exit(app, window)
     sys.exit(exit_code)
 
 

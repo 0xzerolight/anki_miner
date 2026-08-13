@@ -81,6 +81,16 @@ _DUPLICATE_ERROR_SUBSTRING = "cannot create note because it is a duplicate"
 _UNSUPPORTED_ACTION_SUBSTRING = "unsupported action"
 
 
+def _escape_deck_name(deck: str) -> str:
+    """Escape a deck name for use inside a quoted Anki search clause.
+
+    Backslashes, quotes, and Anki's glob metacharacters (``*`` = any run,
+    ``_`` = any single char, which Anki treats as wildcards even inside
+    ``deck:"..."``) are escaped so a name like ``Core_2k`` matches literally.
+    """
+    return deck.replace("\\", "\\\\").replace('"', '\\"').replace("*", "\\*").replace("_", "\\_")
+
+
 def is_transient_anki_transport_error(exc: BaseException) -> bool:
     """Whether *exc* is an AnkiConnect failure a later attempt could survive.
 
@@ -387,8 +397,7 @@ class AnkiService:
         """
         query = "deck:*"
         for deck in self.config.excluded_decks:
-            safe = deck.replace("\\", "\\\\").replace('"', '\\"').replace("*", "\\*").replace("_", "\\_")
-            query += f' -deck:"{safe}"'
+            query += f' -deck:"{_escape_deck_name(deck)}"'
         logger.debug("Anki vocab query: query=%s", query)
         return query
 
@@ -532,67 +541,7 @@ class AnkiService:
             return self._existing_vocab_cache
 
         try:
-            # Find ALL notes in the collection.
-            note_ids = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
-                    "findNotes",
-                    params={"query": self._build_vocab_query()},
-                    timeout=30,
-                )
-                or [],
-                "findNotes",
-                elem_type=int,
-            )
-
-            if not note_ids:
-                logger.warning(
-                    "No notes found in Anki collection. "
-                    "If you have cards in Anki, check that AnkiConnect can access them.",
-                )
-                self._existing_vocab_cache = set()
-                return self._existing_vocab_cache
-
-            # Get note info in batches to avoid timeouts on large collections.
-            existing_words: set[str] = set()
-            batch_size = 1000
-
-            for i in range(0, len(note_ids), batch_size):
-                batch = note_ids[i : i + batch_size]
-                notes = _expect_list(
-                    post_action(
-                        self.config.ankiconnect_url,
-                        "notesInfo",
-                        params={"notes": batch},
-                        timeout=30,
-                    )
-                    or [],
-                    "notesInfo",
-                    elem_type=dict,
-                )
-
-                for note in notes:
-                    # A deleted note comes back as `{}`, and a malformed row may
-                    # carry a non-dict `fields`; both are treated as absent.
-                    fields = note.get("fields")
-                    if not isinstance(fields, dict) or not fields:
-                        continue
-                    # First field is always the expression/word in Anki
-                    # convention. Normalize it the same way Anki dedups (strip
-                    # HTML/media, unescape, NFC) so a markup-wrapped Expression
-                    # matches the plain `mined_form` the filter compares against
-                    # — otherwise the word slips the filter and AnkiConnect
-                    # rejects it as a duplicate at addNotes time.
-                    first_field = next(iter(fields))
-                    field_info = fields[first_field]
-                    if not isinstance(field_info, dict):
-                        # Malformed field entry (not a {value, order} object).
-                        continue
-                    word = _strip_for_dedup(field_info.get("value", ""))
-                    if word and _JAPANESE_RE.search(word):
-                        existing_words.add(word)
-
-            self._existing_vocab_cache = existing_words
+            self._existing_vocab_cache = self._collect_first_field_forms(self._build_vocab_query())
             return self._existing_vocab_cache
 
         except AnkiConnectionError as e:
@@ -609,6 +558,92 @@ class AnkiService:
                 raise
             logger.warning("Failed to fetch existing vocabulary (filtering disabled): %s", e)
             return set()
+
+    def _collect_first_field_forms(self, query: str) -> set[str]:
+        """Run ``query`` and return the dedup-normalized Japanese first fields.
+
+        The findNotes → notesInfo → first-field scan shared by
+        :meth:`get_existing_vocabulary` and
+        :meth:`get_vocabulary_excluding_deck`. Raises ``AnkiConnectionError``
+        on transport failure; degradation policy belongs to the callers.
+        """
+        note_ids = _expect_list(
+            post_action(
+                self.config.ankiconnect_url,
+                "findNotes",
+                params={"query": query},
+                timeout=30,
+            )
+            or [],
+            "findNotes",
+            elem_type=int,
+        )
+
+        if not note_ids:
+            logger.warning(
+                "No notes found in Anki collection. "
+                "If you have cards in Anki, check that AnkiConnect can access them.",
+            )
+            return set()
+
+        # Get note info in batches to avoid timeouts on large collections.
+        existing_words: set[str] = set()
+        batch_size = 1000
+
+        for i in range(0, len(note_ids), batch_size):
+            batch = note_ids[i : i + batch_size]
+            notes = _expect_list(
+                post_action(
+                    self.config.ankiconnect_url,
+                    "notesInfo",
+                    params={"notes": batch},
+                    timeout=30,
+                )
+                or [],
+                "notesInfo",
+                elem_type=dict,
+            )
+
+            for note in notes:
+                # A deleted note comes back as `{}`, and a malformed row may
+                # carry a non-dict `fields`; both are treated as absent.
+                fields = note.get("fields")
+                if not isinstance(fields, dict) or not fields:
+                    continue
+                # First field is always the expression/word in Anki
+                # convention. Normalize it the same way Anki dedups (strip
+                # HTML/media, unescape, NFC) so a markup-wrapped Expression
+                # matches the plain `mined_form` the filter compares against
+                # — otherwise the word slips the filter and AnkiConnect
+                # rejects it as a duplicate at addNotes time.
+                first_field = next(iter(fields))
+                field_info = fields[first_field]
+                if not isinstance(field_info, dict):
+                    # Malformed field entry (not a {value, order} object).
+                    continue
+                word = _strip_for_dedup(field_info.get("value", ""))
+                if word and _JAPANESE_RE.search(word):
+                    existing_words.add(word)
+
+        return existing_words
+
+    def get_vocabulary_excluding_deck(self, deck: str) -> set[str]:
+        """Existing-vocabulary scan that additionally negates ``deck``.
+
+        Used by the Deck Filter tool: the source deck's own expressions must
+        not count as "known", otherwise every note in the deck being filtered
+        would be dropped against itself. Appending the negation is idempotent
+        when ``deck`` is already in ``config.excluded_decks``.
+
+        Never reads or writes the session vocab cache — the cache holds the
+        answer for :meth:`_build_vocab_query`'s shape, and this query's answer
+        must not leak into callers of :meth:`get_existing_vocabulary`. Raises
+        ``AnkiConnectionError`` on any failure: a degraded empty set would
+        silently classify the whole source deck as unknown-but-known-elsewhere
+        and produce a wrong plan.
+        """
+        query = self._build_vocab_query() + f' -deck:"{_escape_deck_name(deck)}"'
+        return self._collect_first_field_forms(query)
 
     def invalidate_existing_vocabulary_cache(self) -> None:
         """Invalidate the session-scoped vocabulary cache.
@@ -921,6 +956,54 @@ class AnkiService:
             bold_fallback=bold_fallback,
         )
         return list(all_created_ids)
+
+    def add_notes_raw(self, notes: list[dict]) -> list[int | None]:
+        """POST caller-built note dicts via ``addNotes`` in chunks of 100.
+
+        Unlike :meth:`create_cards_batch`, the caller owns every part of the
+        payload — ``deckName``, ``modelName``, ``fields``, ``tags``,
+        ``options`` (the Deck Filter tool copies scan-time notes verbatim into
+        a new deck). No duplicate probe and no media upload happen here; a
+        same-collection copy's ``<img>``/``[sound:]`` refs already resolve.
+
+        Returns ids positionally aligned with ``notes`` (``None`` = not
+        created). Write provenance mirrors ``create_cards_batch``: the state
+        is ``NOTE_WRITE_UNCERTAIN`` while a chunk is in flight (and stays so
+        if the request escapes), ``NOTE_WRITE_CONFIRMED`` once any id comes
+        back non-null, else restored to what held before the chunk.
+        """
+        log_summary(logger, "Anki add raw notes", notes=len(notes))
+        results: list[int | None] = []
+        batch_size = 100
+        for i in range(0, len(notes), batch_size):
+            chunk = notes[i : i + batch_size]
+            state_before_request = self.anki_write_state
+            self.anki_write_state = AnkiWriteState.NOTE_WRITE_UNCERTAIN
+            logger.debug("Anki write state: %s", self.anki_write_state.value)
+            note_ids = _expect_list(
+                post_action(
+                    self.config.ankiconnect_url,
+                    "addNotes",
+                    params={"notes": chunk},
+                    timeout=60,
+                ),
+                "addNotes",
+                len(chunk),
+                (int, type(None)),
+            )
+            if any(nid is not None for nid in note_ids):
+                self.anki_write_state = AnkiWriteState.NOTE_WRITE_CONFIRMED
+            else:
+                self.anki_write_state = state_before_request
+            logger.debug("Anki write state: %s", self.anki_write_state.value)
+            results.extend(note_ids)
+        log_summary(
+            logger,
+            "Anki add raw notes done",
+            notes=len(notes),
+            created=sum(1 for nid in results if nid is not None),
+        )
+        return results
 
     @staticmethod
     def _strip_note_to_first_field(note: dict) -> dict:

@@ -114,3 +114,37 @@ class TestBackfillSaysWhatItTouches:
 
     def test_the_stable_subtab_key_did_not_move(self):
         assert "backfill" in SUBTAB_KEYS["subtitles"]
+
+
+class TestDeckFilterSaysWhatItTouches:
+    """Scan reads; the write says it copies into a NEW deck, never the source."""
+
+    @pytest.fixture
+    def deckfilter(self, test_config: AnkiMinerConfig, qtbot):
+        from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
+
+        tab = DeckFilterTab(test_config)
+        qtbot.addWidget(tab)
+        return tab
+
+    def test_scan_declares_itself_read_only(self, deckfilter):
+        assert deckfilter.scan_button.text() == "Scan deck (read-only)"
+
+    def test_apply_names_the_write(self, deckfilter):
+        assert deckfilter.apply_button.text() == "Copy Notes to New Deck"
+
+    def test_the_inner_tab_label_matches_the_screen(self, test_config, qtbot):
+        from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
+
+        tab = SubtitlesTab(test_config, suppress_optional_startup=True)
+        qtbot.addWidget(tab)
+        labels = [tab._inner_tabs.tabText(i) for i in range(tab._inner_tabs.count())]
+        assert "Deck Filter" in labels
+
+    def test_the_capability_entry_says_notes_and_source_safety(self):
+        entry = next(c for c in CAPABILITIES if c.id == "deck-filter")
+        assert entry.title == "Filter a premade deck into a new deck"
+        assert "not modified" in entry.description
+
+    def test_the_stable_subtab_key_did_not_move(self):
+        assert "deckfilter" in SUBTAB_KEYS["subtitles"]

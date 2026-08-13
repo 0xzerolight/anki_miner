@@ -156,3 +156,83 @@ def test_backfill_cancel_and_progress_sit_outside_the_scroll(backfill):
 
 def test_backfill_worker_enumeration_is_unchanged(backfill):
     assert list(backfill.iter_close_workers()) == []
+
+
+# ----------------------------------------------------------------- deck filter
+
+
+@pytest.fixture
+def deckfilter(qtbot, test_config):
+    from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
+
+    widget = DeckFilterTab(test_config)
+    qtbot.addWidget(widget)
+    return widget
+
+
+def _valid_deck_filter_plan():
+    from anki_miner.services.deck_filter import DeckFilterOptions, DeckFilterPlan, KeptNote
+
+    kept = KeptNote(
+        note_id=1,
+        model_name="Core",
+        fields={"Expression": "頷く"},
+        tags=(),
+        expression="頷く",
+        reading="うなずく",
+        frequency_rank=None,
+        forced=False,
+    )
+    return DeckFilterPlan(
+        options=DeckFilterOptions(source_deck="Premade", target_deck="Premade (Filtered)"),
+        kept=(kept,),
+        drops=(),
+        scanned=1,
+        forced_count=0,
+        config_version=0,
+    )
+
+
+def test_deckfilter_keeps_exactly_one_scan_and_one_apply(deckfilter):
+    bar = _bar(deckfilter)
+
+    assert _ancestors(deckfilter.scan_button)[0] is bar
+    assert _ancestors(deckfilter.apply_button)[0] is bar
+    assert [b for b in bar.findChildren(type(deckfilter.scan_button)) if b.text() == deckfilter.scan_button.text()] == [
+        deckfilter.scan_button
+    ]
+
+
+def test_deckfilter_scan_is_primary_before_a_preview(deckfilter):
+    assert deckfilter.scan_button.objectName() == "primary"
+    assert deckfilter.apply_button.objectName() == "secondary"
+    assert not deckfilter.apply_button.isEnabled()
+
+
+def test_deckfilter_apply_takes_over_after_a_valid_preview(deckfilter):
+    deckfilter._on_scan_finished(_valid_deck_filter_plan())
+
+    assert deckfilter.apply_button.objectName() == "primary"
+    assert deckfilter.apply_button.isEnabled()
+    assert deckfilter.scan_button.objectName() == "secondary"
+    assert deckfilter.scan_button.isEnabled()
+    assert _ancestors(deckfilter.scan_button)[0] is _bar(deckfilter)
+
+
+def test_deckfilter_hides_activity_because_it_has_no_log(deckfilter):
+    bar = _bar(deckfilter)
+
+    assert bar.activity_button.isHidden()
+    assert not bar.is_activity_open()
+
+
+def test_deckfilter_cancel_and_progress_sit_outside_the_scroll(deckfilter):
+    scroll = _page_scroll(deckfilter)
+
+    assert scroll not in _ancestors(deckfilter.cancel_button)
+    assert scroll not in _ancestors(deckfilter.progress_bar)
+    assert scroll not in _ancestors(deckfilter.status_label)
+
+
+def test_deckfilter_worker_enumeration_is_unchanged(deckfilter):
+    assert list(deckfilter.iter_close_workers()) == []

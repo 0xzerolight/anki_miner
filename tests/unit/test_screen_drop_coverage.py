@@ -339,3 +339,45 @@ class TestTheToolScreensValidateAtTheField:
         _enter(selector, _mime(urls=(_local(accepted),)))
 
         assert selector.input.property("dropState") == "valid"
+
+
+@pytest.fixture
+def deck_filter_tab(qtbot, test_config):
+    from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
+
+    tab = DeckFilterTab(test_config)
+    qtbot.addWidget(tab)
+    return tab
+
+
+class TestDeckFilterAnswersTheDrop:
+    """Deck Filter takes no file payload, and says so (D50)."""
+
+    def test_the_reason_appears_while_the_drag_is_still_in_the_air(self, deck_filter_tab, tmp_path):
+        episode = tmp_path / "episode.mkv"
+        episode.touch()
+
+        _enter(deck_filter_tab, _mime(urls=(_local(episode),)))
+
+        assert deck_filter_tab.status_label.text() == ("Deck Filter works on a deck already in Anki — pick it above.")
+
+    def test_the_drop_is_refused_and_points_at_the_deck_control(self, deck_filter_tab, tmp_path):
+        episode = tmp_path / "episode.mkv"
+        episode.touch()
+
+        event = _drop(deck_filter_tab, _mime(urls=(_local(episode),)))
+
+        assert not event.isAccepted()
+        assert deck_filter_tab.status_label.text() == ("Deck Filter works on a deck already in Anki — pick it above.")
+        assert deck_filter_tab.focusWidget() is deck_filter_tab.source_combo
+
+    def test_a_run_in_progress_keeps_its_own_status_line(self, deck_filter_tab, tmp_path):
+        episode = tmp_path / "episode.mkv"
+        episode.touch()
+        deck_filter_tab.worker_thread = MagicMock()
+        deck_filter_tab.status_label.setText("Scanning…")
+
+        _enter(deck_filter_tab, _mime(urls=(_local(episode),)))
+        _drop(deck_filter_tab, _mime(urls=(_local(episode),)))
+
+        assert deck_filter_tab.status_label.text() == "Scanning…"
