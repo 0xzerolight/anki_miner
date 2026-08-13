@@ -1181,8 +1181,8 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Revisar palavras antes de minerar</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>Mostrar o pop-up de seleção de palavras para cada episódio antes de criar cartões</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1331,6 +1331,14 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>Repetindo %1 itens com falha...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4716,14 +4724,6 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
         <translation>Reestilizar Cartões Minerados...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>Aj&amp;uda</translation>
     </message>
@@ -4746,6 +4746,14 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>Salvar um zip com logs e detalhes do sistema para um relatório de bug</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>

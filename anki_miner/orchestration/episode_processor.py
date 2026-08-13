@@ -1807,19 +1807,26 @@ class EpisodeProcessor:
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88).
         self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        # A callback carrying suppress_curation_messages=True (the season
+        # pre-pass capture) asks for a quiet run: its [] return is a capture
+        # artifact, not a user decision, so the per-episode info lines would
+        # only mislead. The worker narrates the season flow itself.
+        quiet = getattr(curation_callback, "suppress_curation_messages", False)
         curated = curation_callback(unknown_words)
         if curated is None:
             # The user cancelled/rejected the curation dialog.
             return self._cancelled_result_from_ctx(ctx)
         ctx.new_words_found = len(curated)
         if not curated:
-            self.presenter.show_info(
-                QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
-            )
+            if not quiet:
+                self.presenter.show_info(
+                    QCoreApplication.translate("EpisodeProcessor", "No words selected for card creation")
+                )
             return ctx.build_result(new_words_found=0)
-        self.presenter.show_info(
-            QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(curated))
-        )
+        if not quiet:
+            self.presenter.show_info(
+                QCoreApplication.translate("EpisodeProcessor", "Mining %n selected word(s)", "", len(curated))
+            )
         return curated
 
     def process_episode(

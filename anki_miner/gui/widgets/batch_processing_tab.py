@@ -165,11 +165,12 @@ class BatchProcessingTab(MiningTabBase):
         # height back.
         layout.addWidget(self.queue_panel)
 
-        # Issue #60: opt-in per-episode word curation popup (default off).
+        # Issue #60: opt-in word curation popup (default off). Season-level on
+        # this tab: one popup per series (queue) / per run (quick pairs).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self.review_words_checkbox.setChecked(False)
         self.review_words_checkbox.setToolTip(
-            self.tr("Show the word-selection popup for each episode before creating cards")
+            self.tr("Show the word-selection popup once per series, covering every episode's words")
         )
         layout.addWidget(self.review_words_checkbox)
 
@@ -554,6 +555,24 @@ class BatchProcessingTab(MiningTabBase):
         media_context = self._make_curation_media_context(
             self.config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
         )
+        season_map = getattr(w, "_curation_media_map", None)
+        if media_context is not None and season_map:
+            # Season curation: give the dialog a resolver over a SNAPSHOT of
+            # the worker's episode map, so cross-episode word focus can rebuild
+            # the player context without ever touching the worker after it
+            # unparks. _make_curation_media_context is static, pure and
+            # error-swallowing, so the resolver is safe off the GUI thread.
+            snapshot = dict(season_map)
+            config = self.config
+
+            def _resolve(video: Path) -> CurationMediaContext | None:
+                entry = snapshot.get(video)
+                if entry is None:
+                    return None
+                subtitle, offset = entry
+                return MiningTabBase._make_curation_media_context(config, video, subtitle, offset=offset)
+
+            media_context = replace(media_context, context_resolver=_resolve)
         return media_context, self._lookup_fn_from_processor(w.curation_processor)
 
     def _process_queue(self) -> None:

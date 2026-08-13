@@ -1182,8 +1182,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Просмотреть слова перед майнингом</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>Показывать всплывающее окно выбора слов для каждого эпизода перед созданием карточек</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1332,6 +1332,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>Повтор %1 неудачных элементов...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4728,14 +4736,6 @@ Add %3 word(s) to your known list?</source>
         <translation>Изменить стиль намайненных карточек...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>&amp;Справка</translation>
     </message>
@@ -4758,6 +4758,14 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>Сохранить zip-архив с журналами и сведениями о системе для отчёта об ошибке</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>

@@ -1180,8 +1180,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>マイニング前に単語を確認</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>カードを作成する前に、エピソードごとに単語選択ポップアップを表示します。</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1330,6 +1330,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>%1 件の失敗項目を再試行しています...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4704,14 +4712,6 @@ Add %3 word(s) to your known list?</source>
         <translation>マイニングしたカードのスタイルを再適用...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>ヘルプ(&amp;H)</translation>
     </message>
@@ -4734,6 +4734,14 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>バグ報告用に、ログとシステム情報を含む zip を保存します</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>

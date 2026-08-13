@@ -5875,3 +5875,58 @@ class TestAnkiWriteProvenance:
             processor.process_episode(tmp_path / "v2.mkv", tmp_path / "s2.ass")
 
         assert mock_services["anki_service"].anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+
+class TestCurationQuietMarker:
+    """A callback carrying suppress_curation_messages=True (season pre-pass
+    capture) silences _run_curation's two info lines; an unmarked callback
+    keeps them — pinned so season mode can't regress per-episode logs."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+
+    def _run(self, test_config, mock_services, tmp_path, callback):
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        # curation_callback forces want_line_index → the indexed parse path.
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = (words, [])
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        presenter = MagicMock()
+        processor = build_processor(
+            config=test_config,
+            **mock_services,
+            presenter=presenter,
+        )
+        processor.process_episode(
+            tmp_path / "ep.mkv",
+            tmp_path / "ep.ass",
+            curation_callback=callback,
+        )
+        return [str(c.args[0]) for c in presenter.show_info.call_args_list]
+
+    def test_quiet_callback_suppresses_empty_selection_info(self, test_config, mock_services, tmp_path):
+        def callback(words):
+            return []
+
+        callback.suppress_curation_messages = True
+        infos = self._run(test_config, mock_services, tmp_path, callback)
+        assert not any("No words selected" in msg for msg in infos)
+
+    def test_unmarked_callback_keeps_empty_selection_info(self, test_config, mock_services, tmp_path):
+        infos = self._run(test_config, mock_services, tmp_path, lambda words: [])
+        assert any("No words selected" in msg for msg in infos)
+
+    def test_unmarked_callback_keeps_mining_info(self, test_config, mock_services, tmp_path):
+        infos = self._run(test_config, mock_services, tmp_path, lambda words: list(words))
+        assert any("selected word" in msg for msg in infos)

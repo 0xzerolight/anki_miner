@@ -1181,8 +1181,8 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Wörter vor dem Sammeln überprüfen</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>Das Wortauswahl-Popup für jede Folge vor dem Erstellen von Karten anzeigen</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1331,6 +1331,15 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>%1 fehlgeschlagene Einträge werden wiederholt...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation>
+            <numerusform>Wörter aus %n Episode werden zur Überprüfung gesammelt...</numerusform>
+            <numerusform>Wörter aus %n Episoden werden zur Überprüfung gesammelt...</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4716,14 +4725,6 @@ Add %3 word(s) to your known list?</source>
         <translation>Gesammelte Karten neu gestalten...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
@@ -4746,6 +4747,14 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>Ein ZIP mit Protokollen und Systemdetails für einen Fehlerbericht speichern</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>

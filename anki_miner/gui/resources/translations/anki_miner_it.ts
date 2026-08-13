@@ -1181,8 +1181,8 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
         <translation>Rivedi le parole prima del mining</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each episode before creating cards</source>
-        <translation>Mostra il popup di selezione delle parole per ogni episodio prima di creare le carte</translation>
+        <source>Show the word-selection popup once per series, covering every episode's words</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1331,6 +1331,14 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
     <message>
         <source>Retrying %1 failed items...</source>
         <translation>Nuovo tentativo di %1 elementi non riusciti...</translation>
+    </message>
+</context><context>
+    <name>BatchQueueWorkerThread</name>
+    <message numerus="yes">
+        <source>Collecting words from %n episode(s) for review...</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -4716,14 +4724,6 @@ Aggiungere %3 parola/e all'elenco delle parole conosciute?</translation>
         <translation>Riapplica stile alle carte estratte...</translation>
     </message>
     <message>
-        <source>Usage Guide</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Open Usage Guide...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>&amp;Help</source>
         <translation>&amp;Aiuto</translation>
     </message>
@@ -4746,6 +4746,14 @@ Aggiungere %3 parola/e all'elenco delle parole conosciute?</translation>
     <message>
         <source>Save a zip with logs and system details for a bug report</source>
         <translation>Salva uno zip con registri e dettagli di sistema per una segnalazione di bug</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Report a Bug / Suggest a Feature</source>
