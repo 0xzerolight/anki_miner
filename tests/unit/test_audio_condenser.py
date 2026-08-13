@@ -34,6 +34,7 @@ from anki_miner.services.audio_condenser import (
     write_condensed_lrc,
     write_condensed_srt,
 )
+from anki_miner.services.audio_tagger import TaggingError, TrackMetadata
 from anki_miner.utils.audio_track_detector import SubtitleStream
 
 # ---------------------------------------------------------------------------
@@ -1312,3 +1313,70 @@ def test_condense_one_write_subs_writes_sidecars(tmp_path):
     assert result.sidecar_error is None
     assert (tmp_path / "ep01_condensed.srt").exists()
     assert (tmp_path / "ep01_condensed.lrc").exists()
+
+
+def test_condense_one_metadata_tagged_on_success(tmp_path, monkeypatch):
+    """metadata set → tag_audio_file(out_audio, meta) after a successful condense."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    out = tmp_path / "ep01_condensed.mp3"
+    tag = MagicMock()
+    monkeypatch.setattr("anki_miner.services.audio_condenser.tag_audio_file", tag)
+    meta = TrackMetadata(title="T", track=1)
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, out, metadata=meta)
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert result.tag_error is None
+    tag.assert_called_once_with(out, meta)
+
+
+def test_condense_one_tag_failure_is_best_effort(tmp_path, monkeypatch):
+    """A TaggingError returns SUCCESS with the error string, never a failed result."""
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    out = tmp_path / "ep01_condensed.mp3"
+    monkeypatch.setattr(
+        "anki_miner.services.audio_condenser.tag_audio_file",
+        MagicMock(side_effect=TaggingError("no header")),
+    )
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, out, metadata=TrackMetadata(title="T"))
+
+    assert result.status is CondenseStatus.SUCCESS
+    assert result.out_audio == out
+    assert result.tag_error == "no header"
+
+
+def test_condense_one_no_metadata_no_tagging(tmp_path, monkeypatch):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    tag = MagicMock()
+    monkeypatch.setattr("anki_miner.services.audio_condenser.tag_audio_file", tag)
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3")
+
+    assert result.status is CondenseStatus.SUCCESS
+    tag.assert_not_called()
+
+
+def test_condense_one_not_tagged_on_condense_failure(tmp_path, monkeypatch):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "explicit.srt", [(1000, 2000, "hi")])
+    tag = MagicMock()
+    monkeypatch.setattr("anki_miner.services.audio_condenser.tag_audio_file", tag)
+    svc = _StubCondenser(condense_result=False)
+
+    result = condense_one(
+        svc, _make_config(tmp_path), media, sub, tmp_path / "o.mp3", metadata=TrackMetadata(title="T")
+    )
+
+    assert result.status is CondenseStatus.CONDENSE_FAILED
+    tag.assert_not_called()

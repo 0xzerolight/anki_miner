@@ -26,6 +26,7 @@ from anki_miner.services.audio_condenser import (
     EncoderUnavailableError,
     condense_one,
 )
+from anki_miner.services.audio_tagger import TrackMetadata
 from anki_miner.utils.file_pairing import output_path_identity, resolve_output_paths
 from anki_miner.utils.i18n import tr_format
 
@@ -41,11 +42,14 @@ class CondenseItem:
     """One media file queued for condensing.
 
     ``external_sub`` is a user-picked subtitle file (single mode); when None the
-    service discovers a sibling or embedded subtitle track (D9).
+    service discovers a sibling or embedded subtitle track (D9). ``metadata``
+    is set only when the Tag-output-files dialog ran (Issue #113); None keeps
+    the legacy untagged behavior.
     """
 
     media: Path
     external_sub: Path | None = None
+    metadata: TrackMetadata | None = None
 
 
 class CondenseOutputCollisionError(ValueError):
@@ -269,6 +273,7 @@ class CondenseWorker(FileQueueWorker):
                 audio_track_override=self._audio_track_override,
                 subtitle_track_override=self._subtitle_track_override,
                 write_subs=self._write_subs,
+                metadata=item.metadata,
                 progress_cb=_progress_cb,
                 cancel_event=self._cancel_event,
             )
@@ -291,11 +296,18 @@ class CondenseWorker(FileQueueWorker):
         status = result.status
 
         if status is CondenseStatus.SUCCESS:
-            warning = (
-                tr_format(self.tr("Audio done; subtitle write failed: %1"), result.sidecar_error)
-                if result.sidecar_error
-                else None
-            )
+            if result.sidecar_error and result.tag_error:
+                warning = tr_format(
+                    self.tr("Audio done; subtitle write failed: %1; tagging failed: %2"),
+                    result.sidecar_error,
+                    result.tag_error,
+                )
+            elif result.sidecar_error:
+                warning = tr_format(self.tr("Audio done; subtitle write failed: %1"), result.sidecar_error)
+            elif result.tag_error:
+                warning = tr_format(self.tr("Audio done; tagging failed: %1"), result.tag_error)
+            else:
+                warning = None
             self.file_progress.emit(idx, 100, warning or self.tr("Done"))
             self.file_finished.emit(idx, result.out_audio, None)
         elif status is CondenseStatus.CANCELLED:
