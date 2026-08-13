@@ -131,21 +131,62 @@ def _tools_menu(window):
     raise AssertionError("Tools menu not found on menu bar")
 
 
-def test_find_a_feature_action_present(main_window):
-    """Tools menu exposes the Find a Feature browser entry."""
-    assert _find_action(_tools_menu(main_window), "Find a Feature...") is not None
+def test_usage_guide_sits_between_tools_and_help(main_window):
+    """The Usage Guide is its own top-level menu-bar item, after Tools, before Help."""
+    menu_bar = main_window.menuBar()
+    assert menu_bar is not None
+    texts = [a.text() for a in menu_bar.actions()]
+    assert texts.index("&Tools") < texts.index("Usage Guide") < texts.index("&Help")
 
 
-def test_find_a_feature_opens_browser(main_window, monkeypatch):
+def test_usage_guide_is_a_plain_action_on_non_native_bars(main_window):
+    """Off the native menu bar it is a one-click button, not a dropdown."""
+    assert main_window.usage_guide_action.menu() is None
+
+
+def test_tools_menu_no_longer_lists_find_a_feature(main_window):
+    labels = [a.text() for a in _tools_menu(main_window).actions()]
+    assert "Find a Feature..." not in labels
+    assert not any("Usage Guide" in label for label in labels)
+
+
+def test_usage_guide_action_opens_browser(main_window, monkeypatch):
     """Triggering the action runs the capability browser, parented to the window."""
     from anki_miner.gui.widgets.dialogs import capability_browser
 
     calls: list[tuple] = []
     monkeypatch.setattr(capability_browser, "run_capability_browser", lambda parent, mw: calls.append((parent, mw)))
-    action = _find_action(_tools_menu(main_window), "Find a Feature...")
-    assert action is not None
-    action.trigger()
+    main_window.usage_guide_action.trigger()
     assert calls == [(main_window, main_window)]
+
+
+def test_native_menu_bar_gets_one_action_menu(qtbot, patch_heavy_init, test_config, monkeypatch):
+    """On a native menu bar (macOS, Linux global menu) a menu-less top-level
+    QAction is silently dropped, so the Usage Guide becomes a one-action menu."""
+    from PyQt6.QtGui import QKeySequence
+    from PyQt6.QtWidgets import QMenuBar
+
+    from anki_miner.gui.utils.keyboard_shortcuts import HELP_SEQUENCE
+
+    monkeypatch.setattr(QMenuBar, "isNativeMenuBar", lambda self: True)
+    patch_heavy_init(test_config)
+    from anki_miner.gui.main_window import MainWindow
+
+    window = MainWindow()
+    qtbot.addWidget(window)
+    try:
+        menu_bar = window.menuBar()
+        assert menu_bar is not None
+        guide_actions = [a for a in menu_bar.actions() if a.text() == "Usage Guide"]
+        assert len(guide_actions) == 1
+        menu = guide_actions[0].menu()
+        assert menu is not None
+        inner = menu.actions()
+        assert [a.text() for a in inner] == ["Open Usage Guide..."]
+        assert inner[0].shortcut() == QKeySequence(HELP_SEQUENCE)
+        assert window.usage_guide_action is inner[0]
+    finally:
+        window.deleteLater()
 
 
 def test_star_button_opens_repo_url(main_window, monkeypatch):

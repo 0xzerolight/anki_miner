@@ -16,8 +16,8 @@
         <translation>Запустить основное действие этого экрана</translation>
     </message>
     <message>
-        <source>Find a Feature</source>
-        <translation>Найти функцию</translation>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
@@ -1364,6 +1364,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Внешний вид и язык</translation>
     </message>
     <message>
+        <source>Tools &amp; maintenance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mine a single episode</source>
         <translation>Майнинг одного эпизода</translation>
     </message>
@@ -1380,6 +1384,22 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Поставьте в очередь целую папку с эпизодами и намайньте их за один запуск.</translation>
     </message>
     <message>
+        <source>Queue several series at once</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add multiple series to one batch run, each with its own video and subtitle folders and per-series subtitle offset.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Просмотреть слова перед майнингом</translation>
+    </message>
+    <message>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Build a deck by coverage %</source>
         <translation>Собрать колоду по % покрытия</translation>
     </message>
@@ -1388,12 +1408,12 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Соберите колоду, упорядоченную по частотности, которая покрывает выбранный процент всего корпуса.</translation>
     </message>
     <message>
-        <source>Build a complete deck (skip per-episode filters)</source>
-        <translation>Собрать полную колоду (пропустить поэпизодные фильтры)</translation>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
-        <translation>Конструктор колод может обходить фильтры i+1/частотности/списка слов и допускать дубликаты для полного покрытия.</translation>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -1436,6 +1456,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Вставьте любой японский текст и майните его прямо в карточки Anki.</translation>
     </message>
     <message>
+        <source>Mine subtitle files without video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary straight from subtitle files (.srt/.ass/.vtt) as text -- no video needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Генерировать субтитры из аудио</translation>
     </message>
@@ -1452,6 +1480,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Пересинхронизировать существующие субтитры с видео — как отдельный инструмент.</translation>
     </message>
     <message>
+        <source>Fine-tune subtitle timing by ear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick a line, nudge the offset with the arrow keys, and instantly hear it to check the sync against the video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Condense audio from subtitles</source>
         <translation>Сжать аудио по субтитрам</translation>
     </message>
@@ -1460,20 +1496,20 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Собрать сжатое аудио только с диалогами из видео- или аудиофайла и его субтитров.</translation>
     </message>
     <message>
-        <source>Fill missing fields on existing notes</source>
-        <translation>Заполнить недостающие поля существующих заметок</translation>
+        <source>Condense: track pickers &amp; extra outputs</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
-        <translation>Заполнить недостающие поля тонального ударения, частотности, определения и чтения в уже созданных заметках.</translation>
+        <source>Pick the audio and subtitle tracks to condense, and also write condensed subtitles (.srt) and lyrics (.lrc).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Изменить стиль намайненных карточек</translation>
+        <source>Tag condensed audio with metadata</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
-        <translation>Повторно применить актуальное оформление Anki Miner к ранее намайненным карточкам.</translation>
+        <source>Optionally add title, album, artist and cover art to condensed audio outputs before the run.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1492,6 +1528,30 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Удалить все записанные сеансы и оценки сложности, чтобы начать подсчёт заново.</translation>
     </message>
     <message>
+        <source>YouTube cookies / bot bypass</source>
+        <translation>Cookie YouTube / обход проверки на ботов</translation>
+    </message>
+    <message>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation>Используйте cookie вашего браузера, чтобы пройти вход в YouTube и проверки на ботов.</translation>
+    </message>
+    <message>
+        <source>YouTube duration &amp; playlist limits</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cap the maximum video duration and how many playlist videos are fetched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep yt-dlp up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update the bundled yt-dlp downloader, update it on demand, or point at your own binary.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>Майнинг предложений i+1</translation>
     </message>
@@ -1500,12 +1560,12 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Майньте только предложения, содержащие ровно одно неизвестное слово.</translation>
     </message>
     <message>
-        <source>Skip rare words (frequency cutoff)</source>
-        <translation>Пропускать редкие слова (порог частотности)</translation>
+        <source>Keep words inside a frequency band</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Ignore words rarer than a chosen frequency rank.</source>
-        <translation>Игнорировать слова реже выбранного ранга частотности.</translation>
+        <source>Skip words rarer than a maximum rank, more common than a minimum rank, or missing from your frequency lists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip words you already know</source>
@@ -1528,16 +1588,16 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Отметить слова как известные вручную</translation>
     </message>
     <message>
-        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
-        <translation>Составьте свой собственный список известных слов, который применяется всегда и сохраняется при перестроении кэша.</translation>
+        <source>Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude kana-only words</source>
         <translation>Исключить слова только из каны</translation>
     </message>
     <message>
-        <source>Drop words written only in hiragana or katakana.</source>
-        <translation>Исключать слова, записанные только хираганой или катаканой.</translation>
+        <source>Drop words written without kanji; ticking both boxes leaves a kanji-only deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -1548,20 +1608,12 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Принудительно пропускайте или разрешайте определённые слова с помощью собственных списков блокировки/разрешения.</translation>
     </message>
     <message>
-        <source>Filter by part of speech</source>
-        <translation>Фильтр по части речи</translation>
-    </message>
-    <message>
-        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
-        <translation>Выберите, какие типы слов (существительные, глаголы, частицы, ...) майнятся.</translation>
-    </message>
-    <message>
         <source>Limit sentence length</source>
         <translation>Ограничить длину предложения</translation>
     </message>
     <message>
-        <source>Skip sentences that are too long or too short.</source>
-        <translation>Пропускать слишком длинные или слишком короткие предложения.</translation>
+        <source>Skip sentences longer than a chosen duration or character count.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Avoid duplicate cards</source>
@@ -1578,6 +1630,30 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
         <translation>Удаляйте имена, музыкальные ноты или текст в скобках из субтитров перед разбором.</translation>
+    </message>
+    <message>
+        <source>Skip Japanese names</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude bundled name lists -- surnames, given names, places, companies and products -- from mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Require repeat occurrences in a book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine a word from reading material once it appears a chosen number of times in the book or volume.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Kana spellings count as known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -1620,6 +1696,46 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Добавляйте информацию о тональном ударении на ваши карточки (числовое или ромадзи).</translation>
     </message>
     <message>
+        <source>Fill missing fields on existing notes</source>
+        <translation>Заполнить недостающие поля существующих заметок</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
+        <translation>Заполнить недостающие поля тонального ударения, частотности, определения и чтения в уже созданных заметках.</translation>
+    </message>
+    <message>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation>Распознавание речи (субтитры не нужны)</translation>
+    </message>
+    <message>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation>Создавайте субтитры из аудио с помощью локальной модели Whisper, когда их нет.</translation>
+    </message>
+    <message>
+        <source>Move the resource storage folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Relocate where dictionaries and other indexed resources are stored, restore them from disk, or reimport everything.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speed up subtitle generation (GPU)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Install CUDA or Vulkan acceleration and the silence-skipping pack for the local Whisper model.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tune subtitle alignment (alass)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Word pronunciation audio</source>
         <translation>Аудио произношения слова</translation>
     </message>
@@ -1644,6 +1760,22 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Извлекайте произнесённое предложение как аудиоклип; настраивайте его формат и битрейт.</translation>
     </message>
     <message>
+        <source>Sentence audio for reading (TTS)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a custom word-audio source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plug your own online pronunciation-audio server into the audio chain by URL template or JSON contract.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshots on cards</source>
         <translation>Скриншоты на карточках</translation>
     </message>
@@ -1666,6 +1798,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
         <translation>Добавляйте отступ или смещение, чтобы аудио и скриншоты совпадали с диалогом.</translation>
+    </message>
+    <message>
+        <source>Tune parallel media workers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Map data to your note fields</source>
@@ -1708,6 +1848,30 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Добавляйте теги к каждой заметке, создаваемой Anki Miner.</translation>
     </message>
     <message>
+        <source>Connect to Anki (AnkiConnect)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Set the AnkiConnect address and test the connection to your running Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>One-click note-type presets</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply a preset for a popular note type (Lapis, Kiku, Senren) that fills every field mapping for you.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Bold the mined word in the sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Wrap the mined word in bold inside the sentence fields on your cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Themes, dark mode, fonts &amp; zoom</source>
         <translation>Темы, тёмный режим, шрифты и масштаб</translation>
     </message>
@@ -1728,32 +1892,128 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Профили настроек</translation>
     </message>
     <message>
-        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
-        <translation>Храните несколько именованных снимков всех настроек и переключайтесь между ними одним щелчком.</translation>
+        <source>Keep several named snapshots of every setting and switch between them from the Settings footer.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Speech-to-text (no subtitles needed)</source>
-        <translation>Распознавание речи (субтитры не нужны)</translation>
+        <source>Install custom themes</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
-        <translation>Создавайте субтитры из аудио с помощью локальной модели Whisper, когда их нет.</translation>
+        <source>Add your own theme JSON files and preview every theme in the gallery before applying it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>YouTube cookies / bot bypass</source>
-        <translation>Cookie YouTube / обход проверки на ботов</translation>
+        <source>Use system file dialogs</source>
+        <translation type="unfinished">Использовать системные диалоги выбора файлов</translation>
     </message>
     <message>
-        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
-        <translation>Используйте cookie вашего браузера, чтобы пройти вход в YouTube и проверки на ботов.</translation>
+        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>YouTube quality &amp; playlist limits</source>
-        <translation>Качество YouTube и лимиты плейлистов</translation>
+        <source>Search the settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
-        <translation>Ограничивайте качество видео, максимальную длительность и количество загружаемых видео из плейлиста.</translation>
+        <source>Type in the search box at the top of Settings to jump straight to any control.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export / import settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save every setting to a portable file, load it on another machine, or reset everything to defaults -- from the Settings footer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for app updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyle mined cards</source>
+        <translation>Изменить стиль намайненных карточек</translation>
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>System health check</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Setup wizard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download recommended resources</source>
+        <translation type="unfinished">Загрузить рекомендуемые ресурсы</translation>
+    </message>
+    <message>
+        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create a desktop shortcut</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add an Anki Miner launcher to your desktop from the Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export diagnostics for a bug report</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save a zip of logs and system details to attach to a bug report -- from the Help menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mini job monitor</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pop out a small always-on-top window that tracks the current run -- from the status-bar task menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Crash &amp; session recovery</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After an unexpected exit, Anki Miner offers to restore unfinished queues and resume interrupted downloads at the next launch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Undo a mining run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete the notes a run just created, straight from the results dialog.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keyboard shortcuts</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4460,16 +4720,20 @@ Add %3 word(s) to your known list?</source>
         <translation>Загрузить рекомендуемые ресурсы...</translation>
     </message>
     <message>
-        <source>Find a Feature...</source>
-        <translation>Найти функцию...</translation>
-    </message>
-    <message>
         <source>Setup Wizard...</source>
         <translation>Мастер настройки...</translation>
     </message>
     <message>
         <source>Restyle Mined Cards...</source>
         <translation>Изменить стиль намайненных карточек...</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>&amp;Help</source>

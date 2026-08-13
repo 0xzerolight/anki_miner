@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import QPushButton, QWidget
 #: screen and collides with nothing.
 SETTINGS_SEQUENCE = "Ctrl+,"
 
-#: Help. F1 means help on every desktop, so it opens *Find a Feature*; it used
+#: Help. F1 means help on every desktop, so it opens the *Usage Guide*; it used
 #: to open About, which answers a different question.
 HELP_SEQUENCE = "F1"
 
@@ -59,7 +59,7 @@ SHORTCUT_HELP: tuple[tuple[str, str], ...] = (
         PRIMARY_ACTION_DISPLAY,
         QT_TRANSLATE_NOOP("AboutDialog", "Run this screen's main action"),
     ),
-    (HELP_SEQUENCE, QT_TRANSLATE_NOOP("AboutDialog", "Find a Feature")),
+    (HELP_SEQUENCE, QT_TRANSLATE_NOOP("AboutDialog", "Usage Guide")),
 )
 
 #: Confirmation is Ctrl-modified so a bare Enter stays available to input methods.

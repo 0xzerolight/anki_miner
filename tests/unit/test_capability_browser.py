@@ -1,4 +1,4 @@
-"""The Find a Feature browser dialog: filtering + selection + navigation."""
+"""The Usage Guide browser dialog: filtering + selection + navigation."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import pytest
 from PyQt6.QtCore import QCoreApplication, QTranslator
 from PyQt6.QtWidgets import QPushButton
 
-from anki_miner.gui.capabilities import CAPABILITIES, CapabilityTarget
+from anki_miner.gui.capabilities import CAPABILITIES, Capability, CapabilityTarget
 from anki_miner.gui.widgets.dialogs.capability_browser import (
     CapabilityBrowser,
     run_capability_browser,
@@ -56,10 +56,28 @@ def test_typing_displayed_localized_title_finds_capability(qapp, qtbot):
         qapp.removeTranslator(translator)
 
 
+def test_window_title_is_usage_guide(dialog):
+    assert dialog.windowTitle() == "Anki Miner Usage Guide"
+
+
 def test_open_buttons_match_visible_rows(dialog):
     dialog.search_box.setText("youtube")
     buttons = [b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open"]
-    assert len(buttons) == len(dialog._current)
+    expected = sum(1 for c in dialog._current if c.target is not None)
+    assert len(buttons) == expected
+
+
+def test_target_less_row_has_no_open_button(dialog, qtbot):
+    cap = Capability(
+        id="x-dialog-only",
+        title="Dialog-only thing",
+        description="Lives in a menu.",
+        category="c",
+        keywords=("x",),
+    )
+    row = dialog._make_row(cap)
+    qtbot.addWidget(row)
+    assert row.findChildren(QPushButton) == []
 
 
 def test_no_match_shows_empty_state(dialog):

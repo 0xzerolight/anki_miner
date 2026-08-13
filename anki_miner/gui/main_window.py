@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QEvent, QRect, QSize, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
+    QAction,
     QGuiApplication,
     QIcon,
     QKeySequence,
@@ -427,13 +428,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         assert resources_action is not None
         resources_action.triggered.connect(self._download_recommended_resources)
 
-        find_feature_action = tools_menu.addAction(self.tr("Find a Feature..."))
-        assert find_feature_action is not None
-        # F1 is help everywhere, and "which screen does this?" is the help
-        # question this application can actually answer (D48-B).
-        find_feature_action.setShortcut(QKeySequence(HELP_SEQUENCE))
-        find_feature_action.triggered.connect(self._run_capability_browser_tool)
-
         setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
         assert setup_wizard_action is not None
         setup_wizard_action.triggered.connect(self._run_setup_wizard_tool)
@@ -442,12 +436,30 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         assert restyle_action is not None
         restyle_action.triggered.connect(self._restyle_mined_cards)
 
+        # Usage Guide -- a top-level menu-bar button, not a dropdown. F1 is help
+        # everywhere, and "which screen does this?" is the help question this
+        # application can actually answer (D48-B). A menu-less top-level QAction
+        # is silently dropped from native menu bars (macOS, Linux global menu),
+        # so those platforms get a one-action menu instead.
+        if menu_bar.isNativeMenuBar():
+            guide_menu = menu_bar.addMenu(self.tr("Usage Guide"))
+            assert guide_menu is not None
+            guide_action = guide_menu.addAction(self.tr("Open Usage Guide..."))
+            assert guide_action is not None
+            guide_action.setMenuRole(QAction.MenuRole.NoRole)
+        else:
+            guide_action = menu_bar.addAction(self.tr("Usage Guide"))
+            assert guide_action is not None
+        guide_action.setShortcut(QKeySequence(HELP_SEQUENCE))
+        guide_action.triggered.connect(self._run_capability_browser_tool)
+        self.usage_guide_action = guide_action
+
         # Help menu
         help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
 
-        # No shortcut: About is a credits card, not help. F1 belongs to Find a
-        # Feature (D48-B).
+        # No shortcut: About is a credits card, not help. F1 belongs to the
+        # Usage Guide (D48-B).
         about_action = help_menu.addAction(self.tr("About Anki Miner"))
         assert about_action is not None
         about_action.triggered.connect(self._show_about)
@@ -894,7 +906,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def reveal_capability(self, target: "CapabilityTarget") -> None:
         """Bring the tab that hosts ``target`` to the front (and its sub-tab).
 
-        Called by the Find a Feature browser. No-ops silently if the tab can't be
+        Called by the Usage Guide browser. No-ops silently if the tab can't be
         found (e.g. an optional tab was not registered) so a stale catalogue entry
         never crashes the UI.
         """
@@ -1233,7 +1245,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             return new_config
 
     def _run_capability_browser_tool(self) -> None:
-        """Tools-menu handler: open the Find a Feature browser.
+        """Menu-bar handler: open the Usage Guide browser.
 
         The dialog drives navigation through :meth:`reveal_capability`; it does
         not modify config, so there is nothing to apply on return.

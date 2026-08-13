@@ -16,8 +16,8 @@
         <translation>Chạy thao tác chính của màn hình này</translation>
     </message>
     <message>
-        <source>Find a Feature</source>
-        <translation>Tìm tính năng</translation>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
@@ -1362,6 +1362,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Giao diện và ngôn ngữ</translation>
     </message>
     <message>
+        <source>Tools &amp; maintenance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mine a single episode</source>
         <translation>Khai thác một tập đơn</translation>
     </message>
@@ -1378,6 +1382,22 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Xếp cả một thư mục các tập vào hàng đợi và khai thác trong một lần chạy.</translation>
     </message>
     <message>
+        <source>Queue several series at once</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add multiple series to one batch run, each with its own video and subtitle folders and per-series subtitle offset.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Review words before mining</source>
+        <translation type="unfinished">Xem lại từ trước khi khai thác</translation>
+    </message>
+    <message>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Build a deck by coverage %</source>
         <translation>Xây dựng bộ thẻ theo % độ bao phủ</translation>
     </message>
@@ -1386,12 +1406,12 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Xây dựng bộ thẻ được sắp xếp theo tần suất bao phủ một tỷ lệ phần trăm đã chọn của toàn bộ kho ngữ liệu.</translation>
     </message>
     <message>
-        <source>Build a complete deck (skip per-episode filters)</source>
-        <translation>Xây dựng bộ thẻ hoàn chỉnh (bỏ qua bộ lọc từng tập)</translation>
+        <source>Deck Builder modes (all / top N / coverage %)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck Builder can bypass i+1/frequency/word-list filters and allow duplicates for full coverage.</source>
-        <translation>Trình xây dựng bộ thẻ có thể bỏ qua bộ lọc i+1/tần suất/danh sách từ và cho phép trùng lặp để bao phủ toàn bộ.</translation>
+        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -1434,6 +1454,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Dán bất kỳ văn bản tiếng Nhật nào và khai thác trực tiếp thành thẻ Anki.</translation>
     </message>
     <message>
+        <source>Mine subtitle files without video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine vocabulary straight from subtitle files (.srt/.ass/.vtt) as text -- no video needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Generate subtitles from audio</source>
         <translation>Tạo phụ đề từ âm thanh</translation>
     </message>
@@ -1450,6 +1478,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Đồng bộ lại phụ đề hiện có với video — như một công cụ độc lập.</translation>
     </message>
     <message>
+        <source>Fine-tune subtitle timing by ear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick a line, nudge the offset with the arrow keys, and instantly hear it to check the sync against the video.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Condense audio from subtitles</source>
         <translation>Cô đọng âm thanh từ phụ đề</translation>
     </message>
@@ -1458,20 +1494,20 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Tạo âm thanh cô đọng chỉ gồm lời thoại từ tệp video hoặc âm thanh và phụ đề của nó.</translation>
     </message>
     <message>
-        <source>Fill missing fields on existing notes</source>
-        <translation>Điền các trường còn thiếu trên ghi chú hiện có</translation>
+        <source>Condense: track pickers &amp; extra outputs</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
-        <translation>Điền các trường trọng âm cao độ, tần suất, định nghĩa và cách đọc còn thiếu trên các ghi chú đã khai thác.</translation>
+        <source>Pick the audio and subtitle tracks to condense, and also write condensed subtitles (.srt) and lyrics (.lrc).</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Restyle mined cards</source>
-        <translation>Định dạng lại thẻ đã khai thác</translation>
+        <source>Tag condensed audio with metadata</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier.</source>
-        <translation>Áp dụng lại kiểu định dạng Anki Miner mới nhất cho các thẻ bạn đã khai thác trước đó.</translation>
+        <source>Optionally add title, album, artist and cover art to condensed audio outputs before the run.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>View mining history &amp; stats</source>
@@ -1490,6 +1526,30 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Xóa mọi phiên và điểm độ khó đã ghi để bắt đầu đếm lại.</translation>
     </message>
     <message>
+        <source>YouTube cookies / bot bypass</source>
+        <translation>Cookie YouTube / vượt qua kiểm tra bot</translation>
+    </message>
+    <message>
+        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
+        <translation>Dùng cookie trình duyệt của bạn để vượt qua đăng nhập YouTube và kiểm tra bot.</translation>
+    </message>
+    <message>
+        <source>YouTube duration &amp; playlist limits</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cap the maximum video duration and how many playlist videos are fetched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keep yt-dlp up to date</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto-update the bundled yt-dlp downloader, update it on demand, or point at your own binary.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>Khai thác câu i+1</translation>
     </message>
@@ -1498,12 +1558,12 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Chỉ khai thác các câu chứa đúng một từ chưa biết.</translation>
     </message>
     <message>
-        <source>Skip rare words (frequency cutoff)</source>
-        <translation>Bỏ qua từ hiếm (ngưỡng tần suất)</translation>
+        <source>Keep words inside a frequency band</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Ignore words rarer than a chosen frequency rank.</source>
-        <translation>Bỏ qua các từ hiếm hơn một hạng tần suất đã chọn.</translation>
+        <source>Skip words rarer than a maximum rank, more common than a minimum rank, or missing from your frequency lists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Skip words you already know</source>
@@ -1526,16 +1586,16 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Đánh dấu từ là đã biết theo cách thủ công</translation>
     </message>
     <message>
-        <source>Curate your own list of known words that is always applied and survives cache rebuilds.</source>
-        <translation>Tự quản lý danh sách từ đã biết riêng luôn được áp dụng và tồn tại qua các lần dựng lại bộ nhớ đệm.</translation>
+        <source>Curate your own list of known words -- always applied, survives cache rebuilds, exportable as plain text.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Exclude kana-only words</source>
         <translation>Loại trừ từ chỉ có kana</translation>
     </message>
     <message>
-        <source>Drop words written only in hiragana or katakana.</source>
-        <translation>Loại bỏ các từ chỉ viết bằng hiragana hoặc katakana.</translation>
+        <source>Drop words written without kanji; ticking both boxes leaves a kanji-only deck.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Blacklist / whitelist words</source>
@@ -1546,20 +1606,12 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Buộc bỏ qua hoặc buộc cho phép các từ cụ thể bằng danh sách chặn/cho phép của riêng bạn.</translation>
     </message>
     <message>
-        <source>Filter by part of speech</source>
-        <translation>Lọc theo từ loại</translation>
-    </message>
-    <message>
-        <source>Choose which word types (nouns, verbs, particles, ...) are mined.</source>
-        <translation>Chọn các loại từ (danh từ, động từ, tiểu từ, ...) được khai thác.</translation>
-    </message>
-    <message>
         <source>Limit sentence length</source>
         <translation>Giới hạn độ dài câu</translation>
     </message>
     <message>
-        <source>Skip sentences that are too long or too short.</source>
-        <translation>Bỏ qua các câu quá dài hoặc quá ngắn.</translation>
+        <source>Skip sentences longer than a chosen duration or character count.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Avoid duplicate cards</source>
@@ -1576,6 +1628,30 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Remove names, music notes, or bracketed text from subtitles before parsing.</source>
         <translation>Xóa tên, ký hiệu nhạc hoặc văn bản trong ngoặc khỏi phụ đề trước khi phân tích.</translation>
+    </message>
+    <message>
+        <source>Skip Japanese names</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude bundled name lists -- surnames, given names, places, companies and products -- from mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Require repeat occurrences in a book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine a word from reading material once it appears a chosen number of times in the book or volume.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Kana spellings count as known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -1618,6 +1694,46 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Thêm thông tin trọng âm cao độ vào thẻ của bạn (dạng số hoặc romaji).</translation>
     </message>
     <message>
+        <source>Fill missing fields on existing notes</source>
+        <translation>Điền các trường còn thiếu trên ghi chú hiện có</translation>
+    </message>
+    <message>
+        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
+        <translation>Điền các trường trọng âm cao độ, tần suất, định nghĩa và cách đọc còn thiếu trên các ghi chú đã khai thác.</translation>
+    </message>
+    <message>
+        <source>Speech-to-text (no subtitles needed)</source>
+        <translation>Chuyển giọng nói thành văn bản (không cần phụ đề)</translation>
+    </message>
+    <message>
+        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
+        <translation>Tạo phụ đề từ âm thanh bằng mô hình Whisper cục bộ khi không có sẵn phụ đề.</translation>
+    </message>
+    <message>
+        <source>Move the resource storage folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Relocate where dictionaries and other indexed resources are stored, restore them from disk, or reimport everything.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speed up subtitle generation (GPU)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Install CUDA or Vulkan acceleration and the silence-skipping pack for the local Whisper model.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tune subtitle alignment (alass)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Word pronunciation audio</source>
         <translation>Âm thanh phát âm từ</translation>
     </message>
@@ -1642,6 +1758,22 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Trích xuất câu được nói thành đoạn clip âm thanh; tinh chỉnh định dạng và bitrate của nó.</translation>
     </message>
     <message>
+        <source>Sentence audio for reading (TTS)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add a custom word-audio source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plug your own online pronunciation-audio server into the audio chain by URL template or JSON contract.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshots on cards</source>
         <translation>Ảnh chụp màn hình trên thẻ</translation>
     </message>
@@ -1664,6 +1796,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Add padding or an offset so audio and screenshots line up with the dialogue.</source>
         <translation>Thêm phần đệm hoặc độ lệch để âm thanh và ảnh chụp màn hình khớp với lời thoại.</translation>
+    </message>
+    <message>
+        <source>Tune parallel media workers</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Map data to your note fields</source>
@@ -1706,6 +1846,30 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Thêm thẻ nhãn vào mọi ghi chú mà Anki Miner tạo ra.</translation>
     </message>
     <message>
+        <source>Connect to Anki (AnkiConnect)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Set the AnkiConnect address and test the connection to your running Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>One-click note-type presets</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Apply a preset for a popular note type (Lapis, Kiku, Senren) that fills every field mapping for you.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Bold the mined word in the sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Wrap the mined word in bold inside the sentence fields on your cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Themes, dark mode, fonts &amp; zoom</source>
         <translation>Chủ đề, chế độ tối, phông chữ và thu phóng</translation>
     </message>
@@ -1726,32 +1890,128 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Hồ sơ cài đặt</translation>
     </message>
     <message>
-        <source>Keep several named snapshots of every setting and switch between them in one click.</source>
-        <translation>Giữ nhiều ảnh chụp nhanh được đặt tên của mọi cài đặt và chuyển đổi chỉ bằng một cú nhấp.</translation>
+        <source>Keep several named snapshots of every setting and switch between them from the Settings footer.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Speech-to-text (no subtitles needed)</source>
-        <translation>Chuyển giọng nói thành văn bản (không cần phụ đề)</translation>
+        <source>Install custom themes</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Generate subtitles from audio with a local Whisper model when none exist.</source>
-        <translation>Tạo phụ đề từ âm thanh bằng mô hình Whisper cục bộ khi không có sẵn phụ đề.</translation>
+        <source>Add your own theme JSON files and preview every theme in the gallery before applying it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>YouTube cookies / bot bypass</source>
-        <translation>Cookie YouTube / vượt qua kiểm tra bot</translation>
+        <source>Use system file dialogs</source>
+        <translation type="unfinished">Dùng hộp thoại tệp của hệ thống</translation>
     </message>
     <message>
-        <source>Use your browser cookies to get past YouTube sign-in and bot checks.</source>
-        <translation>Dùng cookie trình duyệt của bạn để vượt qua đăng nhập YouTube và kiểm tra bot.</translation>
+        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>YouTube quality &amp; playlist limits</source>
-        <translation>Giới hạn chất lượng và danh sách phát YouTube</translation>
+        <source>Search the settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Cap video quality, max duration, and how many playlist videos are fetched.</source>
-        <translation>Giới hạn chất lượng video, thời lượng tối đa và số video danh sách phát được tải về.</translation>
+        <source>Type in the search box at the top of Settings to jump straight to any control.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export / import settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save every setting to a portable file, load it on another machine, or reset everything to defaults -- from the Settings footer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for app updates</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyle mined cards</source>
+        <translation>Định dạng lại thẻ đã khai thác</translation>
+    </message>
+    <message>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>System health check</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>See whether Anki, ffmpeg and your resources are ready, with one-click fixes -- open it from the status-bar badge.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Setup wizard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-run the guided first-time setup -- theme, Anki connection, deck, note type and resources -- from the Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download recommended resources</source>
+        <translation type="unfinished">Tải các tài nguyên được đề xuất</translation>
+    </message>
+    <message>
+        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create a desktop shortcut</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add an Anki Miner launcher to your desktop from the Tools menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Export diagnostics for a bug report</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save a zip of logs and system details to attach to a bug report -- from the Help menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mini job monitor</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pop out a small always-on-top window that tracks the current run -- from the status-bar task menu.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Crash &amp; session recovery</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>After an unexpected exit, Anki Miner offers to restore unfinished queues and resume interrupted downloads at the next launch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Undo a mining run</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Delete the notes a run just created, straight from the results dialog.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keyboard shortcuts</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4436,16 +4696,20 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
         <translation>Tải tài nguyên được đề xuất...</translation>
     </message>
     <message>
-        <source>Find a Feature...</source>
-        <translation>Tìm tính năng...</translation>
-    </message>
-    <message>
         <source>Setup Wizard...</source>
         <translation>Trình hướng dẫn cài đặt...</translation>
     </message>
     <message>
         <source>Restyle Mined Cards...</source>
         <translation>Tạo lại kiểu cho thẻ đã khai thác...</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Usage Guide...</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>&amp;Help</source>
