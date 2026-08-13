@@ -642,6 +642,139 @@ def test_device_auto_cuda_failure_falls_back_to_cpu(monkeypatch, tmp_path):
     assert result == []
 
 
+# ---------------------------------------------------------------------------
+# auto: CT2 CUDA failure reconsiders the whisper.cpp (Vulkan) route
+# ---------------------------------------------------------------------------
+
+
+def _make_cpp_route_ready(monkeypatch, ready: bool) -> None:
+    """Make _use_whisper_cpp_engine('vulkan', ...) deterministic for tests."""
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: ready)
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1 if ready else 0)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_ggml_downloaded", lambda name, root: ready)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda root: ready)
+
+
+def _spy_transcribe_cpp(monkeypatch):
+    """Replace _transcribe_cpp with a spy returning a sentinel result."""
+    calls: list[dict] = []
+
+    def fake_cpp(audio, **kwargs):
+        calls.append(kwargs)
+        return [(0.0, 1.0, "cpp")]
+
+    monkeypatch.setattr(transcriber, "_transcribe_cpp", fake_cpp)
+    return calls
+
+
+def test_auto_cuda_build_failure_retries_vulkan(monkeypatch, tmp_path):
+    """auto chose CT2 for the CUDA device, CUDA build fails, cpp route ready →
+    the run retries on whisper.cpp instead of silently decoding on CPU, and the
+    queue session routes later files straight to cpp."""
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed, cuda_raises=True))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 1)
+    _make_cpp_route_ready(monkeypatch, True)
+    cpp_calls = _spy_transcribe_cpp(monkeypatch)
+
+    session = transcriber.Ct2ModelSession()
+    audio = np.zeros(16000, dtype=np.float32)
+    result = transcriber.transcribe(
+        audio,
+        model_name="large-v3",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="auto",
+        ct2_model_session=session,
+    )
+
+    assert result == [(0.0, 1.0, "cpp")]
+    assert len(cpp_calls) == 1
+    # Only the CUDA build was attempted — no silent CT2 CPU decode.
+    assert [c["device"] for c in constructed] == ["cuda"]
+    assert session.backend == "cpp"
+    assert session.model is None
+
+
+def test_auto_deferred_cuda_failure_retries_vulkan(monkeypatch, tmp_path):
+    """A CUDA model that constructs cleanly but fails on the first decode also
+    reconsiders the cpp route (and drops the broken model from the session)."""
+    import numpy as np
+
+    constructed: list[dict] = []
+
+    class DeferredFailModel:
+        def __init__(self, model_name, **kwargs):
+            kwargs["model_name"] = model_name
+            constructed.append(kwargs)
+
+        def transcribe(self, audio, **kwargs):
+            def gen():
+                raise RuntimeError("lazy cuDNN failure")
+                yield  # pragma: no cover
+
+            return gen(), SimpleNamespace(language=kwargs.get("language"))
+
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: DeferredFailModel)
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 1)
+    _make_cpp_route_ready(monkeypatch, True)
+    cpp_calls = _spy_transcribe_cpp(monkeypatch)
+
+    session = transcriber.Ct2ModelSession()
+    audio = np.zeros(16000, dtype=np.float32)
+    result = transcriber.transcribe(
+        audio,
+        model_name="large-v3",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="auto",
+        ct2_model_session=session,
+    )
+
+    assert result == [(0.0, 1.0, "cpp")]
+    assert len(cpp_calls) == 1
+    assert [c["device"] for c in constructed] == ["cuda"]
+    assert session.backend == "cpp"
+    assert session.model is None
+    assert session.device_used is None
+
+
+def test_explicit_cuda_failure_never_retries_vulkan(monkeypatch, tmp_path):
+    """device='cuda' is an explicit CT2 request: its failure path stays CT2 CPU
+    even when the cpp route is fully available."""
+    import numpy as np
+
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed, cuda_raises=True))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 1)
+    _make_cpp_route_ready(monkeypatch, True)
+    cpp_calls = _spy_transcribe_cpp(monkeypatch)
+
+    audio = np.zeros(16000, dtype=np.float32)
+    result = transcriber.transcribe(
+        audio,
+        model_name="large-v3",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=1.0,
+        device="cuda",
+    )
+
+    assert result == []
+    assert cpp_calls == []
+    assert [c["device"] for c in constructed] == ["cuda", "cpu"]
+
+
 def test_device_cuda_no_gpu_falls_back_to_cpu_with_warning(monkeypatch, tmp_path, caplog):
     """device='cuda' but no GPU → CPU build plus a warning."""
     import numpy as np
