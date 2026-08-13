@@ -18,32 +18,129 @@ def _pair(tmp_path, n):
     return SimpleNamespace(video=v, subtitle=s)
 
 
-def test_curation_attrs_and_callback_forwarded(tmp_path, qapp):
-    captured = {}
-    cb = MagicMock(name="curation_callback")
+def _season_word(surface="食べる"):
+    from anki_miner.models.word import TokenizedWord
 
+    return TokenizedWord(
+        surface=surface,
+        lemma=surface,
+        reading="よみ",
+        sentence="文",
+        start_time=1.0,
+        end_time=3.0,
+        duration=2.0,
+    )
+
+
+def _season_processor(words_by_video=None):
+    """Fake processor for season mode: routes words through the curation
+    callback like production and returns real ProcessingResults."""
     proc = MagicMock()
+    proc.config = SimpleNamespace(subtitle_offset=2.5)
+    proc.stats_service = None
 
     def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
+        words = list((words_by_video or {}).get(video, [_season_word()]))
+        if curation_callback is not None:
+            words = curation_callback(words)
+        if words is None:
+            return ProcessingResult(
+                total_words_found=1,
+                new_words_found=0,
+                cards_created=0,
+                errors=["Processing cancelled by user"],
+            )
+        return ProcessingResult(
+            total_words_found=1,
+            new_words_found=len(words),
+            cards_created=len(words),
+        )
+
+    proc.process_episode.side_effect = fake_process
+    return proc
+
+
+def test_curation_attrs_published_at_curator_time(tmp_path, qapp):
+    """Season mode: the curator fires once per run with the first pair's
+    media attrs and the whole-run media map published on the worker."""
+    captured = {}
+
+    proc = _season_processor()
+
+    def cb(pool):
         captured["video"] = worker._curation_video
         captured["subtitle"] = worker._curation_subtitle
         captured["offset"] = worker._curation_offset
         captured["processor"] = worker.curation_processor
-        captured["callback"] = curation_callback
-        return SimpleNamespace(cards_created=0)
+        captured["map"] = dict(worker._curation_media_map)
+        captured.setdefault("calls", 0)
+        captured["calls"] += 1
+        return []
 
-    proc.process_episode.side_effect = fake_process
-    proc.config = SimpleNamespace(subtitle_offset=2.5)
-
-    pair = _pair(tmp_path, 1)
-    worker = ManualPairWorkerThread(proc, [pair], progress_callback=None, curation_callback=cb)
+    p1 = _pair(tmp_path, 1)
+    p2 = _pair(tmp_path, 2)
+    worker = ManualPairWorkerThread(proc, [p1, p2], progress_callback=None, curation_callback=cb)
     worker.run()
 
-    assert captured["video"] == pair.video
-    assert captured["subtitle"] == pair.subtitle
+    assert captured["calls"] == 1
+    assert captured["video"] == p1.video
+    assert captured["subtitle"] == p1.subtitle
     assert captured["offset"] == 2.5
     assert captured["processor"] is proc
-    assert captured["callback"] is cb
+    assert captured["map"] == {p1.video: (p1.subtitle, 2.5), p2.video: (p2.subtitle, 2.5)}
+    assert worker._curation_media_map is None
+
+
+def test_season_one_result_per_pair_and_finished_ticks(tmp_path, qapp):
+    """Every pair ends with exactly one result: mined, pre-pass zero-card, or
+    soft failure; pair_finished ticks once per pair in the mine pass."""
+    p1 = _pair(tmp_path, 1)
+    p2 = _pair(tmp_path, 2)
+    cat, dog = _season_word("猫"), _season_word("犬")
+    proc = _season_processor({p1.video: [cat], p2.video: [dog]})
+
+    def cb(pool):
+        # Keep only p2's word.
+        return [w for w in pool if w.surface == "犬"]
+
+    results_box = []
+    ticks = []
+    worker = ManualPairWorkerThread(proc, [p1, p2], progress_callback=None, curation_callback=cb)
+    worker.result_ready.connect(results_box.append)
+    worker.pair_finished.connect(lambda done, total: ticks.append((done, total)))
+    worker.run()
+
+    results = results_box[0]
+    assert len(results) == 2
+    assert results[0].cards_created == 0  # p1: nothing selected, pre-pass result stands
+    assert results[1].cards_created == 1  # p2: mined the curated word
+    assert ticks == [(1, 2), (2, 2)]
+    # 2 pre-pass calls + 1 mine call (p1 skipped).
+    assert proc.process_episode.call_count == 3
+
+
+def test_season_cancel_at_curator_emits_prepass_failures_only(tmp_path, qapp):
+    p1 = _pair(tmp_path, 1)
+    p2 = _pair(tmp_path, 2)
+    proc = _season_processor()
+    original = proc.process_episode.side_effect
+
+    def failing_first(video, subtitle, **kwargs):
+        if video == p1.video:
+            raise RuntimeError("boom")
+        return original(video, subtitle, **kwargs)
+
+    proc.process_episode.side_effect = failing_first
+
+    results_box = []
+    worker = ManualPairWorkerThread(proc, [p1, p2], progress_callback=None, curation_callback=lambda pool: None)
+    worker.result_ready.connect(results_box.append)
+    worker.run()
+
+    results = results_box[0]
+    assert len(results) == 1
+    assert not results[0].success
+    assert "boom" in results[0].errors[0]
 
 
 def test_curation_attrs_advance_per_pair(tmp_path, qapp):
