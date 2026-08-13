@@ -695,59 +695,6 @@ def exact_term_sequences(
     return found
 
 
-def sequence_terms(
-    conn: sqlite3.Connection,
-    identities: list[tuple[int, str]],
-) -> dict[tuple[int, str], set[str]]:
-    """Return every headword spelling attested for ``(sequence, reading)`` identities.
-
-    The reverse of :func:`exact_term_sequences`: that maps a spelling to the
-    lexemes it belongs to, this maps a lexeme back to all of its orthographic
-    aliases (よそ見/余所見, 肉じゃが/肉ジャガ). Together they answer "is this
-    candidate the same word as one already carded under a different spelling".
-
-    The reading is part of the key, not just a filter on the sequence: a
-    sequence-only expansion would let the からい and つらい senses of 辛い claim
-    each other's spellings.
-
-    ``entries`` carries no index on ``sequence`` (only ``idx_term`` and
-    ``idx_reading``), so each chunk is a sequential scan. That is deliberate:
-    this runs once per dictionary per mining run — a sub-second cost against a
-    run measured in minutes — and adding an index would force a schema bump,
-    and with it a Reimport-All prompt for every installed dictionary.
-    """
-    normalized: list[tuple[int, str]] = []
-    for sequence, reading in identities:
-        if sequence is None or not reading:
-            continue
-        folded_reading = _fold_reading(reading)
-        if folded_reading:
-            normalized.append((sequence, folded_reading))
-    normalized = list(dict.fromkeys(normalized))
-    requested = set(normalized)
-    sequences = list(dict.fromkeys(sequence for sequence, _ in normalized))
-    found: dict[tuple[int, str], set[str]] = {}
-
-    for start in range(0, len(sequences), _EXIST_CHUNK):
-        chunk = sequences[start : start + _EXIST_CHUNK]
-        placeholders = ", ".join("?" for _ in chunk)
-        rows = conn.execute(
-            "SELECT DISTINCT term, reading, sequence FROM entries "
-            f"WHERE sequence IN ({placeholders}) AND reading IS NOT NULL "
-            "AND reading != '' AND term IS NOT NULL AND term != ''",
-            chunk,
-        ).fetchall()
-        for term, reading, sequence in rows:
-            folded_reading = _fold_reading(reading)
-            if folded_reading is None:
-                continue
-            key = (sequence, folded_reading)
-            if key in requested:
-                found.setdefault(key, set()).add(term)
-
-    return found
-
-
 def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: bool) -> dict[str, list[AttestRow]]:
     """Per-word attesting rows for the commonness/quality probes (U10 infra).
 

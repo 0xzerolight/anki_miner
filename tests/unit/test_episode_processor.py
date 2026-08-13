@@ -5293,16 +5293,9 @@ class TestOfflineDefinitionPreFilter:
         mock_services["media_extractor"].extract_media_batch.assert_not_called()
 
 
-class TestDuplicateCollapse:
-    """Dictionary-identity duplicate collapse, in both directions.
-
-    Within-run: words colliding on mined_form (or on a shared dictionary
-    identity) are collapsed before the curator, so it never offers a word Anki
-    will silently skip as a duplicate.
-
-    Cross-run: a candidate whose lexeme is already carded under a different
-    spelling is dropped. Anki's first-field checksum cannot see that, and
-    neither can filter_unknown's exact-string comparison."""
+class TestWithinRunDuplicateCollapse:
+    """Words colliding on mined_form within one run are collapsed before the
+    curator, so it never offers a word Anki will silently skip as a duplicate."""
 
     @pytest.fixture
     def mock_services(self):
@@ -5327,16 +5320,13 @@ class TestDuplicateCollapse:
             presenter=NullPresenter(),
         )
 
-    def _prime(self, mock_services, words, existing: set[str] | None = None):
+    def _prime(self, mock_services, words):
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f: (
             mock_services["subtitle_parser"].parse_subtitle_file.return_value,
             [],
         )
-        mock_services["anki_service"].get_existing_vocabulary.return_value = existing or set()
-        # filter_unknown is stubbed to pass everything through: that IS the
-        # cross-run bug's shape — an alias spelling of an existing card survives
-        # the exact-string comparison.
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = list(words)
         # Every word survives the offline-definition pre-filter so the collapse
         # is the only thing acting on the list the curator receives.
@@ -5344,7 +5334,6 @@ class TestDuplicateCollapse:
             lemmas, True
         )
         mock_services["definition_service"].offline_term_identities.return_value = {}
-        mock_services["definition_service"].offline_identity_terms.return_value = {}
 
     @staticmethod
     def _word(form: str, reading: str, start_time: float) -> TokenizedWord:
@@ -5475,104 +5464,6 @@ class TestDuplicateCollapse:
         proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
 
         assert captured["mined_forms"] == ["食べる", "食べる"]
-
-    # --- cross-run: already carded under a different spelling ---------------
-
-    def _prime_cross_run(self, mock_services, words, existing, identities, aliases):
-        self._prime(mock_services, words, existing=existing)
-        mock_services["definition_service"].offline_term_identities.return_value = identities
-        mock_services["definition_service"].offline_identity_terms.return_value = aliases
-
-    def test_alias_of_an_existing_card_is_skipped(self, test_config, mock_services, tmp_path):
-        """The 2026-08-01 case: 余所見 mined while よそ見 was already a card.
-
-        Anki accepted it — different Expression, different checksum — and the
-        user got two cards for one word.
-        """
-        identity = ("jmdict", 1544190, "よそみ")
-        self._prime_cross_run(
-            mock_services,
-            [self._word("余所見", "よそみ", 1.0)],
-            existing={"よそ見"},
-            identities={("余所見", "よそみ"): {identity}},
-            aliases={identity: {"よそ見", "余所見"}},
-        )
-        captured: dict = {}
-
-        def cb(words):
-            captured["mined_forms"] = [w.mined_form for w in words]
-            return None
-
-        proc = self._build(test_config, mock_services)
-        result = proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
-
-        assert captured.get("mined_forms", []) == []
-        assert result.cards_created == 0
-
-    def test_unrelated_word_sharing_a_reading_with_an_existing_card_survives(
-        self, test_config, mock_services, tmp_path
-    ):
-        """箸 must not be blocked by an existing 橋 card — same reading, different lexeme."""
-        chopsticks_identity = ("jmdict", 1496060, "はし")
-        self._prime_cross_run(
-            mock_services,
-            [self._word("箸", "はし", 1.0)],
-            existing={"橋"},
-            identities={("箸", "はし"): {chopsticks_identity}},
-            aliases={chopsticks_identity: {"箸", "はし"}},
-        )
-        captured: dict = {}
-
-        def cb(words):
-            captured["mined_forms"] = [w.mined_form for w in words]
-            return None
-
-        proc = self._build(test_config, mock_services)
-        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
-
-        assert captured["mined_forms"] == ["箸"]
-
-    def test_word_with_no_dictionary_identity_survives(self, test_config, mock_services, tmp_path):
-        """No identity ⇒ nothing to expand ⇒ never blocked. A miss must not eat a card."""
-        self._prime_cross_run(
-            mock_services,
-            [self._word("鏖殺", "おうさつ", 1.0)],
-            existing={"よそ見"},
-            identities={},
-            aliases={},
-        )
-        captured: dict = {}
-
-        def cb(words):
-            captured["mined_forms"] = [w.mined_form for w in words]
-            return None
-
-        proc = self._build(test_config, mock_services)
-        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
-
-        assert captured["mined_forms"] == ["鏖殺"]
-
-    def test_alias_of_an_existing_card_kept_when_allow_duplicate_cards(self, test_config, mock_services, tmp_path):
-        """Deck Builder parity: the whole collapse block is gated off."""
-        config = replace(test_config, allow_duplicate_cards=True)
-        identity = ("jmdict", 1544190, "よそみ")
-        self._prime_cross_run(
-            mock_services,
-            [self._word("余所見", "よそみ", 1.0)],
-            existing={"よそ見"},
-            identities={("余所見", "よそみ"): {identity}},
-            aliases={identity: {"よそ見", "余所見"}},
-        )
-        captured: dict = {}
-
-        def cb(words):
-            captured["mined_forms"] = [w.mined_form for w in words]
-            return None
-
-        proc = self._build(config, mock_services)
-        proc.process_episode(tmp_path / "ep.mkv", tmp_path / "ep.ass", curation_callback=cb)
-
-        assert captured["mined_forms"] == ["余所見"]
 
 
 class TestDictionaryStalenessGate:
