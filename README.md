@@ -88,13 +88,13 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
 - **Analytics** - mining history, difficulty rankings, milestones, undo.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, and backfill fields on existing cards.
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features
 
 - Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
-- Extensive filtering: i+1, frequency limits, blacklist, regex, wordsets, and more.
+- Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
 - Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
 - Multiple frequency lists chained by priority.
 - Word audio on cards from local audio packs, JapanesePod101, or Google TTS.
