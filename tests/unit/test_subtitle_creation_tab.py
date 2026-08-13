@@ -39,6 +39,9 @@ _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
 _IS_DOWNLOADED = "anki_miner.gui.widgets.subtitle_creation_tab.model_manager.is_downloaded"
 _OS_ACCESS = "anki_miner.gui.widgets.subtitle_creation_tab.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.subtitle_creation_tab.SubtitleGenWorker"
+_WHISPER_CPP_AVAILABLE = "anki_miner.gui.widgets.subtitle_creation_tab._engine.whisper_cpp_available"
+_GGML_DOWNLOADED = "anki_miner.gui.widgets.subtitle_creation_tab.ggml_model_installer.is_ggml_downloaded"
+_VAD_DOWNLOADED = "anki_miner.gui.widgets.subtitle_creation_tab.ggml_model_installer.is_vad_downloaded"
 
 
 # ---------------------------------------------------------------------------
@@ -761,6 +764,65 @@ def test_model_not_downloaded_reports_an_issue_on_generate(qtbot, tmp_path):
     assert "Settings → Transcription & Alignment" in issue.summary
     assert "assert tab.issue_banner().current_issue() is not None"
     # Worker must NOT be started
+    assert tab.worker_thread is None
+
+
+def _click_generate_with_ggml_state(qtbot, tmp_path, *, device: str, cpp_available: bool, ggml: bool, vad: bool):
+    """Click Generate with CT2 model absent and the given whisper.cpp/ggml state."""
+    config = AnkiMinerConfig(
+        asr_models_root=tmp_path / "asr_models",
+        media_temp_folder=tmp_path / "tmp",
+        asr_device=device,
+    )
+    video = tmp_path / "episode.mp4"
+    video.write_bytes(b"fake")
+
+    tab = _make_tab(config, qtbot)
+    tab.file_selector.set_path(str(video))
+
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_IS_DOWNLOADED, return_value=False),
+        patch(_WHISPER_CPP_AVAILABLE, return_value=cpp_available),
+        patch(_GGML_DOWNLOADED, return_value=ggml),
+        patch(_VAD_DOWNLOADED, return_value=vad),
+        patch(_WORKER_CLS, return_value=_FakeWorker()),
+    ):
+        tab.generate_button.click()
+    return tab
+
+
+def test_ggml_only_models_pass_gate_for_vulkan_device(qtbot, tmp_path):
+    """device=vulkan with an installed ggml model + VAD must NOT be blocked.
+
+    The runtime cascade (_use_whisper_cpp_engine) routes this run to
+    whisper.cpp, which never touches the CT2 layout — gating on
+    model_manager.is_downloaded alone blocks a fully usable configuration.
+    """
+    tab = _click_generate_with_ggml_state(qtbot, tmp_path, device="vulkan", cpp_available=True, ggml=True, vad=True)
+    assert tab.issue_banner().current_issue() is None
+    assert tab.worker_thread is not None
+
+
+def test_ggml_only_models_pass_gate_for_auto_device(qtbot, tmp_path):
+    """device=auto can route to whisper.cpp at runtime, so ggml models count."""
+    tab = _click_generate_with_ggml_state(qtbot, tmp_path, device="auto", cpp_available=True, ggml=True, vad=True)
+    assert tab.issue_banner().current_issue() is None
+    assert tab.worker_thread is not None
+
+
+def test_ggml_models_do_not_unblock_cpu_device(qtbot, tmp_path):
+    """device=cpu never routes to whisper.cpp — ggml files must not pass the gate."""
+    tab = _click_generate_with_ggml_state(qtbot, tmp_path, device="cpu", cpp_available=True, ggml=True, vad=True)
+    assert tab.issue_banner().current_issue() is not None
+    assert tab.worker_thread is None
+
+
+def test_ggml_without_vad_stays_blocked(qtbot, tmp_path):
+    """Missing VAD file means the runtime falls back to CT2 — keep the gate closed."""
+    tab = _click_generate_with_ggml_state(qtbot, tmp_path, device="vulkan", cpp_available=True, ggml=True, vad=False)
+    assert tab.issue_banner().current_issue() is not None
     assert tab.worker_thread is None
 
 

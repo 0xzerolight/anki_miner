@@ -41,7 +41,7 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
-from anki_miner.services.asr import _engine, model_manager
+from anki_miner.services.asr import _engine, ggml_model_installer, model_manager
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
 
@@ -332,6 +332,27 @@ class SubtitleCreationTab(_ToolTabBase):
     # Generate
     # ------------------------------------------------------------------
 
+    def _any_usable_model_installed(self) -> bool:
+        """True iff an installed model can serve the configured device route.
+
+        CT2 layout satisfies every route. The ggml pair (acoustic + VAD)
+        satisfies only devices that can route to whisper.cpp (vulkan/auto) and
+        only when the backend itself is present; cpu/cuda are pure CT2. Any
+        probe surprise counts as not-installed (the run would fail anyway).
+        """
+        if model_manager.is_downloaded(self.config.asr_model, self.config.asr_models_root):
+            return True
+        if self.config.asr_device not in ("vulkan", "auto"):
+            return False
+        try:
+            return (
+                _engine.whisper_cpp_available()
+                and ggml_model_installer.is_ggml_downloaded(self.config.asr_model, self.config.asr_models_root)
+                and ggml_model_installer.is_vad_downloaded(self.config.asr_models_root)
+            )
+        except Exception:  # noqa: BLE001 — bucket B: fall back to the guard message.
+            return False
+
     def _on_generate(self) -> None:
         """Validate then start the SubtitleGenWorker."""
         if not self._engine_is_available:
@@ -364,8 +385,16 @@ class SubtitleCreationTab(_ToolTabBase):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
             return
 
-        # Model-downloaded guard
-        if not model_manager.is_downloaded(self.config.asr_model, self.config.asr_models_root):
+        # Model-downloaded guard — mirrors the runtime engine cascade
+        # (transcriber._use_whisper_cpp_engine): a run with device vulkan/auto,
+        # whisper.cpp present, and BOTH ggml files (acoustic + VAD) on disk
+        # routes to whisper.cpp and never touches the CT2 layout, so a
+        # CT2-only check would block a fully usable configuration. Deliberately
+        # does NOT probe Vulkan devices here: vulkan_device_count() can re-exec
+        # the bundle with a 15 s timeout on first call and this runs on the GUI
+        # thread — if the device turns out to be absent at run time the worker
+        # falls back to CT2 and surfaces the real error.
+        if not self._any_usable_model_installed():
             self.show_screen_issue(
                 ScreenIssue(
                     summary=tr_format(
