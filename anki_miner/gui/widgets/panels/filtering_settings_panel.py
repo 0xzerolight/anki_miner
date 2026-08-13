@@ -171,20 +171,6 @@ class FilteringSettingsPanel(FormPanel):
         self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
         self.add_field("", self.use_known_words_db_checkbox)
 
-        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
-        # the kanji dictionary form (頷く) is already carded. Script-gated in
-        # WordFilterService.filter_unknown; kanji variants never fold.
-        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
-        self.match_kana_variants_checkbox.setToolTip(
-            self.tr(
-                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
-                "dictionary form (頷く) is already in your collection or known list, "
-                "skip it instead of creating a second card. Kanji spellings are "
-                "never merged this way."
-            )
-        )
-        self.add_field("", self.match_kana_variants_checkbox)
-
         # Rebuild button: clears the local cache so deck exclusions take effect.
         # The cache is additive (never removes), so a deck synced before being
         # excluded would otherwise stay cached forever (Issue #38).
@@ -397,6 +383,20 @@ class FilteringSettingsPanel(FormPanel):
                 "to also skip words mixing the two kana scripts (サボる, ヤバい)."
             ),
         )
+
+        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
+        # the kanji dictionary form (頷く) is already carded. Script-gated in
+        # WordFilterService.filter_unknown; kanji variants never fold.
+        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
+        self.match_kana_variants_checkbox.setToolTip(
+            self.tr(
+                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
+                "dictionary form (頷く) is already in your collection or known list, "
+                "skip it instead of creating a second card. Kanji spellings are "
+                "never merged this way."
+            )
+        )
+        self.add_field("", self.match_kana_variants_checkbox)
 
         # i+1 Sentence Filter section
         self.add_section(self.tr("i+1 Sentence Filter"))
