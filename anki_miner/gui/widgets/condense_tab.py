@@ -36,6 +36,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -53,7 +54,7 @@ from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
-from anki_miner.gui.widgets.dialogs import AudioTracksDialog, SubtitleTracksDialog
+from anki_miner.gui.widgets.dialogs import AudioTracksDialog, CondenseMetadataDialog, SubtitleTracksDialog
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.condense_worker import (
     CondenseItem,
@@ -61,6 +62,7 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseWorker,
     plan_condense_outputs,
 )
+from anki_miner.services.audio_tagger import prefill_track_metadata
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
@@ -217,6 +219,7 @@ class CondenseTab(_ToolTabBase):
             if idx >= 0:
                 self.format_combo.setCurrentIndex(idx)
             self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
+            self.tag_outputs_checkbox.setChecked(self.config.condenser_tag_outputs)
         finally:
             self._seeding = False
 
@@ -227,12 +230,13 @@ class CondenseTab(_ToolTabBase):
             or self.config.condenser_offset_ms != self.offset_spinbox.value()
             or self.config.condenser_output_format != self.format_combo.currentData()
             or self.config.condenser_write_subtitles != self.write_subs_checkbox.isChecked()
+            or self.config.condenser_tag_outputs != self.tag_outputs_checkbox.isChecked()
         )
 
     def _on_option_changed(self, *_: object) -> None:
         """Persist an edited run option to config so it survives restart.
 
-        Folds all four widgets into a fresh config and emits ``config_changed``
+        Folds all five widgets into a fresh config and emits ``config_changed``
         for the host to save. No-ops during programmatic seeding and when
         nothing actually changed (guards against a save/refresh feedback loop).
         """
@@ -244,6 +248,7 @@ class CondenseTab(_ToolTabBase):
             condenser_offset_ms=self.offset_spinbox.value(),
             condenser_output_format=self.format_combo.currentData(),
             condenser_write_subtitles=self.write_subs_checkbox.isChecked(),
+            condenser_tag_outputs=self.tag_outputs_checkbox.isChecked(),
         )
         if new_config == self.config:
             return
@@ -467,12 +472,20 @@ class CondenseTab(_ToolTabBase):
         )
         layout.addWidget(self.write_subs_checkbox)
 
+        # Metadata tagging (Issue #113)
+        self.tag_outputs_checkbox = QCheckBox(self.tr("Tag output files (title, album, artist…)"))
+        self.tag_outputs_checkbox.setToolTip(
+            self.tr("Review and edit music-library metadata for each output before condensing starts.")
+        )
+        layout.addWidget(self.tag_outputs_checkbox)
+
         # Persist any run-option edit to config (survives restart). Guarded by
         # _seeding so _apply_config_defaults' programmatic writes don't re-emit.
         self.padding_spinbox.valueChanged.connect(self._on_option_changed)
         self.offset_spinbox.valueChanged.connect(self._on_option_changed)
         self.format_combo.currentIndexChanged.connect(self._on_option_changed)
         self.write_subs_checkbox.toggled.connect(self._on_option_changed)
+        self.tag_outputs_checkbox.toggled.connect(self._on_option_changed)
 
         group.setLayout(layout)
         return group
@@ -803,6 +816,15 @@ class CondenseTab(_ToolTabBase):
         if not os.access(check_dir, os.W_OK):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
             return
+
+        # Metadata editor (Issue #113): after every validation so the user
+        # never fills the table only to hit an abort. Cancel aborts the run.
+        if self.tag_outputs_checkbox.isChecked():
+            prefill = prefill_track_metadata([item.media for item in items])
+            dialog = CondenseMetadataDialog([item.media.name for item in items], prefill, parent=self)
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+            items = [replace(item, metadata=meta) for item, meta in zip(items, dialog.metadata(), strict=True)]
 
         self._begin_tool_run(len(items))
         self._total_files = len(items)

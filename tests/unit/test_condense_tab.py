@@ -876,6 +876,7 @@ def _config_with_defaults(tmp_path: Path, **overrides):
         "condenser_offset_ms": -321,
         "condenser_output_format": "flac",
         "condenser_write_subtitles": True,
+        "condenser_tag_outputs": True,
         "condenser_bitrate_kbps": 128,
         "condenser_filtered_chars": "XYZ",
     }
@@ -894,6 +895,7 @@ def test_update_config_refreshes_defaults_when_idle(qtbot, tmp_path):
     assert tab.offset_spinbox.value() == -321
     assert tab.format_combo.currentData() == "flac"
     assert tab.write_subs_checkbox.isChecked() is True
+    assert tab.tag_outputs_checkbox.isChecked() is True
 
 
 def test_update_config_does_not_refresh_defaults_during_run(qtbot, tmp_path):
@@ -931,14 +933,16 @@ def test_editing_option_persists_to_config(qtbot, tmp_path):
     tab.offset_spinbox.setValue(-250)
     tab.format_combo.setCurrentIndex(tab.format_combo.findData("flac"))
     tab.write_subs_checkbox.setChecked(True)
+    tab.tag_outputs_checkbox.setChecked(True)
 
     assert tab.config.condenser_padding_ms == 777
     assert tab.config.condenser_offset_ms == -250
     assert tab.config.condenser_output_format == "flac"
     assert tab.config.condenser_write_subtitles is True
+    assert tab.config.condenser_tag_outputs is True
     # Each edit emitted a fresh config carrying the new value.
     assert emitted
-    assert emitted[-1].condenser_write_subtitles is True
+    assert emitted[-1].condenser_tag_outputs is True
 
 
 def test_seeding_does_not_emit_config_changed(qtbot, tmp_path):
@@ -1101,3 +1105,75 @@ def test_subtitle_tracks_probe_applies_override(qtbot, tmp_path):
     assert tab._subtitle_track_override == 0
     assert "1" in tab.subtitle_track_label.text()
     assert tab.subtitle_tracks_button.isEnabled()
+
+
+# ---------------------------------------------------------------------------
+# Metadata tagging opt-in (Issue #113)
+# ---------------------------------------------------------------------------
+
+_META_DIALOG = "anki_miner.gui.widgets.condense_tab.CondenseMetadataDialog"
+
+
+def _single_item_tab(qtbot, tmp_path):
+    """Tab in single mode with a valid media+sub pair selected."""
+    media = tmp_path / "episode.mkv"
+    sub = tmp_path / "episode.srt"
+    media.write_bytes(b"fake")
+    sub.write_text("1\n")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.media_file_selector.set_path(str(media))
+    tab.subtitle_file_selector.set_path(str(sub))
+    return tab, media, sub
+
+
+def test_unchecked_never_instantiates_dialog(qtbot, tmp_path):
+    tab, _media, _sub = _single_item_tab(qtbot, tmp_path)
+    assert not tab.tag_outputs_checkbox.isChecked()
+
+    with patch(_META_DIALOG) as dialog_cls:
+        _start_condense(tab, _FakeWorker())
+
+    dialog_cls.assert_not_called()
+
+
+def test_accepted_dialog_attaches_metadata(qtbot, tmp_path):
+    from PyQt6.QtWidgets import QDialog
+
+    from anki_miner.services.audio_tagger import TrackMetadata
+
+    tab, media, sub = _single_item_tab(qtbot, tmp_path)
+    tab.tag_outputs_checkbox.setChecked(True)
+
+    meta = TrackMetadata(title="T", track=1)
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Accepted
+    dialog.metadata.return_value = [meta]
+
+    with patch(_META_DIALOG, return_value=dialog) as dialog_cls:
+        worker_cls = _start_condense(tab, _FakeWorker())
+
+    dialog_cls.assert_called_once()
+    # Dialog received the filenames and a prefill list of equal length.
+    names, prefill = dialog_cls.call_args.args
+    assert names == [media.name]
+    assert len(prefill) == 1
+    items = worker_cls.call_args.args[1]
+    assert items == [CondenseItem(media, sub, metadata=meta)]
+    assert items[0].metadata is meta
+
+
+def test_rejected_dialog_aborts_run(qtbot, tmp_path):
+    from PyQt6.QtWidgets import QDialog
+
+    tab, _media, _sub = _single_item_tab(qtbot, tmp_path)
+    tab.tag_outputs_checkbox.setChecked(True)
+
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Rejected
+
+    with patch(_META_DIALOG, return_value=dialog):
+        worker_cls = _start_condense(tab, _FakeWorker())
+
+    worker_cls.assert_not_called()
+    # The run never started, so the button stays available.
+    assert tab.condense_button.isEnabled()
