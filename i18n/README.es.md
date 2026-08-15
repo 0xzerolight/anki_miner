@@ -223,7 +223,6 @@ Si quieres apoyar el proyecto, compártelo con otros que puedan beneficiarse de 
 
 - ¿Eres nuevo aquí? Empieza con [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Descripción general de la arquitectura: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Estrategia de pruebas: [TESTING.md](../TESTING.md).
 - Código de Conducta: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Seguridad: [SECURITY.md](../SECURITY.md).
 
