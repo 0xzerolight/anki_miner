@@ -761,3 +761,19 @@ def test_terminal_qt_dialog_and_timer_are_deleted(
     qtbot.waitUntil(lambda: sip.isdeleted(dialog), timeout=3000)
     qtbot.waitUntil(lambda: sip.isdeleted(timer), timeout=3000)
     assert worker.delete_later_calls == 1
+
+
+def test_format_batch_summary_separates_sections_and_falls_back_to_empty():
+    from anki_miner.gui.controllers.import_flow_common import format_batch_summary
+
+    assert format_batch_summary([], cancelled_note=None, empty="Done.") == "Done."
+    assert (
+        format_batch_summary(
+            [("Imported 1:", ["  • a"]), ("Failed:", ["  • b: boom"])],
+            cancelled_note="Cancelled before remaining.",
+            empty="Done.",
+        )
+        == "Imported 1:\n  • a\n\nFailed:\n  • b: boom\n\nCancelled before remaining."
+    )
+    # A section with no items contributes nothing, not a dangling header.
+    assert format_batch_summary([("Imported 0:", [])], cancelled_note=None, empty="Done.") == "Done."

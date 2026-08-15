@@ -25,6 +25,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_picker_enter,
     _log_import_picker_return,
     _OnceCallback,
+    format_batch_summary,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -204,6 +205,15 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
                 return
 
+            # A failed single pick keeps the pre-batch contract: a banner, not a
+            # success box with a "Failed:" section buried in it.
+            if len(jobs) == 1 and result.failures and not result.successes:
+                self._report_import_issue(
+                    QCoreApplication.translate("DictionaryImportFlow", "The dictionary could not be imported."),
+                    result.failures[0][1],
+                )
+                return
+
             if len(result.successes) == 1 and not result.failures and not result.cancelled:
                 _job, dict_id, meta = result.successes[0]
                 QMessageBox.information(
@@ -218,30 +228,31 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 )
                 return
 
-            lines: list[str] = []
-            if imported:
-                lines.append(
-                    tr_format(
-                        QCoreApplication.translate("DictionaryImportFlow", "Imported %1 dictionaries:"),
-                        len(imported),
-                    )
-                )
-                lines.extend(f"  • {dict_id}" for dict_id in imported)
-            if result.failures:
-                if lines:
-                    lines.append("")
-                lines.append(QCoreApplication.translate("DictionaryImportFlow", "Failed:"))
-                lines.extend(f"  • {job.name}: {message}" for job, message in result.failures)
-            if result.cancelled:
-                if lines:
-                    lines.append("")
-                lines.append(
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(
+                            QCoreApplication.translate("DictionaryImportFlow", "Imported %1 dictionaries:"),
+                            len(imported),
+                        ),
+                        [f"  • {dict_id}" for dict_id in imported],
+                    ),
+                    (
+                        QCoreApplication.translate("DictionaryImportFlow", "Failed:"),
+                        [f"  • {job.name}: {message}" for job, message in result.failures],
+                    ),
+                ],
+                cancelled_note=(
                     QCoreApplication.translate("DictionaryImportFlow", "Cancelled before remaining dictionaries.")
-                )
+                    if result.cancelled
+                    else None
+                ),
+                empty=QCoreApplication.translate("DictionaryImportFlow", "Done."),
+            )
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Dictionaries added"),
-                "\n".join(lines) or QCoreApplication.translate("DictionaryImportFlow", "Done."),
+                summary,
             )
 
         def on_finished_error(exc: Exception, _result: _ChainedImportResult[Path]) -> None:
@@ -679,41 +690,41 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             reimported = [job[2] for job, _dict_id, _meta in result.successes]
             errors = [(job[2], message) for job, message in result.failures]
 
-            lines: list[str] = []
-            if reimported:
-                lines.append(
-                    tr_format(
-                        QCoreApplication.translate("DictionaryImportFlow", "Reimported %1 dictionary/dictionaries:"),
-                        len(reimported),
-                    )
-                )
-                lines.extend(f"  • {n}" for n in reimported)
-            if missing_legacy:
-                if lines:
-                    lines.append("")
-                lines.append(
-                    QCoreApplication.translate(
-                        "DictionaryImportFlow",
-                        "Skipped (not eligible for automatic repair; use per-row Re-import…):",
-                    )
-                )
-                lines.extend(f"  • {n}" for n in missing_legacy)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append(QCoreApplication.translate("DictionaryImportFlow", "Failed:"))
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if result.cancelled:
-                if lines:
-                    lines.append("")
-                lines.append(
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(
+                            QCoreApplication.translate(
+                                "DictionaryImportFlow", "Reimported %1 dictionary/dictionaries:"
+                            ),
+                            len(reimported),
+                        ),
+                        [f"  • {n}" for n in reimported],
+                    ),
+                    (
+                        QCoreApplication.translate(
+                            "DictionaryImportFlow",
+                            "Skipped (not eligible for automatic repair; use per-row Re-import…):",
+                        ),
+                        [f"  • {n}" for n in missing_legacy],
+                    ),
+                    (
+                        QCoreApplication.translate("DictionaryImportFlow", "Failed:"),
+                        [f"  • {name}: {msg}" for name, msg in errors],
+                    ),
+                ],
+                cancelled_note=(
                     QCoreApplication.translate("DictionaryImportFlow", "Cancelled before remaining dictionaries.")
-                )
+                    if result.cancelled
+                    else None
+                ),
+                empty=QCoreApplication.translate("DictionaryImportFlow", "Done."),
+            )
 
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Reimport All"),
-                "\n".join(lines) or QCoreApplication.translate("DictionaryImportFlow", "Done."),
+                summary,
             )
             done()
 

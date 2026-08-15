@@ -38,6 +38,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_picker_enter,
     _log_import_picker_return,
     _OnceCallback,
+    format_batch_summary,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -580,26 +581,19 @@ class SourceChainImportFlow(ModalImportFlowMixin):
             reimported = [job[1] for job, _source_id, _meta in result.successes]
             errors = [(job[1], message) for job, message in result.failures]
 
-            lines: list[str] = []
-            if reimported:
-                lines.append(tr_format(labels.batch_reimported_header_template, len(reimported)))
-                lines.extend(f"  • {n}" for n in reimported)
-            if skipped:
-                if lines:
-                    lines.append("")
-                lines.append(labels.batch_skipped_header)
-                lines.extend(f"  • {n}" for n in skipped)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append(labels.batch_failed_header)
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if result.cancelled:
-                if lines:
-                    lines.append("")
-                lines.append(labels.batch_cancelled)
-
-            QMessageBox.information(self._parent, labels.batch_title, "\n".join(lines) or labels.batch_done)
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(labels.batch_reimported_header_template, len(reimported)),
+                        [f"  • {n}" for n in reimported],
+                    ),
+                    (labels.batch_skipped_header, [f"  • {n}" for n in skipped]),
+                    (labels.batch_failed_header, [f"  • {name}: {msg}" for name, msg in errors]),
+                ],
+                cancelled_note=labels.batch_cancelled if result.cancelled else None,
+                empty=labels.batch_done,
+            )
+            QMessageBox.information(self._parent, labels.batch_title, summary)
             done()
 
         def on_finished_error(exc: Exception, _result: _ChainedImportResult[ReimportJob]) -> None:
