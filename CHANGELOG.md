@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Register local-audio-yomichan `android.db` files in place.** Audio blobs stay in the source database and are loaded on demand, so registering a multi-gigabyte database does not duplicate it.
 
 ### Changed
 

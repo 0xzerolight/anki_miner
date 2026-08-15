@@ -753,18 +753,26 @@ def test_checkbox_reflected_in_get_chain(qapp, qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_add_button_emits_add_pack_requested(qapp, qtbot, tmp_path):
-    """The one Add control offers both paths from a menu, not two primaries."""
+def test_add_button_emits_local_source_requests(qapp, qtbot, tmp_path):
+    """The one Add control exposes folder and Android-database local sources."""
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     fired: list[None] = []
+    android_fired: list[None] = []
     panel.add_pack_requested.connect(lambda: fired.append(None))
+    panel.add_android_db_requested.connect(lambda: android_fired.append(None))
 
     panel._add_pack_action.trigger()
+    panel._add_android_db_action.trigger()
 
     assert fired == [None]
+    assert android_fired == [None]
     assert panel._add_btn.menu() is panel._add_menu
-    assert [action.text() for action in panel._add_menu.actions()] == ["Audio Pack…", "Online Source…"]
+    assert [action.text() for action in panel._add_menu.actions()] == [
+        "Audio Pack…",
+        "Android Audio Database…",
+        "Online Source…",
+    ]
 
 
 # ---------------------------------------------------------------------------

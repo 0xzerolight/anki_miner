@@ -20,7 +20,7 @@ from typing import Any, Callable
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
-from anki_miner.services.audio_packs.importer import import_audio_pack, repair_audio_pack
+from anki_miner.services.audio_packs.importer import import_android_audio_db, import_audio_pack, repair_audio_pack
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip, repair_yomitan_zip
 from anki_miner.services.frequency.source_importer import import_frequency_source, repair_frequency_source
@@ -380,6 +380,34 @@ class ImportWorker(CancellableWorker):
             return result.pack_id, meta
 
         return cls(runner, source_path=pack_dir)
+
+    @classmethod
+    def for_android_audio_db(
+        cls,
+        db_path: Path,
+        dest_root: Path,
+        *,
+        pack_id: str | None = None,
+        overwrite: bool = False,
+    ) -> ImportWorker:
+        """Build a worker that registers a local-audio-yomichan ``android.db``."""
+
+        def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
+            result = import_android_audio_db(
+                db_path,
+                dest_root,
+                pack_id=pack_id,
+                progress=lambda msg: progress_fn(0, 0, msg),
+                cancel_check=cancel_fn,
+                overwrite=overwrite,
+            )
+            return result.pack_id, {
+                "entry_count": result.entry_count,
+                "source_name": result.source_name,
+                "format": result.format,
+            }
+
+        return cls(runner, source_path=db_path)
 
     @classmethod
     def for_pack_repair(
