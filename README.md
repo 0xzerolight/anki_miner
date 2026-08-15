@@ -16,7 +16,7 @@ Turn native Japanese content into Anki vocabulary cards.
 </p>
 
 <p align="center">
-<b>On Android?</b> Get <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a> - the same mining, on your phone through AnkiDroid.
+Also on Android - <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a>.
 </p>
 
 <p align="center">
