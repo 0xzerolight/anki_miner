@@ -3714,10 +3714,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Объединено слов с повторяющимся выражением: %1</translation>
     </message>
     <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>Пропущено слов, уже имеющих карточку под другим написанием: %1</translation>
-    </message>
-    <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
         <translation>Фильтр частотности: удалено %1 слов вне рангов %2-%3</translation>
     </message>
@@ -4350,92 +4346,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Колода, исключаемая из определения известных слов:</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> Это источник на основе слов; его метки уровней показываются на карточке, но не влияют на фильтрацию по рангу частотности.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source</source>
-        <translation>Выберите источник частотности</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (пропущено %1 некорректных записей)</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> Это источник на основе количества вхождений; его значения были преобразованы в ранги.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>Источник частотности добавлен</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Импортировано записей: %1 из «%2».</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
-    </message>
-    <message>
-        <source>Importing frequency source…</source>
-        <translation>Импорт источника частотности…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Не удалось импортировать источник частотности.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Обработчик импорта завершил работу без результата.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Не удалось просканировать эту папку.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>Выберите источник частотности для повторного импорта</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>Источник частотности импортирован повторно</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 успешно импортирован повторно.</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Повторный импорт источника частотности…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>Не удалось повторно импортировать источник частотности.</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>Источник частотности (%1);;Все файлы (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -4484,6 +4394,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Повторно добавьте источники частотности, найденные в папке хранения, но отсутствующие в списке выше. Повторный импорт не требуется.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4536,6 +4454,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Enable or disable %1</source>
         <translation>Включить или отключить %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">Переимпортировать</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ требуется повторный импорт (обновление приложения)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5130,16 +5056,28 @@ Continue?</source>
         <translation>Не удалось обновить стиль созданных карточек.</translation>
     </message>
     <message>
-        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
-        <translation>Эти словари нужно переимпортировать после обновления приложения (формат их индекса изменился):</translation>
+        <source>Dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked for them until you do. Re-import them now?</source>
-        <translation>Майнинг для них заблокирован, пока вы этого не сделаете. Переимпортировать их сейчас?</translation>
+        <source>Frequency sources:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries need re-importing</source>
-        <translation>Требуется повторный импорт словарей</translation>
+        <source>Pitch accent sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These resources need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is blocked until you do. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources need re-importing</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System validation passed</source>
@@ -5482,84 +5420,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Библиотека удаления тишины успешно установлена.</translation>
     </message>
 </context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent source</source>
-        <translation>Выберите источник тонального ударения</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (пропущено %1 некорректных записей)</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>Источник тонального ударения добавлен</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Импортировано записей: %1 из «%2».</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
-    </message>
-    <message>
-        <source>Importing pitch source…</source>
-        <translation>Импорт источника тонального ударения…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Не удалось импортировать источник тонального ударения.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Обработчик импорта завершил работу без результата.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Не удалось просканировать эту папку.</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>Выберите источник тонального ударения для повторного импорта</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>Источник тонального ударения повторно импортирован</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 успешно импортирован повторно.</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>Повторный импорт источника тонального ударения…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>Не удалось повторно импортировать источник тонального ударения.</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>Источник тонального ударения (%1);;Все файлы (*)</translation>
-    </message>
-</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5610,6 +5470,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Повторно добавьте источники тонального ударения, найденные в папке хранения, но отсутствующие в списке выше. Повторный импорт не требуется.</translation>
     </message>
     <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation>Проверяются сверху вниз — побеждает первый источник, содержащий запись тонального ударения для слова.</translation>
     </message>
@@ -5652,6 +5520,14 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Enable or disable %1</source>
         <translation>Включить или отключить %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">Переимпортировать</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ требуется повторный импорт (обновление приложения)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7160,6 +7036,16 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Внешний вид и язык</translation>
     </message>
     <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished">Нечего восстанавливать</translation>
+    </message>
+    <message>
+        <source>Every audio pack found in the storage folder is already listed.
+
+A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The audio packs could not be restored.</source>
         <translation>Не удалось восстановить пакеты аудио.</translation>
     </message>
@@ -7168,12 +7054,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Не удалось проверить установленные пакеты аудио.</translation>
     </message>
     <message>
+        <source>Every frequency source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The frequency sources could not be restored.</source>
         <translation>Не удалось восстановить источники частотности.</translation>
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
         <translation>Не удалось проверить установленные источники частотности.</translation>
+    </message>
+    <message>
+        <source>Every pitch accent source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8454,6 +8352,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Offline dictionary</source>
         <translation>Офлайн-словарь</translation>
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

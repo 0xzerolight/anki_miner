@@ -3708,10 +3708,6 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation>%1 Wörter mit doppeltem Ausdruck zusammengefasst</translation>
     </message>
     <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>%1 Wort(e) übersprungen, die bereits unter einer anderen Schreibweise gekartet sind</translation>
-    </message>
-    <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
         <translation>Häufigkeitsfilter: %1 Wörter außerhalb der Ränge %2-%3 entfernt</translation>
     </message>
@@ -4337,92 +4333,6 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation>Stapel, der von der Erkennung bekannter Wörter ausgeschlossen wird:</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> Dies ist eine wortbasierte Quelle; ihre Stufenbezeichnungen erscheinen auf der Karte, beeinflussen aber die Häufigkeitsrang-Filterung nicht.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source</source>
-        <translation>Häufigkeitsquelle auswählen</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> Dies ist eine vorkommensbasierte Quelle; ihre Zählungen wurden in Ränge umgewandelt.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>Häufigkeitsquelle hinzugefügt</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>%1 Einträge aus '%2' importiert.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
-    </message>
-    <message>
-        <source>Importing frequency source…</source>
-        <translation>Häufigkeitsquelle wird importiert…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Abbrechen</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Die Häufigkeitsquelle konnte nicht importiert werden.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Wird abgebrochen…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Der Import-Worker wurde ohne Abschlussergebnis beendet.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Dieser Ordner konnte nicht durchsucht werden.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>Häufigkeitsquelle zum erneuten Importieren auswählen</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Indizierte Ressourcen werden gerade für Mining, Start-Vorwärmen oder Karten-Nachbefüllung verwendet. Warten Sie, bis die aktive Aufgabe abgeschlossen ist, und versuchen Sie es erneut.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>Häufigkeitsquelle erneut importiert</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 erfolgreich erneut importiert.</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Häufigkeitsquelle wird erneut importiert…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>Die Häufigkeitsquelle konnte nicht erneut importiert werden.</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>Häufigkeitsquelle (%1);;Alle Dateien (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -4471,6 +4381,14 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Häufigkeitsquellen, die im Speicherordner gefunden wurden, aber nicht in der obigen Liste stehen, erneut hinzufügen. Kein erneuter Import nötig.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4523,6 +4441,14 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     <message>
         <source>Enable or disable %1</source>
         <translation>%1 aktivieren oder deaktivieren</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">Erneut importieren</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ Neuimport erforderlich (App-Upgrade)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5117,16 +5043,28 @@ Fortfahren?</translation>
         <translation>Die gesammelten Karten konnten nicht neu gestaltet werden.</translation>
     </message>
     <message>
-        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
-        <translation>Diese Wörterbücher müssen nach einem App-Update neu importiert werden (ihr Indexformat hat sich geändert):</translation>
+        <source>Dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked for them until you do. Re-import them now?</source>
-        <translation>Das Mining ist für sie blockiert, bis Sie dies tun. Jetzt neu importieren?</translation>
+        <source>Frequency sources:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries need re-importing</source>
-        <translation>Wörterbücher müssen erneut importiert werden</translation>
+        <source>Pitch accent sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These resources need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is blocked until you do. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources need re-importing</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System validation passed</source>
@@ -5469,84 +5407,6 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
         <translation>Bibliothek zur Stille-Entfernung erfolgreich installiert.</translation>
     </message>
 </context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent source</source>
-        <translation>Quelle für Tonhöhenakzent auswählen</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>Tonhöhenquelle hinzugefügt</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>%1 Einträge aus '%2' importiert.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
-    </message>
-    <message>
-        <source>Importing pitch source…</source>
-        <translation>Tonhöhenquelle wird importiert…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Abbrechen</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Die Tonhöhenquelle konnte nicht importiert werden.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Wird abgebrochen…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Der Import-Worker wurde ohne Abschlussergebnis beendet.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Dieser Ordner konnte nicht durchsucht werden.</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>Tonhöhenquelle zum erneuten Import auswählen</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Indizierte Ressourcen werden gerade für Mining, Start-Vorwärmen oder Karten-Nachbefüllung verwendet. Warten Sie, bis die aktive Aufgabe abgeschlossen ist, und versuchen Sie es erneut.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>Tonhöhenquelle erneut importiert</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 erfolgreich erneut importiert.</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>Tonhöhenquelle wird erneut importiert…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>Die Tonhöhenquelle konnte nicht erneut importiert werden.</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>Quelle für Tonhöhenakzent (%1);;Alle Dateien (*)</translation>
-    </message>
-</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5597,6 +5457,14 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
         <translation>Tonhöhenquellen, die im Speicherordner gefunden wurden, aber nicht in der obigen Liste stehen, erneut hinzufügen. Kein erneuter Import nötig.</translation>
     </message>
     <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation>Von oben nach unten geprüft — die erste Quelle mit einem Tonhöhenakzent-Eintrag für ein Wort gewinnt.</translation>
     </message>
@@ -5639,6 +5507,14 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
     <message>
         <source>Enable or disable %1</source>
         <translation>%1 aktivieren oder deaktivieren</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">Erneut importieren</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ Neuimport erforderlich (App-Upgrade)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7147,6 +7023,16 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Darstellung &amp; Sprache</translation>
     </message>
     <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished">Nichts wiederherzustellen</translation>
+    </message>
+    <message>
+        <source>Every audio pack found in the storage folder is already listed.
+
+A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The audio packs could not be restored.</source>
         <translation>Die Audio-Pakete konnten nicht wiederhergestellt werden.</translation>
     </message>
@@ -7155,12 +7041,24 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Installierte Audiopakete konnten nicht geprüft werden.</translation>
     </message>
     <message>
+        <source>Every frequency source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The frequency sources could not be restored.</source>
         <translation>Die Häufigkeitsquellen konnten nicht wiederhergestellt werden.</translation>
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
         <translation>Installierte Häufigkeitsquellen konnten nicht geprüft werden.</translation>
+    </message>
+    <message>
+        <source>Every pitch accent source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8439,6 +8337,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>Offline dictionary</source>
         <translation>Offline-Wörterbuch</translation>
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

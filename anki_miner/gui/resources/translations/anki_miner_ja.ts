@@ -3702,10 +3702,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>重複表現の単語 %1 件を統合しました</translation>
     </message>
     <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>別の表記で既にカード化済みのため %1 件の単語をスキップしました</translation>
-    </message>
-    <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
         <translation>頻度フィルター: ランク %2〜%3 の範囲外の単語を %1 件除去しました</translation>
     </message>
@@ -4324,92 +4320,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>既知単語の検出から除外するデッキ:</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> これは単語ベースのソースです。レベルラベルはカードに表示されますが、頻度ランクのフィルタリングには影響しません。</translation>
-    </message>
-    <message>
-        <source>Choose frequency source</source>
-        <translation>頻度ソースを選択</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> これは出現回数ベースのソースです。カウントは順位に変換されました。</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>頻度ソースを追加しました</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>'%2' から %1 件のエントリをインポートしました。</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
-    </message>
-    <message>
-        <source>Importing frequency source…</source>
-        <translation>頻度ソースをインポートしています…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>頻度ソースをインポートできませんでした。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>そのフォルダをスキャンできませんでした。</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>再インポートする頻度ソースを選択</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>インデックス済みリソースはマイニング、起動時のプリウォーム、またはカードの一括補完で使用中です。実行中のタスクが完了するまで待ってから再試行してください。</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>頻度ソースを再インポートしました</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 を再インポートしました。</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>頻度ソースを再インポートしています…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>頻度ソースを再インポートできませんでした。</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>頻度ソース (%1);;すべてのファイル (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -4458,6 +4368,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>保存フォルダーにあるが上の一覧にない頻度ソースを再追加します。再インポートは不要です。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">すべて再インポート</translation>
+    </message>
+    <message>
+        <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4510,6 +4428,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Enable or disable %1</source>
         <translation>%1 を有効化または無効化</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">再インポート</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ 再インポートが必要です（アプリのアップグレード）</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5104,16 +5030,28 @@ Continue?</source>
         <translation>マイニングしたカードのスタイルを再適用できませんでした。</translation>
     </message>
     <message>
-        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
-        <translation>アプリのアップグレード後、これらの辞書は再インポートが必要です（インデックス形式が変更されました）:</translation>
+        <source>Dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked for them until you do. Re-import them now?</source>
-        <translation>再インポートするまで、これらの辞書でのマイニングはブロックされます。今すぐ再インポートしますか？</translation>
+        <source>Frequency sources:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries need re-importing</source>
-        <translation>辞書の再インポートが必要です</translation>
+        <source>Pitch accent sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These resources need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is blocked until you do. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources need re-importing</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System validation passed</source>
@@ -5456,84 +5394,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>無音除去ライブラリのインストールが完了しました。</translation>
     </message>
 </context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent source</source>
-        <translation>ピッチアクセントソースを選択</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>ピッチソースを追加しました</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>'%2' から %1 件のエントリをインポートしました。</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
-    </message>
-    <message>
-        <source>Importing pitch source…</source>
-        <translation>ピッチソースをインポートしています…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>ピッチソースをインポートできませんでした。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>キャンセル中…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>そのフォルダをスキャンできませんでした。</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>再インポートするピッチソースを選択</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>インデックス済みリソースはマイニング、起動時のプリウォーム、またはカードの一括補完で使用中です。実行中のタスクが完了するまで待ってから再試行してください。</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>ピッチソースを再インポートしました</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 を再インポートしました。</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>ピッチソースを再インポートしています…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>ピッチソースを再インポートできませんでした。</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>ピッチアクセントソース（%1）;;すべてのファイル（*）</translation>
-    </message>
-</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5584,6 +5444,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>保存フォルダーにあるが上の一覧にないピッチソースを再追加します。再インポートは不要です。</translation>
     </message>
     <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">すべて再インポート</translation>
+    </message>
+    <message>
+        <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation>上から順に確認され、単語のピッチアクセント項目がある最初のソースが採用されます。</translation>
     </message>
@@ -5626,6 +5494,14 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Enable or disable %1</source>
         <translation>%1 を有効化または無効化</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">再インポート</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ 再インポートが必要です（アプリのアップグレード）</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7134,6 +7010,16 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>外観と言語</translation>
     </message>
     <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished">復元する辞書がありません</translation>
+    </message>
+    <message>
+        <source>Every audio pack found in the storage folder is already listed.
+
+A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The audio packs could not be restored.</source>
         <translation>音声パックを復元できませんでした。</translation>
     </message>
@@ -7142,12 +7028,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>インストール済みの音声パックを確認できませんでした。</translation>
     </message>
     <message>
+        <source>Every frequency source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The frequency sources could not be restored.</source>
         <translation>頻度ソースを復元できませんでした。</translation>
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
         <translation>インストール済みの頻度ソースを確認できませんでした。</translation>
+    </message>
+    <message>
+        <source>Every pitch accent source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8424,6 +8322,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Offline dictionary</source>
         <translation>オフライン辞書</translation>
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

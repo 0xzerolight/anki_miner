@@ -3702,10 +3702,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>已合併 %1 個重複表達的單字</translation>
     </message>
     <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>已略過 %1 個以其他拼寫方式製卡的單字</translation>
-    </message>
-    <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
         <translation>頻率篩選器：已移除 %1 個排名在 %2-%3 之外的單字</translation>
     </message>
@@ -4324,92 +4320,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>從已知單字偵測中排除的牌組：</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> 這是以單字為基礎的來源；其等級標籤會顯示在卡片上，但不影響頻率排名篩選。</translation>
-    </message>
-    <message>
-        <source>Choose frequency source</source>
-        <translation>選擇頻率來源</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> 這是以出現次數為基準的來源；其計數已轉換為排名。</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>已新增頻率來源</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>已從「%2」匯入 %1 個項目。</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>匯入已完成，但無法更新設定。</translation>
-    </message>
-    <message>
-        <source>Importing frequency source…</source>
-        <translation>正在匯入頻率來源…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>無法匯入頻率來源。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>取消中……</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>匯入工作已結束，但未傳回完成結果。</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>無法掃描該資料夾。</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>選擇要重新匯入的頻率來源</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>已重新匯入頻率來源</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>已成功重新匯入 %1。</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>正在重新匯入頻率來源…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>無法重新匯入頻率來源。</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>頻率來源 (%1);;所有檔案 (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -4458,6 +4368,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>重新加入儲存資料夾中找到、但未列在上方清單的頻率來源。無需重新匯入。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">全部重新匯入</translation>
+    </message>
+    <message>
+        <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4510,6 +4428,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Enable or disable %1</source>
         <translation>啟用或停用 %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">重新匯入</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ 需要重新匯入（應用程式已升級）</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5104,16 +5030,28 @@ Continue?</source>
         <translation>無法重新套用已採集卡片的樣式。</translation>
     </message>
     <message>
-        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
-        <translation>應用程式升級後，下列字典需要重新匯入（其索引格式已變更）：</translation>
+        <source>Dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked for them until you do. Re-import them now?</source>
-        <translation>在您完成之前，將無法對它們進行採集。是否要立即重新匯入？</translation>
+        <source>Frequency sources:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries need re-importing</source>
-        <translation>字典需要重新匯入</translation>
+        <source>Pitch accent sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These resources need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is blocked until you do. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources need re-importing</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System validation passed</source>
@@ -5456,84 +5394,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>靜音移除函式庫安裝成功。</translation>
     </message>
 </context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent source</source>
-        <translation>選擇高低音調來源</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>已新增高低音調來源</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>已從「%2」匯入 %1 個項目。</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>匯入已完成，但無法更新設定。</translation>
-    </message>
-    <message>
-        <source>Importing pitch source…</source>
-        <translation>正在匯入高低音調來源…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>無法匯入高低音調來源。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>取消中……</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>匯入工作已結束，但未傳回完成結果。</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>無法掃描該資料夾。</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>選擇要重新匯入的高低音調來源</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>已重新匯入高低音調來源</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>已成功重新匯入 %1。</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>正在重新匯入高低音調來源…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>無法重新匯入高低音調來源。</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>高低音調來源（%1）;;所有檔案（*）</translation>
-    </message>
-</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5584,6 +5444,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>重新加入儲存資料夾中找到、但未列在上方清單的高低音調來源。無需重新匯入。</translation>
     </message>
     <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">全部重新匯入</translation>
+    </message>
+    <message>
+        <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation>由上而下依序檢查 — 第一個找到該詞高低音調條目的來源勝出。</translation>
     </message>
@@ -5626,6 +5494,14 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Enable or disable %1</source>
         <translation>啟用或停用 %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">重新匯入</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ 需要重新匯入（應用程式已升級）</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7134,6 +7010,16 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>外觀與語言</translation>
     </message>
     <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished">無可還原的項目</translation>
+    </message>
+    <message>
+        <source>Every audio pack found in the storage folder is already listed.
+
+A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The audio packs could not be restored.</source>
         <translation>音訊包無法還原。</translation>
     </message>
@@ -7142,12 +7028,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>無法檢查已安裝的音訊包。</translation>
     </message>
     <message>
+        <source>Every frequency source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The frequency sources could not be restored.</source>
         <translation>頻率來源無法還原。</translation>
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
         <translation>無法檢查已安裝的頻率來源。</translation>
+    </message>
+    <message>
+        <source>Every pitch accent source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8424,6 +8322,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Offline dictionary</source>
         <translation>離線字典</translation>
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

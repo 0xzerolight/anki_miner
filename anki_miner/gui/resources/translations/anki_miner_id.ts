@@ -3702,10 +3702,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Menggabungkan %1 kata dengan ekspresi duplikat</translation>
     </message>
     <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>Melewati %1 kata yang sudah berkartu dengan ejaan lain</translation>
-    </message>
-    <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
         <translation>Filter frekuensi: menghapus %1 kata di luar peringkat %2-%3</translation>
     </message>
@@ -4324,92 +4320,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> Ini adalah sumber berbasis kata; label tingkatnya tampil di kartu tetapi tidak memengaruhi pemfilteran peringkat frekuensi.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source</source>
-        <translation>Pilih sumber frekuensi</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (melewati %1 entri yang rusak)</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> Ini adalah sumber berbasis kemunculan; jumlahnya dikonversi menjadi peringkat.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>Sumber Frekuensi Ditambahkan</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Mengimpor %1 entri dari '%2'.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
-    </message>
-    <message>
-        <source>Importing frequency source…</source>
-        <translation>Mengimpor sumber frekuensi…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Sumber frekuensi tidak dapat diimpor.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Proses impor selesai tanpa hasil akhir.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Folder itu tidak dapat dipindai.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>Pilih sumber frekuensi untuk diimpor ulang</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>Sumber Frekuensi Diimpor Ulang</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Berhasil mengimpor ulang %1.</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Mengimpor ulang sumber frekuensi…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>Sumber frekuensi tidak dapat diimpor ulang.</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>Sumber frekuensi (%1);;Semua Berkas (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -4458,6 +4368,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Tambahkan kembali sumber frekuensi yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas. Tidak perlu impor ulang.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4510,6 +4428,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Enable or disable %1</source>
         <translation>Aktifkan atau nonaktifkan %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">Impor ulang</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ perlu impor ulang (pemutakhiran aplikasi)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5104,16 +5030,28 @@ Lanjutkan?</translation>
         <translation>Kartu yang di-mining tidak dapat ditata ulang.</translation>
     </message>
     <message>
-        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
-        <translation>Kamus berikut perlu diimpor ulang setelah pembaruan aplikasi (format indeksnya berubah):</translation>
+        <source>Dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked for them until you do. Re-import them now?</source>
-        <translation>Mining diblokir untuk kamus tersebut sampai Anda melakukannya. Impor ulang sekarang?</translation>
+        <source>Frequency sources:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries need re-importing</source>
-        <translation>Kamus perlu diimpor ulang</translation>
+        <source>Pitch accent sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These resources need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is blocked until you do. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources need re-importing</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System validation passed</source>
@@ -5456,84 +5394,6 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Pustaka penghapus keheningan berhasil dipasang.</translation>
     </message>
 </context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent source</source>
-        <translation>Pilih sumber aksen nada</translation>
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (melewati %1 entri yang rusak)</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>Sumber Aksen Nada Ditambahkan</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Mengimpor %1 entri dari '%2'.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
-    </message>
-    <message>
-        <source>Importing pitch source…</source>
-        <translation>Mengimpor sumber aksen nada…</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Sumber aksen nada tidak dapat diimpor.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Proses impor selesai tanpa hasil akhir.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Folder itu tidak dapat dipindai.</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>Pilih sumber aksen nada untuk diimpor ulang</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>Sumber Aksen Nada Diimpor Ulang</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Berhasil mengimpor ulang %1.</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>Mengimpor ulang sumber aksen nada…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>Sumber aksen nada tidak dapat diimpor ulang.</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>Sumber aksen nada (%1);;Semua Berkas (*)</translation>
-    </message>
-</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5584,6 +5444,14 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Tambahkan kembali sumber aksen nada yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas. Tidak perlu impor ulang.</translation>
     </message>
     <message>
+        <source>Reimport All</source>
+        <translation type="unfinished">Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation>Diperiksa dari atas ke bawah — sumber pertama yang memiliki entri aksen nada untuk suatu kata menang.</translation>
     </message>
@@ -5626,6 +5494,14 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>Enable or disable %1</source>
         <translation>Aktifkan atau nonaktifkan %1</translation>
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished">Impor ulang</translation>
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation type="unfinished">⚠ perlu impor ulang (pemutakhiran aplikasi)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7134,6 +7010,16 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Tampilan &amp; Bahasa</translation>
     </message>
     <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished">Tidak ada yang perlu dipulihkan</translation>
+    </message>
+    <message>
+        <source>Every audio pack found in the storage folder is already listed.
+
+A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The audio packs could not be restored.</source>
         <translation>Paket audio tidak dapat dipulihkan.</translation>
     </message>
@@ -7142,12 +7028,24 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Paket audio terpasang tidak dapat diperiksa.</translation>
     </message>
     <message>
+        <source>Every frequency source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The frequency sources could not be restored.</source>
         <translation>Sumber frekuensi tidak dapat dipulihkan.</translation>
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
         <translation>Sumber frekuensi terpasang tidak dapat diperiksa.</translation>
+    </message>
+    <message>
+        <source>Every pitch accent source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8424,6 +8322,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Offline dictionary</source>
         <translation>Kamus luring</translation>
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
