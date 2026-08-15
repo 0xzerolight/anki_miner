@@ -2,6 +2,7 @@
 
 import html
 import re
+import unicodedata
 from collections.abc import Iterable
 from typing import Any
 
@@ -301,6 +302,26 @@ def is_kana_only(text: str) -> bool:
 # Internal alias predating the public export; existing private-name callers
 # (dictionary storage, furigana helpers) keep working.
 _is_kana_only = is_kana_only
+
+
+def strip_format_chars(text: str) -> str:
+    """Drop Unicode format characters (general category Cf).
+
+    Cf covers the bidi controls (U+202A-U+202E, U+200E/U+200F), the zero-width
+    joiners (U+200B-U+200D) and the BOM (U+FEFF). All of them are zero-width:
+    two strings that differ only by Cf characters are the same text on screen,
+    so no comparison key should tell them apart.
+
+    Deliberately Cf only, NOT Cc. The control characters that actually turn up
+    in Anki fields are newlines and tabs, which carry a word boundary — callers
+    collapse those to spaces rather than deleting them, and stripping Cc here
+    would silently join ``入れ\\n墨`` into one token.
+
+    ``services/reading/mokuro_source.py`` strips Cc *and* Cf for a different
+    job: OCR page text, where a lone control char is noise with no boundary to
+    preserve.
+    """
+    return "".join(ch for ch in text if unicodedata.category(ch) != "Cf")
 
 
 def _format_furigana(surface: str, reading: str) -> str:

@@ -19,6 +19,7 @@ from anki_miner.utils.text_utils import (
     is_katakana_only,
     is_mixed_kana_only,
     katakana_to_hiragana,
+    strip_format_chars,
     strip_inline_annotations,
     strip_subtitle_markup,
     wrap_target_furigana_from_tokens,
@@ -894,3 +895,30 @@ class TestStripInlineAnnotations:
         # Pure function must never throw on malformed/adversarial paren soup.
         for weird in ("）（", "(((", ")))", "（（あ）", "あ）（い", "()()()"):
             strip_inline_annotations(weird)
+
+
+class TestStripFormatChars:
+    """Tests for strip_format_chars (Cf removal for comparison keys)."""
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("‪寮", "寮"),  # LEFT-TO-RIGHT EMBEDDING
+            ("‭寮‬", "寮"),  # LRO + POP DIRECTIONAL FORMATTING
+            ("‎寮‏", "寮"),  # LRM + RLM
+            ("食​べる", "食べる"),  # ZERO WIDTH SPACE mid-word
+            ("﻿寮", "寮"),  # BOM
+            ("‪​﻿", ""),  # nothing but format chars
+        ],
+    )
+    def test_removes_zero_width_format_chars(self, raw, expected):
+        assert strip_format_chars(raw) == expected
+
+    def test_leaves_control_chars_alone(self):
+        """Cc is out of scope: newlines/tabs carry a boundary callers collapse."""
+        assert strip_format_chars("入れ\n墨") == "入れ\n墨"
+        assert strip_format_chars("a\tb") == "a\tb"
+
+    def test_leaves_ordinary_text_untouched(self):
+        assert strip_format_chars("普通の日本語です") == "普通の日本語です"
+        assert strip_format_chars("") == ""
