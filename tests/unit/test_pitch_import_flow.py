@@ -122,6 +122,19 @@ def _fire_thread_finished(instance) -> None:
 
 
 class TestAddSource:
+    @pytest.fixture(autouse=True)
+    def _adapt_existing_single_picker_stubs(self, monkeypatch):
+        """Keep single-file scenarios concise while production uses a multi-picker."""
+
+        def pick_many(*args, on_done, **kwargs):
+            file_dialogs.pick_open_file(
+                *args,
+                on_done=lambda chosen: on_done([chosen] if chosen else []),
+                **kwargs,
+            )
+
+        monkeypatch.setattr(file_dialogs, "pick_open_files", pick_many)
+
     def test_add_and_reimport_pickers_include_all_suffixes(self, tab, monkeypatch):
         filters: list[str] = []
 
@@ -170,6 +183,27 @@ class TestAddSource:
         # New entry is appended enabled (lowest first-hit priority; user
         # reorders upward if it should win overlaps).
         assert new_chain[-1] == PitchSourceEntry(source_id="nhk", enabled=True)
+
+    def test_multiple_sources_import_sequentially_in_picker_order(self, tab, monkeypatch, stub_worker, tmp_path, qtbot):
+        first = tmp_path / "first.zip"
+        second = tmp_path / "second.zip"
+        monkeypatch.setattr(
+            file_dialogs,
+            "pick_open_files",
+            lambda *a, on_done, **kw: on_done([str(first), str(second)]),
+        )
+        _capture_infos(monkeypatch)
+        monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
+        persist_calls: list[tuple[PitchSourceEntry, ...]] = []
+        tab._pitch_import_flow._persist_chain = persist_calls.append
+
+        tab._pitch_import_flow.add_source()
+        _fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
+        qtbot.waitUntil(lambda: len(stub_worker.instances) == 2)
+        _fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
+
+        assert [entry.source_id for entry in persist_calls[-1]][-2:] == ["first", "second"]
+        assert len(persist_calls) == 1
 
     def test_append_after_existing_entries(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "new.csv"

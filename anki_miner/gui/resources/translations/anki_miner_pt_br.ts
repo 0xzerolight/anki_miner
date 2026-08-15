@@ -3214,12 +3214,16 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Não foi possível importar %1 arquivo(s) de mídia.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Escolha o zip de dicionário Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Dicionário %1 de %2: %3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3230,12 +3234,28 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>%1 importado (%2 entradas)</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>A importação terminou, mas não foi possível atualizar as configurações.</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Importando dicionário…</translation>
+        <source>Failed:</source>
+        <translation>Falhou:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Cancelado antes dos dicionários restantes.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Concluído.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>A importação terminou, mas não foi possível atualizar as configurações.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3244,10 +3264,6 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>Não foi possível importar o dicionário.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3286,6 +3302,10 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Não foi possível reimportar o dicionário.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Nenhum XML do JMdict em %1. Baixe do EDRDG e coloque-o ali.</translation>
     </message>
@@ -3316,10 +3336,6 @@ Ignorados (não elegíveis para reparo automático; use Reimportar… por linha)
         <translation>Nada para reimportar</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Dicionário %1 de %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 dicionário(s) reimportado(s):</translation>
     </message>
@@ -3328,20 +3344,8 @@ Ignorados (não elegíveis para reparo automático; use Reimportar… por linha)
         <translation>Ignorados (não elegíveis para reparo automático; use Reimportar… por linha):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Falhou:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Cancelado antes dos dicionários restantes.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Reimportar Tudo</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Concluído.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -4375,6 +4379,112 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Baralho a excluir da detecção de palavras conhecidas:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Esta é uma fonte baseada em palavras; seus rótulos de nível aparecem no cartão, mas não afetam a filtragem por rank de frequência.</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 entradas malformadas ignoradas)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Esta é uma fonte baseada em ocorrências; suas contagens foram convertidas em classificações.</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Não foi possível importar a fonte de frequência.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Fonte de Frequência Adicionada</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 entradas importadas de '%2'.</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Falhou:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Concluído.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>A importação terminou, mas não foi possível atualizar as configurações.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>O processo de importação terminou sem retornar um resultado.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Não foi possível analisar essa pasta.</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Escolha a fonte de frequência a reimportar</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Fonte de Frequência Reimportada</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 reimportada com sucesso.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Reimportando fonte de frequência…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Não foi possível reimportar a fonte de frequência.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Fonte de frequência (%1);;Todos os Arquivos (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5449,6 +5559,104 @@ Você pode ajustar isso depois em Configurações → Anki.</translation>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Biblioteca de remoção de silêncio instalada com sucesso.</translation>
+    </message>
+</context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 entradas malformadas ignoradas)</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Não foi possível importar a fonte de acento tonal.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Fonte de Acento Tonal Adicionada</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 entradas importadas de '%2'.</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Falhou:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Concluído.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>A importação terminou, mas não foi possível atualizar as configurações.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Cancelando…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>O processo de importação terminou sem retornar um resultado.</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>Não foi possível analisar essa pasta.</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Escolha a fonte de acento tonal para reimportar</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>Os recursos indexados estão em uso pela mineração, pelo pré-aquecimento de inicialização ou pelo preenchimento retroativo de cartões. Aguarde a tarefa ativa terminar e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Fonte de Acento Tonal Reimportada</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 reimportado com sucesso.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Reimportando fonte de acento tonal…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Não foi possível reimportar a fonte de acento tonal.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Fonte de acento tonal (%1);;Todos os arquivos (*)</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>

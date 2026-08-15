@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 from PyQt6.QtWidgets import QWidget
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 
 MOD = "anki_miner.gui.controllers.dictionary_import_flow"
@@ -45,12 +45,33 @@ def test_add_dict_dialog_defaults_to_dicts_dir():
 
     with (
         patch(f"{MOD}.resolve_start_dir", return_value=str(dicts_root)) as rsd,
-        patch(f"{MOD}.file_dialogs.pick_open_file", side_effect=lambda *a, on_done, **k: on_done("")),
+        patch(f"{MOD}.file_dialogs.pick_open_files", side_effect=lambda *a, on_done, **k: on_done([])),
     ):
         flow.add_dict()  # empty selection → early return after the dialog
 
     rsd.assert_called_once()
     assert rsd.call_args.kwargs.get("default_dir") == dicts_root
+
+
+def test_add_dict_passes_every_selected_zip_to_one_batch(tmp_path: Path):
+    flow = _make_flow(tmp_path / "dicts")
+    selected = [str(tmp_path / "one.zip"), str(tmp_path / "two.zip")]
+    flow._run_chained_imports = MagicMock()
+
+    with patch(f"{MOD}.file_dialogs.pick_open_files", side_effect=lambda *a, on_done, **k: on_done(selected)):
+        flow.add_dict()
+
+    jobs = flow._run_chained_imports.call_args.kwargs["jobs"]
+    assert jobs == [Path(path) for path in selected]
+
+
+def test_new_dictionary_batch_preserves_picker_order(tmp_path: Path):
+    flow = _make_flow(tmp_path / "dicts")
+    flow._panel.get_chain.return_value = (ChainEntry(kind="indexed", dict_id="existing", enabled=True),)
+
+    chain = flow._with_dicts_at_top(["first", "second"])
+
+    assert [entry.dict_id for entry in chain] == ["first", "second", "existing"]
 
 
 def test_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(tmp_path: Path):
@@ -201,8 +222,8 @@ def test_add_dict_persist_failure_reports_partial_success_after_chain_commit(wir
     try:
         with (
             patch(
-                f"{MOD}.file_dialogs.pick_open_file",
-                side_effect=lambda *a, on_done, **k: on_done(str(tmp_path / "picked.zip")),
+                f"{MOD}.file_dialogs.pick_open_files",
+                side_effect=lambda *a, on_done, **k: on_done([str(tmp_path / "picked.zip")]),
             ),
             patch(f"{MOD}.ImportWorker.for_yomitan", return_value=worker),
             patch("anki_miner.gui.controllers.import_flow_common.QProgressDialog", return_value=dialog),

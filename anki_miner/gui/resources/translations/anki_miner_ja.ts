@@ -3212,12 +3212,16 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>メディアファイルを %1 件インポートできませんでした。</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Yomitan辞書のzipを選択</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Yomitan zip (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>辞書 %1/%2: %3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3228,12 +3232,28 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>%1 をインポートしました（%2 件）</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>辞書をインポートしています…</translation>
+        <source>Failed:</source>
+        <translation>失敗:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>残りの辞書のインポートはキャンセルされました。</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>完了しました。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3242,10 +3262,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>辞書をインポートできませんでした。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3284,6 +3300,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>辞書を再インポートできませんでした。</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>%1 にJMdictのXMLがありません。EDRDGからダウンロードしてそこに配置してください。</translation>
     </message>
@@ -3314,10 +3334,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>再インポートする辞書がありません</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>辞書 %1/%2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 件の辞書を再インポートしました:</translation>
     </message>
@@ -3326,20 +3342,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>スキップ（自動修復の対象外です。行ごとの「再インポート…」を使用してください）:</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>失敗:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>残りの辞書のインポートはキャンセルされました。</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>すべて再インポート</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>完了しました。</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -4362,6 +4366,112 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>既知単語の検出から除外するデッキ:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> これは単語ベースのソースです。レベルラベルはカードに表示されますが、頻度ランクのフィルタリングには影響しません。</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> これは出現回数ベースのソースです。カウントは順位に変換されました。</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>頻度ソースをインポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>頻度ソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>'%2' から %1 件のエントリをインポートしました。</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">失敗:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">完了しました。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>再インポートする頻度ソースを選択</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>インデックス済みリソースはマイニング、起動時のプリウォーム、またはカードの一括補完で使用中です。実行中のタスクが完了するまで待ってから再試行してください。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>頻度ソースを再インポートしました</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 を再インポートしました。</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>頻度ソースを再インポートしています…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>頻度ソースを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>頻度ソース (%1);;すべてのファイル (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5436,6 +5546,104 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>無音除去ライブラリのインストールが完了しました。</translation>
+    </message>
+</context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （不正な形式のエントリを %1 件スキップしました）</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>ピッチソースをインポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>ピッチソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>'%2' から %1 件のエントリをインポートしました。</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">失敗:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">完了しました。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>インポート処理が完了結果を返さずに終了しました。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>再インポートするピッチソースを選択</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>インデックス済みリソースはマイニング、起動時のプリウォーム、またはカードの一括補完で使用中です。実行中のタスクが完了するまで待ってから再試行してください。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>ピッチソースを再インポートしました</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 を再インポートしました。</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>ピッチソースを再インポートしています…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>ピッチソースを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>ピッチアクセントソース（%1）;;すべてのファイル（*）</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>

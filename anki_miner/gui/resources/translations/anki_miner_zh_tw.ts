@@ -3212,12 +3212,16 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>有 %1 個媒體檔案無法匯入。</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>選擇 Yomitan 字典 zip</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Yomitan zip（*.zip）</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>字典 %1／%2：%3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3228,12 +3232,28 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>已匯入 %1（%2 筆條目）</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>匯入已完成，但無法更新設定。</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>正在匯入字典…</translation>
+        <source>Failed:</source>
+        <translation>失敗：</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>在處理其餘字典前已取消。</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>完成。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3242,10 +3262,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>無法匯入字典。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3284,6 +3300,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>無法重新匯入字典。</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>%1 沒有 JMdict XML。請從 EDRDG 下載並放置於該處。</translation>
     </message>
@@ -3314,10 +3334,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>無可重新匯入的項目</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>字典 %1／%2：%3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>已重新匯入 %1 部字典：</translation>
     </message>
@@ -3326,20 +3342,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>已略過（不符合自動修復資格；請使用逐列的重新匯入…）：</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>失敗：</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>在處理其餘字典前已取消。</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>全部重新匯入</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>完成。</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -4362,6 +4366,112 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>從已知單字偵測中排除的牌組：</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> 這是以單字為基礎的來源；其等級標籤會顯示在卡片上，但不影響頻率排名篩選。</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> 這是以出現次數為基準的來源；其計數已轉換為排名。</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>無法匯入頻率來源。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>已新增頻率來源</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>已從「%2」匯入 %1 個項目。</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">失敗：</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">完成。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>匯入工作已結束，但未傳回完成結果。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>無法掃描該資料夾。</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>選擇要重新匯入的頻率來源</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>已重新匯入頻率來源</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>已成功重新匯入 %1。</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>正在重新匯入頻率來源…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>無法重新匯入頻率來源。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>頻率來源 (%1);;所有檔案 (*)</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5436,6 +5546,104 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>靜音移除函式庫安裝成功。</translation>
+    </message>
+</context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳過 %1 筆格式錯誤的項目）</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>無法匯入高低音調來源。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>已新增高低音調來源</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>已從「%2」匯入 %1 個項目。</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">失敗：</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">完成。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>匯入已完成，但無法更新設定。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>取消中……</translation>
+    </message>
+    <message>
+        <source>The import worker finished without a completion result.</source>
+        <translation>匯入工作已結束，但未傳回完成結果。</translation>
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation>無法掃描該資料夾。</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>選擇要重新匯入的高低音調來源</translation>
+    </message>
+    <message>
+        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
+        <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>已重新匯入高低音調來源</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>已成功重新匯入 %1。</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>正在重新匯入高低音調來源…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>無法重新匯入高低音調來源。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>高低音調來源（%1）;;所有檔案（*）</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
