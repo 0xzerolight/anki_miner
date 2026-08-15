@@ -49,8 +49,8 @@ from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
-from anki_miner.services.dictionary.registry import stale_dict_reimport_error
 from anki_miner.services.reading import detector
+from anki_miner.services.resource_staleness import stale_resource_reimport_error
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         self.curation_document: ReadingDocument | None = None
 
     def _stale_reimport_message(self) -> str | None:
-        return stale_dict_reimport_error(self._config)
+        return stale_resource_reimport_error(self._config)
 
     def _run_item(self, idx: int, item: ReadingQueueItem) -> bool:
         """Load + mine one item, owning its READY→PROCESSING→COMPLETED/ERROR

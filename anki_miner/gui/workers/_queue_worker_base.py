@@ -301,7 +301,7 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
     and MUST override:
 
     * :meth:`_stale_reimport_message` — the pre-loop staleness gate, resolving
-      ``stale_dict_reimport_error`` in the *subclass* module so per-module test
+      ``stale_resource_reimport_error`` in the *subclass* module so per-module test
       patches keep intercepting it.
     * :meth:`_run_item` — mine one item, emitting ``item_started`` /
       ``item_finished`` (and any per-item lifecycle the subclass owns). Return
@@ -622,8 +622,8 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
     def _stale_reimport_message(self) -> str | None:
         """Return the schema-staleness abort message, or None to proceed.
 
-        Overridden per subclass to call that module's ``stale_dict_reimport_error``
-        so ``patch("...<subclass>_queue_worker.stale_dict_reimport_error")`` keeps
+        Overridden per subclass to call that module's ``stale_resource_reimport_error``
+        so ``patch("...<subclass>_queue_worker.stale_resource_reimport_error")`` keeps
         intercepting the check.
         """
         raise NotImplementedError

@@ -50,6 +50,7 @@ from anki_miner.services.pitch_accent.render import (
     render_pitch_text_field,
 )
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
+from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
@@ -72,8 +73,10 @@ if TYPE_CHECKING:
     from anki_miner.models.reading import ImageRef, ReadingDocument
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
+    from anki_miner.services.frequency.registry import FrequencySourceRegistry
     from anki_miner.services.known_word_db import KnownWordDB
     from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
+    from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
     from anki_miner.services.stats_service import StatsService
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
@@ -205,6 +208,8 @@ class EpisodeProcessor:
         youtube_fetcher: YouTubeFetcherService | None = None,
         expression_audio_fetcher: ExpressionAudioFetcher | None = None,
         dictionary_registry: DictionaryRegistry | None = None,
+        frequency_registry: FrequencySourceRegistry | None = None,
+        pitch_registry: PitchSourceRegistry | None = None,
         sentence_audio_fetcher: SentenceAudioFetcher | None = None,
         owns_lookup_services: bool = True,
     ):
@@ -232,10 +237,15 @@ class EpisodeProcessor:
                 is only valid for test construction; the service factory always
                 provides a (possibly empty-chain) fetcher.
             dictionary_registry: Optional loaded registry backing the 4.0
-                schema-staleness backstop (``check_dictionary_staleness``). The
+                schema-staleness backstop (``check_resource_staleness``). The
                 service factory injects the same handle that built the provider
                 chain; ``None`` (test construction / callers that skip the gate)
-                disables the backstop.
+                disables the backstop for dictionaries.
+            frequency_registry: Optional loaded frequency registry, same role.
+                ``None`` whenever frequency is inactive, which is also when it
+                must not be gated.
+            pitch_registry: Optional loaded pitch registry, same role and same
+                inactive-means-ungated rule.
             sentence_audio_fetcher: Optional sentence-TTS fetcher. Consulted
                 ONLY by ``process_reading`` phase 3' (reading sources have no
                 source audio); video/YouTube/audiobook paths never touch it.
@@ -268,6 +278,8 @@ class EpisodeProcessor:
         self.expression_audio_fetcher = expression_audio_fetcher
         self.sentence_audio_fetcher = sentence_audio_fetcher
         self._dictionary_registry = dictionary_registry
+        self._frequency_registry = frequency_registry
+        self._pitch_registry = pitch_registry
         self.owns_lookup_services = owns_lookup_services
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
@@ -1688,7 +1700,7 @@ class EpisodeProcessor:
         #   and never resets it, so this reset is the mining-pipeline boundary (D30).
         self._reset_run_write_state()
 
-        self.check_dictionary_staleness()
+        self.check_resource_staleness()
         self._preflight_card_target()
         self.check_offline_dictionary()
         run_temp_folder = self._allocate_run_temp_folder()
@@ -2375,25 +2387,41 @@ class EpisodeProcessor:
         """Fail fast when standard filtering has no usable offline provider."""
         require_usable_offline_provider(self.config, self.definition_service)
 
-    def check_dictionary_staleness(self) -> None:
-        """Raise SetupError if any enabled indexed dict slot needs reimport (4.0).
+    def check_resource_staleness(self) -> None:
+        """Raise SetupError if any enabled indexed slot needs reimport (4.0).
 
-        The single-episode backstop for the schema-bump migration gate:
-        consults the injected registry's per-slot ``DictMeta.schema_ok`` (NOT the
-        built provider chain, which silently drops stale slots) so a user who
-        upgraded and mines before reimporting gets one actionable error instead
-        of a silent zero-card run. Queue workers front-run this with their own
-        pre-loop check so a batch aborts once rather than per item; this covers
-        the direct single-episode callers (episode / manual-pair / deck-builder).
-        No-op when no registry was injected.
+        The single-episode backstop for the schema-bump migration gate, across
+        all three indexed families: consults each injected registry's per-slot
+        ``schema_ok`` (NOT the built chains, which silently drop stale slots) so
+        a user who upgraded and mines before reimporting gets one actionable
+        error instead of a silent zero-card run, an unfiltered flood of rare
+        words, or a blank pitch field.
+
+        Queue workers front-run this with their own pre-loop check so a batch
+        aborts once rather than per item; this covers the direct single-episode
+        callers (episode / manual-pair / deck-builder).
+
+        A family whose registry was not injected is skipped — for frequency and
+        pitch that is the normal state when the user has not configured them,
+        and it is what keeps both optional.
         """
-        if self._dictionary_registry is None:
-            return
-        stale = self._dictionary_registry.stale_enabled(self.config)
-        if stale:
-            from anki_miner.services.dictionary.registry import format_stale_reimport_message
-
-            raise SetupError(format_stale_reimport_message(stale))
+        message = stale_resource_reimport_error(
+            self.config,
+            dictionary_registry=self._dictionary_registry,
+            frequency_registry=self._frequency_registry,
+            pitch_registry=self._pitch_registry,
+            families=frozenset(
+                kind
+                for kind, registry in (
+                    ("dictionary", self._dictionary_registry),
+                    ("frequency", self._frequency_registry),
+                    ("pitch", self._pitch_registry),
+                )
+                if registry is not None
+            ),
+        )
+        if message is not None:
+            raise SetupError(message)
 
     def process_youtube_url(
         self,
@@ -2480,7 +2508,7 @@ class EpisodeProcessor:
         # that double-check is intentional — cheap idempotent localhost calls.
         # The staleness backstop is likewise cheap and fails before the
         # download when an enabled index needs reimport.
-        self.check_dictionary_staleness()
+        self.check_resource_staleness()
         self._preflight_card_target()
         self.check_offline_dictionary()
 

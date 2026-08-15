@@ -22,7 +22,7 @@ from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.word_pool import (
     CaptureCurationCallback,
     MinePassStats,
@@ -185,7 +185,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         # Schema-staleness pre-loop gate (4.0): if any enabled indexed dict slot
         # needs reimport, abort the WHOLE queue with a single actionable error
         # up front rather than emitting one silent zero-card failure per item.
-        stale_msg = stale_dict_reimport_error(self.config)
+        stale_msg = stale_resource_reimport_error(self.config)
         if stale_msg is not None:
             self.error.emit(stale_msg)
             return total_cards

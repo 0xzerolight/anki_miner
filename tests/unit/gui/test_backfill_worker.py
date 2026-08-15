@@ -30,9 +30,22 @@ _RESULT = BackfillResult(notes_updated=1, fields_filled=2, tagged=1, skipped_sta
 _WORKER_MOD = "anki_miner.gui.workers.backfill_worker"
 
 
+def _lookup_bundle() -> MagicMock:
+    """A shared-lookup bundle whose registries report nothing stale.
+
+    A bare ``MagicMock`` answers ``stale_enabled`` with a truthy mock, which the
+    scan worker's staleness gate reads as "needs reimport" and aborts on before
+    ``scan_backfill`` is ever reached. Tests about anything else start clean.
+    """
+    bundle = MagicMock()
+    for name in ("dictionary_registry", "frequency_registry", "pitch_registry"):
+        getattr(bundle, name).stale_enabled.return_value = []
+    return bundle
+
+
 class TestBackfillScanWorker:
     def test_logs_start_and_completion_summary(self, test_config, monkeypatch, caplog):
-        shared_lookup = MagicMock()
+        shared_lookup = _lookup_bundle()
         monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
         monkeypatch.setattr(
             backfill_worker_module,
@@ -54,7 +67,7 @@ class TestBackfillScanWorker:
 
     def test_closes_shared_lookup_bundle_on_success(self, test_config, monkeypatch):
         anki_service = MagicMock()
-        shared_lookup = MagicMock()
+        shared_lookup = _lookup_bundle()
         shared_factory = MagicMock(return_value=shared_lookup)
         scan = MagicMock(return_value=_PLAN)
         monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock(return_value=anki_service))
@@ -73,7 +86,7 @@ class TestBackfillScanWorker:
         shared_lookup.close.assert_called_once_with()
 
     def test_closes_shared_lookup_bundle_on_scan_exception(self, test_config, monkeypatch):
-        shared_lookup = MagicMock()
+        shared_lookup = _lookup_bundle()
         shared_factory = MagicMock(return_value=shared_lookup)
         monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
         monkeypatch.setattr(
@@ -101,6 +114,7 @@ class TestBackfillScanWorker:
             patch(f"{_WORKER_MOD}.create_shared_lookup_services") as factory,
             patch(f"{_WORKER_MOD}.scan_backfill", return_value=_PLAN) as scan,
         ):
+            factory.return_value = _lookup_bundle()
             worker = BackfillScanWorker(test_config, _OPTIONS)
             with qtbot.waitSignal(worker.result_ready, timeout=5000) as blocker:
                 worker.start()
@@ -111,6 +125,53 @@ class TestBackfillScanWorker:
         assert scan.call_args[0][0] is anki_cls.return_value
         assert scan.call_args[0][2] is factory.return_value
         factory.return_value.close.assert_called_once_with()
+
+    def test_stale_source_for_a_requested_field_aborts_the_scan(self, test_config, monkeypatch):
+        """A frequency backfill against a stale frequency index must not run."""
+        shared_lookup = _lookup_bundle()
+        shared_lookup.frequency_registry.stale_enabled.return_value = [
+            SimpleNamespace(source_id="jpdb", source_name="JPDB")
+        ]
+        scan = MagicMock(return_value=_PLAN)
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "create_shared_lookup_services",
+            MagicMock(return_value=shared_lookup),
+        )
+        monkeypatch.setattr(backfill_worker_module, "scan_backfill", scan)
+
+        worker = BackfillScanWorker(test_config, _OPTIONS)
+        errors: list[str] = []
+        worker.error.connect(errors.append)
+        worker.run()
+
+        assert len(errors) == 1
+        assert "JPDB" in errors[0]
+        assert "Reimport All" in errors[0]
+        scan.assert_not_called()
+        shared_lookup.close.assert_called_once_with()
+
+    def test_stale_source_for_an_unrequested_field_does_not_abort(self, test_config, monkeypatch):
+        """A frequency-only backfill has no business failing over a stale pitch index."""
+        shared_lookup = _lookup_bundle()
+        shared_lookup.pitch_registry.stale_enabled.return_value = [SimpleNamespace(source_id="nhk", source_name="NHK")]
+        scan = MagicMock(return_value=_PLAN)
+        monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
+        monkeypatch.setattr(
+            backfill_worker_module,
+            "create_shared_lookup_services",
+            MagicMock(return_value=shared_lookup),
+        )
+        monkeypatch.setattr(backfill_worker_module, "scan_backfill", scan)
+
+        worker = BackfillScanWorker(test_config, _OPTIONS)
+        errors: list[str] = []
+        worker.error.connect(errors.append)
+        worker.run()
+
+        assert errors == []
+        scan.assert_called_once()
 
     def test_missing_primary_warning_reaches_mixed_plan_approval(self, qtbot, test_config, tmp_path, monkeypatch):
         pitch_root = tmp_path / "pitch"
