@@ -734,12 +734,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Отменено до обработки оставшихся пакетов.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Аудиопакеты добавлены</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Готово.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Аудиопакеты добавлены</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -802,14 +802,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 успешно импортирован повторно.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -818,8 +810,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Аудиопакет повторно импортирован</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 успешно импортирован повторно.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -828,6 +824,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Не удалось повторно импортировать пакет аудио.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Аудиопакет повторно импортирован</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3217,7 +3217,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
-        <translation type="unfinished" />
+        <translation>Выберите zip-архивы словарей Yomitan</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
@@ -3226,6 +3226,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Dictionary %1 of %2: %3</source>
         <translation>Словарь %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Не удалось импортировать словарь.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3237,7 +3241,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Imported %1 dictionaries:</source>
-        <translation type="unfinished" />
+        <translation>Импортировано словарей: %1:</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -3248,12 +3252,12 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Отменено до обработки остальных словарей.</translation>
     </message>
     <message>
-        <source>Dictionaries added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Готово.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Словари добавлены</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -3262,10 +3266,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Cancel</source>
         <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Не удалось импортировать словарь.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4394,112 +4394,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Колода, исключаемая из определения известных слов:</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> Это источник на основе слов; его метки уровней показываются на карточке, но не влияют на фильтрацию по рангу частотности.</translation>
-    </message>
-    <message>
-        <source>Choose frequency sources</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency source %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (пропущено %1 некорректных записей)</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> Это источник на основе количества вхождений; его значения были преобразованы в ранги.</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Не удалось импортировать источник частотности.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>Источник частотности добавлен</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Импортировано записей: %1 из «%2».</translation>
-    </message>
-    <message>
-        <source>Imported %1 frequency sources:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed:</source>
-        <translation type="unfinished">Ошибка:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining sources.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Sources Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation type="unfinished">Готово.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Обработчик импорта завершил работу без результата.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Не удалось просканировать эту папку.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>Выберите источник частотности для повторного импорта</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>Источник частотности импортирован повторно</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 успешно импортирован повторно.</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Повторный импорт источника частотности…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>Не удалось повторно импортировать источник частотности.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>Источник частотности (%1);;Все файлы (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5572,104 +5466,6 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Библиотека удаления тишины успешно установлена.</translation>
-    </message>
-</context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent sources</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch source %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (пропущено %1 некорректных записей)</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Не удалось импортировать источник тонального ударения.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>Источник тонального ударения добавлен</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Импортировано записей: %1 из «%2».</translation>
-    </message>
-    <message>
-        <source>Imported %1 pitch sources:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed:</source>
-        <translation type="unfinished">Ошибка:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining sources.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Sources Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation type="unfinished">Готово.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Обработчик импорта завершил работу без результата.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Не удалось просканировать эту папку.</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>Выберите источник тонального ударения для повторного импорта</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>Источник тонального ударения повторно импортирован</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 успешно импортирован повторно.</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>Повторный импорт источника тонального ударения…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>Не удалось повторно импортировать источник тонального ударения.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>Источник тонального ударения (%1);;Все файлы (*)</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>

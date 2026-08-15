@@ -727,11 +727,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Packs Added</source>
+        <source>Done.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Done.</source>
+        <source>Audio Packs Added</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -795,14 +795,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -811,7 +803,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -820,6 +816,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>The audio pack could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3212,6 +3212,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>The dictionary could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Dictionary added</source>
         <translation type="unfinished" />
     </message>
@@ -3232,11 +3236,11 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries added</source>
+        <source>Done.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Done.</source>
+        <source>Dictionaries added</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3245,10 +3249,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4346,112 +4346,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose frequency sources</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency source %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Imported %1 frequency sources:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled before remaining sources.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Sources Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5508,104 +5402,6 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Silence-removal library installed successfully.</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent sources</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch source %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Imported %1 pitch sources:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled before remaining sources.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Sources Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
         <translation type="unfinished" />
     </message>
 </context><context>

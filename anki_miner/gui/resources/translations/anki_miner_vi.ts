@@ -732,12 +732,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Đã hủy trước các gói còn lại.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Đã thêm gói âm thanh</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Xong.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Đã thêm gói âm thanh</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -800,14 +800,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Đã nhập lại %1 thành công.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -816,8 +808,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Đã nhập lại gói âm thanh</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>Đã nhập lại %1 thành công.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -826,6 +822,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Không thể nhập lại gói âm thanh.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Đã nhập lại gói âm thanh</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3213,7 +3213,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
-        <translation type="unfinished" />
+        <translation>Chọn các tệp zip từ điển Yomitan</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
@@ -3222,6 +3222,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Dictionary %1 of %2: %3</source>
         <translation>Từ điển %1 trên %2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Không thể nhập từ điển.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3233,7 +3237,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>Imported %1 dictionaries:</source>
-        <translation type="unfinished" />
+        <translation>Đã nhập %1 từ điển:</translation>
     </message>
     <message>
         <source>Failed:</source>
@@ -3244,12 +3248,12 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Đã hủy trước khi xử lý các từ điển còn lại.</translation>
     </message>
     <message>
-        <source>Dictionaries added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Xong.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Đã thêm từ điển</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -3258,10 +3262,6 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Cancel</source>
         <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Không thể nhập từ điển.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4368,112 +4368,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation> Đây là nguồn dựa trên từ; nhãn cấp độ của nó hiển thị trên thẻ nhưng không ảnh hưởng đến việc lọc theo hạng tần suất.</translation>
-    </message>
-    <message>
-        <source>Choose frequency sources</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency source %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation> Đây là nguồn dựa trên số lần xuất hiện; số đếm của nó đã được chuyển thành thứ hạng.</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Không thể nhập nguồn tần suất.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation>Đã thêm nguồn tần suất</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Đã nhập %1 mục từ '%2'.</translation>
-    </message>
-    <message>
-        <source>Imported %1 frequency sources:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed:</source>
-        <translation type="unfinished">Thất bại:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining sources.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Sources Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation type="unfinished">Xong.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Đã hoàn tất nhập, nhưng không thể cập nhật cài đặt.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Không thể quét thư mục đó.</translation>
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation>Chọn nguồn tần suất để nhập lại</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation>Đã nhập lại nguồn tần suất</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Đã nhập lại %1 thành công.</translation>
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation>Đang nhập lại nguồn tần suất…</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation>Không thể nhập lại nguồn tần suất.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation>Nguồn tần suất (%1);;Tất cả tệp (*)</translation>
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5546,104 +5440,6 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     <message>
         <source>Silence-removal library installed successfully.</source>
         <translation>Đã cài đặt thư viện loại bỏ khoảng lặng thành công.</translation>
-    </message>
-</context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent sources</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch source %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Không thể nhập nguồn trọng âm cao độ.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation>Đã thêm nguồn trọng âm cao độ</translation>
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation>Đã nhập %1 mục từ '%2'.</translation>
-    </message>
-    <message>
-        <source>Imported %1 pitch sources:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed:</source>
-        <translation type="unfinished">Thất bại:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining sources.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Sources Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation type="unfinished">Xong.</translation>
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Đã hoàn tất nhập, nhưng không thể cập nhật cài đặt.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Đang hủy…</translation>
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Tiến trình nhập đã kết thúc mà không có kết quả hoàn tất.</translation>
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Không thể quét thư mục đó.</translation>
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation>Chọn nguồn trọng âm cao độ để nhập lại</translation>
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation>Đã nhập lại nguồn trọng âm cao độ</translation>
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Đã nhập lại %1 thành công.</translation>
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation>Đang nhập lại nguồn trọng âm cao độ…</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation>Không thể nhập lại nguồn trọng âm cao độ.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation>Nguồn trọng âm cao độ (%1);;Tất cả tệp (*)</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
