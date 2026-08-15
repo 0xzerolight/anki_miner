@@ -35,9 +35,9 @@ class PitchSourceMeta:
     source_name: str
     format: str
     entry_count: int
-    # ``schema_ok`` = loadable/chain-includable. Pitch has a single schema
-    # version so far, so this is simply ``version == SCHEMA_VERSION``; the raw
-    # ``version`` is still exposed for a future out-of-date notice.
+    # ``schema_ok`` = loadable/chain-includable. Only the current version is
+    # accepted because schema bumps require reimporting canonicalized keys.
+    # ``version`` is the raw on-disk schema version exposed for stale notices.
     schema_ok: bool
     version: int
     db_path: Path
@@ -104,6 +104,45 @@ class PitchSourceRegistry:
             key=lambda m: m.source_id,
         )
 
+    def stale_enabled(self, config: AnkiMinerConfig) -> list[PitchSourceMeta]:
+        """Enabled chain slots present on disk but schema-mismatched.
+
+        Mirrors ``DictionaryRegistry.stale_enabled``: the single source of truth
+        for every reimport surface (settings row button, startup prompt, pre-run
+        gate, health check). A slot missing on disk (``meta is None``) is NOT
+        reported — the user may have deleted it deliberately, and there is no
+        persisted ``source.<ext>`` left to rebuild from either way.
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        stale: list[PitchSourceMeta] = []
+        for entry in config.pitch_chain:
+            if not entry.enabled or not entry.source_id:
+                continue
+            meta = self._sources.get(entry.source_id)
+            if meta is not None and not meta.schema_ok:
+                stale.append(meta)
+        return sorted(stale, key=lambda m: m.source_id)
+
+    def usable_enabled(self, config: AnkiMinerConfig) -> list[PitchSourceMeta]:
+        """Enabled chain slots that can actually answer a lookup.
+
+        Present on disk, schema-current, and holding at least one entry — read
+        off this snapshot without opening a SQLite connection, so a readiness
+        check can call it without file-locking an index Reimport All is about to
+        replace (Windows).
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        usable: list[PitchSourceMeta] = []
+        for entry in config.pitch_chain:
+            if not entry.enabled or not entry.source_id:
+                continue
+            meta = self._sources.get(entry.source_id)
+            if meta is not None and meta.schema_ok and meta.entry_count > 0:
+                usable.append(meta)
+        return sorted(usable, key=lambda m: m.source_id)
+
     def build_sources(self, config: AnkiMinerConfig) -> list[IndexedPitchProvider]:
         """Build the ordered provider list from config + disk state.
 
@@ -141,3 +180,16 @@ class PitchSourceRegistry:
                 )
             )
         return sources
+
+
+def stale_enabled_pitch_sources(config: AnkiMinerConfig) -> list[PitchSourceMeta]:
+    """Build+scan a fresh registry and return enabled slots needing reimport.
+
+    Convenience wrapper for the startup migration prompt and the pre-run gate,
+    matching ``stale_enabled_dicts``. ``load()`` swallows scan OSErrors, so this
+    never raises for a missing / unreadable pitch folder — it reports no
+    staleness instead.
+    """
+    registry = PitchSourceRegistry(config.pitch_root)
+    registry.load()
+    return registry.stale_enabled(config)
