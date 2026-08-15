@@ -61,6 +61,15 @@ def derive_pack_id(folder_name: str) -> str:
     return _slugify(folder_name)
 
 
+@dataclass(frozen=True)
+class AudioPackImportResult:
+    pack_id: str
+    source_name: str  # source string stored in entries rows
+    format: str  # "ajt" | "ozk5" | "nhk16" | "forvo" | "jpod_legacy"
+    entry_count: int
+    skipped_malformed: int = 0
+
+
 def _validate_android_db(db_path: Path) -> tuple[int, int]:
     """Validate a local-audio-yomichan Android database without modifying it."""
     try:
@@ -161,15 +170,6 @@ def import_android_audio_db(
         format="android_db",
         entry_count=entry_count,
     )
-
-
-@dataclass(frozen=True)
-class AudioPackImportResult:
-    pack_id: str
-    source_name: str  # source string stored in entries rows
-    format: str  # "ajt" | "ozk5" | "nhk16" | "forvo" | "jpod_legacy"
-    entry_count: int
-    skipped_malformed: int = 0
 
 
 def import_audio_pack(

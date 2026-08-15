@@ -160,14 +160,14 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 "%1 was only partly removed. Re-import or repair this audio pack before retrying."
             ),
             config_pending_failure_summary=self.tr(
-                "%1 could not be restored after its settings update failed. Restart Anki Miner before retrying."
+                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
             ),
             post_save_summary=self.tr(
                 "%1 was removed, but Anki Miner could not refresh it. "
                 "The removal is saved and will remain after a restart."
             ),
             cleanup_pending_summary=self.tr(
-                "%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup."
+                "%1 was removed, but its leftover folder could not be deleted. " "Cleanup will be retried at startup."
             ),
         )
         self._setup_fields()
@@ -223,7 +223,9 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
         container = self._build_chain_container(
             ChainListLabels(
-                explanation=self.tr("Sources are tried top to bottom — the first one that has audio for a word wins."),
+                explanation=self.tr(
+                    "Sources are tried top to bottom — the first one that has audio " "for a word wins."
+                ),
                 add=self.tr("Add audio source…"),
                 remove=self.tr("Remove audio source"),
                 remove_tooltip=self.tr("Remove the selected audio source"),
