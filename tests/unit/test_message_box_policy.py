@@ -59,7 +59,7 @@ LEDGER: dict[str, str] = {
     # --- Destructive confirmations and open questions -----------------------
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.restore_unlisted": "confirm",
     "gui/main_window.py::MainWindow._restyle_mined_cards": "confirm",
-    "gui/main_window.py::MainWindow._on_stale_dicts_scanned": "choice",
+    "gui/main_window.py::MainWindow._on_stale_resources_scanned": "choice",
     "gui/widgets/analytics_tab.py::AnalyticsTab._on_reset_clicked": "confirm",
     "gui/widgets/backfill_tab.py::CardBackfillTab._start_apply": "confirm",
     "gui/widgets/deck_filter_tab.py::DeckFilterTab._start_apply": "confirm",
@@ -87,10 +87,11 @@ LEDGER: dict[str, str] = {
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all.on_finished": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_dict.on_success": "notice",
-    "gui/controllers/frequency_import_flow.py::FrequencyImportFlow._add_source_picked.on_success": "notice",
-    "gui/controllers/frequency_import_flow.py::FrequencyImportFlow._continue_reimport.on_success": "notice",
-    "gui/controllers/pitch_import_flow.py::PitchImportFlow._add_source_picked.on_success": "notice",
-    "gui/controllers/pitch_import_flow.py::PitchImportFlow._continue_reimport.on_success": "notice",
+    # Frequency and pitch share one flow now, so one key covers both families.
+    "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow._add_source_picked.on_success": "notice",
+    "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow._continue_reimport.on_success": "notice",
+    "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow.reimport_all": "notice",
+    "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow.reimport_all.on_finished": "notice",
     "gui/main_window.py::MainWindow._restyle_mined_cards.on_result": "notice",
     "gui/main_window.py::MainWindow._run_shortcut_work.on_done": "notice",
     "gui/main_window.py::MainWindow.commit_boot": "notice",
@@ -100,6 +101,9 @@ LEDGER: dict[str, str] = {
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_export._on_picked": "notice",
     "gui/widgets/settings_tab.py::SettingsTab._on_export_settings._on_picked": "notice",
     "gui/widgets/settings_tab.py::SettingsTab._on_retry_missing_audio_done": "notice",
+    # The answer to a button the user is standing in front of, and after a
+    # schema bump the *usual* answer. Silence here read as a dead button.
+    "gui/widgets/settings_tab.py::SettingsTab._show_nothing_to_restore": "notice",
     "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_timing_clicked._on_parsed": "notice",
     "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_tracks_clicked._on_streams": "notice",
     "gui/widgets/subtitle_retime_tab.py::SubtitleRetimeTab._on_tracks_clicked._on_choices": "notice",
