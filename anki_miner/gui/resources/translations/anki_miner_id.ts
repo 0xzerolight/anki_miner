@@ -3168,12 +3168,16 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>%1 berkas media tidak dapat diimpor.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Pilih zip kamus Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Kamus %1 dari %2: %3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3184,12 +3188,28 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Mengimpor %1 (%2 entri)</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Mengimpor kamus…</translation>
+        <source>Failed:</source>
+        <translation>Gagal:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Dibatalkan sebelum kamus yang tersisa.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Selesai.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3198,10 +3218,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>Kamus tidak dapat diimpor.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3240,6 +3256,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Kamus tidak dapat diimpor ulang.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Tidak ada XML JMdict di %1. Unduh dari EDRDG dan letakkan di sana.</translation>
     </message>
@@ -3270,10 +3290,6 @@ Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang…
         <translation>Tidak ada yang perlu diimpor ulang</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Kamus %1 dari %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 kamus diimpor ulang:</translation>
     </message>
@@ -3282,20 +3298,8 @@ Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang…
         <translation>Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang… per baris):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Gagal:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Dibatalkan sebelum kamus yang tersisa.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Impor Ulang Semua</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Selesai.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -3700,10 +3704,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
         <translation>Menggabungkan %1 kata dengan ekspresi duplikat</translation>
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>Melewati %1 kata yang sudah berkartu dengan ejaan lain</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
@@ -4330,8 +4330,12 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation> Ini adalah sumber berbasis kata; label tingkatnya tampil di kartu tetapi tidak memengaruhi pemfilteran peringkat frekuensi.</translation>
     </message>
     <message>
-        <source>Choose frequency source</source>
-        <translation>Pilih sumber frekuensi</translation>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
@@ -4342,6 +4346,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation> Ini adalah sumber berbasis kemunculan; jumlahnya dikonversi menjadi peringkat.</translation>
     </message>
     <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Sumber frekuensi tidak dapat diimpor.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Sumber Frekuensi Ditambahkan</translation>
     </message>
@@ -4350,24 +4358,32 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Mengimpor %1 entri dari '%2'.</translation>
     </message>
     <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Gagal:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Selesai.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Mengimpor sumber frekuensi…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Batal</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Sumber frekuensi tidak dapat diimpor.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4404,6 +4420,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>The frequency source could not be re-imported.</source>
         <translation>Sumber frekuensi tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Frequency source (%1);;All Files (*)</source>
@@ -5458,12 +5478,20 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
 </context><context>
     <name>PitchImportFlow</name>
     <message>
-        <source>Choose pitch accent source</source>
-        <translation>Pilih sumber aksen nada</translation>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (melewati %1 entri yang rusak)</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Sumber aksen nada tidak dapat diimpor.</translation>
     </message>
     <message>
         <source>Pitch Source Added</source>
@@ -5474,24 +5502,32 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
         <translation>Mengimpor %1 entri dari '%2'.</translation>
     </message>
     <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Gagal:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Selesai.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
     </message>
     <message>
-        <source>Importing pitch source…</source>
-        <translation>Mengimpor sumber aksen nada…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Batal</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Sumber aksen nada tidak dapat diimpor.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5528,6 +5564,10 @@ Anda dapat menyempurnakannya nanti di Pengaturan → Anki.</translation>
     <message>
         <source>The pitch source could not be re-imported.</source>
         <translation>Sumber aksen nada tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Pitch accent source (%1);;All Files (*)</source>

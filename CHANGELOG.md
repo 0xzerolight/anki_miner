@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Import several dictionary, frequency, or pitch sources at once.** The GUI imports the selected files in order and reports partial failures without losing the sources that succeeded.
 
 ### Changed
 

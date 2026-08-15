@@ -3170,12 +3170,16 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
         <translation>Impossibile importare %1 file multimediali.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Scegliere lo zip del dizionario Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Dizionario %1 di %2: %3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3186,12 +3190,28 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
         <translation>Importato %1 (%2 voci)</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Importazione completata, ma impossibile aggiornare le impostazioni.</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Importazione del dizionario in corso…</translation>
+        <source>Failed:</source>
+        <translation>Non riusciti:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Annullato prima dei dizionari rimanenti.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Completato.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Importazione completata, ma impossibile aggiornare le impostazioni.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3200,10 +3220,6 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>Impossibile importare il dizionario.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3242,6 +3258,10 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
         <translation>Impossibile reimportare il dizionario.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Nessun XML JMdict in %1. Scaricarlo da EDRDG e collocarlo lì.</translation>
     </message>
@@ -3272,10 +3292,6 @@ Saltati (non idonei alla riparazione automatica; utilizzare Reimporta… per rig
         <translation>Niente da reimportare</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Dizionario %1 di %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>Reimportato/i %1 dizionario/dizionari:</translation>
     </message>
@@ -3284,20 +3300,8 @@ Saltati (non idonei alla riparazione automatica; utilizzare Reimporta… per rig
         <translation>Saltati (non idonei alla riparazione automatica; utilizzare Reimporta… per riga):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Non riusciti:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Annullato prima dei dizionari rimanenti.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Reimporta tutto</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Completato.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -3706,10 +3710,6 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
         <translation>Compattata/e %1 parola/e con espressione duplicata</translation>
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>Saltate %1 parola/e già in una carta con un'altra grafia</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
@@ -4343,8 +4343,12 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation> Questa è una sorgente basata sulle parole; le sue etichette di livello vengono mostrate sulla carta ma non influenzano il filtraggio per rango di frequenza.</translation>
     </message>
     <message>
-        <source>Choose frequency source</source>
-        <translation>Scegli sorgente di frequenza</translation>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
@@ -4355,6 +4359,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation> Questa è una sorgente basata sulle occorrenze; i suoi conteggi sono stati convertiti in ranghi.</translation>
     </message>
     <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Impossibile importare la fonte di frequenza.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Sorgente di frequenza aggiunta</translation>
     </message>
@@ -4363,24 +4371,32 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation>Importate %1 voci da '%2'.</translation>
     </message>
     <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Non riusciti:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Completato.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Importazione completata, ma impossibile aggiornare le impostazioni.</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Importazione della sorgente di frequenza…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Annulla</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Impossibile importare la fonte di frequenza.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4417,6 +4433,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     <message>
         <source>The frequency source could not be re-imported.</source>
         <translation>Impossibile reimportare la fonte di frequenza.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
     </message>
     <message>
         <source>Frequency source (%1);;All Files (*)</source>
@@ -5471,12 +5491,20 @@ You can fine-tune these later in Settings → Anki.</source>
 </context><context>
     <name>PitchImportFlow</name>
     <message>
-        <source>Choose pitch accent source</source>
-        <translation>Scegliere una fonte di accento tonale</translation>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (saltate %1 voci malformate)</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Impossibile importare la fonte di accento tonale.</translation>
     </message>
     <message>
         <source>Pitch Source Added</source>
@@ -5487,24 +5515,32 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Importate %1 voci da '%2'.</translation>
     </message>
     <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Non riusciti:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Completato.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Importazione completata, ma impossibile aggiornare le impostazioni.</translation>
     </message>
     <message>
-        <source>Importing pitch source…</source>
-        <translation>Importazione della fonte di accento tonale…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Annulla</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Impossibile importare la fonte di accento tonale.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5541,6 +5577,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>The pitch source could not be re-imported.</source>
         <translation>Impossibile reimportare la fonte di accento tonale.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
     </message>
     <message>
         <source>Pitch accent source (%1);;All Files (*)</source>

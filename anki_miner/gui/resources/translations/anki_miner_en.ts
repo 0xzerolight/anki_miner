@@ -3156,11 +3156,15 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
+        <source>Choose Yomitan dictionary zips</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3172,11 +3176,27 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
+        <source>Imported %1 dictionaries:</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3185,10 +3205,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>The dictionary could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3228,6 +3244,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation type="unfinished" />
     </message>
@@ -3255,10 +3275,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation type="unfinished" />
     </message>
@@ -3267,19 +3283,7 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reimport All</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3678,10 +3682,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4308,7 +4308,11 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose frequency source</source>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4320,6 +4324,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>The frequency source could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation type="unfinished" />
     </message>
@@ -4328,23 +4336,31 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4381,6 +4397,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>The frequency source could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5421,11 +5441,19 @@ You can fine-tune these later in Settings → Anki.</source>
 </context><context>
     <name>PitchImportFlow</name>
     <message>
-        <source>Choose pitch accent source</source>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5437,23 +5465,31 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing pitch source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5490,6 +5526,10 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>The pitch source could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>

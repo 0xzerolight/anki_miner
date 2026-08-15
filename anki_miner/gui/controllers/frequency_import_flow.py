@@ -23,6 +23,7 @@ from anki_miner.config import AnkiMinerConfig, FreqEntry
 from anki_miner.gui.controllers.import_flow_common import (
     ModalImportFlowMixin,
     _begin_import_trace,
+    _ChainedImportResult,
     _log_import_persist,
     _log_import_picker_enter,
     _log_import_picker_return,
@@ -118,40 +119,50 @@ class FrequencyImportFlow(ModalImportFlowMixin):
         current.append(FreqEntry(source_id=source_id, enabled=True))
         return tuple(current)
 
+    def _chain_with_new_sources_appended(self, source_ids: list[str]) -> tuple[FreqEntry, ...]:
+        """Append a newly imported batch, preserving picker order."""
+        unique_ids = list(dict.fromkeys(source_ids))
+        selected = set(unique_ids)
+        current = [entry for entry in self._panel.get_chain() if entry.source_id not in selected]
+        current.extend(FreqEntry(source_id=source_id, enabled=True) for source_id in unique_ids)
+        return tuple(current)
+
     def add_source(self) -> None:
-        """Prompt for a frequency file and import it as a new source."""
+        """Prompt for one or more frequency files and import them sequentially."""
         if not self._begin_mutation("add"):
             return
         trace_id = _begin_import_trace("frequency add")
         picker_started = _log_import_picker_enter(trace_id, "frequency source")
-        file_dialogs.pick_open_file(
+        file_dialogs.pick_open_files(
             self._parent,
-            QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source"),
+            QCoreApplication.translate("FrequencyImportFlow", "Choose frequency sources"),
             resolve_start_dir(None, file_mode=True),
             self._source_picker_filter(),
             on_done=lambda chosen: self._add_source_picked(trace_id, picker_started, chosen),
         )
 
-    def _add_source_picked(self, trace_id: str, picker_started: float, chosen: str) -> None:
-        """Import the file ``add_source``'s picker returned as a new source."""
-        _log_import_picker_return(trace_id, "frequency source", picker_started, chosen)
+    def _add_source_picked(self, trace_id: str, picker_started: float, chosen: list[str]) -> None:
+        """Import the files ``add_source``'s picker returned as new sources."""
+        _log_import_picker_return(trace_id, "frequency source", picker_started, "; ".join(chosen))
         if not chosen:
             self._set_import_buttons_enabled(True)
             return
 
-        try:
-            worker = ImportWorker.for_source(Path(chosen), self._get_config().freqs_root, overwrite=False)
-        except Exception:
-            self._set_import_buttons_enabled(True)
-            raise
+        jobs = [Path(path) for path in chosen]
 
-        def on_success(source_id: str, meta: dict) -> None:
-            new_chain = self._chain_with_new_source_appended(source_id)
-            self._panel.refresh_registry()
-            self._panel.set_chain(new_chain)
-            _log_import_persist(trace_id, "start")
-            self._persist_chain(new_chain)
-            _log_import_persist(trace_id, "done")
+        def make_worker(source_path: Path) -> ImportWorker:
+            return ImportWorker.for_source(source_path, self._get_config().freqs_root, overwrite=False)
+
+        def format_label(index: int, total: int, source_path: Path, message: str | None) -> str:
+            label = tr_format(
+                QCoreApplication.translate("FrequencyImportFlow", "Frequency source %1 of %2: %3"),
+                index,
+                total,
+                source_path.name,
+            )
+            return f"{label}\n{message}" if message is not None else label
+
+        def success_note(source_id: str, meta: dict) -> str:
             skipped = meta.get("skipped_malformed", 0)
             skipped_note = (
                 tr_format(
@@ -169,20 +180,66 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                 if meta.get("converted_to_ranks")
                 else ""
             )
+            return skipped_note + converted_note + self._categorical_note(meta)
+
+        def on_finished(result: _ChainedImportResult[Path]) -> None:
+            imported = [source_id for _job, source_id, _meta in result.successes]
+            if imported:
+                new_chain = self._chain_with_new_sources_appended(imported)
+                self._panel.refresh_registry()
+                self._panel.set_chain(new_chain)
+                _log_import_persist(trace_id, "start")
+                self._persist_chain(new_chain)
+                _log_import_persist(trace_id, "done")
+
+            if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
+                return
+            if len(jobs) == 1 and result.failures and not result.successes:
+                self._report_import_issue(
+                    QCoreApplication.translate("FrequencyImportFlow", "The frequency source could not be imported."),
+                    result.failures[0][1],
+                )
+                return
+            if len(result.successes) == 1 and not result.failures and not result.cancelled:
+                _job, source_id, meta = result.successes[0]
+                QMessageBox.information(
+                    self._parent,
+                    QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Added"),
+                    tr_format(
+                        QCoreApplication.translate("FrequencyImportFlow", "Imported %1 entries from '%2'."),
+                        f"{meta.get('entry_count', 0):,}",
+                        meta.get("source_name", source_id),
+                    )
+                    + success_note(source_id, meta),
+                )
+                return
+
+            lines: list[str] = []
+            if result.successes:
+                lines.append(
+                    tr_format(
+                        QCoreApplication.translate("FrequencyImportFlow", "Imported %1 frequency sources:"),
+                        len(result.successes),
+                    )
+                )
+                for _job, source_id, meta in result.successes:
+                    lines.append(f"  • {meta.get('source_name', source_id)} ({meta.get('entry_count', 0):,} entries)")
+            if result.failures:
+                if lines:
+                    lines.append("")
+                lines.append(QCoreApplication.translate("FrequencyImportFlow", "Failed:"))
+                lines.extend(f"  • {job.name}: {message}" for job, message in result.failures)
+            if result.cancelled:
+                if lines:
+                    lines.append("")
+                lines.append(QCoreApplication.translate("FrequencyImportFlow", "Cancelled before remaining sources."))
             QMessageBox.information(
                 self._parent,
-                QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Added"),
-                tr_format(
-                    QCoreApplication.translate("FrequencyImportFlow", "Imported %1 entries from '%2'."),
-                    f"{meta.get('entry_count', 0):,}",
-                    meta.get("source_name", source_id),
-                )
-                + skipped_note
-                + converted_note
-                + self._categorical_note(meta),
+                QCoreApplication.translate("FrequencyImportFlow", "Frequency Sources Added"),
+                "\n".join(lines) or QCoreApplication.translate("FrequencyImportFlow", "Done."),
             )
 
-        def on_success_error(exc: Exception) -> None:
+        def on_finished_error(exc: Exception, _result: _ChainedImportResult[Path]) -> None:
             self._report_import_issue(
                 QCoreApplication.translate(
                     "FrequencyImportFlow",
@@ -191,25 +248,23 @@ class FrequencyImportFlow(ModalImportFlowMixin):
                 str(exc),
             )
 
-        self._run_modal_import(
-            worker=worker,
-            progress_label=QCoreApplication.translate("FrequencyImportFlow", "Importing frequency source…"),
+        self._run_chained_imports(
+            jobs=jobs,
+            make_worker=make_worker,
+            format_label=format_label,
             cancel_label=QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
             determinate=False,
             join_noun="frequency import worker",
             failure_summary=QCoreApplication.translate(
                 "FrequencyImportFlow", "The frequency source could not be imported."
             ),
-            refusal_message=QCoreApplication.translate(
-                "FrequencyImportFlow", "Another import is still finishing. Wait for it to finish and try again."
-            ),
             cancelling_label=QCoreApplication.translate("FrequencyImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
                 "FrequencyImportFlow", "The import worker finished without a completion result."
             ),
             trace_id=trace_id,
-            on_success=on_success,
-            on_success_error=on_success_error,
+            on_finished=on_finished,
+            on_finished_error=on_finished_error,
         )
 
     def reimport_source(

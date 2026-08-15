@@ -297,8 +297,8 @@ def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path)
     tab.config_changed.connect(tab.update_config)
     tab.dictionary_panel.dicts_root_selector.set_path(str(new_root))
     monkeypatch.setattr(
-        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.pick_open_file",
-        lambda *args, on_done, **kwargs: on_done(str(tmp_path / "dictionary.zip")),
+        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.pick_open_files",
+        lambda *args, on_done, **kwargs: on_done([str(tmp_path / "dictionary.zip")]),
     )
     captured_roots = []
 
@@ -311,10 +311,11 @@ def test_root_edit_is_committed_before_immediate_add(tab, monkeypatch, tmp_path)
         fake_for_yomitan,
     )
 
-    def fake_run_modal_import(**kwargs):
+    def fake_run_chained_imports(**kwargs):
+        kwargs["make_worker"](kwargs["jobs"][0])
         tab._dict_import_flow._set_import_buttons_enabled(True)
 
-    monkeypatch.setattr(tab._dict_import_flow, "_run_modal_import", fake_run_modal_import)
+    monkeypatch.setattr(tab._dict_import_flow, "_run_chained_imports", fake_run_chained_imports)
 
     tab._dict_import_flow.add_dict()
 

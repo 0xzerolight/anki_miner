@@ -3170,12 +3170,16 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>%1 Mediendatei(en) konnten nicht importiert werden.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Yomitan-Wörterbuch-ZIP auswählen</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Yomitan-ZIP (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Wörterbuch %1 von %2: %3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3186,12 +3190,28 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>%1 importiert (%2 Einträge)</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Wörterbuch wird importiert…</translation>
+        <source>Failed:</source>
+        <translation>Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Vor den verbleibenden Wörterbüchern abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Fertig.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3200,10 +3220,6 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>Das Wörterbuch konnte nicht importiert werden.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3242,6 +3258,10 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>Das Wörterbuch konnte nicht erneut importiert werden.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Keine JMdict-XML unter %1. Laden Sie sie von EDRDG herunter und legen Sie sie dort ab.</translation>
     </message>
@@ -3272,10 +3292,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Nichts zum erneuten Importieren</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Wörterbuch %1 von %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 Wörterbuch/Wörterbücher erneut importiert:</translation>
     </message>
@@ -3284,20 +3300,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Übersprungen (nicht für automatische Reparatur geeignet; verwenden Sie den zeilenweisen Reimport…):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Fehlgeschlagen:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Vor den verbleibenden Wörterbüchern abgebrochen.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Alle erneut importieren</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Fertig.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -3706,10 +3710,6 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
         <translation>%1 Wörter mit doppeltem Ausdruck zusammengefasst</translation>
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>%1 Wort(e) übersprungen, die bereits unter einer anderen Schreibweise gekartet sind</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
@@ -4343,8 +4343,12 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation> Dies ist eine wortbasierte Quelle; ihre Stufenbezeichnungen erscheinen auf der Karte, beeinflussen aber die Häufigkeitsrang-Filterung nicht.</translation>
     </message>
     <message>
-        <source>Choose frequency source</source>
-        <translation>Häufigkeitsquelle auswählen</translation>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
@@ -4355,6 +4359,10 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation> Dies ist eine vorkommensbasierte Quelle; ihre Zählungen wurden in Ränge umgewandelt.</translation>
     </message>
     <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Die Häufigkeitsquelle konnte nicht importiert werden.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Häufigkeitsquelle hinzugefügt</translation>
     </message>
@@ -4363,24 +4371,32 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation>%1 Einträge aus '%2' importiert.</translation>
     </message>
     <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Fertig.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Häufigkeitsquelle wird importiert…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Die Häufigkeitsquelle konnte nicht importiert werden.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4417,6 +4433,10 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     <message>
         <source>The frequency source could not be re-imported.</source>
         <translation>Die Häufigkeitsquelle konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Frequency source (%1);;All Files (*)</source>
@@ -5471,12 +5491,20 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
 </context><context>
     <name>PitchImportFlow</name>
     <message>
-        <source>Choose pitch accent source</source>
-        <translation>Quelle für Tonhöhenakzent auswählen</translation>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Die Tonhöhenquelle konnte nicht importiert werden.</translation>
     </message>
     <message>
         <source>Pitch Source Added</source>
@@ -5487,24 +5515,32 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
         <translation>%1 Einträge aus '%2' importiert.</translation>
     </message>
     <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Fertig.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
     </message>
     <message>
-        <source>Importing pitch source…</source>
-        <translation>Tonhöhenquelle wird importiert…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Die Tonhöhenquelle konnte nicht importiert werden.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5541,6 +5577,10 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
     <message>
         <source>The pitch source could not be re-imported.</source>
         <translation>Die Tonhöhenquelle konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Pitch accent source (%1);;All Files (*)</source>

@@ -3172,12 +3172,16 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Не удалось импортировать %1 медиафайл(ов).</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Выберите zip-архив словаря Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip-архив Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Словарь %1 из %2: %3</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3188,12 +3192,28 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Импортирован %1 (записей: %2)</translation>
     </message>
     <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Импорт словаря…</translation>
+        <source>Failed:</source>
+        <translation>Ошибка:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Отменено до обработки остальных словарей.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Готово.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -3202,10 +3222,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>The dictionary could not be imported.</source>
         <translation>Не удалось импортировать словарь.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3244,6 +3260,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Не удалось повторно импортировать словарь.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Нет XML-файла JMdict по пути %1. Скачайте его с EDRDG и поместите туда.</translation>
     </message>
@@ -3274,10 +3294,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Нечего импортировать повторно</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Словарь %1 из %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>Повторно импортировано словарей: %1:</translation>
     </message>
@@ -3286,20 +3302,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Пропущено (не подходят для автоматического восстановления; используйте «Повторный импорт…» в соответствующей строке):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Ошибка:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Отменено до обработки остальных словарей.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Повторно импортировать все</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Готово.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -3712,10 +3716,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
         <translation>Объединено слов с повторяющимся выражением: %1</translation>
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>Пропущено слов, уже имеющих карточку под другим написанием: %1</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
@@ -4356,8 +4356,12 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation> Это источник на основе слов; его метки уровней показываются на карточке, но не влияют на фильтрацию по рангу частотности.</translation>
     </message>
     <message>
-        <source>Choose frequency source</source>
-        <translation>Выберите источник частотности</translation>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
@@ -4368,6 +4372,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation> Это источник на основе количества вхождений; его значения были преобразованы в ранги.</translation>
     </message>
     <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Не удалось импортировать источник частотности.</translation>
+    </message>
+    <message>
         <source>Frequency Source Added</source>
         <translation>Источник частотности добавлен</translation>
     </message>
@@ -4376,24 +4384,32 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Импортировано записей: %1 из «%2».</translation>
     </message>
     <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Ошибка:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Готово.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Импорт завершён, но не удалось обновить настройки.</translation>
     </message>
     <message>
-        <source>Importing frequency source…</source>
-        <translation>Импорт источника частотности…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation>Не удалось импортировать источник частотности.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -4430,6 +4446,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>The frequency source could not be re-imported.</source>
         <translation>Не удалось повторно импортировать источник частотности.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
         <source>Frequency source (%1);;All Files (*)</source>
@@ -5484,12 +5504,20 @@ You can fine-tune these later in Settings → Anki.</source>
 </context><context>
     <name>PitchImportFlow</name>
     <message>
-        <source>Choose pitch accent source</source>
-        <translation>Выберите источник тонального ударения</translation>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> (skipped %1 malformed entries)</source>
         <translation> (пропущено %1 некорректных записей)</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Не удалось импортировать источник тонального ударения.</translation>
     </message>
     <message>
         <source>Pitch Source Added</source>
@@ -5500,24 +5528,32 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation>Импортировано записей: %1 из «%2».</translation>
     </message>
     <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished">Ошибка:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished">Готово.</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Импорт завершён, но не удалось обновить настройки.</translation>
     </message>
     <message>
-        <source>Importing pitch source…</source>
-        <translation>Импорт источника тонального ударения…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation>Не удалось импортировать источник тонального ударения.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -5554,6 +5590,10 @@ You can fine-tune these later in Settings → Anki.</source>
     <message>
         <source>The pitch source could not be re-imported.</source>
         <translation>Не удалось повторно импортировать источник тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
         <source>Pitch accent source (%1);;All Files (*)</source>
