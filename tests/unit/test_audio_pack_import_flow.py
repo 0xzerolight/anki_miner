@@ -165,6 +165,22 @@ def _capture_infos(monkeypatch) -> list[tuple[str, str]]:
     return captured
 
 
+def test_add_android_db_uses_file_picker_and_android_worker(tab, monkeypatch, tmp_path):
+    db_path = tmp_path / "android.db"
+    db_path.touch()
+    worker = MagicMock(name="android_db_worker")
+    factory = MagicMock(return_value=worker)
+    monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(db_path)))
+    monkeypatch.setattr("anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_android_audio_db", factory)
+    run_import = MagicMock()
+    monkeypatch.setattr(tab._audio_pack_import_flow, "_run_modal_import", run_import)
+
+    tab._audio_pack_import_flow.add_android_db()
+
+    factory.assert_called_once_with(db_path, tab.config.audio_packs_root)
+    assert run_import.call_args.kwargs["worker"] is worker
+
+
 def _emit_native_finished(instance: MagicMock) -> None:
     instance.isRunning.return_value = False
     for connect_call in tuple(instance.finished.connect.call_args_list):

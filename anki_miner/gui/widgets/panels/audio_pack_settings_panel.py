@@ -127,6 +127,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of expression audio sources."""
 
     add_pack_requested = pyqtSignal()
+    add_android_db_requested = pyqtSignal()
     reimport_pack_requested = pyqtSignal(str)
     restore_requested = pyqtSignal()
     # Emitted when the user asks to clear JPod101 .miss markers so absent words
@@ -159,14 +160,14 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 "%1 was only partly removed. Re-import or repair this audio pack before retrying."
             ),
             config_pending_failure_summary=self.tr(
-                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
+                "%1 could not be restored after its settings update failed. Restart Anki Miner before retrying."
             ),
             post_save_summary=self.tr(
                 "%1 was removed, but Anki Miner could not refresh it. "
                 "The removal is saved and will remain after a restart."
             ),
             cleanup_pending_summary=self.tr(
-                "%1 was removed, but its leftover folder could not be deleted. " "Cleanup will be retried at startup."
+                "%1 was removed, but its leftover folder could not be deleted. Cleanup will be retried at startup."
             ),
         )
         self._setup_fields()
@@ -222,9 +223,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
 
         container = self._build_chain_container(
             ChainListLabels(
-                explanation=self.tr(
-                    "Sources are tried top to bottom — the first one that has audio " "for a word wins."
-                ),
+                explanation=self.tr("Sources are tried top to bottom — the first one that has audio for a word wins."),
                 add=self.tr("Add audio source…"),
                 remove=self.tr("Remove audio source"),
                 remove_tooltip=self.tr("Remove the selected audio source"),
@@ -241,6 +240,9 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         self._add_pack_action = QAction(self.tr("Audio Pack…"), self._add_menu)
         self._add_pack_action.triggered.connect(lambda _checked=False: self.add_pack_requested.emit())
         self._add_menu.addAction(self._add_pack_action)
+        self._add_android_db_action = QAction(self.tr("Android Audio Database…"), self._add_menu)
+        self._add_android_db_action.triggered.connect(lambda _checked=False: self.add_android_db_requested.emit())
+        self._add_menu.addAction(self._add_android_db_action)
         self._add_online_action = QAction(self.tr("Online Source…"), self._add_menu)
         self._add_online_action.triggered.connect(lambda _checked=False: self._on_add_online_source())
         self._add_menu.addAction(self._add_online_action)
@@ -257,6 +259,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 self._explanation_label.text(),
                 self._add_btn.text(),
                 self._add_pack_action.text(),
+                self._add_android_db_action.text(),
                 self._add_online_action.text(),
                 self._restore_btn.text(),
                 self._retry_missing_btn.text(),

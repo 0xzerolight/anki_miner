@@ -680,6 +680,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         # Audio panel signals — wire Add/Reimport to the import flow controller.
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
+        self.audio_panel.add_android_db_requested.connect(self._audio_pack_import_flow.add_android_db)
         self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
         self.audio_panel.restore_requested.connect(self._restore_audio_from_disk)
         # Persist chain immediately after reorder/toggle.

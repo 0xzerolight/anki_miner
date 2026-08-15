@@ -760,6 +760,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>匯入工作已結束，但未傳回完成結果。</translation>
     </message>
     <message>
+        <source>Choose Android audio database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Android Audio Database Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Registered %1 (%2 entries).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Registering Android audio database…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Android audio database could not be added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+    </message>
+    <message>
+        <source>Choose Android audio database to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>選擇要重新匯入的音訊包資料夾</translation>
     </message>
@@ -768,12 +800,24 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>音訊包已重新匯入</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>已成功重新匯入 %1。</translation>
+    </message>
+    <message>
+        <source>Re-importing Android audio database…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Android audio database could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>音訊包已重新匯入</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -782,10 +826,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>無法重新匯入音訊包。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -880,6 +920,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Audio Pack…</source>
         <translation>音訊包…</translation>
+    </message>
+    <message>
+        <source>Android Audio Database…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Online Source…</source>
@@ -3700,10 +3744,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
         <translation>已合併 %1 個重複表達的單字</translation>
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>已略過 %1 個以其他拼寫方式製卡的單字</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>

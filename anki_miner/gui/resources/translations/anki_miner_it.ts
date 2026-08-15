@@ -761,6 +761,38 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Il processo di importazione è terminato senza un risultato di completamento.</translation>
     </message>
     <message>
+        <source>Choose Android audio database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Android Audio Database Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Registered %1 (%2 entries).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Registering Android audio database…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Android audio database could not be added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
+    </message>
+    <message>
+        <source>Choose Android audio database to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>Scegli la cartella del pacchetto audio da reimportare</translation>
     </message>
@@ -769,12 +801,24 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
         <translation>Le risorse indicizzate sono in uso da mining, precaricamento all'avvio o completamento delle carte. Attendere la fine dell'attività in corso e riprovare.</translation>
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Pacchetto audio reimportato</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>Reimportato %1 correttamente.</translation>
+    </message>
+    <message>
+        <source>Re-importing Android audio database…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Android audio database could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Pacchetto audio reimportato</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -783,10 +827,6 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Impossibile reimportare il pacchetto audio.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Un'altra importazione è ancora in corso. Attendi che finisca e riprova.</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -881,6 +921,10 @@ Formati supportati: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
     <message>
         <source>Audio Pack…</source>
         <translation>Pacchetto audio…</translation>
+    </message>
+    <message>
+        <source>Android Audio Database…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Online Source…</source>
@@ -3706,10 +3750,6 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     <message>
         <source>Collapsed %1 duplicate-expression word(s)</source>
         <translation>Compattata/e %1 parola/e con espressione duplicata</translation>
-    </message>
-    <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation>Saltate %1 parola/e già in una carta con un'altra grafia</translation>
     </message>
     <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>

@@ -76,11 +76,13 @@ class LocalAudioPackFetcher:
         pack_dir: Path,
         pack_id: str,
         cache_dir: Path,
+        blob_db_path: Path | None = None,
     ) -> None:
         self._db_path = db_path
         self._pack_dir = pack_dir.resolve()
         self._pack_id = pack_id
         self._cache_dir = _pack_cache_dir(cache_dir, pack_id)
+        self._blob_db_path = blob_db_path
 
     @property
     def pack_id(self) -> str:
@@ -144,7 +146,7 @@ class LocalAudioPackFetcher:
         conn: sqlite3.Connection | None = None
         try:
             try:
-                conn = storage.open_readonly(self._db_path)
+                conn = storage.open_readonly(self._blob_db_path or self._db_path)
             except (sqlite3.Error, OSError) as exc:
                 logger.debug("LocalAudioPackFetcher: cannot open %s: %s", self._db_path, exc)
                 return None
@@ -177,6 +179,35 @@ class LocalAudioPackFetcher:
 
         # 3. Walk rows in id order; apply containment guard; copy first safe hit.
         for row in rows:
+            if self._blob_db_path is not None:
+                suffix = Path(row.file).suffix.lower() or ".mp3"
+                cache_path = self._cache_dir / f"{stem}{suffix}"
+                try:
+                    blob_conn = storage.open_readonly(self._blob_db_path)
+                    try:
+                        found = blob_conn.execute(
+                            "SELECT data FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
+                            (row.file, row.source),
+                        ).fetchone()
+                    finally:
+                        blob_conn.close()
+                    if found is None or not isinstance(found[0], bytes) or not found[0]:
+                        continue
+                    self._cache_dir.mkdir(parents=True, exist_ok=True)
+                    with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
+                        part_path = Path(tmp_fd.name)
+                        tmp_fd.write(found[0])
+                    try:
+                        os.replace(part_path, cache_path)
+                    finally:
+                        with contextlib.suppress(FileNotFoundError):
+                            part_path.unlink()
+                    _record_cached_path(self._cache_dir, cache_path)
+                    return cache_path
+                except (sqlite3.Error, OSError) as exc:
+                    logger.debug("LocalAudioPackFetcher: blob read failed for %s: %s", row.file, exc)
+                    return None
+
             candidate = self._resolve_safe(row.file)
             if candidate is None:
                 continue

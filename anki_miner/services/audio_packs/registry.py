@@ -31,6 +31,7 @@ class AudioPackMeta:
     pack_dir: Path
     pack_dir_exists: bool
     db_path: Path
+    source_db: Path | None = None
 
 
 class AudioPackRegistry:
@@ -99,6 +100,10 @@ class AudioPackRegistry:
 
         pack_dir_str = meta.get("pack_dir", "")
         pack_dir = Path(pack_dir_str) if pack_dir_str else child
+        source_db_str = meta.get("source_db", "")
+        source_db = Path(source_db_str) if source_db_str else None
+
+        pack_dir_exists = source_db.is_file() if meta.get("format") == "android_db" and source_db else pack_dir.is_dir()
 
         return AudioPackMeta(
             pack_id=meta.get("pack_id", child.name),
@@ -107,8 +112,9 @@ class AudioPackRegistry:
             entry_count=count,
             schema_ok=(version == SCHEMA_VERSION),
             pack_dir=pack_dir,
-            pack_dir_exists=pack_dir.is_dir(),
+            pack_dir_exists=pack_dir_exists,
             db_path=db,
+            source_db=source_db,
         )
 
     @property
@@ -187,12 +193,20 @@ class AudioPackRegistry:
                     meta.pack_dir,
                 )
                 continue
+            if meta.format == "android_db" and (meta.source_db is None or not meta.source_db.is_file()):
+                logger.warning(
+                    "Android audio database for pack '%s' is missing (%s); skipping",
+                    entry.pack_id,
+                    meta.source_db,
+                )
+                continue
             chain.append(
                 LocalAudioPackFetcher(
                     db_path=meta.db_path,
                     pack_dir=meta.pack_dir,
                     pack_id=meta.pack_id,
                     cache_dir=cache_dir,
+                    blob_db_path=meta.source_db if meta.format == "android_db" else None,
                 )
             )
         return chain
