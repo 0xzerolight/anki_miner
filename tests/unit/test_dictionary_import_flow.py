@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
+from anki_miner.gui.controllers.import_flow_common import _ChainedImportResult
 
 MOD = "anki_miner.gui.controllers.dictionary_import_flow"
 COMMON = "anki_miner.gui.controllers.import_flow_common"
@@ -72,6 +73,27 @@ def test_new_dictionary_batch_preserves_picker_order(tmp_path: Path):
     chain = flow._with_dicts_at_top(["first", "second"])
 
     assert [entry.dict_id for entry in chain] == ["first", "second", "existing"]
+
+
+def test_single_failed_zip_reports_an_issue_instead_of_an_added_box(tmp_path: Path, monkeypatch):
+    flow = _make_flow(tmp_path / "dicts")
+    issues: list[tuple[str, str]] = []
+    flow._report_import_issue = lambda summary, details="": issues.append((summary, details))
+    boxes: list[str] = []
+    monkeypatch.setattr(f"{MOD}.QMessageBox.information", lambda *a, **kw: boxes.append("shown"))
+
+    captured: dict = {}
+    flow._run_chained_imports = lambda **kwargs: captured.update(kwargs)
+    with patch(
+        f"{MOD}.file_dialogs.pick_open_files",
+        side_effect=lambda *a, on_done, **k: on_done([str(tmp_path / "one.zip")]),
+    ):
+        flow.add_dict()
+
+    captured["on_finished"](_ChainedImportResult(successes=(), failures=((Path("one.zip"), "boom"),), cancelled=False))
+
+    assert boxes == []
+    assert issues and issues[0][1] == "boom"
 
 
 def test_corrupt_saved_jmdict_zip_falls_back_to_configured_xml(tmp_path: Path):
