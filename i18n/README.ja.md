@@ -31,57 +31,57 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Turn native Japanese content into Anki vocabulary cards.
+日本語のネイティブコンテンツを Anki の語彙カードに変換します。
 </p>
 
 <p align="center">
-<b>On Android?</b> Get <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a> - the same mining, on your phone through AnkiDroid.
+<b>Android をお使いですか？</b> <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a> をどうぞ - AnkiDroid を通して、同じマイニングをスマートフォンで。
 </p>
 
 <p align="center">
-Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
+Anki Miner が役に立ったら ⭐ スターをお願いします - 他の人が見つけやすくなります :)。
 </p>
 
 
-# <p align="center">Mining Demo</p>
+# <p align="center">マイニングのデモ</p>
 
 ![Anki Miner Showcase](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.gif)
 
-<p align="center">⬇️ <a href="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.mp4">Full demo with sound (MP4)</a></p>
+<p align="center">⬇️ <a href="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.mp4">音声付きのフルデモ（MP4）</a></p>
 
-### Example cards
+### カードの例
 
 | ![ホント](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.gif) | ![いちゃいちゃ](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.gif) | ![代](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.gif) |
 |:--:|:--:|:--:|
-| ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.mp4) | ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.mp4) | ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.mp4) |
+| ⬇️ [MP4（音声付き）](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.mp4) | ⬇️ [MP4（音声付き）](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.mp4) | ⬇️ [MP4（音声付き）](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.mp4) |
 
-## Installation
+## インストール
 
-### Requirements
+### 動作要件
 
-- **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (code `2055492159`)
-- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx or source.
+- **Anki** と [AnkiConnect](https://ankiweb.net/shared/info/2055492159) アドオン（コード `2055492159`）
+- **ffmpeg** + **libmpv**（動画プレビューのみ）- pip/pipx またはソースからインストールする場合にのみ必要です。
 
-Grab the download for your platform from the [latest release](https://github.com/0xzerolight/anki_miner/releases/latest):
+お使いのプラットフォーム向けのダウンロードは[最新リリース](https://github.com/0xzerolight/anki_miner/releases/latest)から入手してください:
 
-| Platform | Download |
+| プラットフォーム | ダウンロード |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-macOS-arm64.tar.gz` |
-| macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
-| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
-| Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
+| macOS（Apple Silicon / M1-M4） | `AnkiMiner-macOS-arm64.tar.gz` |
+| macOS（Intel） | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
+| Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
+| Linux（その他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
+¹ ローカル Whisper による字幕生成と AVIF スクリーンショットは含まれません。すべての機能を使うには: `pipx install "anki-miner[asr]"`。
 
-### First-run notes (unsigned builds)
+### 初回起動時の注意（未署名ビルド）
 
-- **macOS**: Gatekeeper blocks the app. Extract first, then `xattr -dr com.apple.quarantine AnkiMiner/`
-- **Windows SmartScreen**: **More info** -> **Run anyway**.
-- **Windows Defender false positive**: restore from **Protection history** or [report to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
+- **macOS**: Gatekeeper がアプリをブロックします。先に展開してから `xattr -dr com.apple.quarantine AnkiMiner/`
+- **Windows SmartScreen**: **詳細情報** -> **実行**。
+- **Windows Defender の誤検知**: **保護の履歴** から復元するか、[Microsoft に報告](https://www.microsoft.com/en-us/wdsi/filesubmission)してください。
 
 <details>
-<summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
+<summary><strong>PyPI からインストール（Python 3.11+）</strong></summary>
 
 ```bash
 pipx install anki-miner   # or: pip install anki-miner
@@ -91,7 +91,7 @@ anki_miner_gui
 </details>
 
 <details>
-<summary><strong>Install from source</strong></summary>
+<summary><strong>ソースからインストール</strong></summary>
 
 ```bash
 git clone https://github.com/0xzerolight/anki_miner.git
@@ -100,146 +100,146 @@ pip install -e .
 anki_miner_gui
 ```
 
-For full development setup, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+開発環境の完全なセットアップは [CONTRIBUTING.md](../CONTRIBUTING.md) を参照してください。
 
 </details>
 
-## Tabs
+## タブ
 
-- **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
-- **Deck Builder** - mine a whole series into one frequency-ranked deck.
-- **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
-- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
-- **Analytics** - mining history, difficulty rankings, milestones, undo.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
-- **Settings** - everything configurable.
+- **動画** - 単一の動画/字幕のペア、バッチフォルダ、または YouTube の URL をマイニングします。
+- **デッキビルダー** - シリーズ全体をマイニングして、頻度順に並んだ 1 つのデッキにまとめます。
+- **オーディオブック** - オーディオブック、ポッドキャスト、ラジオ、楽曲（音声 + 字幕/文字起こしのペア）をマイニングします。
+- **読み** - 漫画（mokuro）、小説（`.epub`、`.txt`。1 冊でもフォルダ全体でも可）、単体の字幕ファイル、貼り付けた日本語テキストをマイニングします。
+- **分析** - マイニング履歴、難易度ランキング、マイルストーン、取り消し。
+- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（alass）、メディアをセリフだけの音声に凝縮、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完。
+- **設定** - 設定できるものすべて。
 
-## Other Features
+## その他の機能
 
-- Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
-- Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
-- Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
-- Multiple frequency lists chained by priority.
-- Word audio on cards from local audio packs, JapanesePod101, or Google TTS.
-- Sentence audio on Reading cards from Google Translate TTS or Naver Papago (off by default).
-- Per-dictionary glossary styling, Yomitan-style.
-- Embedded libmpv video preview - play a word's scene while curating, or nudge subtitle timing with live playback.
-- Animated screenshots (see example cards above).
-- Settings profiles - save named configurations and switch between them from the header.
-- Restyle Mined Cards - re-apply your current card styling to cards you already made (Tools menu).
+- 単語キュレーター - カードが作られる前に候補の単語をすべて確認できます。シーン、漫画のページ、辞書項目を並べて表示します。
+- 豊富なフィルタリング: i+1、頻度ランクの範囲、ブラックリスト、正規表現、単語セットなど。
+- オフラインの Yomitan 辞書のインポート - 語義、ピッチアクセント、頻度 - 優先順位で連鎖します。
+- 複数の頻度リストを優先順位で連鎖できます。
+- ローカルの音声パック、JapanesePod101、Google TTS からカードに単語の音声を付けられます。
+- 「読み」のカードには Google 翻訳 TTS または Naver Papago の例文音声を付けられます（既定ではオフ）。
+- 辞書ごとの語義スタイル設定（Yomitan 風）。
+- 埋め込み libmpv による動画プレビュー - キュレーション中に単語のシーンを再生したり、再生を見ながら字幕のタイミングを微調整したりできます。
+- アニメーションするスクリーンショット（上のカードの例を参照）。
+- 設定プロファイル - 名前を付けた設定を保存し、ヘッダーから切り替えられます。
+- マイニングしたカードのスタイルを再適用 - 現在のカードスタイルを、すでに作成済みのカードに適用し直します（ツールメニュー）。
 
 <details>
-<summary><strong>Built-in themes (29)</strong></summary>
+<summary><strong>組み込みテーマ（29 種類）</strong></summary>
 
-- **Ayu** - Light, Mirage, Dark
-- **Catppuccin** - Latte (light); Frappé, Macchiato, Mocha (dark)
-- **Dracula** - Dracula, Alucard
-- **Everforest** - Light, Dark
-- **GitHub** - Light; Dark, Dark Dimmed
-- **Gruvbox** - Light Medium, Dark Medium
-- **Kanagawa** - Lotus (light), Wave (dark)
-- **Rosé Pine** - Dawn (light); Main, Moon (dark)
-- **Solarized** - Light, Dark
-- **Standalone** - Light, Dark, Sakura, Nord, One Dark, Tokyo Night
+- **Ayu** - Light、Mirage、Dark
+- **Catppuccin** - Latte（ライト）; Frappé、Macchiato、Mocha（ダーク）
+- **Dracula** - Dracula、Alucard
+- **Everforest** - Light、Dark
+- **GitHub** - Light; Dark、Dark Dimmed
+- **Gruvbox** - Light Medium、Dark Medium
+- **Kanagawa** - Lotus（ライト）、Wave（ダーク）
+- **Rosé Pine** - Dawn（ライト）; Main、Moon（ダーク）
+- **Solarized** - Light、Dark
+- **Standalone** - Light、Dark、Sakura、Nord、One Dark、Tokyo Night
 
-Theme licenses: [LICENSE-THEMES.md](../LICENSE-THEMES.md). 
-Want another theme added? Suggest in a GitHub Issue.
+テーマのライセンス: [LICENSE-THEMES.md](../LICENSE-THEMES.md). 
+別のテーマを追加してほしいですか？ GitHub Issue で提案してください。
 
 </details>
 
 <details>
-<summary><strong>How It Works</strong></summary>
+<summary><strong>仕組み</strong></summary>
 
-1. **Read the subtitles** and split Japanese into individual words.
-2. **Filter** to content words you don't already know - optionally reviewing the list yourself in the Word Curator.
-3. **Grab a screenshot and audio clip** from the video for each line.
-4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online if enabled (slower, rate-limited).
-5. **Send the finished cards to Anki.**
+1. **字幕を読み込み**、日本語を個々の単語に分割します。
+2. まだ知らない内容語だけに**フィルタリング**します。必要なら単語キュレーターで自分でリストを確認できます。
+3. 各行について、動画から**スクリーンショットと音声クリップを取得**します。
+4. 設定したオフライン辞書で**語義を検索**します。有効にしていればオンラインの Jisho にフォールバックすることもできます（低速、レート制限あり）。
+5. **完成したカードを Anki に送信します。**
 
 </details>
 
-## Recommended Resources
+## 推奨リソース
 
-| Type | Resource | Download | Add via |
+| 種類 | リソース | ダウンロード | 追加方法 |
 |------|----------|----------|---------|
-| Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
-| Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
-| Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Add Dictionary… |
-| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Pitch Accent -> Add pitch source… |
-| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Pitch Accent -> Add pitch source… |
-| Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… |
-| Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… |
+| 辞書 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 辞書を追加… |
+| 辞書 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 辞書を追加… |
+| 辞書 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | サイト上で生成 | 辞書を追加… |
+| ピッチ | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | ピッチアクセント -> ピッチソースを追加… |
+| ピッチ | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | ピッチアクセント -> ピッチソースを追加… |
+| 頻度 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻度 -> 頻度ソースを追加… |
+| 頻度 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻度 -> 頻度ソースを追加… |
 
 
 <details>
-<summary><strong>JMnedict License</strong></summary>
+<summary><strong>JMnedict のライセンス</strong></summary>
 
-Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
+[JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html)（JMdict/EDICT プロジェクト、EDRDG、CC BY-SA 4.0）から派生した人名の単語セットを同梱して使用しています。
 
 </details>
 
-## Troubleshooting
+## トラブルシューティング
 
-| Issue                    | Solution                                                                         |
+| 問題                    | 解決方法                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
-| "Cannot connect to Anki" | Start Anki and ensure AnkiConnect is installed.                                  |
-| "Deck not found"         | Pick an existing deck in Settings -> Cards & Anki. Decks are not created for you; make it in Anki first if you need a new one. |
-| "Note type not found"    | Configure your note type's field names in Settings -> Cards & Anki.               |
-| "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
-| No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
-| Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
-| Fresh install has no definitions | Run Tools -> Setup Wizard or Tools -> Download Recommended Resources. For manual import, keep the Yomitan ZIP intact (do not unzip it). |
-| Add Dictionary stalls or fails | Note the last visible stage and attach logs (see "Where are the logs?" below). Include the dictionary ZIP name, source, and size in the report. |
-| Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. |
-| Reporting a bug          | Help → Export Diagnostics… writes a ZIP with logs and system details to a location you choose. Review it before uploading because it contains file paths and file names from your computer. Nothing is uploaded automatically. |
-| More diagnostic logging | Set `ANKI_MINER_LOG_LEVEL=DEBUG` before starting Anki Miner to capture third-party yt-dlp, urllib3, and fugashi details. The default is `WARNING`; Anki Miner logs remain at DEBUG. |
-| Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
-| Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
+| 「Anki に接続できません」 | Anki を起動し、AnkiConnect がインストールされていることを確認してください。       |
+| 「デッキが見つかりません」 | 設定 -> カードと Anki で既存のデッキを選んでください。デッキは自動では作成されません。新しいデッキが必要な場合は、先に Anki で作成してください。 |
+| 「ノートタイプが見つかりません」 | 設定 -> カードと Anki でノートタイプのフィールド名を設定してください。            |
+| 「ffmpeg が見つかりません」 | ffmpeg をインストールし、PATH に追加してください。                               |
+| 語義が見つからない       | 設定 -> 辞書を追加… で Yomitan 辞書を追加するか（推奨）、Jisho へのフォールバックを有効にしてください（低速、レート制限あり）。 |
+| Windows のインストーラーが開かない / SmartScreen の警告 | [初回起動時の注意](#初回起動時の注意未署名ビルド)を参照してください: **詳細情報** -> **実行** を選びます。Defender の誤検知は **保護の履歴** から復元してください。 |
+| 新規インストールで語義が出ない | ツール -> セットアップウィザード、またはツール -> 推奨リソースをダウンロード を実行してください。手動でインポートする場合は、Yomitan の ZIP をそのままの状態にしておいてください（解凍しないでください）。 |
+| 辞書を追加 が止まる、または失敗する | 最後に見えた段階を控え、ログを添付してください（下の「ログはどこにありますか？」を参照）。報告には辞書 ZIP の名前、入手元、サイズを含めてください。 |
+| ログはどこにありますか？ | ヘルプ -> ログフォルダを開く を使うか、Windows では `%USERPROFILE%\.anki_miner\anki_miner.log`、macOS/Linux では `~/.anki_miner/anki_miner.log` を開いてください。ローテーションされたログには `.1` から `.5` の接尾辞が付きます。 |
+| バグを報告する           | ヘルプ -> 診断情報をエクスポート… で、ログとシステム情報を含む ZIP を任意の場所に書き出します。お使いのコンピューターのファイルパスやファイル名が含まれるため、アップロードする前に内容を確認してください。自動でアップロードされるものはありません。 |
+| 診断ログを増やしたい | Anki Miner を起動する前に `ANKI_MINER_LOG_LEVEL=DEBUG` を設定すると、サードパーティの yt-dlp、urllib3、fugashi の詳細を記録できます。既定は `WARNING` で、Anki Miner 自身のログは DEBUG のままです。 |
+| 音声の言語が違う         | 最初に日本語の音声トラックを試し、なければ既定のものにフォールバックします。      |
+| 字幕がずれている         | GUI の字幕オフセット調整を使ってください（範囲は ±300 秒）。                     |
 
-## Roadmap
+## ロードマップ
 
-List of ideas for future versions of Anki Miner. Not in priority order. Feature requests take precedence.
-- Suggest a feature - [Open an issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discuss the roadmap - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+Anki Miner の今後のバージョンに向けたアイデアの一覧です。優先順ではありません。機能リクエストが優先されます。
+- 機能を提案する - [Issue を作成](https://github.com/0xzerolight/anki_miner/issues)。
+- ロードマップについて議論する - [Discussions](https://github.com/0xzerolight/anki_miner/discussions)。
 
-- **Features**:
-  - [x] UI language selection.
-  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
-  - [x] Reading tab: Mine manga and books.
-  - [x] Backfill tool.
-  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
-  - [ ] Automatic subtitle downloading.
+- **機能**:
+  - [x] UI の言語選択。
+  - [x] ローカル字幕作成タブ: ローカルで字幕を生成するオプトインのタブ。
+  - [x] 読みタブ: 漫画と書籍のマイニング。
+  - [x] 補完ツール。
+  - [ ] メディアライブラリ: 分析タブを拡張し、あらゆる形式のローカルメディアライブラリを表示する。
+  - [ ] 字幕の自動ダウンロード。
 
-- **Long-term**:
-  - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Beyond Japanese: Mining other languages.
-  - [ ] Anki Miner browser extension.
-
-
-## Contributing
-
-Contributions of any kind are welcome.
-If you want to support the project, please share it with others who may benefit from it.
-
-- New here? Start with [CONTRIBUTING.md](../CONTRIBUTING.md).
-- Architecture overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Testing strategy: [TESTING.md](../TESTING.md).
-- Code of Conduct: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
-- Security: [SECURITY.md](../SECURITY.md).
-
-Bug reports and feature requests -> [Issues](https://github.com/0xzerolight/anki_miner/issues).
-General questions and discussion -> [Discussions](https://github.com/0xzerolight/anki_miner/discussions) or [Discord](https://discord.com/invite/aDtQyZzUVP).
-
-## Special Thanks
-
-Sincere thanks to people who made exceptional contributions to the project:
-
-- ★ **[StyraxBenzoin](https://github.com/StyraxBenzoin)** - Brilliant feature suggestions, new release testing, community building.
-- ★ **[rob-olvr](https://github.com/rob-olvr)** - Excellent feature suggestions, community building and moderation on Discord.
-
-See [CONTRIBUTORS.md](../CONTRIBUTORS.md) for everyone who has made any kind of contribution to the project.
+- **長期**:
+  - [x] Android への移植 -- https://github.com/0xzerolight/anki_miner_android
+  - [ ] 日本語の先へ: 他の言語のマイニング。
+  - [ ] Anki Miner のブラウザ拡張機能。
 
 
-## License
+## 貢献
 
-GNU General Public License v3.0. See [LICENSE](../LICENSE).
+どのような形の貢献も歓迎します。
+プロジェクトを応援したい方は、役に立ちそうな人に共有してください。
+
+- はじめての方は [CONTRIBUTING.md](../CONTRIBUTING.md) から。
+- アーキテクチャの概要: [ARCHITECTURE.md](../ARCHITECTURE.md)。
+- テストの方針: [TESTING.md](../TESTING.md)。
+- 行動規範: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。
+- セキュリティ: [SECURITY.md](../SECURITY.md)。
+
+バグ報告と機能リクエスト -> [Issues](https://github.com/0xzerolight/anki_miner/issues)。
+一般的な質問や議論 -> [Discussions](https://github.com/0xzerolight/anki_miner/discussions) または [Discord](https://discord.com/invite/aDtQyZzUVP)。
+
+## 特別な感謝
+
+プロジェクトに格別な貢献をしてくださった方々に心から感謝します:
+
+- ★ **[StyraxBenzoin](https://github.com/StyraxBenzoin)** - 素晴らしい機能の提案、新リリースのテスト、コミュニティづくり。
+- ★ **[rob-olvr](https://github.com/rob-olvr)** - 優れた機能の提案、Discord でのコミュニティづくりとモデレーション。
+
+プロジェクトに何らかの貢献をしてくださったすべての方は [CONTRIBUTORS.md](../CONTRIBUTORS.md) をご覧ください。
+
+
+## ライセンス
+
+GNU General Public License v3.0。[LICENSE](../LICENSE) を参照してください。

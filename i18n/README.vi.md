@@ -31,57 +31,57 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Turn native Japanese content into Anki vocabulary cards.
+Biến nội dung tiếng Nhật bản ngữ thành thẻ từ vựng Anki.
 </p>
 
 <p align="center">
-<b>On Android?</b> Get <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a> - the same mining, on your phone through AnkiDroid.
+<b>Dùng Android?</b> Hãy tải <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner cho Android</a> - vẫn cách khai thác đó, ngay trên điện thoại của bạn qua AnkiDroid.
 </p>
 
 <p align="center">
-Please leave a ⭐ star if Anki Miner helped you - it helps others find it :).
+Hãy để lại một ngôi sao ⭐ nếu Anki Miner giúp ích cho bạn - điều đó giúp người khác tìm thấy nó :).
 </p>
 
 
-# <p align="center">Mining Demo</p>
+# <p align="center">Bản demo khai thác</p>
 
 ![Anki Miner Showcase](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.gif)
 
-<p align="center">⬇️ <a href="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.mp4">Full demo with sound (MP4)</a></p>
+<p align="center">⬇️ <a href="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/demo.mp4">Bản demo đầy đủ có âm thanh (MP4)</a></p>
 
-### Example cards
+### Thẻ ví dụ
 
 | ![ホント](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.gif) | ![いちゃいちゃ](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.gif) | ![代](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.gif) |
 |:--:|:--:|:--:|
-| ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.mp4) | ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.mp4) | ⬇️ [MP4 (sound)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.mp4) |
+| ⬇️ [MP4 (âm thanh)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/ホント.mp4) | ⬇️ [MP4 (âm thanh)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/いちゃいちゃ.mp4) | ⬇️ [MP4 (âm thanh)](https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/代.mp4) |
 
-## Installation
+## Cài đặt
 
-### Requirements
+### Yêu cầu
 
-- **Anki** with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on (code `2055492159`)
-- **ffmpeg** + **libmpv** (video preview only) - needed only when installing via pip/pipx or source.
+- **Anki** cùng add-on [AnkiConnect](https://ankiweb.net/shared/info/2055492159) (mã `2055492159`)
+- **ffmpeg** + **libmpv** (chỉ dùng cho xem trước video) - chỉ cần khi cài qua pip/pipx hoặc từ mã nguồn.
 
-Grab the download for your platform from the [latest release](https://github.com/0xzerolight/anki_miner/releases/latest):
+Tải bản dành cho nền tảng của bạn từ [bản phát hành mới nhất](https://github.com/0xzerolight/anki_miner/releases/latest):
 
-| Platform | Download |
+| Nền tảng | Tải về |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
 | macOS (Apple Silicon / M1-M4) | `AnkiMiner-macOS-arm64.tar.gz` |
 | macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
-| Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
+| Linux (khác) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
+¹ Không bao gồm tạo phụ đề bằng Whisper cục bộ và ảnh chụp màn hình AVIF. Để có đầy đủ chức năng: `pipx install "anki-miner[asr]"`.
 
-### First-run notes (unsigned builds)
+### Lưu ý lần chạy đầu (bản dựng chưa ký)
 
-- **macOS**: Gatekeeper blocks the app. Extract first, then `xattr -dr com.apple.quarantine AnkiMiner/`
+- **macOS**: Gatekeeper chặn ứng dụng. Hãy giải nén trước, rồi chạy `xattr -dr com.apple.quarantine AnkiMiner/`
 - **Windows SmartScreen**: **More info** -> **Run anyway**.
-- **Windows Defender false positive**: restore from **Protection history** or [report to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
+- **Cảnh báo nhầm của Windows Defender**: khôi phục từ **Protection history** hoặc [báo cho Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
 
 <details>
-<summary><strong>Install from PyPI (Python 3.11+)</strong></summary>
+<summary><strong>Cài đặt từ PyPI (Python 3.11+)</strong></summary>
 
 ```bash
 pipx install anki-miner   # or: pip install anki-miner
@@ -91,7 +91,7 @@ anki_miner_gui
 </details>
 
 <details>
-<summary><strong>Install from source</strong></summary>
+<summary><strong>Cài đặt từ mã nguồn</strong></summary>
 
 ```bash
 git clone https://github.com/0xzerolight/anki_miner.git
@@ -100,146 +100,146 @@ pip install -e .
 anki_miner_gui
 ```
 
-For full development setup, see [CONTRIBUTING.md](../CONTRIBUTING.md).
+Để thiết lập môi trường phát triển đầy đủ, xem [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 </details>
 
-## Tabs
+## Các tab
 
-- **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
-- **Deck Builder** - mine a whole series into one frequency-ranked deck.
-- **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
-- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
-- **Analytics** - mining history, difficulty rankings, milestones, undo.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
-- **Settings** - everything configurable.
+- **Video** - khai thác một cặp video/phụ đề đơn lẻ, một thư mục hàng loạt, hoặc các URL YouTube.
+- **Trình dựng bộ thẻ** - khai thác cả một loạt phim thành một bộ thẻ được xếp hạng theo tần suất.
+- **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
+- **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản tiếng Nhật dán vào.
+- **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc, hoàn tác.
+- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (alass), cô đọng media thành âm thanh chỉ có hội thoại, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, và điền bổ sung các trường trên thẻ đã có.
+- **Cài đặt** - mọi thứ có thể cấu hình.
 
-## Other Features
+## Tính năng khác
 
-- Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
-- Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
-- Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
-- Multiple frequency lists chained by priority.
-- Word audio on cards from local audio packs, JapanesePod101, or Google TTS.
-- Sentence audio on Reading cards from Google Translate TTS or Naver Papago (off by default).
-- Per-dictionary glossary styling, Yomitan-style.
-- Embedded libmpv video preview - play a word's scene while curating, or nudge subtitle timing with live playback.
-- Animated screenshots (see example cards above).
-- Settings profiles - save named configurations and switch between them from the header.
-- Restyle Mined Cards - re-apply your current card styling to cards you already made (Tools menu).
+- Word Curator - xem lại từng từ ứng viên trước khi thẻ được tạo, cùng với cảnh phim, trang manga và mục từ điển của nó đặt cạnh nhau.
+- Bộ lọc phong phú: i+1, khoảng hạng tần suất, danh sách đen, regex, tập từ, và hơn thế nữa.
+- Nhập từ điển Yomitan ngoại tuyến - định nghĩa, trọng âm cao độ, tần suất - xâu chuỗi theo thứ tự ưu tiên.
+- Nhiều danh sách tần suất được xâu chuỗi theo thứ tự ưu tiên.
+- Âm thanh của từ trên thẻ, lấy từ gói âm thanh cục bộ, JapanesePod101, hoặc Google TTS.
+- Âm thanh câu trên thẻ Cách đọc, lấy từ Google Translate TTS hoặc Naver Papago (mặc định tắt).
+- Định kiểu bảng nghĩa riêng cho từng từ điển, theo phong cách Yomitan.
+- Xem trước video bằng libmpv nhúng - phát cảnh phim của một từ trong lúc chọn lọc, hoặc tinh chỉnh thời gian phụ đề với phát trực tiếp.
+- Ảnh chụp màn hình động (xem thẻ ví dụ ở trên).
+- Hồ sơ cài đặt - lưu các cấu hình có tên và chuyển đổi giữa chúng từ thanh tiêu đề.
+- Tạo lại kiểu cho thẻ đã khai thác - áp dụng lại kiểu thẻ hiện tại của bạn cho những thẻ bạn đã tạo (menu Công cụ).
 
 <details>
-<summary><strong>Built-in themes (29)</strong></summary>
+<summary><strong>Chủ đề tích hợp sẵn (29)</strong></summary>
 
 - **Ayu** - Light, Mirage, Dark
-- **Catppuccin** - Latte (light); Frappé, Macchiato, Mocha (dark)
+- **Catppuccin** - Latte (sáng); Frappé, Macchiato, Mocha (tối)
 - **Dracula** - Dracula, Alucard
 - **Everforest** - Light, Dark
 - **GitHub** - Light; Dark, Dark Dimmed
 - **Gruvbox** - Light Medium, Dark Medium
-- **Kanagawa** - Lotus (light), Wave (dark)
-- **Rosé Pine** - Dawn (light); Main, Moon (dark)
+- **Kanagawa** - Lotus (sáng), Wave (tối)
+- **Rosé Pine** - Dawn (sáng); Main, Moon (tối)
 - **Solarized** - Light, Dark
-- **Standalone** - Light, Dark, Sakura, Nord, One Dark, Tokyo Night
+- **Độc lập** - Light, Dark, Sakura, Nord, One Dark, Tokyo Night
 
-Theme licenses: [LICENSE-THEMES.md](../LICENSE-THEMES.md). 
-Want another theme added? Suggest in a GitHub Issue.
+Giấy phép chủ đề: [LICENSE-THEMES.md](../LICENSE-THEMES.md). 
+Muốn thêm chủ đề khác? Hãy đề xuất trong một GitHub Issue.
 
 </details>
 
 <details>
-<summary><strong>How It Works</strong></summary>
+<summary><strong>Cách hoạt động</strong></summary>
 
-1. **Read the subtitles** and split Japanese into individual words.
-2. **Filter** to content words you don't already know - optionally reviewing the list yourself in the Word Curator.
-3. **Grab a screenshot and audio clip** from the video for each line.
-4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online if enabled (slower, rate-limited).
-5. **Send the finished cards to Anki.**
+1. **Đọc phụ đề** và tách tiếng Nhật thành từng từ riêng lẻ.
+2. **Lọc** xuống còn các từ mang nghĩa mà bạn chưa biết - tùy chọn tự bạn xem lại danh sách trong Word Curator.
+3. **Lấy ảnh chụp màn hình và đoạn âm thanh** từ video cho mỗi dòng.
+4. **Tra định nghĩa** trong các từ điển ngoại tuyến bạn đã cấu hình, tùy chọn dự phòng sang Jisho trực tuyến nếu được bật (chậm hơn, bị giới hạn tốc độ).
+5. **Gửi các thẻ đã hoàn thiện sang Anki.**
 
 </details>
 
-## Recommended Resources
+## Tài nguyên được đề xuất
 
-| Type | Resource | Download | Add via |
+| Loại | Tài nguyên | Tải về | Thêm qua |
 |------|----------|----------|---------|
-| Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
-| Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
-| Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Add Dictionary… |
-| Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Pitch Accent -> Add pitch source… |
-| Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Pitch Accent -> Add pitch source… |
-| Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… |
-| Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… |
+| Từ điển | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Zip Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Thêm từ điển… |
+| Từ điển | [Jitendex](https://jitendex.org/) | [Zip Yomitan](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Thêm từ điển… |
+| Từ điển | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Tạo ngay trên trang | Thêm từ điển… |
+| Trọng âm | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Trọng âm cao độ -> Thêm nguồn trọng âm cao độ… |
+| Trọng âm | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Trọng âm cao độ -> Thêm nguồn trọng âm cao độ… |
+| Tần suất | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Zip Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Tần suất -> Thêm nguồn tần suất… |
+| Tần suất | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Zip Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Tần suất -> Thêm nguồn tần suất… |
 
 
 <details>
-<summary><strong>JMnedict License</strong></summary>
+<summary><strong>Giấy phép JMnedict</strong></summary>
 
-Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (JMdict/EDICT project, EDRDG, CC BY-SA 4.0).
+Sử dụng các tập từ tên riêng đi kèm được dẫn xuất từ [JMnedict](https://www.edrdg.org/enamdict/enamdict_doc.html) (dự án JMdict/EDICT, EDRDG, CC BY-SA 4.0).
 
 </details>
 
-## Troubleshooting
+## Khắc phục sự cố
 
-| Issue                    | Solution                                                                         |
+| Vấn đề                    | Giải pháp                                                                         |
 |--------------------------|----------------------------------------------------------------------------------|
-| "Cannot connect to Anki" | Start Anki and ensure AnkiConnect is installed.                                  |
-| "Deck not found"         | Pick an existing deck in Settings -> Cards & Anki. Decks are not created for you; make it in Anki first if you need a new one. |
-| "Note type not found"    | Configure your note type's field names in Settings -> Cards & Anki.               |
-| "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
-| No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
-| Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
-| Fresh install has no definitions | Run Tools -> Setup Wizard or Tools -> Download Recommended Resources. For manual import, keep the Yomitan ZIP intact (do not unzip it). |
-| Add Dictionary stalls or fails | Note the last visible stage and attach logs (see "Where are the logs?" below). Include the dictionary ZIP name, source, and size in the report. |
-| Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. |
-| Reporting a bug          | Help → Export Diagnostics… writes a ZIP with logs and system details to a location you choose. Review it before uploading because it contains file paths and file names from your computer. Nothing is uploaded automatically. |
-| More diagnostic logging | Set `ANKI_MINER_LOG_LEVEL=DEBUG` before starting Anki Miner to capture third-party yt-dlp, urllib3, and fugashi details. The default is `WARNING`; Anki Miner logs remain at DEBUG. |
-| Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
-| Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
+| "Không thể kết nối với Anki" | Khởi động Anki và đảm bảo AnkiConnect đã được cài đặt.                                  |
+| "Không tìm thấy bộ thẻ"         | Chọn một bộ thẻ đã có trong Cài đặt -> Thẻ & Anki. Bộ thẻ không được tạo sẵn cho bạn; nếu cần bộ thẻ mới, hãy tạo trong Anki trước. |
+| "Không tìm thấy loại ghi chú"    | Cấu hình tên các trường của loại ghi chú trong Cài đặt -> Thẻ & Anki.               |
+| "Không tìm thấy ffmpeg"       | Cài đặt ffmpeg và thêm nó vào PATH.                                               |
+| Không tìm thấy định nghĩa nào     | Thêm một từ điển Yomitan trong Cài đặt -> Thêm từ điển… (khuyến nghị), hoặc bật dự phòng Jisho (chậm hơn, bị giới hạn tốc độ). |
+| Trình cài đặt Windows không mở được / cảnh báo SmartScreen | Xem [Lưu ý lần chạy đầu](#lưu-ý-lần-chạy-đầu-bản-dựng-chưa-ký): chọn **More info** -> **Run anyway**; khôi phục các cảnh báo nhầm của Defender từ **Protection history**. |
+| Bản cài mới không có định nghĩa | Chạy Công cụ -> Trình hướng dẫn cài đặt hoặc Công cụ -> Tải tài nguyên được đề xuất. Nếu nhập thủ công, hãy giữ nguyên tệp ZIP Yomitan (đừng giải nén). |
+| Thêm từ điển bị treo hoặc thất bại | Ghi lại giai đoạn cuối cùng bạn nhìn thấy và đính kèm nhật ký (xem "Nhật ký nằm ở đâu?" bên dưới). Kèm theo tên, nguồn và kích thước tệp ZIP từ điển trong báo cáo. |
+| Nhật ký nằm ở đâu?      | Dùng Trợ giúp -> Mở thư mục nhật ký, hoặc mở `%USERPROFILE%\.anki_miner\anki_miner.log` trên Windows hoặc `~/.anki_miner/anki_miner.log` trên macOS/Linux. Nhật ký xoay vòng dùng hậu tố `.1` đến `.5`. |
+| Báo cáo lỗi          | Trợ giúp -> Xuất chẩn đoán… sẽ ghi một tệp ZIP chứa nhật ký và thông tin hệ thống vào vị trí bạn chọn. Hãy xem lại nó trước khi tải lên vì nó chứa đường dẫn và tên tệp từ máy tính của bạn. Không có gì được tải lên tự động. |
+| Nhật ký chẩn đoán chi tiết hơn | Đặt `ANKI_MINER_LOG_LEVEL=DEBUG` trước khi khởi động Anki Miner để ghi lại chi tiết của yt-dlp, urllib3 và fugashi bên thứ ba. Mặc định là `WARNING`; nhật ký của Anki Miner vẫn ở mức DEBUG. |
+| Âm thanh sai ngôn ngữ  | Công cụ thử các bản âm thanh tiếng Nhật trước, rồi mới lùi về bản mặc định.      |
+| Phụ đề không khớp tiếng    | Dùng điều khiển bù thời gian phụ đề trong giao diện (khoảng ±300 giây).                 |
 
-## Roadmap
+## Lộ trình
 
-List of ideas for future versions of Anki Miner. Not in priority order. Feature requests take precedence.
-- Suggest a feature - [Open an issue](https://github.com/0xzerolight/anki_miner/issues).
-- Discuss the roadmap - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
+Danh sách ý tưởng cho các phiên bản Anki Miner trong tương lai. Không theo thứ tự ưu tiên. Các yêu cầu tính năng được ưu tiên trước.
+- Đề xuất một tính năng - [Mở một issue](https://github.com/0xzerolight/anki_miner/issues).
+- Thảo luận về lộ trình - [Discussions](https://github.com/0xzerolight/anki_miner/discussions).
 
-- **Features**:
-  - [x] UI language selection.
-  - [x] Local subtitle creation tab: Opt-in tab to locally generate subtitles.
-  - [x] Reading tab: Mine manga and books.
-  - [x] Backfill tool.
-  - [ ] Media library: Expand Analytics tab to display local media library across all media forms.
-  - [ ] Automatic subtitle downloading.
+- **Tính năng**:
+  - [x] Chọn ngôn ngữ giao diện.
+  - [x] Tab tạo phụ đề cục bộ: tab tùy chọn để tạo phụ đề ngay trên máy.
+  - [x] Tab Cách đọc: khai thác manga và sách.
+  - [x] Công cụ điền bổ sung.
+  - [ ] Thư viện media: mở rộng tab Phân tích để hiển thị thư viện media cục bộ trên mọi dạng media.
+  - [ ] Tự động tải phụ đề.
 
-- **Long-term**:
-  - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Beyond Japanese: Mining other languages.
-  - [ ] Anki Miner browser extension.
-
-
-## Contributing
-
-Contributions of any kind are welcome.
-If you want to support the project, please share it with others who may benefit from it.
-
-- New here? Start with [CONTRIBUTING.md](../CONTRIBUTING.md).
-- Architecture overview: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Testing strategy: [TESTING.md](../TESTING.md).
-- Code of Conduct: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
-- Security: [SECURITY.md](../SECURITY.md).
-
-Bug reports and feature requests -> [Issues](https://github.com/0xzerolight/anki_miner/issues).
-General questions and discussion -> [Discussions](https://github.com/0xzerolight/anki_miner/discussions) or [Discord](https://discord.com/invite/aDtQyZzUVP).
-
-## Special Thanks
-
-Sincere thanks to people who made exceptional contributions to the project:
-
-- ★ **[StyraxBenzoin](https://github.com/StyraxBenzoin)** - Brilliant feature suggestions, new release testing, community building.
-- ★ **[rob-olvr](https://github.com/rob-olvr)** - Excellent feature suggestions, community building and moderation on Discord.
-
-See [CONTRIBUTORS.md](../CONTRIBUTORS.md) for everyone who has made any kind of contribution to the project.
+- **Dài hạn**:
+  - [x] Bản chuyển sang Android -- https://github.com/0xzerolight/anki_miner_android
+  - [ ] Vượt ra ngoài tiếng Nhật: khai thác các ngôn ngữ khác.
+  - [ ] Tiện ích mở rộng trình duyệt cho Anki Miner.
 
 
-## License
+## Đóng góp
 
-GNU General Public License v3.0. See [LICENSE](../LICENSE).
+Mọi hình thức đóng góp đều được hoan nghênh.
+Nếu bạn muốn ủng hộ dự án, hãy chia sẻ nó với những người khác có thể hưởng lợi từ nó.
+
+- Mới đến đây? Hãy bắt đầu với [CONTRIBUTING.md](../CONTRIBUTING.md).
+- Tổng quan kiến trúc: [ARCHITECTURE.md](../ARCHITECTURE.md).
+- Chiến lược kiểm thử: [TESTING.md](../TESTING.md).
+- Quy tắc ứng xử: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
+- Bảo mật: [SECURITY.md](../SECURITY.md).
+
+Báo lỗi và yêu cầu tính năng -> [Issues](https://github.com/0xzerolight/anki_miner/issues).
+Câu hỏi chung và thảo luận -> [Discussions](https://github.com/0xzerolight/anki_miner/discussions) hoặc [Discord](https://discord.com/invite/aDtQyZzUVP).
+
+## Lời cảm ơn đặc biệt
+
+Chân thành cảm ơn những người đã có đóng góp xuất sắc cho dự án:
+
+- ★ **[StyraxBenzoin](https://github.com/StyraxBenzoin)** - Những đề xuất tính năng tuyệt vời, kiểm thử bản phát hành mới, xây dựng cộng đồng.
+- ★ **[rob-olvr](https://github.com/rob-olvr)** - Những đề xuất tính năng xuất sắc, xây dựng cộng đồng và điều hành trên Discord.
+
+Xem [CONTRIBUTORS.md](../CONTRIBUTORS.md) để biết tất cả những ai đã đóng góp cho dự án dưới mọi hình thức.
+
+
+## Giấy phép
+
+GNU General Public License v3.0. Xem [LICENSE](../LICENSE).
