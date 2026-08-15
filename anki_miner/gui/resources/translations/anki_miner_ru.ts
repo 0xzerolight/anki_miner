@@ -734,12 +734,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Отменено до обработки оставшихся пакетов.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Аудиопакеты добавлены</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Готово.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Аудиопакеты добавлены</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -802,14 +802,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 успешно импортирован повторно.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -818,8 +810,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Аудиопакет повторно импортирован</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 успешно импортирован повторно.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -828,6 +824,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Не удалось повторно импортировать пакет аудио.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Аудиопакет повторно импортирован</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3216,12 +3216,20 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Не удалось импортировать %1 медиафайл(ов).</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Выберите zip-архив словаря Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation>Выберите zip-архивы словарей Yomitan</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip-архив Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Словарь %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Не удалось импортировать словарь.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3232,24 +3240,32 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Импортирован %1 (записей: %2)</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>Импортировано словарей: %1:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Ошибка:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Отменено до обработки остальных словарей.</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Готово.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Словари добавлены</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Импорт завершён, но не удалось обновить настройки.</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Импорт словаря…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Не удалось импортировать словарь.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3288,6 +3304,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Не удалось повторно импортировать словарь.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Нет XML-файла JMdict по пути %1. Скачайте его с EDRDG и поместите туда.</translation>
     </message>
@@ -3318,10 +3338,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Нечего импортировать повторно</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Словарь %1 из %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>Повторно импортировано словарей: %1:</translation>
     </message>
@@ -3330,20 +3346,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Пропущено (не подходят для автоматического восстановления; используйте «Повторный импорт…» в соответствующей строке):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Ошибка:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Отменено до обработки остальных словарей.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Повторно импортировать все</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Готово.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

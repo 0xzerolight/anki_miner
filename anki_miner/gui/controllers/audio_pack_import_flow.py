@@ -25,6 +25,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_persist,
     _log_import_picker_enter,
     _log_import_picker_return,
+    format_batch_summary,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -248,29 +249,31 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                 return
 
             # Multi-pack batch: show summary dialog.
-            lines: list[str] = []
-            if imported:
-                lines.append(
-                    tr_format(
-                        QCoreApplication.translate("AudioPackImportFlow", "Imported %1 audio pack(s):"),
-                        len(imported),
-                    )
-                )
-                lines.extend(f"  • {pid}" for pid in imported)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append(QCoreApplication.translate("AudioPackImportFlow", "Failed:"))
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if result.cancelled:
-                if lines:
-                    lines.append("")
-                lines.append(QCoreApplication.translate("AudioPackImportFlow", "Cancelled before remaining packs."))
-
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(
+                            QCoreApplication.translate("AudioPackImportFlow", "Imported %1 audio pack(s):"),
+                            len(imported),
+                        ),
+                        [f"  • {pid}" for pid in imported],
+                    ),
+                    (
+                        QCoreApplication.translate("AudioPackImportFlow", "Failed:"),
+                        [f"  • {name}: {msg}" for name, msg in errors],
+                    ),
+                ],
+                cancelled_note=(
+                    QCoreApplication.translate("AudioPackImportFlow", "Cancelled before remaining packs.")
+                    if result.cancelled
+                    else None
+                ),
+                empty=QCoreApplication.translate("AudioPackImportFlow", "Done."),
+            )
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("AudioPackImportFlow", "Audio Packs Added"),
-                "\n".join(lines) or QCoreApplication.translate("AudioPackImportFlow", "Done."),
+                summary,
             )
 
         def on_finished_error(

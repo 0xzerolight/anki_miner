@@ -733,12 +733,12 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Annulé avant les packs restants.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Packs audio ajoutés</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Terminé.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Packs audio ajoutés</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -801,14 +801,6 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 réimporté avec succès.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -817,8 +809,12 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Pack audio réimporté</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 réimporté avec succès.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -827,6 +823,10 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Impossible de réimporter le pack audio.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Pack audio réimporté</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3214,12 +3214,20 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>%1 fichier(s) multimédia n'ont pas pu être importés.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Choisir le zip de dictionnaire Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation>Choisir les zips de dictionnaires Yomitan</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Dictionnaire %1 sur %2 : %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Impossible d’importer le dictionnaire.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3230,24 +3238,32 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>%1 importé (%2 entrées)</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>%1 dictionnaires importés :</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Échecs :</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Annulé avant les dictionnaires restants.</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Terminé.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Dictionnaires ajoutés</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>L’importation est terminée, mais les paramètres n’ont pas pu être mis à jour.</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Importation du dictionnaire…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Annuler</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Impossible d’importer le dictionnaire.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Une autre importation est en cours. Attendez qu'elle se termine, puis réessayez.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3286,6 +3302,10 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Impossible de réimporter le dictionnaire.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Une autre importation est en cours. Attendez qu'elle se termine, puis réessayez.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Aucun XML JMdict à %1. Téléchargez-le depuis EDRDG et placez-le là.</translation>
     </message>
@@ -3316,10 +3336,6 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>Rien à réimporter</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Dictionnaire %1 sur %2 : %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 dictionnaire(s) réimporté(s) :</translation>
     </message>
@@ -3328,20 +3344,8 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter… pour chaque ligne) :</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Échecs :</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Annulé avant les dictionnaires restants.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Tout réimporter</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Terminé.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

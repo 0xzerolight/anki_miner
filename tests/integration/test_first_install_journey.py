@@ -202,9 +202,10 @@ def test_first_install_journey(
 
     def choose_fixture(*_args: object, on_done, **_kwargs: object) -> None:
         assert picker_paths, "unexpected extra native picker request"
-        on_done(str(picker_paths.popleft()))
+        # Add takes a multi-select picker; this journey picks one zip per run.
+        on_done([str(picker_paths.popleft())])
 
-    monkeypatch.setattr(dictionary_import_flow.file_dialogs, "pick_open_file", choose_fixture)
+    monkeypatch.setattr(dictionary_import_flow.file_dialogs, "pick_open_files", choose_fixture)
 
     real_progress_dialog = QProgressDialog
 

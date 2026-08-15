@@ -38,6 +38,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_picker_enter,
     _log_import_picker_return,
     _OnceCallback,
+    format_batch_summary,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -90,6 +91,12 @@ class SourceFlowLabels:
     add_failure_summary: str
     added_title: str
     added_body_template: str
+    # Multi add. The batch progress and cancelled lines are shared with
+    # reimport-all: they name the family and the position, which reads the same
+    # either way.
+    picker_add_multi_caption: str
+    added_batch_title: str
+    added_batch_header_template: str
     # Single reimport.
     reimport_progress: str
     reimport_failure_summary: str
@@ -258,69 +265,121 @@ class SourceChainImportFlow(ModalImportFlowMixin):
         current.append(self._make_entry(source_id))
         return tuple(current)
 
+    def _chain_with_new_sources_appended(self, source_ids: list[str]) -> tuple[Any, ...]:
+        """Append a whole imported batch, preserving picker order.
+
+        Same re-add rule as the single case: an id already in the chain moves to
+        the end rather than duplicating.
+        """
+        unique_ids = list(dict.fromkeys(source_ids))
+        selected = set(unique_ids)
+        current = [e for e in self._panel.get_chain() if e.source_id not in selected]
+        current.extend(self._make_entry(source_id) for source_id in unique_ids)
+        return tuple(current)
+
     def add_source(self) -> None:
-        """Prompt for a source file and import it as a new slot."""
+        """Prompt for one or more source files and import them in picker order."""
         if not self._begin_mutation("add"):
             return
         labels = self._labels
         trace_id = _begin_import_trace(f"{self._trace_noun} add")
         picker_started = _log_import_picker_enter(trace_id, f"{self._trace_noun} source")
-        file_dialogs.pick_open_file(
+        file_dialogs.pick_open_files(
             self._parent,
-            labels.picker_add_caption,
+            labels.picker_add_multi_caption,
             resolve_start_dir(None, file_mode=True),
             self._source_picker_filter(),
             on_done=lambda chosen: self._add_source_picked(trace_id, picker_started, chosen),
         )
 
-    def _add_source_picked(self, trace_id: str, picker_started: float, chosen: str) -> None:
-        """Import the file ``add_source``'s picker returned as a new source."""
-        _log_import_picker_return(trace_id, f"{self._trace_noun} source", picker_started, chosen)
+    def _add_source_picked(self, trace_id: str, picker_started: float, chosen: list[str]) -> None:
+        """Import every file ``add_source``'s picker returned, in picker order.
+
+        One modal, one chain write, one persist for the whole batch: a partial
+        failure keeps the sources that did import instead of losing the run.
+        """
+        _log_import_picker_return(trace_id, f"{self._trace_noun} source", picker_started, "; ".join(chosen))
         if not chosen:
             self._set_import_buttons_enabled(True)
             return
 
         labels = self._labels
-        try:
-            worker = self._make_add_worker(Path(chosen), self._dest_root(self._get_config()))
-        except Exception:
-            self._set_import_buttons_enabled(True)
-            raise
+        jobs = [Path(path) for path in chosen]
 
-        def on_success(source_id: str, meta: dict) -> None:
-            new_chain = self._chain_with_new_source_appended(source_id)
-            self._panel.refresh_registry()
-            self._panel.set_chain(new_chain)
-            _log_import_persist(trace_id, "start")
-            self._persist_chain(new_chain)
-            _log_import_persist(trace_id, "done")
-            QMessageBox.information(
-                self._parent,
-                labels.added_title,
-                tr_format(
-                    labels.added_body_template,
-                    f"{meta.get('entry_count', 0):,}",
-                    meta.get("source_name", source_id),
+        def make_worker(source_file: Path) -> ImportWorker:
+            return self._make_add_worker(source_file, self._dest_root(self._get_config()))
+
+        def format_label(index: int, total: int, source_file: Path, message: str | None) -> str:
+            label = tr_format(labels.batch_progress_template, index, total, source_file.name)
+            return f"{label}\n{message}" if message is not None else label
+
+        def on_finished(result: _ChainedImportResult[Path]) -> None:
+            imported = [source_id for _job, source_id, _meta in result.successes]
+            if imported:
+                new_chain = self._chain_with_new_sources_appended(imported)
+                self._panel.refresh_registry()
+                self._panel.set_chain(new_chain)
+                _log_import_persist(trace_id, "start")
+                self._persist_chain(new_chain)
+                _log_import_persist(trace_id, "done")
+
+            # A cancelled single pick is the user changing their mind: say nothing.
+            if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
+                return
+            # A failed single pick keeps the pre-batch contract: a banner, not a
+            # success box with a "Failed:" section buried in it.
+            if len(jobs) == 1 and result.failures and not result.successes:
+                self._report_import_issue(labels.add_failure_summary, result.failures[0][1])
+                return
+            if len(result.successes) == 1 and not result.failures and not result.cancelled:
+                _job, source_id, meta = result.successes[0]
+                QMessageBox.information(
+                    self._parent,
+                    labels.added_title,
+                    tr_format(
+                        labels.added_body_template,
+                        f"{meta.get('entry_count', 0):,}",
+                        meta.get("source_name", source_id),
+                    )
+                    + self._extra_add_notes(meta),
                 )
-                + self._extra_add_notes(meta),
-            )
+                return
 
-        def on_success_error(exc: Exception) -> None:
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(labels.added_batch_header_template, len(result.successes)),
+                        [
+                            f"  • {meta.get('source_name', source_id)} ({meta.get('entry_count', 0):,} entries)"
+                            for _job, source_id, meta in result.successes
+                        ],
+                    ),
+                    (
+                        labels.batch_failed_header,
+                        [f"  • {job.name}: {message}" for job, message in result.failures],
+                    ),
+                ],
+                cancelled_note=labels.batch_cancelled if result.cancelled else None,
+                empty=labels.batch_done,
+            )
+            QMessageBox.information(self._parent, labels.added_batch_title, summary)
+
+        def on_finished_error(exc: Exception, _result: _ChainedImportResult[Path]) -> None:
             self._report_import_issue(labels.settings_update_failed, str(exc))
 
-        self._run_modal_import(
-            worker=worker,
-            progress_label=labels.add_progress,
+        self._run_chained_imports(
+            jobs=jobs,
+            make_worker=make_worker,
+            format_label=format_label,
             cancel_label=labels.cancel,
+            cancelling_label=labels.cancelling,
             determinate=False,
             join_noun=f"{self._trace_noun} import worker",
             failure_summary=labels.add_failure_summary,
-            refusal_message=labels.refusal,
-            cancelling_label=labels.cancelling,
             missing_result_message=labels.missing_result,
             trace_id=trace_id,
-            on_success=on_success,
-            on_success_error=on_success_error,
+            on_finished=on_finished,
+            on_finished_error=on_finished_error,
         )
 
     # ------------------------------------------------------------------
@@ -580,26 +639,19 @@ class SourceChainImportFlow(ModalImportFlowMixin):
             reimported = [job[1] for job, _source_id, _meta in result.successes]
             errors = [(job[1], message) for job, message in result.failures]
 
-            lines: list[str] = []
-            if reimported:
-                lines.append(tr_format(labels.batch_reimported_header_template, len(reimported)))
-                lines.extend(f"  • {n}" for n in reimported)
-            if skipped:
-                if lines:
-                    lines.append("")
-                lines.append(labels.batch_skipped_header)
-                lines.extend(f"  • {n}" for n in skipped)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append(labels.batch_failed_header)
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if result.cancelled:
-                if lines:
-                    lines.append("")
-                lines.append(labels.batch_cancelled)
-
-            QMessageBox.information(self._parent, labels.batch_title, "\n".join(lines) or labels.batch_done)
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(labels.batch_reimported_header_template, len(reimported)),
+                        [f"  • {n}" for n in reimported],
+                    ),
+                    (labels.batch_skipped_header, [f"  • {n}" for n in skipped]),
+                    (labels.batch_failed_header, [f"  • {name}: {msg}" for name, msg in errors]),
+                ],
+                cancelled_note=labels.batch_cancelled if result.cancelled else None,
+                empty=labels.batch_done,
+            )
+            QMessageBox.information(self._parent, labels.batch_title, summary)
             done()
 
         def on_finished_error(exc: Exception, _result: _ChainedImportResult[ReimportJob]) -> None:

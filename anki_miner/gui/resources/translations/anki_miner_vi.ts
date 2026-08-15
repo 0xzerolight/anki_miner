@@ -732,12 +732,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Đã hủy trước các gói còn lại.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Đã thêm gói âm thanh</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Xong.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Đã thêm gói âm thanh</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -800,14 +800,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Tài nguyên đã lập chỉ mục đang được sử dụng cho khai thác, làm nóng khi khởi động, hoặc điền dữ liệu còn thiếu cho thẻ. Hãy đợi tác vụ đang hoạt động hoàn tất rồi thử lại.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Đã nhập lại %1 thành công.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -816,8 +808,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Đã nhập lại gói âm thanh</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>Đã nhập lại %1 thành công.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -826,6 +822,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Không thể nhập lại gói âm thanh.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Đã nhập lại gói âm thanh</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3212,12 +3212,20 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Không thể nhập %1 tệp phương tiện.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Chọn tệp zip từ điển Yomitan</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation>Chọn các tệp zip từ điển Yomitan</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Từ điển %1 trên %2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Không thể nhập từ điển.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3228,24 +3236,32 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Đã nhập %1 (%2 mục)</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>Đã nhập %1 từ điển:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Thất bại:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Đã hủy trước khi xử lý các từ điển còn lại.</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Xong.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Đã thêm từ điển</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Đã hoàn tất nhập, nhưng không thể cập nhật cài đặt.</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Đang nhập từ điển…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Hủy</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Không thể nhập từ điển.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3284,6 +3300,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Không thể nhập lại từ điển.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Không có JMdict XML tại %1. Hãy tải về từ EDRDG và đặt tại đó.</translation>
     </message>
@@ -3314,10 +3334,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Không có gì để nhập lại</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Từ điển %1 trên %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>Đã nhập lại %1 từ điển:</translation>
     </message>
@@ -3326,20 +3342,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Đã bỏ qua (không đủ điều kiện để tự động sửa chữa; hãy dùng Nhập lại… theo từng dòng):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Thất bại:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Đã hủy trước khi xử lý các từ điển còn lại.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Nhập lại tất cả</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Xong.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

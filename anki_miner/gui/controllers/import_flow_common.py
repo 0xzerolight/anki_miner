@@ -112,6 +112,25 @@ def _log_import_persist(trace_id: str, phase: Literal["start", "done"]) -> None:
     logger.info("Import trace %s persist %s", trace_id, phase)
 
 
+def format_batch_summary(
+    sections: Sequence[tuple[str, Sequence[str]]],
+    *,
+    cancelled_note: str | None,
+    empty: str,
+) -> str:
+    """Join ``(header, items)`` blocks with a blank line between them.
+
+    Every chained flow reports the same shape — what landed, what failed, what
+    was skipped, and whether the user stopped it early — so the shape is built
+    once here. All strings arrive already translated by the caller, per this
+    module's i18n note.
+    """
+    blocks = ["\n".join([header, *items]) for header, items in sections if items]
+    if cancelled_note:
+        blocks.append(cancelled_note)
+    return "\n\n".join(blocks) or empty
+
+
 class ReimportAllFlow(Protocol):
     """The one method the startup migration prompt drives a family through.
 

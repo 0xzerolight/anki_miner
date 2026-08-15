@@ -733,12 +733,12 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
         <translation>Vor den verbleibenden Paketen abgebrochen.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Audiopakete hinzugefügt</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Fertig.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Audiopakete hinzugefügt</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -801,14 +801,6 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
         <translation>Indizierte Ressourcen werden gerade für Mining, Start-Vorwärmen oder Karten-Nachbefüllung verwendet. Warten Sie, bis die aktive Aufgabe abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 erfolgreich erneut importiert.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -817,8 +809,12 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Audiopaket erneut importiert</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 erfolgreich erneut importiert.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -827,6 +823,10 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Das Audiopaket konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Audiopaket erneut importiert</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3214,12 +3214,20 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>%1 Mediendatei(en) konnten nicht importiert werden.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
-        <translation>Yomitan-Wörterbuch-ZIP auswählen</translation>
+        <source>Choose Yomitan dictionary zips</source>
+        <translation>Yomitan-Wörterbuch-ZIPs auswählen</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Yomitan-ZIP (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Wörterbuch %1 von %2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Das Wörterbuch konnte nicht importiert werden.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3230,24 +3238,32 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>%1 importiert (%2 Einträge)</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>%1 Wörterbücher importiert:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Vor den verbleibenden Wörterbüchern abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Fertig.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Wörterbücher hinzugefügt</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Wörterbuch wird importiert…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Das Wörterbuch konnte nicht importiert werden.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3286,6 +3302,10 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>Das Wörterbuch konnte nicht erneut importiert werden.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Keine JMdict-XML unter %1. Laden Sie sie von EDRDG herunter und legen Sie sie dort ab.</translation>
     </message>
@@ -3316,10 +3336,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Nichts zum erneuten Importieren</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Wörterbuch %1 von %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 Wörterbuch/Wörterbücher erneut importiert:</translation>
     </message>
@@ -3328,20 +3344,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>Übersprungen (nicht für automatische Reparatur geeignet; verwenden Sie den zeilenweisen Reimport…):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Fehlgeschlagen:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Vor den verbleibenden Wörterbüchern abgebrochen.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Alle erneut importieren</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Fertig.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

@@ -150,7 +150,7 @@ def test_add_dict_user_cancel_closes_without_warning(tab, monkeypatch, stub_work
     "Import Failed" dialog. This is the pre-unification bug ARC-013 fixes:
     cancellation used to route through ``failed``."""
     zip_path = build_yomitan_zip(tmp_path / "src.zip", title="Test Dict", revision="v1")
-    monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(zip_path)))
+    monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(zip_path)]))
     warnings = _capture_warnings(monkeypatch)
 
     tab._dict_import_flow.add_dict()
@@ -188,9 +188,9 @@ def test_add_dict_opens_file_dialog_at_home(tab, monkeypatch, stub_worker):
 
     def fake_open(parent, title, start_dir, file_filter, *a, on_done, **kw):
         captured["dir"] = start_dir
-        on_done("")  # user cancels
+        on_done([])  # user cancels
 
-    monkeypatch.setattr(file_dialogs, "pick_open_file", fake_open)
+    monkeypatch.setattr(file_dialogs, "pick_open_files", fake_open)
     tab._dict_import_flow.add_dict()
 
     home = str(Path.home())

@@ -732,12 +732,12 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Dibatalkan sebelum paket yang tersisa.</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>Paket Audio Ditambahkan</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>Selesai.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>Paket Audio Ditambahkan</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -800,14 +800,6 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Sumber daya terindeks sedang digunakan oleh mining, pemanasan awal saat startup, atau pengisian ulang kartu. Tunggu hingga tugas yang aktif selesai lalu coba lagi.</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>Berhasil mengimpor ulang %1.</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -816,8 +808,12 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Paket Audio Diimpor Ulang</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>Berhasil mengimpor ulang %1.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -826,6 +822,10 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Paket audio tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Paket Audio Diimpor Ulang</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3212,12 +3212,20 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>%1 berkas media tidak dapat diimpor.</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
+        <source>Choose Yomitan dictionary zips</source>
         <translation>Pilih zip kamus Yomitan</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Zip Yomitan (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>Kamus %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>Kamus tidak dapat diimpor.</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3228,24 +3236,32 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Mengimpor %1 (%2 entri)</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>Mengimpor %1 kamus:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Gagal:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>Dibatalkan sebelum kamus yang tersisa.</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>Selesai.</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>Kamus ditambahkan</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>Mengimpor kamus…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>Batal</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>Kamus tidak dapat diimpor.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3284,6 +3300,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Kamus tidak dapat diimpor ulang.</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>Tidak ada XML JMdict di %1. Unduh dari EDRDG dan letakkan di sana.</translation>
     </message>
@@ -3314,10 +3334,6 @@ Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang…
         <translation>Tidak ada yang perlu diimpor ulang</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>Kamus %1 dari %2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 kamus diimpor ulang:</translation>
     </message>
@@ -3326,20 +3342,8 @@ Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang…
         <translation>Dilewati (tidak memenuhi syarat untuk perbaikan otomatis; gunakan Impor Ulang… per baris):</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>Gagal:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>Dibatalkan sebelum kamus yang tersisa.</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>Impor Ulang Semua</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>Selesai.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

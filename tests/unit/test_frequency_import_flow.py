@@ -193,7 +193,13 @@ class TestAddSource:
             filters.append(args[3])
             on_done("")
 
+        def cancel_multi_picker(*args, on_done, **kwargs):
+            filters.append(args[3])
+            on_done([])
+
+        # Add takes several files at once; reimport still replaces exactly one.
         monkeypatch.setattr(file_dialogs, "pick_open_file", cancel_picker)
+        monkeypatch.setattr(file_dialogs, "pick_open_files", cancel_multi_picker)
 
         tab._frequency_import_flow.add_source()
         tab._frequency_import_flow.reimport_source(
@@ -210,14 +216,14 @@ class TestAddSource:
         assert "*.txt" in filters[1]
 
     def test_cancelled_dialog_skips_import(self, tab, monkeypatch, stub_worker):
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(""))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([]))
         tab._frequency_import_flow.add_source()
         stub_worker.assert_not_called()
 
     def test_happy_path_appends_entry_and_persists(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "mylist.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
 
         persist_calls: list[tuple[FreqEntry, ...]] = []
@@ -239,10 +245,31 @@ class TestAddSource:
         # New entry is enabled.
         assert new_chain[-1] == FreqEntry(source_id="mylist", enabled=True)
 
+    def test_multiple_sources_import_sequentially_in_picker_order(self, tab, monkeypatch, stub_worker, tmp_path, qtbot):
+        first = tmp_path / "first.csv"
+        second = tmp_path / "second.csv"
+        monkeypatch.setattr(
+            file_dialogs,
+            "pick_open_files",
+            lambda *a, on_done, **kw: on_done([str(first), str(second)]),
+        )
+        _capture_infos(monkeypatch)
+        monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
+        persist_calls: list[tuple[FreqEntry, ...]] = []
+        tab._frequency_import_flow._persist_chain = persist_calls.append
+
+        tab._frequency_import_flow.add_source()
+        _fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
+        qtbot.waitUntil(lambda: len(stub_worker.instances) == 2)
+        _fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
+
+        assert [entry.source_id for entry in persist_calls[-1]][-2:] == ["first", "second"]
+        assert len(persist_calls) == 1
+
     def test_converted_note_surfaced_in_info(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "counts.csv"
         src.write_text("word,count\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         infos = _capture_infos(monkeypatch)
         tab._frequency_import_flow._persist_chain = lambda _chain: None
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
@@ -261,7 +288,7 @@ class TestAddSource:
     def test_categorical_note_surfaced_in_info(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "jlpt.zip"
         src.write_bytes(b"zip")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         infos = _capture_infos(monkeypatch)
         tab._frequency_import_flow._persist_chain = lambda _chain: None
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
@@ -280,7 +307,7 @@ class TestAddSource:
     def test_append_after_existing_entries(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "new.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
@@ -303,7 +330,7 @@ class TestAddSource:
     def test_failure_surfaces_error_and_leaves_chain(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "broken.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
@@ -329,7 +356,7 @@ class TestAddSource:
         # old substring probe wrongly swallowed it.
         src = tmp_path / "cancel-list.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
@@ -344,7 +371,7 @@ class TestAddSource:
         # must be silent (no error dialog); the add button is re-enabled.
         src = tmp_path / "list.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
 
@@ -360,7 +387,7 @@ class TestAddSource:
         src = tmp_path / "tail.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         worker = _TailImportWorker()
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         monkeypatch.setattr(
             "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
             lambda *a, **kw: worker,
@@ -407,7 +434,7 @@ class TestAddSource:
     def test_racing_domain_signals_terminalize_once_from_finished(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "race.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         infos = _capture_infos(monkeypatch)
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
@@ -442,7 +469,7 @@ class TestAddSource:
         tab = tabs["Settings"]
         src = tmp_path / "persist.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         infos = _capture_infos(monkeypatch)
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
@@ -473,7 +500,7 @@ class TestAddSource:
     def test_missing_domain_outcome_is_failure_at_native_finished(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "missing.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
 
         tab._frequency_import_flow.add_source()
@@ -489,7 +516,7 @@ class TestAddSource:
 
         src = tmp_path / "stages.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         dialog = MagicMock()
         monkeypatch.setattr(import_flow_common, "QProgressDialog", MagicMock(return_value=dialog))
         monkeypatch.setattr(import_flow_common, "QTimer", MagicMock(return_value=MagicMock()))
@@ -510,7 +537,7 @@ class TestAddSource:
 
         src = tmp_path / "reentrant.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         dialog = MagicMock()
         timer = MagicMock()
         timer.timeout = MagicMock()
@@ -535,7 +562,7 @@ class TestAddSource:
 
         src = tmp_path / "watchdog.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         dialog = MagicMock()
         timer = MagicMock()
         timer.timeout = MagicMock()
@@ -566,7 +593,7 @@ class TestAddSource:
         src = tmp_path / "cancel.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
         worker = _TailImportWorker(cancel_path=True)
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         monkeypatch.setattr(
             "anki_miner.gui.controllers.frequency_import_flow.ImportWorker.for_source",
             lambda *a, **kw: worker,
@@ -601,7 +628,7 @@ class TestAddSource:
         assert warnings == []
 
     def test_cancelled_picker_logs_entry_and_elapsed_return(self, tab, monkeypatch, stub_worker, caplog):
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(""))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([]))
 
         with caplog.at_level(logging.INFO, logger="anki_miner.gui.controllers.import_flow_common"):
             tab._frequency_import_flow.add_source()

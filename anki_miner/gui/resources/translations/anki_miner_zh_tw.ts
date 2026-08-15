@@ -732,12 +732,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>在處理剩餘音訊包前已取消。</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>已新增音訊包</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>完成。</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>已新增音訊包</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -800,14 +800,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>索引資源正被採集、啟動預熱或卡片回填使用中。請等待進行中的工作完成後再試一次。</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>已成功重新匯入 %1。</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -816,8 +808,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>音訊包已重新匯入</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>已成功重新匯入 %1。</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -826,6 +822,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>無法重新匯入音訊包。</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>音訊包已重新匯入</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3212,12 +3212,20 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>有 %1 個媒體檔案無法匯入。</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
+        <source>Choose Yomitan dictionary zips</source>
         <translation>選擇 Yomitan 字典 zip</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Yomitan zip（*.zip）</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>字典 %1／%2：%3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>無法匯入字典。</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3228,24 +3236,32 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>已匯入 %1（%2 筆條目）</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>已匯入 %1 部字典：</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>失敗：</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>在處理其餘字典前已取消。</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>完成。</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>已新增字典</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>匯入已完成，但無法更新設定。</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>正在匯入字典…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>取消</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>無法匯入字典。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3284,6 +3300,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>無法重新匯入字典。</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>%1 沒有 JMdict XML。請從 EDRDG 下載並放置於該處。</translation>
     </message>
@@ -3314,10 +3334,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>無可重新匯入的項目</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>字典 %1／%2：%3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>已重新匯入 %1 部字典：</translation>
     </message>
@@ -3326,20 +3342,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>已略過（不符合自動修復資格；請使用逐列的重新匯入…）：</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>失敗：</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>在處理其餘字典前已取消。</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>全部重新匯入</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>完成。</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

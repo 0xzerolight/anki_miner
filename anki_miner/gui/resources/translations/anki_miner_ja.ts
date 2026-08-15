@@ -732,12 +732,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>残りのパックの処理をキャンセルしました。</translation>
     </message>
     <message>
-        <source>Audio Packs Added</source>
-        <translation>音声パックを追加しました</translation>
-    </message>
-    <message>
         <source>Done.</source>
         <translation>完了しました。</translation>
+    </message>
+    <message>
+        <source>Audio Packs Added</source>
+        <translation>音声パックを追加しました</translation>
     </message>
     <message>
         <source>The import finished, but the settings could not be updated.</source>
@@ -800,14 +800,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>インデックス済みリソースはマイニング、起動時のプリウォーム、またはカードの一括補完で使用中です。実行中のタスクが完了するまで待ってから再試行してください。</translation>
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 を再インポートしました。</translation>
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -816,8 +808,12 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>音声パックを再インポートしました</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
+        <translation>%1 を再インポートしました。</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -826,6 +822,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>音声パックを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>音声パックを再インポートしました</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -3212,12 +3212,20 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>メディアファイルを %1 件インポートできませんでした。</translation>
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
+        <source>Choose Yomitan dictionary zips</source>
         <translation>Yomitan辞書のzipを選択</translation>
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
         <translation>Yomitan zip (*.zip)</translation>
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation>辞書 %1/%2: %3</translation>
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
+        <translation>辞書をインポートできませんでした。</translation>
     </message>
     <message>
         <source>Dictionary added</source>
@@ -3228,24 +3236,32 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>%1 をインポートしました（%2 件）</translation>
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation>%1 件の辞書をインポートしました:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>失敗:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation>残りの辞書のインポートはキャンセルされました。</translation>
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation>完了しました。</translation>
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation>辞書を追加しました</translation>
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation>辞書をインポートしています…</translation>
-    </message>
-    <message>
         <source>Cancel</source>
         <translation>キャンセル</translation>
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation>辞書をインポートできませんでした。</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3284,6 +3300,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>辞書を再インポートできませんでした。</translation>
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation>%1 にJMdictのXMLがありません。EDRDGからダウンロードしてそこに配置してください。</translation>
     </message>
@@ -3314,10 +3334,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>再インポートする辞書がありません</translation>
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation>辞書 %1/%2: %3</translation>
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation>%1 件の辞書を再インポートしました:</translation>
     </message>
@@ -3326,20 +3342,8 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation>スキップ（自動修復の対象外です。行ごとの「再インポート…」を使用してください）:</translation>
     </message>
     <message>
-        <source>Failed:</source>
-        <translation>失敗:</translation>
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation>残りの辞書のインポートはキャンセルされました。</translation>
-    </message>
-    <message>
         <source>Reimport All</source>
         <translation>すべて再インポート</translation>
-    </message>
-    <message>
-        <source>Done.</source>
-        <translation>完了しました。</translation>
     </message>
     <message>
         <source>Nothing to restore</source>

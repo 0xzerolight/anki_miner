@@ -25,6 +25,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_picker_enter,
     _log_import_picker_return,
     _OnceCallback,
+    format_batch_summary,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -145,59 +146,116 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
     def _with_dict_at_top(self, dict_id: str) -> tuple[ChainEntry, ...]:
         """Return the current chain with ``dict_id`` placed (or moved) to the top."""
-        chain = list(self._panel.get_chain())
-        chain = [e for e in chain if not (e.kind == "indexed" and e.dict_id == dict_id)]
-        chain.insert(0, ChainEntry(kind="indexed", dict_id=dict_id, enabled=True))
-        return tuple(chain)
+        return self._with_dicts_at_top([dict_id])
+
+    def _with_dicts_at_top(self, dict_ids: list[str]) -> tuple[ChainEntry, ...]:
+        """Place a newly imported batch at the top, preserving picker order."""
+        unique_ids = list(dict.fromkeys(dict_ids))
+        selected = set(unique_ids)
+        chain = [
+            entry for entry in self._panel.get_chain() if not (entry.kind == "indexed" and entry.dict_id in selected)
+        ]
+        return tuple([ChainEntry(kind="indexed", dict_id=dict_id, enabled=True) for dict_id in unique_ids] + chain)
 
     def add_dict(self) -> None:
-        """Prompt for a Yomitan zip and run the import worker."""
+        """Prompt for one or more Yomitan zips and import them sequentially."""
         if not self._begin_mutation("add"):
             return
         trace_id = _begin_import_trace("dictionary add")
         picker_started = _log_import_picker_enter(trace_id, "dictionary zip")
-        file_dialogs.pick_open_file(
+        file_dialogs.pick_open_files(
             self._parent,
-            QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zip"),
+            QCoreApplication.translate("DictionaryImportFlow", "Choose Yomitan dictionary zips"),
             resolve_start_dir(None, file_mode=True, default_dir=self._get_config().dicts_root),
             QCoreApplication.translate("DictionaryImportFlow", "Yomitan zip (*.zip)"),
             on_done=lambda chosen: self._add_dict_picked(trace_id, picker_started, chosen),
         )
 
-    def _add_dict_picked(self, trace_id: str, picker_started: float, zip_path_str: str) -> None:
-        """Run the dictionary import for the zip ``add_dict``'s picker returned."""
-        _log_import_picker_return(trace_id, "dictionary zip", picker_started, zip_path_str)
-        if not zip_path_str:
+    def _add_dict_picked(self, trace_id: str, picker_started: float, zip_path_strs: list[str]) -> None:
+        """Run a chained import for the zips ``add_dict``'s picker returned."""
+        _log_import_picker_return(trace_id, "dictionary zip", picker_started, "; ".join(zip_path_strs))
+        if not zip_path_strs:
             self._set_import_buttons_enabled(True)
             return
 
-        try:
-            worker = ImportWorker.for_yomitan(Path(zip_path_str), self._get_config().dicts_root)
-        except Exception:  # noqa: BLE001 — bucket C: release UI, then re-raise the same failure.
-            self._set_import_buttons_enabled(True)
-            raise
+        jobs = [Path(path) for path in zip_path_strs]
 
-        def on_success(dict_id: str, meta: dict) -> None:
-            new_chain = self._with_dict_at_top(dict_id)
-            # New dict folder on disk — invalidate the panel's cached registry
-            # scan so the row picks up the entry_count + source_name.
-            self._panel.refresh_registry()
-            self._panel.set_chain(new_chain)
-            _log_import_persist(trace_id, "start")
-            self._persist_chain(new_chain)
-            _log_import_persist(trace_id, "done")
+        def make_worker(zip_path: Path) -> ImportWorker:
+            return ImportWorker.for_yomitan(zip_path, self._get_config().dicts_root)
+
+        def format_label(index: int, total: int, zip_path: Path, message: str | None) -> str:
+            label = tr_format(
+                QCoreApplication.translate("DictionaryImportFlow", "Dictionary %1 of %2: %3"),
+                index,
+                total,
+                zip_path.name,
+            )
+            return f"{label}\n{message}" if message is not None else label
+
+        def on_finished(result: _ChainedImportResult[Path]) -> None:
+            imported = [dict_id for _job, dict_id, _meta in result.successes]
+            if imported:
+                new_chain = self._with_dicts_at_top(imported)
+                self._panel.refresh_registry()
+                self._panel.set_chain(new_chain)
+                _log_import_persist(trace_id, "start")
+                self._persist_chain(new_chain)
+                _log_import_persist(trace_id, "done")
+
+            if len(jobs) == 1 and result.cancelled and not result.successes and not result.failures:
+                return
+
+            # A failed single pick keeps the pre-batch contract: a banner, not a
+            # success box with a "Failed:" section buried in it.
+            if len(jobs) == 1 and result.failures and not result.successes:
+                self._report_import_issue(
+                    QCoreApplication.translate("DictionaryImportFlow", "The dictionary could not be imported."),
+                    result.failures[0][1],
+                )
+                return
+
+            if len(result.successes) == 1 and not result.failures and not result.cancelled:
+                _job, dict_id, meta = result.successes[0]
+                QMessageBox.information(
+                    self._parent,
+                    QCoreApplication.translate("DictionaryImportFlow", "Dictionary added"),
+                    tr_format(
+                        QCoreApplication.translate("DictionaryImportFlow", "Imported %1 (%2 entries)"),
+                        dict_id,
+                        f"{meta.get('entry_count', 0):,}",
+                    )
+                    + self._import_notes(meta),
+                )
+                return
+
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(
+                            QCoreApplication.translate("DictionaryImportFlow", "Imported %1 dictionaries:"),
+                            len(imported),
+                        ),
+                        [f"  • {dict_id}" for dict_id in imported],
+                    ),
+                    (
+                        QCoreApplication.translate("DictionaryImportFlow", "Failed:"),
+                        [f"  • {job.name}: {message}" for job, message in result.failures],
+                    ),
+                ],
+                cancelled_note=(
+                    QCoreApplication.translate("DictionaryImportFlow", "Cancelled before remaining dictionaries.")
+                    if result.cancelled
+                    else None
+                ),
+                empty=QCoreApplication.translate("DictionaryImportFlow", "Done."),
+            )
             QMessageBox.information(
                 self._parent,
-                QCoreApplication.translate("DictionaryImportFlow", "Dictionary added"),
-                tr_format(
-                    QCoreApplication.translate("DictionaryImportFlow", "Imported %1 (%2 entries)"),
-                    dict_id,
-                    f"{meta.get('entry_count', 0):,}",
-                )
-                + self._import_notes(meta),
+                QCoreApplication.translate("DictionaryImportFlow", "Dictionaries added"),
+                summary,
             )
 
-        def on_success_error(exc: Exception) -> None:
+        def on_finished_error(exc: Exception, _result: _ChainedImportResult[Path]) -> None:
             self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
@@ -206,23 +264,21 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 str(exc),
             )
 
-        self._run_modal_import(
-            worker=worker,
-            progress_label=QCoreApplication.translate("DictionaryImportFlow", "Importing dictionary…"),
+        self._run_chained_imports(
+            jobs=jobs,
+            make_worker=make_worker,
+            format_label=format_label,
             cancel_label=QCoreApplication.translate("DictionaryImportFlow", "Cancel"),
             determinate=True,
             join_noun="dictionary import worker",
             failure_summary=QCoreApplication.translate("DictionaryImportFlow", "The dictionary could not be imported."),
-            refusal_message=QCoreApplication.translate(
-                "DictionaryImportFlow", "Another import is still finishing. Wait for it to finish and try again."
-            ),
             cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
                 "DictionaryImportFlow", "The import worker finished without a completion result."
             ),
             trace_id=trace_id,
-            on_success=on_success,
-            on_success_error=on_success_error,
+            on_finished=on_finished,
+            on_finished_error=on_finished_error,
         )
 
     def _catalog_slot_base_matches(self, slot_id: str, zip_path: Path) -> bool:
@@ -634,41 +690,41 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             reimported = [job[2] for job, _dict_id, _meta in result.successes]
             errors = [(job[2], message) for job, message in result.failures]
 
-            lines: list[str] = []
-            if reimported:
-                lines.append(
-                    tr_format(
-                        QCoreApplication.translate("DictionaryImportFlow", "Reimported %1 dictionary/dictionaries:"),
-                        len(reimported),
-                    )
-                )
-                lines.extend(f"  • {n}" for n in reimported)
-            if missing_legacy:
-                if lines:
-                    lines.append("")
-                lines.append(
-                    QCoreApplication.translate(
-                        "DictionaryImportFlow",
-                        "Skipped (not eligible for automatic repair; use per-row Re-import…):",
-                    )
-                )
-                lines.extend(f"  • {n}" for n in missing_legacy)
-            if errors:
-                if lines:
-                    lines.append("")
-                lines.append(QCoreApplication.translate("DictionaryImportFlow", "Failed:"))
-                lines.extend(f"  • {name}: {msg}" for name, msg in errors)
-            if result.cancelled:
-                if lines:
-                    lines.append("")
-                lines.append(
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(
+                            QCoreApplication.translate(
+                                "DictionaryImportFlow", "Reimported %1 dictionary/dictionaries:"
+                            ),
+                            len(reimported),
+                        ),
+                        [f"  • {n}" for n in reimported],
+                    ),
+                    (
+                        QCoreApplication.translate(
+                            "DictionaryImportFlow",
+                            "Skipped (not eligible for automatic repair; use per-row Re-import…):",
+                        ),
+                        [f"  • {n}" for n in missing_legacy],
+                    ),
+                    (
+                        QCoreApplication.translate("DictionaryImportFlow", "Failed:"),
+                        [f"  • {name}: {msg}" for name, msg in errors],
+                    ),
+                ],
+                cancelled_note=(
                     QCoreApplication.translate("DictionaryImportFlow", "Cancelled before remaining dictionaries.")
-                )
+                    if result.cancelled
+                    else None
+                ),
+                empty=QCoreApplication.translate("DictionaryImportFlow", "Done."),
+            )
 
             QMessageBox.information(
                 self._parent,
                 QCoreApplication.translate("DictionaryImportFlow", "Reimport All"),
-                "\n".join(lines) or QCoreApplication.translate("DictionaryImportFlow", "Done."),
+                summary,
             )
             done()
 

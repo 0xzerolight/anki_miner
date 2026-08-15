@@ -129,7 +129,13 @@ class TestAddSource:
             filters.append(args[3])
             on_done("")
 
+        def cancel_multi_picker(*args, on_done, **kwargs):
+            filters.append(args[3])
+            on_done([])
+
+        # Add takes several files at once; reimport still replaces exactly one.
         monkeypatch.setattr(file_dialogs, "pick_open_file", cancel_picker)
+        monkeypatch.setattr(file_dialogs, "pick_open_files", cancel_multi_picker)
 
         tab._pitch_import_flow.add_source()
         tab._pitch_import_flow.reimport_source(
@@ -144,14 +150,14 @@ class TestAddSource:
         ]
 
     def test_cancelled_dialog_skips_import(self, tab, monkeypatch, stub_worker):
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(""))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([]))
         tab._pitch_import_flow.add_source()
         stub_worker.assert_not_called()
 
     def test_happy_path_appends_entry_and_persists(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "nhk.zip"
         src.write_bytes(b"zip")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -171,10 +177,31 @@ class TestAddSource:
         # reorders upward if it should win overlaps).
         assert new_chain[-1] == PitchSourceEntry(source_id="nhk", enabled=True)
 
+    def test_multiple_sources_import_sequentially_in_picker_order(self, tab, monkeypatch, stub_worker, tmp_path, qtbot):
+        first = tmp_path / "first.zip"
+        second = tmp_path / "second.zip"
+        monkeypatch.setattr(
+            file_dialogs,
+            "pick_open_files",
+            lambda *a, on_done, **kw: on_done([str(first), str(second)]),
+        )
+        _capture_infos(monkeypatch)
+        monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
+        persist_calls: list[tuple[PitchSourceEntry, ...]] = []
+        tab._pitch_import_flow._persist_chain = persist_calls.append
+
+        tab._pitch_import_flow.add_source()
+        _fire_done(stub_worker.instances[0], "first", {"entry_count": 1, "source_name": "First"})
+        qtbot.waitUntil(lambda: len(stub_worker.instances) == 2)
+        _fire_done(stub_worker.instances[1], "second", {"entry_count": 2, "source_name": "Second"})
+
+        assert [entry.source_id for entry in persist_calls[-1]][-2:] == ["first", "second"]
+        assert len(persist_calls) == 1
+
     def test_append_after_existing_entries(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "new.csv"
         src.write_text("ねこ,猫,1\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -193,7 +220,7 @@ class TestAddSource:
     def test_readd_moves_existing_entry_to_end(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "again.csv"
         src.write_text("ねこ,猫,1\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -217,7 +244,7 @@ class TestAddSource:
     def test_failure_surfaces_error_and_leaves_chain(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "broken.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -238,7 +265,7 @@ class TestAddSource:
     def test_user_cancellation_is_silent_and_reenables_add(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "list.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 

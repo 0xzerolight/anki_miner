@@ -8,8 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **Register local-audio-yomichan `android.db` files in place.** Audio blobs stay in the source database and are loaded on demand, so registering a multi-gigabyte database does not duplicate it.
+- **Import several dictionary, frequency, or pitch sources at once.** The GUI imports the selected files in order and reports partial failures without losing the sources that succeeded.
 
 ### Changed
+- **An import started while another is still finishing now waits its turn instead of being refused.** The new import begins as soon as the previous one ends, so the "Another import is still finishing" message no longer appears when adding a dictionary, frequency, or pitch source.
 
 ### Fixed
 

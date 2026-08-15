@@ -727,11 +727,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Packs Added</source>
+        <source>Done.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Done.</source>
+        <source>Audio Packs Added</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -795,14 +795,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Re-importing Android audio database…</source>
         <translation type="unfinished" />
     </message>
@@ -811,7 +803,11 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 successfully.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -820,6 +816,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>The audio pack could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -3200,11 +3200,19 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Choose Yomitan dictionary zip</source>
+        <source>Choose Yomitan dictionary zips</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Yomitan zip (*.zip)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The dictionary could not be imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3216,23 +3224,31 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Imported %1 dictionaries:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Done.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionaries added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Importing dictionary…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The dictionary could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3272,6 +3288,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
         <translation type="unfinished" />
     </message>
@@ -3299,10 +3319,6 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionary %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reimported %1 dictionary/dictionaries:</source>
         <translation type="unfinished" />
     </message>
@@ -3311,19 +3327,7 @@ Skipped (not eligible for automatic repair; use per-row Re-import…):
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Failed:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled before remaining dictionaries.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reimport All</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Done.</source>
         <translation type="unfinished" />
     </message>
     <message>

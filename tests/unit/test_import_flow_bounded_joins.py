@@ -202,11 +202,11 @@ class TestFrequencyBoundedJoin:
         )
         return new
 
-    def test_running_predecessor_is_refused_without_gui_wait(self, tab, monkeypatch, tmp_path, caplog):
+    def test_running_predecessor_is_deferred_without_gui_wait(self, tab, monkeypatch, tmp_path, caplog):
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         warnings: list[tuple[str, str]] = []
         monkeypatch.setattr(
@@ -225,24 +225,27 @@ class TestFrequencyBoundedJoin:
         assert stuck in flow._retained_import_workers
         assert stuck in flow.iter_close_workers()
         new.start.assert_not_called()
-        new.deleteLater.assert_called_once()
+        # Chained imports check the predecessor before constructing this worker.
+        new.deleteLater.assert_not_called()
         assert stuck.cancel_calls == 0
         assert stuck.wait_calls == 0
-        assert warnings
-        assert "still" in warnings[0][1].lower()
+        assert warnings == []
         assert any("frequency import worker is still running" in r.message for r in caplog.records)
 
         stuck.finish()
 
-        assert flow._active_import_worker is None
+        assert flow._active_import_worker is new
         assert stuck not in flow._retained_import_workers
-        new.start.assert_not_called()
+        new.start.assert_called_once()
+        new.cancelled.connect.call_args.args[0]()
+        new.finished.connect.call_args.args[0]()
+        assert flow._active_import_worker is None
 
     def test_finished_in_shared_connect_gap_starts_replacement_and_closes_modal(self, tab, monkeypatch, tmp_path):
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         dialog = MagicMock()
         monkeypatch.setattr(
             "anki_miner.gui.controllers.import_flow_common.QProgressDialog",
@@ -271,7 +274,7 @@ class TestFrequencyBoundedJoin:
         new = self._patch_worker(monkeypatch)
         src = tmp_path / "f.csv"
         src.write_text("word,rank\n猫,5\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         monkeypatch.setattr(tab.frequency_panel, "refresh_registry", lambda: None)
         _silence_dialogs(monkeypatch)
 
