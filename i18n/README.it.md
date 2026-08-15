@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - **Costruttore di mazzi** - estrai un'intera serie in un unico mazzo ordinato per frequenza.
 - **Audiolibri** - estrai audiolibri, podcast, radio, canzoni (coppie audio + sottotitoli/trascrizione).
 - **Lettura** - estrai manga (mokuro), romanzi (`.epub`, `.txt`; un singolo libro o un'intera cartella), file di sottotitoli autonomi o testo giapponese incollato.
-- **Analisi** - cronologia del mining, classifiche di difficoltà, traguardi, annulla.
+- **Analisi** - cronologia del mining, classifiche di difficoltà, traguardi.
 - **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (alass), condensa i contenuti multimediali in audio con solo dialoghi, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo e completa retroattivamente i campi delle carte esistenti.
 - **Impostazioni** - tutto ciò che è configurabile.
 
 ## Altre funzionalità
 
 - Curatore di parole - rivedi ogni parola candidata prima che vengano create le carte, con la sua scena, pagina del manga e voce del dizionario affiancate.
+- Annulla un'esecuzione - elimina le note appena create da un'esecuzione, direttamente dalla sua finestra dei risultati.
 - Filtri avanzati: i+1, intervallo di rango di frequenza, blacklist, regex, insiemi di parole e altro ancora.
 - Importazione offline di dizionari Yomitan - definizioni, accento tonale, frequenza - concatenati per priorità.
 - Più elenchi di frequenza concatenati per priorità.
@@ -223,7 +224,6 @@ Se vuoi sostenere il progetto, condividilo con altri che potrebbero trarne benef
 
 - Sei nuovo? Inizia con [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Panoramica dell'architettura: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Strategia di test: [TESTING.md](../TESTING.md).
 - Codice di condotta: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Sicurezza: [SECURITY.md](../SECURITY.md).
 

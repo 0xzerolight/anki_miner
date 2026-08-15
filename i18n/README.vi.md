@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ anki_miner_gui
 - **Trình dựng bộ thẻ** - khai thác cả một loạt phim thành một bộ thẻ được xếp hạng theo tần suất.
 - **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
 - **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản tiếng Nhật dán vào.
-- **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc, hoàn tác.
+- **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc.
 - **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (alass), cô đọng media thành âm thanh chỉ có hội thoại, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, và điền bổ sung các trường trên thẻ đã có.
 - **Cài đặt** - mọi thứ có thể cấu hình.
 
 ## Tính năng khác
 
 - Word Curator - xem lại từng từ ứng viên trước khi thẻ được tạo, cùng với cảnh phim, trang manga và mục từ điển của nó đặt cạnh nhau.
+- Hoàn tác một lần chạy - xóa các ghi chú mà một lần chạy vừa tạo, ngay trong hộp thoại kết quả.
 - Bộ lọc phong phú: i+1, khoảng hạng tần suất, danh sách đen, regex, tập từ, và hơn thế nữa.
 - Nhập từ điển Yomitan ngoại tuyến - định nghĩa, trọng âm cao độ, tần suất - xâu chuỗi theo thứ tự ưu tiên.
 - Nhiều danh sách tần suất được xâu chuỗi theo thứ tự ưu tiên.
@@ -223,7 +224,6 @@ Nếu bạn muốn ủng hộ dự án, hãy chia sẻ nó với những ngườ
 
 - Mới đến đây? Hãy bắt đầu với [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Tổng quan kiến trúc: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Chiến lược kiểm thử: [TESTING.md](../TESTING.md).
 - Quy tắc ứng xử: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Bảo mật: [SECURITY.md](../SECURITY.md).
 

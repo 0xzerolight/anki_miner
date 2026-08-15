@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ anki_miner_gui
 - **牌組建立器** - 把整部影集採集成一個依頻率排序的牌組。
 - **有聲書** - 採集有聲書、Podcast、廣播、歌曲（音訊 + 字幕／逐字稿組合）。
 - **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的日文文字。
-- **分析** - 採集歷史、難度排名、里程碑、復原。
+- **分析** - 採集歷史、難度排名、里程碑。
 - **工具** - 生成字幕（本機 Whisper）、重新校時字幕（alass）、把媒體濃縮成只有對話的音訊、把現成牌組中值得學的部分複製到新牌組，以及為既有卡片補齊欄位。
 - **設定** - 所有可調整的項目。
 
 ## 其他功能
 
 - 單字整理工具 - 在製作卡片前逐一檢視每個候選單字，並排顯示它的場景、漫畫頁面與字典條目。
+- 復原一次執行 - 直接在結果對話框中刪除該次執行剛建立的筆記。
 - 完整的篩選機制：i+1、頻率排名區間、黑名單、正規表示式、單字集等等。
 - 離線 Yomitan 字典匯入 - 釋義、高低音調、頻率 - 依優先順序串接。
 - 多份頻率清單依優先順序串接。
@@ -223,7 +224,6 @@ Anki Miner 未來版本的構想清單。順序不代表優先度。功能請求
 
 - 第一次來？請從 [CONTRIBUTING.md](../CONTRIBUTING.md) 開始。
 - 架構概覽：[ARCHITECTURE.md](../ARCHITECTURE.md)。
-- 測試策略：[TESTING.md](../TESTING.md)。
 - 行為準則：[CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。
 - 安全性：[SECURITY.md](../SECURITY.md)。
 
