@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [2.11.0] - 2026-08-15
+
+### Added
 - **Register local-audio-yomichan `android.db` files in place.** Audio blobs stay in the source database and are loaded on demand, so registering a multi-gigabyte database does not duplicate it.
 - **Import several dictionary, frequency, or pitch sources at once.** The GUI imports the selected files in order and reports partial failures without losing the sources that succeeded.
 - **Frequency and pitch sources have a visible reimport path.** Both panels gained a "Reimport All" button and a per-row "Re-import" button, matching dictionaries — right-click Re-import already worked, but nobody could find it. A row now distinguishes stale (present but schema-mismatched, so it is rebuildable from the saved copy and gets a button) from missing (folder gone, nothing to rebuild from). The startup prompt covers all three families in one dialog and runs their batches in sequence, rather than stacking three modal progress dialogs.
