@@ -78,6 +78,24 @@ python scripts/i18n.py extract
 python scripts/i18n.py compile
 ```
 
+### README translations
+
+The README ships in every UI language under `i18n/README.<code>.md`, where
+`<code>` matches the locale codes in `anki_miner/gui/i18n.py`.
+
+- Editing `README.md` makes every translation's source stamp stale and turns
+  `tests/unit/test_readme_translations.py` red. Update the affected passages in
+  each `i18n/README.<code>.md`, then run `python scripts/readme_i18n.py stamp`.
+- Adding a language: add the entry to `_LANGUAGES`, then
+  `python scripts/readme_i18n.py scaffold <code>` and translate the result.
+- Translations must keep the English structure exactly: same headings, same
+  table rows, same `<details>` blocks, same URLs, and byte-identical code
+  blocks. Only prose, headings, `<summary>` labels and table cell text change.
+- GUI labels, menu paths and quoted error messages should match that language's
+  shipped UI strings - look them up in
+  `anki_miner/gui/resources/translations/anki_miner_<code>.ts`.
+- `python scripts/readme_i18n.py check` runs the same gate as the test.
+
 ## Changelog
 
 Add an entry under `## [Unreleased]` in `CHANGELOG.md` using the [Keep a Changelog](https://keepachangelog.com/) sections (Added / Changed / Fixed / Removed). Match the existing prose style — entries explain *what* changed and *why it matters to a user*, not just the implementation detail.
