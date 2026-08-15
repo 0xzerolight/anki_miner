@@ -188,7 +188,12 @@ def test_missing_source_badge_shown(qapp, qtbot, tmp_path):
     assert any("missing" in t for t in texts), texts
 
 
-def test_schema_mismatch_renders_missing(qapp, qtbot, tmp_path):
+def test_stale_source_offers_a_re_import_button(qapp, qtbot, tmp_path):
+    """Stale and missing are two failures with two repairs, so two rows.
+
+    Stale is present on disk and rebuildable from the copy saved at import, so
+    it gets a button; missing has nothing to rebuild from and gets none.
+    """
     meta = _make_meta("old", schema_ok=False)
     panel = FrequencySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
@@ -198,7 +203,44 @@ def test_schema_mismatch_renders_missing(qapp, qtbot, tmp_path):
     )
     row = panel._row_widget(0)
     assert row is not None
-    assert row.warning_text != ""
+    assert "upgrade" in row.warning_text
+    assert row.repair_button is not None
+
+
+def test_missing_source_offers_no_repair_button(qapp, qtbot, tmp_path):
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain((FreqEntry(source_id="gone", enabled=True),), registry_meta={})
+    row = panel._row_widget(0)
+    assert row is not None
+    assert "missing" in row.warning_text
+    assert row.repair_button is None
+
+
+def test_row_re_import_button_requests_that_source(qapp, qtbot, tmp_path):
+    meta = _make_meta("old", schema_ok=False)
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    requested: list[str] = []
+    panel.reimport_source_requested.connect(requested.append)
+    panel.set_chain((FreqEntry(source_id="old", enabled=True),), registry_meta={"old": meta})
+
+    row = panel._row_widget(0)
+    assert row is not None and row.repair_button is not None
+    row.repair_button.click()
+
+    assert requested == ["old"]
+
+
+def test_reimport_all_button_emits_its_request(qapp, qtbot, tmp_path):
+    panel = FrequencySettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    fired: list[int] = []
+    panel.reimport_all_requested.connect(lambda: fired.append(1))
+
+    panel._reimport_btn.click()
+
+    assert fired == [1]
 
 
 def test_present_source_no_missing_badge(qapp, qtbot, tmp_path):

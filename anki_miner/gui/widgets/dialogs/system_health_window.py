@@ -55,12 +55,17 @@ HEALTH_OK = "ok"
 HEALTH_WARN = "warn"
 HEALTH_FAIL = "fail"
 
+#: Detail shown for an optional resource family the user has not set up. Rows
+#: come from a static group tuple, so frequency and pitch always render; saying
+#: so plainly beats a green tick for something absent or a warning for a choice.
+_NOT_CONFIGURED = "Not configured (optional)"
+
 #: Row order, grouped exactly as D26 names the groups. The group keys are
 #: stable; their titles are translated at render time.
 HEALTH_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("destination", ("anki.connect", "anki.deck", "anki.note_type", "anki.fields")),
     ("media", ("tools.ffmpeg", "tools.ffprobe")),
-    ("language", ("resources.dictionary",)),
+    ("language", ("resources.dictionary", "resources.frequency", "resources.pitch")),
     ("optional", ("tools.ytdlp", "tools.alass")),
     ("updates", ("app.updates",)),
 )
@@ -78,6 +83,8 @@ HEALTH_FIX_ANCHORS: dict[str, str] = {
     "anki.note_type": "anki.note_type",
     "anki.fields": "anki.expression_field_input",
     "resources.dictionary": "dictionaries.chain",
+    "resources.frequency": "frequency.chain",
+    "resources.pitch": "pitch.chain",
     "tools.ytdlp": "youtube.ytdlp_update",
     "tools.alass": "subtitles.alass_download",
 }
@@ -93,6 +100,8 @@ _COMPONENT_KEYS: dict[str, str] = {
     "ffmpeg": "tools.ffmpeg",
     "ffprobe": "tools.ffprobe",
     "Offline Dictionary": "resources.dictionary",
+    "Frequency Sources": "resources.frequency",
+    "Pitch Sources": "resources.pitch",
     "yt-dlp": "tools.ytdlp",
     "alass": "tools.alass",
 }
@@ -182,6 +191,18 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
         dictionary_state,
         dictionary_detail or versions.get("offline-dictionary", ""),
     )
+
+    # Frequency and pitch are optional: an unconfigured family produces no
+    # issue AND no version string, which reads as "unknown" rather than a green
+    # tick for something that is not set up. Configured-and-healthy fills the
+    # detail with source names and counts.
+    for key, version_key in (("resources.frequency", "frequency-sources"), ("resources.pitch", "pitch-sources")):
+        state, detail = _issue_state(key)
+        summary = versions.get(version_key, "")
+        if state == HEALTH_OK and not detail and not summary:
+            checks[key] = HealthCheck(key=key, state=HEALTH_UNKNOWN, detail=_NOT_CONFIGURED, checked_at=checked_at)
+            continue
+        checks[key] = _record(key, state, detail or summary)
 
     ytdlp_state, ytdlp_detail = _issue_state("tools.ytdlp")
     checks["tools.ytdlp"] = _record("tools.ytdlp", ytdlp_state, ytdlp_detail or versions.get("yt-dlp", ""))
@@ -597,6 +618,8 @@ class SystemHealthWindow(EnhancedDialog):
             "tools.ffmpeg": self.tr("ffmpeg"),
             "tools.ffprobe": self.tr("ffprobe"),
             "resources.dictionary": self.tr("Offline dictionary"),
+            "resources.frequency": self.tr("Frequency lists"),
+            "resources.pitch": self.tr("Pitch accent"),
             "tools.ytdlp": self.tr("yt-dlp (YouTube mining)"),
             "tools.alass": self.tr("alass (subtitle retiming)"),
             "app.updates": self.tr("Anki Miner updates"),

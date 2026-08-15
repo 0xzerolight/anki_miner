@@ -74,7 +74,7 @@ from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, Sequential
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
-from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -122,7 +122,7 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         self._curation_offset: float = config.subtitle_offset
 
     def _stale_reimport_message(self) -> str | None:
-        return stale_dict_reimport_error(self._config)
+        return stale_resource_reimport_error(self._config)
 
     def _run_item(self, idx: int, item: YouTubeQueueItem) -> bool:
         """Fetch + mine one item under the shared bounded-retry cycle.

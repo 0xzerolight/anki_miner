@@ -905,7 +905,7 @@ def test_stale_dict_aborts_queue_once(qapp, mock_processor, test_config, fake_lo
     caps = _connect_all(worker)
 
     with patch(
-        "anki_miner.gui.workers.reading_queue_worker.stale_dict_reimport_error",
+        "anki_miner.gui.workers.reading_queue_worker.stale_resource_reimport_error",
         return_value="Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → Reimport All",
     ):
         worker.run()

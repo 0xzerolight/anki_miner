@@ -25,7 +25,7 @@ import time
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, Protocol, TypeVar
 from uuid import uuid4
 
 from PyQt6.QtCore import Qt, QTimer
@@ -110,6 +110,43 @@ def _log_import_picker_return(trace_id: str, picker_name: str, started_at: float
 def _log_import_persist(trace_id: str, phase: Literal["start", "done"]) -> None:
     """Log the state-persistence boundary for a modal import."""
     logger.info("Import trace %s persist %s", trace_id, phase)
+
+
+class ReimportAllFlow(Protocol):
+    """The one method the startup migration prompt drives a family through.
+
+    Both ``DictionaryImportFlow`` and ``SourceChainImportFlow`` satisfy it, but
+    their only common base is ``ModalImportFlowMixin``, which does not — so a
+    mapping of the three flows needs this to stay typed.
+    """
+
+    def reimport_all(
+        self,
+        *,
+        only_ids: frozenset[str] | None = ...,
+        on_complete: Callable[[], None] | None = ...,
+    ) -> None: ...
+
+
+class _OnceCallback:
+    """Fire an optional callback at most once.
+
+    A ``reimport_all`` has six terminal paths and some are reachable in
+    sequence — ``on_finished`` raising lands in ``on_finished_error`` — so the
+    guard is what makes "fires exactly once" true rather than aspirational. The
+    startup prompt chains one resource family's batch off the previous one's
+    completion, and a double fire there would run a family twice.
+    """
+
+    def __init__(self, callback: Callable[[], None] | None) -> None:
+        self._callback = callback
+        self._fired = False
+
+    def __call__(self) -> None:
+        if self._fired or self._callback is None:
+            return
+        self._fired = True
+        self._callback()
 
 
 class ModalImportFlowMixin:

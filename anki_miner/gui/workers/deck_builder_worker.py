@@ -175,7 +175,7 @@ class DeckBuilderWorker(ProcessorOwningWorker):
             # aggregate and the preview the user would otherwise confirm — with the
             # same actionable error. Raises SetupError → the outer except surfaces
             # it once via ``error``; process_episode re-checks as a backstop.
-            base.check_dictionary_staleness()
+            base.check_resource_staleness()
             counts = aggregate(base.subtitle_parser, self.request.pairs, cancel_check=self.check_cancelled)
             if self.check_cancelled():
                 return

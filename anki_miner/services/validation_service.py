@@ -240,7 +240,26 @@ class ValidationService:
         # use_pitch_accent / use_frequency_data flags: activation is now derived
         # from the resource being present (pitch_active / frequency_active = an
         # enabled source in the chain), so a "wanted but missing" state is no
-        # longer representable.
+        # longer representable. That still holds.
+        #
+        # "Wanted but BROKEN" is a different state and is representable: the
+        # source is enabled, on disk, and unusable because an app upgrade bumped
+        # the index schema. Reported here so the silent failure it causes
+        # (frequency: no rank and no rank filtering; pitch: blank field) is not
+        # the user's only clue. Nothing configured stays silent — both families
+        # are optional, and the checks return None for it.
+        for component, key, check in (
+            ("Frequency Sources", "frequency-sources", self._check_frequency_sources),
+            ("Pitch Sources", "pitch-sources", self._check_pitch_sources),
+        ):
+            ok, message = check()
+            if ok is None:
+                # Not configured: the row renders "not configured (optional)".
+                tool_versions[key] = ""
+            elif ok:
+                tool_versions[key] = message
+            else:
+                issues.append(ValidationIssue(component=component, severity="WARNING", message=message))
 
         return ValidationResult(
             ankiconnect_ok=ankiconnect_ok,
@@ -530,6 +549,103 @@ class ValidationService:
             f"Dictionary index(es) not found on disk: {', '.join(missing)}. "
             "Import them again in Settings → Dictionaries."
         )
+
+    def _check_frequency_sources(self) -> tuple[bool | None, str]:
+        """Check that the configured frequency chain can answer a lookup.
+
+        Reads the registry snapshot only, for the same reason
+        :meth:`_check_offline_dictionary` does: a readiness probe that opened
+        the chain would take a Windows file lock on the very index Reimport All
+        is about to replace, and so could block its own fix.
+
+        Frequency is optional and activation is derived from an enabled source
+        existing, so "configured nothing" is not a failure — it returns ``None``
+        and the row reports itself as unconfigured rather than nagging. Neither
+        is "enabled but gone from disk": that state was deliberately dropped
+        from validation when the ``use_frequency_data`` flag went away, and
+        nothing here brings it back.
+
+        What *is* reported is a source the user asked for that an app upgrade
+        broke. A stale index is silently dropped from the chain, which costs the
+        card its rank AND stops ``max_frequency_rank`` filtering — so the run
+        floods the deck with rare words and says nothing.
+
+        Returns:
+            ``(None, "")`` when nothing is configured, ``(True, names)`` when
+            usable, ``(False, message)`` when stale or empty.
+        """
+        from anki_miner.services.frequency.registry import FrequencySourceRegistry
+
+        enabled = [e for e in self.config.frequency_chain if e.enabled and e.source_id]
+        if not enabled:
+            return None, ""
+
+        registry = FrequencySourceRegistry(self.config.freqs_root)
+        registry.load()
+        usable = registry.usable_enabled(self.config)
+
+        stale = [meta.source_name for meta in registry.stale_enabled(self.config)]
+        if stale:
+            return False, (
+                f"Frequency source(s) need reimporting after an upgrade: {', '.join(stale)}. "
+                "Use Settings → Frequency → Reimport All."
+            )
+        empty = [
+            meta.source_name
+            for meta in (registry.get(e.source_id) for e in enabled)
+            if meta is not None and meta.schema_ok and meta.entry_count == 0
+        ]
+        if empty:
+            return False, (
+                f"Frequency source(s) contain no entries: {', '.join(empty)}. " "Reimport them in Settings → Frequency."
+            )
+        if usable:
+            return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
+        # Enabled but absent from disk. Not reported — see the docstring.
+        return None, ""
+
+    def _check_pitch_sources(self) -> tuple[bool | None, str]:
+        """Check that the configured pitch chain can answer a lookup.
+
+        Same contract and same registry-snapshot-only rule as
+        :meth:`_check_frequency_sources`. A stale pitch index costs the card its
+        pitch field silently; an unconfigured chain is reported as unconfigured,
+        never as a problem.
+
+        Returns:
+            ``(None, "")`` when nothing is configured, ``(True, names)`` when
+            usable, ``(False, message)`` when stale or empty.
+        """
+        from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
+
+        enabled = [e for e in self.config.pitch_chain if e.enabled and e.source_id]
+        if not enabled:
+            return None, ""
+
+        registry = PitchSourceRegistry(self.config.pitch_root)
+        registry.load()
+        usable = registry.usable_enabled(self.config)
+
+        stale = [meta.source_name for meta in registry.stale_enabled(self.config)]
+        if stale:
+            return False, (
+                f"Pitch accent source(s) need reimporting after an upgrade: {', '.join(stale)}. "
+                "Use Settings → Pitch Accent → Reimport All."
+            )
+        empty = [
+            meta.source_name
+            for meta in (registry.get(e.source_id) for e in enabled)
+            if meta is not None and meta.schema_ok and meta.entry_count == 0
+        ]
+        if empty:
+            return False, (
+                f"Pitch accent source(s) contain no entries: {', '.join(empty)}. "
+                "Reimport them in Settings → Pitch Accent."
+            )
+        if usable:
+            return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
+        # Enabled but absent from disk. Not reported — see the docstring.
+        return None, ""
 
     def _check_deck_exists(self) -> tuple[bool, str]:
         """Check if the target deck exists in Anki.

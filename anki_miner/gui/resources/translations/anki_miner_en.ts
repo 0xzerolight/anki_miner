@@ -3681,10 +3681,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Skipped %1 word(s) already carded under another spelling</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Frequency filter: removed %1 words outside ranks %2-%3</source>
         <translation type="unfinished" />
     </message>
@@ -4302,92 +4298,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>FrequencyImportFlow</name>
-    <message>
-        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose frequency source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Source Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Importing frequency source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The frequency source could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose frequency source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency Source Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-importing frequency source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The frequency source could not be re-imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency source (%1);;All Files (*)</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -4435,6 +4345,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Re-add frequency sources found in the storage folder that aren't in the list above. No re-import needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4487,6 +4405,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5068,15 +4994,27 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>These dictionaries need re-importing after an app upgrade (their index format changed):</source>
+        <source>Dictionaries:</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked for them until you do. Re-import them now?</source>
+        <source>Frequency sources:</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Dictionaries need re-importing</source>
+        <source>Pitch accent sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>These resources need re-importing after an app upgrade (their index format changed):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is blocked until you do. Re-import them now?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resources need re-importing</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5419,84 +5357,6 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>PitchImportFlow</name>
-    <message>
-        <source>Choose pitch accent source</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> (skipped %1 malformed entries)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Source Added</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Imported %1 entries from '%2'.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import finished, but the settings could not be updated.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Importing pitch source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The pitch source could not be imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>That folder could not be scanned.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose pitch source to re-import</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch Source Re-imported</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Re-importing pitch source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The pitch source could not be re-imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent source (%1);;All Files (*)</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Loading…</source>
@@ -5547,6 +5407,14 @@ You can fine-tune these later in Settings → Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
         <translation type="unfinished" />
     </message>
@@ -5588,6 +5456,14 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Enable or disable %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>⚠ re-import required (app upgrade)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7091,6 +6967,16 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Nothing to restore</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every audio pack found in the storage folder is already listed.
+
+A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The audio packs could not be restored.</source>
         <translation type="unfinished" />
     </message>
@@ -7099,11 +6985,23 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Every frequency source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>The frequency sources could not be restored.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Installed frequency sources could not be checked.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every pitch accent source found in the storage folder is already listed.
+
+A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8376,6 +8274,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Offline dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency lists</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -56,10 +56,50 @@ def _result(*, ankiconnect_ok=True, deck=True, note_type=True, issues=None, vers
 
 
 def test_healthy_sweep_marks_every_row_ready():
-    checks = checks_from_validation(_result(), CHECKED_AT)
+    # Frequency and pitch report a summary only once configured; an empty chain
+    # is a choice, not a fault, and is pinned separately below.
+    result = _result(versions={"frequency-sources": "JPDB (1,000 entries)", "pitch-sources": "NHK (2,000 entries)"})
+
+    checks = checks_from_validation(result, CHECKED_AT)
 
     assert {check.state for check in checks.values()} == {HEALTH_OK}
     assert all(check.checked_at == CHECKED_AT for check in checks.values())
+
+
+def test_unconfigured_optional_resources_read_as_unknown_not_ready():
+    """Frequency and pitch are optional, so absent must not paint a green tick.
+
+    The rows come from a static group tuple and so always render; without this
+    the screen would claim a resource is ready when the user never added one.
+    """
+    checks = checks_from_validation(_result(), CHECKED_AT)
+
+    for key in ("resources.frequency", "resources.pitch"):
+        assert checks[key].state == HEALTH_UNKNOWN
+        assert checks[key].detail == "Not configured (optional)"
+    assert checks["resources.dictionary"].state == HEALTH_OK
+
+
+def test_stale_optional_resource_warns_and_can_be_repaired():
+    """The upgrade case: enabled, on disk, unusable until reimported."""
+    result = _result(
+        issues=[
+            ValidationIssue(
+                component="Frequency Sources",
+                severity="WARNING",
+                message="Frequency source(s) need reimporting after an upgrade: JPDB. "
+                "Use Settings → Frequency → Reimport All.",
+            )
+        ]
+    )
+
+    checks = checks_from_validation(result, CHECKED_AT)
+
+    assert checks["resources.frequency"].state == HEALTH_WARN
+    assert "Reimport All" in checks["resources.frequency"].detail
+    # The Fix button has somewhere to land.
+    assert HEALTH_FIX_ANCHORS["resources.frequency"] == "frequency.chain"
+    assert HEALTH_FIX_ANCHORS["resources.pitch"] == "pitch.chain"
 
 
 def test_unreachable_anki_leaves_dependent_rows_unknown():

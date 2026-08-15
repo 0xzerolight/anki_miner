@@ -39,7 +39,7 @@ from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, Sequential
 from anki_miner.models.audiobook_queue import AudiobookQueueItem
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.orchestration import EpisodeProcessor
-from anki_miner.services.dictionary.registry import stale_dict_reimport_error
+from anki_miner.services.resource_staleness import stale_resource_reimport_error
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class AudiobookQueueWorker(SequentialQueueWorker[AudiobookQueueItem]):
         self._curation_offset: float = config.subtitle_offset
 
     def _stale_reimport_message(self) -> str | None:
-        return stale_dict_reimport_error(self._config)
+        return stale_resource_reimport_error(self._config)
 
     def _run_item(self, idx: int, item: AudiobookQueueItem) -> bool:
         """Mine one item, emitting item_started + item_finished. Never aborts early."""

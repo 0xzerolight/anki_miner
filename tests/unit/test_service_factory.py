@@ -413,9 +413,10 @@ class TestPitchServiceWiring:
         )
         load_result = service_factory.ServiceLoadResult()
 
-        service = service_factory._build_pitch_service(cfg, load_result)
+        service, registry = service_factory._build_pitch_service(cfg, load_result)
 
         assert service is not None
+        assert registry is not None
         assert [provider.source_id for provider in service.providers] == ["fallback", "later"]
         assert service.lookup_entry("橋", "はし").pattern == "1"
         assert any("primary" in warning for warning in load_result.warnings)
@@ -672,6 +673,8 @@ class TestSharedLookupServices:
             definition_service=definition,
             pitch_accent_service=None,
             frequency_service=freq,
+            frequency_registry=None,
+            pitch_registry=None,
             load_result=service_factory.ServiceLoadResult(),
         )
         bundle.close()  # must not raise despite freq.close raising

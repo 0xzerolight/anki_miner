@@ -422,3 +422,48 @@ def test_delayed_restore_result_is_discarded_after_root_and_chain_change(
 
     assert emissions == []
     assert panel.get_chain() == new_chain
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected_fix"),
+    [("audio", "Re-import"), ("frequency", "Reimport All"), ("pitch", "Reimport All")],
+)
+def test_restore_says_so_when_it_finds_nothing(
+    tab_for_resource_restore,
+    tmp_path,
+    monkeypatch,
+    kind,
+    expected_fix,
+):
+    """Silence here read as a dead button (the v2.10.0 report).
+
+    ``unlisted()`` drops anything already chained AND anything schema-stale, so
+    right after an index bump an empty result is the normal outcome for every
+    user. The box also names the control that does repair a stale index, since
+    that is what someone clicking Restore is usually trying to do.
+    """
+    tab = tab_for_resource_restore
+    panel = {"audio": tab.audio_panel, "frequency": tab.frequency_panel, "pitch": tab.pitch_panel}[kind]
+
+    monkeypatch.setattr(
+        settings_tab_module,
+        "run_off_thread",
+        lambda _parent, work, on_done, on_error: _run_scan_sync(work, on_done, on_error),
+    )
+    info_calls: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda parent, title, body, *a, **kw: info_calls.append((title, body)) or 0,
+    )
+    emissions: list[AnkiMinerConfig] = []
+    tab.config_changed.connect(emissions.append)
+
+    panel._restore_btn.click()
+
+    assert len(info_calls) == 1, info_calls
+    title, body = info_calls[0]
+    assert title == "Nothing to restore"
+    assert expected_fix in body
+    # The no-op path must touch neither the panel chain nor the config.
+    assert emissions == []

@@ -311,3 +311,71 @@ def test_build_sources_uses_source_name_as_display(tmp_path: Path):
     config = AnkiMinerConfig(frequency_chain=(FreqEntry(source_id="jpdb"),))
     sources = reg.build_sources(config)
     assert sources[0].name == "JPDB"
+
+
+# --- The reimport surfaces' single source of truth (schema-bump migration) ---
+#
+# Every reimport surface - the settings row button, the startup prompt, the
+# pre-run gate, the System Health row - keys on stale_enabled. What it must NOT
+# report is as load-bearing as what it must: frequency is optional, so a source
+# the user never configured, disabled, or deleted from disk can never gate a run.
+
+
+def test_stale_enabled_reports_only_present_but_stale(tmp_path: Path):
+    _build_source(tmp_path, "old", [("猫", "ねこ", 100)], schema_version=2)
+    _build_source(tmp_path, "current", [("犬", "いぬ", 200)])
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    config = AnkiMinerConfig(
+        freqs_root=tmp_path,
+        frequency_chain=(FreqEntry(source_id="old"), FreqEntry(source_id="current")),
+    )
+
+    assert [m.source_id for m in reg.stale_enabled(config)] == ["old"]
+
+
+def test_stale_enabled_ignores_disabled_and_absent_entries(tmp_path: Path):
+    """A deliberate deletion and an unticked row are not upgrade damage.
+
+    Neither has a persisted copy the app could rebuild from either way, so
+    reporting them would nag about something no button here can fix.
+    """
+    _build_source(tmp_path, "off", [("猫", "ねこ", 100)], schema_version=2)
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    config = AnkiMinerConfig(
+        freqs_root=tmp_path,
+        frequency_chain=(
+            FreqEntry(source_id="off", enabled=False),
+            FreqEntry(source_id="deleted-from-disk"),
+        ),
+    )
+
+    assert reg.stale_enabled(config) == []
+
+
+def test_stale_enabled_empty_for_unconfigured_chain(tmp_path: Path):
+    _build_source(tmp_path, "old", [("猫", "ねこ", 100)], schema_version=2)
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+
+    assert reg.stale_enabled(AnkiMinerConfig(freqs_root=tmp_path)) == []
+
+
+def test_usable_enabled_requires_current_schema_and_entries(tmp_path: Path):
+    _build_source(tmp_path, "good", [("猫", "ねこ", 100)])
+    _build_source(tmp_path, "stale", [("犬", "いぬ", 200)], schema_version=2)
+    _build_source(tmp_path, "empty", [])
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    config = AnkiMinerConfig(
+        freqs_root=tmp_path,
+        frequency_chain=(
+            FreqEntry(source_id="good"),
+            FreqEntry(source_id="stale"),
+            FreqEntry(source_id="empty"),
+            FreqEntry(source_id="gone"),
+        ),
+    )
+
+    assert [m.source_id for m in reg.usable_enabled(config)] == ["good"]

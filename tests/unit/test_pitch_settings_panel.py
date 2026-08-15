@@ -102,15 +102,52 @@ def test_row_shows_name_format_and_count(qapp, qtbot, tmp_path):
     assert any("1,234" in t for t in texts)
 
 
-def test_missing_and_stale_sources_flagged(qapp, qtbot, tmp_path):
+def test_missing_and_stale_sources_flagged_differently(qapp, qtbot, tmp_path):
+    """Two failures, two repairs, two rows.
+
+    Stale is present on disk and rebuildable from the copy saved at import, so
+    it gets a Re-import button; missing has nothing to rebuild from, so its
+    row says so rather than offering a button that only opens a file picker.
+    """
     panel = PitchSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain(
         (PitchSourceEntry("gone"), PitchSourceEntry("stale")),
         registry_meta={"stale": _make_meta("stale", schema_ok=False, version=99)},
     )
-    assert panel._row_widget(0).warning_text != ""
-    assert panel._row_widget(1).warning_text != ""
+
+    missing_row = panel._row_widget(0)
+    stale_row = panel._row_widget(1)
+    assert "missing" in missing_row.warning_text
+    assert missing_row.repair_button is None
+    assert "upgrade" in stale_row.warning_text
+    assert stale_row.repair_button is not None
+
+
+def test_row_re_import_button_requests_that_source(qapp, qtbot, tmp_path):
+    panel = PitchSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    requested: list[str] = []
+    panel.reimport_source_requested.connect(requested.append)
+    panel.set_chain(
+        (PitchSourceEntry("stale"),),
+        registry_meta={"stale": _make_meta("stale", schema_ok=False, version=99)},
+    )
+
+    panel._row_widget(0).repair_button.click()
+
+    assert requested == ["stale"]
+
+
+def test_reimport_all_button_emits_its_request(qapp, qtbot, tmp_path):
+    panel = PitchSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    fired: list[int] = []
+    panel.reimport_all_requested.connect(lambda: fired.append(1))
+
+    panel._reimport_btn.click()
+
+    assert fired == [1]
 
 
 def test_set_get_chain_round_trip(qapp, qtbot, tmp_path):

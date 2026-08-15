@@ -115,6 +115,45 @@ class FrequencySourceRegistry:
             key=lambda m: m.source_id,
         )
 
+    def stale_enabled(self, config: AnkiMinerConfig) -> list[FreqSourceMeta]:
+        """Enabled chain slots present on disk but schema-mismatched.
+
+        Mirrors ``DictionaryRegistry.stale_enabled``: the single source of truth
+        for every reimport surface (settings row button, startup prompt, pre-run
+        gate, health check). A slot missing on disk (``meta is None``) is NOT
+        reported — the user may have deleted it deliberately, and there is no
+        persisted ``source.<ext>`` left to rebuild from either way.
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        stale: list[FreqSourceMeta] = []
+        for entry in config.frequency_chain:
+            if not entry.enabled or not entry.source_id:
+                continue
+            meta = self._sources.get(entry.source_id)
+            if meta is not None and not meta.schema_ok:
+                stale.append(meta)
+        return sorted(stale, key=lambda m: m.source_id)
+
+    def usable_enabled(self, config: AnkiMinerConfig) -> list[FreqSourceMeta]:
+        """Enabled chain slots that can actually answer a lookup.
+
+        Present on disk, schema-current, and holding at least one entry — read
+        off this snapshot without opening a SQLite connection, so a readiness
+        check can call it without file-locking an index Reimport All is about to
+        replace (Windows).
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        usable: list[FreqSourceMeta] = []
+        for entry in config.frequency_chain:
+            if not entry.enabled or not entry.source_id:
+                continue
+            meta = self._sources.get(entry.source_id)
+            if meta is not None and meta.schema_ok and meta.entry_count > 0:
+                usable.append(meta)
+        return sorted(usable, key=lambda m: m.source_id)
+
     def build_sources(self, config: AnkiMinerConfig) -> list[IndexedFreqProvider]:
         """Build the ordered provider list from config + disk state.
 
@@ -153,3 +192,16 @@ class FrequencySourceRegistry:
                 )
             )
         return sources
+
+
+def stale_enabled_freq_sources(config: AnkiMinerConfig) -> list[FreqSourceMeta]:
+    """Build+scan a fresh registry and return enabled slots needing reimport.
+
+    Convenience wrapper for the startup migration prompt and the pre-run gate,
+    matching ``stale_enabled_dicts``. ``load()`` swallows scan OSErrors, so this
+    never raises for a missing / unreadable freqs folder — it reports no
+    staleness instead.
+    """
+    registry = FrequencySourceRegistry(config.freqs_root)
+    registry.load()
+    return registry.stale_enabled(config)

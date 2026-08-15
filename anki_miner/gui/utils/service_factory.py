@@ -94,6 +94,12 @@ class Services:
     # backs the 4.0 staleness gate — NOT the built chain, which drops stale
     # slots and would make the gate never fire.
     dictionary_registry: DictionaryRegistry
+    # Scanned frequency / pitch registries (the same handles that built the
+    # chains above), injected for the staleness gate. None when the family is
+    # inactive or its scan failed — which is precisely when nothing should be
+    # gated, since frequency and pitch are optional.
+    frequency_registry: FrequencySourceRegistry | None
+    pitch_registry: PitchSourceRegistry | None
     load_result: ServiceLoadResult
 
 
@@ -205,17 +211,22 @@ def _no_dictionary_warning() -> str:
 def _build_pitch_service(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult,
-) -> MultiPitchAccentService | None:
+) -> tuple[MultiPitchAccentService | None, PitchSourceRegistry | None]:
     """Build + load the optional first-hit-wins pitch accent chain.
 
     Extracted from :func:`create_services` so :func:`create_shared_lookup_services`
     constructs the identical service — single source of truth for the load,
     the entry-count info line, and the failure-to-warning downgrade.
+
+    Returns the service *and* the scanned registry, because the staleness gate
+    needs the per-slot ``schema_ok`` metas rather than the built chain — which
+    drops stale slots and would make the gate never fire. Both are ``None`` when
+    pitch is inactive, which is exactly when nothing should be gated.
     """
     if not config.pitch_active:
-        return None
+        return None, None
+    registry = PitchSourceRegistry(config.pitch_root)
     try:
-        registry = PitchSourceRegistry(config.pitch_root)
         registry.load()
         loaded_providers = [p for p in registry.build_sources(config) if p.load()]
         providers_by_id: dict[str, list] = {}
@@ -235,7 +246,9 @@ def _build_pitch_service(
         if not providers:
             # Nothing enabled / on-disk: no providers loaded. Not an error —
             # an enabled chain entry can still point at a missing on-disk index.
-            return None
+            # The registry still goes back: a slot that is present but stale is
+            # exactly what the gate must see here.
+            return None, registry
         pitch_accent_service = MultiPitchAccentService(providers)
         total_entries = sum(meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None)
         load_result.info.append(
@@ -245,34 +258,37 @@ def _build_pitch_service(
                 f"{total_entries:,}",
             )
         )
-        return pitch_accent_service
+        return pitch_accent_service, registry
     except MemoryError:
         raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning("Could not load pitch accent data: %s", e)
         load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
-        return None
+        return None, None
 
 
 def _build_frequency_service(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult,
-) -> MultiFrequencyService | None:
+) -> tuple[MultiFrequencyService | None, FrequencySourceRegistry | None]:
     """Build + load the optional multi-source frequency service.
 
     Extracted from :func:`create_services` for the same single-source-of-truth
-    reason as :func:`_build_pitch_service`.
+    reason as :func:`_build_pitch_service`, and returns its scanned registry for
+    the same staleness-gate reason.
     """
     if not config.frequency_active:
-        return None
+        return None, None
+    registry = FrequencySourceRegistry(config.freqs_root)
     try:
-        registry = FrequencySourceRegistry(config.freqs_root)
         registry.load()
         providers = [p for p in registry.build_sources(config) if p.load()]
         if not providers:
             # Nothing enabled / on-disk: no providers loaded. Not an error —
             # an enabled chain entry can still point at a missing on-disk index.
-            return None
+            # The registry still goes back: a slot that is present but stale is
+            # exactly what the gate must see here.
+            return None, registry
         frequency_service = MultiFrequencyService(providers)
         # Sum entry counts from the registry meta for the enabled chain
         # entries that actually produced a loaded provider. The provider
@@ -286,13 +302,13 @@ def _build_frequency_service(
                 f"{total_entries:,}",
             )
         )
-        return frequency_service
+        return frequency_service, registry
     except MemoryError:
         raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning("Could not load frequency data: %s", e)
         load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
-        return None
+        return None, None
 
 
 @dataclass(frozen=True)
@@ -314,6 +330,12 @@ class SharedLookupServices:
     definition_service: DefinitionService
     pitch_accent_service: MultiPitchAccentService | None
     frequency_service: MultiFrequencyService | None
+    # Scanned frequency / pitch registries (the same handles that built the
+    # chains above), injected for the staleness gate. None when the family is
+    # inactive or its scan failed — which is precisely when nothing should be
+    # gated, since frequency and pitch are optional.
+    frequency_registry: FrequencySourceRegistry | None
+    pitch_registry: PitchSourceRegistry | None
     load_result: ServiceLoadResult
 
     def close(self) -> None:
@@ -344,11 +366,15 @@ def create_shared_lookup_services(config: AnkiMinerConfig) -> SharedLookupServic
     load_result = ServiceLoadResult()
     dictionary_registry = _load_dict_registry(config, load_result)
     definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
+    pitch_accent_service, pitch_registry = _build_pitch_service(config, load_result)
+    frequency_service, frequency_registry = _build_frequency_service(config, load_result)
     return SharedLookupServices(
         dictionary_registry=dictionary_registry,
         definition_service=definition_service,
-        pitch_accent_service=_build_pitch_service(config, load_result),
-        frequency_service=_build_frequency_service(config, load_result),
+        pitch_accent_service=pitch_accent_service,
+        frequency_service=frequency_service,
+        frequency_registry=frequency_registry,
+        pitch_registry=pitch_registry,
         load_result=load_result,
     )
 
@@ -530,6 +556,8 @@ def create_services(
     if shared_lookup is not None:
         dictionary_registry = shared_lookup.dictionary_registry
         definition_service = shared_lookup.definition_service
+        frequency_registry = shared_lookup.frequency_registry
+        pitch_registry = shared_lookup.pitch_registry
     else:
         # Scan the dictionary registry ONCE, then reuse the same handle for both the
         # provider chain and the EpisodeProcessor's staleness gate (4.0). Built
@@ -613,8 +641,8 @@ def create_services(
         pitch_accent_service = shared_lookup.pitch_accent_service
         frequency_service = shared_lookup.frequency_service
     else:
-        pitch_accent_service = _build_pitch_service(config, load_result)
-        frequency_service = _build_frequency_service(config, load_result)
+        pitch_accent_service, pitch_registry = _build_pitch_service(config, load_result)
+        frequency_service, frequency_registry = _build_frequency_service(config, load_result)
 
     # Always construct the DB: the constructor is I/O-free and the user-curated
     # ignore list (source='user', Issue #42) must be applied on every run even
@@ -649,6 +677,8 @@ def create_services(
             word_list_service = None
 
     return Services(
+        frequency_registry=frequency_registry,
+        pitch_registry=pitch_registry,
         subtitle_parser=subtitle_parser,
         word_filter=word_filter,
         media_extractor=media_extractor,
@@ -724,6 +754,8 @@ def create_episode_processor(
         expression_audio_fetcher=services.expression_audio_fetcher,
         sentence_audio_fetcher=services.sentence_audio_fetcher,
         dictionary_registry=services.dictionary_registry,
+        frequency_registry=services.frequency_registry,
+        pitch_registry=services.pitch_registry,
         owns_lookup_services=shared_lookup is None,
     )
 

@@ -6,21 +6,32 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
-from anki_miner.gui.utils.service_factory import create_shared_lookup_services
+from anki_miner.gui.utils.service_factory import SharedLookupServices, create_shared_lookup_services
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
+    FIELD_GROUPS,
     BackfillOptions,
     BackfillPlan,
     BackfillResult,
     apply_backfill,
     scan_backfill,
 )
-from anki_miner.services.dictionary.registry import format_stale_reimport_message
+from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
+
+#: Which indexed resource family produces which backfill field keys. Drives the
+#: scoped staleness gate: only a family whose output this run would actually
+#: write can abort it. Derived from ``FIELD_GROUPS`` rather than restated, so a
+#: new field key cannot land in a group the gate does not know about.
+_BACKFILL_FIELD_FAMILIES: dict[str, frozenset[str]] = {
+    "dictionary": frozenset(FIELD_GROUPS["definition"] + FIELD_GROUPS["glossary"]),
+    "frequency": frozenset(FIELD_GROUPS["frequency"]),
+    "pitch": frozenset(FIELD_GROUPS["pitch"]),
+}
 
 
 class BackfillScanWorker(CancellableWorker):
@@ -39,6 +50,27 @@ class BackfillScanWorker(CancellableWorker):
         self.config = config
         self.options = options
 
+    def _check_resource_staleness(self, shared_lookup: SharedLookupServices) -> None:
+        """Abort the scan if a resource *this backfill would write* is stale.
+
+        Scoped to the requested fields, not the whole config: a definition-only
+        backfill has no business failing over a stale pitch index it will never
+        read, and vice versa. Each family maps to the field keys whose values it
+        produces.
+        """
+        families = {family for family, keys in _BACKFILL_FIELD_FAMILIES.items() if self.options.field_keys & keys}
+        if not families:
+            return
+        message = stale_resource_reimport_error(
+            self.config,
+            families=frozenset(families),
+            dictionary_registry=shared_lookup.dictionary_registry,
+            frequency_registry=shared_lookup.frequency_registry,
+            pitch_registry=shared_lookup.pitch_registry,
+        )
+        if message is not None:
+            raise SetupError(message)
+
     def run(self) -> None:
         self.log_start(
             "BackfillScanWorker",
@@ -55,10 +87,7 @@ class BackfillScanWorker(CancellableWorker):
             try:
                 if self.check_cancelled():
                     return
-                if self.options.field_keys & {"definition", "glossary"}:
-                    stale = shared_lookup.dictionary_registry.stale_enabled(self.config)
-                    if stale:
-                        raise SetupError(format_stale_reimport_message(stale))
+                self._check_resource_staleness(shared_lookup)
                 plan = scan_backfill(
                     anki_service,
                     self.config,
