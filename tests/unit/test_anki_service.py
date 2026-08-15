@@ -243,6 +243,36 @@ class TestStripForDedup:
 
         assert _strip_for_dedup(raw) == expected
 
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("‪寮", "寮"),  # LEFT-TO-RIGHT EMBEDDING — the observed duplicate
+            ("‭寮‬", "寮"),  # LRO + POP DIRECTIONAL FORMATTING
+            ("‎寮", "寮"),  # LEFT-TO-RIGHT MARK
+            ("寮​", "寮"),  # ZERO WIDTH SPACE
+            ("﻿寮", "寮"),  # BOM
+            ("&#8234;寮", "寮"),  # escaped U+202A — stripped after html.unescape
+            ("‪", ""),  # nothing but format chars normalizes to empty
+        ],
+    )
+    def test_zero_width_format_chars_stripped(self, raw, expected):
+        """Cf characters are invisible, so they must not split the dedup key.
+
+        Anki's own first-field checksum cannot see them either, so both duplicate
+        gates go blind at once and a second card gets created. This filter is the
+        only layer that can catch it.
+        """
+        from anki_miner.services.anki_service import _strip_for_dedup
+
+        assert _strip_for_dedup(raw) == expected
+
+    def test_control_chars_still_collapse_to_a_space(self):
+        """Cc is NOT stripped: newlines/tabs carry a word boundary the collapse keeps."""
+        from anki_miner.services.anki_service import _strip_for_dedup
+
+        assert _strip_for_dedup("入れ\n墨") == "入れ 墨"
+        assert _strip_for_dedup("\n入れ墨<br>") == "入れ墨"
+
     def test_reading_furigana_brackets_preserved(self):
         """Anki does NOT strip [reading] furigana, so neither do we — stays distinct."""
         from anki_miner.services.anki_service import _strip_for_dedup
@@ -271,6 +301,24 @@ class TestGetExistingVocabulary:
             result = service.get_existing_vocabulary()
 
         assert result == {"食べる", "飲む"}
+
+    def test_zero_width_prefixed_first_field_matches_the_mined_form(self, test_config):
+        """Regression: a U+202A-prefixed Expression must key as the bare word.
+
+        A collection card mined by Yomitan/asbplayer off Netflix subtitles carries
+        LEFT-TO-RIGHT EMBEDDING on its Expression. Anki's own duplicate checksum
+        cannot see it, so if this set keeps the raw form too, re-mining the word
+        creates a second card and nothing reports a duplicate.
+        """
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(result=[{"fields": {"word": {"value": "‪寮"}}}])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"寮"}
 
     def test_success_with_multiple_notes(self, test_config):
         """Should return a set of words from multiple notes."""

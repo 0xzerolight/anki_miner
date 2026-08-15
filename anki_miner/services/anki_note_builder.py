@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload
+from anki_miner.utils.text_utils import strip_format_chars
 
 # Field keys every config's ``anki_fields`` must contain (AnkiService
 # validates this at construction time).
@@ -130,10 +131,25 @@ def _strip_for_dedup(value: str) -> str:
 
     Mirrors Anki deliberately: it strips HTML/media but NOT ``[reading]``
     furigana brackets, so ``食べる[たべる]`` stays distinct from ``食べる`` here too.
+
+    Goes deliberately STRICTER than Anki in exactly one place: zero-width format
+    characters (Cf) are removed. Anki's checksum cannot see them, so a card
+    whose Expression is ``\\u202a寮`` — the shape Yomitan/asbplayer mines out of
+    Netflix subtitles, which carry U+202A LEFT-TO-RIGHT EMBEDDING — is invisible
+    to Anki's own duplicate check AND, before this strip, to the known-words
+    filter. Both gates going blind at once is how a second, clean ``寮`` card got
+    created. This filter is the only layer that can catch it, so it must.
+    Stripping can only make the filter match more, and two strings differing
+    only by zero-width characters are the same word on screen.
+
+    Order matters: the strip runs after ``html.unescape`` so an escaped
+    ``&#8234;`` is caught too, and before the whitespace collapse so a field
+    holding nothing but format characters normalizes to the empty string.
     """
     text = _SOUND_REF_RE.sub("", value)
     text = _HTML_TAG_RE.sub("", text)
     text = html.unescape(text)
+    text = strip_format_chars(text)
     text = unicodedata.normalize("NFC", text)
     return " ".join(text.split())
 
