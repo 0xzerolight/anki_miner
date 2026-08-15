@@ -762,27 +762,27 @@ Formatos compatibles: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Choose Android audio database</source>
-        <translation type="unfinished" />
+        <translation>Elegir base de datos de audio de Android</translation>
     </message>
     <message>
         <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
-        <translation type="unfinished" />
+        <translation>Base de datos de Android (*.db);;Base de datos SQLite (*.sqlite *.sqlite3)</translation>
     </message>
     <message>
         <source>Android Audio Database Added</source>
-        <translation type="unfinished" />
+        <translation>Base de datos de audio de Android agregada</translation>
     </message>
     <message>
         <source>Registered %1 (%2 entries).</source>
-        <translation type="unfinished" />
+        <translation>Se registró %1 (%2 entradas).</translation>
     </message>
     <message>
         <source>Registering Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Registrando base de datos de audio de Android…</translation>
     </message>
     <message>
         <source>The Android audio database could not be added.</source>
-        <translation type="unfinished" />
+        <translation>No se pudo agregar la base de datos de audio de Android.</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -790,7 +790,7 @@ Formatos compatibles: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Choose Android audio database to re-import</source>
-        <translation type="unfinished" />
+        <translation>Elija la base de datos de audio de Android para reimportar</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
@@ -802,15 +802,15 @@ Formatos compatibles: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Re-importing Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Reimportando base de datos de audio de Android…</translation>
     </message>
     <message>
         <source>The Android audio database could not be re-imported.</source>
-        <translation type="unfinished" />
+        <translation>No se pudo volver a importar la base de datos de audio de Android.</translation>
     </message>
     <message>
         <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
+        <translation>Base de datos de audio de Android reimportada</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
@@ -924,7 +924,7 @@ Formatos compatibles: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     </message>
     <message>
         <source>Android Audio Database…</source>
-        <translation type="unfinished" />
+        <translation>Base de datos de audio de Android…</translation>
     </message>
     <message>
         <source>Online Source…</source>
@@ -4432,11 +4432,11 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">Reimportar todo</translation>
+        <translation>Reimportar todo</translation>
     </message>
     <message>
         <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>Reconstruye todas las fuentes de frecuencia de la lista a partir de la copia guardada al importarlas. Necesario después de que una actualización de la aplicación cambie el formato del índice.</translation>
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4492,11 +4492,11 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">Reimportar</translation>
+        <translation>Reimportar</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ se requiere reimportar (actualización de la aplicación)</translation>
+        <translation>⚠ se requiere reimportar (actualización de la aplicación)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5092,27 +5092,27 @@ Cierre primero el explorador de tarjetas de Anki y cualquier editor de notas abi
     </message>
     <message>
         <source>Dictionaries:</source>
-        <translation type="unfinished" />
+        <translation>Diccionarios:</translation>
     </message>
     <message>
         <source>Frequency sources:</source>
-        <translation type="unfinished" />
+        <translation>Fuentes de frecuencia:</translation>
     </message>
     <message>
         <source>Pitch accent sources:</source>
-        <translation type="unfinished" />
+        <translation>Fuentes de acento tonal:</translation>
     </message>
     <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
-        <translation type="unfinished" />
+        <translation>Estos recursos deben reimportarse después de una actualización de la aplicación (su formato de índice cambió):</translation>
     </message>
     <message>
         <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation type="unfinished" />
+        <translation>La minería está bloqueada hasta que lo haga. ¿Reimportarlos ahora?</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
-        <translation type="unfinished" />
+        <translation>Se requiere reimportar recursos</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -5506,11 +5506,11 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">Reimportar todo</translation>
+        <translation>Reimportar todo</translation>
     </message>
     <message>
         <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>Reconstruye todas las fuentes de acento tonal de la lista a partir de la copia guardada al importarlas. Necesario después de que una actualización de la aplicación cambie el formato del índice.</translation>
     </message>
     <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
@@ -5558,11 +5558,11 @@ Puede ajustar esto más tarde en Ajustes → Anki.</translation>
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">Reimportar</translation>
+        <translation>Reimportar</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ se requiere reimportar (actualización de la aplicación)</translation>
+        <translation>⚠ se requiere reimportar (actualización de la aplicación)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7072,13 +7072,15 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
     </message>
     <message>
         <source>Nothing to restore</source>
-        <translation type="unfinished">Nada que restaurar</translation>
+        <translation>Nada que restaurar</translation>
     </message>
     <message>
         <source>Every audio pack found in the storage folder is already listed.
 
 A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Todos los paquetes de audio que se encuentran en la carpeta de almacenamiento ya están en la lista.
+
+Un paquete que dejó de funcionar tras una actualización de la aplicación se repara con Reimportar en su fila, no restaurándolo.</translation>
     </message>
     <message>
         <source>The audio packs could not be restored.</source>
@@ -7092,7 +7094,9 @@ A pack that stopped working after an app upgrade is repaired by Re-import on its
         <source>Every frequency source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Todas las fuentes de frecuencia que se encuentran en la carpeta de almacenamiento ya están en la lista.
+
+Una fuente que dejó de funcionar tras una actualización de la aplicación se repara con Reimportar todo, no restaurándola.</translation>
     </message>
     <message>
         <source>The frequency sources could not be restored.</source>
@@ -7106,7 +7110,9 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <source>Every pitch accent source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Todas las fuentes de acento tonal que se encuentran en la carpeta de almacenamiento ya están en la lista.
+
+Una fuente que dejó de funcionar tras una actualización de la aplicación se repara con Reimportar todo, no restaurándola.</translation>
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8388,11 +8394,11 @@ Sus diccionarios instalados, audio, listas de frecuencia y tema se conservan.</t
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished" />
+        <translation>Listas de frecuencia</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished" />
+        <translation>Acento tonal</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

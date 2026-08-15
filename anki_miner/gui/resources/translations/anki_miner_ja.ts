@@ -761,27 +761,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Choose Android audio database</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを選択</translation>
     </message>
     <message>
         <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
-        <translation type="unfinished" />
+        <translation>Android データベース (*.db);;SQLite データベース (*.sqlite *.sqlite3)</translation>
     </message>
     <message>
         <source>Android Audio Database Added</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを追加しました</translation>
     </message>
     <message>
         <source>Registered %1 (%2 entries).</source>
-        <translation type="unfinished" />
+        <translation>%1 を登録しました（%2 件）。</translation>
     </message>
     <message>
         <source>Registering Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを登録中…</translation>
     </message>
     <message>
         <source>The Android audio database could not be added.</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを追加できませんでした。</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -789,7 +789,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Choose Android audio database to re-import</source>
-        <translation type="unfinished" />
+        <translation>再インポートする Android 音声データベースを選択</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
@@ -801,15 +801,15 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Re-importing Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを再インポート中…</translation>
     </message>
     <message>
         <source>The Android audio database could not be re-imported.</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを再インポートできませんでした。</translation>
     </message>
     <message>
         <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベースを再インポートしました</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
@@ -923,7 +923,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Android Audio Database…</source>
-        <translation type="unfinished" />
+        <translation>Android 音声データベース…</translation>
     </message>
     <message>
         <source>Online Source…</source>
@@ -4419,11 +4419,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">すべて再インポート</translation>
+        <translation>すべて再インポート</translation>
     </message>
     <message>
         <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>一覧にあるすべての頻度ソースを、インポート時に保存されたコピーから再構築します。アプリのアップグレードでインデックス形式が変更された場合に必要です。</translation>
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4479,11 +4479,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">再インポート</translation>
+        <translation>再インポート</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ 再インポートが必要です（アプリのアップグレード）</translation>
+        <translation>⚠ 再インポートが必要です（アプリのアップグレード）</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5079,27 +5079,27 @@ Continue?</source>
     </message>
     <message>
         <source>Dictionaries:</source>
-        <translation type="unfinished" />
+        <translation>辞書:</translation>
     </message>
     <message>
         <source>Frequency sources:</source>
-        <translation type="unfinished" />
+        <translation>頻度ソース:</translation>
     </message>
     <message>
         <source>Pitch accent sources:</source>
-        <translation type="unfinished" />
+        <translation>ピッチアクセントソース:</translation>
     </message>
     <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
-        <translation type="unfinished" />
+        <translation>アプリのアップグレード後、これらのリソースは再インポートが必要です（インデックス形式が変更されました）:</translation>
     </message>
     <message>
         <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation type="unfinished" />
+        <translation>再インポートするまでマイニングはブロックされます。今すぐ再インポートしますか？</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
-        <translation type="unfinished" />
+        <translation>リソースの再インポートが必要です</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -5493,11 +5493,11 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">すべて再インポート</translation>
+        <translation>すべて再インポート</translation>
     </message>
     <message>
         <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>一覧にあるすべてのピッチソースを、インポート時に保存されたコピーから再構築します。アプリのアップグレードでインデックス形式が変更された場合に必要です。</translation>
     </message>
     <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
@@ -5545,11 +5545,11 @@ You can fine-tune these later in Settings → Anki.</source>
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">再インポート</translation>
+        <translation>再インポート</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ 再インポートが必要です（アプリのアップグレード）</translation>
+        <translation>⚠ 再インポートが必要です（アプリのアップグレード）</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7059,13 +7059,15 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Nothing to restore</source>
-        <translation type="unfinished">復元する辞書がありません</translation>
+        <translation>復元する内容はありません</translation>
     </message>
     <message>
         <source>Every audio pack found in the storage folder is already listed.
 
 A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダー内で見つかった音声パックは、すべてすでに一覧に表示されています。
+
+アプリのアップグレード後に動作しなくなったパックは、復元ではなく、その行の「再インポート」で修復してください。</translation>
     </message>
     <message>
         <source>The audio packs could not be restored.</source>
@@ -7079,7 +7081,9 @@ A pack that stopped working after an app upgrade is repaired by Re-import on its
         <source>Every frequency source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダー内で見つかった頻度ソースは、すべてすでに一覧に表示されています。
+
+アプリのアップグレード後に動作しなくなったソースは、復元ではなく「すべて再インポート」で修復してください。</translation>
     </message>
     <message>
         <source>The frequency sources could not be restored.</source>
@@ -7093,7 +7097,9 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <source>Every pitch accent source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>保存フォルダー内で見つかったピッチアクセントソースは、すべてすでに一覧に表示されています。
+
+アプリのアップグレード後に動作しなくなったソースは、復元ではなく「すべて再インポート」で修復してください。</translation>
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8373,11 +8379,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished" />
+        <translation>頻度リスト</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished" />
+        <translation>ピッチアクセント</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

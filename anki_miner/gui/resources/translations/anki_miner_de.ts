@@ -762,27 +762,27 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>Choose Android audio database</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank auswählen</translation>
     </message>
     <message>
         <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
-        <translation type="unfinished" />
+        <translation>Android-Datenbank (*.db);;SQLite-Datenbank (*.sqlite *.sqlite3)</translation>
     </message>
     <message>
         <source>Android Audio Database Added</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank hinzugefügt</translation>
     </message>
     <message>
         <source>Registered %1 (%2 entries).</source>
-        <translation type="unfinished" />
+        <translation>%1 registriert (%2 Einträge).</translation>
     </message>
     <message>
         <source>Registering Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank wird registriert…</translation>
     </message>
     <message>
         <source>The Android audio database could not be added.</source>
-        <translation type="unfinished" />
+        <translation>Die Android-Audiodatenbank konnte nicht hinzugefügt werden.</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -790,7 +790,7 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>Choose Android audio database to re-import</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank für erneuten Import auswählen</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
@@ -802,15 +802,15 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>Re-importing Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank wird erneut importiert…</translation>
     </message>
     <message>
         <source>The Android audio database could not be re-imported.</source>
-        <translation type="unfinished" />
+        <translation>Die Android-Audiodatenbank konnte nicht erneut importiert werden.</translation>
     </message>
     <message>
         <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank erneut importiert</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
@@ -924,7 +924,7 @@ Unterstützte Formate: AJT (index.json + media/), NHK16 (entries.json + audio/),
     </message>
     <message>
         <source>Android Audio Database…</source>
-        <translation type="unfinished" />
+        <translation>Android-Audiodatenbank…</translation>
     </message>
     <message>
         <source>Online Source…</source>
@@ -4432,11 +4432,11 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">Alle erneut importieren</translation>
+        <translation>Alle erneut importieren</translation>
     </message>
     <message>
         <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>Jede Häufigkeitsquelle in der Liste aus der beim Import gespeicherten Kopie neu aufbauen. Erforderlich, wenn ein App-Upgrade das Indexformat ändert.</translation>
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4492,11 +4492,11 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">Erneut importieren</translation>
+        <translation>Erneut importieren</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ Neuimport erforderlich (App-Upgrade)</translation>
+        <translation>⚠ Neuimport erforderlich (App-Upgrade)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5092,27 +5092,27 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Dictionaries:</source>
-        <translation type="unfinished" />
+        <translation>Wörterbücher:</translation>
     </message>
     <message>
         <source>Frequency sources:</source>
-        <translation type="unfinished" />
+        <translation>Häufigkeitsquellen:</translation>
     </message>
     <message>
         <source>Pitch accent sources:</source>
-        <translation type="unfinished" />
+        <translation>Quellen für Tonhöhenakzent:</translation>
     </message>
     <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
-        <translation type="unfinished" />
+        <translation>Diese Ressourcen müssen nach einem App-Upgrade erneut importiert werden (deren Indexformat sich geändert hat):</translation>
     </message>
     <message>
         <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation type="unfinished" />
+        <translation>Mining ist blockiert, bis Sie dies tun. Jetzt erneut importieren?</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
-        <translation type="unfinished" />
+        <translation>Ressourcen müssen erneut importiert werden</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -5506,11 +5506,11 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">Alle erneut importieren</translation>
+        <translation>Alle erneut importieren</translation>
     </message>
     <message>
         <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>Jede Tonhöhenquelle in der Liste aus der beim Import gespeicherten Kopie neu aufbauen. Erforderlich, wenn ein App-Upgrade das Indexformat ändert.</translation>
     </message>
     <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
@@ -5558,11 +5558,11 @@ Sie können dies später unter Einstellungen → Anki verfeinern.</translation>
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">Erneut importieren</translation>
+        <translation>Erneut importieren</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ Neuimport erforderlich (App-Upgrade)</translation>
+        <translation>⚠ Neuimport erforderlich (App-Upgrade)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7072,13 +7072,15 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     </message>
     <message>
         <source>Nothing to restore</source>
-        <translation type="unfinished">Nichts wiederherzustellen</translation>
+        <translation>Nichts wiederherzustellen</translation>
     </message>
     <message>
         <source>Every audio pack found in the storage folder is already listed.
 
 A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Jedes im Speicherordner gefundene Audiopaket ist bereits aufgeführt.
+
+Ein Paket, das nach einem App-Upgrade nicht mehr funktioniert, wird durch Erneut importieren in seiner Zeile repariert, nicht durch Wiederherstellen.</translation>
     </message>
     <message>
         <source>The audio packs could not be restored.</source>
@@ -7092,7 +7094,9 @@ A pack that stopped working after an app upgrade is repaired by Re-import on its
         <source>Every frequency source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Jede im Speicherordner gefundene Häufigkeitsquelle ist bereits aufgeführt.
+
+Eine Quelle, die nach einem App-Upgrade nicht mehr funktioniert, wird durch Alle erneut importieren repariert, nicht durch Wiederherstellen.</translation>
     </message>
     <message>
         <source>The frequency sources could not be restored.</source>
@@ -7106,7 +7110,9 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <source>Every pitch accent source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Jede im Speicherordner gefundene Tonhöhenquelle ist bereits aufgeführt.
+
+Eine Quelle, die nach einem App-Upgrade nicht mehr funktioniert, wird durch Alle erneut importieren repariert, nicht durch Wiederherstellen.</translation>
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8388,11 +8394,11 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished" />
+        <translation>Häufigkeitslisten</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished" />
+        <translation>Tonhöhenakzent</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

@@ -761,27 +761,27 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Choose Android audio database</source>
-        <translation type="unfinished" />
+        <translation>Chọn cơ sở dữ liệu âm thanh Android</translation>
     </message>
     <message>
         <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
-        <translation type="unfinished" />
+        <translation>Cơ sở dữ liệu Android (*.db);;Cơ sở dữ liệu SQLite (*.sqlite *.sqlite3)</translation>
     </message>
     <message>
         <source>Android Audio Database Added</source>
-        <translation type="unfinished" />
+        <translation>Đã thêm cơ sở dữ liệu âm thanh Android</translation>
     </message>
     <message>
         <source>Registered %1 (%2 entries).</source>
-        <translation type="unfinished" />
+        <translation>Đã đăng ký %1 (%2 mục).</translation>
     </message>
     <message>
         <source>Registering Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Đang đăng ký cơ sở dữ liệu âm thanh Android…</translation>
     </message>
     <message>
         <source>The Android audio database could not be added.</source>
-        <translation type="unfinished" />
+        <translation>Không thể thêm cơ sở dữ liệu âm thanh Android.</translation>
     </message>
     <message>
         <source>Another import is still finishing. Wait for it to finish and try again.</source>
@@ -789,7 +789,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Choose Android audio database to re-import</source>
-        <translation type="unfinished" />
+        <translation>Chọn cơ sở dữ liệu âm thanh Android để nhập lại</translation>
     </message>
     <message>
         <source>Choose audio pack folder to re-import</source>
@@ -801,15 +801,15 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Re-importing Android audio database…</source>
-        <translation type="unfinished" />
+        <translation>Đang nhập lại cơ sở dữ liệu âm thanh Android…</translation>
     </message>
     <message>
         <source>The Android audio database could not be re-imported.</source>
-        <translation type="unfinished" />
+        <translation>Không thể nhập lại cơ sở dữ liệu âm thanh Android.</translation>
     </message>
     <message>
         <source>Android Audio Database Re-imported</source>
-        <translation type="unfinished" />
+        <translation>Đã nhập lại cơ sở dữ liệu âm thanh Android</translation>
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
@@ -923,7 +923,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Android Audio Database…</source>
-        <translation type="unfinished" />
+        <translation>Cơ sở dữ liệu âm thanh Android…</translation>
     </message>
     <message>
         <source>Online Source…</source>
@@ -4419,11 +4419,11 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">Nhập lại tất cả</translation>
+        <translation>Nhập lại tất cả</translation>
     </message>
     <message>
         <source>Rebuild every frequency source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>Xây dựng lại mọi nguồn tần suất trong danh sách từ bản sao đã lưu khi nhập. Cần thiết sau khi ứng dụng nâng cấp làm thay đổi định dạng chỉ mục.</translation>
     </message>
     <message>
         <source>Every enabled source counts: filtering uses the lowest rank, Frequency Sort the harmonic mean. Order only sets the card's source list.</source>
@@ -4479,11 +4479,11 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">Nhập lại</translation>
+        <translation>Nhập lại</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ cần nhập lại (ứng dụng đã nâng cấp)</translation>
+        <translation>⚠ cần nhập lại (ứng dụng đã nâng cấp)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -5079,27 +5079,27 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Dictionaries:</source>
-        <translation type="unfinished" />
+        <translation>Từ điển:</translation>
     </message>
     <message>
         <source>Frequency sources:</source>
-        <translation type="unfinished" />
+        <translation>Nguồn tần suất:</translation>
     </message>
     <message>
         <source>Pitch accent sources:</source>
-        <translation type="unfinished" />
+        <translation>Nguồn trọng âm cao độ:</translation>
     </message>
     <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
-        <translation type="unfinished" />
+        <translation>Các tài nguyên này cần được nhập lại sau khi ứng dụng nâng cấp (định dạng chỉ mục của chúng đã thay đổi):</translation>
     </message>
     <message>
         <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation type="unfinished" />
+        <translation>Khai thác bị chặn cho đến khi bạn thực hiện. Nhập lại chúng ngay bây giờ?</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
-        <translation type="unfinished" />
+        <translation>Tài nguyên cần được nhập lại</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -5493,11 +5493,11 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>Reimport All</source>
-        <translation type="unfinished">Nhập lại tất cả</translation>
+        <translation>Nhập lại tất cả</translation>
     </message>
     <message>
         <source>Rebuild every pitch source in the list from the copy saved when it was imported. Needed after an app upgrade changes the index format.</source>
-        <translation type="unfinished" />
+        <translation>Xây dựng lại mọi nguồn trọng âm cao độ trong danh sách từ bản sao đã lưu khi nhập. Cần thiết sau khi ứng dụng nâng cấp làm thay đổi định dạng chỉ mục.</translation>
     </message>
     <message>
         <source>Checked top to bottom — the first source with a pitch entry for a word wins.</source>
@@ -5545,11 +5545,11 @@ Bạn có thể tinh chỉnh sau trong Cài đặt → Anki.</translation>
     </message>
     <message>
         <source>Re-import</source>
-        <translation type="unfinished">Nhập lại</translation>
+        <translation>Nhập lại</translation>
     </message>
     <message>
         <source>⚠ re-import required (app upgrade)</source>
-        <translation type="unfinished">⚠ cần nhập lại (ứng dụng đã nâng cấp)</translation>
+        <translation>⚠ cần nhập lại (ứng dụng đã nâng cấp)</translation>
     </message>
     <message>
         <source>⚠ missing — re-import</source>
@@ -7059,13 +7059,15 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Nothing to restore</source>
-        <translation type="unfinished">Không có gì để khôi phục</translation>
+        <translation>Không có gì để khôi phục</translation>
     </message>
     <message>
         <source>Every audio pack found in the storage folder is already listed.
 
 A pack that stopped working after an app upgrade is repaired by Re-import on its row, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Mọi gói âm thanh tìm thấy trong thư mục lưu trữ đều đã có trong danh sách.
+
+Gói không còn hoạt động sau khi ứng dụng nâng cấp được sửa bằng Nhập lại trên dòng của gói đó, không phải bằng cách khôi phục nó.</translation>
     </message>
     <message>
         <source>The audio packs could not be restored.</source>
@@ -7079,7 +7081,9 @@ A pack that stopped working after an app upgrade is repaired by Re-import on its
         <source>Every frequency source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Mọi nguồn tần suất tìm thấy trong thư mục lưu trữ đều đã có trong danh sách.
+
+Nguồn không còn hoạt động sau khi ứng dụng nâng cấp được sửa bằng Nhập lại tất cả, không phải bằng cách khôi phục nó.</translation>
     </message>
     <message>
         <source>The frequency sources could not be restored.</source>
@@ -7093,7 +7097,9 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <source>Every pitch accent source found in the storage folder is already listed.
 
 A source that stopped working after an app upgrade is repaired by Reimport All, not by restoring it.</source>
-        <translation type="unfinished" />
+        <translation>Mọi nguồn trọng âm cao độ tìm thấy trong thư mục lưu trữ đều đã có trong danh sách.
+
+Nguồn không còn hoạt động sau khi ứng dụng nâng cấp được sửa bằng Nhập lại tất cả, không phải bằng cách khôi phục nó.</translation>
     </message>
     <message>
         <source>The pitch accent sources could not be restored.</source>
@@ -8373,11 +8379,11 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Frequency lists</source>
-        <translation type="unfinished" />
+        <translation>Danh sách tần suất</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished" />
+        <translation>Trọng âm cao độ</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
