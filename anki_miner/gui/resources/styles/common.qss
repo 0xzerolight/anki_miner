@@ -41,18 +41,32 @@ QLabel#heading3 {
     font-weight: 600;
 }
 
+/* `caption` is a CHIP, not simply small text: it carries horizontal padding and
+   a radius so a short status word can take a tinted background (the theme
+   gallery's "Active", the header's profile name). Small secondary text that is
+   NOT a chip wants `row-meta` below -- naming it `caption` indents it 8px away
+   from whatever it is meant to sit beside. */
 QLabel#caption {
     font-size: ${font-size-caption}px;
     padding: 2px ${spacing-xs}px;
     border-radius: ${border-radius-small}px;
 }
 
-/* Chain priority rows (D13): title on line one, the row's own facts below it. */
+/* A dialog's own subtitle sits directly under its title and must share that
+   title's left edge, so it carries no horizontal padding. */
+QLabel#dialog-subtitle {
+    font-size: ${font-size-body-sm}px;
+}
+
+/* Chain priority rows (D13): title on line one, the row's own facts below it.
+   `row-meta` is the same idea generalised -- muted, caption-sized text that
+   states a row's own facts beside or below it, with no padding of its own. */
 QLabel#chain-row-title {
     font-weight: 500;
 }
 
 QLabel#chain-row-meta,
+QLabel#row-meta,
 QLabel#chain-row-warning {
     font-size: ${font-size-caption}px;
 }
@@ -718,6 +732,16 @@ QLabel#helper-text {
     margin-top: ${spacing-xxs}px;
 }
 
+/* A diagnostic belonging to one row of a list, printed under that row's label.
+   Helper text in every respect except padding: its left edge is set by the
+   layout that knows how wide the columns above it came out, so padding here
+   would fight that and leave the line 8px off its own label. */
+QLabel#row-detail {
+    font-size: ${font-size-small}px;
+    font-style: italic;
+    margin-top: ${spacing-xxs}px;
+}
+
 /* Output-location value: small muted helper styling but NOT italic */
 QLabel#output-location-value {
     font-size: ${font-size-small}px;
@@ -750,6 +774,19 @@ QScrollArea {
 
 QScrollArea > QWidget {
     background-color: ${color-background};
+}
+
+/* System Health's row list. The two rules above paint any scroll area in
+   `background`, which inside a dialog painted in `surface` reads as an
+   unrounded inset slab in the wrong colour -- plainly so in dark mode. This
+   screen is one surface, so its scroller, viewport, list and rows all defer to
+   the dialog behind them. Id selectors, so they outrank the rules above
+   whatever the order. */
+QScrollArea#health-scroll,
+QWidget#health-scroll-viewport,
+QWidget#health-list,
+QFrame#health-row {
+    background-color: transparent;
 }
 
 /* --- Buttons ---
@@ -1587,7 +1624,8 @@ QLabel#validation-status[status="checking"] {
     color: ${color-info};
 }
 
-QLabel#helper-text {
+QLabel#helper-text,
+QLabel#row-detail {
     color: ${color-text-muted};
 }
 
@@ -1599,7 +1637,9 @@ QLabel#output-location-value {
    line, so the metadata carries the muted role and only real breakage spends
    the warning colour. Replaces the inline `gray` / `#d97706` stylesheets the
    four chain panels each wrote by hand, which no theme could reach. */
-QLabel#chain-row-meta {
+QLabel#chain-row-meta,
+QLabel#row-meta,
+QLabel#dialog-subtitle {
     color: ${color-text-muted};
 }
 

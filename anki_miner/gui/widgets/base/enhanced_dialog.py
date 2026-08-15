@@ -85,11 +85,13 @@ class EnhancedDialog(QDialog):
         self._title_label.setFont(title_font)
         self._title_label.hide()
 
+        # Not `caption`: that object name is a chip, and its horizontal padding
+        # pushed every dialog's subtitle 8px to the right of the title it sits
+        # under. `dialog-subtitle` is the same small muted text with no padding,
+        # so the two share a left edge. The size lives in the stylesheet, which
+        # beats setFont() -- the pixel size set here before was never applied.
         self._subtitle_label = QLabel()
-        self._subtitle_label.setObjectName("caption")
-        subtitle_font = QFont()
-        subtitle_font.setPixelSize(FONT_SIZES.body)
-        self._subtitle_label.setFont(subtitle_font)
+        self._subtitle_label.setObjectName("dialog-subtitle")
         self._subtitle_label.setWordWrap(True)
         self._subtitle_label.hide()
 

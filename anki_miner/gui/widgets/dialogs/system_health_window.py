@@ -27,10 +27,10 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
-from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.widgets.base import EnhancedDialog, StatusBadge
 from anki_miner.models import ValidationResult
 from anki_miner.utils.i18n import tr_format
@@ -256,8 +256,13 @@ class _HealthRow(QFrame):
         self._key = key
         self.setObjectName("health-row")
 
+        # The horizontal margin is the row's own padding: without it the badge
+        # sits flush against the scroll viewport's left edge and the time
+        # against the scrollbar. The vertical one is deliberately small — the
+        # column that owns these rows sets no spacing of its own, so this is
+        # the entire gap between two sibling rows.
         column = QVBoxLayout(self)
-        column.setContentsMargins(0, SPACING.xs, 0, SPACING.xs)
+        column.setContentsMargins(SPACING.xs, SPACING.xxs, SPACING.xs, SPACING.xxs)
         column.setSpacing(SPACING.xxs)
 
         top = QHBoxLayout()
@@ -270,7 +275,20 @@ class _HealthRow(QFrame):
         # bare text — the two states this screen exists to distinguish.
         self.badge = StatusBadge("", status="pending", clickable=False)
         self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        top.addWidget(self.badge)
+
+        # The pill goes in a fixed-width cell rather than being widened itself.
+        # Widening it is what made "Ready" render as a slab the width of "Needs
+        # attention"; the column still lines up because the *cell* reserves
+        # that width. ``AlignVCenter`` stops it stretching to the row's tallest
+        # item as well — the badge's own vertical policy lets it grow, so rows
+        # showing a Fix button used to get a taller pill than rows without one.
+        self.badge_cell = QWidget()
+        badge_row = QHBoxLayout(self.badge_cell)
+        badge_row.setContentsMargins(0, 0, 0, 0)
+        badge_row.setSpacing(0)
+        badge_row.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignVCenter)
+        badge_row.addStretch()
+        top.addWidget(self.badge_cell)
 
         self.label = QLabel(label)
         label_font = QFont()
@@ -279,27 +297,46 @@ class _HealthRow(QFrame):
         top.addWidget(self.label, 1)
 
         self.checked_label = QLabel("")
-        self.checked_label.setObjectName("caption")
-        caption_font = QFont()
-        caption_font.setPixelSize(FONT_SIZES.caption)
-        self.checked_label.setFont(caption_font)
+        self.checked_label.setObjectName("row-meta")
+        self.checked_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+        )
         top.addWidget(self.checked_label)
 
         from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 
         self.fix_button = ModernButton(self.tr("Fix"), variant="secondary")
         self.fix_button.clicked.connect(lambda: self.fix_requested.emit(self._key))
+        # Hiding the button must not give its width back: the rows that have
+        # one are exactly the rows being read, and releasing the space slid the
+        # time column sideways on precisely those. Retaining it also makes
+        # every row the same height, button or no button.
+        fix_policy = self.fix_button.sizePolicy()
+        fix_policy.setRetainSizeWhenHidden(True)
+        self.fix_button.setSizePolicy(fix_policy)
         self.fix_button.hide()
         top.addWidget(self.fix_button)
 
         column.addLayout(top)
 
+        # `row-detail`, not `helper-text`: the two are the same style except
+        # that helper text carries its own horizontal padding, which would sit
+        # on top of the indent `set_detail_indent` computes and leave the line
+        # 8px off the label it belongs to.
         self.detail_label = QLabel("")
-        self.detail_label.setObjectName("helper-text")
+        self.detail_label.setObjectName("row-detail")
         self.detail_label.setWordWrap(True)
         self.detail_label.setTextFormat(Qt.TextFormat.PlainText)
         self.detail_label.hide()
         column.addWidget(self.detail_label)
+
+    def set_detail_indent(self, pixels: int) -> None:
+        """Start the diagnostic under the label it explains, not under the pill.
+
+        Called once from :meth:`SystemHealthWindow._align_columns`, which is the
+        only thing that knows how wide the badge column came out.
+        """
+        self.detail_label.setContentsMargins(pixels, 0, 0, 0)
 
     def apply_check(self, check: HealthCheck, *, state_text: str, checked_text: str) -> None:
         """Repaint from one fact. Never stores it: the report is the truth."""
@@ -349,6 +386,11 @@ class SystemHealthWindow(EnhancedDialog):
         self.add_content(self.error_label)
 
         self._rows: dict[str, _HealthRow] = {}
+        #: Set by ``_build_rows``; kept so ``_size_to_content`` can ask the list
+        #: how tall it wants to be rather than the scroller how tall it settles
+        #: for.
+        self._health_list: QWidget
+        self._health_scroll: QScrollArea
         self.add_content(self._build_rows(), 1)
 
         self.recheck_button = self.add_button(self.tr("Re-check now"), "secondary", self.recheck_requested.emit)
@@ -359,6 +401,7 @@ class SystemHealthWindow(EnhancedDialog):
         )
         self.add_close_button()
 
+        self._size_to_content()
         self.show_health(HealthReport.unknown())
 
     # ------------------------------------------------------------------
@@ -366,51 +409,121 @@ class SystemHealthWindow(EnhancedDialog):
     # ------------------------------------------------------------------
 
     def _build_rows(self) -> QWidget:
-        """One scrollable column of titled groups, built once."""
+        """One scrollable column of titled groups, built once.
+
+        The column sets no spacing of its own. A single spacing value cannot
+        separate a title from the rows it owns, two sibling rows, and one group
+        from the next — giving all three the same gap is what made the five
+        groups read as one flat list. Each gap is stated here instead: rows
+        carry their own 4px margins, a title sits 4px above its first row, and
+        groups are a full 24px apart.
+        """
         container = QWidget()
+        container.setObjectName("health-list")
+        self._health_list = container
         column = QVBoxLayout(container)
-        column.setContentsMargins(0, 0, 0, 0)
-        column.setSpacing(SPACING.md)
+        # Right margin only: a gutter so the time column clears the scrollbar.
+        column.setContentsMargins(0, 0, SPACING.xs, 0)
+        column.setSpacing(0)
 
         labels = self._row_labels()
-        for group_key, keys in HEALTH_GROUPS:
+        for index, (group_key, keys) in enumerate(HEALTH_GROUPS):
+            if index:
+                column.addSpacing(SPACING.lg)
             title = QLabel(self._group_titles()[group_key])
             title.setObjectName("heading3")
-            title_font = QFont()
-            title_font.setWeight(QFont.Weight.Bold)
-            title.setFont(title_font)
+            # Matches ``_HealthRow``'s own left padding, so a heading starts at
+            # the same x as the badges beneath it. ``heading3`` already carries
+            # the weight; a QFont set here would not have been applied anyway,
+            # because a stylesheet outranks setFont().
+            title.setContentsMargins(SPACING.xs, 0, 0, 0)
             column.addWidget(title)
+            column.addSpacing(SPACING.xxs)
             for key in keys:
                 row = _HealthRow(key, labels[key])
                 row.fix_requested.connect(self._on_fix_requested)
                 self._rows[key] = row
                 column.addWidget(row)
         column.addStretch()
-        self._align_badges()
+        self._align_columns()
 
         scroll = QScrollArea()
+        scroll.setObjectName("health-scroll")
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setWidget(container)
+        if viewport := scroll.viewport():
+            # Named so the stylesheet can stop it painting itself in the
+            # window-background colour inside a surface-coloured dialog.
+            viewport.setObjectName("health-scroll-viewport")
+        self._health_scroll = scroll
         return scroll
 
-    def _align_badges(self) -> None:
-        """Reserve the widest state word for every badge, so the labels line up.
+    def _size_to_content(self) -> None:
+        """Open at a height that shows the rows, not a quarter of them.
 
-        Measured rather than hard-coded: the four state words are translated,
-        and a pixel width chosen against English clips the German ones.
+        A readiness screen that opens showing four of its ten rows, with a group
+        heading sliced in half at the bottom edge, makes the user scroll to
+        finish reading the answer. A scroll area asks for very little, so the
+        height is taken from what the list actually wants and the scroller's own
+        modest request is subtracted back out. Derived rather than a constant,
+        so adding a sixth group does not quietly re-introduce the clipping.
+
+        Clamped to the screen, so it still opens whole on a laptop; the window
+        stays resizable and still scrolls when it is made smaller.
+        """
+        chrome = self.sizeHint().height() - self._health_scroll.sizeHint().height()
+        wanted = chrome + self._health_list.sizeHint().height()
+
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        available = screen.availableGeometry().height() if screen is not None else 900
+        self.resize(600, min(wanted, int(available * 0.9)))
+
+    def _align_columns(self) -> None:
+        """Reserve one width per column, so every row lines up on all three.
+
+        Measured rather than hard-coded: the state words and "Checked …" are
+        translated, and a pixel width chosen against English clips the German
+        ones. The badge column reserves the widest *pill*; the pill itself is
+        left to hug its own word, since padding a five-letter state out to the
+        width of "Needs attention" is what made these read as coloured slabs.
         """
         rows = list(self._rows.values())
         if not rows:
             return
-        metrics = rows[0].badge.fontMetrics()
-        widest = max(
-            metrics.horizontalAdvance(self._state_text(state))
-            for state in (HEALTH_UNKNOWN, HEALTH_OK, HEALTH_WARN, HEALTH_FAIL)
-        )
+
+        badge_metrics = rows[0].badge.fontMetrics()
         # The badge is a pill: its QSS padding sits outside the measured text.
+        badge_width = (
+            max(
+                badge_metrics.horizontalAdvance(self._state_text(state))
+                for state in (HEALTH_UNKNOWN, HEALTH_OK, HEALTH_WARN, HEALTH_FAIL)
+            )
+            + 2 * SPACING.sm
+        )
+
+        meta_metrics = rows[0].checked_label.fontMetrics()
+        # Digits are not equal-width in every face, so the worst-case clock is
+        # built from whichever digit measures widest rather than assumed to be
+        # "00:00".
+        widest_digit = max("0123456789", key=meta_metrics.horizontalAdvance)
+        meta_width = max(
+            meta_metrics.horizontalAdvance(self._checked_text(None)),
+            meta_metrics.horizontalAdvance(self._checked_at_text(f"{widest_digit * 2}:{widest_digit * 2}")),
+        )
+
+        # The diagnostic belongs under the label, not under the pill: the badge
+        # column plus the gap after it is exactly where the label starts. This
+        # is arithmetic and not a stylesheet padding on purpose, so the two line
+        # up whether or not a stylesheet is loaded.
+        detail_indent = badge_width + SPACING.sm
+
         for row in rows:
-            row.badge.setMinimumWidth(widest + 2 * SPACING.sm)
+            row.badge_cell.setFixedWidth(badge_width)
+            # Fixed, not minimum: a minimum lets the longer of the two strings
+            # claim an extra pixel and shifts that one row's column.
+            row.checked_label.setFixedWidth(meta_width)
+            row.set_detail_indent(detail_indent)
 
     def _on_fix_requested(self, key: str) -> None:
         """Translate a row into the setting id that repairs it.
@@ -456,7 +569,15 @@ class SystemHealthWindow(EnhancedDialog):
     def _checked_text(self, checked_at: datetime | None) -> str:
         if checked_at is None:
             return self.tr("Not checked yet")
-        return tr_format(self.tr("Checked %1"), checked_at.strftime("%H:%M"))
+        return self._checked_at_text(checked_at.strftime("%H:%M"))
+
+    def _checked_at_text(self, clock: str) -> str:
+        """The "Checked …" line for an already-formatted clock time.
+
+        Split out so ``_align_columns`` can measure a worst-case time without
+        spelling the translated string a second time.
+        """
+        return tr_format(self.tr("Checked %1"), clock)
 
     def _group_titles(self) -> dict[str, str]:
         return {

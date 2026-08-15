@@ -19,7 +19,9 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from PyQt6.QtWidgets import QLabel
 
+from anki_miner.gui.resources.styles import Theme
 from anki_miner.gui.widgets.dialogs.system_health_window import (
     HEALTH_FAIL,
     HEALTH_FIX_ANCHORS,
@@ -231,6 +233,162 @@ def test_sweep_error_is_shown_and_then_cleared(health_window):
 
     health_window.show_health(HealthReport.unknown().with_validation(_result(), CHECKED_AT))
     assert health_window.error_label.text() == ""
+
+
+# ---------------------------------------------------------------------------
+# Layout
+#
+# The screen shipped with ten rows that each disagreed with the next about
+# where their columns were: a pill padded out to the widest translated state
+# word, a pill that grew taller on the rows carrying a Fix button, a time column
+# that slid sideways on those same rows, a diagnostic printed under the pill
+# instead of under the label it explains, and one spacing value doing duty as
+# both the gap between two rows and the gap between two groups.
+#
+# These are all *relative* measurements on purpose. The offscreen platform
+# substitutes a generic font, so absolute pixel expectations are not worth
+# writing down — and absolute-pixel thinking is what let the defects through in
+# the first place.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def laid_out_window(health_window):
+    """The window shown and **styled**, with a report exercising every column.
+
+    One row healthy with no Fix button, one failing with a Fix button and a
+    diagnostic, one warning, and the rest unknown.
+
+    The stylesheet matters here and nowhere else in this file: half of what went
+    wrong was stylesheet padding landing on a widget positioned by a layout, and
+    ``contentsRect`` only reports that padding once a stylesheet is in effect.
+    Applied to the window rather than the application so it cannot leak into
+    another test.
+    """
+    result = _result(
+        issues=[
+            ValidationIssue(component="Anki Deck", severity="ERROR", message="Deck 'Mining' does not exist."),
+            ValidationIssue(component="Offline Dictionary", severity="WARNING", message="none configured"),
+        ]
+    )
+    health_window.setStyleSheet(Theme.get_stylesheet())
+    health_window.show()
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+    if layout := health_window.layout():
+        layout.activate()
+    return health_window
+
+
+def _group_titles(window) -> list[QLabel]:
+    """The five group headings, in the order they were built."""
+    return window._health_list.findChildren(QLabel, "heading3")
+
+
+def test_a_group_break_is_wider_than_the_gap_between_two_rows(laid_out_window):
+    """Grouping is carried by rhythm, so the two gaps cannot be equal.
+
+    They were: one ``setSpacing(SPACING.md)`` separated a title from its rows,
+    two sibling rows, and one group from the next, which left five headings
+    reading as five more entries in one flat list.
+    """
+    rows = laid_out_window._rows
+    connect, deck = rows["anki.connect"], rows["anki.deck"]
+    between_rows = deck.y() - (connect.y() + connect.height())
+
+    last_of_group = rows["anki.fields"]
+    media_title = _group_titles(laid_out_window)[1]
+    between_groups = media_title.y() - (last_of_group.y() + last_of_group.height())
+
+    assert between_groups > between_rows
+
+
+def test_a_heading_sits_closer_to_its_own_rows_than_to_the_group_above(laid_out_window):
+    """A title that is equidistant from both groups belongs to neither."""
+    media_title = _group_titles(laid_out_window)[1]
+    above = media_title.y() - (laid_out_window._rows["anki.fields"].y() + laid_out_window._rows["anki.fields"].height())
+    below = laid_out_window._rows["tools.ffmpeg"].y() - (media_title.y() + media_title.height())
+
+    assert below < above
+
+
+def test_a_group_heading_starts_where_its_rows_start(laid_out_window):
+    """The missing title padding: headings sat flush against the viewport edge
+    while the rows beneath them carried their own."""
+    title = _group_titles(laid_out_window)[0]
+    row = laid_out_window._rows["anki.connect"]
+
+    assert title.x() + title.contentsRect().left() == row.x() + row.badge_cell.x()
+
+
+def test_the_time_column_does_not_move_when_a_fix_button_appears(laid_out_window):
+    """``hide()`` used to give the button's width back, so the time column slid
+    left on exactly the rows a user is reading."""
+    rows = laid_out_window._rows
+    assert rows["anki.deck"].fix_button.isVisible()
+    assert not rows["anki.connect"].fix_button.isVisible()
+
+    assert rows["anki.deck"].checked_label.x() == rows["anki.connect"].checked_label.x()
+
+
+def test_a_status_pill_is_sized_to_its_own_word(laid_out_window):
+    """Padding the pill out to the widest state word turned "Ready" into a slab.
+
+    The column still lines up, because the cell holding the pill reserves that
+    width instead.
+    """
+    rows = laid_out_window._rows
+    ready = rows["anki.connect"]
+    attention = rows["resources.dictionary"]
+
+    assert ready.badge.width() < ready.badge_cell.width()
+    assert ready.badge.width() < attention.badge.width()
+    assert ready.badge_cell.width() == attention.badge_cell.width()
+
+
+def test_every_status_pill_is_the_same_height(laid_out_window):
+    """The badge's own policy let it stretch to the row's tallest item, so rows
+    with a Fix button grew a taller pill than rows without one."""
+    assert len({row.badge.height() for row in laid_out_window._rows.values()}) == 1
+
+
+def test_a_diagnostic_starts_under_the_label_it_explains(laid_out_window):
+    """It used to print under the pill, detached from its own row's subject."""
+    row = laid_out_window._rows["anki.deck"]
+    assert row.detail_label.isVisible()
+
+    detail_text_x = row.detail_label.x() + row.detail_label.contentsRect().left()
+    label_text_x = row.label.x() + row.label.contentsRect().left()
+
+    assert detail_text_x == label_text_x
+
+
+def test_the_dialog_subtitle_shares_its_title_left_edge(laid_out_window):
+    """``caption`` is a chip: its horizontal padding indented the subtitle of
+    every ``EnhancedDialog`` 8px past the title it sits under.
+
+    ``contentsRect`` is the measurement that sees stylesheet padding, so naming
+    the subtitle ``caption`` again fails here.
+    """
+    title = laid_out_window._title_label
+    subtitle = laid_out_window._subtitle_label
+    assert subtitle.isVisible()
+
+    assert subtitle.x() + subtitle.contentsRect().left() == title.x() + title.contentsRect().left()
+
+
+def test_the_window_opens_tall_enough_to_show_every_row(health_window):
+    """It opened at 560x533 and showed four of ten rows, with a group heading
+    sliced in half at the bottom edge.
+
+    Height comes from what the list asks for rather than from what the scroller
+    settles for, so adding a sixth group cannot quietly re-introduce the
+    clipping. Only that relationship is pinned: the real screen clamps the
+    result, and CI's screen is not the user's.
+    """
+    scroll_hint = health_window._health_scroll.sizeHint().height()
+
+    assert health_window._health_list.sizeHint().height() > scroll_hint
+    assert health_window.height() > scroll_hint
 
 
 # ---------------------------------------------------------------------------
