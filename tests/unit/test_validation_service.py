@@ -1370,3 +1370,143 @@ class TestPublicChecks:
             public = service.check_field_names()
         assert isinstance(public, tuple) and len(public) == 2
         assert isinstance(public[0], bool) and isinstance(public[1], str)
+
+
+class TestOptionalIndexedResourceChecks:
+    """Frequency and pitch: reported when broken, silent when simply absent.
+
+    The removed ``use_frequency_data`` / ``use_pitch_accent`` flags made "wanted
+    but missing" unrepresentable, and that stands. "Wanted but BROKEN by an
+    upgrade" is a different state and is the only one these report.
+    """
+
+    @staticmethod
+    def _build_freq(root, source_id, *, stale=False, entries=1, name=None):
+        from anki_miner.services.frequency import storage
+
+        storage.build_index(
+            root / source_id / "index.sqlite",
+            [("猫", "ねこ", 100, None)][:entries],
+            {
+                "schema_version": str(storage.SCHEMA_VERSION - 1 if stale else storage.SCHEMA_VERSION),
+                "format": "csv",
+                "source_name": name or source_id,
+                "entry_count": str(entries),
+            },
+        )
+
+    @staticmethod
+    def _build_pitch(root, source_id, *, stale=False, entries=1, name=None):
+        from anki_miner.services.pitch_accent import storage
+
+        storage.build_index(
+            root / source_id / "index.sqlite",
+            [("ねこ", "猫", "1", "", "")][:entries],
+            {
+                "schema_version": str(storage.SCHEMA_VERSION - 1 if stale else storage.SCHEMA_VERSION),
+                "format": "csv",
+                "source_name": name or source_id,
+                "source_revision": "",
+                "import_date": "2026-01-01T00:00:00+00:00",
+                "entry_count": str(entries),
+            },
+        )
+
+    def test_unconfigured_returns_none_not_a_failure(self, test_config, tmp_path):
+        config = replace(test_config, freqs_root=tmp_path / "freqs", pitch_root=tmp_path / "pitch")
+        service = ValidationService(config)
+
+        assert service._check_frequency_sources() == (None, "")
+        assert service._check_pitch_sources() == (None, "")
+
+    def test_usable_source_reports_its_name_and_count(self, test_config, tmp_path):
+        from anki_miner.config import FreqEntry
+
+        freqs_root = tmp_path / "freqs"
+        self._build_freq(freqs_root, "jpdb", name="JPDB")
+        config = replace(test_config, freqs_root=freqs_root, frequency_chain=(FreqEntry("jpdb"),))
+
+        ok, message = ValidationService(config)._check_frequency_sources()
+
+        assert ok is True
+        assert "JPDB" in message
+        assert "1 entries" in message
+
+    def test_stale_source_warns_and_names_reimport_all(self, test_config, tmp_path):
+        from anki_miner.config import FreqEntry
+
+        freqs_root = tmp_path / "freqs"
+        self._build_freq(freqs_root, "jpdb", stale=True, name="JPDB")
+        config = replace(test_config, freqs_root=freqs_root, frequency_chain=(FreqEntry("jpdb"),))
+
+        ok, message = ValidationService(config)._check_frequency_sources()
+
+        assert ok is False
+        assert "JPDB" in message
+        assert "Settings → Frequency → Reimport All" in message
+
+    def test_empty_source_warns(self, test_config, tmp_path):
+        from anki_miner.config import PitchSourceEntry
+
+        pitch_root = tmp_path / "pitch"
+        self._build_pitch(pitch_root, "nhk", entries=0, name="NHK")
+        config = replace(test_config, pitch_root=pitch_root, pitch_chain=(PitchSourceEntry("nhk"),))
+
+        ok, message = ValidationService(config)._check_pitch_sources()
+
+        assert ok is False
+        assert "no entries" in message
+
+    def test_enabled_but_absent_from_disk_stays_silent(self, test_config, tmp_path):
+        """The deliberately-removed case: a deletion is not a validation failure."""
+        from anki_miner.config import FreqEntry, PitchSourceEntry
+
+        config = replace(
+            test_config,
+            freqs_root=tmp_path / "freqs",
+            pitch_root=tmp_path / "pitch",
+            frequency_chain=(FreqEntry("gone"),),
+            pitch_chain=(PitchSourceEntry("gone"),),
+        )
+        service = ValidationService(config)
+
+        assert service._check_frequency_sources() == (None, "")
+        assert service._check_pitch_sources() == (None, "")
+
+    def test_stale_pitch_reaches_validate_setup_as_a_warning(self, test_config, tmp_path, monkeypatch):
+        from anki_miner.config import PitchSourceEntry
+
+        TestOptionalResourceWarnings._patch_external_checks(monkeypatch)
+        pitch_root = tmp_path / "pitch"
+        self._build_pitch(pitch_root, "nhk", stale=True, name="NHK")
+        config = replace(
+            test_config,
+            pitch_root=pitch_root,
+            pitch_chain=(PitchSourceEntry("nhk"),),
+            media_temp_folder=tmp_path / "temp",
+        )
+
+        result = ValidationService(config).validate_setup()
+
+        assert TestOptionalResourceWarnings._has_warning(result, "Pitch Sources")
+        # The System Health row keys off the component string; a mismatch there
+        # silently drops the warning off the screen.
+        assert any(issue.component == "Pitch Sources" for issue in result.issues)
+        assert "pitch-sources" not in result.tool_versions
+
+    def test_unconfigured_family_records_an_empty_version_string(self, test_config, tmp_path, monkeypatch):
+        """System Health renders the row as unknown off exactly this."""
+        TestOptionalResourceWarnings._patch_external_checks(monkeypatch)
+        config = replace(
+            test_config,
+            freqs_root=tmp_path / "freqs",
+            pitch_root=tmp_path / "pitch",
+            media_temp_folder=tmp_path / "temp",
+        )
+
+        result = ValidationService(config).validate_setup()
+
+        assert result.tool_versions["frequency-sources"] == ""
+        assert result.tool_versions["pitch-sources"] == ""
+        assert not TestOptionalResourceWarnings._has_warning(result, "Frequency Sources")
+        assert not TestOptionalResourceWarnings._has_warning(result, "Pitch Sources")

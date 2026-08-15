@@ -117,3 +117,65 @@ class TestBuildSources:
         registry = PitchSourceRegistry(root)
         registry.load()
         assert [p.source_id for p in registry.build_sources(cfg)] == ["ok"]
+
+
+class TestStaleAndUsable:
+    """The reimport surfaces' single source of truth (schema-bump migration).
+
+    What ``stale_enabled`` must NOT report is as load-bearing as what it must:
+    pitch is optional, so a source the user never configured, disabled, or
+    deleted from disk can never gate a run.
+    """
+
+    def test_stale_enabled_reports_only_present_but_stale(self, root: Path) -> None:
+        _make_source(root, "old", schema_version=2)
+        _make_source(root, "current")
+        cfg = replace(
+            AnkiMinerConfig(),
+            pitch_root=root,
+            pitch_chain=(PitchSourceEntry("old"), PitchSourceEntry("current")),
+        )
+        registry = PitchSourceRegistry(root)
+        registry.load()
+
+        assert [m.source_id for m in registry.stale_enabled(cfg)] == ["old"]
+
+    def test_stale_enabled_ignores_disabled_and_absent_entries(self, root: Path) -> None:
+        _make_source(root, "off", schema_version=2)
+        cfg = replace(
+            AnkiMinerConfig(),
+            pitch_root=root,
+            pitch_chain=(
+                PitchSourceEntry("off", enabled=False),
+                PitchSourceEntry("deleted-from-disk"),
+            ),
+        )
+        registry = PitchSourceRegistry(root)
+        registry.load()
+
+        assert registry.stale_enabled(cfg) == []
+
+    def test_stale_enabled_empty_for_unconfigured_chain(self, root: Path) -> None:
+        _make_source(root, "old", schema_version=2)
+        cfg = replace(AnkiMinerConfig(), pitch_root=root)
+        registry = PitchSourceRegistry(root)
+        registry.load()
+
+        assert registry.stale_enabled(cfg) == []
+
+    def test_usable_enabled_requires_current_schema(self, root: Path) -> None:
+        _make_source(root, "good")
+        _make_source(root, "stale", schema_version=2)
+        cfg = replace(
+            AnkiMinerConfig(),
+            pitch_root=root,
+            pitch_chain=(
+                PitchSourceEntry("good"),
+                PitchSourceEntry("stale"),
+                PitchSourceEntry("gone"),
+            ),
+        )
+        registry = PitchSourceRegistry(root)
+        registry.load()
+
+        assert [m.source_id for m in registry.usable_enabled(cfg)] == ["good"]
