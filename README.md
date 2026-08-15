@@ -108,13 +108,14 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Deck Builder** - mine a whole series into one frequency-ranked deck.
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
-- **Analytics** - mining history, difficulty rankings, milestones, undo.
+- **Analytics** - mining history, difficulty rankings, milestones.
 - **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features
 
 - Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
+- Undo a run - delete the notes a run just created, straight from its results dialog.
 - Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
 - Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
 - Multiple frequency lists chained by priority.
@@ -221,7 +222,6 @@ If you want to support the project, please share it with others who may benefit 
 
 - New here? Start with [CONTRIBUTING.md](CONTRIBUTING.md).
 - Architecture overview: [ARCHITECTURE.md](ARCHITECTURE.md).
-- Testing strategy: [TESTING.md](TESTING.md).
 - Code of Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 - Security: [SECURITY.md](SECURITY.md).
 
