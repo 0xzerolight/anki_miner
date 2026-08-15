@@ -757,6 +757,18 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         except Exception as error:  # noqa: BLE001 - dispatch failure is shown inline
             fail(str(error))
 
+    def _show_nothing_to_restore(self, body: str) -> None:
+        """Report that a Restore from Disk scan found nothing to add.
+
+        Restore only re-adds sources present on disk but absent from the chain;
+        ``unlisted()`` further drops anything schema-stale. After a schema bump
+        that makes an empty result the *normal* outcome for everyone, so a
+        silent return read as a dead button (the v2.10.0 report). Says so
+        instead, and names Reimport All, which is what repairs a stale index.
+        Mirrors ``DictionaryImportFlow.restore_unlisted``, which always spoke.
+        """
+        QMessageBox.information(self, self.tr("Nothing to restore"), body)
+
     def _restore_audio_from_disk(self) -> None:
         scan_root = self.config.audio_packs_root
         scan_chain = self.audio_panel.get_chain()
@@ -772,6 +784,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 return
             packs = cast(list[AudioPackMeta], result)
             if not packs:
+                self._show_nothing_to_restore(
+                    self.tr(
+                        "Every audio pack found in the storage folder is already listed.\n\n"
+                        "A pack that stopped working after an app upgrade is repaired by "
+                        "Re-import on its row, not by restoring it."
+                    )
+                )
                 return
             chain = list(scan_chain)
             entries = [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
@@ -812,6 +831,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 return
             sources = cast(list[FreqSourceMeta], result)
             if not sources:
+                self._show_nothing_to_restore(
+                    self.tr(
+                        "Every frequency source found in the storage folder is already listed.\n\n"
+                        "A source that stopped working after an app upgrade is repaired by "
+                        "Reimport All, not by restoring it."
+                    )
+                )
                 return
             new_chain = (*scan_chain, *(FreqEntry(source.source_id) for source in sources))
             try:
@@ -846,6 +872,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 return
             sources = cast(list[PitchSourceMeta], result)
             if not sources:
+                self._show_nothing_to_restore(
+                    self.tr(
+                        "Every pitch accent source found in the storage folder is already listed.\n\n"
+                        "A source that stopped working after an app upgrade is repaired by "
+                        "Reimport All, not by restoring it."
+                    )
+                )
                 return
             new_chain = (*scan_chain, *(PitchSourceEntry(source.source_id) for source in sources))
             try:
