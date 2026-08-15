@@ -37,7 +37,7 @@ External runtime dependencies:
 1. Fork the repo and create a branch from `main`. Branch names like `feat/...`, `fix/...`, or `docs/...` are appreciated but not required.
 2. Keep PRs focused — one feature or fix per PR.
 3. Style (`black` + `ruff`) is auto-fixed on your PR by [pre-commit.ci](https://pre-commit.ci) — a bot pushes a fix commit if needed, so you don't have to run anything to pass CI. Installing the local hook (`pre-commit install`) is recommended for faster feedback but no longer required.
-4. Run the test suite. See [TESTING.md](TESTING.md).
+4. Run the test suite. See [Tests](#tests).
 5. Add an entry under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md).
 6. Open the PR against `main`. The PR template will populate automatically.
 
@@ -54,18 +54,55 @@ Quick checks before pushing:
 black .
 ruff check .
 mypy anki_miner
-pytest
+pytest -m "not youtube and not asr and not e2e and not golden"
 ```
 
 `scripts/health.sh` runs the full local gate in one command (the above plus vulture and shellcheck).
 
 ## Tests
 
-See [TESTING.md](TESTING.md) for the full strategy. Quick reference:
+Tests live under `tests/unit/` (external services mocked — most of the suite), `tests/integration/` (the assembled pipeline, still mocked at the process boundary), and `tests/e2e/` (an on-demand live harness; see `tests/e2e/README.md`). Shared fixtures go in `tests/conftest.py`.
 
-- `pytest` — default suite (runs in parallel; excludes the `e2e` marker).
-- `pytest -m youtube` — network-dependent YouTube tests; `pytest -m asr` — local-Whisper tests.
-- Headless Qt: `QT_QPA_PLATFORM=offscreen` matches CI behavior.
+```bash
+# What CI runs, and what to run before pushing
+pytest -m "not youtube and not asr and not e2e and not golden"
+
+# Single file
+pytest tests/unit/test_word_filter.py
+```
+
+Bare `pytest` is **not** that gate. `pyproject.toml` sets `addopts` to `-n auto --dist loadfile --max-worker-restart=0 -m "not e2e"`, and a `-m` on the command line *replaces* that marker expression instead of adding to it — so `pytest -m youtube` also drops the `not e2e` exclusion. Spell out the full expression every time. The run is parallel (pytest-xdist, one file per worker to keep the order-dependent Qt teardown stable); pass `-n0` to force it serial. A 120s per-test timeout names any worker that deadlocks.
+
+Coverage is computed but never gated, so it is off by default. Opt in with `pytest --cov=anki_miner --cov-report=term-missing`.
+
+### Markers
+
+| Marker | Use |
+|---|---|
+| `youtube` | Needs the network and yt-dlp's real extractor. Kept out of CI so upstream breakage can't turn the tree red. |
+| `asr` | Needs an ASR backend and a downloaded model. Runs in the dedicated `test-asr` CI job, which installs `.[dev,asr,asr-vulkan]`. |
+| `e2e` | Drives the real GUI through the `tests/e2e/` harness. Excluded by default via `addopts`. Most of these need Anki running; a couple (motion timing, mpv playback cycles) do not. |
+| `soak` | Multi-session soak runs through the same harness. |
+| `real_ytdlp` | Exercises the real `_ytdlp_supports_js_runtimes` probe (no autouse stub). |
+| `real_probe` | Exercises the real `AnkiService._probe_duplicates` (no autouse stub). |
+| `network` | Genuinely needs the network; suppresses the socket tripwire in `tests/_network_tripwire.py`. |
+| `golden` | Android-port engine parity contract. Clones a pinned revision and runs real exports, so it is on-demand only. |
+| `motion` | Needs real animation timing; opts out of the autouse instant-motion fixture. |
+
+Register new markers in `[tool.pytest.ini_options].markers` in `pyproject.toml`.
+
+### Headless Qt
+
+Any test importing a PyQt6 widget needs the offscreen platform plugin (`QT_QPA_PLATFORM=offscreen`). `tests/conftest.py` sets it, and so does CI. Widget tests take pytest-qt's `qtbot` fixture and call `qtbot.addWidget()` on every top-level widget they build, so teardown stays deterministic.
+
+### Mocking
+
+Patch at the smallest boundary that still exercises your code:
+
+- **AnkiConnect** — `anki_miner.services._ankiconnect.requests.post`, the actual HTTP call site.
+- **ffmpeg** — `subprocess.run`, returning canned probe/extraction output.
+- **Jisho** — `requests.get`, with payloads stored as JSON fixtures where practical.
+- **yt-dlp** — the subprocess boundary, leaving `YouTubeFetcherService` as the unit under test.
 
 New code should add tests where reasonable; refactors should not regress existing coverage by a meaningful amount.
 
@@ -74,6 +111,7 @@ New code should add tests where reasonable; refactors should not regress existin
 If your change adds or edits a user-facing UI string, refresh the translation catalogs before committing:
 
 ```bash
+pip install -e ".[i18n]"   # compile shells out to pyside6-lrelease, which ships only in this extra
 python scripts/i18n.py extract
 python scripts/i18n.py compile
 ```

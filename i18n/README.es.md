@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 - **Constructor de mazos** - minera una serie completa en un solo mazo clasificado por frecuencia.
 - **Audiolibros** - minera audiolibros, pódcasts, radio, canciones (pares de audio + subtítulo/transcripción).
 - **Lectura** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto japonés pegado.
-- **Analíticas** - historial de minería, clasificaciones de dificultad, hitos, deshacer.
+- **Analíticas** - historial de minería, clasificaciones de dificultad, hitos.
 - **Utilidades** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (alass), condensa medios a audio solo de diálogos, copia la parte que vale la pena aprender de un mazo prediseñado a uno nuevo, y rellena campos en tarjetas existentes.
 - **Configuración** - todo lo configurable.
 
 ## Otras Características
 
 - Word Curator - revisa cada palabra candidata antes de crear las tarjetas, con su escena, su página de manga y su entrada de diccionario al lado.
+- Deshacer una ejecución - elimina las notas que una ejecución acaba de crear, directamente desde su diálogo de resultados.
 - Filtrado extenso: i+1, rango de clasificación de frecuencia, lista negra, regex, conjuntos de palabras y más.
 - Importación de diccionario Yomitan offline - definiciones, acento tonal, frecuencia - encadenados por prioridad.
 - Múltiples listas de frecuencia encadenadas por prioridad.
@@ -223,7 +224,6 @@ Si quieres apoyar el proyecto, compártelo con otros que puedan beneficiarse de 
 
 - ¿Eres nuevo aquí? Empieza con [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Descripción general de la arquitectura: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Estrategia de pruebas: [TESTING.md](../TESTING.md).
 - Código de Conducta: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Seguridad: [SECURITY.md](../SECURITY.md).
 

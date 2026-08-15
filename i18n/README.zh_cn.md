@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ anki_miner_gui
 - **牌组构建器** - 把整部剧集挖词成一个按词频排序的牌组。
 - **有声书** - 挖词有声书、播客、广播和歌曲（音频 + 字幕/文稿配对）。
 - **阅读** - 挖词漫画（mokuro）、小说（`.epub`、`.txt`；单本书或整个文件夹）、独立字幕文件，或粘贴的日语文本。
-- **分析** - 挖词历史、难度排名、里程碑、撤销。
+- **分析** - 挖词历史、难度排名、里程碑。
 - **工具** - 生成字幕（本地 Whisper）、重新校准字幕时间轴（alass）、把媒体压缩成纯对话音频、把现成牌组中值得学习的部分复制到新牌组，以及为已有卡片回填字段。
 - **设置** - 所有可配置项。
 
 ## 其他功能
 
 - 单词整理器 - 在生成卡片之前逐一审阅每个候选单词，画面、漫画页面和词典条目并排显示。
+- 撤销一次运行 - 直接在结果对话框中删除该次运行刚创建的笔记。
 - 丰富的过滤器：i+1、词频排名区间、黑名单、正则表达式、词汇集等。
 - 离线 Yomitan 词典导入 - 释义、音调、词频 - 按优先级串联。
 - 多个词频列表按优先级串联。
@@ -223,7 +224,6 @@ Anki Miner 未来版本的想法清单。排列顺序不代表优先级。功能
 
 - 第一次来？请从 [CONTRIBUTING.md](../CONTRIBUTING.md) 开始。
 - 架构概览：[ARCHITECTURE.md](../ARCHITECTURE.md)。
-- 测试策略：[TESTING.md](../TESTING.md)。
 - 行为准则：[CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md)。
 - 安全：[SECURITY.md](../SECURITY.md)。
 

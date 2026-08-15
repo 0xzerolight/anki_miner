@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - **Générateur de paquets** - extraire une série entière dans un seul paquet classé par fréquence.
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
 - **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte japonais collé.
-- **Statistiques** - historique d'extraction, classements de difficulté, jalons, annulation.
+- **Statistiques** - historique d'extraction, classements de difficulté, jalons.
 - **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (alass), condenser les médias en audio dialogue uniquement, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
 - **Paramètres** - tout ce qui est configurable.
 
 ## Autres fonctionnalités
 
 - Curateur de mots - passez en revue chaque mot candidat avant la création des cartes, avec sa scène, sa page de manga et son entrée de dictionnaire côte à côte.
+- Annuler une exécution - supprimez les notes qu'une exécution vient de créer, directement depuis sa boîte de dialogue de résultats.
 - Filtrage étendu : i+1, plage de rang de fréquence, liste noire, regex, ensembles de mots, et plus encore.
 - Import de dictionnaires Yomitan hors ligne - définitions, accent de hauteur, fréquence - chaînés par priorité.
 - Plusieurs listes de fréquence chaînées par priorité.
@@ -223,7 +224,6 @@ Si vous souhaitez soutenir le projet, merci de le partager avec d'autres personn
 
 - Nouveau ici ? Commencez par [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Aperçu de l'architecture : [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Stratégie de test : [TESTING.md](../TESTING.md).
 - Code de conduite : [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Sécurité : [SECURITY.md](../SECURITY.md).
 

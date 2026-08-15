@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 - **Construtor de Baralho** - minere uma série inteira em um único baralho ordenado por frequência.
 - **Audiolivros** - minere audiolivros, podcasts, rádio, músicas (pares de áudio + legenda/transcrição).
 - **Leitura** - minere mangás (mokuro), romances (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto em japonês colado.
-- **Análises** - histórico de mineração, classificações de dificuldade, marcos, desfazer.
+- **Análises** - histórico de mineração, classificações de dificuldade, marcos.
 - **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (alass), condensar mídia em áudio só com diálogos, copiar a parte que vale a pena aprender de um baralho pronto para um novo, e preencher retroativamente campos em cartões existentes.
 - **Configurações** - tudo que é configurável.
 
 ## Outros Recursos
 
 - Curador de Palavras - revise cada palavra candidata antes de os cartões serem criados, com a cena, a página do mangá e a entrada do dicionário lado a lado.
+- Desfazer uma execução - exclua as notas que uma execução acabou de criar, direto da caixa de diálogo de resultados.
 - Filtragem extensa: i+1, faixa de posição de frequência, blacklist, regex, wordsets e muito mais.
 - Importação de dicionário Yomitan offline - definições, acento tonal, frequência - encadeados por prioridade.
 - Múltiplas listas de frequência encadeadas por prioridade.
@@ -223,7 +224,6 @@ Se você quiser apoiar o projeto, compartilhe-o com outras pessoas que possam se
 
 - Novo por aqui? Comece com [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Visão geral da arquitetura: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Estratégia de testes: [TESTING.md](../TESTING.md).
 - Código de Conduta: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Segurança: [SECURITY.md](../SECURITY.md).
 

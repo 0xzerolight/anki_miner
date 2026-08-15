@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - **Pembuat Dek** - mining seluruh serial menjadi satu dek yang diurutkan berdasarkan frekuensi.
 - **Buku Audio** - mining buku audio, podcast, radio, lagu (pasangan audio + subtitel/transkrip).
 - **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks Jepang yang ditempel.
-- **Analitik** - riwayat mining, peringkat kesulitan, milestone, undo.
+- **Analitik** - riwayat mining, peringkat kesulitan, milestone.
 - **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (alass), memadatkan media menjadi audio berisi dialog saja, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, dan mengisi ulang bidang pada kartu yang sudah ada.
 - **Pengaturan** - semua yang bisa dikonfigurasi.
 
 ## Fitur Lainnya
 
 - Word Curator - tinjau setiap kata kandidat sebelum kartu dibuat, lengkap dengan adegan, halaman manga, dan entri kamus berdampingan.
+- Batalkan sebuah proses - hapus catatan yang baru saja dibuat oleh sebuah proses, langsung dari dialog hasilnya.
 - Filter yang luas: i+1, rentang peringkat frekuensi, daftar hitam, regex, kumpulan kata, dan lainnya.
 - Impor kamus Yomitan offline - definisi, aksen nada, frekuensi - dirangkai berdasarkan prioritas.
 - Beberapa daftar frekuensi dirangkai berdasarkan prioritas.
@@ -223,7 +224,6 @@ Jika Anda ingin mendukung proyek ini, silakan bagikan ke orang lain yang mungkin
 
 - Baru di sini? Mulai dengan [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Gambaran arsitektur: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Strategi pengujian: [TESTING.md](../TESTING.md).
 - Kode Etik: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Keamanan: [SECURITY.md](../SECURITY.md).
 

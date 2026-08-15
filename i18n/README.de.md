@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
+<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -110,13 +110,14 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - **Deck Builder** - mine eine ganze Serie zu einem nach Häufigkeit geordneten Stapel.
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten japanischen Text.
-- **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine, Rückgängig machen.
+- **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
 - **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (alass), Medien auf reines Dialog-Audio kondensieren, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren und Felder bestehender Karten nachträglich befüllen.
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen
 
 - Word Curator - jedes Kandidatenwort vor der Kartenerstellung prüfen, mit Szene, Manga-Seite und Wörterbucheintrag nebeneinander.
+- Lauf rückgängig machen - die Notizen, die ein Lauf gerade erstellt hat, direkt aus seinem Ergebnisdialog löschen.
 - Umfangreiche Filterung: i+1, Häufigkeitsrang-Bereich, Sperrliste, Regex, Wortgruppen und mehr.
 - Offline-Import von Yomitan-Wörterbüchern - Definitionen, Tonhöhenakzent, Häufigkeit - nach Priorität verkettet.
 - Mehrere Häufigkeitslisten, nach Priorität verkettet.
@@ -223,7 +224,6 @@ Wenn du das Projekt unterstützen möchtest, teile es bitte mit anderen, denen e
 
 - Neu hier? Beginne mit [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Architekturüberblick: [ARCHITECTURE.md](../ARCHITECTURE.md).
-- Teststrategie: [TESTING.md](../TESTING.md).
 - Verhaltenskodex: [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 - Sicherheit: [SECURITY.md](../SECURITY.md).
 
