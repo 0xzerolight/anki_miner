@@ -16,6 +16,10 @@ Convierte contenido japonés nativo en tarjetas de vocabulario de Anki.
 </p>
 
 <p align="center">
+<b>¿En Android?</b> Consigue <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner para Android</a> - el mismo minado, en tu teléfono a través de AnkiDroid.
+</p>
+
+<p align="center">
 Por favor, deja una ⭐ estrella si Anki Miner te ha ayudado; ayuda a que otros lo encuentren :).
 </p>
 
