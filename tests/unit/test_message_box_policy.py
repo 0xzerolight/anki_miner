@@ -83,8 +83,7 @@ LEDGER: dict[str, str] = {
     # --- Success reports for a foreground action ----------------------------
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow._add_android_db_picked.on_success": "notice",
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.add_pack.on_finished": "notice",
-    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow._reimport_android_db_picked.on_success": "notice",
-    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow._reimport_pack_picked.on_success": "notice",
+    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow._run_pack_reimport.on_success": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow._add_dict_picked.on_success": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all.on_finished": "notice",

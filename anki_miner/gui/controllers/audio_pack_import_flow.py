@@ -31,9 +31,10 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
+from anki_miner.services._sqlite_index import resolve_managed_slot
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
-from anki_miner.services.audio_packs.storage import read_meta
+from anki_miner.services.audio_packs.storage import read_meta_cached
 from anki_miner.utils.i18n import tr_format
 
 # Upstream source priority for newly imported packs inserted into the chain.
@@ -384,9 +385,9 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         if not self._begin_mutation("reimport"):
             return
         trace_id = _begin_import_trace("audio pack reimport")
-        index_path = self._get_config().audio_packs_root / pack_id / "index.sqlite"
         try:
-            is_android_db = read_meta(index_path).get("format") == "android_db"
+            index_path = resolve_managed_slot(self._get_config().audio_packs_root, pack_id) / "index.sqlite"
+            is_android_db = read_meta_cached(index_path).get("format") == "android_db"
         except (OSError, ValueError, sqlite3.Error):
             is_android_db = False
         if is_android_db:
@@ -436,6 +437,34 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._set_import_buttons_enabled(True)
             raise
 
+        self._run_pack_reimport(
+            trace_id,
+            worker,
+            progress_label=QCoreApplication.translate("AudioPackImportFlow", "Re-importing Android audio database…"),
+            failure_summary=QCoreApplication.translate(
+                "AudioPackImportFlow", "The Android audio database could not be re-imported."
+            ),
+            reimported_title=QCoreApplication.translate("AudioPackImportFlow", "Android Audio Database Re-imported"),
+            join_noun="Android audio database import worker",
+        )
+
+    def _run_pack_reimport(
+        self,
+        trace_id: str,
+        worker: ImportWorker,
+        *,
+        progress_label: str,
+        failure_summary: str,
+        reimported_title: str,
+        join_noun: str,
+    ) -> None:
+        """Drive a reimport that rebuilds an existing slot in place.
+
+        A reimport changes an index without changing the chain, so it persists
+        nothing: one registry refresh plus one ``config_changed`` is what makes
+        the rebuilt slot live.
+        """
+
         def on_success(imported_id: str, _meta: dict) -> None:
             current_chain = self._panel.get_chain()
             self._panel.refresh_registry()
@@ -445,21 +474,29 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             _log_import_persist(trace_id, "done")
             QMessageBox.information(
                 self._parent,
-                QCoreApplication.translate("AudioPackImportFlow", "Android Audio Database Re-imported"),
+                reimported_title,
                 tr_format(
                     QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1 successfully."), imported_id
                 ),
             )
 
+        def on_success_error(exc: Exception) -> None:
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "AudioPackImportFlow", "The import finished, but the settings could not be updated."
+                ),
+                str(exc),
+            )
+
+        # Busy/indeterminate bar (determinate=False) like add_pack — the pack
+        # importer reports only progress messages, no percentage granularity.
         self._run_modal_import(
             worker=worker,
-            progress_label=QCoreApplication.translate("AudioPackImportFlow", "Re-importing Android audio database…"),
+            progress_label=progress_label,
             cancel_label=QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
             determinate=False,
-            join_noun="Android audio database import worker",
-            failure_summary=QCoreApplication.translate(
-                "AudioPackImportFlow", "The Android audio database could not be re-imported."
-            ),
+            join_noun=join_noun,
+            failure_summary=failure_summary,
             refusal_message=QCoreApplication.translate(
                 "AudioPackImportFlow", "Another import is still finishing. Wait for it to finish and try again."
             ),
@@ -469,6 +506,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             ),
             trace_id=trace_id,
             on_success=on_success,
+            on_success_error=on_success_error,
         )
 
     def _reimport_pack_picked(self, pack_id: str, trace_id: str, picker_started: float, chosen_dir: str) -> None:
@@ -499,39 +537,13 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._set_import_buttons_enabled(True)
             raise
 
-        def on_success(imported_id: str, _meta: dict) -> None:
-            current_chain = self._panel.get_chain()
-            self._panel.refresh_registry()
-            self._panel.set_chain(current_chain)
-            _log_import_persist(trace_id, "start")
-            self._notify_config_changed()
-            _log_import_persist(trace_id, "done")
-            QMessageBox.information(
-                self._parent,
-                QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
-                tr_format(
-                    QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1 successfully."), imported_id
-                ),
-            )
-
-        # Busy/indeterminate bar (determinate=False) like add_pack — the pack
-        # importer reports only progress messages, no percentage granularity.
-        self._run_modal_import(
-            worker=worker,
+        self._run_pack_reimport(
+            trace_id,
+            worker,
             progress_label=QCoreApplication.translate("AudioPackImportFlow", "Re-importing audio pack…"),
-            cancel_label=QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
-            determinate=False,
-            join_noun="audio pack import worker",
             failure_summary=QCoreApplication.translate(
                 "AudioPackImportFlow", "The audio pack could not be re-imported."
             ),
-            refusal_message=QCoreApplication.translate(
-                "AudioPackImportFlow", "Another import is still finishing. Wait for it to finish and try again."
-            ),
-            cancelling_label=QCoreApplication.translate("AudioPackImportFlow", "Cancelling…"),
-            missing_result_message=QCoreApplication.translate(
-                "AudioPackImportFlow", "The import worker finished without a completion result."
-            ),
-            trace_id=trace_id,
-            on_success=on_success,
+            reimported_title=QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
+            join_noun="audio pack import worker",
         )

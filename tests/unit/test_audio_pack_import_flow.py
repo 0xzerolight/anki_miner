@@ -987,3 +987,30 @@ class TestBrowseStartDir:
 
         home = str(Path.home())
         assert captured.get("dir") == home, f"Expected home={home!r}; got {captured.get('dir')!r}"
+
+
+def test_reimport_of_android_pack_uses_the_file_picker_and_keeps_the_pack_id(tab, monkeypatch, tmp_path):
+    packs_root = tab.config.audio_packs_root
+    (packs_root / "android").mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.audio_pack_import_flow.read_meta_cached",
+        lambda _path: {"format": "android_db"},
+    )
+    db_path = tmp_path / "android.db"
+    db_path.touch()
+    picked: list[str] = []
+    monkeypatch.setattr(
+        file_dialogs,
+        "pick_open_file",
+        lambda *a, on_done, **kw: (picked.append("file"), on_done(str(db_path)))[1],
+    )
+    monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, **kw: pytest.fail("folder picker used"))
+    worker = MagicMock(name="android_db_worker")
+    factory = MagicMock(return_value=worker)
+    monkeypatch.setattr("anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_android_audio_db", factory)
+    monkeypatch.setattr(tab._audio_pack_import_flow, "_run_modal_import", MagicMock())
+
+    tab._audio_pack_import_flow.reimport_pack("android")
+
+    assert picked == ["file"]
+    assert factory.call_args.kwargs == {"pack_id": "android", "overwrite": True}
