@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac9fceb71927c480 -->
+<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -35,7 +35,7 @@
 </p>
 
 <p align="center">
-<b>在用 Android？</b>获取 <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a> - 同样的挖词体验，通过 AnkiDroid 在手机上完成。
+Android 上也可用 - <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a>。
 </p>
 
 <p align="center">

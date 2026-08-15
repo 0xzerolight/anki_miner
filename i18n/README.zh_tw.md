@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac9fceb71927c480 -->
+<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -35,11 +35,11 @@
 </p>
 
 <p align="center">
-<b>使用 Android？</b>請取得 <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a>——同樣的採集功能，透過 AnkiDroid 在手機上使用。
+Android 上也能用 - <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner for Android</a>。
 </p>
 
 <p align="center">
-如果 Anki Miner 對你有幫助，請留下一顆 ⭐ 星星——這能讓更多人找到它 :)。
+如果 Anki Miner 對你有幫助，請留下一顆 ⭐ 星星 - 這能讓更多人找到它 :)。
 </p>
 
 
@@ -60,7 +60,7 @@
 ### 需求
 
 - **Anki** 並安裝 [AnkiConnect](https://ankiweb.net/shared/info/2055492159) 附加元件（代碼 `2055492159`）
-- **ffmpeg** + **libmpv**（僅影片預覽需要）——只有透過 pip/pipx 或原始碼安裝時才需要。
+- **ffmpeg** + **libmpv**（僅影片預覽需要） - 只有透過 pip/pipx 或原始碼安裝時才需要。
 
 請從[最新發行版本](https://github.com/0xzerolight/anki_miner/releases/latest)下載適用你平台的檔案：
 
@@ -151,7 +151,7 @@ anki_miner_gui
 <summary><strong>運作方式</strong></summary>
 
 1. **讀取字幕**並把日文切分成一個個單字。
-2. **篩選**出你還不認識的實詞——也可以自己在單字整理工具中檢視清單。
+2. **篩選**出你還不認識的實詞 - 也可以自己在單字整理工具中檢視清單。
 3. 為每一行**擷取螢幕截圖與音訊片段**。
 4. 在你設定的離線字典中**查詢釋義**，若有啟用則可退回線上 Jisho（較慢，有速率限制）。
 5. **把完成的卡片送到 Anki。**

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac9fceb71927c480 -->
+<!-- i18n-source: README.md sha256:edbfeed099296e19 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -35,7 +35,7 @@ Wandelt originalsprachige japanische Inhalte in Anki-Vokabelkarten um.
 </p>
 
 <p align="center">
-<b>Auf Android?</b> Hol dir <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner für Android</a> - das gleiche Mining, auf deinem Handy über AnkiDroid.
+Auch auf Android - <a href="https://github.com/0xzerolight/anki_miner_android">Anki Miner für Android</a>.
 </p>
 
 <p align="center">
