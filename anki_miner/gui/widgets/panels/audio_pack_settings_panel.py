@@ -425,7 +425,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 meta.source if meta else (entry.pack_id or "(missing)"),
                 meta.format if meta else "",
                 meta.entry_count if meta else None,
-                meta is not None and not meta.pack_dir_exists,
+                meta is not None and not meta.source_available,
                 meta is not None and not meta.schema_ok,
             )
         if entry.kind == "googletts":

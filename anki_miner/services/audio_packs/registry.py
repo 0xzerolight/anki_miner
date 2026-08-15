@@ -33,6 +33,18 @@ class AudioPackMeta:
     db_path: Path
     source_db: Path | None = None
 
+    @property
+    def source_available(self) -> bool:
+        """Whether the audio this pack serves is actually reachable.
+
+        A folder pack needs its ``pack_dir``; an ``android_db`` pack needs the
+        external database it was registered against. ``pack_dir_exists`` stays
+        literal so it does not have to answer both questions.
+        """
+        if self.format == "android_db":
+            return self.source_db is not None and self.source_db.is_file()
+        return self.pack_dir_exists
+
 
 class AudioPackRegistry:
     """Scans the audio_packs folder and builds runtime fetcher chains.
@@ -103,8 +115,6 @@ class AudioPackRegistry:
         source_db_str = meta.get("source_db", "")
         source_db = Path(source_db_str) if source_db_str else None
 
-        pack_dir_exists = source_db.is_file() if meta.get("format") == "android_db" and source_db else pack_dir.is_dir()
-
         return AudioPackMeta(
             pack_id=meta.get("pack_id", child.name),
             source=meta.get("source", child.name),
@@ -112,7 +122,7 @@ class AudioPackRegistry:
             entry_count=count,
             schema_ok=(version == SCHEMA_VERSION),
             pack_dir=pack_dir,
-            pack_dir_exists=pack_dir_exists,
+            pack_dir_exists=pack_dir.is_dir(),
             db_path=db,
             source_db=source_db,
         )
@@ -186,18 +196,11 @@ class AudioPackRegistry:
                     entry.pack_id,
                 )
                 continue
-            if not meta.pack_dir_exists:
+            if not meta.source_available:
                 logger.warning(
-                    "Audio pack '%s' pack_dir missing (%s); skipping — audio files moved?",
+                    "Audio pack '%s' source missing (%s); skipping — moved or deleted?",
                     entry.pack_id,
-                    meta.pack_dir,
-                )
-                continue
-            if meta.format == "android_db" and (meta.source_db is None or not meta.source_db.is_file()):
-                logger.warning(
-                    "Android audio database for pack '%s' is missing (%s); skipping",
-                    entry.pack_id,
-                    meta.source_db,
+                    meta.source_db if meta.format == "android_db" else meta.pack_dir,
                 )
                 continue
             chain.append(

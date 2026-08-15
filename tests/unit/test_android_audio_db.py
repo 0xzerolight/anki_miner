@@ -81,3 +81,23 @@ def test_android_db_rejects_unrelated_sqlite_file(tmp_path: Path):
 
     with pytest.raises(SetupError, match="entries table"):
         import_android_audio_db(bad, tmp_path / "packs")
+
+
+def test_android_pack_reports_unavailable_when_source_db_moves(tmp_path: Path):
+    source = _make_android_db(tmp_path / "android.db")
+    packs_root = tmp_path / "packs"
+    import_android_audio_db(source, packs_root)
+
+    registry = AudioPackRegistry(packs_root)
+    registry.load()
+    meta = registry.packs["android"]
+    assert meta.source_available is True
+    # pack_dir stays literal: it is the folder the db lives in, and it exists.
+    assert meta.pack_dir_exists is True
+
+    source.unlink()
+    registry = AudioPackRegistry(packs_root)
+    registry.load()
+    meta = registry.packs["android"]
+    assert meta.source_available is False
+    assert meta.pack_dir_exists is True
