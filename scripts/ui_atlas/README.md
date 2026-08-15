@@ -1,13 +1,13 @@
 # UI atlas
 
 Renders and mechanically checks every screen of the composed application at a
-named layout cell, plus two extra passes (button/menu inventory + resize sweep)
-and a responsiveness receipt.
+named layout cell, plus a button/menu inventory, a resize sweep, and a
+responsiveness receipt.
 
-It drives the real `anki_miner.gui.app.main()`, not `tests/e2e/app_driver`:
-`AppDriver` mounts a single tab, so it cannot see the composed window, the
-pinned action bars, the status strip or the settings navigator — the exact
-things the layout cells exist to check.
+It drives the real `anki_miner.gui.app.main()` rather than `tests/e2e/app_driver`,
+because `AppDriver` mounts a single tab and so cannot see the composed window, the
+pinned action bars, the status strip, or the settings navigator — the exact things
+the layout cells exist to check.
 
 ## Cells
 
@@ -18,12 +18,11 @@ things the layout cells exist to check.
 | `hostile_pseudo` | 1024×768 | German + 25 characters on every string | 1.5 |
 | `firstrun` | 1280×800 | English | 1.0, `first_run_setup_done` cleared |
 
-`hostile_pseudo` exists because the German catalog only covers strings that
-existed when it was last regenerated. A German-only run silently renders newer
-UI in English and therefore under-reports width pressure. The pseudo cell is a
-deliberate *upper bound*, not a prediction: +25 characters on every string is far
-harsher than German, so treat its findings as "this is what breaks first", never
-as "German breaks here".
+`hostile_pseudo` is a deliberate *upper bound*, not a prediction: +25 characters on
+every string is far harsher than any real locale, so treat its findings as "this is
+what breaks first", never as "German breaks here". It also insures against catalog
+drift — the catalogs are fully translated today, but a German-only run renders any
+newer, not-yet-translated string in English and would under-report width pressure.
 
 ## Running
 

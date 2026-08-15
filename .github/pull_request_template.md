@@ -17,8 +17,7 @@
 ## Checklist
 
 - [ ] Tests added or updated where applicable
-- [ ] `pytest` passes locally
-- [ ] `ruff check .` and `black --check .` pass
-- [ ] `mypy anki_miner` passes
+- [ ] `scripts/health.sh` passes locally (format, lint, types, tests)
+- [ ] Translation catalogs refreshed if any user-facing string changed (see [CONTRIBUTING.md](../CONTRIBUTING.md#translations))
 - [ ] `CHANGELOG.md` updated under `## [Unreleased]`
 - [ ] Docs updated if behavior changed (README, ARCHITECTURE, etc.)
