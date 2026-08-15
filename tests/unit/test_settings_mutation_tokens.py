@@ -362,6 +362,11 @@ def test_retained_migration_worker_refuses_every_settings_dictionary_entry_point
         "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.pick_open_file",
         unexpected,
     )
+    # Add opens the multi-select picker; both must stay unreached.
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.dictionary_import_flow.file_dialogs.pick_open_files",
+        unexpected,
+    )
     monkeypatch.setattr(tab.dictionary_panel, "_confirm_remove", unexpected)
     monkeypatch.setattr(tab._dict_import_flow, "_run_latest_scan", unexpected)
 
