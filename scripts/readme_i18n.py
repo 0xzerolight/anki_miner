@@ -178,9 +178,81 @@ def nav_all() -> None:
             path.write_text(replace_nav(path.read_text(encoding="utf-8"), code), encoding="utf-8")
 
 
+def _anchor_problems(label: str, text: str) -> list[str]:
+    prose, _ = split_fences(strip_nav(text))
+    slugs = {slugify(title) for _, title in headings(prose)}
+    return [
+        f"{label}: in-page link #{anchor} matches no heading (slugs: {sorted(slugs)})"
+        for anchor in ANCHOR_RE.findall("\n".join(prose))
+        if anchor not in slugs
+    ]
+
+
 def check() -> list[str]:
-    """Structural parity gate. Implemented in Task 3."""
-    return []
+    """Return every parity problem across README.md and its translations."""
+    problems: list[str] = []
+    source_text = SOURCE.read_text(encoding="utf-8")
+
+    if NAV_START not in source_text or NAV_END not in source_text:
+        return [f"README.md: missing {NAV_START} / {NAV_END} markers"]
+    if nav_body(source_text) != render_nav("en"):
+        problems.append("README.md: nav block is stale - run `python scripts/readme_i18n.py nav`")
+    problems += _anchor_problems("README.md", source_text)
+
+    bare = strip_nav(source_text)
+    src_prose, src_blocks = split_fences(bare)
+    src_levels = [level for level, _ in headings(src_prose)]
+    src_urls = sorted(URL_RE.findall(bare))
+    src_rel = sorted(REL_LINK_RE.findall(bare))
+    src_rows = sum(1 for line in src_prose if line.lstrip().startswith("|"))
+    src_html = {tag: bare.count(tag) for tag in ("<details>", "</details>", "<summary>", "</summary>")}
+    want_stamp = stamp_line(source_text)
+
+    for code in codes():
+        path = translation_path(code)
+        label = f"i18n/README.{code}.md"
+        if not path.exists():
+            problems.append(f"{label}: missing - run `python scripts/readme_i18n.py scaffold {code}`")
+            continue
+
+        text = path.read_text(encoding="utf-8")
+        first = text.splitlines()[0] if text else ""
+        if first != want_stamp:
+            problems.append(
+                f"{label}: source stamp is stale or missing (line 1 must be `{want_stamp}`). "
+                "Re-translate the changed parts of README.md, then run "
+                "`python scripts/readme_i18n.py stamp`."
+            )
+        if NAV_START not in text or NAV_END not in text:
+            problems.append(f"{label}: missing nav markers")
+            continue
+        if nav_body(text) != render_nav(code):
+            problems.append(f"{label}: nav block is stale - run `python scripts/readme_i18n.py nav`")
+
+        bare_t = strip_nav(text)
+        prose, blocks = split_fences(bare_t)
+        levels = [level for level, _ in headings(prose)]
+        if levels != src_levels:
+            problems.append(f"{label}: heading skeleton differs - English {src_levels}, got {levels}")
+        if blocks != src_blocks:
+            problems.append(f"{label}: fenced code blocks must be byte-identical to README.md")
+        urls = sorted(URL_RE.findall(bare_t))
+        if urls != src_urls:
+            lost = sorted(set(src_urls) - set(urls))
+            extra = sorted(set(urls) - set(src_urls))
+            problems.append(f"{label}: URL set differs - missing {lost}, unexpected {extra}")
+        rel = sorted(REL_LINK_RE.findall(bare_t))
+        if rel != sorted(_up(target) for target in src_rel):
+            problems.append(f"{label}: relative links must be the English ones prefixed `../` - got {rel}")
+        rows = sum(1 for line in prose if line.lstrip().startswith("|"))
+        if rows != src_rows:
+            problems.append(f"{label}: table row count differs - English {src_rows}, got {rows}")
+        html = {tag: bare_t.count(tag) for tag in src_html}
+        if html != src_html:
+            problems.append(f"{label}: HTML block counts differ - English {src_html}, got {html}")
+        problems += _anchor_problems(label, text)
+
+    return problems
 
 
 def main(argv: list[str] | None = None) -> int:
