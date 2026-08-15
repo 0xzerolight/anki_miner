@@ -11,6 +11,23 @@
 <a href="https://discord.com/invite/aDtQyZzUVP"><img src="https://img.shields.io/discord/1517634859110240326?logo=discord&logoColor=white&label=Discord&color=5865F2" alt="Discord community"></a>
 </p>
 
+<!-- i18n-nav:start -->
+<p align="center">
+<b>English</b> ·
+<a href="i18n/README.ja.md">日本語</a> ·
+<a href="i18n/README.ru.md">Русский</a> ·
+<a href="i18n/README.fr.md">Français</a> ·
+<a href="i18n/README.es.md">Español</a> ·
+<a href="i18n/README.de.md">Deutsch</a> ·
+<a href="i18n/README.pt_br.md">Português (Brasil)</a> ·
+<a href="i18n/README.id.md">Bahasa Indonesia</a> ·
+<a href="i18n/README.vi.md">Tiếng Việt</a> ·
+<a href="i18n/README.zh_cn.md">简体中文</a> ·
+<a href="i18n/README.zh_tw.md">繁體中文</a> ·
+<a href="i18n/README.it.md">Italiano</a>
+</p>
+<!-- i18n-nav:end -->
+
 <p align="center">
 Turn native Japanese content into Anki vocabulary cards.
 </p>
