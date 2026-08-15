@@ -145,10 +145,13 @@ class LocalAudioPackFetcher:
         # 2. Query the SQLite index.
         conn: sqlite3.Connection | None = None
         try:
+            # An android_db pack's managed index holds no rows: it is a
+            # metadata token, and the entries live in the registered source db.
+            lookup_db = self._blob_db_path or self._db_path
             try:
-                conn = storage.open_readonly(self._blob_db_path or self._db_path)
+                conn = storage.open_readonly(lookup_db)
             except (sqlite3.Error, OSError) as exc:
-                logger.debug("LocalAudioPackFetcher: cannot open %s: %s", self._db_path, exc)
+                logger.debug("LocalAudioPackFetcher: cannot open %s: %s", lookup_db, exc)
                 return None
 
             try:
@@ -177,63 +180,22 @@ class LocalAudioPackFetcher:
             if conn is not None:
                 conn.close()
 
+        # 3a. An android_db pack keeps its audio as blobs in the source db:
+        #     there is no file to resolve, so the containment guard is moot.
+        if self._blob_db_path is not None:
+            return self._serve_from_blobs(rows, stem)
+
         # 3. Walk rows in id order; apply containment guard; copy first safe hit.
         for row in rows:
-            if self._blob_db_path is not None:
-                suffix = Path(row.file).suffix.lower() or ".mp3"
-                cache_path = self._cache_dir / f"{stem}{suffix}"
-                try:
-                    blob_conn = storage.open_readonly(self._blob_db_path)
-                    try:
-                        found = blob_conn.execute(
-                            "SELECT data FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
-                            (row.file, row.source),
-                        ).fetchone()
-                    finally:
-                        blob_conn.close()
-                    if found is None or not isinstance(found[0], bytes) or not found[0]:
-                        continue
-                    self._cache_dir.mkdir(parents=True, exist_ok=True)
-                    with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
-                        part_path = Path(tmp_fd.name)
-                        tmp_fd.write(found[0])
-                    try:
-                        os.replace(part_path, cache_path)
-                    finally:
-                        with contextlib.suppress(FileNotFoundError):
-                            part_path.unlink()
-                    _record_cached_path(self._cache_dir, cache_path)
-                    return cache_path
-                except (sqlite3.Error, OSError) as exc:
-                    logger.debug("LocalAudioPackFetcher: blob read failed for %s: %s", row.file, exc)
-                    return None
-
             candidate = self._resolve_safe(row.file)
             if candidate is None:
                 continue
 
-            # 4. Copy winning file into cache atomically.
-            orig_suffix = candidate.suffix
-            cache_path = self._cache_dir / f"{stem}{orig_suffix}"
-            try:
-                self._cache_dir.mkdir(parents=True, exist_ok=True)
-                with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
-                    part_path = Path(tmp_fd.name)
-                try:
-                    shutil.copy2(candidate, part_path)
-                    os.replace(part_path, cache_path)
-                finally:
-                    with contextlib.suppress(FileNotFoundError):
-                        part_path.unlink()
-                _record_cached_path(self._cache_dir, cache_path)
-            except OSError as exc:
-                logger.debug("LocalAudioPackFetcher: copy failed for %s: %s", candidate, exc)
-                return None
-
-            # Never return the in-place pack path — Anki storeMediaFile uses
-            # path.name verbatim and would silently overwrite other packs'
-            # files if names collide.
-            return cache_path
+            # 4. Copy winning file into cache atomically. Never return the
+            #    in-place pack path — Anki storeMediaFile uses path.name
+            #    verbatim and would silently overwrite other packs' files if
+            #    names collide.
+            return self._write_cached(stem, candidate.suffix, lambda part, src=candidate: shutil.copy2(src, part))
 
         return None
 
@@ -259,6 +221,59 @@ class LocalAudioPackFetcher:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    def _serve_from_blobs(self, rows: list[storage.AudioEntry], stem: str) -> Path | None:
+        """Cache the first row whose blob can be read out of the android.db.
+
+        One connection for the whole walk: the registered database can be tens
+        of gigabytes, and reopening it per candidate row costs a fresh page-cache
+        warm-up each time.
+        """
+        assert self._blob_db_path is not None
+        try:
+            conn = storage.open_readonly(self._blob_db_path)
+        except (sqlite3.Error, OSError) as exc:
+            logger.debug("LocalAudioPackFetcher: cannot open blob db %s: %s", self._blob_db_path, exc)
+            return None
+        try:
+            for row in rows:
+                try:
+                    found = conn.execute(
+                        "SELECT data FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
+                        (row.file, row.source),
+                    ).fetchone()
+                except sqlite3.Error as exc:
+                    # An unreadable row is this row's problem, not the lookup's:
+                    # the next candidate may still serve.
+                    logger.debug("LocalAudioPackFetcher: blob read failed for %s: %s", row.file, exc)
+                    continue
+                if found is None or not isinstance(found[0], bytes) or not found[0]:
+                    continue
+                data = found[0]
+                suffix = Path(row.file).suffix.lower() or ".mp3"
+                return self._write_cached(stem, suffix, lambda part, blob=data: part.write_bytes(blob))
+        finally:
+            conn.close()
+        return None
+
+    def _write_cached(self, stem: str, suffix: str, writer: Callable[[Path], object]) -> Path | None:
+        """Stage *writer*'s bytes beside the cache and rename them into place."""
+        cache_path = self._cache_dir / f"{stem}{suffix}"
+        try:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(dir=self._cache_dir, suffix=".part", delete=False) as tmp_fd:
+                part_path = Path(tmp_fd.name)
+            try:
+                writer(part_path)
+                os.replace(part_path, cache_path)
+            finally:
+                with contextlib.suppress(FileNotFoundError):
+                    part_path.unlink()
+            _record_cached_path(self._cache_dir, cache_path)
+        except OSError as exc:
+            logger.debug("LocalAudioPackFetcher: cache write failed for %s: %s", cache_path, exc)
+            return None
+        return cache_path
 
     def _resolve_safe(self, rel_file: str) -> Path | None:
         """Resolve *rel_file* relative to pack_dir with a containment guard.
