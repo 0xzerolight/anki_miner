@@ -543,8 +543,9 @@ jobs:
 
       # =====================================================================
       # libmpv — fetched from the repo-owned vendor-libmpv-* release (produced
-      # by .github/workflows/vendor-libmpv.yml; see RELEASING.md "Vendored
-      # libmpv"). Pinned URL + SHA256, fail-closed, like every other fetch.
+      # by .github/workflows/vendor-libmpv.yml, which is the source of truth for
+      # how these are produced). Pinned URL + SHA256, fail-closed, like every
+      # other fetch.
       # Lands at vendor/libmpv/ (spec dest "." → _MEIPASS root) and drops the
       # per-artifact Copyright/SOURCES.txt into licenses/libmpv/ next to the
       # committed README/COPYING.

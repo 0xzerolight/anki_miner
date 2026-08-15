@@ -355,7 +355,7 @@ The in-app video preview runs on libmpv via the `python-mpv` binding (not Qt Mul
 - `MpvVideoWidget` (`gui/widgets/mpv_video_widget.py`): a `QOpenGLWidget` view on the libmpv render API (`render_gl.h`; works on Wayland where `wid` embedding cannot). A dumb view — owns only the render context, which MUST be freed (`detach`) before the owning `MPV` handle terminates or libmpv aborts the process.
 - `SubtitlePlayerWidget` (`gui/widgets/subtitle_player_widget.py`): the controller. Owns the `mpv.MPV` handle (one per widget lifetime; re-sourcing uses `loadfile`), holds all playback policy, and bridges python-mpv's event-thread callbacks to the GUI thread via queued Qt signals (every slot None-guards — a None property value is the normal first event).
 
-Release bundles ship libmpv from the repo-owned `vendor-libmpv-*` GitHub releases (see RELEASING.md); pip/`.deb`/source installs use the system libmpv, and the preview pane shows a notice when none is found.
+Release bundles ship libmpv from the repo-owned `vendor-libmpv-*` GitHub releases, produced by `.github/workflows/vendor-libmpv.yml`. pip and source installs use the system libmpv, and the preview pane shows a notice when none is found.
 
 ### Dialogs
 
