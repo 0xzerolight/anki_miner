@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import FreqEntry
 from anki_miner.gui.widgets.base import ScreenIssue
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec
+from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec, ChainSourceRow
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainListLabels,
     ChainSettingsPanelBase,
@@ -54,6 +54,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
 
     add_source_requested = pyqtSignal()
     reimport_source_requested = pyqtSignal(str)
+    reimport_all_requested = pyqtSignal()
     restore_requested = pyqtSignal()
 
     ANCHOR_NAMESPACE = "frequency"
@@ -133,6 +134,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             )
         )
         self._restore_btn.clicked.connect(self.restore_requested.emit)
+        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._reimport_btn.setToolTip(
+            self.tr(
+                "Rebuild every frequency source in the list from the copy saved when it was imported. "
+                "Needed after an app upgrade changes the index format."
+            )
+        )
+        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
         container = self._build_chain_container(
             ChainListLabels(
                 # Not the first-match sentence the other three chains carry:
@@ -150,7 +159,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down"),
             ),
-            extra_actions=(self._restore_btn,),
+            extra_actions=(self._reimport_btn, self._restore_btn),
         )
         self._add_btn.clicked.connect(self.add_source_requested.emit)
         self._list.customContextMenuRequested.connect(self._on_row_context_menu)
@@ -163,6 +172,7 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             anchor_text=lambda: (
                 self._explanation_label.text(),
                 self._add_btn.text(),
+                self._reimport_btn.text(),
                 self._restore_btn.text(),
             ),
         )
@@ -179,8 +189,17 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             self._view = _RegistryView(registry_meta.get)
         self._rebuild_list()
 
+    def set_per_row_reimport_enabled(self, enabled: bool) -> None:
+        """Toggle every stale-row Re-import button.
+
+        Prevents a second per-row import starting while one is in flight —
+        clobbering the flow's active worker would orphan the first.
+        """
+        self._set_row_repair_enabled(enabled)
+
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)
+        self._reimport_btn.setEnabled(enabled)
         self._restore_btn.setEnabled(enabled)
 
     # ------------------------------------------------------------------
@@ -197,9 +216,14 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
 
     def _row_spec(self, entry: FreqEntry, view: _RegistryView | None) -> ChainRowSpec:
         meta = view.get(entry.source_id) if (view is not None and entry.source_id) else None
-        # A chain entry whose source folder is gone (or schema-mismatched so
-        # build_sources would drop it) is "missing" — prompt re-import.
-        missing = view is not None and (meta is None or not meta.schema_ok)
+        # Two different failures with two different repairs, so two different
+        # rows. Stale = present on disk but schema-mismatched, which an app
+        # upgrade caused and Re-import fixes from the saved copy, so the row
+        # gets a button. Missing = the folder is gone, leaving nothing to
+        # rebuild from; the row says so and offers no button that would only
+        # open a file picker.
+        stale = meta is not None and not meta.schema_ok
+        absent = view is not None and meta is None
         display = meta.source_name if meta else (entry.source_id or "(missing)")
         metadata: tuple[str, ...] = ()
         tooltip = ""
@@ -219,8 +243,24 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
             enabled_text=self.tr("Enabled"),
             enabled_accessible_text=tr_format(self.tr("Enable %1"), display),
             enabled_tooltip=tr_format(self.tr("Enable or disable %1"), display),
-            warning=self.tr("⚠ missing — re-import") if missing else "",
+            warning=self._row_warning(stale=stale, absent=absent),
+            repair_text=self.tr("Re-import") if stale else "",
         )
+
+    def _row_warning(self, *, stale: bool, absent: bool) -> str:
+        if stale:
+            return self.tr("⚠ re-import required (app upgrade)")
+        if absent:
+            return self.tr("⚠ missing — re-import")
+        return ""
+
+    def _connect_row_repair(self, row: ChainSourceRow) -> None:
+        if row.repair_button is None:
+            return
+        source_id = row.entry.source_id
+        if not source_id:
+            return
+        row.repair_button.clicked.connect(lambda _checked=False, s=source_id: self.reimport_source_requested.emit(s))
 
     def _entry_display_name(self, entry: FreqEntry) -> str:
         source_id = entry.source_id

@@ -137,7 +137,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Optional startup work runs once per launch, behind first-run setup.
         # Set at close so a wizard exiting during shutdown starts nothing.
         self._post_setup_boot_started = False
-        self._stale_dict_prompt_handled = False
+        self._stale_resource_prompt_handled = False
         # Set the first time closeEvent persists geometry + route. A deferred
         # close runs closeEvent again after the window has been hidden, and the
         # hidden window's geometry is not what the user left behind.
@@ -302,7 +302,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self._run_optional_boot_step("update check", self._check_for_updates)
         self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
         self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
-        QTimer.singleShot(0, self._maybe_prompt_stale_dictionaries)
+        QTimer.singleShot(0, self._maybe_prompt_stale_resources)
         QTimer.singleShot(0, self._start_prewarm)
 
     def _start_prewarm(self) -> None:
@@ -1425,51 +1425,81 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         finally:
             self._start_post_setup_boot_once()
 
-    def _maybe_prompt_stale_dictionaries(self) -> None:
+    def _maybe_prompt_stale_resources(self) -> None:
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
 
-        The probe builds a fresh registry and reads every enabled dictionary's
-        index sidecar (per-dict SQLite), so it runs on a worker thread via
-        ``run_off_thread`` rather than blocking the GUI during startup. The
-        Reimport prompt is shown from ``_on_stale_dicts_scanned`` on the GUI
-        thread. The ``QTimer.singleShot`` startup deferral is unchanged.
+        The probe builds fresh registries and reads every enabled slot's index
+        sidecar (per-slot SQLite) across all three indexed families, so it runs
+        on a worker thread via ``run_off_thread`` rather than blocking the GUI
+        during startup. The prompt is shown from ``_on_stale_resources_scanned``
+        on the GUI thread. The ``QTimer.singleShot`` startup deferral is
+        unchanged.
         """
-        if self._stale_dict_prompt_handled:
+        if self._stale_resource_prompt_handled:
             return
         from anki_miner.services.dictionary.registry import stale_enabled_dicts
+        from anki_miner.services.frequency.registry import stale_enabled_freq_sources
+        from anki_miner.services.pitch_accent.registry import stale_enabled_pitch_sources
 
         config = self.config
-        run_off_thread(self, lambda: stale_enabled_dicts(config), self._on_stale_dicts_scanned)
 
-    def _on_stale_dicts_scanned(self, result: object) -> None:
-        """GUI-thread continuation: prompt to Reimport All for any stale dicts found.
+        def _scan() -> dict[str, list[tuple[str, str]]]:
+            # (id, display name) pairs rather than the metas themselves: the
+            # prompt needs the name for its body and the id for the repair, and
+            # shipping whole dataclasses across the thread hop would tempt
+            # callers into reading a snapshot the repair immediately invalidates.
+            return {
+                "dictionary": [(m.dict_id, m.source_name) for m in stale_enabled_dicts(config)],
+                "frequency": [(m.source_id, m.source_name) for m in stale_enabled_freq_sources(config)],
+                "pitch": [(m.source_id, m.source_name) for m in stale_enabled_pitch_sources(config)],
+            }
 
-        Detection reused the registry seam (``stale_enabled_dicts`` → per-slot
-        ``DictMeta.schema_ok``), not a new scanner. When any *enabled* indexed
-        chain entry is schema-stale, mining would silently drop every word for
-        lack of a definition, so we surface a blocking prompt offering one-click
-        repair scoped to those stale slots (covering both yomitan ``source.zip``
-        slots and the legacy JMdict slot; slots without a saved source are named
-        in its summary and fall to the per-row affordance). "Later" leaves mining
-        gated by the per-run pre-checks; the prompt re-offers next launch.
+        run_off_thread(self, _scan, self._on_stale_resources_scanned)
+
+    def _on_stale_resources_scanned(self, result: object) -> None:
+        """GUI-thread continuation: offer one-click repair for every stale family.
+
+        Detection reuses each registry's ``stale_enabled`` seam (per-slot
+        ``schema_ok``), not a new scanner. A stale *dictionary* means mining
+        drops every word for lack of a definition; a stale *frequency* source
+        means cards lose their rank and the rank cutoff silently stops
+        filtering; a stale *pitch* source means the pitch field goes blank. All
+        three are silent and all three are fixed by reimporting, so they share
+        one prompt rather than queueing a dialog each.
+
+        Only present-but-stale slots reach here. A family the user never
+        configured contributes nothing, which is what keeps frequency and pitch
+        optional. "Later" leaves mining gated by the per-run pre-checks; the
+        prompt re-offers next launch.
         """
-        if self._stale_dict_prompt_handled:
+        if self._stale_resource_prompt_handled:
             return
-        stale = list(result) if isinstance(result, list) else []
-        if not stale:
+        stale = result if isinstance(result, dict) else {}
+        families = [(kind, entries) for kind, entries in stale.items() if entries]
+        if not families:
             return
         # Set before exec() so a re-entrant 0ms fire inside the modal loop bails.
-        self._stale_dict_prompt_handled = True
+        self._stale_resource_prompt_handled = True
 
-        names = "\n".join(f"  • {m.source_name}" for m in stale)
+        headers = {
+            "dictionary": self.tr("Dictionaries:"),
+            "frequency": self.tr("Frequency sources:"),
+            "pitch": self.tr("Pitch accent sources:"),
+        }
+        blocks = []
+        for kind, entries in families:
+            listed = "\n".join(f"  • {name}" for _source_id, name in entries)
+            blocks.append(f"{headers[kind]}\n{listed}" if len(families) > 1 else listed)
         body = (
-            self.tr("These dictionaries need re-importing after an app upgrade (their index format changed):")
-            + f"\n\n{names}\n\n"
-            + self.tr("Mining is blocked for them until you do. Re-import them now?")
+            self.tr("These resources need re-importing after an app upgrade (their index format changed):")
+            + "\n\n"
+            + "\n\n".join(blocks)
+            + "\n\n"
+            + self.tr("Mining is blocked until you do. Re-import them now?")
         )
         reply = QMessageBox.question(
             self,
-            self.tr("Dictionaries need re-importing"),
+            self.tr("Resources need re-importing"),
             body,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
@@ -1482,8 +1512,21 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.tabs.setCurrentIndex(idx)
         settings_widget = self.tabs.widget(idx)
         trigger = getattr(settings_widget, "trigger_reimport_all", None)
-        if callable(trigger):
-            trigger(frozenset(m.dict_id for m in stale))
+        if not callable(trigger):
+            return
+
+        # One family at a time, each starting when the previous one's batch
+        # reports done. Firing them together would put three ApplicationModal
+        # progress dialogs on screen at once.
+        pending = list(families)
+
+        def _run_next() -> None:
+            if not pending:
+                return
+            kind, entries = pending.pop(0)
+            trigger(frozenset(i for i, _name in entries), kind=kind, on_complete=_run_next)
+
+        _run_next()
 
     def _show_about(self) -> None:
         """Show the About dialog."""

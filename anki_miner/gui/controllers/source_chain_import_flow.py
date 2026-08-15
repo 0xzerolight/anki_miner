@@ -37,6 +37,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_persist,
     _log_import_picker_enter,
     _log_import_picker_return,
+    _OnceCallback,
 )
 from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
@@ -457,6 +458,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
         self,
         *,
         only_ids: frozenset[str] | None = None,
+        on_complete: Callable[[], None] | None = None,
         _scan_result: tuple[list[ReimportJob], list[str]] | None = None,
         _trace_id: str | None = None,
     ) -> None:
@@ -475,11 +477,18 @@ class SourceChainImportFlow(ModalImportFlowMixin):
         whole batch; per-source failures accumulate rather than aborting the
         loop, and ``config_changed`` fires once at the end so cached services
         rebuild a single time.
+
+        ``on_complete`` fires exactly once on every terminal path, including the
+        refusals and the nothing-to-do case. The startup prompt uses it to run
+        one family after another: three ApplicationModal progress dialogs racing
+        each other is what firing them together would produce.
         """
+        done = _OnceCallback(on_complete)
         labels = self._labels
         trace_id = _trace_id or _begin_import_trace(f"{self._trace_noun} reimport all")
         if _scan_result is None:
             if not self._begin_mutation("reimport-all"):
+                done()
                 return
             dest_root = self._dest_root(self._get_config())
             chain = self._panel.get_chain()
@@ -508,11 +517,17 @@ class SourceChainImportFlow(ModalImportFlowMixin):
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
-                self.reimport_all(only_ids=only_ids, _scan_result=result, _trace_id=trace_id)
+                self.reimport_all(
+                    only_ids=only_ids,
+                    on_complete=on_complete,
+                    _scan_result=result,
+                    _trace_id=trace_id,
+                )
 
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
                 self._report_import_issue(labels.scan_failed, message)
+                done()
 
             self._run_latest_scan(_scan, _on_done, _on_error)
             return
@@ -526,6 +541,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
                 body = labels.nothing_empty_chain
             QMessageBox.information(self._parent, labels.nothing_title, body)
             self._set_import_buttons_enabled(True)
+            done()
             return
 
         # Drop sqlite handles before any worker touches the slot folders. On
@@ -534,6 +550,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
         if not self._panel.request_resource_release():
             self._report_import_issue(labels.resources_in_use)
             self._set_import_buttons_enabled(True)
+            done()
             return
 
         def make_worker(job: ReimportJob) -> ImportWorker:
@@ -583,9 +600,11 @@ class SourceChainImportFlow(ModalImportFlowMixin):
                 lines.append(labels.batch_cancelled)
 
             QMessageBox.information(self._parent, labels.batch_title, "\n".join(lines) or labels.batch_done)
+            done()
 
         def on_finished_error(exc: Exception, _result: _ChainedImportResult[ReimportJob]) -> None:
             self._report_import_issue(labels.settings_update_failed, str(exc))
+            done()
 
         self._run_chained_imports(
             jobs=jobs,

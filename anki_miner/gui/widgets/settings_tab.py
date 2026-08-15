@@ -40,6 +40,7 @@ from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
 from anki_miner.gui.controllers.audio_pack_import_flow import AudioPackImportFlow
 from anki_miner.gui.controllers.dictionary_import_flow import DictionaryImportFlow
 from anki_miner.gui.controllers.frequency_import_flow import FrequencyImportFlow
+from anki_miner.gui.controllers.import_flow_common import ReimportAllFlow
 from anki_miner.gui.controllers.pitch_import_flow import PitchImportFlow
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
@@ -691,6 +692,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
         self.frequency_panel.reimport_source_requested.connect(self._frequency_import_flow.reimport_source)
+        self.frequency_panel.reimport_all_requested.connect(self._frequency_import_flow.reimport_all)
         self.frequency_panel.restore_requested.connect(self._restore_frequency_from_disk)
         # Persist chain immediately after reorder/toggle.
         self.frequency_panel.chain_changed.connect(
@@ -700,6 +702,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Pitch panel signals — same wiring as frequency.
         self.pitch_panel.add_source_requested.connect(self._pitch_import_flow.add_source)
         self.pitch_panel.reimport_source_requested.connect(self._pitch_import_flow.reimport_source)
+        self.pitch_panel.reimport_all_requested.connect(self._pitch_import_flow.reimport_all)
         self.pitch_panel.restore_requested.connect(self._restore_pitch_from_disk)
         self.pitch_panel.chain_changed.connect(lambda: self._persist_pitch_chain_change(self.pitch_panel.get_chain()))
 
@@ -1240,18 +1243,32 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         anchor.focus_widget.setFocus(Qt.FocusReason.ShortcutFocusReason)
         flash_search_hit(anchor.highlight_widget, duration_ms=self._search_hit_ms)
 
-    def trigger_reimport_all(self, only_ids: frozenset[str] | None = None) -> None:
-        """Run the Dictionary → Reimport All flow (4.0 migration prompt hook).
+    def trigger_reimport_all(
+        self,
+        only_ids: frozenset[str] | None = None,
+        *,
+        kind: str = "dictionary",
+        on_complete: Callable[[], None] | None = None,
+    ) -> None:
+        """Run one family's Reimport All flow (4.0 migration prompt hook).
 
         Public entry point the startup schema-staleness prompt calls after the
         user opts to reimport now. ``only_ids`` keeps that repair scoped to the
         stale slots found by the startup scan; ``None`` preserves manual
-        Reimport All behavior. Delegates to the same
-        ``DictionaryImportFlow.reimport_all`` the panel button drives, so the
-        one-click migration and manual path share one implementation.
+        Reimport All behavior. ``kind`` selects the family, and ``on_complete``
+        lets the prompt chain the next one when this batch finishes.
+
+        Delegates to the same ``reimport_all`` each panel button drives, so the
+        one-click migration and the manual path share one implementation.
         """
-        self.open_subtab("dictionaries")
-        self._dict_import_flow.reimport_all(only_ids=only_ids)
+        flows: dict[str, tuple[str, ReimportAllFlow]] = {
+            "dictionary": ("dictionaries", self._dict_import_flow),
+            "frequency": ("frequency", self._frequency_import_flow),
+            "pitch": ("pitch", self._pitch_import_flow),
+        }
+        subtab, flow = flows[kind]
+        self.open_subtab(subtab)
+        flow.reimport_all(only_ids=only_ids, on_complete=on_complete)
 
     def set_dictionary_mutation_preflight(self, callback: Callable[[], bool] | None) -> None:
         """Install the startup-migration preflight for dictionary mutations."""
