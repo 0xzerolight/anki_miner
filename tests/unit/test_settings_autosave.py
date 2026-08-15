@@ -194,9 +194,19 @@ class TestCommitSelfEcho:
             raise RuntimeError("import probe")
 
         monkeypatch.setattr(ImportWorker, "for_yomitan", staticmethod(probe_import))
-        with pytest.raises(RuntimeError, match="import probe"):
-            tab._dict_import_flow._add_dict_picked("trace", 0.0, str(tmp_path / "dict.zip"))
+        # Add is a batch now: a worker that cannot even be constructed is that
+        # item's failure, reported as a banner, not an exception out of the slot.
+        issues: list[tuple[str, str]] = []
+        monkeypatch.setattr(
+            tab._dict_import_flow,
+            "_report_import_issue",
+            lambda summary, details="": issues.append((summary, details)),
+        )
+        tab._dict_import_flow._add_dict_picked("trace", 0.0, [str(tmp_path / "dict.zip")])
+        # The batch runner defers each job through QTimer.singleShot(0, …).
+        qtbot.waitUntil(lambda: bool(issues), timeout=3000)
         assert import_roots == [expected_root]
+        assert "import probe" in issues[0][1]
 
         entry = ChainEntry(kind="indexed", dict_id="test-dict")
         assert tab.dictionary_panel._entry_disk_dir(entry) == expected_root / "test-dict"

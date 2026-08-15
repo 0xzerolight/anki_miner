@@ -122,19 +122,6 @@ def _fire_thread_finished(instance) -> None:
 
 
 class TestAddSource:
-    @pytest.fixture(autouse=True)
-    def _adapt_existing_single_picker_stubs(self, monkeypatch):
-        """Keep single-file scenarios concise while production uses a multi-picker."""
-
-        def pick_many(*args, on_done, **kwargs):
-            file_dialogs.pick_open_file(
-                *args,
-                on_done=lambda chosen: on_done([chosen] if chosen else []),
-                **kwargs,
-            )
-
-        monkeypatch.setattr(file_dialogs, "pick_open_files", pick_many)
-
     def test_add_and_reimport_pickers_include_all_suffixes(self, tab, monkeypatch):
         filters: list[str] = []
 
@@ -142,7 +129,13 @@ class TestAddSource:
             filters.append(args[3])
             on_done("")
 
+        def cancel_multi_picker(*args, on_done, **kwargs):
+            filters.append(args[3])
+            on_done([])
+
+        # Add takes several files at once; reimport still replaces exactly one.
         monkeypatch.setattr(file_dialogs, "pick_open_file", cancel_picker)
+        monkeypatch.setattr(file_dialogs, "pick_open_files", cancel_multi_picker)
 
         tab._pitch_import_flow.add_source()
         tab._pitch_import_flow.reimport_source(
@@ -157,14 +150,14 @@ class TestAddSource:
         ]
 
     def test_cancelled_dialog_skips_import(self, tab, monkeypatch, stub_worker):
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(""))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([]))
         tab._pitch_import_flow.add_source()
         stub_worker.assert_not_called()
 
     def test_happy_path_appends_entry_and_persists(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "nhk.zip"
         src.write_bytes(b"zip")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -208,7 +201,7 @@ class TestAddSource:
     def test_append_after_existing_entries(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "new.csv"
         src.write_text("ねこ,猫,1\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -227,7 +220,7 @@ class TestAddSource:
     def test_readd_moves_existing_entry_to_end(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "again.csv"
         src.write_text("ねこ,猫,1\n", encoding="utf-8")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         _capture_infos(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -251,7 +244,7 @@ class TestAddSource:
     def test_failure_surfaces_error_and_leaves_chain(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "broken.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
@@ -272,7 +265,7 @@ class TestAddSource:
     def test_user_cancellation_is_silent_and_reenables_add(self, tab, monkeypatch, stub_worker, tmp_path):
         src = tmp_path / "list.zip"
         src.write_bytes(b"junk")
-        monkeypatch.setattr(file_dialogs, "pick_open_file", lambda *a, on_done, **kw: on_done(str(src)))
+        monkeypatch.setattr(file_dialogs, "pick_open_files", lambda *a, on_done, **kw: on_done([str(src)]))
         warnings = _capture_warnings(monkeypatch)
         monkeypatch.setattr(tab.pitch_panel, "refresh_registry", lambda: None)
 
