@@ -11,6 +11,7 @@ import sqlite3
 import tempfile
 import uuid
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 from anki_miner.services.audio_fetch_common import (
@@ -195,7 +196,7 @@ class LocalAudioPackFetcher:
             #    in-place pack path — Anki storeMediaFile uses path.name
             #    verbatim and would silently overwrite other packs' files if
             #    names collide.
-            return self._write_cached(stem, candidate.suffix, lambda part, src=candidate: shutil.copy2(src, part))
+            return self._write_cached(stem, candidate.suffix, partial(shutil.copy2, candidate))
 
         return None
 
@@ -251,7 +252,11 @@ class LocalAudioPackFetcher:
                     continue
                 data = found[0]
                 suffix = Path(row.file).suffix.lower() or ".mp3"
-                return self._write_cached(stem, suffix, lambda part, blob=data: part.write_bytes(blob))
+
+                def write_blob(part: Path, blob: bytes = data) -> None:
+                    part.write_bytes(blob)
+
+                return self._write_cached(stem, suffix, write_blob)
         finally:
             conn.close()
         return None
