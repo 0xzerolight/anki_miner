@@ -127,6 +127,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of expression audio sources."""
 
     add_pack_requested = pyqtSignal()
+    add_android_db_requested = pyqtSignal()
     reimport_pack_requested = pyqtSignal(str)
     restore_requested = pyqtSignal()
     # Emitted when the user asks to clear JPod101 .miss markers so absent words
@@ -241,6 +242,9 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         self._add_pack_action = QAction(self.tr("Audio Pack…"), self._add_menu)
         self._add_pack_action.triggered.connect(lambda _checked=False: self.add_pack_requested.emit())
         self._add_menu.addAction(self._add_pack_action)
+        self._add_android_db_action = QAction(self.tr("Android Audio Database…"), self._add_menu)
+        self._add_android_db_action.triggered.connect(lambda _checked=False: self.add_android_db_requested.emit())
+        self._add_menu.addAction(self._add_android_db_action)
         self._add_online_action = QAction(self.tr("Online Source…"), self._add_menu)
         self._add_online_action.triggered.connect(lambda _checked=False: self._on_add_online_source())
         self._add_menu.addAction(self._add_online_action)
@@ -257,6 +261,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 self._explanation_label.text(),
                 self._add_btn.text(),
                 self._add_pack_action.text(),
+                self._add_android_db_action.text(),
                 self._add_online_action.text(),
                 self._restore_btn.text(),
                 self._retry_missing_btn.text(),
@@ -422,7 +427,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 meta.source if meta else (entry.pack_id or "(missing)"),
                 meta.format if meta else "",
                 meta.entry_count if meta else None,
-                meta is not None and not meta.pack_dir_exists,
+                meta is not None and not meta.source_available,
                 meta is not None and not meta.schema_ok,
             )
         if entry.kind == "googletts":

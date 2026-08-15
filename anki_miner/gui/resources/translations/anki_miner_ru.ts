@@ -762,6 +762,38 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Обработчик импорта завершил работу без результата.</translation>
     </message>
     <message>
+        <source>Choose Android audio database</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Android database (*.db);;SQLite database (*.sqlite *.sqlite3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Android Audio Database Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Registered %1 (%2 entries).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Registering Android audio database…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Android audio database could not be added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>Choose Android audio database to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose audio pack folder to re-import</source>
         <translation>Выберите папку аудиопакета для повторного импорта</translation>
     </message>
@@ -770,12 +802,24 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Индексированные ресурсы используются майнингом, прогревом при запуске или пополнением карточек. Дождитесь завершения текущей задачи и повторите попытку.</translation>
     </message>
     <message>
-        <source>Audio Pack Re-imported</source>
-        <translation>Аудиопакет повторно импортирован</translation>
+        <source>Android Audio Database Re-imported</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Re-imported %1 successfully.</source>
         <translation>%1 успешно импортирован повторно.</translation>
+    </message>
+    <message>
+        <source>Re-importing Android audio database…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The Android audio database could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Pack Re-imported</source>
+        <translation>Аудиопакет повторно импортирован</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -784,10 +828,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The audio pack could not be re-imported.</source>
         <translation>Не удалось повторно импортировать пакет аудио.</translation>
-    </message>
-    <message>
-        <source>Another import is still finishing. Wait for it to finish and try again.</source>
-        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
@@ -882,6 +922,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Audio Pack…</source>
         <translation>Пакет аудио…</translation>
+    </message>
+    <message>
+        <source>Android Audio Database…</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Online Source…</source>
