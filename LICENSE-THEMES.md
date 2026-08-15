@@ -15,6 +15,7 @@ Color palettes ported from the following upstream projects. No upstream source c
 | Everforest | https://github.com/sainnhe/everforest | MIT | sainnhe |
 | GitHub | https://github.com/primer/primitives | MIT | GitHub Inc. |
 | Dracula | https://github.com/dracula/dracula-theme | MIT | Dracula Theme |
+| Tokyo Night | https://github.com/enkia/tokyo-night-vscode-theme | MIT | enkia |
 
 ## Bundled brand assets / trademarks
 
