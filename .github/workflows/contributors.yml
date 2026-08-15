@@ -1,36 +1,43 @@
-name: Update CONTRIBUTORS.md
+name: Check CONTRIBUTORS.md
+
+# Reports when CONTRIBUTORS.md has drifted from the live participant list. It
+# does NOT commit: the `main required checks` ruleset requires 7 status checks
+# on main and only repository admins bypass it, so a github-actions[bot] push
+# is rejected with GH013 -- and because the bot commit carried [skip ci], those
+# checks could never report on it either. The push was unsatisfiable by
+# construction, not flaky. The maintainer refreshes the file locally (admins
+# bypass) using the command this workflow prints in its job summary.
+#
+# Schedule + dispatch only. The old issue / comment / discussion /
+# pull_request_target triggers existed to land the welcome commit the moment
+# someone showed up; with no commit happening they would only re-report the same
+# drift several times a day. Dropping pull_request_target also keeps this
+# maintainer-housekeeping job off contributor PRs, where a red X here said
+# nothing about their code.
 
 on:
-  issues:
-    types: [opened, reopened]
-  issue_comment:
-    types: [created]
-  pull_request_target:
-    types: [opened, reopened]
-  discussion:
-    types: [created]
-  discussion_comment:
-    types: [created]
+  schedule:
+    # Daily, off the hour to avoid the cron rush.
+    - cron: "17 4 * * *"
   workflow_dispatch:
 
+# Read-only: nothing here writes to the repository.
 permissions:
-  contents: write
+  contents: read
   issues: read
   pull-requests: read
   discussions: read
 
 concurrency:
   group: update-contributors
-  cancel-in-progress: true
+  # Queue rather than cancel -- a cancelled run reports as a failure, which is
+  # indistinguishable from real drift.
+  cancel-in-progress: false
 
 jobs:
   update:
-    # Dependabot is never listed in CONTRIBUTORS.md, so regenerating for its PRs
-    # is pure churn -- and because the concurrency group above is deliberately
-    # global (one shared file, serialized on purpose), a burst of dependabot PRs
-    # makes these runs cancel each other and report as failed checks.
-    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -45,37 +52,49 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: node scripts/update_contributors.mjs
 
-      - name: Commit if changed
+      - name: Report drift
         env:
           NEW_LOGINS: ${{ steps.update.outputs.new_logins }}
+          REPO: ${{ github.repository }}
         run: |
           if git diff --quiet CONTRIBUTORS.md; then
-            echo "No changes to CONTRIBUTORS.md."
+            echo "CONTRIBUTORS.md is up to date."
+            echo "CONTRIBUTORS.md is up to date." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          # Build a personal commit message when new logins appeared this run.
-          # Cap at 3 mentions to keep the subject line short; overflow becomes
-          # "and N more". Plain message when only avatar/order changes happened.
-          if [ -n "$NEW_LOGINS" ]; then
-            IFS=',' read -ra logins <<< "$NEW_LOGINS"
-            count=${#logins[@]}
-            mentions=""
-            for i in 0 1 2; do
-              [ $i -ge $count ] && break
-              [ -n "$mentions" ] && mentions+=", "
-              mentions+="@${logins[$i]}"
-            done
-            if [ $count -gt 3 ]; then
-              mentions+=" and $((count - 3)) more"
+          {
+            echo "## CONTRIBUTORS.md is out of date"
+            echo
+            if [ -n "$NEW_LOGINS" ]; then
+              echo "New contributors not yet listed:"
+              echo
+              IFS=',' read -ra logins <<< "$NEW_LOGINS"
+              for login in "${logins[@]}"; do
+                echo "- @${login}"
+              done
+              echo
+            else
+              echo "Avatar or ordering changes only; no new logins."
+              echo
             fi
-            msg="chore: welcome ${mentions} to CONTRIBUTORS.md [skip ci]"
-          else
-            msg='chore: refresh CONTRIBUTORS.md [skip ci]'
-          fi
+            echo "Refresh it locally and commit -- repository admins bypass the"
+            echo "\`main required checks\` ruleset, so the push goes through:"
+            echo
+            echo '```bash'
+            echo "GITHUB_TOKEN=\$(gh auth token) \\"
+            echo "GITHUB_REPOSITORY=${REPO} \\"
+            echo "node scripts/update_contributors.mjs"
+            echo '```'
+            echo
+            echo "<details><summary>Pending diff</summary>"
+            echo
+            echo '```diff'
+            git --no-pager diff -- CONTRIBUTORS.md
+            echo '```'
+            echo
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          git config user.name  'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add CONTRIBUTORS.md
-          git commit -m "$msg"
-          git push
+          echo "CONTRIBUTORS.md is out of date; see the job summary."
+          exit 1
