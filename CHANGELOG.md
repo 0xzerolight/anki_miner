@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **A word written as a verb stem but used as a noun is mined as the noun.** `これ、差し入れ` / `みんなで食べてよ` mined 差し入れる, and `ご存じですか` mined 存じる. Two separate causes. A subtitle cue's line break arrives as a plain space, which MeCab does not treat as a sentence boundary, so it read 差し入れ as the stem of 差し入れる; the same line punctuated with `。` was always correct. A 連用形 stem is now mined as the noun when the dictionary attests it and the next word cannot follow a verb stem, so 帰りましょう, 疲れた, 笑いながら and 動き出した keep their verbs. Separately, the compound matcher only ever looked up ご + the dictionary form of 存じ — ご存ずる, which no dictionary lists — and never ご存じ, which both bundled dictionaries list as a noun; an honorific prefix followed by a verb stem now also tries the written form. This changes お願いします to mine お願い rather than 願う, and お帰りなさい to mine お帰り rather than 帰る, so those words card once more under their new front.
 
 ### Removed
 

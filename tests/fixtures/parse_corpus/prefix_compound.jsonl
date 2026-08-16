@@ -1,0 +1,3 @@
+{"id":"pc01","sentence":"ご存じですか","expected":["ご存じ"],"category":"prefix-compound","note":"The fix: kind A builds the unattested ご存ずる (unidic's orthBase for 存じ is archaic), so only the surface join can match."}
+{"id":"pc02","sentence":"気をつけて帰る","expected":["気をつける","帰る"],"category":"prefix-compound","note":"Narrow gate: a 名詞-headed span must take kind A. 気をつけ is DELIBERATELY attested so this fails loudly if the surface join is widened past 接頭辞 heads."}
+{"id":"pc03","sentence":"ご飯を食べる","expected":["ご飯","食べる"],"category":"prefix-compound","note":"Control: unidic emits ご飯 as one 名詞 token, so the pre-existing non-inflectable kind-B path is untouched."}

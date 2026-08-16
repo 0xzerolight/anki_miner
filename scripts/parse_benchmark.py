@@ -337,6 +337,28 @@ _ANCHOR_HEADWORDS: tuple[str, ...] = (
     # cap. The 18-char katakana string is DELIBERATELY attested: it must still NOT
     # merge (over the 16-char cap). The 14-char greeting is also attested: it must
     # still NOT merge (7 tokens > the 5-token cap).
+    # masu-stem-nominal: 差し入れ is the fix's own attestation gate. 帰り/笑い/
+    # 動き are DELIBERATELY attested for the same reason as the aux-context
+    # verbs above — their fixtures must fail on the neighbour allow-list, not on
+    # a fixture-dict miss, or the floor stays green after a revert. 食べ is
+    # DELIBERATELY absent so ms06 pins the attestation gate itself.
+    "差し入れ",
+    "帰り",
+    "笑い",
+    "動き",
+    "歩く",
+    "動く",
+    "笑う",
+    "早い",
+    "食べる",
+    "帰る",
+    # prefix-compound: ご存じ is the fix's target. 気をつけ is DELIBERATELY
+    # attested so pc02 fails loudly if the surface join is ever widened past
+    # 接頭辞-headed spans and starts shipping inflected fronts.
+    "ご存じ",
+    "気をつける",
+    "気をつけ",
+    "ご飯",
     "走り出す",
     "応急処置",
     "アプリケーションプログラム",
@@ -355,6 +377,10 @@ _ANCHOR_RULES: dict[str, str] = {
     # ichidan (jiru-zuru targets + other ichidan guards)
     **dict.fromkeys(("感じる", "論じる", "信じる", "生じる", "演じる", "通じる", "準じる", "かんじる"), "v1"),
     **dict.fromkeys(("報いる", "帰れる", "見る", "恐れる", "いる", "くれる"), "v1"),
+    **dict.fromkeys(("食べる", "気をつける"), "v1"),
+    **dict.fromkeys(("笑う",), "v5u"),
+    **dict.fromkeys(("歩く", "動く"), "v5k"),
+    "帰る": "v5r",
     # godan, keyed by their final mora
     **dict.fromkeys(("乞う", "彷徨う", "出逢う", "言う", "しまう"), "v5u"),
     **dict.fromkeys(("保つ", "立つ", "待つ"), "v5t"),

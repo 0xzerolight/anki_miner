@@ -1435,6 +1435,34 @@ class TestOfflineDeinflectionTermsExist:
 
         assert service.offline_deinflection_terms_exist(candidates) == {"決まる"}
 
+    def test_zero_conditions_is_a_wildcard_not_a_noninflecting_filter(self, test_config, tmp_path: Path):
+        """conditions=0 matches EVERY entry, whatever its rules.
+
+        ``conditions_match`` treats 0 as the wildcard (it is the "not a
+        deinflection hypothesis" case), so probing with 0 degrades to plain
+        existence. This is worth pinning because it reads like the opposite:
+        a rules="" ROW yields flags 0 and matches only a zero-condition
+        hypothesis, which invites using ``conditions=0`` to ask "is this term
+        attested as a non-inflecting (noun) headword". It cannot answer that.
+        The masu-stem nominalizer and the 接頭辞 surface join both deliberately
+        gate on POS + plain attestation instead — see
+        services/masu_stem_nominalizer.py and compound_matcher._candidate_for_tail.
+        """
+        provider = _seed_rows(
+            tmp_path,
+            "d",
+            "D",
+            [
+                DictRow(term="差し入れ", reading="さしいれ", content=_gloss("supplies"), rules=""),
+                DictRow(term="差し入れる", reading="さしいれる", content=_gloss("insert"), rules="v1"),
+            ],
+        )
+        service = DefinitionService(test_config, providers=[provider])
+
+        both = service.offline_deinflection_terms_exist([("差し入れ", 0), ("差し入れる", 0)])
+
+        assert both == {"差し入れ", "差し入れる"}
+
 
 class TestGetDefinitionsBatchFallback:
     """Miss-only fallback inside ``get_definitions_batch`` (pipeline path)."""

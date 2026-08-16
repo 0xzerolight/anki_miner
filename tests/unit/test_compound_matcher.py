@@ -17,7 +17,7 @@ def _rule(excluded=DEFAULT_EXCLUDED_SUBTYPES):
     return TokenInclusionRule(allowed_pos=DEFAULT_ALLOWED_POS, excluded_subtypes=excluded)
 
 
-def _tok(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None):
+def _tok(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None, c_form=None):
     token = MagicMock()
     token.surface = surface
     token.feature.pos1 = pos1
@@ -25,6 +25,9 @@ def _tok(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None):
     token.feature.lemma = lemma if lemma is not None else surface
     token.feature.kana = kana if kana is not None else surface
     token.feature.orthBase = orth_base if orth_base is not None else token.feature.lemma
+    # MagicMock auto-creates a TRUTHY feature.cForm, which would make every
+    # token read as inflected. Default to unidic's "*" placeholder instead.
+    token.feature.cForm = c_form if c_form is not None else "*"
     return token
 
 
@@ -469,3 +472,90 @@ class TestInputPreservation:
         tokens = [legacy, _tok("状態", "名詞", "普通名詞", kana="ジョウタイ")]
         out = _matcher({"不可能状態"}).merge_line("不可能状態", tokens)
         assert [t.surface for t in out] == ["不可能状態"]
+
+
+# ご存じ → ご | 存じ. unidic tags 存じ as a 連用形 サ行変格 verb whose orthBase is
+# the archaic 存ずる, so the kind-A candidate is the unattested ご存ずる.
+def _gozonji():
+    return [
+        _tok("ご", "接頭辞", "*", lemma="御", kana="ゴ", orth_base="ご"),
+        _tok(
+            "存じ",
+            "動詞",
+            "一般",
+            lemma="存ずる",
+            kana="ゾンジ",
+            orth_base="存ずる",
+            c_form="連用形-一般",
+        ),
+    ]
+
+
+class TestPrefixInflectedTailSurfaceJoin:
+    """接頭辞 + 連用形 verb: the surface join is offered as a second candidate.
+
+    Without it, ご存じ never merges (kind A builds the unattested ご存ずる), 存じ
+    mines alone, and the じる/ずる resolver ships 存じる as the card front.
+    """
+
+    def test_prefix_plus_continuative_merges_on_surface_join(self):
+        out = _matcher({"ご存じ"}).merge_line("ご存じ", _gozonji())
+        assert [t.surface for t in out] == ["ご存じ"]
+        assert out[0].feature.lemma == "ご存じ"
+
+    def test_merged_token_is_nominal_so_mined_form_is_the_surface(self):
+        out = _matcher({"ご存じ"}).merge_line("ご存じ", _gozonji())
+        assert out[0].feature.pos1 == "名詞"
+        assert out[0].feature.pos2 == "普通名詞"
+        assert out[0].feature.kana == "ゴゾンジ"
+
+    def test_deinflected_candidate_still_wins_when_both_attested(self):
+        """Kind A is first in preference order, so a span that attests both
+        keeps the pre-fix front — this change only adds a fallback."""
+        out = _matcher({"ご存じ", "ご存ずる"}).merge_line("ご存じ", _gozonji())
+        assert out[0].feature.lemma == "ご存ずる"
+
+    def test_no_merge_when_neither_candidate_attested(self):
+        out = _matcher(set()).merge_line("ご存じ", _gozonji())
+        assert [t.surface for t in out] == ["ご", "存じ"]
+
+    def test_non_continuative_tail_offers_no_surface_join(self):
+        """お + する (終止形): only kind A is generated, so an attested surface
+        join cannot merge. The 連用形 gate is what blocks te-/past-form tails."""
+        tokens = [
+            _tok("お", "接頭辞", "*", lemma="御", kana="オ", orth_base="お"),
+            _tok("する", "動詞", "一般", lemma="する", kana="スル", orth_base="する", c_form="終止形-一般"),
+        ]
+        out = _matcher({"おする"}).merge_line("おする", tokens)
+        assert [t.surface for t in out] == ["お", "する"]
+
+    def test_noun_headed_span_never_offers_the_surface_join(self):
+        """The 気をつけて hole stays closed: a 名詞-headed span with an
+        inflected tail must not match its own inflected surface join."""
+        tokens = [
+            _tok("気", "名詞", "普通名詞", kana="キ"),
+            _tok("を", "助詞", "格助詞", kana="ヲ"),
+            _tok(
+                "つけ",
+                "動詞",
+                "非自立可能",
+                lemma="付ける",
+                kana="ツケ",
+                orth_base="つける",
+                c_form="連用形-一般",
+            ),
+        ]
+        out = _matcher({"気をつけ"}).merge_line("気をつけ", tokens)
+        assert [t.surface for t in out] == ["気", "を", "つけ"]
+
+    def test_both_alternatives_resolve_in_one_lookup_call(self):
+        spy: list = []
+        _matcher({"ご存じ"}, spy=spy).merge_line("ご存じ", _gozonji())
+        assert len(spy) == 1
+        assert set(spy[0]) == {"ご存じ", "ご存ずる"}
+
+    def test_input_list_never_mutated(self):
+        tokens = _gozonji()
+        snapshot = list(tokens)
+        _matcher({"ご存じ"}).merge_line("ご存じ", tokens)
+        assert tokens == snapshot
