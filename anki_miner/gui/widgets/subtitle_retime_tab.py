@@ -453,6 +453,7 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _on_tracks_clicked(self) -> None:
         """Open RetimeReferenceDialog to pick what alass aligns against."""
+        self.clear_screen_issue()
         video_path = self.video_file_selector.path_or_none()
         if video_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
@@ -571,6 +572,12 @@ class SubtitleRetimeTab(_ToolTabBase):
         # over a live thread.
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
+
+        # A fresh attempt supersedes the complaint about the last one -- both a
+        # refusal ("Choose a video file first") and a problem the previous run
+        # logged through `_ToolTabBase._on_log_problem`, which nothing else ever
+        # cleared. After the reentrancy guard, before anything that re-raises.
+        self.clear_screen_issue()
 
         # Clear the log before collecting: _collect_pairs logs the pairing
         # summary ("Matched N of M") we must not wipe afterwards.

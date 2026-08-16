@@ -640,6 +640,7 @@ class CondenseTab(_ToolTabBase):
 
     def _on_audio_tracks_clicked(self) -> None:
         """Open AudioTracksDialog to pick which audio track to condense."""
+        self.clear_screen_issue()
         media_path = self.media_file_selector.path_or_none()
         if media_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file first.")))
@@ -706,6 +707,7 @@ class CondenseTab(_ToolTabBase):
 
     def _on_subtitle_tracks_clicked(self) -> None:
         """Open SubtitleTracksDialog to pick which embedded subtitle track to use."""
+        self.clear_screen_issue()
         media_path = self.media_file_selector.path_or_none()
         if media_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file first.")))
@@ -783,6 +785,12 @@ class CondenseTab(_ToolTabBase):
         # over a live thread.
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
+
+        # A fresh attempt supersedes the complaint about the last one -- both a
+        # refusal ("Choose a media file first") and a problem the previous run
+        # logged through `_ToolTabBase._on_log_problem`, which nothing else ever
+        # cleared. After the reentrancy guard, before anything that re-raises.
+        self.clear_screen_issue()
 
         # Clear the log before collecting: _collect_items logs the pairing
         # summary ("Matched N of M") we must not wipe afterwards.

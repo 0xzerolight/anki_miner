@@ -423,6 +423,7 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
+        self.clear_screen_issue()
         video_path = self.video_selector.path_or_none()
         if video_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
@@ -496,6 +497,7 @@ class SingleEpisodeTab(MiningTabBase):
 
     def _on_timing_clicked(self) -> None:
         """Handle test timing button click. Opens the subtitle viewer dialog."""
+        self.clear_screen_issue()
         video_path = self.video_selector.path_or_none()
         subtitle_path = self.subtitle_selector.path_or_none()
 
@@ -605,6 +607,11 @@ class SingleEpisodeTab(MiningTabBase):
         """Start episode processing."""
         if self._is_processing:
             return
+
+        # A fresh attempt supersedes the complaint about the last one. After the
+        # reentrancy guard, before the checks that re-raise whatever is still
+        # wrong.
+        self.clear_screen_issue()
 
         # Validate inputs using FileSelector validation
         video_path = self.video_selector.path_or_none()
