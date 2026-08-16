@@ -69,6 +69,10 @@ _MAX_SPAN_CHARS = 16
 _MAX_NAME_SPAN_CHARS = 24
 _MAX_SPAN_TOKENS = 5
 
+# One span may offer more than one lookup candidate, tried in order (first
+# attested wins). Spans that offer a single candidate behave exactly as before.
+Alternatives = tuple[tuple[str, str], ...]
+
 # Existence-cache bound (positive AND negative results). Clear-on-cap keeps
 # whole-corpus Deck Builder runs from growing without limit.
 _EXIST_CACHE_CAP = 200_000
@@ -103,6 +107,19 @@ def _pos2(token) -> str | None:
     except AttributeError:
         return None
     return str(pos2) if pos2 else None
+
+
+def _c_form(token) -> str:
+    """Inflection form, or "" when absent.
+
+    Synthetic tokens carry no ``cForm``, and fugashi maps unidic's ``*``
+    placeholder to None — both must read as "no inflection form", never crash.
+    """
+    try:
+        c_form = token.feature.cForm
+    except AttributeError:
+        return ""
+    return str(c_form) if c_form and c_form != "*" else ""
 
 
 class CompoundDictionaryMatcher:
@@ -154,17 +171,19 @@ class CompoundDictionaryMatcher:
             if self._can_start(token):
                 # Longest span first — Yomitan ranks by source length.
                 for j in range(min(i + self._max_span - 1, n - 1), i, -1):
-                    entry = candidates.get((i, j))
-                    if entry is None:
+                    alternatives = candidates.get((i, j))
+                    if not alternatives:
                         continue
-                    candidate, kind = entry
-                    if not self._exist_cache.get(candidate):
-                        continue
-                    synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
-                    # Never consume tokens for a word the gate would then drop.
-                    if self._rule.should_include(synthetic):
-                        replacement = synthetic
-                        consumed_end = j
+                    for candidate, kind in alternatives:
+                        if not self._exist_cache.get(candidate):
+                            continue
+                        synthetic = self._build_synthetic(tokens[i : j + 1], candidate, kind)
+                        # Never consume tokens for a word the gate would then drop.
+                        if self._rule.should_include(synthetic):
+                            replacement = synthetic
+                            consumed_end = j
+                            break
+                    if replacement is not None:
                         break
             if replacement is not None:
                 merged.append(replacement)
@@ -198,16 +217,17 @@ class CompoundDictionaryMatcher:
             next_index += 1
         return spans
 
-    def _generate_candidates(self, text: str, tokens: list) -> dict[tuple[int, int], tuple[str, str]]:
-        """Map ``(start, end)`` span -> ``(candidate_string, kind)``.
+    def _generate_candidates(self, text: str, tokens: list) -> dict[tuple[int, int], Alternatives]:
+        """Map ``(start, end)`` span -> candidate alternatives in preference order.
 
         kind "A" = deinflected tail (joined surfaces + tail orthBase);
-        kind "B" = plain surface join (non-inflectable tail only — for an
-        inflected tail the surface join is an inflected string, and matching
-        it would ship inflected-headword card fronts like 気をつけて).
+        kind "B" = plain surface join. For an inflected tail the surface join is
+        normally an inflected string, and matching it would ship inflected-
+        headword card fronts like 気をつけて — so B is offered for an inflectable
+        tail only in the one structurally safe case, see ``_candidate_for_tail``.
         """
         n = len(tokens)
-        out: dict[tuple[int, int], tuple[str, str]] = {}
+        out: dict[tuple[int, int], Alternatives] = {}
         source_spans = self._source_spans(text, tokens)
         for i in range(n - 1):
             start_span = source_spans.get(i)
@@ -230,22 +250,45 @@ class CompoundDictionaryMatcher:
                 # but the span may still extend past them (気に|する|な: the
                 # (0..2) span ending on する is reachable through the な).
                 if self._can_end(tail):
-                    candidate, kind = self._candidate_for_tail(prefix, tail, joined)
-                    out[(i, j)] = (candidate, kind)
+                    out[(i, j)] = self._candidate_for_tail(prefix, tail, joined, tokens[i])
                 prefix = joined
                 source_end = tail_span[1]
         return out
 
     @staticmethod
-    def _candidate_for_tail(prefix: str, tail, joined: str) -> tuple[str, str]:
-        """Return the lookup candidate and synthetic-token kind for one span."""
-        if _pos1(tail) in _INFLECTABLE_POS1:
-            return prefix + extract_orth_base(tail), "A"
-        return joined, "B"
+    def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
+        """Lookup candidates for one span, in preference order (first attested wins).
 
-    def _resolve(self, candidates: dict[tuple[int, int], tuple[str, str]]) -> None:
-        """One batched lookup for all uncached candidate strings."""
-        current = {c for c, _kind in candidates.values()}
+        An inflectable tail normally yields ONLY the deinflected kind-A candidate:
+        its raw surface join is an inflected string, and attesting that would ship
+        気をつけて as a card front (the reason ``_INFLECTABLE_POS1`` exists).
+
+        The one exception is a 接頭辞-headed span whose tail is in 連用形 — the
+        standard honorific-nominalization pattern (ご存じ, お願い, お帰り). unidic
+        tags 存じ as a 連用形 verb whose orthBase is the archaic 存ずる, so kind A
+        builds ご存ずる, which no dictionary attests; 存じ then mines alone and the
+        じる/ずる resolver ships 存じる. The surface join ご存じ IS an attested noun
+        headword, so it is offered as a second alternative. This cannot leak
+        inflected fronts: 接頭辞 is structurally incapable of being an inflected
+        form, and the 連用形 gate blocks te-/past-form tails. Widening it past
+        接頭辞 heads would re-open the 気をつけて hole.
+
+        kind A stays FIRST so a span that attests both keeps its pre-fix front.
+        """
+        if _pos1(tail) not in _INFLECTABLE_POS1:
+            return ((joined, "B"),)
+        alternatives: Alternatives = ((prefix + extract_orth_base(tail), "A"),)
+        if _pos1(head) == "接頭辞" and _c_form(tail).startswith("連用形"):
+            alternatives += ((joined, "B"),)
+        return alternatives
+
+    def _resolve(self, candidates: dict[tuple[int, int], Alternatives]) -> None:
+        """One batched lookup for all uncached candidate strings.
+
+        ``_exist_cache`` is keyed by candidate STRING, so a span offering two
+        alternatives is two independent entries resolved in the same batch.
+        """
+        current = {c for alternatives in candidates.values() for c, _kind in alternatives}
         verdicts = {c: self._exist_cache[c] for c in current if c in self._exist_cache}
         unknown = {c for c in current if c not in verdicts}
         if not unknown:
@@ -290,6 +333,9 @@ class CompoundDictionaryMatcher:
             # would smuggle 接尾辞 onto the synthetic and the inclusion gate
             # would reject the whole attested compound — those chains are
             # lexicalized nouns, so they take the nominal default instead.
+            # A 接頭辞 + 連用形-verb kind B (ご存じ) lands here too and takes the
+            # nominal default, which is exactly right: the attested headword is
+            # a noun, and inheriting 動詞 would make mined_form the verb front.
             tail_pos1 = _pos1(span[-1])
             tail_pos2 = _pos2(span[-1])
             if tail_pos1 in ("名詞", "形状詞", "代名詞"):
@@ -324,8 +370,8 @@ class NameSpanMatcher(CompoundDictionaryMatcher):
     _default_max_span_chars = _MAX_NAME_SPAN_CHARS
 
     @staticmethod
-    def _candidate_for_tail(prefix: str, tail, joined: str) -> tuple[str, str]:
-        return joined, "B"
+    def _candidate_for_tail(prefix: str, tail, joined: str, head) -> Alternatives:
+        return ((joined, "B"),)
 
     def _can_start(self, token) -> bool:
         # Exact raw-name attestation, not UniDic POS, licenses this boundary.
