@@ -20,6 +20,7 @@ from anki_miner.services.dictionary.storage import (
     attest_detail,
     bulk_insert,
     create_index,
+    create_lookup_indexes,
     exact_term_sequences,
     lookup,
     lookup_many,
@@ -63,6 +64,64 @@ class TestCreateIndex:
             indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
             assert "idx_term" in indexes
             assert "idx_reading" in indexes
+
+    def test_deferring_lookup_indexes_creates_tables_only(self, tmp_path: Path):
+        db_path = tmp_path / "deferred.sqlite"
+        create_index(db_path, with_lookup_indexes=False)
+
+        with sqlite3.connect(db_path) as conn:
+            tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            assert {"entries", "tags", "meta"} <= tables
+            indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+            assert "idx_term" not in indexes
+            assert "idx_reading" not in indexes
+
+    def test_create_lookup_indexes_completes_a_deferred_schema(self, tmp_path: Path):
+        deferred = tmp_path / "deferred.sqlite"
+        eager = tmp_path / "eager.sqlite"
+        create_index(deferred, with_lookup_indexes=False)
+        create_lookup_indexes(deferred)
+        create_index(eager)
+
+        def schema(path: Path) -> set[tuple[str, str]]:
+            with sqlite3.connect(path) as conn:
+                return {
+                    (row[0], row[1])
+                    for row in conn.execute("SELECT name, type FROM sqlite_master WHERE sql IS NOT NULL")
+                }
+
+        # Deferring the index build must land the same schema, not a subset.
+        assert schema(deferred) == schema(eager)
+
+    def test_create_lookup_indexes_is_idempotent(self, tmp_path: Path):
+        db_path = tmp_path / "twice.sqlite"
+        create_index(db_path, with_lookup_indexes=False)
+        create_lookup_indexes(db_path)
+        create_lookup_indexes(db_path)
+
+        with sqlite3.connect(db_path) as conn:
+            indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        assert {"idx_term", "idx_reading"} <= indexes
+
+    def test_rows_inserted_before_the_indexes_are_still_found(self, tmp_path: Path):
+        db_path = tmp_path / "ordered.sqlite"
+        create_index(db_path, with_lookup_indexes=False)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(term="猫", reading="ねこ", content="cat"),
+                DictRow(term="犬", reading="いぬ", content="dog"),
+            ],
+        )
+        create_lookup_indexes(db_path)
+
+        conn = open_readonly(db_path)
+        try:
+            assert lookup(conn, "猫")[0][0] == "cat"
+            # Reading lookups go through idx_reading, built after the rows.
+            assert lookup(conn, "いぬ")[0][0] == "dog"
+        finally:
+            conn.close()
 
     def test_schema_version_is_6(self):
         assert SCHEMA_VERSION == 6

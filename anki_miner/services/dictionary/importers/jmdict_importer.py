@@ -43,6 +43,7 @@ from anki_miner.services.dictionary.storage import (
     DictRow,
     bulk_insert,
     create_index,
+    create_lookup_indexes,
     write_meta,
 )
 from anki_miner.utils.logging_ext import log_summary
@@ -117,7 +118,8 @@ def import_jmdict_xml(
         staging.mkdir(parents=True, exist_ok=True)
         write_ownership_marker(staging, JMDICT_DICT_ID, "dictionary")
         db_path = staging / "index.sqlite"
-        create_index(db_path)
+        # Tables only: the lookup indexes are built once after the rows land.
+        create_index(db_path, with_lookup_indexes=False)
 
         def rows() -> Iterator[DictRow]:
             nonlocal malformed_entries, malformed_exemplar
@@ -216,6 +218,8 @@ def import_jmdict_xml(
                     progress(i, total_entries, f"Processed {i}/{total_entries} entries")
 
         row_count = bulk_insert(db_path, rows())
+        # Deferred to here so the load did not maintain two B-trees per insert.
+        create_lookup_indexes(db_path)
 
         if malformed_entries:
             log_summary(

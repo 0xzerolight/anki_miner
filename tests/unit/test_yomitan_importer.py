@@ -196,6 +196,47 @@ class TestImportYomitanZip:
             stage_positions.append(position)
         assert stage_positions == sorted(stage_positions)
 
+    def test_import_leaves_the_lookup_indexes_built(self, tmp_path: Path):
+        import sqlite3
+
+        zip_path = build_yomitan_zip(tmp_path / "src" / "indexed.zip")
+        dest_root = tmp_path / "dicts"
+
+        result = import_yomitan_zip(zip_path, dest_root)
+
+        db_path = dest_root / result.dict_id / "index.sqlite"
+        with sqlite3.connect(db_path) as conn:
+            indexes = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        # Built after the rows land rather than maintained per insert, but the
+        # imported database still has to arrive fully indexed.
+        assert {"idx_term", "idx_reading"} <= indexes
+
+    def test_bank_progress_reports_every_bank_against_a_fixed_total(self, tmp_path: Path):
+        banks = [[[f"t{bank}-{i}", "", "", "", 0, [f"d{bank}-{i}"], i, ""] for i in range(3)] for bank in range(4)]
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "banks.zip",
+            term_banks=banks,
+            tag_banks=[],
+        )
+        seen: list[tuple[int, int]] = []
+
+        import_yomitan_zip(
+            zip_path,
+            tmp_path / "dicts",
+            bank_progress=lambda done, total: seen.append((done, total)),
+        )
+
+        assert seen == [(1, 4), (2, 4), (3, 4), (4, 4)]
+
+    def test_bank_progress_is_optional(self, tmp_path: Path):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "no-bank-progress.zip")
+
+        # The desktop caller passes only ``progress``; the import must not
+        # require the newer callback.
+        result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        assert result.entry_count >= 1
+
     def test_large_bank_reports_monotonic_progress_between_batches(self, tmp_path: Path):
         term_bank = [[f"term-{i}", f"reading-{i}", "", "", 0, [f"definition-{i}"], i, ""] for i in range(5001)]
         zip_path = build_yomitan_zip(
