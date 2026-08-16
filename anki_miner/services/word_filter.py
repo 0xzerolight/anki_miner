@@ -535,7 +535,7 @@ class WordFilterService:
         self,
         words: list[TokenizedWord],
         line_index: list[LineLemmas],
-        max_candidates: int = 12,
+        max_candidates: int | None = None,
     ) -> None:
         """Populate ``word.sentence_candidates`` for words that repeat across lines.
 
@@ -543,11 +543,16 @@ class WordFilterService:
         include ``word.lemma`` and whose matched surface preserves the card front
         (subtitle order preserved). When a word appears on two or more compatible
         lines, builds one fully-swapped :class:`TokenizedWord` variant per line
-        (capped at ``max_candidates``, earliest-first) via
-        :meth:`_swap_word_to_line` and assigns the list — including the variant
-        for the word's current sentence, so the curator can default-select it.
-        Words on a single compatible line are left untouched (empty candidates
-        ⇒ no picker).
+        (earliest-first) via :meth:`_swap_word_to_line` and assigns the list —
+        including the variant for the word's current sentence, so the curator can
+        default-select it. Words on a single compatible line are left untouched
+        (empty candidates ⇒ no picker).
+
+        ``max_candidates`` is unbounded by default: the curator's picker scrolls,
+        and a silent truncation there reads as "the word says it appears N times
+        but offers fewer lines". Pass an int to bound the list. Cost is one
+        :meth:`_swap_word_to_line` per compatible line (sub-millisecond, dominated
+        by one furigana pass over the line), summed over words that repeat.
 
         Mutates ``words`` in place. Safe to call with an empty ``line_index``.
         """
@@ -562,7 +567,9 @@ class WordFilterService:
             lines = [line for line in lines_by_lemma.get(word.lemma, ()) if self._line_preserves_mined_form(word, line)]
             if len(lines) < 2:
                 continue
-            word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines[:max_candidates]]
+            if max_candidates is not None:
+                lines = lines[:max_candidates]
+            word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines]
 
     def attach_occurrence_counts(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> None:
         """Set ``word.occurrence_count`` from in-episode lemma counts (Issue #88).

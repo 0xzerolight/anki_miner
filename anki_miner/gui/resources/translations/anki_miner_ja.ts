@@ -8660,6 +8660,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>出現回数</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>この単語がこのエピソードに出現する回数です。
+
+「文」の選択欄は字幕1行につき1つの候補を表示するため、通常はこれより少なくなります。同じ行での繰り返しはここでは1回として数えられ、カードの「単語（マイニング済み）」が変わってしまう形で出現する行は除外されます。</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S：含める／除外　Space：再生／一時停止　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
     </message>
@@ -8678,10 +8686,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-（利用可能な文が %2 件あります — 行を選択してから「文」で 1 つ選んでください）</translation>
+（選べる例文は %2 件 — 行を選択してから「文」の一覧で選んでください）</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>文（%1）</translation>
     </message>
     <message>
         <source>No page image for this word</source>

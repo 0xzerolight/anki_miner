@@ -8660,6 +8660,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>出現次數</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>此單字在本集出現的次數。
+
+「句子」選單每一行字幕只提供一個選項，因此列出的通常較少：同一行中的重複在這裡只算一次，而單字以會改變卡片「單字（已採集）」的形式出現的行會被略過。</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S 包含／排除 · Space 播放／暫停 · Ctrl+A 包含可見項目 · Ctrl+D 排除可見項目 · Ctrl+Enter 確認</translation>
     </message>
@@ -8678,10 +8686,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-（有 %2 個句子可選——聚焦該列，再於「句子」下選擇一個）</translation>
+（可選的例句有 %2 個 — 先選取該列，再於「句子」中挑一個）</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>句子（%1）</translation>
     </message>
     <message>
         <source>No page image for this word</source>

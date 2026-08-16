@@ -8660,6 +8660,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Kemunculan</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>Berapa kali kata ini muncul di episode ini.
+
+Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya daftarnya lebih sedikit: pengulangan pada baris yang sama dihitung sekali di sini, dan baris yang membuat kata muncul dalam bentuk yang akan mengubah “Kata (di-mining)” pada kartu akan dilewati.</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S sertakan/kecualikan · Spasi putar/jeda · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
     </message>
@@ -8678,10 +8686,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-(%2 kalimat tersedia — fokuskan baris, lalu pilih satu di bawah “Kalimat”)</translation>
+(%2 contoh kalimat untuk dipilih — fokuskan barisnya, lalu pilih satu di bagian “Kalimat”)</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>Kalimat (%1)</translation>
     </message>
     <message>
         <source>No page image for this word</source>

@@ -8675,6 +8675,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Vorkommen</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>Wie oft dieses Wort in dieser Folge vorkommt.
+
+Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher meist weniger: Wiederholungen in derselben Zeile zählen hier nur einmal, und Zeilen, in denen das Wort in einer Form steht, die das Feld „Wort (gesammelt)“ der Karte ändern würde, werden übersprungen.</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S Ein-/Ausschließen · Leertaste Wiedergabe/Pause · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
     </message>
@@ -8693,10 +8701,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-(%2 Sätze verfügbar — fokussieren Sie die Zeile und wählen Sie dann einen unter „Sätze“)</translation>
+(%2 Beispielsätze zur Auswahl — Zeile auswählen, dann unter „Sätze“ einen davon wählen)</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>Sätze (%1)</translation>
     </message>
     <message>
         <source>No page image for this word</source>

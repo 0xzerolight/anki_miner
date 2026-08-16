@@ -454,6 +454,23 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.tr("Occurrences"),
             ]
         )
+        # Occurrences and the Sentences picker count different things, and a user
+        # who reads the first as "example sentences I can pick" reports the gap as
+        # a bug. Occurrences counts every appearance, including several on one
+        # line; the picker offers one option per line, minus the lines whose
+        # inflection would change the card's Word.
+        occurrences_header = self.table.horizontalHeaderItem(6)
+        if occurrences_header is not None:
+            occurrences_header.setToolTip(
+                self.tr(
+                    "How many times this word appears in this episode.\n\n"
+                    "The “Sentences” picker offers one option per subtitle line, so it "
+                    "usually lists fewer: repeats on the same line count once here, and "
+                    "lines where the word takes a form that would change the card’s Word "
+                    "are skipped."
+                )
+            )
+
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
@@ -868,15 +885,19 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         The list is repopulated on row focus with the focused word's candidate
         sentences; selecting one rewrites which sentence/scene gets mined.
+
+        The label carries the option count because the list is unbounded and
+        scrolls: without it, a word offering 30 lines looks like it offers the
+        five that happen to fit the pane.
         """
         container = QWidget()
         vbox = QVBoxLayout(container)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(SPACING.xs)
 
-        label = QLabel(self.tr("Sentences"))
-        label.setFont(self._make_font(12, QFont.Weight.Medium))
-        vbox.addWidget(label)
+        self.sentence_pane_label = QLabel(self.tr("Sentences"))
+        self.sentence_pane_label.setFont(self._make_font(12, QFont.Weight.Medium))
+        vbox.addWidget(self.sentence_pane_label)
 
         self.sentence_list = QListWidget()
         self.sentence_list.setWordWrap(True)
@@ -1123,7 +1144,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Full sentence tooltip, hinting at the picker when alternatives exist."""
         if n_candidates > 1:
             return tr_format(
-                self.tr("%1\n\n(%2 sentences available — focus the row, then pick one under “Sentences”)"),
+                self.tr("%1\n\n(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)"),
                 sentence,
                 n_candidates,
             )
@@ -1421,11 +1442,22 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     selected_row = i
             self.sentence_list.setCurrentRow(selected_row)
             self.sentence_list.setEnabled(True)
+            self._set_sentence_pane_count(len(candidates))
         else:
             self.sentence_list.setEnabled(False)
+            self._set_sentence_pane_count(0)
 
         self.sentence_list.blockSignals(False)
         self._populating_candidates = False
+
+    def _set_sentence_pane_count(self, count: int) -> None:
+        """Title the picker with how many lines it is offering (blank when off)."""
+        if not hasattr(self, "sentence_pane_label"):
+            return
+        if count > 1:
+            self.sentence_pane_label.setText(tr_format(self.tr("Sentences (%1)"), count))
+        else:
+            self.sentence_pane_label.setText(self.tr("Sentences"))
 
     @staticmethod
     def _same_pick(a: TokenizedWord, b: TokenizedWord) -> bool:

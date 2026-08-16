@@ -1354,6 +1354,17 @@ class TestAttachSentenceCandidates:
 
         assert any(c.sentence == "line A" and c.start_time == 0.0 for c in word.sentence_candidates)
 
+    def test_candidates_are_uncapped_by_default(self, test_config):
+        """Every compatible line becomes an option — the curator's picker scrolls."""
+        service = WordFilterService(test_config)
+        word = create_word("X")
+        line_index = [self._line({"X"}, text=f"line {i}", start=float(i), end=float(i) + 1) for i in range(20)]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert len(word.sentence_candidates) == 20
+        assert [c.sentence for c in word.sentence_candidates] == [f"line {i}" for i in range(20)]
+
     def test_candidate_count_capped(self, test_config):
         service = WordFilterService(test_config)
         word = create_word("X")

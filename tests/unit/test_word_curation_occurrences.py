@@ -33,6 +33,20 @@ def test_occurrences_column_present(qtbot):
     assert header.text() == "Occurrences"
 
 
+def test_occurrences_header_explains_the_sentence_picker_gap(qtbot):
+    """The header says why the picker can offer fewer lines than this count.
+
+    Users read "Occurrences: 28" as "28 example sentences" and report the picker's
+    shorter list as a bug; the tooltip is where that is answered.
+    """
+    dlg = WordCurationDialog([_word("食べる", 28)])
+    qtbot.addWidget(dlg)
+
+    tooltip = dlg.table.horizontalHeaderItem(_OCC_COL).toolTip()
+    assert "Sentences" in tooltip
+    assert "same line" in tooltip
+
+
 def test_occurrence_count_rendered(qtbot):
     """Each row shows the word's occurrence_count."""
     dlg = WordCurationDialog([_word("食べる", 15), _word("猫", 0)])

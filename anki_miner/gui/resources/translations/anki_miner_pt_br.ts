@@ -8675,6 +8675,14 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Ocorrências</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>Quantas vezes esta palavra aparece neste episódio.
+
+O seletor “Frases” oferece uma opção por linha de legenda, então costuma listar menos: repetições na mesma linha contam uma vez só aqui, e linhas em que a palavra assume uma forma que mudaria a “Palavra (minerada)” do cartão são ignoradas.</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S incluir/excluir · Espaço reproduzir/pausar · Ctrl+A incluir visíveis · Ctrl+D excluir visíveis · Ctrl+Enter confirmar</translation>
     </message>
@@ -8693,10 +8701,14 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-(%2 frases disponíveis — foque na linha e escolha uma em “Frases”)</translation>
+(%2 frases de exemplo para escolher — selecione a linha e escolha uma em “Frases”)</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>Frases (%1)</translation>
     </message>
     <message>
         <source>No page image for this word</source>

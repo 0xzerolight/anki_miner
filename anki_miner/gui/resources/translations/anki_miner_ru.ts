@@ -8690,6 +8690,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Вхождения</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>Сколько раз это слово встречается в этом эпизоде.
+
+Список «Предложения» предлагает по одному варианту на строку субтитров, поэтому обычно их меньше: повторы в одной строке здесь считаются один раз, а строки, где слово стоит в форме, меняющей поле «Слово (намайнено)» карточки, пропускаются.</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S — включить/исключить · Пробел — воспроизведение/пауза · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
     </message>
@@ -8708,10 +8716,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-(доступно предложений: %2 — выделите строку, затем выберите одно в столбце «Предложения»)</translation>
+(примеров для выбора: %2 — выделите строку, затем выберите один в разделе «Предложения»)</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>Предложения (%1)</translation>
     </message>
     <message>
         <source>No page image for this word</source>
