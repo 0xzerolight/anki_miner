@@ -6666,3 +6666,76 @@ class TestKatakanaPronounFold:
         # 私 card, not two, and no stray ワタシ front.
         emitted = self._emit(test_config, "ワタシと私は")
         assert set(emitted) == {"私"}
+
+
+class TestMasuStemNominalizationWiring:
+    """The nominalizer pass as the parser actually runs it (real tagger).
+
+    Covers the seams the unit tests for the pass itself cannot: that it is
+    constructed only with a dictionary, that it runs AFTER the compound matcher,
+    and that the emitted word's card-facing fields all agree.
+    """
+
+    @staticmethod
+    def _service(test_config, dictionary):
+        def term_lookup(terms):
+            return dictionary & set(terms)
+
+        return SubtitleParserService(test_config, term_lookup=term_lookup)
+
+    @staticmethod
+    def _mined(service, text):
+        words, _index, _counts = service.parse_text_units(
+            [ReadingUnit(text=text, index=0, location_label="test")],
+            want_line_index=False,
+        )
+        return {w.mined_form: w for w in words}
+
+    # 差し入れ ends the cue's first display line; clean_subtitle_text collapses
+    # that break to a space, and MeCab reads straight through it.
+    SENTENCE = "これ、差し入れ みんなで食べてよ"
+
+    def test_without_a_dictionary_the_verb_front_is_unchanged(self, test_config):
+        """Safe degrade: no term_lookup ⇒ no nominalizer ⇒ pre-fix output."""
+        mined = self._mined(SubtitleParserService(test_config), self.SENTENCE)
+        assert "差し入れる" in mined
+        assert "差し入れ" not in mined
+
+    def test_attested_stem_mines_as_the_noun(self, test_config):
+        mined = self._mined(self._service(test_config, {"差し入れ"}), self.SENTENCE)
+        assert "差し入れ" in mined
+        assert "差し入れる" not in mined
+
+    def test_emitted_word_is_nominal_and_self_consistent(self, test_config):
+        word = self._mined(self._service(test_config, {"差し入れ"}), self.SENTENCE)["差し入れ"]
+        assert word.pos == "名詞"
+        assert word.lemma == "差し入れ"
+        assert word.surface == "差し入れ"
+        assert word.expression_reading == "さしいれ"
+
+    def test_highlight_does_not_extend_past_the_stem(self, test_config):
+        """A nominal token is not deinflection-extendable, so the bolded span is
+        exactly the stem."""
+        word = self._mined(self._service(test_config, {"差し入れ"}), self.SENTENCE)["差し入れ"]
+        assert word.sentence[word.surface_start : word.highlight_end] == "差し入れ"
+
+    def test_unattested_stem_keeps_the_verb_front(self, test_config):
+        mined = self._mined(self._service(test_config, set()), self.SENTENCE)
+        assert "差し入れる" in mined
+
+    def test_punctuated_line_was_already_correct_and_stays_correct(self, test_config):
+        """With 。 at the break unidic tags 名詞 on its own; the pass must not
+        change that line's outcome either way."""
+        for dictionary in (set(), {"差し入れ"}):
+            mined = self._mined(self._service(test_config, dictionary), "これ、差し入れ。みんなで食べてよ")
+            assert "差し入れ" in mined
+
+    def test_compound_matcher_wins_the_same_token(self, test_config):
+        """Ordering: ご存じ merges into a 名詞 compound BEFORE this pass sees
+        存じ, so the two never fight. Without the merge the stem is blocked
+        anyway (its neighbour です is 助動詞) and resolves to 存じる."""
+        merged = self._mined(self._service(test_config, {"ご存じ", "存じ"}), "ご存じですか")
+        assert "ご存じ" in merged
+
+        unmerged = self._mined(self._service(test_config, {"存じ"}), "ご存じですか")
+        assert "存じ" not in unmerged
