@@ -250,3 +250,72 @@ def test_a_worker_that_never_starts_does_not_strand_the_lock(qtbot, test_config)
     assert tab.queue_panel.clear_button.isEnabled()
     assert not tab._is_processing
     tab.deleteLater()
+
+
+# ---------------------------------------------------------------------------
+# Re-running a completed row
+# ---------------------------------------------------------------------------
+
+
+def test_a_selected_complete_row_is_mined_again_from_scratch(panel, tmp_path):
+    widget = _add(panel, "a", tmp_path)
+    item = panel._items[id(widget)]
+    item.status = QueueItemStatus.COMPLETED
+    item.cards_created = 12
+    item.committed_pair_keys.add((tmp_path / "ep1.mkv", tmp_path / "ep1.ass"))
+    widget.set_status("complete")
+    widget.set_cards_created(12)
+    panel.list_widget.item(0).setSelected(True)
+
+    assert panel.runnable_items() == [item]
+    # The receipts must go, or the worker skips every pair and the re-run is a
+    # no-op that instantly reports Complete with 0 cards.
+    assert item.committed_pair_keys == set()
+    assert item.status is QueueItemStatus.PENDING
+    assert item.cards_created == 0
+    assert widget.get_status() == "pending"
+
+
+def test_an_unselected_complete_row_is_left_alone(panel, tmp_path):
+    widget = _add(panel, "done", tmp_path)
+    pending = _add(panel, "todo", tmp_path)
+    done_item = panel._items[id(widget)]
+    done_item.status = QueueItemStatus.COMPLETED
+    done_item.committed_pair_keys.add((tmp_path / "ep1.mkv", tmp_path / "ep1.ass"))
+    widget.set_status("complete")
+
+    # No selection: Process Queue still means "mine what is not done yet".
+    assert panel.runnable_items() == [panel._items[id(pending)]]
+    assert done_item.status is QueueItemStatus.COMPLETED
+    assert done_item.committed_pair_keys
+
+
+def test_a_selected_failed_row_still_keeps_its_receipts(panel, tmp_path):
+    widget = _add(panel, "a", tmp_path)
+    item = panel._items[id(widget)]
+    item.status = QueueItemStatus.ERROR
+    item.committed_pair_keys.add((tmp_path / "ep1.mkv", tmp_path / "ep1.ass"))
+    widget.set_status("error")
+    panel.list_widget.item(0).setSelected(True)
+
+    assert panel.runnable_items() == [item]
+    assert item.status is QueueItemStatus.PENDING
+    assert item.committed_pair_keys, "a retry must not re-mine pairs already in Anki"
+
+
+def test_has_only_completed_rows_is_true_when_every_bound_row_is_done(panel, tmp_path):
+    first = _add(panel, "a", tmp_path)
+    second = _add(panel, "b", tmp_path)
+    first.set_status("complete")
+    second.set_status("complete")
+
+    assert panel.has_only_completed_rows() is True
+
+    second.set_status("pending")
+    assert panel.has_only_completed_rows() is False
+
+
+def test_has_only_completed_rows_is_false_for_an_empty_queue(panel, tmp_path):
+    assert panel.has_only_completed_rows() is False
+    _add(panel, "unbound", tmp_path, bound=False)
+    assert panel.has_only_completed_rows() is False

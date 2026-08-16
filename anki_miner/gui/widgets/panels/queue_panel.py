@@ -132,6 +132,12 @@ class QueuePanel(QFrame):
         layout.addWidget(self.queue_stats_label)
 
         self.queue_controls = QueueControlsBar()
+        # Batch-only amendment to the shared bar's Run tooltip: this is the one
+        # queue where selecting a finished row and running it mines it again, so
+        # the YouTube and Audiobook bars must keep the plain wording.
+        self.queue_controls.run_button.setToolTip(
+            self.tr("Mine the selected rows, in list order. A completed row is mined again from scratch.")
+        )
         layout.addWidget(self.queue_controls)
 
         self.list_widget = QListWidget()
@@ -300,7 +306,7 @@ class QueuePanel(QFrame):
         if (item.video_folder, item.subtitle_folder) != (video, subtitle):
             item.video_folder = video
             item.subtitle_folder = subtitle
-            self.queue.reset_for_new_inputs(item)
+            self.queue.reset_run_history(item)
             widget.set_status("pending")
         item.display_name = widget.display_name
         item.subtitle_offset = widget.subtitle_offset
@@ -766,15 +772,38 @@ class QueuePanel(QFrame):
         self._update_stats()
         return item
 
+    def has_only_completed_rows(self) -> bool:
+        """Whether every row that could run has already finished.
+
+        Read off the badges, like the chip counts are: it is what the user can
+        see, and it is the one case where a run with nothing to do is not a
+        broken queue but a finished one.
+        """
+        bound = [w for w in self.queue_item_widgets if id(w) in self._items]
+        return bool(bound) and all(w.get_status() == "complete" for w in bound)
+
     def runnable_items(self) -> list[QueueItem]:
         """The bound, runnable rows a Process Queue click should mine.
 
         The selection when there is one, in the order the list shows it;
         otherwise every runnable row. A run therefore mines exactly what the user
         can see it is about to mine (D28, D29-A).
+
+        Selecting a row is the user saying "mine this one", so a selected row
+        that already finished is reset and mined again -- that is the only way
+        back after a settings change. It is a full reset, receipts included: the
+        worker skips every pair already in ``committed_pair_keys``, so keeping
+        them would make the re-run a silent no-op that instantly reports
+        Complete with 0 cards. Nothing is duplicated by it, because the
+        known-words filter and ``allow_duplicate_cards`` (False by default) are
+        what actually stop a second card for a word already in Anki. Without a
+        selection the sweep is unchanged: a finished row is left finished, so
+        Process Queue never silently re-mines the whole cohort.
         """
-        chosen = self.selected_widgets() or self.view_order()
+        selection = self.selected_widgets()
+        chosen = selection or self.view_order()
         items: list[QueueItem] = []
+        rerun = False
         for widget in chosen:
             item = self._items.get(id(widget))
             if item is None or widget.get_status() == "processing":
@@ -782,6 +811,17 @@ class QueuePanel(QFrame):
             if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR):
                 item.status = QueueItemStatus.PENDING
                 items.append(item)
+            elif selection and item.status is QueueItemStatus.COMPLETED:
+                self.queue.reset_run_history(item)
+                # The badge goes with it: a row about to be mined must not still
+                # read Complete, and the chip counts are taken from the badges.
+                widget.set_status("pending")
+                widget.set_cards_created(0)
+                items.append(item)
+                rerun = True
+        if rerun:
+            self._update_stats()
+            self._apply_view()
         return items
 
     def get_valid_pairs(self) -> list:

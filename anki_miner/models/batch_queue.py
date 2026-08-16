@@ -127,12 +127,14 @@ class BatchQueue:
         self._items = list(order)
 
     @staticmethod
-    def reset_for_new_inputs(item: QueueItem) -> None:
-        """Discard ``item``'s run history because its folders changed.
+    def reset_run_history(item: QueueItem) -> None:
+        """Discard ``item``'s run history so its next run starts from scratch.
 
-        The episode receipts say which pairs are already in Anki. Once the
-        folders are different they describe work that is no longer this item's,
-        so keeping them would silently skip episodes the user just pointed at.
+        Two callers, one meaning. The folders changed, so the episode receipts
+        describe work that is no longer this item's and keeping them would
+        silently skip episodes the user just pointed at; or the user selected a
+        finished row and asked to mine it again, and the receipts are the only
+        thing that would make that a no-op.
         """
         item.status = QueueItemStatus.PENDING
         item.cards_created = 0

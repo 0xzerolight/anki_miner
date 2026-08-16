@@ -57,3 +57,19 @@ def test_start_queue_worker_connects_item_pairs_progress(tab):
         tab._start_queue_worker()
 
     fake_worker.item_pairs_progress.connect.assert_any_call(tab._on_item_pairs_progress)
+
+
+def test_an_all_complete_queue_is_told_how_to_run_again(tab):
+    """The dead end names the way out instead of just refusing."""
+    tab.queue_panel.has_only_completed_rows = lambda: True
+
+    summary = tab._empty_run_summary()
+
+    assert "Run selected" in summary
+    assert "already complete" in summary
+
+
+def test_an_unrunnable_queue_still_reports_the_plain_reason(tab):
+    tab.queue_panel.has_only_completed_rows = lambda: False
+
+    assert tab._empty_run_summary() == "No valid series in the queue to process."
