@@ -6945,6 +6945,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <source>Details</source>
         <translation>Detail</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Tutup</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

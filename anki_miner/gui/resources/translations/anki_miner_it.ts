@@ -6958,6 +6958,10 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <source>Details</source>
         <translation>Dettagli</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Chiudi</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

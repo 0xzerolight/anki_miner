@@ -6945,6 +6945,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <source>Details</source>
         <translation>Chi tiết</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Đóng</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

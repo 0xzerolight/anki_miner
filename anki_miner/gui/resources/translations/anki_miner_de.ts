@@ -6958,6 +6958,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <source>Details</source>
         <translation>Details</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Schließen</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

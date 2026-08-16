@@ -6958,6 +6958,10 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
         <source>Details</source>
         <translation>Detalles</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Descartar</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

@@ -6958,6 +6958,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <source>Details</source>
         <translation>Détails</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Fermer</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>
