@@ -132,6 +132,12 @@ class QueuePanel(QFrame):
         layout.addWidget(self.queue_stats_label)
 
         self.queue_controls = QueueControlsBar()
+        # Batch-only amendment to the shared bar's Run tooltip: this is the one
+        # queue where selecting a finished row and running it mines it again, so
+        # the YouTube and Audiobook bars must keep the plain wording.
+        self.queue_controls.run_button.setToolTip(
+            self.tr("Mine the selected rows, in list order. A completed row is mined again from scratch.")
+        )
         layout.addWidget(self.queue_controls)
 
         self.list_widget = QListWidget()
@@ -765,6 +771,16 @@ class QueuePanel(QFrame):
         widget.set_status("complete" if item.status is QueueItemStatus.COMPLETED else status)
         self._update_stats()
         return item
+
+    def has_only_completed_rows(self) -> bool:
+        """Whether every row that could run has already finished.
+
+        Read off the badges, like the chip counts are: it is what the user can
+        see, and it is the one case where a run with nothing to do is not a
+        broken queue but a finished one.
+        """
+        bound = [w for w in self.queue_item_widgets if id(w) in self._items]
+        return bool(bound) and all(w.get_status() == "complete" for w in bound)
 
     def runnable_items(self) -> list[QueueItem]:
         """The bound, runnable rows a Process Queue click should mine.

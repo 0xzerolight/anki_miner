@@ -301,3 +301,21 @@ def test_a_selected_failed_row_still_keeps_its_receipts(panel, tmp_path):
     assert panel.runnable_items() == [item]
     assert item.status is QueueItemStatus.PENDING
     assert item.committed_pair_keys, "a retry must not re-mine pairs already in Anki"
+
+
+def test_has_only_completed_rows_is_true_when_every_bound_row_is_done(panel, tmp_path):
+    first = _add(panel, "a", tmp_path)
+    second = _add(panel, "b", tmp_path)
+    first.set_status("complete")
+    second.set_status("complete")
+
+    assert panel.has_only_completed_rows() is True
+
+    second.set_status("pending")
+    assert panel.has_only_completed_rows() is False
+
+
+def test_has_only_completed_rows_is_false_for_an_empty_queue(panel, tmp_path):
+    assert panel.has_only_completed_rows() is False
+    _add(panel, "unbound", tmp_path, bound=False)
+    assert panel.has_only_completed_rows() is False
