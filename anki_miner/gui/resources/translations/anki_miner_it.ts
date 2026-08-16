@@ -8675,6 +8675,14 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
         <translation>Occorrenze</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>Quante volte questa parola compare in questo episodio.
+
+Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi di solito ne elenca meno: le ripetizioni sulla stessa riga contano una volta sola qui, e le righe in cui la parola assume una forma che cambierebbe la “Parola (estratta)” della carta vengono saltate.</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S includi/escludi · Spazio riproduci/metti in pausa · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
     </message>
@@ -8693,10 +8701,14 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-(%2 frasi disponibili — mettere a fuoco la riga, poi sceglierne una sotto “Frasi”)</translation>
+(%2 frasi di esempio tra cui scegliere — selezionare la riga, poi sceglierne una sotto “Frasi”)</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>Frasi (%1)</translation>
     </message>
     <message>
         <source>No page image for this word</source>

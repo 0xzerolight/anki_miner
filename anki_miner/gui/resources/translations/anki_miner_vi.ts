@@ -8660,6 +8660,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Số lần xuất hiện</translation>
     </message>
     <message>
+        <source>How many times this word appears in this episode.
+
+The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation>Số lần từ này xuất hiện trong tập phim.
+
+Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề nên thường liệt kê ít hơn: các lần lặp trong cùng một dòng chỉ được tính một lần ở đây, và những dòng mà từ mang dạng làm thay đổi “Từ (đã khai thác)” của thẻ sẽ bị bỏ qua.</translation>
+    </message>
+    <message>
         <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
         <translation>S bao gồm/loại trừ · Phím cách phát/tạm dừng · Ctrl+A bao gồm phần hiển thị · Ctrl+D loại trừ phần hiển thị · Ctrl+Enter xác nhận</translation>
     </message>
@@ -8678,10 +8686,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>%1
 
-(%2 sentences available — focus the row, then pick one under “Sentences”)</source>
+(%2 example sentences to pick from — focus the row, then choose one under “Sentences”)</source>
         <translation>%1
 
-(%2 câu khả dụng — tập trung vào hàng, rồi chọn một câu dưới “Câu”)</translation>
+(%2 câu ví dụ để chọn — chọn dòng, rồi chọn một câu trong mục “Câu”)</translation>
+    </message>
+    <message>
+        <source>Sentences (%1)</source>
+        <translation>Câu (%1)</translation>
     </message>
     <message>
         <source>No page image for this word</source>
