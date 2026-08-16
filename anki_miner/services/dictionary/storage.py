@@ -55,7 +55,7 @@ def _scrub_surrogates(value: str | None) -> str | None:
         return _SURROGATE_RE.sub("�", value)
 
 
-_SCHEMA_SQL = """
+_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS entries (
     id        INTEGER PRIMARY KEY,
     term      TEXT NOT NULL,
@@ -66,8 +66,6 @@ CREATE TABLE IF NOT EXISTS entries (
     score     INTEGER DEFAULT 0,
     sequence  INTEGER
 );
-CREATE INDEX IF NOT EXISTS idx_term    ON entries(term);
-CREATE INDEX IF NOT EXISTS idx_reading ON entries(reading);
 
 CREATE TABLE IF NOT EXISTS tags (
     name     TEXT PRIMARY KEY,
@@ -82,6 +80,16 @@ CREATE TABLE IF NOT EXISTS meta (
     value TEXT
 );
 """
+
+# The two lookup indexes every reader needs. Split out of the table DDL so an
+# importer can populate first and build them once, instead of maintaining two
+# B-trees across every one of a million inserts.
+_LOOKUP_INDEXES_SQL = """
+CREATE INDEX IF NOT EXISTS idx_term    ON entries(term);
+CREATE INDEX IF NOT EXISTS idx_reading ON entries(reading);
+"""
+
+_SCHEMA_SQL = _TABLES_SQL + _LOOKUP_INDEXES_SQL
 
 # Candidate-pool size fetched per word BEFORE the provider runs content-dedup,
 # sequence grouping, and the display cap (indexed_provider._DISPLAY_LIMIT). Raised
@@ -264,12 +272,49 @@ def _homograph_keep_mask(word: str, rows: list[tuple[str, str]]) -> list[bool]:
     return [True] * len(rows)
 
 
-def create_index(db_path: Path) -> None:
-    """Create a fresh dictionary index at db_path. Idempotent (uses IF NOT EXISTS)."""
+def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
+    """Open *db_path* tuned for a one-shot bulk load.
+
+    Importers write into a staging database that is renamed into place only
+    after the whole import succeeds, so durability during the load buys nothing:
+    a crash leaves staging bytes that are discarded, never a promoted index. The
+    defaults (rollback journal, ``synchronous=FULL``) cost an fsync per batch
+    and a journal write per page for exactly that discarded state.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA journal_mode=OFF")
+    conn.execute("PRAGMA synchronous=OFF")
+    conn.execute("PRAGMA temp_store=MEMORY")
+    conn.execute("PRAGMA cache_size=-16000")
+    return conn
+
+
+def create_index(db_path: Path, *, with_lookup_indexes: bool = True) -> None:
+    """Create a fresh dictionary index at db_path. Idempotent (uses IF NOT EXISTS).
+
+    ``with_lookup_indexes=False`` creates the tables only, leaving ``idx_term``
+    and ``idx_reading`` to :func:`create_lookup_indexes` after the rows land.
+    Importers use it; every other caller gets the fully indexed database the
+    default has always produced.
+    """
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
     try:
-        conn.executescript(_SCHEMA_SQL)
+        conn.executescript(_SCHEMA_SQL if with_lookup_indexes else _TABLES_SQL)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def create_lookup_indexes(db_path: Path) -> None:
+    """Build the ``entries`` lookup indexes. Idempotent (uses IF NOT EXISTS).
+
+    Building once over a populated table is markedly cheaper than maintaining
+    the same two B-trees across every insert, so importers defer to this.
+    """
+    conn = _connect_for_bulk_write(db_path)
+    try:
+        conn.executescript(_LOOKUP_INDEXES_SQL)
         conn.commit()
     finally:
         conn.close()
@@ -294,7 +339,7 @@ def bulk_insert(
     across the importer's staging-dir cleanup (matters on Windows).
     """
     total = 0
-    conn = sqlite3.connect(db_path)
+    conn = _connect_for_bulk_write(db_path)
     try:
         batch: list[tuple] = []
 
