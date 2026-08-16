@@ -216,3 +216,24 @@ class TestRetryFeature:
         reset = queue.reset_failed_for_retry()
         assert reset == 0
         assert item.status == QueueItemStatus.ERROR
+
+
+class TestResetRunHistory:
+    """Tests for the full-reset primitive shared by an edit and a re-run."""
+
+    def test_reset_run_history_returns_an_item_to_a_clean_first_run(self, tmp_path):
+        queue = BatchQueue()
+        item = queue.add_item(tmp_path / "v", tmp_path / "s", "Show")
+        item.status = QueueItemStatus.COMPLETED
+        item.cards_created = 42
+        item.error_message = "old"
+        item.retry_count = 2
+        item.committed_pair_keys.add((tmp_path / "v" / "ep1.mkv", tmp_path / "s" / "ep1.ass"))
+
+        BatchQueue.reset_run_history(item)
+
+        assert item.status is QueueItemStatus.PENDING
+        assert item.cards_created == 0
+        assert item.error_message == ""
+        assert item.retry_count == 0
+        assert item.committed_pair_keys == set()

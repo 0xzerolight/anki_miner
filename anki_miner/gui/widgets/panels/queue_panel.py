@@ -300,7 +300,7 @@ class QueuePanel(QFrame):
         if (item.video_folder, item.subtitle_folder) != (video, subtitle):
             item.video_folder = video
             item.subtitle_folder = subtitle
-            self.queue.reset_for_new_inputs(item)
+            self.queue.reset_run_history(item)
             widget.set_status("pending")
         item.display_name = widget.display_name
         item.subtitle_offset = widget.subtitle_offset
