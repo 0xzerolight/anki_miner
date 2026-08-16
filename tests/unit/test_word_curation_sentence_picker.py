@@ -16,7 +16,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QMenu
+from PyQt6.QtWidgets import QAbstractItemView, QApplication, QMenu
 
 from anki_miner.gui.utils.qt_helpers import COPY_ROLE
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
@@ -173,6 +173,39 @@ class TestPickerPopulation:
         _select_and_fire(dlg, 1)
         assert dlg.sentence_list.count() == 0
         assert dlg.sentence_list.isEnabled() is False
+
+    def test_every_candidate_is_listed_and_the_list_scrolls(self, qtbot):
+        """The picker is unbounded: 40 lines are 40 options, reachable by scrolling.
+
+        The pane is nowhere near 40 rows tall, so the count alone is only half the
+        contract — per-pixel vertical scrolling is what makes the tail reachable.
+        """
+        word = _leaf("食べる", "文 0", 0.0)
+        word.sentence_candidates = [_leaf("食べる", f"文 {i}", float(i)) for i in range(40)]
+        dlg = WordCurationDialog([word])
+        qtbot.addWidget(dlg)
+
+        _select_and_fire(dlg, 0)
+
+        assert dlg.sentence_list.count() == 40
+        assert dlg.sentence_list.verticalScrollMode() == QAbstractItemView.ScrollMode.ScrollPerPixel
+
+
+class TestPickerPaneLabel:
+    """The pane title carries the option count (an unbounded list needs one)."""
+
+    def test_label_counts_the_options(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        assert dlg.sentence_pane_label.text() == "Sentences (3)"
+
+    def test_label_drops_the_count_for_a_single_occurrence_word(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+        _select_and_fire(dlg, 1)
+        assert dlg.sentence_pane_label.text() == "Sentences"
 
 
 class TestPickerSelection:

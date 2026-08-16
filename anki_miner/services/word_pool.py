@@ -19,9 +19,6 @@ from anki_miner.services.stats_service import StatsService
 
 logger = logging.getLogger(__name__)
 
-# Mirrors WordFilterService.attach_sentence_candidates' cap.
-MAX_MERGED_CANDIDATES = 12
-
 
 def stamp_episode(words: list[TokenizedWord], video: Path) -> None:
     """Mark ``words`` (and their candidates) as sourced from ``video``.
@@ -45,18 +42,24 @@ def _leaf_copy(word: TokenizedWord) -> TokenizedWord:
 def merge_pools(
     pools: list[list[TokenizedWord]],
     *,
-    max_candidates: int = MAX_MERGED_CANDIDATES,
+    max_candidates: int | None = None,
 ) -> list[TokenizedWord]:
     """Fold per-episode word lists into one deduped season pool.
 
     One row per ``mined_form``; the first-seen episode's word is the
     primary. Sentence candidates are the ordered concatenation of each
     episode's candidate set (a bare word contributes a leaf copy of
-    itself), capped at ``max_candidates``; ``occurrence_count`` becomes
-    the season total. A word seen once on a single line keeps its empty
-    candidate list, so the curator's sentence picker stays hidden —
-    matching the per-episode invariant that a non-empty list always
-    holds the current pick plus at least one alternative.
+    itself); ``occurrence_count`` becomes the season total. A word seen
+    once on a single line keeps its empty candidate list, so the
+    curator's sentence picker stays hidden — matching the per-episode
+    invariant that a non-empty list always holds the current pick plus
+    at least one alternative.
+
+    ``max_candidates`` is unbounded by default, matching
+    ``WordFilterService.attach_sentence_candidates``: the picker scrolls,
+    so a season word keeps every line it was mineable on. Merging builds
+    no new variants (the per-episode pass already did), so the only cost
+    of the concatenation is memory. Pass an int to bound the list.
     """
     merged: dict[str, TokenizedWord] = {}
     candidates: dict[str, list[TokenizedWord]] = {}
@@ -74,7 +77,7 @@ def merge_pools(
                 primary.occurrence_count += word.occurrence_count
                 candidates[key].extend(contribution)
     for key, primary in merged.items():
-        cands = candidates[key][:max_candidates]
+        cands = candidates[key] if max_candidates is None else candidates[key][:max_candidates]
         # Single-episode, single-line word: leave the picker off.
         primary.sentence_candidates = cands if len(cands) > 1 else []
     return list(merged.values())

@@ -99,6 +99,11 @@ class TestMergePools:
             "ep2文B",
         ]
 
+    def test_merged_candidates_are_uncapped_by_default(self):
+        pools = [[_word("猫", sentence=f"ep{i}の文", video=Path(f"/m/ep{i}.mkv"))] for i in range(20)]
+        merged = merge_pools(pools)
+        assert len(merged[0].sentence_candidates) == 20
+
     def test_candidate_cap(self):
         pools = [[_word("猫", sentence=f"ep{i}の文", video=Path(f"/m/ep{i}.mkv"))] for i in range(20)]
         merged = merge_pools(pools, max_candidates=12)
