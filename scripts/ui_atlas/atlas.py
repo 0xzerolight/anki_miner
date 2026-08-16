@@ -49,8 +49,9 @@ import contextlib  # noqa: E402
 from contextlib import ExitStack  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 
-import probe  # noqa: E402
 from cells import CELLS, PSEUDO_PADDING, find_main_window, reveal, screens_to_visit  # noqa: E402
+
+import probe  # noqa: E402
 
 __all__ = ["CELLS", "PSEUDO_PADDING", "find_main_window", "reveal", "screens_to_visit"]
 

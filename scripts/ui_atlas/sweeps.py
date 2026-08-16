@@ -40,6 +40,7 @@ from contextlib import ExitStack  # noqa: E402
 from unittest.mock import patch  # noqa: E402
 
 import cells  # noqa: E402
+
 import probe  # noqa: E402
 
 STATE: dict = {"buttons": [], "actions": [], "resize": [], "failures": []}
