@@ -399,7 +399,54 @@ def test_form_identity_assertion_corpus() -> None:
     assert ("返る", "かえる") not in _expression_audio_candidates(word)
 
 
+def test_anchor_strictly_beats_orthbase_on_masu_stem_nominal() -> None:
+    results = _scored()
+    a_ms = f1(results["a-lite-orthbase"].by_category["masu-stem-nominal"])
+    b_ms = f1(results["b-lite-anchor"].by_category["masu-stem-nominal"])
+    # The nominalizer is attestation-gated, so dict-free (a) cannot fire and
+    # keeps unidic's verb front. Equality would mean the pass never ran.
+    assert b_ms > a_ms, f"strategy (b) masu-stem-nominal f1 {b_ms} did not beat (a) {a_ms}"
+
+
+def test_anchor_meets_masu_stem_nominal_floor() -> None:
+    results = _scored()
+    b_ms = results["b-lite-anchor"].by_category["masu-stem-nominal"]
+    assert recall(b_ms) == 1.0, f"strategy (b) masu-stem-nominal recall {recall(b_ms)} below 1.0"
+    assert junk_rate(b_ms) == 0.0, f"(b) masu-stem-nominal junk_rate {junk_rate(b_ms)} above 0.0"
+    # The bug itself: dict-free keeps unidic's 差し入れる, the anchor mines the noun.
+    assert mine_lite_orthbase("これ、差し入れ みんなで食べてよ") == {"差し入れる", "食べる"}
+    assert mine_lite_anchor("これ、差し入れ みんなで食べてよ") == {"差し入れ", "食べる"}
+    # Neighbour allow-list: 帰り/笑い/動き are all attested, so these can only
+    # stay verbs while the gate holds.
+    assert mine_lite_anchor("帰り ましょう") == {"帰る"}
+    assert mine_lite_anchor("笑い ながら歩く") == {"歩く", "笑う"}
+    assert mine_lite_anchor("動き 出した") == {"出す", "動く"}
+    # A final 連用形 token has no neighbour and must never fire.
+    assert mine_lite_anchor("早く帰り") == {"帰る", "早い"}
+
+
+def test_anchor_strictly_beats_orthbase_on_prefix_compound() -> None:
+    results = _scored()
+    a_pc = f1(results["a-lite-orthbase"].by_category["prefix-compound"])
+    b_pc = f1(results["b-lite-anchor"].by_category["prefix-compound"])
+    # Dict-free drops the 接頭辞 and ships the resolver's 存ずる/存じる.
+    assert b_pc > a_pc, f"strategy (b) prefix-compound f1 {b_pc} did not beat (a) {a_pc}"
+
+
+def test_anchor_meets_prefix_compound_floor() -> None:
+    results = _scored()
+    b_pc = results["b-lite-anchor"].by_category["prefix-compound"]
+    assert recall(b_pc) == 1.0, f"strategy (b) prefix-compound recall {recall(b_pc)} below 1.0"
+    assert junk_rate(b_pc) == 0.0, f"(b) prefix-compound junk_rate {junk_rate(b_pc)} above 0.0"
+    assert mine_lite_orthbase("ご存じですか") == {"存ずる"}
+    assert mine_lite_anchor("ご存じですか") == {"ご存じ"}
+    # Narrow-gate proof: 気をつけ IS attested in the fixture index, so a
+    # 名詞-headed span taking the surface join would mine it and fail here.
+    assert mine_lite_anchor("気をつけて帰る") == {"気をつける", "帰る"}
+
+
 # NOTE: jiru-zuru (Task 3), kana-written (Task 4), nominal-suffix (Task 5),
 # colloquial/counter (A2), aux-context (A1), long-compound (Task 6/Q2),
-# ellipsis-truncation (U8), katakana-verb-front and front-remap floors are gated
-# above; linebreak-split is scoreboard-only.
+# ellipsis-truncation (U8), katakana-verb-front, front-remap, masu-stem-nominal
+# and prefix-compound floors are gated above; linebreak-split is
+# scoreboard-only.

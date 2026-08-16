@@ -138,6 +138,8 @@ _EXPECTED_CATEGORIES = {
     "cross-conjugation",
     "katakana",
     "nominal-suffix",
+    "masu-stem-nominal",
+    "prefix-compound",
     "long-compound",
     "aux-context",
     "aux-keijoushi",

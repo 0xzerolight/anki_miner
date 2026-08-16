@@ -1,0 +1,6 @@
+{"id":"ms01","sentence":"これ、差し入れ みんなで食べてよ","expected":["差し入れ","食べる"],"category":"masu-stem-nominal","note":"The fix: the cue's line break collapses to a space, so unidic tags 差し入れ 動詞/連用形 (orthBase 差し入れる) instead of the noun."}
+{"id":"ms02","sentence":"帰り ましょう","expected":["帰る"],"category":"masu-stem-nominal","note":"助動詞 neighbour blocks. 帰り is DELIBERATELY attested so this fails on the neighbour gate, not a fixture-dict miss."}
+{"id":"ms03","sentence":"笑い ながら歩く","expected":["笑う","歩く"],"category":"masu-stem-nominal","note":"助詞 neighbour blocks. 笑い DELIBERATELY attested."}
+{"id":"ms04","sentence":"動き 出した","expected":["動く","出す"],"category":"masu-stem-nominal","note":"動詞 neighbour (compound-verb second half) blocks. 動き DELIBERATELY attested."}
+{"id":"ms05","sentence":"早く帰り","expected":["早い","帰る"],"category":"masu-stem-nominal","note":"End of line is no signal: a final 連用形 token has no neighbour and must never fire."}
+{"id":"ms06","sentence":"食べ みんなで","expected":["食べる"],"category":"masu-stem-nominal","note":"Attestation gate: 食べ is a 連用形 stem before a noun but is NOT an attested headword."}
