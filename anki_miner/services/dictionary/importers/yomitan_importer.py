@@ -31,6 +31,7 @@ from anki_miner.services.dictionary.storage import (
     TagMeta,
     bulk_insert,
     create_index,
+    create_lookup_indexes,
     write_meta,
     write_tags,
 )
@@ -47,6 +48,13 @@ from anki_miner.services.dictionary.zip_safety import (
 from anki_miner.utils.slug import slugify
 
 ProgressFn = Callable[[int, int, str], None]
+# (banks_done, bank_total) as each term bank is consumed. Separate from
+# ``ProgressFn`` because that contract is deliberately indeterminate during the
+# load — the ROW total is unknown until the last bank is parsed, so batch events
+# report ``total == 0``. The BANK count is known before the first bank opens,
+# which is the only determinate denominator this import has. Consumers whose
+# progress UI cannot render a running count without a fraction use this.
+BankProgressFn = Callable[[int, int], None]
 
 # index.json is a tiny metadata file (title, revision, format, a handful of
 # scalar fields). Cap how much we ever pull into memory when *peeking* at a zip
@@ -105,6 +113,7 @@ def import_yomitan_zip(
     dest_root: Path,
     *,
     progress: ProgressFn | None = None,
+    bank_progress: BankProgressFn | None = None,
     overwrite: bool = False,
     cancel_check: Callable[[], bool] | None = None,
     dict_id: str | None = None,
@@ -119,6 +128,12 @@ def import_yomitan_zip(
         progress: Optional (current, total, message) callback. ``total == 0``
                   means the stage is indeterminate; consumers must call
                   ``setRange(0, 0)``.
+        bank_progress: Optional (banks_done, bank_total) callback, fired once per
+                  consumed term bank. The only determinate denominator this
+                  import has — ``progress`` stays indeterminate during the load
+                  because the row total is unknown until the last bank is
+                  parsed. For consumers that need a fraction rather than a
+                  running count.
         overwrite: If True and the destination dict_id already exists, the old
                    folder is renamed to <dict_id>.bak-<timestamp> then removed
                    on success. If False, raises SetupError.
@@ -212,7 +227,8 @@ def import_yomitan_zip(
         staging.mkdir(parents=True, exist_ok=True)
         write_ownership_marker(staging, dict_id, "dictionary")
         db_path = staging / "index.sqlite"
-        create_index(db_path)
+        # Tables only: the lookup indexes are built once after the rows land.
+        create_index(db_path, with_lookup_indexes=False)
 
         total_entries = 0
         skipped_malformed = 0
@@ -222,8 +238,11 @@ def import_yomitan_zip(
         # later upload it via AnkiConnect storeMediaFile.
         media_paths: set[str] = set()
 
+        bank_total = len(term_files)
+        banks_done = 0
+
         def rows() -> Any:
-            nonlocal total_entries, skipped_malformed
+            nonlocal total_entries, skipped_malformed, banks_done
             for term_file in term_files:
                 _raise_if_cancelled(cancel_check)
                 try:
@@ -233,6 +252,9 @@ def import_yomitan_zip(
                 # A bank whose top-level JSON is not an array is wholly
                 # unreadable — raise instead of skipping every "entry".
                 ensure_bank_array(entries, term_file.name)
+                banks_done += 1
+                if bank_progress is not None:
+                    bank_progress(banks_done, bank_total)
                 for entry in entries:
                     # Structural gate the loop below implicitly assumes (list of
                     # >= 6 positions, non-blank term). Count skips so a
@@ -308,6 +330,10 @@ def import_yomitan_zip(
 
         if progress:
             progress(0, 0, "Finalizing import")
+        _raise_if_cancelled(cancel_check)
+
+        # Deferred to here so the load did not maintain two B-trees per insert.
+        create_lookup_indexes(db_path)
         _raise_if_cancelled(cancel_check)
 
         # Tag metadata (schema v3): glob tag_bank_*.json + convert any legacy
