@@ -108,6 +108,61 @@ class TestPersistenceAndAction:
             banner.action_button.click()
         assert blocker.args == ["settings.media"]
 
+    def test_nothing_dismisses_the_banner_on_a_timer(self, banner, qtbot):
+        """The D24 invariant: a run that fails while nobody is watching must
+        still be on screen when somebody looks. Pumping the event loop is what
+        a ``QTimer.singleShot(..., clear_issue)`` would need to fire."""
+        banner.show_issue(FFMPEG)
+        qtbot.wait(150)
+        assert not banner.isHidden()
+        assert banner.current_issue() == FFMPEG
+
+
+class TestDismiss:
+    """The user's own exit. Before this, 96 reporting sites shared 15 clear
+    sites, so most issues had no success path that would ever hide them."""
+
+    def test_dismiss_is_offered_on_an_issue_that_carries_a_repair(self, banner):
+        banner.show_issue(FFMPEG)
+        assert not banner.dismiss_button.isHidden()
+
+    def test_dismiss_is_offered_on_an_issue_with_no_repair(self, banner):
+        banner.show_issue(ScreenIssue(summary="No valid series in the queue to process."))
+        assert not banner.dismiss_button.isHidden()
+
+    def test_pressing_dismiss_clears_the_banner(self, banner):
+        banner.show_issue(FFMPEG)
+        banner.dismiss_button.click()
+        assert banner.isHidden()
+        assert banner.current_issue() is None
+
+    def test_pressing_dismiss_emits_dismissed(self, banner, qtbot):
+        banner.show_issue(FFMPEG)
+        with qtbot.waitSignal(banner.dismissed):
+            banner.dismiss_button.click()
+
+    def test_dismiss_collapses_details_for_the_next_issue(self, banner):
+        banner.show_issue(FFMPEG)
+        banner.details_button.click()
+        banner.dismiss_button.click()
+        banner.show_issue(FFMPEG)
+        assert banner.details_label.isHidden()
+        assert not banner.details_button.isChecked()
+
+    def test_dismissing_a_clear_banner_says_nothing(self, banner):
+        """No issue means no acknowledgement to announce, so ``dismissed`` stays
+        quiet rather than firing at a host that has nothing to react to."""
+        heard = []
+        banner.dismissed.connect(lambda: heard.append(True))
+        banner.dismiss_button.click()
+        assert heard == []
+
+    def test_the_dismiss_glyph_carries_its_meaning_accessibly(self, banner):
+        """The label is a glyph, so the name a screen reader announces is the
+        only place the word lives."""
+        assert banner.dismiss_button.accessibleName()
+        assert banner.dismiss_button.accessibleName() != banner.dismiss_button.text()
+
 
 class _Screen(ScreenIssueHost, QWidget):
     """A screen shaped like the real ones: one top-level vertical layout."""

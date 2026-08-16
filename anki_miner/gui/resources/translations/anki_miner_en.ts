@@ -6902,6 +6902,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <source>Details</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

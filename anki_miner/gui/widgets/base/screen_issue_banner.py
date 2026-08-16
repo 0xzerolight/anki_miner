@@ -14,9 +14,13 @@ Three rules shape the design.
 * **The raw diagnostic is behind Details.** Exception text, filesystem paths and
   URLs are what an issue report needs and what a reader does not. They go in the
   collapsed half; the summary stays a sentence.
-* **Clearing is the caller's job, and only on success.** Nothing here dismisses
-  itself on a timer or on the next click. :meth:`ScreenIssueBanner.clear_issue`
-  is called when the thing that failed has since succeeded.
+* **Nothing here dismisses itself.** No timer, no dismiss-on-the-next-click. A
+  banner that clears itself eight seconds after episode 14 failed at 23:47 is a
+  failure the user can never find at 08:00, which is the exact thing D24 removed.
+  It goes away for one of two reasons only: :meth:`ScreenIssueBanner.clear_issue`,
+  which a caller invokes when the thing that failed has since succeeded or when a
+  fresh attempt supersedes the last one, or the Dismiss button, which is the user
+  saying they have read it. Acknowledgement is not concealment.
 
 A modal remains correct for exactly two things: a destructive confirmation
 (the user is about to lose data) and a whole-app blocker (a second instance, an
@@ -68,9 +72,13 @@ class ScreenIssueBanner(QFrame):
     Signals:
         action_requested: Emitted with :attr:`ScreenIssue.action_id` when the
             repair button is pressed.
+        dismissed: Emitted when the user presses Dismiss. The banner has already
+            cleared itself by then; this is for a host that wants to know the
+            issue was read rather than repaired.
     """
 
     action_requested = pyqtSignal(str)
+    dismissed = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -110,6 +118,21 @@ class ScreenIssueBanner(QFrame):
         self.action_button = ModernButton("", variant="secondary")
         self.action_button.clicked.connect(self._on_action_clicked)
         row.addWidget(self.action_button)
+
+        # Last on the row and always present, including on an issue that carries
+        # a repair: a user who has read the sentence and decided to live with it
+        # needs a way out, and before this the only exit was a `clear_issue` call
+        # that most of the 96 reporting sites had no success path to make.
+        # Glyph rather than a word, and the accessible name carries the meaning
+        # (same shape as `update_banner`'s dismiss). `square` because the global
+        # button padding is measured for a word and would otherwise stretch one
+        # glyph to a text button's width; no `setObjectName` here, because on
+        # `ModernButton` the object name *is* the variant hook in `common.qss`.
+        self.dismiss_button = ModernButton("✕", variant="ghost", square=True)
+        self.dismiss_button.setAccessibleName(self.tr("Dismiss"))
+        self.dismiss_button.setToolTip(self.tr("Dismiss"))
+        self.dismiss_button.clicked.connect(self._on_dismiss_clicked)
+        row.addWidget(self.dismiss_button)
 
         layout.addLayout(row)
 
@@ -171,6 +194,13 @@ class ScreenIssueBanner(QFrame):
         if self._action is not None:
             self._action()
         self.action_requested.emit(issue.action_id)
+
+    def _on_dismiss_clicked(self) -> None:
+        """Clear first, then announce: a slot on ``dismissed`` reads a clear banner."""
+        if self._issue is None:
+            return
+        self.clear_issue()
+        self.dismissed.emit()
 
 
 class ScreenIssueHost:

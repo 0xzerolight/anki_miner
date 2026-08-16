@@ -6971,6 +6971,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <source>Details</source>
         <translation>Подробности</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Закрыть</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

@@ -365,6 +365,13 @@ class SubtitleCreationTab(_ToolTabBase):
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
 
+        # A fresh attempt supersedes the complaint about the last one -- both a
+        # refusal ("Choose a folder before generating subtitles") and a problem
+        # the previous run logged through `_ToolTabBase._on_log_problem`, which
+        # nothing else ever cleared. After the reentrancy guard, before anything
+        # that re-raises.
+        self.clear_screen_issue()
+
         # Collect media file list
         video_files = self._collect_video_files()
         if not video_files:

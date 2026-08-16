@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import QPushButton
 from anki_miner.config import AudioSourceEntry, ChainEntry, FreqEntry, PitchSourceEntry
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
+from anki_miner.gui.widgets.base.screen_issue_banner import ScreenIssueBanner
 from anki_miner.gui.widgets.enhanced.file_selector import FileSelector
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.dictionary_settings_panel import DictionarySettingsPanel
@@ -104,12 +105,13 @@ def test_accessible_names_are_translated(
 
 def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tmp_path: Path):
     banner = UpdateBanner(_update_info())
+    issue_banner = ScreenIssueBanner()
     dictionary = DictionarySettingsPanel(tmp_path / "dicts")
     frequency = FrequencySettingsPanel(tmp_path / "freqs")
     audio = AudioPackSettingsPanel(tmp_path / "audio")
     pitch = PitchSettingsPanel(tmp_path / "pitch")
     ui = UISettingsPanel(tmp_path / "themes")
-    for widget in (banner, dictionary, frequency, audio, pitch, ui):
+    for widget in (banner, issue_banner, dictionary, frequency, audio, pitch, ui):
         qtbot.addWidget(widget)
 
     dismiss = banner.findChild(QPushButton, "dismissBtn")
@@ -125,7 +127,15 @@ def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tm
     audio.set_chain((AudioSourceEntry(kind="pack", pack_id="a", enabled=True),), registry_meta={})
     pitch.set_chain((PitchSourceEntry(source_id="a", enabled=True),), registry_meta={})
 
-    buttons = [dismiss, star, *(p._remove_btn for p in (dictionary, frequency, audio, pitch))]
+    buttons = [
+        dismiss,
+        # The screen-issue banner's own ✕ (D24): the word lives only in the
+        # accessible name, so a screen reader is the only surface that can
+        # announce what pressing it does.
+        issue_banner.dismiss_button,
+        star,
+        *(p._remove_btn for p in (dictionary, frequency, audio, pitch)),
+    ]
     for panel in (dictionary, frequency, audio, pitch):
         for row in panel._rows():
             buttons.extend((row.up_button, row.down_button))

@@ -6945,6 +6945,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <source>Details</source>
         <translation>詳細資料</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>關閉</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>

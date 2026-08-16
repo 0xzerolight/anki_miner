@@ -6958,6 +6958,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <source>Details</source>
         <translation>Detalhes</translation>
     </message>
+    <message>
+        <source>Dismiss</source>
+        <translation>Fechar</translation>
+    </message>
 </context><context>
     <name>SettingsSearchBox</name>
     <message>
