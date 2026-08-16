@@ -1465,3 +1465,79 @@ def test_item_pairs_progress_counts_failed_attempts(tmp_path):
         worker.run()
 
     assert ticks == [(item.id, 0, 2), (item.id, 1, 2), (item.id, 2, 2)]
+
+
+# ---------------------------------------------------------------------------
+# The PENDING-only gate a re-run depends on
+# ---------------------------------------------------------------------------
+
+
+def test_a_completed_item_handed_to_the_worker_is_skipped(tmp_path):
+    """The worker's own gate: only PENDING runs.
+
+    This is why QueuePanel.runnable_items resets a re-run row to PENDING before
+    the run starts -- handing the worker a COMPLETED item mines nothing.
+    """
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    item.status = QueueItemStatus.COMPLETED
+
+    processor = MagicMock()
+    processor.process_episode.return_value = _ok_result(cards=2)
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), items=[item])
+    results = _wire_status_slots(worker, queue)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=processor,
+        ) as factory,
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    factory.assert_not_called()
+    processor.process_episode.assert_not_called()
+    assert item.status is QueueItemStatus.COMPLETED
+    assert results["completed"] == []
+
+
+def test_a_reset_item_re_mines_every_pair(tmp_path):
+    """With the receipts cleared the worker sees every pair as pending again."""
+    pair1 = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair2 = SimpleNamespace(video=tmp_path / "ep2.mkv", subtitle=tmp_path / "ep2.ass")
+    queue = BatchQueue()
+    item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+    item.status = QueueItemStatus.COMPLETED
+    item.cards_created = 5
+    item.committed_pair_keys = {
+        (pair1.video.resolve(), pair1.subtitle.resolve()),
+        (pair2.video.resolve(), pair2.subtitle.resolve()),
+    }
+
+    BatchQueue.reset_run_history(item)
+
+    processor = MagicMock()
+    processor.process_episode.return_value = _ok_result(cards=2)
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), items=[item])
+    results = _wire_status_slots(worker, queue)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=processor,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair1, pair2],
+        ),
+    ):
+        worker.run()
+
+    processed_videos = [call.args[0] for call in processor.process_episode.call_args_list]
+    assert processed_videos == [pair1.video, pair2.video]
+    # The row's own count restarted at 0, so it reports only this run's cards.
+    assert item.cards_created == 4
+    assert results["completed"] == [(item.id, 4)]
