@@ -23,6 +23,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PIL import Image
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.reading_text_tab import ReadingTextTab
@@ -147,6 +148,46 @@ class TestStartRun:
         tab.text_edit.setPlainText("変更後。")
         items = tab._queue_worker_cls.call_args.kwargs["items"]
         assert items[0].source.text == "元の文。"
+
+
+class TestCardImage:
+    """The optional picked image rides on the ref as ``image_root``."""
+
+    def test_picked_image_rides_on_the_ref(self, tab, tmp_path):
+        picture = tmp_path / "shot.png"
+        Image.new("RGB", (16, 16), "white").save(picture)
+        tab.image_selector.set_path(str(picture))
+
+        _mine(tab, "今日は晴れ。")
+
+        items = tab._queue_worker_cls.call_args.kwargs["items"]
+        assert items[0].source.image_root == picture
+
+    def test_no_image_picked_leaves_ref_imageless(self, tab):
+        _mine(tab, "今日は晴れ。")
+        items = tab._queue_worker_cls.call_args.kwargs["items"]
+        assert items[0].source.image_root is None
+
+    def test_unreadable_image_refuses_the_run(self, tab, tmp_path):
+        bogus = tmp_path / "broken.png"
+        bogus.write_text("not an image")
+        tab.image_selector.set_path(str(bogus))
+
+        _mine(tab, "今日は晴れ。")
+
+        tab._queue_worker_cls.assert_not_called()
+        assert tab.worker_thread is None
+        assert "image" in tab.log_widget.text_edit.toPlainText().lower()
+
+    def test_missing_image_path_refuses_the_run(self, tab, tmp_path):
+        tab.image_selector.set_path(str(tmp_path / "gone.png"))
+        _mine(tab, "今日は晴れ。")
+        tab._queue_worker_cls.assert_not_called()
+        assert tab.worker_thread is None
+
+    def test_image_selector_does_not_gate_mine(self, tab):
+        tab.text_edit.setPlainText("本文")
+        assert tab.mine_button.isEnabled()  # the image is optional
 
 
 class TestItemSlots:
