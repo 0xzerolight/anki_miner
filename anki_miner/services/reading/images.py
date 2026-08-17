@@ -117,6 +117,26 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
     return out_path
 
 
+def validate_card_image(path: Path) -> bool:
+    """Answer whether :func:`prepare_card_image` could turn this file into a picture.
+
+    Header-only and cheap: ``Image.open`` parses the header, the pixel budget
+    reads ``size``, and ``verify`` walks the stream without decoding pixels.
+    Callers use it as a pre-run gate so a user who picked an unreadable file
+    hears about it before mining rather than after. Every failure — missing
+    file, wrong format, decompression bomb — is a plain ``False``: this is a
+    gate, not a diagnostic.
+    """
+    try:
+        with Image.open(path) as img:
+            # Budget first: verify() leaves the file object unusable.
+            validate_image_pixel_budget(img)
+            img.verify()
+    except Exception:  # noqa: BLE001 - any read failure means "not usable"
+        return False
+    return True
+
+
 def _validate_archive_once(zf: zipfile.ZipFile, source: Path, dest_dir: Path) -> None:
     """Run the full zip-safety scan once per unchanged archive and destination."""
     try:
