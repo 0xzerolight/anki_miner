@@ -1,10 +1,9 @@
 """Tests for SubtitleRetimeWorker — signal contract, output path, skip/overwrite,
-success/failure, AlassNotFoundError queue-stop, cancel, and log_cb forwarding."""
+success/failure, per-pair error isolation, cancel, and log_cb forwarding."""
 
 from __future__ import annotations
 
 import unicodedata
-from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -45,13 +44,10 @@ def _make_worker(
     *,
     output_dir: Path | None = None,
     overwrite: bool = False,
-    split_penalty: float | None = None,
     retimer=None,
 ) -> SubtitleRetimeWorker:
     if config is None:
         config = _make_config()
-    if split_penalty is not None:
-        config = replace(config, retime_split_penalty=split_penalty)
     return SubtitleRetimeWorker(
         config,
         pairs,
@@ -93,8 +89,9 @@ def _fake_retimer_failure(*args, cancel_event=None, log_cb=None, **kwargs):
 # ---------------------------------------------------------------------------
 
 
-def test_alass_options_come_from_config(qapp, tmp_path):
-    """The three alignment knobs are read from config, not constructor kwargs."""
+def test_retimer_receives_only_pipeline_kwargs(qapp, tmp_path):
+    """No per-run tuning knobs: the retimer gets the override, cancel event and
+    log callback — alignment decisions belong to the pipeline, not config."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     for p in (v, s):
@@ -106,14 +103,8 @@ def test_alass_options_come_from_config(qapp, tmp_path):
         captured.append(kwargs)
         return True
 
-    config = replace(
-        _make_config(),
-        retime_split_penalty=12.0,
-        retime_correct_framerate=True,
-        retime_single_offset=False,
-    )
     worker = SubtitleRetimeWorker(
-        config,
+        _make_config(),
         [(v, s)],
         reference_override=ReferenceOverride(kind="audio", index=3),
         retimer=_recording_retimer,
@@ -122,15 +113,11 @@ def test_alass_options_come_from_config(qapp, tmp_path):
 
     assert len(captured) == 1
     kw = captured[0]
-    assert kw["split_penalty"] == 12.0
-    # `retime_correct_framerate` is the inverse of the alass flag.
-    assert kw["disable_fps_guessing"] is False
-    assert kw["no_split"] is False
     assert kw["reference_override"] == ReferenceOverride(kind="audio", index=3)
+    assert set(kw) == {"reference_override", "cancel_event", "log_cb"}
 
 
-def test_default_alass_options_forwarded(qapp, tmp_path):
-    """Defaults: fps-guessing disabled, single-offset mode, auto reference (None)."""
+def test_default_reference_override_is_none(qapp, tmp_path):
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     for p in (v, s):
@@ -145,11 +132,7 @@ def test_default_alass_options_forwarded(qapp, tmp_path):
     worker = _make_worker([(v, s)], retimer=_recording_retimer)
     worker.run()
 
-    kw = captured[0]
-    assert kw["split_penalty"] == 7.0
-    assert kw["disable_fps_guessing"] is True
-    assert kw["no_split"] is True
-    assert kw["reference_override"] is None
+    assert captured[0]["reference_override"] is None
 
 
 def test_signal_contract_two_pairs(qapp, tmp_path):
@@ -411,12 +394,16 @@ def test_success_emits_100_progress(qapp, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# AlassNotFoundError: stops queue, queue_finished still fires
+# AlassNotFoundError: no longer fatal — the pipeline has other engines
 # ---------------------------------------------------------------------------
 
 
-def test_alass_not_found_stops_queue(qapp, tmp_path):
-    """AlassNotFoundError on pair 0 → that pair errors, pair 1 NOT processed; queue_finished fires."""
+def test_alass_not_found_is_isolated_per_pair(qapp, tmp_path):
+    """A leaked AlassNotFoundError errors that pair only; the queue continues.
+
+    The retime pipeline normally absorbs a missing alass (ffsubsync still
+    runs), so the worker no longer treats it as queue-fatal.
+    """
     v1 = tmp_path / "ep01.mkv"
     v2 = tmp_path / "ep02.mkv"
     s1 = tmp_path / "ep01_orig.srt"
@@ -424,28 +411,25 @@ def test_alass_not_found_stops_queue(qapp, tmp_path):
     for p in (v1, v2, s1, s2):
         p.write_bytes(b"")
 
+    calls: list[int] = []
+
     def _alass_missing(*args, cancel_event=None, log_cb=None, **kwargs):
-        raise AlassNotFoundError("alass binary not found: 'alass'")
+        calls.append(1)
+        if len(calls) == 1:
+            raise AlassNotFoundError("alass binary not found: 'alass'")
+        return True
 
     worker = _make_worker([(v1, s1), (v2, s2)], retimer=_alass_missing)
     cap = _capture(worker)
     worker.run()
 
-    # Pair 0 must have an error.
-    assert len(cap["finished"]) == 1
+    assert len(cap["finished"]) == 2
     idx, out_path, err = cap["finished"][0]
-    assert idx == 0
-    assert out_path is None
+    assert (idx, out_path) == (0, None)
     assert "alass" in err.lower()
-
-    # Pair 1 must NOT have been started.
-    assert 1 not in cap["started"]
-
-    # queue_finished must still fire.
+    # Pair 1 still ran and succeeded.
+    assert cap["finished"][1][2] is None
     assert cap["queue_finished"] == [True]
-
-    # is_cancelled must stay False — alass-missing is a tool error, not a user
-    # cancel; callers rely on this to distinguish the two.
     assert worker.is_cancelled is False
 
 
@@ -618,26 +602,6 @@ def test_log_cb_pct_is_zero_for_alass_lines(qapp, tmp_path):
 # ---------------------------------------------------------------------------
 # split_penalty forwarded to retimer
 # ---------------------------------------------------------------------------
-
-
-def test_split_penalty_forwarded_to_retimer(qapp, tmp_path):
-    """split_penalty constructor arg is passed to the retimer."""
-    v = tmp_path / "ep01.mkv"
-    s = tmp_path / "ep01_orig.srt"
-    v.write_bytes(b"")
-    s.write_bytes(b"")
-
-    received_penalty: list = []
-
-    def _recording_retimer(*args, split_penalty=7, cancel_event=None, log_cb=None, **kwargs):
-        received_penalty.append(split_penalty)
-        return True
-
-    worker = _make_worker([(v, s)], split_penalty=42.0, retimer=_recording_retimer)
-    _capture(worker)
-    worker.run()
-
-    assert received_penalty == [42.0]
 
 
 # ---------------------------------------------------------------------------

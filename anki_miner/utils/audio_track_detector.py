@@ -126,6 +126,42 @@ def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -
     return data
 
 
+def get_media_duration_seconds(video_path: Path, ffprobe_cmd: str = "ffprobe") -> float | None:
+    """Return the container duration of *video_path* in seconds, or None.
+
+    Uses ``format=duration`` (container-level) rather than a stream duration,
+    which many MKVs omit. None on any probe failure — callers treat duration
+    as unknown, never as zero.
+    """
+    cmd = [
+        ffprobe_cmd,
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_entries",
+        "format=duration",
+        str(video_path),
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            timeout=30,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+        )
+        if proc.returncode != 0:
+            return None
+        duration = float(json.loads(proc.stdout)["format"]["duration"])
+    except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError) as e:
+        logger.warning("Error probing duration of %s: %s", video_path, e)
+        return None
+    return duration if duration > 0 else None
+
+
 def list_audio_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> list[AudioStream]:
     """Probe a video file with ffprobe and return all audio streams.
 

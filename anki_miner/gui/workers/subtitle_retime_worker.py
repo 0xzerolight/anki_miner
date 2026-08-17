@@ -1,9 +1,10 @@
-"""Worker that retimes subtitle files to a list of video files using alass.
+"""Worker that retimes subtitle files to a list of video files.
 
 The 5-signal contract and per-file queue loop live in
 :class:`~anki_miner.gui.workers.file_queue_worker.FileQueueWorker`; this worker
-supplies only the per-pair retiming logic and declares ``AlassNotFoundError`` as
-a queue-stopping fatal exception.
+supplies only the per-pair retiming logic. The retime pipeline itself (engine
+chain, validation, keep-original guarantee) lives in
+:func:`~anki_miner.services.subtitle_retimer.retime_subtitle`.
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import resolve_output_path
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class SubtitleRetimeWorker(FileQueueWorker):
-    """Retime a list of (video, subtitle) pairs using alass.
+    """Retime a list of (video, subtitle) pairs.
 
     Per pair:
     1. Emits ``file_started(idx)``.
@@ -29,14 +29,13 @@ class SubtitleRetimeWorker(FileQueueWorker):
        given, else next to the video.
     3. If the output already exists and *overwrite* is False — emits
        ``file_skipped(idx, out_sub)`` and continues.
-    4. Calls the retimer; forwards alass stdout lines via ``file_progress``.
+    4. Calls the retimer; forwards pipeline decision/progress lines via
+       ``file_progress``.
     5. Emits ``file_finished(idx, out_sub, None)`` on success, or
-       ``file_finished(idx, None, error_str)`` on failure / cancel.
-
-    ``AlassNotFoundError`` stops the entire queue (alass is missing for all
-    subsequent pairs too) after emitting a per-pair error for the triggering
-    pair.  All other unexpected exceptions are caught per-pair so the queue
-    continues.
+       ``file_finished(idx, None, error_str)`` on failure / cancel. A pipeline
+       that kept the original (every engine's result failed validation) is a
+       per-pair failure whose message says the original was left untouched;
+       the queue continues.
 
     Cancel is honoured between pairs and propagated into the retimer via
     ``self._cancel_event``.
@@ -49,22 +48,14 @@ class SubtitleRetimeWorker(FileQueueWorker):
         output_dir: When given, output subtitles are written here instead of
             next to each source video.
         overwrite: When ``True``, existing output subtitles are regenerated.
-        reference_override: Explicit user pick of what alass aligns against;
+        reference_override: Explicit user pick of what to align against;
             None auto-selects (embedded subtitle track preferred, audio
             fallback) per video.
         retimer: Optional callable with the same signature as
             :func:`~anki_miner.services.subtitle_retimer.retime_subtitle`;
             defaults to that function.  Injected by tests.
         parent: Optional parent QObject.
-
-    The three alass alignment knobs (split penalty, framerate correction,
-    single-offset) are read from *config* rather than passed in: they are
-    persisted preferences edited in Settings → Transcription & Alignment, not
-    per-run choices.
     """
-
-    #: alass missing dooms every remaining pair — stop the queue (see base loop).
-    _FATAL_QUEUE_EXCEPTIONS = (AlassNotFoundError,)
 
     def __init__(
         self,
@@ -151,42 +142,35 @@ class SubtitleRetimeWorker(FileQueueWorker):
         member (alass missing) propagates, for the base loop to stop the queue.
         """
         try:
-            # log_cb forwards alass stdout lines via file_progress.
-            # alass provides no percentage — emit pct=0 for in-progress lines.
+            # log_cb forwards pipeline decision/progress lines via
+            # file_progress. There is no percentage — emit pct=0.
             def _log_cb(line: str) -> None:
                 self.file_progress.emit(idx, 0, line)
 
-            ok = self._retimer(
+            outcome = self._retimer(
                 self._config,
                 video,
                 in_sub,
                 out_sub,
-                split_penalty=self._config.retime_split_penalty,
-                disable_fps_guessing=not self._config.retime_correct_framerate,
-                no_split=self._config.retime_single_offset,
                 reference_override=self._reference_override,
                 cancel_event=self._cancel_event,
                 log_cb=_log_cb,
             )
 
-            if ok:
+            if outcome:
                 self.file_progress.emit(idx, 100, self.tr("Done"))
                 self.file_finished.emit(idx, out_sub, None)
+            elif self.is_cancelled or getattr(outcome, "cancelled", False):
+                self.file_finished.emit(idx, None, self.tr("Cancelled"))
             else:
-                if self.is_cancelled:
-                    self.file_finished.emit(idx, None, self.tr("Cancelled"))
-                else:
-                    self.file_finished.emit(
-                        idx,
-                        None,
-                        tr_format(self.tr("Retiming failed for %1"), video.name),
-                    )
-
-        except self._FATAL_QUEUE_EXCEPTIONS:
-            # alass missing — affects all remaining pairs. Re-raise so the base
-            # queue loop reports this pair's error and stops the queue without
-            # poisoning is_cancelled (a tool error, not a user cancel).
-            raise
+                self.file_finished.emit(
+                    idx,
+                    None,
+                    tr_format(
+                        self.tr("No trustworthy sync for %1; original kept unchanged"),
+                        video.name,
+                    ),
+                )
 
         except Exception as exc:  # noqa: BLE001 — per-pair isolation
             logger.exception("subtitle_retime_worker: error on %s", video)
