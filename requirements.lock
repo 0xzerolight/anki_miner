@@ -40,16 +40,22 @@
 # Direct runtime dependencies
 annotated-doc==0.0.4
 anyio==4.14.0
+auditok==0.1.5
 av==17.1.0
 certifi==2026.6.17
+chardet==7.6.0
 charset-normalizer==3.4.7
 click==8.1.8
 ctranslate2==4.8.0
 faster-whisper==1.2.1
+faust-cchardet==3.2.0
+ffmpeg-python==0.2.0
+ffsubsync==0.5.1
 filelock==3.29.4
 flatbuffers==25.12.19
 fsspec==2026.6.0
 fugashi==1.5.2
+future==1.0.0
 gTTS==2.5.4
 h11==0.16.0
 hf-xet==1.5.1
@@ -78,6 +84,7 @@ requests==2.34.2
 rich==15.0.0
 setuptools==82.0.1
 shellingham==1.5.4
+srt==3.5.3
 tokenizers==0.23.1
 tqdm==4.68.3
 truststore==0.10.4
@@ -85,4 +92,5 @@ typer==0.26.7
 typing_extensions==4.15.0
 unidic-lite==1.0.8
 urllib3==2.7.0
+webrtcvad-wheels==2.0.14
 yt-dlp==2026.6.9

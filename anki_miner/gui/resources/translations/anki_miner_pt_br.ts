@@ -1309,6 +1309,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>séries</translation>
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation>Não há séries válidas na fila para processar.</translation>
     </message>
@@ -5971,6 +5975,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Adicionar Série</translation>
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation>Processar Fila</translation>
     </message>
@@ -7827,8 +7835,8 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Entrada</translation>
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-        <translation>alass não encontrado; instale-o ou defina seu caminho nas Configurações para habilitar o reajuste de tempo.</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7891,6 +7899,18 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Pasta de Legenda:</translation>
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation>Saída</translation>
     </message>
@@ -7915,12 +7935,8 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Quando desmarcado, os pares cuja legenda de saída já existe são ignorados, não sobrescritos.</translation>
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation>Penalidade de divisão, correção de taxa de quadros e modo de deslocamento único:</translation>
-    </message>
-    <message>
-        <source>Alignment Settings</source>
-        <translation>Configurações de Alinhamento</translation>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8033,8 +8049,8 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Cancelado</translation>
     </message>
     <message>
-        <source>Retiming failed for %1</source>
-        <translation>Falha no reajuste de tempo de %1</translation>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8237,38 +8253,6 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>Nenhum binário do alass é publicado para macOS. Instale-o com o Homebrew:</translation>
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation>Penalidade de divisão</translation>
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation>O quanto o alinhamento resiste a cortar uma legenda em segmentos com tempos separados. Valores mais baixos criam mais pontos de corte para intervalos comerciais. Intervalo útil de 1 a 20; padrão 7.</translation>
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation>Corrigir diferenças de taxa de quadros</translation>
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation>Taxa de quadros</translation>
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation>Ative apenas para legendas de uma versão com taxa de quadros diferente. Em uma legenda que está apenas deslocada, isso estica o tempo e piora a sincronia.</translation>
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation>Deslocar por um único valor apenas</translation>
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation>Deslocamento único</translation>
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation>Desloque a legenda inteira por um único valor; nunca a corte em segmentos com tempos separados. Adequado para mídia japonesa, que raramente tem cortes de intervalo comercial. Desmarque para permitir alinhamento segmentado.</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>

@@ -123,45 +123,14 @@ def test_contribute_with_path_set_returns_config_with_alass_location(qtbot, tmp_
     assert new_config.alass_location == alass_path
 
 
-def test_retime_options_round_trip(qtbot, tmp_path):
-    """The three alignment knobs load from and contribute back to config.
-
-    They moved off the Retime tab, where they reset on every launch; the point
-    of the move is that they now persist.
-    """
+def test_alignment_knob_widgets_are_gone(qtbot):
+    """The three alass alignment knobs were removed with the self-tuning
+    retime pipeline; the panel must not grow them back."""
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
-
-    panel.load_from_config(
-        AnkiMinerConfig(
-            retime_split_penalty=13.5,
-            retime_correct_framerate=True,
-            retime_single_offset=False,
-        )
-    )
-    _wait_state_settled(qtbot, panel)
-
-    assert panel.retime_split_penalty_spinbox.value() == 13.5
-    assert panel.retime_correct_framerate_checkbox.isChecked()
-    assert not panel.retime_single_offset_checkbox.isChecked()
-
-    new_config = panel.contribute(AnkiMinerConfig())
-    assert new_config.retime_split_penalty == 13.5
-    assert new_config.retime_correct_framerate is True
-    assert new_config.retime_single_offset is False
-
-
-def test_retime_defaults(qtbot):
-    """An untouched panel offers the app defaults.
-
-    Penalty and framerate match alass; single offset is deliberately ON,
-    diverging from alass, because Japanese media rarely has ad-break cuts.
-    """
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    assert panel.retime_split_penalty_spinbox.value() == 7.0
-    assert not panel.retime_correct_framerate_checkbox.isChecked()
-    assert panel.retime_single_offset_checkbox.isChecked()
+    assert not hasattr(panel, "retime_split_penalty_spinbox")
+    assert not hasattr(panel, "retime_correct_framerate_checkbox")
+    assert not hasattr(panel, "retime_single_offset_checkbox")
 
 
 def test_contribute_with_empty_selector_returns_none(qtbot):

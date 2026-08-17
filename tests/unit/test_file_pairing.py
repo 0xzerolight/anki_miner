@@ -211,6 +211,33 @@ class TestFilePairMatcher:
             assert [pair.subtitle.name for pair in pairs] == [expected]
 
         @pytest.mark.parametrize("reverse", [False, True])
+        def test_video_pairing_is_independent_of_directory_order(self, tmp_path, monkeypatch, reverse):
+            """Videos whose names collapse onto one episode number must pair
+            deterministically: iterdir() enumeration order (filesystem-dependent)
+            must never decide which subtitle a video receives."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            # Both stems end in the same bare number, so episode extraction
+            # collapses them onto episode 1 and match order decides the pairing.
+            videos = [video_dir / "Show Alpha 01.mkv", video_dir / "Show Beta 01.mkv"]
+            subtitles = [sub_dir / "Show Alpha 01.srt", sub_dir / "Show Beta 01.srt"]
+            for path in [*videos, *subtitles]:
+                path.touch()
+            ordered = list(reversed(videos)) if reverse else list(videos)
+
+            entries = {video_dir: ordered, sub_dir: subtitles}
+            monkeypatch.setattr(Path, "iterdir", lambda path: iter(entries[path]))
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+
+            assert [(pair.video.name, pair.subtitle.name) for pair in pairs] == [
+                ("Show Alpha 01.mkv", "Show Alpha 01.srt"),
+                ("Show Beta 01.mkv", "Show Beta 01.srt"),
+            ]
+
+        @pytest.mark.parametrize("reverse", [False, True])
         def test_canonically_equivalent_names_pick_nfc_regardless_of_dir_order(self, tmp_path, monkeypatch, reverse):
             """NFC and NFD spellings share one _nfc key; the raw-name tie-break
             must make selection independent of iterdir() enumeration order."""

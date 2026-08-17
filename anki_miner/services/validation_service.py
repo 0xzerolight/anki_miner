@@ -426,7 +426,8 @@ class ValidationService:
             resolve_alass(self.config),
             version_flag="--version",
             missing_message=(
-                "alass not found — subtitle retiming will be unavailable; install alass or set its path in Settings"
+                "alass not found — retiming will use ffsubsync only; install alass or set its path in Settings "
+                "for a fallback alignment engine"
             ),
         )
 

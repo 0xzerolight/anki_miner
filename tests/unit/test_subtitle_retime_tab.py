@@ -131,15 +131,15 @@ def test_alass_present_enables_retime(qtbot, tmp_path):
     assert tab.engine_notice_label.isHidden()
 
 
-def test_alass_absent_disables_retime(qtbot, tmp_path):
-    """alass absent → Retime disabled, notice visible."""
+def test_alass_absent_keeps_retime_enabled_with_notice(qtbot, tmp_path):
+    """alass absent → notice visible, but Retime stays enabled (ffsubsync runs)."""
     config = _make_config(tmp_path)
     with patch(_COMPUTE_AVAILABLE, return_value=False):
         tab = SubtitleRetimeTab(config)
         assert tab._availability_worker.wait(3000)
         qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
-    assert not tab.retime_button.isEnabled()
+    assert tab.retime_button.isEnabled()
     assert not tab.engine_notice_label.isHidden()
 
 
@@ -158,7 +158,7 @@ def test_alass_available_via_path_check(qtbot, tmp_path):
 
 
 def test_alass_unavailable_via_path_check(qtbot, tmp_path):
-    """resolve_alass returns 'alass' but shutil.which → None → unavailable."""
+    """resolve_alass returns 'alass' but shutil.which → None → notice shown."""
     config = _make_config(tmp_path)
     with (
         patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value="alass"),
@@ -168,11 +168,11 @@ def test_alass_unavailable_via_path_check(qtbot, tmp_path):
         assert tab._availability_worker.wait(3000)
         qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
-    assert not tab.retime_button.isEnabled()
+    assert tab.retime_button.isEnabled()
 
 
 def test_alass_resolved_path_missing_unavailable(qtbot, tmp_path):
-    """resolve_alass returns an explicit path that does not exist → unavailable."""
+    """resolve_alass returns an explicit path that does not exist → notice shown."""
     config = _make_config(tmp_path)
     missing = str(tmp_path / "nope" / "alass")
     with patch("anki_miner.gui.widgets.subtitle_retime_tab.resolve_alass", return_value=missing):
@@ -180,7 +180,7 @@ def test_alass_resolved_path_missing_unavailable(qtbot, tmp_path):
         assert tab._availability_worker.wait(3000)
         qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
     qtbot.addWidget(tab)
-    assert not tab.retime_button.isEnabled()
+    assert tab.retime_button.isEnabled()
 
 
 def test_alass_resolved_path_exists_available(qtbot, tmp_path):
@@ -494,10 +494,67 @@ def test_alignment_knobs_are_not_on_the_tab(qtbot, tmp_path):
     assert not hasattr(tab, "no_split_checkbox")
 
 
-def test_tab_links_to_alignment_settings(qtbot, tmp_path):
-    """A button points at where those controls went."""
+def test_tab_has_no_alignment_settings_link(qtbot, tmp_path):
+    """The alignment knobs are gone entirely; no button points at them."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab.alignment_settings_button.text().strip()
+    assert not hasattr(tab, "alignment_settings_button")
+
+
+# ---------------------------------------------------------------------------
+# Folder-mode pair preview
+# ---------------------------------------------------------------------------
+
+
+def _folder_fixture(tmp_path):
+    video_dir = tmp_path / "videos"
+    video_dir.mkdir()
+    sub_dir = tmp_path / "subs"
+    sub_dir.mkdir()
+    (video_dir / "Show - 01.mkv").touch()
+    (video_dir / "Show - 02.mkv").touch()
+    (video_dir / "Show - 03.mkv").touch()
+    (sub_dir / "jp 01.srt").touch()
+    (sub_dir / "jp 02.srt").touch()
+    return video_dir, sub_dir
+
+
+def test_pair_preview_lists_matches_and_unmatched(qtbot, tmp_path):
+    """Folder mode shows exactly which subtitle each video will get, plus
+    unmatched videos — mispairing must be visible before the run."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+
+    assert not tab.pair_preview.isHidden()
+    items = [tab.pair_preview.item(i).text() for i in range(tab.pair_preview.count())]
+    assert any("Show - 01.mkv" in t and "jp 01.srt" in t for t in items)
+    assert any("Show - 02.mkv" in t and "jp 02.srt" in t for t in items)
+    assert any("Show - 03.mkv" in t and "no matching subtitle" in t for t in items)
+    assert "2" in tab.pair_preview_label.text()
+
+
+def test_pair_preview_hidden_in_single_file_mode(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+    assert not tab.pair_preview.isHidden()
+
+    tab._on_file_mode()
+    assert tab.pair_preview.isHidden()
+    assert tab.pair_preview_label.isHidden()
+
+
+def test_pair_preview_hidden_until_both_folders_chosen(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, _sub_dir = _folder_fixture(tmp_path)
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    assert tab.pair_preview.isHidden()
 
 
 # ---------------------------------------------------------------------------
@@ -875,7 +932,8 @@ def test_alass_probe_cached_not_rerun_per_call(qtbot, tmp_path):
         tab = SubtitleRetimeTab(config)
         qtbot.addWidget(tab)
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
+        # The button no longer waits on the probe; wait for the cached bool.
+        qtbot.waitUntil(tab._alass_available, timeout=3000)
         # Construction probed exactly once.
         assert which.call_count == 1
         # Repeated availability reads must NOT re-probe.
@@ -897,14 +955,13 @@ def test_update_config_recomputes_alass_cache(qtbot, tmp_path):
         qtbot.addWidget(tab)
         assert tab._availability_worker.wait(3000)
         qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
-        assert not tab.retime_button.isEnabled()
         assert which.call_count == 1
 
         # alass now appears on PATH; a config refresh must flip the cached bool.
         which.return_value = "/usr/bin/alass"
         tab.update_config(dataclasses.replace(config, alass_location="/x"))
         assert tab._availability_worker.wait(3000)
-        qtbot.waitUntil(tab.retime_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.engine_notice_label.isHidden, timeout=3000)
         assert which.call_count == 2
         assert tab.retime_button.isEnabled()
         assert tab._alass_is_available is True

@@ -266,6 +266,13 @@ a = Analysis(
         # module is a single file (no package dir) and the import sits behind a
         # find_library monkeypatch — belt-and-braces it into the graph.
         "mpv",
+        # ffsubsync (primary subtitle-sync engine): imported function-locally in
+        # services/sync_engines/ffsubsync_engine.py. Bytecode analysis finds the
+        # IMPORT opcodes, but the engine is load-bearing for the Retime tool —
+        # belt-and-braces it into the graph like mpv. Pure-Python package, no
+        # data files; its VAD/chardet deps are ordinary static imports it pulls
+        # in itself.
+        "ffsubsync",
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).

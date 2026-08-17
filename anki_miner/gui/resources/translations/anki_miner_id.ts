@@ -1308,6 +1308,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>seri</translation>
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation>Tidak ada seri valid dalam antrean untuk diproses.</translation>
     </message>
@@ -5958,6 +5962,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Tambah Seri</translation>
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation>Proses Antrean</translation>
     </message>
@@ -7812,8 +7820,8 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Masukan</translation>
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-        <translation>alass tidak ditemukan; instal alass atau atur jalurnya di Pengaturan untuk mengaktifkan penyesuaian waktu.</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7876,6 +7884,18 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Folder Subtitel:</translation>
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation>Keluaran</translation>
     </message>
@@ -7900,12 +7920,8 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Jika tidak dicentang, pasangan yang subtitel keluarannya sudah ada akan dilewati, bukan ditimpa.</translation>
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation>Penalti pemisahan, koreksi laju bingkai, dan mode offset tunggal:</translation>
-    </message>
-    <message>
-        <source>Alignment Settings</source>
-        <translation>Pengaturan Penyelarasan</translation>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8018,8 +8034,8 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Dibatalkan</translation>
     </message>
     <message>
-        <source>Retiming failed for %1</source>
-        <translation>Penyesuaian waktu gagal untuk %1</translation>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8222,38 +8238,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>Tidak ada biner alass yang diterbitkan untuk macOS. Instal dengan Homebrew:</translation>
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation>Penalti pemisahan</translation>
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation>Seberapa enggan penyelarasan memotong subtitel menjadi segmen dengan waktu terpisah. Nilai lebih rendah menghasilkan lebih banyak titik potong untuk jeda iklan. Rentang berguna 1-20; default 7.</translation>
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation>Koreksi perbedaan laju bingkai</translation>
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation>Laju bingkai</translation>
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation>Aktifkan hanya untuk subtitel dari rilis dengan laju bingkai berbeda. Pada subtitel yang hanya bergeser (offset), ini akan meregangkan waktu dan justru memperburuknya.</translation>
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation>Geser dengan satu offset saja</translation>
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation>Offset tunggal</translation>
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation>Geser seluruh subtitel dengan satu nilai; tidak pernah memotongnya menjadi segmen dengan waktu terpisah. Cocok untuk media Jepang, yang jarang memiliki potongan jeda iklan. Hapus centang untuk mengizinkan penyelarasan tersegmentasi.</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>

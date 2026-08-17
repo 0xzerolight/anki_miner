@@ -1310,6 +1310,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>серии</translation>
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation>В очереди нет подходящих серий для обработки.</translation>
     </message>
@@ -5984,6 +5988,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Добавить сериал</translation>
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation>Обработать очередь</translation>
     </message>
@@ -7842,8 +7850,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Ввод</translation>
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-        <translation>alass не найден; установите его или укажите путь в настройках для включения пересинхронизации тайминга.</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7906,6 +7914,18 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Папка с субтитрами:</translation>
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation>Вывод</translation>
     </message>
@@ -7930,12 +7950,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Если флажок снят, пары, у которых выходные субтитры уже существуют, пропускаются, а не перезаписываются.</translation>
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation>Штраф за разбиение, коррекция частоты кадров и режим единого смещения:</translation>
-    </message>
-    <message>
-        <source>Alignment Settings</source>
-        <translation>Настройки выравнивания</translation>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8048,8 +8064,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Отменено</translation>
     </message>
     <message>
-        <source>Retiming failed for %1</source>
-        <translation>Ошибка пересинхронизации для %1</translation>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8252,38 +8268,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>Бинарный файл alass для macOS не публикуется. Установите его через Homebrew:</translation>
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation>Штраф за разбиение</translation>
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation>Насколько неохотно выравнивание разбивает субтитры на отдельно синхронизированные сегменты. Меньшие значения создают больше точек разбиения для рекламных пауз. Полезный диапазон 1-20; по умолчанию 7.</translation>
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation>Исправлять различия частоты кадров</translation>
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation>Частота кадров</translation>
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation>Включайте только для субтитров из релиза с другой частотой кадров. На субтитрах, которые просто смещены, это растягивает тайминг и ухудшает результат.</translation>
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation>Сдвигать только на единое смещение</translation>
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation>Единое смещение</translation>
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation>Сдвигать весь файл субтитров на одну величину; никогда не разбивать его на отдельно синхронизированные сегменты. Подходит для японских медиа, где редко бывают рекламные разбиения. Снимите флажок, чтобы разрешить сегментированное выравнивание.</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>

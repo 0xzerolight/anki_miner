@@ -1309,6 +1309,10 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Serien</translation>
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation>Keine gültigen Serien in der Warteschlange zur Verarbeitung.</translation>
     </message>
@@ -5971,6 +5975,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Serie hinzufügen</translation>
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation>Warteschlange verarbeiten</translation>
     </message>
@@ -7827,8 +7835,8 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Eingabe</translation>
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-        <translation>alass nicht gefunden; installieren Sie es oder legen Sie den Pfad in den Einstellungen fest, um die Neusynchronisierung zu aktivieren.</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7891,6 +7899,18 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Untertitelordner:</translation>
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation>Ausgabe</translation>
     </message>
@@ -7915,12 +7935,8 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Wenn deaktiviert, werden Paare übersprungen und nicht überschrieben, deren Ausgabe-Untertitel bereits existiert.</translation>
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation>Trennstrafe, Bildratenkorrektur und Einzel-Offset-Modus:</translation>
-    </message>
-    <message>
-        <source>Alignment Settings</source>
-        <translation>Ausrichtungseinstellungen</translation>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8033,8 +8049,8 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Abgebrochen</translation>
     </message>
     <message>
-        <source>Retiming failed for %1</source>
-        <translation>Neutaktung fehlgeschlagen für %1</translation>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8237,38 +8253,6 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>Für macOS wird keine alass-Binärdatei veröffentlicht. Installieren Sie es mit Homebrew:</translation>
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation>Trennstrafe</translation>
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation>Wie zurückhaltend die Ausrichtung dabei ist, einen Untertitel in separat getaktete Segmente zu schneiden. Niedrigere Werte erzeugen mehr Schnittpunkte für Werbepausen. Sinnvoller Bereich 1-20; Standard 7.</translation>
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation>Bildratenunterschiede korrigieren</translation>
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation>Bildrate</translation>
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation>Nur für Untertitel einer Version mit abweichender Bildrate aktivieren. Bei einem Untertitel, der lediglich versetzt ist, streckt dies das Timing und verschlimmert es.</translation>
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation>Nur um einen einzelnen Offset verschieben</translation>
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation>Einzel-Offset</translation>
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation>Den gesamten Untertitel um einen Betrag verschieben; nie in separat getaktete Segmente schneiden. Passt zu japanischen Medien, die selten Werbepausen-Schnitte haben. Deaktivieren, um segmentierte Ausrichtung zuzulassen.</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>

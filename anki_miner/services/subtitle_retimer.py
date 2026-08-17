@@ -1,31 +1,28 @@
-"""Subtitle retiming via the external ``alass`` binary.
+"""Subtitle retiming orchestrator: clean → align → validate → commit.
 
-alass aligns an off-timed subtitle file to a reference.  This module wraps the
-subprocess interaction, wires up cancellation, and streams progress lines to an
-optional callback.  Choosing and preparing the reference — an embedded subtitle
-track where one exists, extracted audio otherwise — lives in
-:mod:`anki_miner.services.retime_reference`.
+One episode's retime is a pipeline, not a single tool call:
 
-alass CLI (v2.0.0) notes
-------------------------
-* Usage: ``alass [OPTIONS] <reference> <incorrect-sub> <output>``.
-  Options come **before** the three positional paths.
-* The reference may be a **video or a subtitle file**; sub-to-sub alignment is
-  both more accurate and far faster than aligning against audio.
-* ``--split-penalty <float>``  (0–1000, default 7) goes before the positionals.
-* ``--speed-optimization`` defaults to 1 and, per ``--help``, "(greatly) speeds
-  up synchronization by sacrificing some accuracy".  0 disables it.
-* ``--encoding-inc`` / ``--encoding-ref`` take **WHATWG labels** and alass
-  *panics* on any label it does not know (``cp932`` panics, ``shift_jis``
-  works), so only vetted labels may be passed — see
-  :func:`~anki_miner.utils.subtitle_encoding.detect_subtitle_encoding`.
-* The v2 flag is ``--no-split``, singular; the README's ``--no-splits`` is stale.
-* Output format is inferred from the output file's extension.
-* All output (progress, errors) goes to **stdout**; stderr is empty.
-  Merge stderr → stdout via ``stderr=subprocess.STDOUT``.
-* Exit 0 = success; nonzero = failure.
-* alass shells out to ffmpeg/ffprobe internally; point it at our resolved
-  binaries via ``ALASS_FFMPEG_PATH`` / ``ALASS_FFPROBE_PATH`` env vars.
+1. **Reference** — :mod:`anki_miner.services.retime_reference` picks what to
+   align against (embedded dialogue track preferred, extracted audio fallback,
+   raw video as last resort).
+2. **Clean** — :mod:`anki_miner.services.subtitle_cleaner` strips non-dialogue
+   cues (signs, songs, ♪ markers, HoH annotations) from the input into a
+   same-format copy; aligners see dialogue only.
+3. **Align** — engines are tried in order until one produces a candidate that
+   survives validation: ffsubsync in split mode (in-process, has its own
+   quality gate), then alass in split mode, then alass with a single global
+   offset. A missing alass binary (macOS) just shortens the chain.
+4. **Map back** — the winning candidate's timings are applied to the untouched
+   original, so every line and all ASS styling survive.
+5. **Validate** — :mod:`anki_miner.services.sync_validator` rejects the failure
+   signatures aligners produce when they lock onto a wrong optimum. A rejected
+   candidate is discarded; the chain moves on.
+6. **Commit** — only a validated candidate replaces *out_sub*, atomically, and
+   an existing file is first copied to ``<name>.pre-retime.bak``.
+
+The guarantee callers build UX on: **a bad sync never overwrites a usable
+subtitle** — when every engine fails validation the original files are left
+exactly as they were and the outcome says why.
 """
 
 from __future__ import annotations
@@ -33,27 +30,48 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
+import shutil
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
-from anki_miner.utils.alass_resolver import resolve_alass
-from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
-from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
-from anki_miner.utils.subtitle_encoding import detect_subtitle_encoding
+from anki_miner.services.subtitle_cleaner import clean_for_alignment, map_deltas_back
+from anki_miner.services.sync_engines import SyncResult
+from anki_miner.services.sync_engines.alass_engine import sync_with_alass
+from anki_miner.services.sync_engines.ffsubsync_engine import sync_with_ffsubsync
+from anki_miner.services.sync_validator import validate_candidate
+from anki_miner.utils.audio_track_detector import get_media_duration_seconds
+from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["retime_subtitle"]
+__all__ = ["RetimeOutcome", "retime_subtitle"]
 
-_ALASS_TIMEOUT_S = 60 * 60
+#: Sibling suffix for the pre-overwrite copy of an existing output subtitle.
+BACKUP_SUFFIX = ".pre-retime.bak"
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RetimeOutcome:
+    """What one episode's retime pipeline did.
+
+    Truthy exactly when a validated result was written. ``attempts`` holds one
+    human-readable line per engine tried — the forensic trail the old pipeline
+    never kept.
+    """
+
+    ok: bool
+    engine: str | None = None
+    reference_label: str | None = None
+    attempts: tuple[str, ...] = ()
+    reason: str = ""
+    cancelled: bool = False
+
+    def __bool__(self) -> bool:
+        return self.ok
 
 
 def retime_subtitle(
@@ -62,179 +80,207 @@ def retime_subtitle(
     in_sub: Path,
     out_sub: Path,
     *,
-    split_penalty: float = 7,
-    disable_fps_guessing: bool = True,
-    no_split: bool = False,
     reference_override: ReferenceOverride | None = None,
     cancel_event: threading.Event | None = None,
     log_cb: Callable[[str], None] | None = None,
-) -> bool:
-    """Retime *in_sub* to *video* using alass, writing the result to *out_sub*.
+) -> RetimeOutcome:
+    """Retime *in_sub* to *video*, writing a validated result to *out_sub*.
 
-    Uses a temp file in ``out_sub.parent`` with the same extension so that the
-    final atomic ``os.replace(tmp, out_sub)`` stays on the same filesystem, and
-    so the ``in_sub == out_sub`` aliasing case is handled safely (alass reads
-    *in_sub*, writes the distinct temp path, then we replace).
-
-    The reference comes from
-    :func:`~anki_miner.services.retime_reference.resolve_reference`: a cleaned
-    copy of an embedded subtitle track when *video* has a usable one, otherwise
-    a pre-extracted audio WAV. If both fail, *video* itself is passed and alass
-    does its own audio extraction, so nothing ever blocks a run.
+    Engine order, validation, and the keep-original guarantee are described in
+    the module docstring. Never raises for content or tool reasons; every
+    failure path comes back as a falsy :class:`RetimeOutcome` with the original
+    files untouched.
 
     Args:
-        config: Application config (used to resolve alass/ffmpeg/ffprobe paths).
+        config: Application config (used to resolve tool paths and temp dirs).
         video:  The video the subtitle should be matched against.
         in_sub: The off-timed subtitle file to correct.
-        out_sub: Destination path for the corrected subtitle.
-        split_penalty: alass ``--split-penalty`` value (0–1000, default 7).
-            Lower values allow more split-points; higher keeps the sub as one
-            contiguous block.
-        disable_fps_guessing: When True (default), pass ``--disable-fps-guessing``
-            so alass never multiplicatively stretches the sub to a guessed
-            framerate ratio. Correct for resyncing a sub to *its own* video; set
-            False only for subs from a different-framerate release.
-        no_split: When True, pass ``--no-split`` so alass applies a single global
-            offset instead of cutting the sub into independently-shifted segments.
+        out_sub: Destination path. May alias *in_sub* (in-place retime): the
+            pipeline writes temps beside it and replaces atomically, and the
+            pre-replace backup keeps the original recoverable.
         reference_override: Explicit user pick of the reference track; None
             auto-selects (embedded subtitle preferred, audio fallback).
-        cancel_event: When set, kills the alass process group and returns False.
-        log_cb: Called with each stripped stdout line from alass as it arrives,
-            and with the reference-selection decisions made before it starts.
-
-    Returns:
-        True on success (alass exited 0 and output was written); False on any
-        failure or cancellation.
-
-    Raises:
-        AlassNotFoundError: When the alass binary cannot be found.  This is the
-            **only** exception this function may raise.
+        cancel_event: Checked between pipeline steps; alass runs are killed
+            mid-flight, an in-process ffsubsync run finishes first.
+        log_cb: Called with human-readable progress/decision lines.
     """
-    alass_bin = resolve_alass(config)
-
-    # Build the temp output path: same directory and extension as out_sub so
-    # os.replace is atomic (same filesystem) and alass infers the right format.
-    tmp_out = out_sub.parent / (out_sub.stem + ".retime-tmp" + out_sub.suffix)
-
-    reference = resolve_reference(
-        config,
-        video,
-        override=reference_override,
-        cancel_event=cancel_event,
-        log_cb=log_cb,
-    )
-
+    logger.info("retime: %s <- %s (out %s)", video.name, in_sub.name, out_sub.name)
+    temps: list[Path] = []
+    reference = None
     try:
-        return _run_alass(
-            alass_bin,
+        duration_s = get_media_duration_seconds(video, resolve_ffprobe(config))
+        reference = resolve_reference(
             config,
-            reference.path if reference is not None else video,
-            in_sub,
-            tmp_out,
-            out_sub,
-            split_penalty=split_penalty,
-            disable_fps_guessing=disable_fps_guessing,
-            no_split=no_split,
-            sub_reference=reference is not None and reference.kind == "subtitle",
+            video,
+            override=reference_override,
+            video_duration_seconds=duration_s,
             cancel_event=cancel_event,
             log_cb=log_cb,
         )
+        if _cancelled(cancel_event):
+            return RetimeOutcome(ok=False, cancelled=True, reason="cancelled")
+
+        reference_label = reference.label if reference is not None else "raw video"
+        reference_path = reference.path if reference is not None else video
+        sub_reference = reference is not None and reference.kind == "subtitle"
+
+        cleaned = clean_for_alignment(in_sub, out_sub.parent / (out_sub.stem + ".retime-clean" + in_sub.suffix))
+        if cleaned is not None:
+            temps.append(cleaned.path)
+            if cleaned.dropped:
+                _log(log_cb, f"Ignoring {cleaned.dropped} non-dialogue lines during alignment.")
+        align_input = cleaned.path if cleaned is not None else in_sub
+
+        attempts: list[str] = []
+        alass_missing = False
+        for label, runner in _engine_chain(config, sub_reference=sub_reference, cancel_event=cancel_event):
+            if _cancelled(cancel_event):
+                return RetimeOutcome(
+                    ok=False,
+                    cancelled=True,
+                    reference_label=reference_label,
+                    attempts=tuple(attempts),
+                    reason="cancelled",
+                )
+            if alass_missing and label.startswith("alass"):
+                continue
+
+            candidate = out_sub.parent / f"{out_sub.stem}.retime-cand-{len(attempts)}{out_sub.suffix}"
+            temps.append(candidate)
+            try:
+                result = runner(reference_path, align_input, candidate, log_cb)
+            except AlassNotFoundError:
+                alass_missing = True
+                attempts.append(f"{label}: binary not installed")
+                _log(log_cb, "alass is not installed; skipping alass attempts.")
+                continue
+
+            final_candidate = candidate
+            if result.ok and cleaned is not None:
+                mapped = out_sub.parent / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
+                temps.append(mapped)
+                if map_deltas_back(in_sub, candidate, cleaned.kept_indices, mapped):
+                    final_candidate = mapped
+                else:
+                    attempts.append(f"{label}: aligner changed the cue count; discarded")
+                    continue
+
+            verdict = validate_candidate(in_sub, final_candidate, result, video_duration_seconds=duration_s)
+            if verdict.ok:
+                attempts.append(f"{label}: accepted")
+                _commit(final_candidate, out_sub)
+                summary = _success_summary(result)
+                logger.info(
+                    "retime: %s accepted for %s (reference %s)%s",
+                    label,
+                    video.name,
+                    reference_label,
+                    summary,
+                )
+                _log(log_cb, f"Retimed with {label}{summary}.")
+                return RetimeOutcome(
+                    ok=True,
+                    engine=result.engine,
+                    reference_label=reference_label,
+                    attempts=tuple(attempts),
+                )
+
+            reason = "; ".join(verdict.reasons) or "rejected"
+            attempts.append(f"{label}: {reason}")
+            _log(log_cb, f"{label} result rejected: {reason}")
+
+        reason = "no engine produced a trustworthy sync; original left untouched"
+        logger.warning(
+            "retime: kept original for %s (reference %s). Attempts: %s",
+            video.name,
+            reference_label,
+            " | ".join(attempts) or "none",
+        )
+        return RetimeOutcome(
+            ok=False,
+            reference_label=reference_label,
+            attempts=tuple(attempts),
+            reason=reason,
+        )
     finally:
+        for temp in temps:
+            _unlink_quiet(temp)
         if reference is not None and reference.temp is not None:
-            with contextlib.suppress(OSError):
-                reference.temp.unlink()
+            _unlink_quiet(reference.temp)
 
 
-def _run_alass(
-    alass_bin: str,
-    config,
-    reference: Path,
-    in_sub: Path,
-    tmp_out: Path,
-    out_sub: Path,
-    *,
-    split_penalty: float,
-    disable_fps_guessing: bool,
-    no_split: bool,
-    sub_reference: bool,
-    cancel_event: threading.Event | None,
-    log_cb: Callable[[str], None] | None,
-) -> bool:
-    """Run alass against *reference* and place the corrected sub at *out_sub*."""
-    flags: list[str] = []
-    if disable_fps_guessing:
-        flags.append("--disable-fps-guessing")
-    if no_split:
-        flags.append("--no-split")
+def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event | None):
+    """Yield ``(label, runner)`` pairs in the order they should be tried."""
 
-    # The input subtitle's encoding is independent of what it is aligned
-    # against, so this is declared on both paths. alass's own detection fails
-    # outright on cp932 ("error while decoding subtitle from bytes to string"),
-    # which is the routine encoding for Japanese subtitle downloads.
-    incoming = detect_subtitle_encoding(in_sub)
-    if incoming is not None:
-        flags += ["--encoding-inc", incoming]
+    def run_ffsubsync(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
+        return sync_with_ffsubsync(config, reference, in_sub, out, cancel_event=cancel_event, log_cb=log_cb)
 
-    if sub_reference:
-        # Sub-to-sub alignment finishes in well under a second, so alass's
-        # accuracy-for-speed tradeoff buys nothing and is turned off. The audio
-        # path keeps the default: there it can cost minutes on a full episode.
-        flags += ["--speed-optimization", "0"]
-        # _clean_reference always writes UTF-8, so the reference encoding is
-        # known exactly rather than guessed.
-        flags += ["--encoding-ref", "utf-8"]
+    def run_alass_split(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
+        return sync_with_alass(
+            config,
+            reference,
+            in_sub,
+            out,
+            sub_reference=sub_reference,
+            no_split=False,
+            cancel_event=cancel_event,
+            log_cb=log_cb,
+        )
 
-    cmd = [
-        alass_bin,
-        *flags,
-        "--split-penalty",
-        str(split_penalty),
-        str(reference),
-        str(in_sub),
-        str(tmp_out),
-    ]
+    def run_alass_offset(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
+        return sync_with_alass(
+            config,
+            reference,
+            in_sub,
+            out,
+            sub_reference=sub_reference,
+            no_split=True,
+            cancel_event=cancel_event,
+            log_cb=log_cb,
+        )
 
-    env = os.environ.copy()
-    env["ALASS_FFMPEG_PATH"] = resolve_ffmpeg(config)
-    env["ALASS_FFPROBE_PATH"] = resolve_ffprobe(config)
+    yield "ffsubsync", run_ffsubsync
+    yield "alass", run_alass_split
+    yield "alass (single offset)", run_alass_offset
 
-    result = run_supervised(
-        cmd,
-        timeout_s=_ALASS_TIMEOUT_S,
-        cancel=cancel_event,
-        env=env,
-        line_callback=log_cb,
-        combine_stderr=True,
-    )
-    if isinstance(result.error, FileNotFoundError):
-        raise AlassNotFoundError(
-            f"alass binary not found: {alass_bin!r}.  Install alass or set its path in Settings → Transcription & Alignment."
-        ) from result.error
 
-    # --- Evaluate result -------------------------------------------------
-    if result.state in {SupervisedState.CANCELLED, SupervisedState.TIMED_OUT}:
+def _commit(candidate: Path, out_sub: Path) -> None:
+    """Atomically place *candidate* at *out_sub*, backing up any existing file.
+
+    The backup is a copy (not a rename): with in-place retiming the existing
+    output *is* the input subtitle, which must stay readable until the final
+    ``os.replace``. One backup per output name; a rerun overwrites it.
+    """
+    if out_sub.exists():
+        backup = out_sub.with_name(out_sub.name + BACKUP_SUFFIX)
         try:
-            if tmp_out.exists():
-                tmp_out.unlink()
+            shutil.copy2(out_sub, backup)
         except OSError:
-            pass
-        return False
+            logger.warning("retime: could not write backup %s", backup, exc_info=True)
+    os.replace(candidate, out_sub)
 
-    if result.state is SupervisedState.COMPLETED and tmp_out.exists():
-        os.replace(tmp_out, out_sub)
-        return True
 
-    # Failure — clean up the partial temp file and log the tail.
-    try:
-        if tmp_out.exists():
-            tmp_out.unlink()
-    except OSError:
-        pass
+def _success_summary(result: SyncResult) -> str:
+    if result.offset_seconds is not None:
+        return f" (offset {result.offset_seconds:+.2f}s)"
+    if result.block_shifts_seconds:
+        shifts = result.block_shifts_seconds
+        if len(shifts) == 1:
+            return f" (offset {shifts[0]:+.2f}s)"
+        return f" ({len(shifts)} blocks, shifts {min(shifts):+.2f}s..{max(shifts):+.2f}s)"
+    return ""
 
-    logger.warning(
-        "alass retiming failed (%s, exit %s). Last output:\n%s",
-        result.state.value,
-        result.returncode,
-        "\n".join(result.stdout.splitlines()[-50:]),
-    )
-    return False
+
+def _cancelled(cancel_event: threading.Event | None) -> bool:
+    return cancel_event is not None and cancel_event.is_set()
+
+
+def _log(log_cb: Callable[[str], None] | None, message: str) -> None:
+    logger.info("retime: %s", message)
+    if log_cb is not None:
+        log_cb(message)
+
+
+def _unlink_quiet(path: Path) -> None:
+    with contextlib.suppress(OSError):
+        path.unlink(missing_ok=True)
