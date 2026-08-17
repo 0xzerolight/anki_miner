@@ -1308,6 +1308,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>系列</translation>
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation>队列中没有可处理的有效系列。</translation>
     </message>
@@ -5958,6 +5962,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>添加剧集</translation>
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation>处理队列</translation>
     </message>
@@ -7812,8 +7820,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>输入</translation>
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-        <translation>未找到 alass；请安装它或在设置中指定其路径以启用重新计时。</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7876,6 +7884,18 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>字幕文件夹：</translation>
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation>输出</translation>
     </message>
@@ -7900,12 +7920,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>未勾选时，输出字幕已存在的配对会被跳过，而不会被覆盖。</translation>
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation>切分惩罚、帧率校正和单一偏移模式：</translation>
-    </message>
-    <message>
-        <source>Alignment Settings</source>
-        <translation>对齐设置</translation>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8018,8 +8034,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>已取消</translation>
     </message>
     <message>
-        <source>Retiming failed for %1</source>
-        <translation>重新计时 %1 失败</translation>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8222,38 +8238,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>macOS 没有发布 alass 二进制文件。请使用 Homebrew 安装：</translation>
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation>切分惩罚</translation>
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation>对齐在多大程度上不愿意将字幕切分为分别计时的片段。数值越低，切分点越多，适合插播广告的情形。常用范围 1-20；默认 7。</translation>
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation>校正帧率差异</translation>
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation>帧率</translation>
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation>仅在字幕来自不同帧率的版本时启用。若字幕只是存在整体偏移，启用此项会拉伸时间轴，使情况更糟。</translation>
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation>仅按单一偏移量整体平移</translation>
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation>单一偏移</translation>
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation>将整个字幕整体平移一个偏移量；绝不将其切分为分别计时的片段。适合日语媒体，因为它很少有插播广告造成的切点。取消勾选可允许分段对齐。</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>

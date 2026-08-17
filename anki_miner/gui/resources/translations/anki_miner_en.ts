@@ -1298,6 +1298,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation type="unfinished" />
     </message>
@@ -5916,6 +5920,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation type="unfinished" />
     </message>
@@ -7759,7 +7767,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7823,6 +7831,18 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation type="unfinished" />
     </message>
@@ -7847,11 +7867,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Alignment Settings</source>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7965,7 +7981,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Retiming failed for %1</source>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -8168,38 +8184,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -1308,6 +1308,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>loạt phim</translation>
     </message>
     <message>
+        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No valid series in the queue to process.</source>
         <translation>Không có loạt phim hợp lệ nào trong hàng đợi để xử lý.</translation>
     </message>
@@ -5958,6 +5962,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Thêm series</translation>
     </message>
     <message>
+        <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Process Queue</source>
         <translation>Xử lý hàng đợi</translation>
     </message>
@@ -7812,8 +7820,8 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Đầu vào</translation>
     </message>
     <message>
-        <source>alass not found; install it or set its path in Settings to enable retiming.</source>
-        <translation>Không tìm thấy alass; cài đặt nó hoặc đặt đường dẫn trong Cài đặt để bật chỉnh lại thời gian.</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7876,6 +7884,18 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Thư mục phụ đề:</translation>
     </message>
     <message>
+        <source>Matched pairs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1  —  no matching subtitle</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Matched pairs (%1):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Output</source>
         <translation>Đầu ra</translation>
     </message>
@@ -7900,12 +7920,8 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Khi không được chọn, các cặp có phụ đề đầu ra đã tồn tại sẽ bị bỏ qua, không ghi đè.</translation>
     </message>
     <message>
-        <source>Split penalty, frame-rate correction and single-offset mode:</source>
-        <translation>Phạt khi chia đoạn, sửa khác biệt tốc độ khung hình và chế độ độ lệch đơn:</translation>
-    </message>
-    <message>
-        <source>Alignment Settings</source>
-        <translation>Cài đặt căn chỉnh</translation>
+        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8018,8 +8034,8 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Đã hủy</translation>
     </message>
     <message>
-        <source>Retiming failed for %1</source>
-        <translation>Chỉnh lại thời gian thất bại cho %1</translation>
+        <source>No trustworthy sync for %1; original kept unchanged</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8222,38 +8238,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>No alass binary is published for macOS. Install it with Homebrew:</source>
         <translation>Không có tệp nhị phân alass nào được phát hành cho macOS. Cài đặt nó bằng Homebrew:</translation>
-    </message>
-    <message>
-        <source>Split penalty</source>
-        <translation>Phạt khi chia đoạn</translation>
-    </message>
-    <message>
-        <source>How reluctant alignment is to cut a subtitle into separately-timed segments. Lower values create more cut points for ad breaks. Useful range 1-20; default 7.</source>
-        <translation>Mức độ ngần ngại của việc căn chỉnh khi cắt phụ đề thành các đoạn có thời gian riêng. Giá trị thấp hơn tạo nhiều điểm cắt hơn cho quảng cáo xen giữa. Khoảng hữu ích 1-20; mặc định 7.</translation>
-    </message>
-    <message>
-        <source>Correct frame-rate differences</source>
-        <translation>Sửa khác biệt tốc độ khung hình</translation>
-    </message>
-    <message>
-        <source>Frame rate</source>
-        <translation>Tốc độ khung hình</translation>
-    </message>
-    <message>
-        <source>Enable only for subtitles from a different-framerate release. On a subtitle that is merely offset this stretches the timing and makes it worse.</source>
-        <translation>Chỉ bật cho phụ đề từ bản phát hành có tốc độ khung hình khác. Với phụ đề chỉ bị lệch thời gian, việc này sẽ kéo giãn thời gian và làm cho tệ hơn.</translation>
-    </message>
-    <message>
-        <source>Shift by a single offset only</source>
-        <translation>Chỉ dịch theo một độ lệch duy nhất</translation>
-    </message>
-    <message>
-        <source>Single offset</source>
-        <translation>Độ lệch đơn</translation>
-    </message>
-    <message>
-        <source>Shift the entire subtitle by one amount; never cut it into separately-timed segments. Suits Japanese media, which rarely has ad-break cuts. Uncheck to allow segmented alignment.</source>
-        <translation>Dịch toàn bộ phụ đề theo một khoảng duy nhất; không bao giờ cắt thành các đoạn có thời gian riêng. Phù hợp với nội dung tiếng Nhật, vốn hiếm khi có điểm cắt quảng cáo. Bỏ chọn để cho phép căn chỉnh theo từng đoạn.</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
