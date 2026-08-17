@@ -71,7 +71,9 @@ class TestCleanReference:
             ],
         )
         dest = tmp_path / "out.srt"
-        assert clean_reference(src, dest) == 1
+        stats = clean_reference(src, dest)
+        assert stats.cues == 1
+        assert stats.span_ms == 1000
         out = pysubs2.load(str(dest))
         assert [e.start for e in out.events] == [4000]
 

@@ -167,13 +167,13 @@ class TestCleanReference:
 
     def test_returns_the_written_cue_count(self, tmp_path: Path) -> None:
         src = _dialogue_srt(tmp_path / "in.srt", 5)
-        assert _clean_reference(src, tmp_path / "out.srt") == 5
+        assert _clean_reference(src, tmp_path / "out.srt").cues == 5
 
     def test_cp932_source_is_readable(self, tmp_path: Path) -> None:
         """Japanese embedded tracks are routinely Shift-JIS, not UTF-8."""
         src = tmp_path / "in.srt"
         src.write_bytes("1\n00:00:01,000 --> 00:00:02,000\nこんにちは\n\n".encode("cp932"))
-        assert _clean_reference(src, tmp_path / "out.srt") == 1
+        assert _clean_reference(src, tmp_path / "out.srt").cues == 1
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +222,73 @@ class TestResolveReference:
         assert reference is not None
         assert reference.kind == "subtitle"
         assert condenser.return_value.extract_embedded_subtitle.call_count == 2
+
+    def test_low_coverage_track_rejected_when_duration_known(
+        self, config: MagicMock, video: Path, tmp_path: Path
+    ) -> None:
+        """An untitled recap/signs track passing the cue floor still fails the
+        coverage gate: 40 cues spanning ~40s of a 2-minute episode."""
+        clustered = _dialogue_srt(tmp_path / "clustered.srt", 40)
+        with (
+            patch(_LIST_STREAMS, return_value=[_stream(0)]),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_CONDENSER) as condenser,
+            patch(_EXTRACTOR) as extractor,
+        ):
+            condenser.return_value.extract_embedded_subtitle.return_value = clustered
+            extractor.return_value.extract_full_audio.return_value = False
+            reference = resolve_reference(config, video, video_duration_seconds=120.0)
+
+        assert reference is None  # fell through to audio, which also failed
+
+    def test_coverage_gate_passes_a_full_episode_track(self, config: MagicMock, video: Path, tmp_path: Path) -> None:
+        dense = _dialogue_srt(tmp_path / "dense.srt", 40)  # spans ~40s
+        with (
+            patch(_LIST_STREAMS, return_value=[_stream(0)]),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_CONDENSER) as condenser,
+        ):
+            condenser.return_value.extract_embedded_subtitle.return_value = dense
+            reference = resolve_reference(config, video, video_duration_seconds=60.0)
+
+        assert reference is not None
+        assert reference.kind == "subtitle"
+
+    def test_audio_fallback_labels_missing_japanese_tag_honestly(self, config: MagicMock, video: Path) -> None:
+        with (
+            patch(_LIST_STREAMS, return_value=[]),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_EXTRACTOR) as extractor,
+            patch(
+                "anki_miner.services.retime_reference.find_japanese_audio_stream",
+                return_value=None,
+            ),
+        ):
+            extractor.return_value.extract_full_audio.return_value = True
+            lines: list[str] = []
+            reference = resolve_reference(config, video, log_cb=lines.append)
+
+        assert reference is not None
+        assert reference.label == "first audio track (no Japanese tag)"
+        assert any("may be a dub" in line for line in lines)
+        reference.path.unlink()
+
+    def test_audio_fallback_labels_japanese_track(self, config: MagicMock, video: Path) -> None:
+        with (
+            patch(_LIST_STREAMS, return_value=[]),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_EXTRACTOR) as extractor,
+            patch(
+                "anki_miner.services.retime_reference.find_japanese_audio_stream",
+                return_value=MagicMock(),
+            ),
+        ):
+            extractor.return_value.extract_full_audio.return_value = True
+            reference = resolve_reference(config, video)
+
+        assert reference is not None
+        assert reference.label == "Japanese audio"
+        reference.path.unlink()
 
     def test_forced_track_is_skipped_without_extraction(self, config: MagicMock, video: Path) -> None:
         with (

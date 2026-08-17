@@ -99,10 +99,20 @@ def _load(path: Path) -> pysubs2.SSAFile:
         return load_with_fallback_encoding(path, exc)
 
 
-def clean_reference(src: Path, dest: Path) -> int:
+@dataclass(frozen=True)
+class ReferenceCleanResult:
+    """What survived cleaning a reference track: cue count and covered span."""
+
+    cues: int
+    span_ms: int
+
+
+def clean_reference(src: Path, dest: Path) -> ReferenceCleanResult:
     """Write the dialogue-only cues of *src* to *dest* as UTF-8 SRT.
 
-    Returns the number of cues written. Drops everything
+    Returns the surviving cue count and their first-start-to-last-end span —
+    the two signals reference selection uses to reject a track that is not
+    real full-episode dialogue. Drops everything
     :func:`_is_non_dialogue_event` flags, plus duplicate spans. Only cue
     *timings* matter to the aligner, but the text is carried through so the
     temp file stays readable when a run needs diagnosing.
@@ -126,7 +136,8 @@ def clean_reference(src: Path, dest: Path) -> int:
     out = pysubs2.SSAFile()
     out.events = kept
     out.save(str(dest), encoding="utf-8", format_="srt")
-    return len(kept)
+    span_ms = max(e.end for e in kept) - min(e.start for e in kept) if kept else 0
+    return ReferenceCleanResult(cues=len(kept), span_ms=span_ms)
 
 
 @dataclass(frozen=True)

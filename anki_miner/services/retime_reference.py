@@ -46,6 +46,7 @@ from anki_miner.services.subtitle_cleaner import clean_reference as _clean_refer
 from anki_miner.utils.audio_track_detector import (
     JAPANESE_LANGUAGE_CODES,
     SubtitleStream,
+    find_japanese_audio_stream,
     list_subtitle_streams,
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
@@ -68,6 +69,11 @@ ENGLISH_LANGUAGE_CODES = frozenset({"eng", "en", "english"})
 #: 24-minute episode's dialogue track has several hundred cues; a signs-only
 #: track that slipped the title and disposition filters has a few dozen.
 _MIN_REFERENCE_CUES = 30
+
+#: Minimum fraction of the episode a cleaned reference must span. A dialogue
+#: track covers nearly the whole runtime; an untitled signs or recap track
+#: that clears the cue floor still clusters its cues in a fraction of it.
+_MIN_REFERENCE_COVERAGE = 0.6
 
 #: Stream titles that mark a track as something other than full dialogue.
 _NON_DIALOGUE_TITLE_RE = re.compile(r"sign|song|karaoke|s&s|forced|commentary", re.IGNORECASE)
@@ -119,6 +125,7 @@ def resolve_reference(
     video: Path,
     *,
     override: ReferenceOverride | None = None,
+    video_duration_seconds: float | None = None,
     cancel_event: threading.Event | None = None,
     log_cb: Callable[[str], None] | None = None,
 ) -> RetimeReference | None:
@@ -129,8 +136,13 @@ def resolve_reference(
     still falls back to audio if that pick turns out to be unusable — a mystery
     result beats a refused run, and the reason is logged either way.
 
-    Returns None when even audio extraction fails; the caller then hands alass
-    the raw video, which is exactly the pre-existing behaviour.
+    *video_duration_seconds* (when known) gates auto-picked subtitle tracks on
+    episode coverage, so an untitled signs/recap track that passes the cue-count
+    floor is still rejected. An explicit override skips the gate — the user
+    outranks the heuristic.
+
+    Returns None when even audio extraction fails; the caller then hands the
+    engine the raw video, which is exactly the pre-existing behaviour.
     """
     if _cancelled(cancel_event):
         return None
@@ -141,7 +153,7 @@ def resolve_reference(
     if override is not None:
         picked = _stream_by_sub_index(config, video, override.index)
         if picked is not None:
-            reference = _try_subtitle_stream(config, video, picked, cancel_event, log_cb)
+            reference = _try_subtitle_stream(config, video, picked, None, cancel_event, log_cb)
             if reference is not None:
                 return reference
         _log(log_cb, f"Chosen subtitle track {override.index + 1} is unusable; using audio instead.")
@@ -153,7 +165,7 @@ def resolve_reference(
         if _is_non_dialogue_stream(stream):
             _log(log_cb, f"Skipping subtitle track {stream.sub_index + 1}: not a dialogue track.")
             continue
-        reference = _try_subtitle_stream(config, video, stream, cancel_event, log_cb)
+        reference = _try_subtitle_stream(config, video, stream, video_duration_seconds, cancel_event, log_cb)
         if reference is not None:
             return reference
 
@@ -201,6 +213,7 @@ def _try_subtitle_stream(
     config,
     video: Path,
     stream: SubtitleStream,
+    video_duration_seconds: float | None,
     cancel_event: threading.Event | None,
     log_cb: Callable[[str], None] | None,
 ) -> RetimeReference | None:
@@ -211,10 +224,11 @@ def _try_subtitle_stream(
 
     cleaned = extracted.with_suffix(".clean.srt")
     try:
-        cue_count = _clean_reference(extracted, cleaned)
+        stats = _clean_reference(extracted, cleaned)
+        cue_count, span_ms = stats.cues, stats.span_ms
     except Exception:  # noqa: BLE001 — an unparsable track is just a bad candidate
         logger.warning("retime reference: could not clean %s", extracted, exc_info=True)
-        cue_count = 0
+        cue_count, span_ms = 0, 0
     finally:
         _unlink(extracted)
 
@@ -225,6 +239,16 @@ def _try_subtitle_stream(
             f"Skipping subtitle track {stream.sub_index + 1}: only {cue_count} dialogue lines.",
         )
         return None
+
+    if video_duration_seconds is not None and video_duration_seconds > 0:
+        coverage = span_ms / (video_duration_seconds * 1000)
+        if coverage < _MIN_REFERENCE_COVERAGE:
+            _unlink(cleaned)
+            _log(
+                log_cb,
+                f"Skipping subtitle track {stream.sub_index + 1}: " f"covers only {coverage:.0%} of the episode.",
+            )
+            return None
 
     label = _stream_label(stream)
     _log(log_cb, f"Aligning against embedded subtitle track {stream.sub_index + 1} ({label}, {cue_count} lines).")
@@ -312,7 +336,22 @@ def _audio_reference(
         _unlink(tmp_wav)
         return None
 
-    label = "auto-detected Japanese" if audio_track_override is None else f"track {audio_track_override + 1}"
+    if audio_track_override is not None:
+        label = f"audio track {audio_track_override + 1}"
+    else:
+        # Honest labelling: extraction falls back to the FIRST audio track when
+        # no Japanese-tagged stream exists, which on dual-audio releases can be
+        # the dub — say so instead of claiming "auto-detected Japanese".
+        jp_stream = find_japanese_audio_stream(video, resolve_ffprobe(config))
+        if jp_stream is not None:
+            label = "Japanese audio"
+        else:
+            label = "first audio track (no Japanese tag)"
+            _log(
+                log_cb,
+                "No Japanese-tagged audio track found; using the first audio track — "
+                "on a dual-audio release this may be a dub.",
+            )
     _log(log_cb, f"Aligning against audio ({label}).")
     return RetimeReference(path=tmp_wav, kind="audio", temp=tmp_wav, label=label)
 

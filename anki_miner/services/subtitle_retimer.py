@@ -108,10 +108,12 @@ def retime_subtitle(
     temps: list[Path] = []
     reference = None
     try:
+        duration_s = get_media_duration_seconds(video, resolve_ffprobe(config))
         reference = resolve_reference(
             config,
             video,
             override=reference_override,
+            video_duration_seconds=duration_s,
             cancel_event=cancel_event,
             log_cb=log_cb,
         )
@@ -121,7 +123,6 @@ def retime_subtitle(
         reference_label = reference.label if reference is not None else "raw video"
         reference_path = reference.path if reference is not None else video
         sub_reference = reference is not None and reference.kind == "subtitle"
-        duration_s = get_media_duration_seconds(video, resolve_ffprobe(config))
 
         cleaned = clean_for_alignment(in_sub, out_sub.parent / (out_sub.stem + ".retime-clean" + in_sub.suffix))
         if cleaned is not None:
