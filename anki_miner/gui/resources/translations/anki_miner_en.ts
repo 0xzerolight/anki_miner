@@ -6456,7 +6456,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6465,6 +6465,22 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Drop or paste text here; files are not supported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6485,6 +6501,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Paste some text first.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
         <translation type="unfinished" />
     </message>
     <message>

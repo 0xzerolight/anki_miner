@@ -1,6 +1,6 @@
 """Tests for the pasted-text source loader."""
 
-from anki_miner.models.reading import ReadingSourceRef
+from anki_miner.models.reading import ImageRef, ReadingSourceRef
 from anki_miner.services.reading import text_source
 
 
@@ -52,3 +52,21 @@ def test_exotic_line_breaks_are_not_paragraph_breaks():
     doc = text_source.load(ReadingSourceRef(kind="text", title="Text", text="あ い\fうえ"))
     assert len(doc.units) == 1
     assert [u.location_label for u in doc.units] == ["¶1"]
+
+
+def test_image_root_becomes_one_shared_image_ref(tmp_path):
+    picture = tmp_path / "cover.jpg"
+    picture.write_bytes(b"not-really-a-jpeg")  # the loader never opens it
+    ref = ReadingSourceRef(kind="text", title="Text", text="一文目。\n\n二文目。", image_root=picture)
+
+    doc = text_source.load(ref)
+
+    assert len(doc.units) == 2
+    assert {u.image_ref for u in doc.units} == {ImageRef(picture)}
+    # One identical frozen ref, so phase-3 materializes the image exactly once.
+    assert doc.units[0].image_ref is doc.units[1].image_ref
+
+
+def test_no_image_root_keeps_units_imageless():
+    doc = text_source.load(ReadingSourceRef(kind="text", title="Text", text="一文目。"))
+    assert doc.units[0].image_ref is None

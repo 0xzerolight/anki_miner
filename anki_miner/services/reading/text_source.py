@@ -6,6 +6,10 @@ there is no file I/O, no encoding sniffing, and no Aozora markup handling
 Identity is deliberately constant — series/episode/title are all "Text" — per
 the sub-tab's design: pasted snippets come from arbitrary places and derived
 titles would be noise in history/stats.
+
+Pasted text has no page of its own, so the sub-tab may hand over one optional
+card image in ``ref.image_root``; every unit shares it, exactly as epub shares
+a cover, and it lands in the Picture field of every card from the run.
 """
 
 from __future__ import annotations
@@ -14,7 +18,7 @@ import logging
 from collections.abc import Callable
 
 from anki_miner.exceptions import OperationCancelled
-from anki_miner.models.reading import ReadingDocument, ReadingSourceRef, ReadingUnit
+from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingSourceRef, ReadingUnit
 from anki_miner.utils.logging_ext import log_summary
 
 from .sentence_splitter import split_sentences
@@ -44,6 +48,11 @@ def load(
     # str.splitlines() would also break on \v/\f/NEL/U+2028 from PDF/web pastes.
     text = (ref.text or "").replace("\r\n", "\n").replace("\r", "\n")
 
+    # One frozen ref shared by every unit — the shape epub uses for a book
+    # cover, so phase-3's per-ref cache materializes the picked image once for
+    # the whole run and every card carries the same Picture.
+    image_ref = ImageRef(ref.image_root) if ref.image_root is not None else None
+
     units: list[ReadingUnit] = []
     index = 0
     para_no = 0
@@ -62,7 +71,7 @@ def load(
                     text=sentence,
                     index=index,
                     location_label=f"¶{para_no}",
-                    image_ref=None,
+                    image_ref=image_ref,
                 )
             )
             index += 1

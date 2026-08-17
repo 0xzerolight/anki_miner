@@ -6511,8 +6511,8 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
         <translation>Texto pegado</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Pegue texto en japonés y mínelo en tarjetas de Anki, sin capturas de pantalla ni audio.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Pegue texto en japonés y conviértalo en tarjetas de Anki — no se extrae audio.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6521,6 +6521,22 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Suelte o pegue texto aquí; los archivos no son compatibles.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Imagen de tarjeta:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Imágenes</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Este campo acepta un archivo de imagen.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Opcional. Esta imagen se coloca en el campo Picture de cada tarjeta generada a partir de este texto.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6541,6 +6557,10 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
     <message>
         <source>Paste some text first.</source>
         <translation>Primero pegue algún texto.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>No se puede leer esa imagen. Elija otra, o borre el campo para minar sin ella.</translation>
     </message>
     <message>
         <source>Starting…</source>

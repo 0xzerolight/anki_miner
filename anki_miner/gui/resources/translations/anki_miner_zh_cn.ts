@@ -6498,8 +6498,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>粘贴文本</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>粘贴日语文本并挖词生成 Anki 卡片——不含截图和音频。</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>粘贴日语文本并挖词生成 Anki 卡片，不提取音频。</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6508,6 +6508,22 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>将文本拖放或粘贴到此处；不支持文件。</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>卡片图片：</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>图片</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>此字段接受图片文件。</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>可选。此图片将放入该文本生成的每张卡片的 Picture 字段。</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6528,6 +6544,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Paste some text first.</source>
         <translation>请先粘贴文本。</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>无法读取该图片。请另选一张，或清空字段以不使用图片进行挖词。</translation>
     </message>
     <message>
         <source>Starting…</source>

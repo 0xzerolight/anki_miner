@@ -6524,8 +6524,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Вставленный текст</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Вставьте японский текст и майните его в карточки Anki — без скриншотов и аудио.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Вставьте японский текст и майните его в карточки Anki — аудио не извлекается.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6534,6 +6534,22 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Перетащите или вставьте текст сюда; файлы не поддерживаются.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Изображение карточки:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Изображения</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Это поле принимает файл изображения.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Необязательно. Это изображение попадает в поле Picture каждой карточки, созданной из этого текста.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6554,6 +6570,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Paste some text first.</source>
         <translation>Сначала вставьте текст.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Это изображение не удаётся прочитать. Выберите другое или очистите поле, чтобы майнить без изображения.</translation>
     </message>
     <message>
         <source>Starting…</source>

@@ -68,8 +68,12 @@ class ReadingSourceRef:
       final ``ReadingDocument`` metadata.
     * kind="text": built directly by the Text sub-tab, never by the detector —
       ``text`` holds the pasted content, ``title`` = "Text", and ``path`` /
-      ``image_root`` / ``volume`` are None. Distinct from kind="txt", which is
-      a ``.txt`` *file* on disk (aozora loader).
+      ``volume`` are None. ``image_root`` is the ONE optional card image the
+      user picked — an image *file*, unlike mokuro's page directory/archive
+      root — which the loader hangs on every unit as a single shared
+      ``ImageRef``, the way epub shares a cover; None means imageless cards.
+      Distinct from kind="txt", which is a ``.txt`` *file* on disk (aozora
+      loader).
 
     ``path`` is always set for the file-backed kinds (their loaders assert
     this) and only None for kind="text".

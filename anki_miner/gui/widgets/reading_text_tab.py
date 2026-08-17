@@ -1,8 +1,11 @@
 """Text sub-tab of the Reading tab: pasted-text mining.
 
-Mines one pasted snippet per run — no file, no screenshots, no extracted audio
-(synthetic sentence TTS, if enabled in Audio settings, still applies like any
-reading-sourced card) — through the shared reading pipeline. Paste text,
+Mines one pasted snippet per run — no file, no extracted audio (synthetic
+sentence TTS, if enabled in Audio settings, still applies like any
+reading-sourced card) — through the shared reading pipeline. Pasted text has no
+page of its own, so the one optional Card Image the user picks here rides on
+the ref as ``image_root`` and lands in the Picture field of every card from the
+run (``services/reading/text_source.py``). Paste text,
 **Mine** launches a single ephemeral :class:`ReadingQueueItem` carrying a
 pathless ``kind="text"`` ref (the text is snapshotted at Mine time, so the
 edit stays usable mid-run) through the shared
@@ -24,6 +27,7 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject
@@ -43,15 +47,21 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
 from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format, apply_japanese_font
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout
-from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, field_label_width
+from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
+from anki_miner.services.reading.images import validate_card_image
 from anki_miner.utils.i18n import tr_format
+
+#: Suffixes the picker offers and accepts on a drop. ``prepare_card_image``
+#: re-encodes everything to JPEG, so the list is about what Pillow can read.
+_IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp")
+_IMAGE_FILTER_GLOB = " ".join(f"*{ext}" for ext in _IMAGE_EXTS)
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -161,6 +171,11 @@ class ReadingTextTab(_ReadingMiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
+        # LogWidget: own header + Copy/Clear actions; install_workflow_shell
+        # moves it into the Activity drawer (D6). Built before the card because
+        # the card's controls report into it.
+        self.log_widget = LogWidget()
+
         layout.addWidget(self._create_text_card())
 
         # Issue #65: opt-in word curation popup (default off).
@@ -175,9 +190,6 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # The durable end state of this same card (D20). Pasted text is always
         # one item, so the receipt never needs a noun to count.
         self._install_receipt(layout, self.overall_progress_widget)
-
-        # LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
-        self.log_widget = LogWidget()
 
         container.setLayout(layout)
 
@@ -213,7 +225,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
 
         card_layout.addWidget(SectionHeader(title=self.tr("Pasted Text")))
 
-        note = QLabel(self.tr("Paste Japanese text and mine it into Anki cards — no screenshots or audio."))
+        note = QLabel(self.tr("Paste Japanese text and mine it into Anki cards — no audio is extracted."))
         note.setObjectName("caption")
         note.setWordWrap(True)
         card_layout.addWidget(note)
@@ -241,6 +253,23 @@ class ReadingTextTab(_ReadingMiningTabBase):
         self.text_edit.textChanged.connect(self._keep_japanese_leading)
         self.text_edit.textChanged.connect(self._recompute_buttons)
         card_layout.addWidget(self.text_edit)
+
+        # Pasted text has no page of its own, so the one picture every card in
+        # the run shares is a deliberate pick, not an extraction. Optional by
+        # design: an empty field mines imageless cards exactly as before.
+        self.image_selector = FileSelector(
+            label=self.tr("Card Image:"),
+            file_mode=True,
+            file_filter=f"{self.tr('Images')} ({_IMAGE_FILTER_GLOB})",
+            label_width=field_label_width(self.tr("Card Image:")),
+            history_key="reading.text.inputs",
+            drop_validator=accepts_suffixes(_IMAGE_EXTS, self.tr("This field takes an image file.")),
+        )
+        self.image_selector.setToolTip(
+            self.tr("Optional. This image goes in the Picture field of every card from this text.")
+        )
+        self.image_selector.drop_rejected.connect(self.log_widget.append_warning)
+        card_layout.addWidget(self.image_selector)
 
         # Mine and Cancel live in the pinned bar (D6), so a long paste cannot
         # push the run button off the screen.
@@ -274,13 +303,37 @@ class ReadingTextTab(_ReadingMiningTabBase):
             self.log_widget.append_warning(self.tr("Paste some text first."))
             return
 
+        usable, image_root = self._picked_image()
+        if not usable:  # picked but unreadable — the user already heard why
+            return
+
         # Constant identity by design (see text_source.py) — untranslated data
         # constant, like aozora's series="Books".
-        ref = ReadingSourceRef(kind="text", title="Text", text=text)
+        ref = ReadingSourceRef(kind="text", title="Text", text=text, image_root=image_root)
         item = ReadingQueueItem(source=ref, title=ref.title, kind=ref.kind)
 
         if self._launch_run([item]):
             self._begin_progress()
+
+    def _picked_image(self) -> tuple[bool, Path | None]:
+        """Resolve the optional card image as ``(usable, path)``.
+
+        An empty field and a broken pick must not be confused: ``(True, None)``
+        = nothing picked, mine imageless; ``(True, path)`` = use it;
+        ``(False, None)`` = the user picked something this pipeline cannot
+        read, so the run is refused now instead of after mining the whole text.
+        """
+        raw = self.image_selector.path_or_none()
+        if raw is None:
+            return True, None
+        # NEVER strip a path — trailing whitespace can be part of a real name.
+        path = Path(raw)
+        if not validate_card_image(path):
+            self.log_widget.append_warning(
+                self.tr("That image cannot be read. Pick another, or clear the field to mine without one.")
+            )
+            return False, None
+        return True, path
 
     def _begin_progress(self) -> None:
         """Reset the run bar and swap to the running button state."""

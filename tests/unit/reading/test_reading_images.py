@@ -10,7 +10,12 @@ from PIL import Image
 
 from anki_miner.exceptions import SetupError
 from anki_miner.models.reading import ImageRef
-from anki_miner.services.reading.images import _MAX_EDGE, ReadingImageMemberError, prepare_card_image
+from anki_miner.services.reading.images import (
+    _MAX_EDGE,
+    ReadingImageMemberError,
+    prepare_card_image,
+    validate_card_image,
+)
 from anki_miner.utils import pil_limits
 
 
@@ -202,3 +207,23 @@ def test_controlled_dest_name_ignores_entry(tmp_path: Path) -> None:
     assert not (dest / "nested").exists()
     # Nothing escaped dest_dir.
     assert list(dest.iterdir()) == [out]
+
+
+def test_validate_card_image_accepts_a_real_image(tmp_path: Path) -> None:
+    assert validate_card_image(_make_image(tmp_path / "ok.png", (32, 32))) is True
+
+
+def test_validate_card_image_rejects_a_non_image(tmp_path: Path) -> None:
+    path = tmp_path / "nope.png"
+    path.write_text("this is not a png")
+    assert validate_card_image(path) is False
+
+
+def test_validate_card_image_rejects_a_missing_file(tmp_path: Path) -> None:
+    assert validate_card_image(tmp_path / "gone.png") is False
+
+
+def test_validate_card_image_rejects_a_decompression_bomb(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    src = _make_image(tmp_path / "bomb.png", (3, 2))
+    monkeypatch.setattr(pil_limits, "MAX_IMAGE_PIXELS", 4)
+    assert validate_card_image(src) is False
