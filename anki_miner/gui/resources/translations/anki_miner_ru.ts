@@ -1311,7 +1311,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>Все серии в очереди уже завершены. Выберите те, которые хотите майнить снова, затем нажмите «Запустить выбранное».</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5989,7 +5989,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>Майнить выбранные строки в порядке списка. Завершённая строка майнится заново, с нуля.</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7851,7 +7851,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>alass не найден; для пересинхронизации используется только ffsubsync. Установите alass в настройках, чтобы получить резервный движок.</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7915,15 +7915,15 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>Сопоставленные пары:</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  нет подходящих субтитров</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>Сопоставленные пары (%1):</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7951,7 +7951,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>Выравнивание выполняется автоматически; ненадёжный результат никогда не заменяет исходный файл.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8065,7 +8065,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>Нет надёжной синхронизации для %1; оригинал остался без изменений</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>

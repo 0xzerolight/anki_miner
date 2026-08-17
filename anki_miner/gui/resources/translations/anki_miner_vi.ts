@@ -1309,7 +1309,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>Mọi loạt phim trong hàng đợi đều đã hoàn tất. Hãy chọn những loạt phim bạn muốn khai thác lại, rồi nhấn Chạy mục đã chọn.</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5963,7 +5963,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>Khai thác các hàng đã chọn theo thứ tự danh sách. Một hàng đã hoàn tất sẽ được khai thác lại từ đầu.</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7821,7 +7821,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy alass; việc chỉnh lại thời gian chỉ dùng ffsubsync. Hãy cài đặt alass trong Cài đặt để có công cụ dự phòng.</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7885,15 +7885,15 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>Cặp đã khớp:</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  không có phụ đề khớp</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>Cặp đã khớp (%1):</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7921,7 +7921,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>Việc căn chỉnh diễn ra tự động; kết quả không đáng tin cậy sẽ không bao giờ thay thế tệp gốc.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8035,7 +8035,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>Không có kết quả đồng bộ đáng tin cậy cho %1; tệp gốc được giữ nguyên</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>

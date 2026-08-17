@@ -1309,7 +1309,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>キュー内のすべてのシリーズはすでに完了しています。もう一度マイニングしたいシリーズを選択し、「選択項目を実行」をクリックしてください。</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5963,7 +5963,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>選択した行をリスト順にマイニングします。完了済みの行は、最初から再度マイニングされます。</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7821,7 +7821,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>alass が見つかりません。リタイミングには ffsubsync のみが使用されます。フォールバックエンジンを使うには、設定で alass をインストールしてください。</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7885,15 +7885,15 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>一致したペア:</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  一致する字幕なし</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>一致したペア（%1）:</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7921,7 +7921,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>位置合わせは自動で行われます。信頼できない結果によって元のファイルが上書きされることはありません。</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8035,7 +8035,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>%1 の同期結果は信頼できません；元のファイルは変更されていません</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>

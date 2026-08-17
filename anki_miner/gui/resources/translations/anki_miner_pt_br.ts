@@ -1310,7 +1310,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>Todas as séries na fila já estão concluídas. Selecione as que você quer minerar novamente e clique em Executar selecionados.</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5976,7 +5976,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>Minere as linhas selecionadas na ordem da lista. Uma linha concluída é minerada novamente do zero.</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7836,7 +7836,7 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>alass não encontrado; o reajuste de tempo usa apenas o ffsubsync. Instale o alass em Configurações para ter um mecanismo alternativo.</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7900,15 +7900,15 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>Pares correspondentes:</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  sem legenda correspondente</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>Pares correspondentes (%1):</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7936,7 +7936,7 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>O alinhamento é automático; um resultado não confiável nunca substitui o arquivo original.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8050,7 +8050,7 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>Nenhuma sincronização confiável para %1; original mantido inalterado</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>

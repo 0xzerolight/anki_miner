@@ -1310,7 +1310,7 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>Tutte le serie in coda sono già completate. Selezionare quelle da estrarre di nuovo, poi fare clic su Esegui selezionati.</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5976,7 +5976,7 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>Estrai le righe selezionate nell'ordine dell'elenco. Una riga completata viene estratta di nuovo da zero.</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7836,7 +7836,7 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>alass non trovato; la ritemporizzazione usa solo ffsubsync. Installare alass nelle Impostazioni per un motore di fallback.</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7900,15 +7900,15 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>Coppie abbinate:</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  nessun sottotitolo corrispondente</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>Coppie abbinate (%1):</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7936,7 +7936,7 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>L'allineamento è automatico; un risultato non affidabile non sostituisce mai il file originale.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8050,7 +8050,7 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>Nessuna sincronizzazione affidabile per %1; l'originale resta invariato</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>

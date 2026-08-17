@@ -1309,7 +1309,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>Setiap seri dalam antrean sudah selesai. Pilih seri yang ingin Anda mining lagi, lalu klik Jalankan yang dipilih.</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5963,7 +5963,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>Mining baris yang dipilih, sesuai urutan daftar. Baris yang sudah selesai akan di-mining ulang dari awal.</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7821,7 +7821,7 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>alass tidak ditemukan; penyesuaian waktu hanya menggunakan ffsubsync. Pasang alass di Pengaturan untuk mesin cadangan.</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7885,15 +7885,15 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>Pasangan yang cocok:</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  tidak ada subtitel yang cocok</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>Pasangan yang cocok (%1):</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7921,7 +7921,7 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>Penyelarasan berjalan otomatis; hasil yang tidak dapat dipercaya tidak akan pernah menggantikan berkas asli.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8035,7 +8035,7 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada hasil penyelarasan yang dapat dipercaya untuk %1; berkas asli dibiarkan tidak berubah</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>

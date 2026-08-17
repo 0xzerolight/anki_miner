@@ -1309,7 +1309,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation type="unfinished" />
+        <translation>队列中的所有系列均已完成挖词。选择你想要重新挖词的系列，然后点击“运行所选项”。</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -5963,7 +5963,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
-        <translation type="unfinished" />
+        <translation>按列表顺序挖词所选行。已完成的行会从头重新挖词。</translation>
     </message>
     <message>
         <source>Process Queue</source>
@@ -7821,7 +7821,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation type="unfinished" />
+        <translation>未找到 alass；重新计时仅使用 ffsubsync。请在设置中安装 alass 以启用备用引擎。</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -7885,15 +7885,15 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Matched pairs:</source>
-        <translation type="unfinished" />
+        <translation>匹配的配对：</translation>
     </message>
     <message>
         <source>%1  —  no matching subtitle</source>
-        <translation type="unfinished" />
+        <translation>%1  —  没有匹配的字幕</translation>
     </message>
     <message>
         <source>Matched pairs (%1):</source>
-        <translation type="unfinished" />
+        <translation>匹配的配对（%1）：</translation>
     </message>
     <message>
         <source>Output</source>
@@ -7921,7 +7921,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation type="unfinished" />
+        <translation>对齐是全自动的；不可信的结果绝不会替换原始文件。</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -8035,7 +8035,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>%1 没有可信的同步结果；原始文件保持不变</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
