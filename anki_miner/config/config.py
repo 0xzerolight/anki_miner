@@ -458,21 +458,13 @@ class AnkiMinerConfig:
     # subtitle retiming falls back to alass on PATH.
     alass_location: Path | None = None
 
-    # --- Subtitle retiming (alass alignment knobs) ---
-    # These live in Settings rather than on the Retime screen: the defaults are
-    # right for the overwhelming majority of runs, and they are preferences that
-    # should survive a restart, not per-run choices. `retime_split_penalty` is
-    # alass `--split-penalty` (useful range 1-20; clamped to 0-1000 below).
-    # `retime_correct_framerate` is the INVERSE of `--disable-fps-guessing`:
-    # default off, because FPS guessing stretches an already-correct subtitle
-    # and only helps when the sub came from a different-framerate release.
-    # `retime_single_offset` is `--no-split` (one global shift, never segments):
-    # default ON, diverging from alass's own default, because Japanese media
-    # generally has no ad-break cuts — splitting mostly invents spurious cut
-    # points on a merely-offset subtitle. Uncheck to allow segmented alignment.
-    retime_split_penalty: float = 7.0
-    retime_correct_framerate: bool = False
-    retime_single_offset: bool = True
+    # NOTE: the three alass alignment knobs (retime_split_penalty,
+    # retime_correct_framerate, retime_single_offset) were removed when the
+    # retime pipeline became self-tuning (engine chain + validation in
+    # services/subtitle_retimer.py). The old `retime_single_offset=True`
+    # default was the root cause of whole-season retime failures — a single
+    # global shift cannot fix cross-release segmentation differences. Stale
+    # persisted keys are ignored on load by GUIConfigManager.
 
     # ASR (Automatic Speech Recognition) settings. Used by the Local Subtitle
     # Creation feature (offline transcription via faster-whisper). Requires
@@ -670,15 +662,6 @@ class AnkiMinerConfig:
         # pass an unsupported backend name through to the transcriber.
         if self.asr_device not in {"auto", "cuda", "cpu", "vulkan"}:
             object.__setattr__(self, "asr_device", "auto")
-
-        # Clamp the split penalty into alass's accepted 0-1000 range. alass
-        # rejects anything outside it, and a hand-edited or stale config must
-        # not turn every retime into an argument error.
-        try:
-            penalty = float(self.retime_split_penalty)
-        except (TypeError, ValueError):
-            penalty = 7.0
-        object.__setattr__(self, "retime_split_penalty", min(1000.0, max(0.0, penalty)))
 
     @property
     def frequency_active(self) -> bool:

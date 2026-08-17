@@ -354,34 +354,19 @@ def test_reading_min_occurrence_default_and_replace():
 
 
 class TestRetimeOptions:
-    """The alass alignment knobs, persisted in config since they left the tab."""
+    """The alass alignment knobs were removed — the pipeline is self-tuning."""
 
-    def test_defaults(self):
-        """Penalty/framerate match alass; single offset deliberately diverges.
+    def test_alignment_knobs_are_gone(self):
+        """A config carrying the retired knob keys must not resurrect them.
 
-        Japanese media rarely has ad-break cuts, so the app defaults to
-        `--no-split` even though alass itself defaults to segmented alignment.
+        The old ``retime_single_offset=True`` default silently destroyed
+        cross-release retimes; alignment decisions now live in the retime
+        pipeline (engine chain + validation), not in config.
         """
         cfg = AnkiMinerConfig()
-        assert cfg.retime_split_penalty == 7.0
-        assert cfg.retime_correct_framerate is False
-        assert cfg.retime_single_offset is True
-
-    @pytest.mark.parametrize(
-        ("given", "expected"),
-        [(-5.0, 0.0), (0.0, 0.0), (7.0, 7.0), (1000.0, 1000.0), (5000.0, 1000.0)],
-    )
-    def test_split_penalty_clamped_to_the_alass_range(self, given, expected):
-        """alass rejects values outside 0-1000; a stale config must not break every run."""
-        from dataclasses import replace
-
-        assert replace(AnkiMinerConfig(), retime_split_penalty=given).retime_split_penalty == expected
-
-    def test_non_numeric_split_penalty_falls_back_to_the_default(self):
-        """A hand-edited config with a string must not reach the alass argv."""
-        from dataclasses import replace
-
-        assert replace(AnkiMinerConfig(), retime_split_penalty="banana").retime_split_penalty == 7.0
+        assert not hasattr(cfg, "retime_split_penalty")
+        assert not hasattr(cfg, "retime_correct_framerate")
+        assert not hasattr(cfg, "retime_single_offset")
 
 
 class TestAudioSourceEntry:

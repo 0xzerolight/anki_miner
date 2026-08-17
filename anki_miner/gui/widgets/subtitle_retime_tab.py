@@ -1,4 +1,4 @@
-"""Subtitle Retime tab — retime subtitle files to video using alass.
+"""Subtitle Retime tab — retime subtitle files against their videos.
 
 Composes four :class:`~anki_miner.gui.widgets.enhanced.FileSelector` instances
 (single-file / folder mode toggle — video + subtitle selectors per mode), a
@@ -7,14 +7,13 @@ reference row, an output-location row, an Overwrite checkbox, a Retime button, a
 progress, and a :class:`~anki_miner.gui.widgets.log_widget.LogWidget` for
 per-pair pass/fail lines.
 
-The alass alignment knobs (split penalty, framerate correction, single-offset)
-deliberately do **not** live here. Their defaults are right for nearly every
-run, they are preferences rather than per-run choices, and keeping them off this
-screen leaves one decision on it: which files. They are in
-Settings → Transcription & Alignment, reachable from the link in the Output card.
+There are no alignment knobs here or anywhere: the retime pipeline
+(services/subtitle_retimer.py) tunes itself — engine chain (ffsubsync, then
+alass), dialogue-only cleaning, and result validation with a keep-original
+guarantee. The one decision on this screen is which files.
 
 Guard contract:
-- alass not found → Retime disabled, notice visible.
+- alass not found → notice visible; retiming stays enabled (ffsubsync-only).
 - Output directory not writable → Retime aborts, error logged.
 
 Worker contract:
@@ -186,9 +185,9 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         layout.addWidget(SectionHeader(self.tr("Input")))
 
-        # alass notice (shown when alass unavailable)
+        # alass notice (shown when alass unavailable; retiming still works)
         self.engine_notice_label = QLabel(
-            self.tr("alass not found; install it or set its path in Settings to enable retiming.")
+            self.tr("alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.")
         )
         self.engine_notice_label.setObjectName("helper-text")
         self.engine_notice_label.setWordWrap(True)
@@ -325,19 +324,12 @@ class SubtitleRetimeTab(_ToolTabBase):
         )
         layout.addWidget(self.overwrite_checkbox)
 
-        # Pointer to the alignment knobs, which live in Settings (see the module
-        # docstring). Without this the controls that used to be here would just
-        # look deleted.
-        options_row = QHBoxLayout()
-        options_row.setSpacing(SPACING.xs)
-        options_hint = QLabel(self.tr("Split penalty, frame-rate correction and single-offset mode:"))
-        options_hint.setObjectName("helper-text")
-        options_hint.setWordWrap(True)
-        options_row.addWidget(options_hint, 1)
-        self.alignment_settings_button = ModernButton(self.tr("Alignment Settings"), variant="secondary")
-        self.alignment_settings_button.clicked.connect(lambda: reveal_settings(self, "subtitles"))
-        options_row.addWidget(self.alignment_settings_button)
-        layout.addLayout(options_row)
+        # Alignment tunes itself (engine chain + result validation); a result
+        # that cannot be trusted never overwrites the original subtitle.
+        auto_hint = QLabel(self.tr("Alignment is automatic; an untrustworthy result never replaces the original file."))
+        auto_hint.setObjectName("helper-text")
+        auto_hint.setWordWrap(True)
+        layout.addWidget(auto_hint)
 
         group.setLayout(layout)
         return group
@@ -362,16 +354,20 @@ class SubtitleRetimeTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def _refresh_engine_state(self) -> None:
-        """Probe alass availability off-thread, then update the Retime guard."""
+        """Probe alass availability off-thread, then update the notice.
+
+        alass is optional now: ffsubsync ships with the app as the primary
+        engine, so a missing alass shortens the fallback chain instead of
+        disabling retiming. The probe only drives the informational notice.
+        """
         config = self.config
-        self.retime_button.setEnabled(False)
+        self.retime_button.setEnabled(True)
         if self._suppress_optional_startup:
             return
 
         def _apply(result: object) -> None:
             self._alass_is_available = bool(result)
             self.engine_notice_label.setVisible(not self._alass_is_available)
-            self.retime_button.setEnabled(self._alass_is_available)
 
         def _on_error(message: str) -> None:
             logger.warning("alass availability probe failed: %s", message)
@@ -563,10 +559,6 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _on_retime(self) -> None:
         """Validate then start the SubtitleRetimeWorker."""
-        if not self._alass_available():
-            # Should not happen (button disabled), but guard anyway.
-            return
-
         # Reentrancy guard: a prior run's QThread may still be tearing down when
         # queue_finished re-enabled the button. Never reassign self.worker_thread
         # over a live thread.
