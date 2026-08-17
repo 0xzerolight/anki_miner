@@ -6498,8 +6498,8 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Teks yang Ditempel</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Tempelkan teks bahasa Jepang dan lakukan mining menjadi kartu Anki — tanpa tangkapan layar atau audio.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Tempel teks Jepang lalu mining jadi kartu Anki — tanpa ekstraksi audio.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6508,6 +6508,22 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Jatuhkan atau tempel teks di sini; berkas tidak didukung.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Gambar Kartu:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Gambar</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Bidang ini menerima file gambar.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Opsional. Gambar ini masuk ke bidang Picture pada setiap kartu dari teks ini.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6528,6 +6544,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Paste some text first.</source>
         <translation>Tempel teks terlebih dahulu.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Gambar itu tidak dapat dibaca. Pilih gambar lain, atau kosongkan bidang untuk mining tanpa gambar.</translation>
     </message>
     <message>
         <source>Starting…</source>

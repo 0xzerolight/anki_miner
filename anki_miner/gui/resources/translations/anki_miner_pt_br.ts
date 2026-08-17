@@ -6511,8 +6511,8 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Texto Colado</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Cole texto em japonês e minere-o em cartões do Anki — sem capturas de tela nem áudio.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Cole texto em japonês e minere-o em cartões do Anki — nenhum áudio é extraído.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6521,6 +6521,22 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Solte ou cole o texto aqui; arquivos não são compatíveis.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Imagem do Cartão:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Imagens</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Este campo aceita um arquivo de imagem.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Opcional. Esta imagem vai no campo Picture de todos os cartões deste texto.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6541,6 +6557,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Paste some text first.</source>
         <translation>Cole algum texto primeiro.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Essa imagem não pode ser lida. Escolha outra, ou limpe o campo para minerar sem uma.</translation>
     </message>
     <message>
         <source>Starting…</source>

@@ -6498,8 +6498,8 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Văn bản đã dán</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Dán văn bản tiếng Nhật và khai thác thành thẻ Anki — không có ảnh chụp màn hình hay âm thanh.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Dán văn bản tiếng Nhật và khai thác nó thành thẻ Anki — không trích xuất âm thanh.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6508,6 +6508,22 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Thả hoặc dán văn bản vào đây; tệp không được hỗ trợ.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Ảnh thẻ:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Hình ảnh</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Trường này nhận tệp hình ảnh.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Tùy chọn. Hình ảnh này sẽ được đưa vào trường Picture của mọi thẻ từ văn bản này.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6528,6 +6544,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Paste some text first.</source>
         <translation>Hãy dán văn bản trước.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Không thể đọc hình ảnh đó. Chọn ảnh khác, hoặc xóa trường để khai thác mà không cần ảnh.</translation>
     </message>
     <message>
         <source>Starting…</source>

@@ -6511,8 +6511,8 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Testo incollato</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Incolla testo giapponese ed estrailo in carte Anki — senza schermate né audio.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Incolla testo giapponese e minalo in carte Anki — nessun audio viene estratto.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6521,6 +6521,22 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Rilasciare o incollare il testo qui; i file non sono supportati.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Immagine della carta:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Immagini</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Questo campo richiede un file immagine.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Facoltativo. Questa immagine va nel campo Picture di ogni carta generata da questo testo.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6541,6 +6557,10 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
     <message>
         <source>Paste some text first.</source>
         <translation>Incolla prima un testo.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Impossibile leggere quell'immagine. Scegline un'altra o svuota il campo per minare senza.</translation>
     </message>
     <message>
         <source>Starting…</source>

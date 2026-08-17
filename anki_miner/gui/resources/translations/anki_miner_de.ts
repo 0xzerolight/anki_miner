@@ -6511,8 +6511,8 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Eingefügter Text</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Fügen Sie japanischen Text ein und sammeln Sie daraus Anki-Karten — ohne Screenshots oder Audio.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Fügen Sie japanischen Text ein und sammeln Sie ihn zu Anki-Karten — es wird kein Audio extrahiert.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6521,6 +6521,22 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Text hier ablegen oder einfügen; Dateien werden nicht unterstützt.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Kartenbild:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Bilder</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Dieses Feld akzeptiert eine Bilddatei.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Optional. Dieses Bild wird in das Picture-Feld jeder aus diesem Text erstellten Karte eingefügt.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6541,6 +6557,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     <message>
         <source>Paste some text first.</source>
         <translation>Fügen Sie zuerst Text ein.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Dieses Bild kann nicht gelesen werden. Wählen Sie ein anderes aus, oder leeren Sie das Feld, um ohne Bild zu sammeln.</translation>
     </message>
     <message>
         <source>Starting…</source>

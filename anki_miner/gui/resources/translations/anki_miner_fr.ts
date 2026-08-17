@@ -6511,8 +6511,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Texte collé</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>Collez du texte japonais et extrayez-le en cartes Anki — sans captures d'écran ni audio.</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Collez du texte japonais et extrayez-le en cartes Anki — aucun audio n'est extrait.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6521,6 +6521,22 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>Déposez ou collez du texte ici ; les fichiers ne sont pas pris en charge.</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>Image de la carte :</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>Images</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>Ce champ accepte un fichier image.</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>Facultatif. Cette image est placée dans le champ Picture de chaque carte issue de ce texte.</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6541,6 +6557,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Paste some text first.</source>
         <translation>Veuillez d'abord coller du texte.</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>Impossible de lire cette image. Choisissez-en une autre, ou videz le champ pour extraire sans image.</translation>
     </message>
     <message>
         <source>Starting…</source>

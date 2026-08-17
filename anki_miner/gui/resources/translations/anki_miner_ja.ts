@@ -6498,8 +6498,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>貼り付けテキスト</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no screenshots or audio.</source>
-        <translation>日本語テキストを貼り付けて Anki カードにマイニングします（スクリーンショット・音声なし）。</translation>
+        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>日本語のテキストを貼り付けてAnkiカードにマイニングします — 音声は抽出されません。</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -6508,6 +6508,22 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Drop or paste text here; files are not supported.</source>
         <translation>ここにテキストをドロップまたは貼り付けてください。ファイルには対応していません。</translation>
+    </message>
+    <message>
+        <source>Card Image:</source>
+        <translation>カード画像:</translation>
+    </message>
+    <message>
+        <source>Images</source>
+        <translation>画像</translation>
+    </message>
+    <message>
+        <source>This field takes an image file.</source>
+        <translation>このフィールドには画像ファイルを指定します。</translation>
+    </message>
+    <message>
+        <source>Optional. This image goes in the Picture field of every card from this text.</source>
+        <translation>任意項目。この画像はこのテキストから作られる全カードのPictureフィールドに挿入されます。</translation>
     </message>
     <message>
         <source>Mine</source>
@@ -6528,6 +6544,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Paste some text first.</source>
         <translation>先にテキストを貼り付けてください。</translation>
+    </message>
+    <message>
+        <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
+        <translation>この画像を読み込めません。別の画像を選択するか、フィールドを空にして画像なしでマイニングしてください。</translation>
     </message>
     <message>
         <source>Starting…</source>
