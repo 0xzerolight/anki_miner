@@ -200,6 +200,13 @@ class FilePairMatcher:
         except OSError:
             return []
 
+        # Deterministic video order: iterdir() order is filesystem-dependent, and
+        # when episode extraction collapses several videos onto one number the
+        # match outcome would otherwise depend on directory enumeration order
+        # while the subtitle side is fully sorted — a shuffle that silently pairs
+        # episode N's subtitle with episode M's video.
+        videos.sort(key=lambda video: (_nfc(video.name), video.name))
+
         subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
         subtitles.sort(
             key=lambda subtitle: (
