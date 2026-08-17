@@ -501,6 +501,63 @@ def test_tab_has_no_alignment_settings_link(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# Folder-mode pair preview
+# ---------------------------------------------------------------------------
+
+
+def _folder_fixture(tmp_path):
+    video_dir = tmp_path / "videos"
+    video_dir.mkdir()
+    sub_dir = tmp_path / "subs"
+    sub_dir.mkdir()
+    (video_dir / "Show - 01.mkv").touch()
+    (video_dir / "Show - 02.mkv").touch()
+    (video_dir / "Show - 03.mkv").touch()
+    (sub_dir / "jp 01.srt").touch()
+    (sub_dir / "jp 02.srt").touch()
+    return video_dir, sub_dir
+
+
+def test_pair_preview_lists_matches_and_unmatched(qtbot, tmp_path):
+    """Folder mode shows exactly which subtitle each video will get, plus
+    unmatched videos — mispairing must be visible before the run."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+
+    assert not tab.pair_preview.isHidden()
+    items = [tab.pair_preview.item(i).text() for i in range(tab.pair_preview.count())]
+    assert any("Show - 01.mkv" in t and "jp 01.srt" in t for t in items)
+    assert any("Show - 02.mkv" in t and "jp 02.srt" in t for t in items)
+    assert any("Show - 03.mkv" in t and "no matching subtitle" in t for t in items)
+    assert "2" in tab.pair_preview_label.text()
+
+
+def test_pair_preview_hidden_in_single_file_mode(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+    assert not tab.pair_preview.isHidden()
+
+    tab._on_file_mode()
+    assert tab.pair_preview.isHidden()
+    assert tab.pair_preview_label.isHidden()
+
+
+def test_pair_preview_hidden_until_both_folders_chosen(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, _sub_dir = _folder_fixture(tmp_path)
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    assert tab.pair_preview.isHidden()
+
+
+# ---------------------------------------------------------------------------
 # Control explanations / styling
 # ---------------------------------------------------------------------------
 

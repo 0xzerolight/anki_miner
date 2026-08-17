@@ -30,11 +30,13 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QListWidget,
     QMessageBox,
     QScrollArea,
     QVBoxLayout,
@@ -285,8 +287,61 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.subtitle_folder_selector.hide()
         layout.addWidget(self.subtitle_folder_selector)
 
+        # Pair preview (folder mode): shows exactly which subtitle each video
+        # will be paired with BEFORE the run, so a mispairing (the silent
+        # destroyer of whole-season retimes) is visible up front.
+        self.pair_preview_label = QLabel(self.tr("Matched pairs:"))
+        self.pair_preview_label.hide()
+        layout.addWidget(self.pair_preview_label)
+        self.pair_preview = QListWidget()
+        self.pair_preview.setObjectName("pair-preview")
+        self.pair_preview.setSelectionMode(QListWidget.SelectionMode.NoSelection)
+        self.pair_preview.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.pair_preview.setMaximumHeight(180)
+        self.pair_preview.hide()
+        layout.addWidget(self.pair_preview)
+        self.video_folder_selector.path_changed.connect(lambda _p: self._refresh_pair_preview())
+        self.subtitle_folder_selector.path_changed.connect(lambda _p: self._refresh_pair_preview())
+
         group.setLayout(layout)
         return group
+
+    def _refresh_pair_preview(self) -> None:
+        """Recompute and show the folder-mode video↔subtitle pairing preview."""
+        if self.video_folder_selector.isHidden():
+            self.pair_preview.hide()
+            self.pair_preview_label.hide()
+            return
+        video_folder_str = self.video_folder_selector.path_or_none()
+        sub_folder_str = self.subtitle_folder_selector.path_or_none()
+        if video_folder_str is None or sub_folder_str is None:
+            self.pair_preview.hide()
+            self.pair_preview_label.hide()
+            return
+
+        video_folder = Path(video_folder_str)
+        sub_folder = Path(sub_folder_str)
+        pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)
+
+        self.pair_preview.clear()
+        for pair in pairs:
+            self.pair_preview.addItem(f"{pair.video.name}  ←  {pair.subtitle.name}")
+        try:
+            unmatched = sorted(
+                f.name
+                for f in video_folder.iterdir()
+                if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+            )
+        except OSError:
+            unmatched = []
+        matched_names = {pair.video.name for pair in pairs}
+        for name in unmatched:
+            if name not in matched_names:
+                self.pair_preview.addItem(tr_format(self.tr("%1  —  no matching subtitle"), name))
+
+        self.pair_preview_label.setText(tr_format(self.tr("Matched pairs (%1):"), str(len(pairs))))
+        self.pair_preview_label.show()
+        self.pair_preview.show()
 
     def _create_output_section(self) -> QFrame:
         group = QFrame()
@@ -405,6 +460,8 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.track_row_widget.show()
         self.video_folder_selector.hide()
         self.subtitle_folder_selector.hide()
+        self.pair_preview.hide()
+        self.pair_preview_label.hide()
 
     def set_single_inputs(self, video_path: Path, subtitle_path: Path) -> None:
         """Prefill single-file mode with an exact pair (D35 hand-off).
@@ -433,6 +490,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.track_row_widget.hide()
         self.video_folder_selector.show()
         self.subtitle_folder_selector.show()
+        self._refresh_pair_preview()
 
     # ------------------------------------------------------------------
     # Reference selection (single-file mode)
