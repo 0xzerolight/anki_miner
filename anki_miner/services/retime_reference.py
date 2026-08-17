@@ -42,15 +42,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import pysubs2
-
+from anki_miner.services.subtitle_cleaner import clean_reference as _clean_reference
 from anki_miner.utils.audio_track_detector import (
     JAPANESE_LANGUAGE_CODES,
     SubtitleStream,
     list_subtitle_streams,
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
-from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 
 logger = logging.getLogger(__name__)
 
@@ -73,20 +71,6 @@ _MIN_REFERENCE_CUES = 30
 
 #: Stream titles that mark a track as something other than full dialogue.
 _NON_DIALOGUE_TITLE_RE = re.compile(r"sign|song|karaoke|s&s|forced|commentary", re.IGNORECASE)
-
-#: ASS style names that mark an event as something other than dialogue. The
-#: alternation is bounded by non-word characters on both sides so a style named
-#: ``Subtitle`` does not match ``title`` and ``Fixed`` does not match ``ed``.
-_NON_DIALOGUE_STYLE_RE = re.compile(
-    r"(?:^|[\W_])"
-    r"(?:signs?|songs?|karaoke|kara|op|ed|opening|ending|credits?|titles?|captions?|notes?|typeset\w*)"
-    r"(?:$|[\W_])",
-    re.IGNORECASE,
-)
-
-#: ASS drawing-mode override. An event carrying one paints a vector shape, not
-#: text, and its timing has nothing to do with speech.
-_ASS_DRAWING_RE = re.compile(r"\\p[1-9]")
 
 
 @dataclass(frozen=True)
@@ -272,45 +256,6 @@ def _extract_stream(
     except Exception:  # noqa: BLE001 — extraction is best-effort
         logger.warning("retime reference: subtitle extraction raised for s:%d", stream.sub_index, exc_info=True)
         return None
-
-
-def _clean_reference(src: Path, dest: Path) -> int:
-    """Write the dialogue-only cues of *src* to *dest* as UTF-8 SRT.
-
-    Returns the number of cues written. Drops ASS comments, drawing events,
-    non-dialogue styles, zero/negative-duration cues, and duplicate spans.
-    Only cue *timings* matter to alass, but the text is carried through so the
-    temp file stays readable when a run needs diagnosing.
-    """
-    try:
-        subs = pysubs2.load(str(src))
-    except UnicodeDecodeError as exc:
-        subs = load_with_fallback_encoding(src, exc)
-
-    kept: list[pysubs2.SSAEvent] = []
-    seen: set[tuple[int, int]] = set()
-    for event in subs.events:
-        if getattr(event, "is_comment", None) is True:
-            continue
-        if event.end <= event.start:
-            continue
-        if _NON_DIALOGUE_STYLE_RE.search(event.style or ""):
-            continue
-        if _ASS_DRAWING_RE.search(event.text or ""):
-            continue
-        span = (event.start, event.end)
-        if span in seen:
-            continue
-        seen.add(span)
-        # SRT has no concept of an empty cue; substitute a marker so the writer
-        # cannot merge or drop a span whose text was pure override tags.
-        text = event.plaintext.strip() or "-"
-        kept.append(pysubs2.SSAEvent(start=event.start, end=event.end, text=text))
-
-    out = pysubs2.SSAFile()
-    out.events = kept
-    out.save(str(dest), encoding="utf-8", format_="srt")
-    return len(kept)
 
 
 def _stream_label(stream: SubtitleStream) -> str:
