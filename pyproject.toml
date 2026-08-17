@@ -252,6 +252,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+# ui_atlas scripts import sibling modules script-style (`import probe`), whose
+# first-party/third-party classification flips with unrelated untracked
+# directories at the repo root — I001 there is environment-dependent noise.
+"scripts/ui_atlas/*.py" = ["I001"]
 
 [tool.vulture]
 # Deadcode scan config. Run bare `vulture` to pick these up.
