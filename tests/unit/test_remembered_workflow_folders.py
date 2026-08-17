@@ -32,6 +32,7 @@ _INPUT_KEYS = frozenset(
         "reading.manga.inputs",
         "reading.novels.inputs",
         "reading.subtitles.inputs",
+        "reading.text.inputs",
         "tools.generate.inputs",
         "tools.retime.inputs",
         "tools.condense.inputs",
