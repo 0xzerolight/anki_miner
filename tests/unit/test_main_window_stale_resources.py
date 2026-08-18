@@ -53,6 +53,32 @@ def _patch_stale(monkeypatch, *, dicts=(), freqs=(), pitches=()):
     monkeypatch.setattr(pitch_reg, "stale_enabled_pitch_sources", lambda config: list(pitches))
 
 
+def _answer_prompt(monkeypatch, *, accept: bool) -> MagicMock:
+    """Answer the stale-resource prompt without running a real Qt modal.
+
+    One seam for every test in the module: the prompt's dialog shape is an
+    implementation detail that has changed once already.
+    """
+    from PyQt6.QtWidgets import QMessageBox
+
+    shown = MagicMock(name="prompt")
+    answer = QMessageBox.StandardButton.Yes if accept else QMessageBox.StandardButton.No
+
+    def _question(*_args, **_kwargs):
+        shown()
+        return answer
+
+    monkeypatch.setattr(QMessageBox, "question", _question)
+    return shown
+
+
+def _stub_prewarm(monkeypatch, window) -> list[str]:
+    """Record prewarm starts instead of spinning a real PrewarmWorker."""
+    started: list[str] = []
+    monkeypatch.setattr(window, "_start_prewarm", lambda: started.append("prewarm"))
+    return started
+
+
 def _stub_settings_trigger(qtbot, window) -> MagicMock:
     """Install a minimal fake Settings tab so ``_settings_tab_index`` resolves.
 
@@ -204,3 +230,104 @@ def test_scan_dispatched_off_thread(main_window, monkeypatch):
     }
     # The continuation is the GUI-thread prompt handler.
     assert captured["on_done"] == main_window._on_stale_resources_scanned
+
+
+# ---------------------------------------------------------------------------
+# Prewarm ordering: prewarm holds the indexes a repair has to rebuild, and
+# release_dictionary_resources refuses outright while it runs — so starting it
+# before the prompt is answered made every family's Reimport All fail.
+# ---------------------------------------------------------------------------
+
+
+def test_boot_does_not_start_prewarm_before_the_prompt(main_window, monkeypatch):
+    from anki_miner.gui import main_window as mw_module
+
+    scheduled: list = []
+    monkeypatch.setattr(mw_module.QTimer, "singleShot", staticmethod(lambda _ms, fn: scheduled.append(fn)))
+    monkeypatch.setattr(main_window, "_start_prewarm", MagicMock(name="_start_prewarm"))
+
+    main_window._post_setup_boot_started = False
+    main_window._start_post_setup_boot_once()
+
+    assert main_window._start_prewarm not in scheduled
+    main_window._start_prewarm.assert_not_called()
+
+
+def test_prewarm_starts_when_nothing_is_stale(main_window, monkeypatch):
+    started = _stub_prewarm(monkeypatch, main_window)
+
+    main_window._stale_resource_prompt_handled = False
+    main_window._on_stale_resources_scanned({"dictionary": [], "frequency": [], "pitch": []})
+
+    assert started == ["prewarm"]
+
+
+def test_prewarm_starts_after_the_user_declines(main_window, monkeypatch, qtbot):
+    _answer_prompt(monkeypatch, accept=False)
+    _stub_settings_trigger(qtbot, main_window)
+    started = _stub_prewarm(monkeypatch, main_window)
+
+    main_window._stale_resource_prompt_handled = False
+    main_window._on_stale_resources_scanned({"dictionary": [("old-dict", "Old Dict")]})
+
+    assert started == ["prewarm"]
+
+
+def test_prewarm_waits_for_the_repair_chain_to_drain(main_window, monkeypatch, qtbot):
+    _answer_prompt(monkeypatch, accept=True)
+    trigger = _stub_settings_trigger(qtbot, main_window)
+    started = _stub_prewarm(monkeypatch, main_window)
+
+    completions: list = []
+    trigger.side_effect = lambda only_ids, *, kind, on_complete=None: completions.append((kind, on_complete))
+
+    main_window._stale_resource_prompt_handled = False
+    main_window._on_stale_resources_scanned({"dictionary": [("d", "Dict")], "frequency": [("f", "Freq")]})
+
+    assert started == []  # first batch in flight
+    completions[-1][1]()
+    assert started == []  # second batch in flight
+    completions[-1][1]()
+    assert started == ["prewarm"]
+
+
+def test_prewarm_starts_when_there_is_no_settings_tab(main_window, monkeypatch):
+    _answer_prompt(monkeypatch, accept=True)
+    started = _stub_prewarm(monkeypatch, main_window)
+
+    main_window._stale_resource_prompt_handled = False
+    main_window._on_stale_resources_scanned({"dictionary": [("old-dict", "Old Dict")]})
+
+    assert started == ["prewarm"]
+
+
+def test_prewarm_starts_when_the_scan_itself_fails(main_window, monkeypatch):
+    started = _stub_prewarm(monkeypatch, main_window)
+
+    main_window._on_stale_scan_failed("freqs root unreadable")
+
+    assert started == ["prewarm"]
+
+
+def test_prewarm_starts_when_the_prompt_was_already_handled(main_window, monkeypatch):
+    started = _stub_prewarm(monkeypatch, main_window)
+
+    main_window._stale_resource_prompt_handled = True
+    main_window._maybe_prompt_stale_resources()
+    main_window._on_stale_resources_scanned({"dictionary": [("old-dict", "Old Dict")]})
+
+    assert started == ["prewarm", "prewarm"]
+
+
+def test_start_prewarm_is_idempotent(main_window, monkeypatch):
+    import anki_miner.gui.workers.prewarm_worker as prewarm_module
+
+    made: list = []
+    monkeypatch.setattr(prewarm_module, "PrewarmWorker", lambda config: made.append(config) or MagicMock())
+    monkeypatch.setattr(main_window.background_tasks, "set_prewarm", lambda worker: None)
+
+    main_window._prewarm_started = False
+    main_window._start_prewarm()
+    main_window._start_prewarm()
+
+    assert len(made) == 1

@@ -138,6 +138,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Set at close so a wizard exiting during shutdown starts nothing.
         self._post_setup_boot_started = False
         self._stale_resource_prompt_handled = False
+        # Prewarm is started by the stale-resource scan, from more than one
+        # terminal arm, so it needs its own one-shot guard.
+        self._prewarm_started = False
         # Set the first time closeEvent persists geometry + route. A deferred
         # close runs closeEvent again after the window has been hidden, and the
         # hidden window's geometry is not what the user left behind.
@@ -302,8 +305,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self._run_optional_boot_step("update check", self._check_for_updates)
         self._run_optional_boot_step("JMdict migration", self._maybe_migrate_jmdict)
         self._run_optional_boot_step("yt-dlp update", self._maybe_start_ytdlp_update)
+        # Prewarm is started by the stale-resource scan's continuation, not
+        # here: it holds the very indexes a repair has to rebuild, and
+        # release_dictionary_resources refuses outright while it runs — so
+        # starting it alongside the scan made accepting the prompt fail on
+        # every family, which is the whole "I had to reimport tab by tab".
         QTimer.singleShot(0, self._maybe_prompt_stale_resources)
-        QTimer.singleShot(0, self._start_prewarm)
 
     def _start_prewarm(self) -> None:
         """Warm the shared MeCab tagger and the dictionary chain off-thread.
@@ -314,14 +321,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         cold path. ``BackgroundTaskController`` holds the reference so the
         QThread is not collected mid-run and shutdown can join it.
 
-        Scheduled on the next event-loop turn, so it never blocks the first
-        paint, and from the one-shot boot step, so it never runs *during* the
-        first-run wizard: a zero timer fires inside a modal dialog's nested
-        event loop, and this reads the dictionary slot that wizard replaces.
+        Started from the stale-resource scan's continuation, so it never blocks
+        the first paint, never runs *during* the first-run wizard (a zero timer
+        fires inside a modal dialog's nested event loop, and this reads the
+        dictionary slot that wizard replaces), and never holds the indexes a
+        pending schema repair has to rebuild. That continuation has several
+        terminal arms, hence the one-shot guard.
         """
-        from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
+        if self._prewarm_started:
+            return
+        self._prewarm_started = True
+        from anki_miner.gui.workers import prewarm_worker as prewarm_module
 
-        worker = PrewarmWorker(self.get_config())
+        worker = prewarm_module.PrewarmWorker(self.get_config())
         self.background_tasks.set_prewarm(worker)
         worker.start()
 
@@ -1433,9 +1445,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         on a worker thread via ``run_off_thread`` rather than blocking the GUI
         during startup. The prompt is shown from ``_on_stale_resources_scanned``
         on the GUI thread. The ``QTimer.singleShot`` startup deferral is
-        unchanged.
+        unchanged. Prewarm starts from this scan's continuation rather than
+        beside it, so every early return here has to start it instead.
         """
         if self._stale_resource_prompt_handled:
+            self._start_prewarm()
             return
         from anki_miner.services.dictionary.registry import stale_enabled_dicts
         from anki_miner.services.frequency.registry import stale_enabled_freq_sources
@@ -1454,7 +1468,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 "pitch": [(m.source_id, m.source_name) for m in stale_enabled_pitch_sources(config)],
             }
 
-        run_off_thread(self, _scan, self._on_stale_resources_scanned)
+        run_off_thread(self, _scan, self._on_stale_resources_scanned, self._on_stale_scan_failed)
+
+    def _on_stale_scan_failed(self, message: str) -> None:
+        """A scan that could not run reports nothing — and must not strand prewarm."""
+        logger.warning("Stale-resource scan failed: %s", message)
+        self._start_prewarm()
 
     def _on_stale_resources_scanned(self, result: object) -> None:
         """GUI-thread continuation: offer one-click repair for every stale family.
@@ -1471,12 +1490,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         configured contributes nothing, which is what keeps frequency and pitch
         optional. "Later" leaves mining gated by the per-run pre-checks; the
         prompt re-offers next launch.
+
+        Also the gate prewarm waits behind: every arm that ends without a repair
+        in flight starts it, and the repair chain starts it once it drains.
         """
         if self._stale_resource_prompt_handled:
+            self._start_prewarm()
             return
         stale = result if isinstance(result, dict) else {}
         families = [(kind, entries) for kind, entries in stale.items() if entries]
         if not families:
+            self._start_prewarm()
             return
         # Set before exec() so a re-entrant 0ms fire inside the modal loop bails.
         self._stale_resource_prompt_handled = True
@@ -1505,14 +1529,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             QMessageBox.StandardButton.Yes,
         )
         if reply != QMessageBox.StandardButton.Yes:
+            self._start_prewarm()
             return
         idx = self._settings_tab_index()
         if idx < 0:
+            self._start_prewarm()
             return
         self.tabs.setCurrentIndex(idx)
         settings_widget = self.tabs.widget(idx)
         trigger = getattr(settings_widget, "trigger_reimport_all", None)
         if not callable(trigger):
+            self._start_prewarm()
             return
 
         # One family at a time, each starting when the previous one's batch
@@ -1522,6 +1549,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         def _run_next() -> None:
             if not pending:
+                # Every family is done; the rebuilt chain is the one worth
+                # warming, and nothing is holding the indexes any more.
+                self._start_prewarm()
                 return
             kind, entries = pending.pop(0)
             trigger(frozenset(i for i, _name in entries), kind=kind, on_complete=_run_next)
