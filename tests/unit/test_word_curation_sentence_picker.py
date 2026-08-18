@@ -208,6 +208,35 @@ class TestPickerPaneLabel:
         assert dlg.sentence_pane_label.text() == "Sentences"
 
 
+class TestPickerViewportStability:
+    """Wrapped rows re-flow when the scrollbar toggles the viewport width.
+
+    Candidate counts swing per focused word (the list is unbounded), so a
+    scrollbar that comes and goes re-wraps every sentence left/right — the
+    stutter users see while arrow-keying through the table. The gutter is
+    reserved permanently: viewport width must not depend on candidate count.
+    """
+
+    def test_viewport_width_constant_across_candidate_counts(self, qtbot):
+        many = _leaf("食べる", "文 0", 0.0)
+        many.sentence_candidates = [_leaf("食べる", f"文 {i}", float(i)) for i in range(40)]
+        dlg = WordCurationDialog([many, _word_with_candidates()])
+        qtbot.addWidget(dlg)
+        dlg.resize(780, 600)  # offscreen screen is 800x800; stay inside it
+        dlg.show()
+        QApplication.processEvents()
+
+        _select_and_fire(dlg, 0)  # 40 candidates: scrollbar needed
+        QApplication.processEvents()
+        width_many = dlg.sentence_list.viewport().width()
+
+        _select_and_fire(dlg, 1)  # 3 short candidates: content fits the pane
+        QApplication.processEvents()
+        width_few = dlg.sentence_list.viewport().width()
+
+        assert width_few == width_many
+
+
 class TestPickerSelection:
     def test_pick_updates_chosen_and_cell(self, qtbot, mixed_words):
         dlg = WordCurationDialog(mixed_words)
