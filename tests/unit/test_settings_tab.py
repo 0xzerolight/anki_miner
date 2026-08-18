@@ -231,6 +231,20 @@ class TestSettingsTabRoundTrip:
         assert len(received) == 1
         assert received[0].auto_update_ytdlp is False
 
+    def test_save_emits_ytdlp_prerelease(self, tab, monkeypatch):
+        from PyQt6.QtWidgets import QMessageBox
+
+        monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: None)
+
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.youtube_panel.set_ytdlp_prerelease(True)
+        tab.commit_settings()
+
+        assert len(received) == 1
+        assert received[0].ytdlp_prerelease is True
+
     def test_save_emits_ytdlp_location(self, tab, monkeypatch, tmp_path):
         from PyQt6.QtWidgets import QMessageBox
 

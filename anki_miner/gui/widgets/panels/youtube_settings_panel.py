@@ -105,6 +105,21 @@ class YouTubeSettingsPanel(FormPanel):
             ),
         )
 
+        # Nightly channel for the updater above. YouTube breakage is fixed in
+        # yt-dlp nightlies days before a stable release ships (e.g. the 2026-08
+        # android_vr kill, yt-dlp#17456), so this is the "keep working during the
+        # gap" switch.
+        self.prerelease_checkbox = QCheckBox(self.tr("Use pre-release yt-dlp builds"))
+        self.add_field(
+            self.tr("Pre-release"),
+            self.prerelease_checkbox,
+            helper=self.tr(
+                "Updates install yt-dlp's nightly channel, which fixes YouTube "
+                "breakage days before a stable release. Turning this off keeps "
+                "the installed build until a newer stable version replaces it."
+            ),
+        )
+
         # Explicit yt-dlp override, also previously UI-less. The escape hatch when the
         # app-managed copy takes precedence and the user wants their own binary instead.
         self.ytdlp_location_selector = FileSelector(
@@ -216,6 +231,14 @@ class YouTubeSettingsPanel(FormPanel):
         """Return the auto-update checkbox state."""
         return self.auto_update_checkbox.isChecked()
 
+    def set_ytdlp_prerelease(self, value: bool) -> None:
+        """Set the pre-release (nightly channel) checkbox."""
+        self.prerelease_checkbox.setChecked(bool(value))
+
+    def get_ytdlp_prerelease(self) -> bool:
+        """Return the pre-release checkbox state."""
+        return self.prerelease_checkbox.isChecked()
+
     def set_ytdlp_location(self, value: object) -> None:
         """Populate the yt-dlp override field from a config value (Path/str/None)."""
         self.ytdlp_location_selector.set_path(str(value) if value else "")
@@ -242,6 +265,7 @@ class YouTubeSettingsPanel(FormPanel):
         self.set_max_duration_seconds(config.youtube_max_duration_s)
         self.set_playlist_max(config.youtube_playlist_max)
         self.set_auto_update_ytdlp(config.auto_update_ytdlp)
+        self.set_ytdlp_prerelease(config.ytdlp_prerelease)
         self.set_ytdlp_location(config.ytdlp_location)
 
     def contribute(self, config):
@@ -263,5 +287,6 @@ class YouTubeSettingsPanel(FormPanel):
             youtube_max_duration_s=self.get_max_duration_seconds(),
             youtube_playlist_max=self.get_playlist_max(),
             auto_update_ytdlp=self.get_auto_update_ytdlp(),
+            ytdlp_prerelease=self.get_ytdlp_prerelease(),
             ytdlp_location=Path(ytdlp_location_str) if ytdlp_location_str else None,
         )
