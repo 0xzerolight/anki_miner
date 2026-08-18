@@ -904,6 +904,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Same surface as the word table beside it (D42). Candidates stay in
         # occurrence order, so sorting is not enabled; copy lifts the sentence.
         configure_data_view(self.sentence_list)
+        # The gutter stays reserved: candidate counts swing per focused word, and
+        # a scrollbar that comes and goes changes the viewport width, re-wrapping
+        # every word-wrapped row left/right on each focus change.
+        self.sentence_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         install_copy_rows(self.sentence_list)
         self.sentence_list.setToolTip(
             self.tr("Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.")
