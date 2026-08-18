@@ -1070,8 +1070,10 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
         dict_id=None,
         before_promote=None,
     ):
+        # cur/total during insert are files_done/total_term_files (a bank
+        # count), not entries — the real entry count is only in the message.
         progress(0, 0, "Validating archive")
-        progress(184_200, 0, "Inserted 184,200 entries")
+        progress(4, 4, "Inserted 184,200 entries")
         progress(0, 0, "Finalizing import")  # A message with no count is not a regression.
         return _FakeYomitanResult()
 
@@ -1086,8 +1088,15 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
     phases = [e.phase for e in events]
     assert resource_download_worker.ResourcePhase.INDEXING in phases
     indexed = [e for e in events if e.phase is resource_download_worker.ResourcePhase.INDEXING]
-    assert [e.entries for e in indexed] == [184_200, 184_200]
-    # Once entries are landing, nothing walks the phase back to installing.
+    # The reporter has no way to tell a files-done reading from an entries
+    # reading (both are positive numerics on the same channel) — during the
+    # dict importer's insert phase it now surfaces the bank count, not a real
+    # entry count. The importer's own trailing "Done" call (still a real
+    # entries figure, unchanged by this contract) is what an exact live count
+    # would need; this fake doesn't emit it, so the reporter latches on the
+    # bank-count reading it does see.
+    assert [e.entries for e in indexed] == [4, 4]
+    # Once a count is landing, nothing walks the phase back to installing.
     assert phases.index(resource_download_worker.ResourcePhase.INDEXING) == len(phases) - 2
 
 
