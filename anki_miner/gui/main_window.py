@@ -1451,6 +1451,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self._stale_resource_prompt_handled:
             self._start_prewarm()
             return
+        from anki_miner.services.audio_packs.registry import stale_enabled_audio_packs
         from anki_miner.services.dictionary.registry import stale_enabled_dicts
         from anki_miner.services.frequency.registry import stale_enabled_freq_sources
         from anki_miner.services.pitch_accent.registry import stale_enabled_pitch_sources
@@ -1466,6 +1467,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 "dictionary": [(m.dict_id, m.source_name) for m in stale_enabled_dicts(config)],
                 "frequency": [(m.source_id, m.source_name) for m in stale_enabled_freq_sources(config)],
                 "pitch": [(m.source_id, m.source_name) for m in stale_enabled_pitch_sources(config)],
+                "audio": [(m.pack_id, m.source) for m in stale_enabled_audio_packs(config)],
             }
 
         run_off_thread(self, _scan, self._on_stale_resources_scanned, self._on_stale_scan_failed)
@@ -1482,14 +1484,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         ``schema_ok``), not a new scanner. A stale *dictionary* means mining
         drops every word for lack of a definition; a stale *frequency* source
         means cards lose their rank and the rank cutoff silently stops
-        filtering; a stale *pitch* source means the pitch field goes blank. All
-        three are silent and all three are fixed by reimporting, so they share
-        one prompt rather than queueing a dialog each.
+        filtering; a stale *pitch* source means the pitch field goes blank; a
+        stale *audio pack* drops out of the expression-audio chain. All are
+        silent and all are fixed by reimporting, so they share one prompt
+        rather than queueing a dialog each.
+
+        Audio is the one family here that does *not* gate a run — it is
+        deliberately absent from ``services.resource_staleness`` — so the
+        "mining is blocked" line is only added when a gating family is present.
 
         Only present-but-stale slots reach here. A family the user never
-        configured contributes nothing, which is what keeps frequency and pitch
-        optional. "Later" leaves mining gated by the per-run pre-checks; the
-        prompt re-offers next launch.
+        configured contributes nothing, which is what keeps frequency, pitch
+        and audio optional. "Later" leaves mining gated by the per-run
+        pre-checks; the prompt re-offers next launch.
 
         Also the gate prewarm waits behind: every arm that ends without a repair
         in flight starts it, and the repair chain starts it once it drains.
@@ -1509,6 +1516,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             "dictionary": self.tr("Dictionaries:"),
             "frequency": self.tr("Frequency sources:"),
             "pitch": self.tr("Pitch accent sources:"),
+            "audio": self.tr("Audio packs:"),
         }
         blocks = []
         for kind, entries in families:
@@ -1518,9 +1526,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self.tr("These resources need re-importing after an app upgrade (their index format changed):")
             + "\n\n"
             + "\n\n".join(blocks)
-            + "\n\n"
-            + self.tr("Mining is blocked until you do.")
         )
+        if any(kind != "audio" for kind, _entries in families):
+            body += "\n\n" + self.tr("Mining is blocked until you do.")
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Question)
         box.setWindowTitle(self.tr("Resources need re-importing"))
