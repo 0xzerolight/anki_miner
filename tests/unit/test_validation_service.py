@@ -1508,5 +1508,122 @@ class TestOptionalIndexedResourceChecks:
 
         assert result.tool_versions["frequency-sources"] == ""
         assert result.tool_versions["pitch-sources"] == ""
+        assert result.tool_versions["audio-packs"] == ""
         assert not TestOptionalResourceWarnings._has_warning(result, "Frequency Sources")
         assert not TestOptionalResourceWarnings._has_warning(result, "Pitch Sources")
+        assert not TestOptionalResourceWarnings._has_warning(result, "Audio Packs")
+
+    # -- audio packs ----------------------------------------------------
+
+    @staticmethod
+    def _build_pack(root, pack_id, *, stale=False, entries=1, name=None, source_dir=None):
+        from anki_miner.services.audio_packs import storage
+
+        pack_source = source_dir if source_dir is not None else root / pack_id / "media"
+        pack_source.mkdir(parents=True, exist_ok=True)
+        db = root / pack_id / "index.sqlite"
+        storage.create_index(db)
+        storage.write_meta(
+            db,
+            {
+                "pack_id": pack_id,
+                "source": name or pack_id,
+                "format": "ajt",
+                "entry_count": str(entries),
+                "schema_version": str(storage.SCHEMA_VERSION - 1 if stale else storage.SCHEMA_VERSION),
+                "pack_dir": str(pack_source),
+            },
+        )
+
+    def test_online_only_audio_chain_is_unconfigured_not_a_failure(self, test_config, tmp_path):
+        """A chain of only JPod101/Google TTS has no index to be stale."""
+        from anki_miner.config import AudioSourceEntry
+
+        config = replace(
+            test_config,
+            audio_packs_root=tmp_path / "audio_packs",
+            expression_audio_chain=(AudioSourceEntry(kind="jpod101"), AudioSourceEntry(kind="googletts")),
+        )
+
+        assert ValidationService(config)._check_audio_packs() == (None, "")
+
+    def test_usable_pack_reports_its_name_and_count(self, test_config, tmp_path):
+        from anki_miner.config import AudioSourceEntry
+
+        packs_root = tmp_path / "audio_packs"
+        self._build_pack(packs_root, "nhk16", entries=5000, name="NHK 2016")
+        config = replace(
+            test_config,
+            audio_packs_root=packs_root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
+        )
+
+        ok, message = ValidationService(config)._check_audio_packs()
+
+        assert ok is True
+        assert "NHK 2016" in message
+        assert "5,000 entries" in message
+
+    def test_stale_pack_warns_and_names_reimport_all(self, test_config, tmp_path):
+        from anki_miner.config import AudioSourceEntry
+
+        packs_root = tmp_path / "audio_packs"
+        self._build_pack(packs_root, "nhk16", stale=True, name="NHK 2016")
+        config = replace(
+            test_config,
+            audio_packs_root=packs_root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
+        )
+
+        ok, message = ValidationService(config)._check_audio_packs()
+
+        assert ok is False
+        assert "NHK 2016" in message
+        assert "Settings → Audio → Reimport All" in message
+
+    def test_pack_absent_from_disk_stays_silent(self, test_config, tmp_path):
+        from anki_miner.config import AudioSourceEntry
+
+        config = replace(
+            test_config,
+            audio_packs_root=tmp_path / "audio_packs",
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="gone"),),
+        )
+
+        assert ValidationService(config)._check_audio_packs() == (None, "")
+
+    def test_pack_whose_audio_folder_moved_stays_silent(self, test_config, tmp_path):
+        """Unreachable audio degrades to the online sources; not upgrade damage."""
+        from anki_miner.config import AudioSourceEntry
+
+        packs_root = tmp_path / "audio_packs"
+        self._build_pack(packs_root, "nhk16", name="NHK 2016", source_dir=tmp_path / "on_a_usb_stick")
+        (tmp_path / "on_a_usb_stick").rmdir()
+        config = replace(
+            test_config,
+            audio_packs_root=packs_root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
+        )
+
+        assert ValidationService(config)._check_audio_packs() == (None, "")
+
+    def test_stale_pack_reaches_validate_setup_as_a_warning(self, test_config, tmp_path, monkeypatch):
+        from anki_miner.config import AudioSourceEntry
+
+        TestOptionalResourceWarnings._patch_external_checks(monkeypatch)
+        packs_root = tmp_path / "audio_packs"
+        self._build_pack(packs_root, "nhk16", stale=True, name="NHK 2016")
+        config = replace(
+            test_config,
+            audio_packs_root=packs_root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
+            media_temp_folder=tmp_path / "temp",
+        )
+
+        result = ValidationService(config).validate_setup()
+
+        assert TestOptionalResourceWarnings._has_warning(result, "Audio Packs")
+        # The System Health row keys off the component string; a mismatch there
+        # silently drops the warning off the screen.
+        assert any(issue.component == "Audio Packs" for issue in result.issues)
+        assert "audio-packs" not in result.tool_versions

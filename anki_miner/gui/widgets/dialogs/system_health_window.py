@@ -65,7 +65,7 @@ _NOT_CONFIGURED = "Not configured (optional)"
 HEALTH_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("destination", ("anki.connect", "anki.deck", "anki.note_type", "anki.fields")),
     ("media", ("tools.ffmpeg", "tools.ffprobe")),
-    ("language", ("resources.dictionary", "resources.frequency", "resources.pitch")),
+    ("language", ("resources.dictionary", "resources.frequency", "resources.pitch", "resources.audio")),
     ("optional", ("tools.ytdlp", "tools.alass")),
     ("updates", ("app.updates",)),
 )
@@ -85,6 +85,7 @@ HEALTH_FIX_ANCHORS: dict[str, str] = {
     "resources.dictionary": "dictionaries.chain",
     "resources.frequency": "frequency.chain",
     "resources.pitch": "pitch.chain",
+    "resources.audio": "audio.chain",
     "tools.ytdlp": "youtube.ytdlp_update",
     "tools.alass": "subtitles.alass_download",
 }
@@ -102,6 +103,7 @@ _COMPONENT_KEYS: dict[str, str] = {
     "Offline Dictionary": "resources.dictionary",
     "Frequency Sources": "resources.frequency",
     "Pitch Sources": "resources.pitch",
+    "Audio Packs": "resources.audio",
     "yt-dlp": "tools.ytdlp",
     "alass": "tools.alass",
 }
@@ -192,11 +194,15 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
         dictionary_detail or versions.get("offline-dictionary", ""),
     )
 
-    # Frequency and pitch are optional: an unconfigured family produces no
-    # issue AND no version string, which reads as "unknown" rather than a green
-    # tick for something that is not set up. Configured-and-healthy fills the
-    # detail with source names and counts.
-    for key, version_key in (("resources.frequency", "frequency-sources"), ("resources.pitch", "pitch-sources")):
+    # Frequency, pitch and audio packs are optional: an unconfigured family
+    # produces no issue AND no version string, which reads as "unknown" rather
+    # than a green tick for something that is not set up. Configured-and-healthy
+    # fills the detail with source names and counts.
+    for key, version_key in (
+        ("resources.frequency", "frequency-sources"),
+        ("resources.pitch", "pitch-sources"),
+        ("resources.audio", "audio-packs"),
+    ):
         state, detail = _issue_state(key)
         summary = versions.get(version_key, "")
         if state == HEALTH_OK and not detail and not summary:
@@ -620,6 +626,7 @@ class SystemHealthWindow(EnhancedDialog):
             "resources.dictionary": self.tr("Offline dictionary"),
             "resources.frequency": self.tr("Frequency lists"),
             "resources.pitch": self.tr("Pitch accent"),
+            "resources.audio": self.tr("Audio packs"),
             "tools.ytdlp": self.tr("yt-dlp (YouTube mining)"),
             "tools.alass": self.tr("alass (subtitle retiming)"),
             "app.updates": self.tr("Anki Miner updates"),

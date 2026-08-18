@@ -827,6 +827,56 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Audio Pack Re-imported</source>
         <translation>Đã nhập lại gói âm thanh</translation>
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation>Không thể quét thư mục gói âm thanh.</translation>
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation>Không tìm thấy gói âm thanh nào đủ điều kiện để tự động sửa chữa.
+
+Đã bỏ qua (không tìm thấy thư mục nguồn hoặc cơ sở dữ liệu; hãy dùng Nhập lại… theo từng dòng):
+</translation>
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation>Không có gói âm thanh nào trong chuỗi.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Không có gì để nhập lại</translation>
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation>Gói âm thanh %1 trên %2: %3</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation>Đã nhập lại %1 gói âm thanh:</translation>
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation>Đã bỏ qua (không tìm thấy thư mục nguồn hoặc cơ sở dữ liệu; hãy dùng Nhập lại… theo từng dòng):</translation>
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation>Đã hủy trước khi lượt xử lý hoàn tất.</translation>
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation>Không có gì để làm.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation>Đã nhập lại các gói âm thanh</translation>
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation>Một số gói âm thanh không thể nhập lại.</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -884,6 +934,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Thêm lại các gói âm thanh tìm thấy trong thư mục lưu trữ mà chưa có trong danh sách trên. Không cần nhập lại.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Nhập lại tất cả</translation>
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
+        <translation>Xây dựng lại mọi gói âm thanh trong danh sách từ thư mục hoặc cơ sở dữ liệu đã nhập từ đó. Cần thiết sau khi ứng dụng nâng cấp làm thay đổi định dạng chỉ mục.</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -5094,16 +5152,28 @@ Tiếp tục?</translation>
         <translation>Nguồn trọng âm cao độ:</translation>
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation>Gói âm thanh:</translation>
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation>Các tài nguyên này cần được nhập lại sau khi ứng dụng nâng cấp (định dạng chỉ mục của chúng đã thay đổi):</translation>
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation>Khai thác bị chặn cho đến khi bạn thực hiện. Nhập lại chúng ngay bây giờ?</translation>
+        <source>Mining is blocked until you do.</source>
+        <translation>Khai thác bị chặn cho đến khi việc nhập lại hoàn tất.</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
         <translation>Tài nguyên cần được nhập lại</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Nhập lại tất cả</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>Để sau</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -8392,6 +8462,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>Pitch accent</source>
         <translation>Trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Audio packs</source>
+        <translation>Gói âm thanh</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

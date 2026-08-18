@@ -395,8 +395,17 @@ def test_a_gating_family_still_says_mining_is_blocked(main_window, monkeypatch, 
     assert "Audio packs:" in seen.bodies[0]
 
 
-def test_audio_packs_stay_out_of_the_pre_run_gate(test_config):
-    """resource_staleness feeds the abort that stops a run; audio must not."""
+def test_audio_packs_are_in_the_pre_run_gate(test_config):
+    """resource_staleness feeds the abort that stops a run; audio is in it.
+
+    Reverses an earlier call to leave audio out on the grounds that a stale
+    pack costs only expression audio. Cost is not the test the other three are
+    held to — frequency and pitch are optional too, and they gate. What the
+    gate prevents is a *silent* wrong result, and a dropped pack is one: the
+    run reports success while cards fall back to the online sources or get no
+    audio, with nothing but a log line saying so.
+    """
     from anki_miner.services.resource_staleness import _FAMILY_LABELS
 
-    assert "audio" not in _FAMILY_LABELS
+    assert "audio" in _FAMILY_LABELS
+    assert set(_FAMILY_LABELS) == {"dictionary", "frequency", "pitch", "audio"}

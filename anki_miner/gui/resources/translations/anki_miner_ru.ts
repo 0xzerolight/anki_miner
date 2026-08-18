@@ -829,6 +829,56 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Audio Pack Re-imported</source>
         <translation>Аудиопакет повторно импортирован</translation>
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation>Не удалось просканировать папку аудиопакета.</translation>
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation>Не найдено аудиопакетов, подходящих для автоматического восстановления.
+
+Пропущено (исходная папка или база данных не найдены; используйте «Повторный импорт…» в соответствующей строке):
+</translation>
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation>В цепочке нет аудиопакетов.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Нечего импортировать повторно</translation>
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation>Аудиопакет %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation>Повторно импортировано аудиопакетов (%1):</translation>
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation>Пропущено (исходная папка или база данных не найдены; используйте «Повторный импорт…» в соответствующей строке):</translation>
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation>Отменено до завершения пакетной операции.</translation>
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation>Нечего делать.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation>Аудиопакеты повторно импортированы</translation>
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать некоторые аудиопакеты.</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -886,6 +936,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Повторно добавить пакеты аудио, найденные в папке хранения, но отсутствующие в списке выше. Повторный импорт не требуется.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
+        <translation>Перестроить все аудиопакеты в списке из папки или базы данных, из которой они были импортированы. Требуется после того, как обновление приложения изменит формат индекса.</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -5120,16 +5178,28 @@ Continue?</source>
         <translation>Источники тонального ударения:</translation>
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation>Аудиопакеты:</translation>
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation>Следующим ресурсам требуется повторный импорт после обновления приложения (формат их индекса изменился):</translation>
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation>Майнинг заблокирован, пока вы этого не сделаете. Повторно импортировать их сейчас?</translation>
+        <source>Mining is blocked until you do.</source>
+        <translation>Майнинг заблокирован, пока вы этого не сделаете.</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
         <translation>Требуется повторный импорт ресурсов</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>Позже</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -8422,6 +8492,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Pitch accent</source>
         <translation>Тональное ударение</translation>
+    </message>
+    <message>
+        <source>Audio packs</source>
+        <translation>Аудиопакеты</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

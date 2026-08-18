@@ -245,12 +245,14 @@ class ValidationService:
         # "Wanted but BROKEN" is a different state and is representable: the
         # source is enabled, on disk, and unusable because an app upgrade bumped
         # the index schema. Reported here so the silent failure it causes
-        # (frequency: no rank and no rank filtering; pitch: blank field) is not
-        # the user's only clue. Nothing configured stays silent — both families
-        # are optional, and the checks return None for it.
+        # (frequency: no rank and no rank filtering; pitch: blank field; audio
+        # packs: cards fall through to the online sources) is not the user's
+        # only clue. Nothing configured stays silent — all three families are
+        # optional, and the checks return None for it.
         for component, key, check in (
             ("Frequency Sources", "frequency-sources", self._check_frequency_sources),
             ("Pitch Sources", "pitch-sources", self._check_pitch_sources),
+            ("Audio Packs", "audio-packs", self._check_audio_packs),
         ):
             ok, message = check()
             if ok is None:
@@ -646,6 +648,54 @@ class ValidationService:
         if usable:
             return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
         # Enabled but absent from disk. Not reported — see the docstring.
+        return None, ""
+
+    def _check_audio_packs(self) -> tuple[bool | None, str]:
+        """Check that the configured audio pack chain can answer a lookup.
+
+        Same contract and same registry-snapshot-only rule as
+        :meth:`_check_frequency_sources`. Audio packs are optional — a chain of
+        only online sources (JPod101, Google TTS) has no index to go stale and
+        is reported as unconfigured, never as a problem.
+
+        What *is* reported is a pack the user asked for that an app upgrade
+        broke: a stale index is dropped from the fetcher chain, so the card
+        falls through to the online sources or gets no audio at all, silently.
+        A pack whose audio folder has merely moved is not reported — that
+        degrades the same way but is not upgrade damage, matching how a source
+        missing from disk is treated for the other three families.
+
+        Returns:
+            ``(None, "")`` when nothing is configured, ``(True, names)`` when
+            usable, ``(False, message)`` when stale.
+        """
+        from anki_miner.services.audio_packs.registry import AudioPackRegistry
+
+        enabled_ids = [
+            e.pack_id for e in self.config.expression_audio_chain if e.enabled and e.kind == "pack" and e.pack_id
+        ]
+        if not enabled_ids:
+            return None, ""
+
+        registry = AudioPackRegistry(self.config.audio_packs_root)
+        registry.load()
+        packs = registry.packs
+
+        stale = [meta.source for meta in registry.stale_enabled(self.config)]
+        if stale:
+            return False, (
+                f"Audio pack(s) need reimporting after an upgrade: {', '.join(stale)}. "
+                "Use Settings → Audio → Reimport All."
+            )
+        usable = [
+            meta
+            for meta in (packs.get(pack_id) for pack_id in enabled_ids if pack_id)
+            if meta is not None and meta.schema_ok and meta.source_available
+        ]
+        if usable:
+            return True, ", ".join(f"{meta.source} ({meta.entry_count:,} entries)" for meta in usable)
+        # Enabled but absent from disk, or its audio is unreachable. Not
+        # reported — see the docstring.
         return None, ""
 
     def _check_deck_exists(self) -> tuple[bool, str]:

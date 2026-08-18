@@ -827,6 +827,56 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Audio Pack Re-imported</source>
         <translation>音訊包已重新匯入</translation>
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation>無法掃描音訊包資料夾。</translation>
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation>找不到符合自動修復資格的音訊包。
+
+已略過（找不到來源資料夾或資料庫；請使用逐列的重新匯入…）：
+</translation>
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation>鏈中沒有音訊包。</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>無可重新匯入的項目</translation>
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation>音訊包 %1／%2：%3</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation>已重新匯入 %1 個音訊包：</translation>
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation>已略過（找不到來源資料夾或資料庫；請使用逐列的重新匯入…）：</translation>
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation>在批次完成前已取消。</translation>
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation>沒有可執行的操作。</translation>
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation>音訊包已重新匯入</translation>
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation>部分音訊包無法重新匯入。</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -884,6 +934,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>重新加入儲存資料夾中找到、但未列在上方清單的音訊包。無需重新匯入。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>全部重新匯入</translation>
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
+        <translation>從匯入來源的資料夾或資料庫，重建清單中的每個音訊包。應用程式升級導致索引格式變更後，需要執行此操作。</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -5094,16 +5152,28 @@ Continue?</source>
         <translation>高低音調來源：</translation>
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation>音訊包：</translation>
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation>這些資源在應用程式升級後需要重新匯入（其索引格式已變更）：</translation>
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation>在此之前，採集功能將被封鎖。要立即重新匯入嗎？</translation>
+        <source>Mining is blocked until you do.</source>
+        <translation>在完成重新匯入前，將無法進行採集。</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
         <translation>資源需要重新匯入</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>全部重新匯入</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>稍後</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -8392,6 +8462,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Pitch accent</source>
         <translation>高低音調</translation>
+    </message>
+    <message>
+        <source>Audio packs</source>
+        <translation>音訊包</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

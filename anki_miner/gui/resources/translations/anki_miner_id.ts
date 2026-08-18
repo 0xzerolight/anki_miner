@@ -827,6 +827,56 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <source>Audio Pack Re-imported</source>
         <translation>Paket Audio Diimpor Ulang</translation>
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation>Folder paket audio tidak dapat dipindai.</translation>
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation>Tidak ditemukan paket audio yang memenuhi syarat untuk perbaikan otomatis.
+
+Dilewati (folder sumber atau database tidak ditemukan; gunakan Impor Ulang… per baris):
+</translation>
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation>Tidak ada paket audio dalam rantai.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Tidak ada yang perlu diimpor ulang</translation>
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation>Paket audio %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation>Mengimpor ulang %1 paket audio:</translation>
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation>Dilewati (folder sumber atau database tidak ditemukan; gunakan Impor Ulang… per baris):</translation>
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation>Dibatalkan sebelum batch selesai.</translation>
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation>Tidak ada yang perlu dilakukan.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation>Paket Audio Diimpor Ulang</translation>
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation>Beberapa paket audio tidak dapat diimpor ulang.</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -884,6 +934,14 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Tambahkan kembali paket audio yang ditemukan di folder penyimpanan yang tidak ada dalam daftar di atas. Tidak perlu impor ulang.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
+        <translation>Membangun ulang setiap paket audio dalam daftar dari folder atau database tempat paket itu diimpor. Diperlukan setelah pemutakhiran aplikasi mengubah format indeks.</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -5094,16 +5152,28 @@ Lanjutkan?</translation>
         <translation>Sumber aksen nada:</translation>
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation>Paket audio:</translation>
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation>Sumber daya berikut perlu diimpor ulang setelah pemutakhiran aplikasi (format indeksnya berubah):</translation>
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation>Mining diblokir hingga Anda melakukannya. Impor ulang sekarang?</translation>
+        <source>Mining is blocked until you do.</source>
+        <translation>Mining diblokir sampai Anda melakukannya.</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
         <translation>Sumber daya perlu diimpor ulang</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>Nanti</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -8392,6 +8462,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Pitch accent</source>
         <translation>Aksen nada</translation>
+    </message>
+    <message>
+        <source>Audio packs</source>
+        <translation>Paket audio</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
