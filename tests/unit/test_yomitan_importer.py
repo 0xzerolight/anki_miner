@@ -184,7 +184,10 @@ class TestImportYomitanZip:
             progress=record_progress,
         )
 
-        completion_events = [event for event in events if event[1] > 0 and event[0] == event[1]]
+        # "Done" is the entries-based terminal signal; the mid-insert
+        # files_done/total_term_files calls also reach cur == total > 0 well
+        # before promotion, so filtering on message avoids conflating the two.
+        completion_events = [event for event in events if event[2] == "Done"]
         assert [(msg, promoted, count) for _, _, msg, promoted, count in completion_events] == [("Done", True, 2)]
 
         stage_positions: list[int] = []
@@ -211,11 +214,52 @@ class TestImportYomitanZip:
             progress=lambda cur, total, msg: events.append((cur, total, msg)),
         )
 
-        batch_events = [event for event in events if event[0] > 0 and event[1] == 0]
-        assert len(batch_events) >= 2
-        inserted_counts = [cur for cur, _, _ in batch_events]
+        # cur/total now carry files_done/total_term_files (single bank here,
+        # so total == 1 throughout); the real inserted count is only in the
+        # message. Recover it from there to keep verifying the underlying
+        # bulk_insert batch cadence is monotonic across flushes.
+        insert_events = [event for event in events if event[2].startswith("Inserted ")]
+        assert len(insert_events) >= 2
+        inserted_counts = [int(msg.split()[1].replace(",", "")) for _, _, msg in insert_events]
         assert inserted_counts == sorted(inserted_counts)
         assert inserted_counts[:2] == [5000, 5001]
+        files_done = [cur for cur, _, _ in insert_events]
+        assert files_done == sorted(files_done)
+        assert all(total == 1 for _, total, _ in insert_events)
+
+    def test_insert_progress_reports_files_done_against_bank_total(self, tmp_path: Path):
+        """``progress`` calls during entry insertion are determinate against the
+        term-bank count: ``total`` is pinned to the bank count and ``files_done``
+        is non-decreasing, ending with a terminal ``(total, total)`` call once
+        ``bulk_insert`` returns. Stage markers stay ``(0, 0, ...)``."""
+        bank_size = 2000
+        banks = [
+            [[f"t{bank}-{i}", "", "", "", 0, [f"d{bank}-{i}"], i, ""] for i in range(bank_size)] for bank in range(3)
+        ]
+        zip_path = build_yomitan_zip(tmp_path / "src" / "multi-bank.zip", term_banks=banks, tag_banks=[])
+        events: list[tuple[int, int, str]] = []
+
+        import_yomitan_zip(
+            zip_path,
+            tmp_path / "dicts",
+            progress=lambda cur, total, msg: events.append((cur, total, msg)),
+        )
+
+        insert_events = [event for event in events if event[2].startswith("Inserted ")]
+        assert len(insert_events) >= 2
+        assert all(total == 3 for _, total, _ in insert_events)
+        files_done = [cur for cur, _, _ in insert_events]
+        assert files_done == sorted(files_done)
+        assert files_done[0] < 3  # at least one non-terminal reading mid-insert
+        assert insert_events[-1][:2] == (3, 3)
+
+        stage_events = [
+            event
+            for event in events
+            if event[2] in {"Validating archive", "Extracting archive", "Inserting entries", "Finalizing import"}
+        ]
+        assert stage_events
+        assert all(event[:2] == (0, 0) for event in stage_events)
 
     def test_rejects_old_format_version(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "old.zip", format_version=2)
@@ -396,8 +440,11 @@ class TestImportYomitanZip:
         monkeypatch.setattr(tempfile, "tempdir", str(scratch))
         events: list[tuple[int, int, str]] = []
 
+        # cur/total are files_done/total_term_files now (single bank here);
+        # the real inserted count driving the cancel point is only in the
+        # message, so key off that instead.
         def cancel_check() -> bool:
-            return any(cur >= 5000 and total == 0 for cur, total, _ in events)
+            return any(msg == "Inserted 5,000 entries" for _, _, msg in events)
 
         with pytest.raises(SetupError, match="Import cancelled"):
             import_yomitan_zip(
@@ -407,7 +454,7 @@ class TestImportYomitanZip:
                 cancel_check=cancel_check,
             )
 
-        assert any(cur == 5000 and total == 0 for cur, total, _ in events)
+        assert any(msg == "Inserted 5,000 entries" for _, _, msg in events)
         assert not (dest_root / "test-dict-v1").exists()
         assert list(scratch.iterdir()) == []
 

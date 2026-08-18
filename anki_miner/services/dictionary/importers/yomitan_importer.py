@@ -118,7 +118,15 @@ def import_yomitan_zip(
                    ~/.anki_miner/dicts/).
         progress: Optional (current, total, message) callback. ``total == 0``
                   means the stage is indeterminate; consumers must call
-                  ``setRange(0, 0)``.
+                  ``setRange(0, 0)``. During entry insertion, calls are
+                  determinate against the term-bank count: ``(files_done,
+                  total_term_files, "Inserted N entries")``, where
+                  ``files_done`` is the number of fully-consumed term-bank
+                  files (the row total isn't known until the last bank is
+                  parsed, so the bank count is the only determinate
+                  denominator available). A terminal ``(total, total, ...)``
+                  call fires once ``bulk_insert`` returns, before the
+                  "Finalizing import" stage marker.
         overwrite: If True and the destination dict_id already exists, the old
                    folder is renamed to <dict_id>.bak-<timestamp> then removed
                    on success. If False, raises SetupError.
@@ -222,8 +230,11 @@ def import_yomitan_zip(
         # later upload it via AnkiConnect storeMediaFile.
         media_paths: set[str] = set()
 
+        total_files = len(term_files)
+        files_done = 0
+
         def rows() -> Any:
-            nonlocal total_entries, skipped_malformed
+            nonlocal total_entries, skipped_malformed, files_done
             for term_file in term_files:
                 _raise_if_cancelled(cancel_check)
                 try:
@@ -291,13 +302,14 @@ def import_yomitan_zip(
                         score=score,
                         sequence=sequence,
                     )
+                files_done += 1
 
         if progress:
             progress(0, 0, "Inserting entries")
 
         def on_insert_progress(inserted: int) -> None:
             if progress:
-                progress(inserted, 0, f"Inserted {inserted:,} entries")
+                progress(files_done, total_files, f"Inserted {inserted:,} entries")
 
         bulk_insert(
             db_path,
@@ -307,6 +319,7 @@ def import_yomitan_zip(
         )
 
         if progress:
+            progress(total_files, total_files, f"Inserted {total_entries:,} entries")
             progress(0, 0, "Finalizing import")
         _raise_if_cancelled(cancel_check)
 
