@@ -181,6 +181,11 @@ class TestFirstRunPrecedesOptionalWork:
         index. Scheduled from ``app.main`` it fired inside the modal wizard's
         nested event loop, so a first run warmed the dictionary chain underneath
         the very Resources page that replaces it.
+
+        It now waits behind the stale-resource scan as well — it holds the
+        indexes a schema repair rebuilds — so the boot step schedules that scan
+        and prewarm starts from its continuation. Either way nothing warms the
+        chain until this one-shot step runs.
         """
         build, _events, scheduled = recorded_boot
 
@@ -188,10 +193,14 @@ class TestFirstRunPrecedesOptionalWork:
         window.commit_boot()
 
         assert window._start_prewarm not in scheduled
+        assert window._maybe_prompt_stale_resources not in scheduled
 
         window._start_post_setup_boot_once()
 
-        assert window._start_prewarm in scheduled
+        assert window._maybe_prompt_stale_resources in scheduled
+        # Not scheduled beside the scan: doing that is what made accepting the
+        # stale-resource prompt refuse on every family.
+        assert window._start_prewarm not in scheduled
         window.deleteLater()
 
     def test_a_normal_run_starts_the_optional_work_straight_away(self, recorded_boot) -> None:

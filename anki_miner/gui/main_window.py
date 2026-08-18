@@ -1555,8 +1555,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             return
 
         # One family at a time, each starting when the previous one's batch
-        # reports done. Firing them together would put three ApplicationModal
-        # progress dialogs on screen at once.
+        # reports done. Firing them together would put an ApplicationModal
+        # progress dialog per family on screen at once.
         pending = list(families)
 
         def _run_next() -> None:
