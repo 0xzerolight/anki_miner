@@ -165,7 +165,12 @@ class IndexedDictProvider:
             )
             return None
 
-    def lookup_many(self, pairs: list[tuple[str, str | None]], scope_homographs: bool = True) -> dict[str, str | None]:
+    def lookup_many(
+        self,
+        pairs: list[tuple[str, str | None]],
+        scope_homographs: bool = True,
+        lemmas: dict[str, str] | None = None,
+    ) -> dict[str, str | None]:
         """Batch lookup over ``(word, reading | None)`` pairs. Each word's
         contextual reading boosts that word's own ranking (``None`` = wildcard).
         Runs one IN-clause query per dictionary (chunked), then renders each
@@ -174,13 +179,14 @@ class IndexedDictProvider:
         collapse).
 
         ``scope_homographs`` forwards to :func:`storage.lookup_many`: ``True``
-        (default) applies the render-path Rule A/B homograph scope; ``False`` keeps
-        the unfiltered term-OR-reading semantics for the existence/attestation
-        probes (see ``DefinitionService.has_offline_definitions``)."""
+        (default) applies the render-path Rule A/A′/B homograph scope; ``False``
+        keeps the unfiltered term-OR-reading semantics for the existence/attestation
+        probes (see ``DefinitionService.has_offline_definitions``). ``lemmas``
+        (word → token lemma) feeds the Rule A′ kana-front scope."""
         if self._conn is None:
             return {w: None for w, _ in pairs}
         try:
-            rows_by_word = storage_lookup_many(self._conn, pairs, scope_homographs=scope_homographs)
+            rows_by_word = storage_lookup_many(self._conn, pairs, scope_homographs=scope_homographs, lemmas=lemmas)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup_many; treating as all-miss: %s",

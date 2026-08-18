@@ -272,6 +272,7 @@ class DefinitionService:
         fallback_context: dict[str, tuple[str, str | None]] | None = None,
         *,
         is_cancelled: Callable[[], bool] | None = None,
+        lemma_context: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Resolve definitions for a list of ``(word, reading | None)`` pairs,
         preserving first-hit-wins. The reading is a per-word ranking BOOST
@@ -296,6 +297,13 @@ class DefinitionService:
         okurigana-only case; callers may pass an empty alternate while retaining
         kana/deinflection fallback. Absent (``None``) ⇒ no fallback, preserving
         pre-5.2 behavior for callers that don't supply context.
+
+        ``lemma_context`` maps a lookup word to its token's UniDic lemma,
+        forwarded to each offline provider's ``lookup_many`` for the Rule A′
+        homograph scope: a kana front (ゆう, lemma 言う) that resolves only via
+        the folded-reading scan keeps its own lexeme's rows instead of the
+        highest-scored same-reading homograph (有/夕/結う). Absent/empty ⇒
+        providers are called with the legacy shape, so older stubs keep working.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -337,8 +345,13 @@ class DefinitionService:
                 for batch_index, batch in enumerate(batches):
                     if cancellation_requested():
                         break
+                    # Legacy call shape when no lemma applies to this batch, so
+                    # providers/stubs predating the ``lemmas`` kwarg keep working.
+                    batch_lemmas = (
+                        {w: lemma_context[w] for w, _ in batch if w in lemma_context} if lemma_context else {}
+                    )
                     try:
-                        hits = batch_fn(batch)
+                        hits = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
                     except Exception as e:
                         logger.warning(
                             "Provider '%s' raised during lookup_many; skipping: %s",
@@ -770,6 +783,7 @@ class DefinitionService:
         progress_callback: ProgressCallback | None = None,
         *,
         is_cancelled: Callable[[], bool] | None = None,
+        lemma_context: dict[str, str] | None = None,
     ) -> list[str | None]:
         """Collect glossary HTML for ``(word, reading | None)`` pairs, preserving
         input order. The reading is a per-word ranking BOOST threaded to each
@@ -786,6 +800,10 @@ class DefinitionService:
           offline provider returned a hit for that word — they act as a fallback.
         Providers lacking ``lookup_many`` (e.g. legacy offline or online Jisho)
         are consulted per-word, matching the old behaviour.
+
+        ``lemma_context`` mirrors ``get_definitions_batch``: word → token lemma,
+        forwarded to batch-capable offline providers for the Rule A′ kana-front
+        homograph scope; absent/empty keeps the legacy call shape.
         """
         if progress_callback:
             progress_callback.on_start(
@@ -828,8 +846,12 @@ class DefinitionService:
                 for batch in _word_unique_batches(unique_pairs):
                     if cancellation_requested():
                         break
+                    # Same legacy-shape guard as get_definitions_batch.
+                    batch_lemmas = (
+                        {w: lemma_context[w] for w, _ in batch if w in lemma_context} if lemma_context else {}
+                    )
                     try:
-                        provider_results = batch_fn(batch)
+                        provider_results = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
                     except Exception as e:
                         logger.warning(
                             "Provider '%s' raised during lookup_many; skipping: %s",
