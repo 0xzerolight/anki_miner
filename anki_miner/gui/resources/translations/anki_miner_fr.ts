@@ -828,6 +828,56 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <source>Audio Pack Re-imported</source>
         <translation>Pack audio réimporté</translation>
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation>Impossible d'analyser le dossier du pack audio.</translation>
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation>Aucun pack audio éligible à la réparation automatique n'a été trouvé.
+
+Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter… pour chaque ligne) :
+</translation>
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation>Aucun pack audio dans la chaîne.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Rien à réimporter</translation>
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation>Pack audio %1 sur %2 : %3</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation>%1 pack(s) audio réimporté(s) :</translation>
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation>Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter… pour chaque ligne) :</translation>
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation>Annulé avant la fin du lot.</translation>
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation>Rien à faire.</translation>
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation>Packs audio réimportés</translation>
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation>Impossible de réimporter certains packs audio.</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -885,6 +935,14 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>Réajoute les packs audio trouvés dans le dossier de stockage qui ne figurent pas dans la liste ci-dessus. Aucune réimportation nécessaire.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Tout réimporter</translation>
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
+        <translation>Reconstruit chaque pack audio de la liste à partir du dossier ou de la base de données d'origine. Nécessaire après qu'une mise à niveau de l'application modifie le format de l'index.</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -5107,16 +5165,28 @@ Continuer ?</translation>
         <translation>Sources d'accent de hauteur :</translation>
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation>Packs audio :</translation>
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation>Ces ressources doivent être réimportées après une mise à niveau de l'application (leur format d'index a changé) :</translation>
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation>L'extraction est bloquée jusqu'à ce que vous le fassiez. Les réimporter maintenant ?</translation>
+        <source>Mining is blocked until you do.</source>
+        <translation>L'extraction est bloquée tant que ce n'est pas fait.</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
         <translation>Réimportation des ressources requise</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Tout réimporter</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>Plus tard</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -8407,6 +8477,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>Pitch accent</source>
         <translation>Accent de hauteur</translation>
+    </message>
+    <message>
+        <source>Audio packs</source>
+        <translation>Packs audio</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>

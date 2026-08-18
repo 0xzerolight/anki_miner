@@ -822,6 +822,53 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Audio Pack Re-imported</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -878,6 +925,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5058,15 +5113,27 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
+        <source>Mining is blocked until you do.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Resources need re-importing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Later</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8338,6 +8405,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Pitch accent</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio packs</source>
         <translation type="unfinished" />
     </message>
     <message>

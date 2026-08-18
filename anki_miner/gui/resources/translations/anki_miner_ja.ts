@@ -827,6 +827,56 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <source>Audio Pack Re-imported</source>
         <translation>音声パックを再インポートしました</translation>
     </message>
+    <message>
+        <source>The audio pack folder could not be scanned.</source>
+        <translation>音声パックフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>No audio packs eligible for automatic repair were found.
+
+Skipped (source folder or database not found; use per-row Re-import…):
+</source>
+        <translation>自動修復の対象となる音声パックが見つかりませんでした。
+
+スキップ（インポート元のフォルダまたはデータベースが見つかりません。行ごとの「再インポート…」を使用してください）:
+</translation>
+    </message>
+    <message>
+        <source>No audio packs in the chain.</source>
+        <translation>チェーンに音声パックがありません。</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>再インポートする音声パックがありません</translation>
+    </message>
+    <message>
+        <source>Audio pack %1 of %2: %3</source>
+        <translation>音声パック %1 / %2: %3</translation>
+    </message>
+    <message>
+        <source>Re-imported %1 audio pack(s):</source>
+        <translation>%1 個の音声パックを再インポートしました:</translation>
+    </message>
+    <message>
+        <source>Skipped (source folder or database not found; use per-row Re-import…):</source>
+        <translation>スキップ（インポート元のフォルダまたはデータベースが見つかりません。行ごとの「再インポート…」を使用してください）:</translation>
+    </message>
+    <message>
+        <source>Cancelled before the batch finished.</source>
+        <translation>バッチが完了する前にキャンセルされました。</translation>
+    </message>
+    <message>
+        <source>Nothing to do.</source>
+        <translation>行うことはありませんでした。</translation>
+    </message>
+    <message>
+        <source>Audio Packs Re-imported</source>
+        <translation>音声パックを再インポートしました</translation>
+    </message>
+    <message>
+        <source>Some audio packs could not be re-imported.</source>
+        <translation>一部の音声パックを再インポートできませんでした。</translation>
+    </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
@@ -884,6 +934,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed.</source>
         <translation>保存フォルダーにあるが上の一覧にない音声パックを再追加します。再インポートは不要です。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>すべて再インポート</translation>
+    </message>
+    <message>
+        <source>Rebuild every audio pack in the list from the folder or database it was imported from. Needed after an app upgrade changes the index format.</source>
+        <translation>一覧にあるすべての音声パックを、インポート元のフォルダまたはデータベースから再構築します。アプリのアップグレードでインデックス形式が変更された場合に必要です。</translation>
     </message>
     <message>
         <source>Sources are tried top to bottom — the first one that has audio for a word wins.</source>
@@ -5094,16 +5152,28 @@ Continue?</source>
         <translation>ピッチアクセントソース:</translation>
     </message>
     <message>
+        <source>Audio packs:</source>
+        <translation>音声パック:</translation>
+    </message>
+    <message>
         <source>These resources need re-importing after an app upgrade (their index format changed):</source>
         <translation>アプリのアップグレード後、これらのリソースは再インポートが必要です（インデックス形式が変更されました）:</translation>
     </message>
     <message>
-        <source>Mining is blocked until you do. Re-import them now?</source>
-        <translation>再インポートするまでマイニングはブロックされます。今すぐ再インポートしますか？</translation>
+        <source>Mining is blocked until you do.</source>
+        <translation>再インポートするまでマイニングはできません。</translation>
     </message>
     <message>
         <source>Resources need re-importing</source>
         <translation>リソースの再インポートが必要です</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>すべて再インポート</translation>
+    </message>
+    <message>
+        <source>Later</source>
+        <translation>後で</translation>
     </message>
     <message>
         <source>System validation passed</source>
@@ -8392,6 +8462,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Pitch accent</source>
         <translation>ピッチアクセント</translation>
+    </message>
+    <message>
+        <source>Audio packs</source>
+        <translation>音声パック</translation>
     </message>
     <message>
         <source>yt-dlp (YouTube mining)</source>
