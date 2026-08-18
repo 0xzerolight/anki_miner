@@ -1500,3 +1500,70 @@ class TestAddSourceDialogImeSafety:
         dlg._accept_if_valid()
         assert dlg.isVisible()
         assert dlg.result() != int(QDialog.DialogCode.Accepted)
+
+
+# ---------------------------------------------------------------------------
+# Reimport controls
+# ---------------------------------------------------------------------------
+
+
+def test_stale_pack_row_offers_a_repair_button(qapp, qtbot, tmp_path):
+    """The stale row already said 're-import required'; it now offers the control.
+
+    Withholding the button until the whole pack went missing left the one
+    failure an app upgrade actually causes with nothing to press.
+    """
+    meta = _make_meta("old-pack", source="Old Pack", schema_ok=False)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),),
+        registry_meta={"old-pack": meta},
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.repair_button is not None
+
+
+def test_stale_row_repair_button_requests_that_pack(qapp, qtbot, tmp_path):
+    meta = _make_meta("old-pack", schema_ok=False)
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    requested: list[str] = []
+    panel.reimport_pack_requested.connect(requested.append)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="old-pack", enabled=True),),
+        registry_meta={"old-pack": meta},
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None and row.repair_button is not None
+    row.repair_button.click()
+
+    assert requested == ["old-pack"]
+
+
+def test_healthy_pack_row_offers_no_repair_button(qapp, qtbot, tmp_path):
+    meta = _make_meta("good-pack")
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (AudioSourceEntry(kind="pack", pack_id="good-pack", enabled=True),),
+        registry_meta={"good-pack": meta},
+    )
+
+    row = panel._row_widget(0)
+    assert row is not None
+    assert row.repair_button is None
+
+
+def test_reimport_all_button_emits_its_request(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    fired: list[int] = []
+    panel.reimport_all_requested.connect(lambda: fired.append(1))
+
+    panel._reimport_btn.click()
+
+    assert fired == [1]

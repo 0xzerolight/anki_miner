@@ -129,6 +129,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     add_pack_requested = pyqtSignal()
     add_android_db_requested = pyqtSignal()
     reimport_pack_requested = pyqtSignal(str)
+    reimport_all_requested = pyqtSignal()
     restore_requested = pyqtSignal()
     # Emitted when the user asks to clear JPod101 .miss markers so absent words
     # are re-tried next run. The settings tab owns the actual unlink sweep (it
@@ -221,6 +222,15 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         )
         self._restore_btn.clicked.connect(self.restore_requested.emit)
 
+        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._reimport_btn.setToolTip(
+            self.tr(
+                "Rebuild every audio pack in the list from the folder or database it was imported from. "
+                "Needed after an app upgrade changes the index format."
+            )
+        )
+        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
+
         container = self._build_chain_container(
             ChainListLabels(
                 explanation=self.tr(
@@ -234,7 +244,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down in priority"),
             ),
-            extra_actions=(self._restore_btn, self._retry_missing_btn),
+            extra_actions=(self._reimport_btn, self._restore_btn, self._retry_missing_btn),
         )
         # Two ways in, one control: a second primary button beside the first
         # would say the app has two equally-important task actions here (D41).
@@ -471,7 +481,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             enabled_accessible_text=tr_format(self.tr("Enable %1"), display),
             enabled_tooltip=tr_format(self.tr("Enable or disable %1"), display),
             warning=warning,
-            repair_text=self.tr("Re-import") if pack_missing and entry.pack_id else "",
+            # Stale gets the button too: an app upgrade is the failure the
+            # warning above names, and the batch Reimport All rebuilds it from
+            # the same recorded source this per-row control prompts for.
+            repair_text=self.tr("Re-import") if (pack_missing or schema_stale) and entry.pack_id else "",
         )
 
     def _connect_row_repair(self, row: ChainSourceRow) -> None:
