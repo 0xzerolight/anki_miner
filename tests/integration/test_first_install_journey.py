@@ -279,7 +279,10 @@ def test_first_install_journey(
         def gated_progress(current: int, total: int, message: str) -> None:
             if progress is not None:
                 progress(current, total, message)
-            if current == 5_000 and total == 0:
+            # current/total are files_done/total_term_files now (a bank
+            # count); the first-bank-flushed checkpoint is only visible in the
+            # message's real inserted count.
+            if message == "Inserted 5,000 entries":
                 first_bank_done.set()
 
         def gated_cancel_check() -> bool:

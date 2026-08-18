@@ -48,12 +48,14 @@ from anki_miner.services.dictionary.zip_safety import (
 from anki_miner.utils.slug import slugify
 
 ProgressFn = Callable[[int, int, str], None]
-# (banks_done, bank_total) as each term bank is consumed. Separate from
-# ``ProgressFn`` because that contract is deliberately indeterminate during the
-# load — the ROW total is unknown until the last bank is parsed, so batch events
-# report ``total == 0``. The BANK count is known before the first bank opens,
-# which is the only determinate denominator this import has. Consumers whose
-# progress UI cannot render a running count without a fraction use this.
+# (files_done, total_files) as each term bank is fully consumed — the same
+# counter ``ProgressFn``'s insert-phase calls now report (see
+# ``import_yomitan_zip``'s ``progress`` param). Kept as a separate callback
+# because it fires exactly once per bank boundary from inside the row
+# generator, whereas ``progress``'s insert-phase calls follow bulk_insert's
+# own batch cadence (multiple times per bank, or less than once for a single
+# huge bank). Consumers that want one event per bank rather than per batch use
+# this.
 BankProgressFn = Callable[[int, int], None]
 
 # index.json is a tiny metadata file (title, revision, format, a handful of
@@ -127,13 +129,20 @@ def import_yomitan_zip(
                    ~/.anki_miner/dicts/).
         progress: Optional (current, total, message) callback. ``total == 0``
                   means the stage is indeterminate; consumers must call
-                  ``setRange(0, 0)``.
-        bank_progress: Optional (banks_done, bank_total) callback, fired once per
-                  consumed term bank. The only determinate denominator this
-                  import has — ``progress`` stays indeterminate during the load
-                  because the row total is unknown until the last bank is
-                  parsed. For consumers that need a fraction rather than a
-                  running count.
+                  ``setRange(0, 0)``. During entry insertion, calls are
+                  determinate against the term-bank count: ``(files_done,
+                  total_term_files, "Inserted N entries")``, where
+                  ``files_done`` is the number of fully-consumed term-bank
+                  files (the row total isn't known until the last bank is
+                  parsed, so the bank count is the only determinate
+                  denominator available). A terminal ``(total, total, ...)``
+                  call fires once ``bulk_insert`` returns, before the
+                  "Finalizing import" stage marker.
+        bank_progress: Optional (files_done, total_files) callback, fired once
+                  per consumed term bank — the same counter as ``progress``'s
+                  insert-phase calls, but one event per bank rather than one
+                  per bulk_insert batch. For consumers that want a coarser,
+                  bank-granular signal.
         overwrite: If True and the destination dict_id already exists, the old
                    folder is renamed to <dict_id>.bak-<timestamp> then removed
                    on success. If False, raises SetupError.
@@ -238,11 +247,11 @@ def import_yomitan_zip(
         # later upload it via AnkiConnect storeMediaFile.
         media_paths: set[str] = set()
 
-        bank_total = len(term_files)
-        banks_done = 0
+        total_files = len(term_files)
+        files_done = 0
 
         def rows() -> Any:
-            nonlocal total_entries, skipped_malformed, banks_done
+            nonlocal total_entries, skipped_malformed, files_done
             for term_file in term_files:
                 _raise_if_cancelled(cancel_check)
                 try:
@@ -252,9 +261,6 @@ def import_yomitan_zip(
                 # A bank whose top-level JSON is not an array is wholly
                 # unreadable — raise instead of skipping every "entry".
                 ensure_bank_array(entries, term_file.name)
-                banks_done += 1
-                if bank_progress is not None:
-                    bank_progress(banks_done, bank_total)
                 for entry in entries:
                     # Structural gate the loop below implicitly assumes (list of
                     # >= 6 positions, non-blank term). Count skips so a
@@ -313,13 +319,16 @@ def import_yomitan_zip(
                         score=score,
                         sequence=sequence,
                     )
+                files_done += 1
+                if bank_progress is not None:
+                    bank_progress(files_done, total_files)
 
         if progress:
             progress(0, 0, "Inserting entries")
 
         def on_insert_progress(inserted: int) -> None:
             if progress:
-                progress(inserted, 0, f"Inserted {inserted:,} entries")
+                progress(files_done, total_files, f"Inserted {inserted:,} entries")
 
         bulk_insert(
             db_path,
@@ -329,6 +338,7 @@ def import_yomitan_zip(
         )
 
         if progress:
+            progress(total_files, total_files, f"Inserted {total_entries:,} entries")
             progress(0, 0, "Finalizing import")
         _raise_if_cancelled(cancel_check)
 
