@@ -237,13 +237,18 @@ class AudioPackRegistry:
 def stale_enabled_audio_packs(config: AnkiMinerConfig) -> list[AudioPackMeta]:
     """Build+scan a fresh registry and return enabled packs needing reimport.
 
-    Convenience wrapper for the startup migration prompt, matching
-    ``stale_enabled_freq_sources``. ``load()`` swallows scan OSErrors, so this
-    never raises for a missing / unreadable audio_packs folder.
+    Convenience wrapper for the startup migration prompt and the pre-run gate,
+    matching ``stale_enabled_freq_sources``. ``load()`` swallows scan OSErrors,
+    so this never raises for a missing / unreadable audio_packs folder.
 
-    Deliberately NOT wired into ``services.resource_staleness``: that module is
-    the pre-run gate that aborts a mining run, and a stale pack costs
-    expression audio and nothing else.
+    This IS wired into ``services.resource_staleness``, reversing an earlier
+    call to leave it out on the grounds that a stale pack costs only expression
+    audio. Cost is not the test the other three families are held to: frequency
+    and pitch are optional too, and they gate. What the gate exists to prevent
+    is a *silent* wrong result, and this is one — ``build_fetcher_chain`` drops
+    the stale pack, so the run reports success while cards quietly fall back to
+    the online sources or get no audio at all. Ungated, the only notice a user
+    ever gets is a warning line in the log.
     """
     registry = AudioPackRegistry(config.audio_packs_root)
     registry.load()
