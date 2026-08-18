@@ -144,6 +144,25 @@ class AudioPackRegistry:
             key=lambda meta: meta.pack_id,
         )
 
+    def stale_enabled(self, config: AnkiMinerConfig) -> list[AudioPackMeta]:
+        """Enabled chain packs present on disk but schema-mismatched.
+
+        Mirrors ``FrequencySourceRegistry.stale_enabled``. Online entries
+        (jpod101/googletts/custom) carry no index and cannot be stale; a pack
+        absent from disk is NOT reported, because there is nothing left to
+        rebuild from.
+
+        Does NOT call load(); callers control when the scan happens.
+        """
+        stale: list[AudioPackMeta] = []
+        for entry in config.expression_audio_chain:
+            if entry.kind != "pack" or not entry.enabled or not entry.pack_id:
+                continue
+            meta = self._packs.get(entry.pack_id)
+            if meta is not None and not meta.schema_ok:
+                stale.append(meta)
+        return sorted(stale, key=lambda meta: meta.pack_id)
+
     # ------------------------------------------------------------------
     # Chain assembly
     # ------------------------------------------------------------------
@@ -213,3 +232,19 @@ class AudioPackRegistry:
                 )
             )
         return chain
+
+
+def stale_enabled_audio_packs(config: AnkiMinerConfig) -> list[AudioPackMeta]:
+    """Build+scan a fresh registry and return enabled packs needing reimport.
+
+    Convenience wrapper for the startup migration prompt, matching
+    ``stale_enabled_freq_sources``. ``load()`` swallows scan OSErrors, so this
+    never raises for a missing / unreadable audio_packs folder.
+
+    Deliberately NOT wired into ``services.resource_staleness``: that module is
+    the pre-run gate that aborts a mining run, and a stale pack costs
+    expression audio and nothing else.
+    """
+    registry = AudioPackRegistry(config.audio_packs_root)
+    registry.load()
+    return registry.stale_enabled(config)

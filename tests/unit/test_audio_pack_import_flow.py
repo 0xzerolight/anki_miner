@@ -1014,3 +1014,166 @@ def test_reimport_of_android_pack_uses_the_file_picker_and_keeps_the_pack_id(tab
 
     assert picked == ["file"]
     assert factory.call_args.kwargs == {"pack_id": "android", "overwrite": True}
+
+
+# ---------------------------------------------------------------------------
+# reimport_all: batch repair from the source path each pack's meta recorded
+# ---------------------------------------------------------------------------
+
+
+def _install_pack_slot(
+    packs_root: Path,
+    pack_id: str,
+    *,
+    fmt: str = "ajt",
+    pack_dir: Path | None = None,
+    source_db: Path | None = None,
+    stale: bool = True,
+) -> None:
+    """Write a pack slot whose meta points at *pack_dir* / *source_db*."""
+    from anki_miner.services.audio_packs.storage import SCHEMA_VERSION, create_index, write_meta
+
+    slot = packs_root / pack_id
+    slot.mkdir(parents=True, exist_ok=True)
+    db = slot / "index.sqlite"
+    create_index(db)
+    meta = {
+        "pack_id": pack_id,
+        "source": pack_id.title(),
+        "format": fmt,
+        "entry_count": "1",
+        "schema_version": str(SCHEMA_VERSION - 1 if stale else SCHEMA_VERSION),
+        "pack_dir": str(pack_dir if pack_dir is not None else slot),
+    }
+    if source_db is not None:
+        meta["source_db"] = str(source_db)
+    write_meta(db, meta)
+
+
+def _explode(*_args, **_kwargs):
+    raise AssertionError("a batch reimport must never open a picker")
+
+
+class TestReimportAll:
+    def test_rebuilds_a_folder_pack_from_its_recorded_dir(self, tab, monkeypatch, stub_worker, tmp_path):
+        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
+        _capture_infos(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"forvo"}))
+
+        assert stub_worker.repair_factory.called
+        args, kwargs = stub_worker.repair_factory.call_args
+        assert args[0] == pack_dir
+        assert kwargs["pack_id"] == "forvo"
+
+    def test_rebuilds_an_android_db_pack_in_place(self, tab, monkeypatch, stub_worker, tmp_path):
+        db_path = tmp_path / "android.db"
+        db_path.touch()
+        _install_pack_slot(tab.config.audio_packs_root, "jp", fmt="android_db", source_db=db_path)
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="jp", enabled=True),))
+        android_factory = MagicMock(name="for_android_audio_db", side_effect=stub_worker.side_effect)
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.audio_pack_import_flow.ImportWorker.for_android_audio_db",
+            android_factory,
+        )
+        _capture_infos(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"jp"}))
+
+        args, kwargs = android_factory.call_args
+        assert args[0] == db_path
+        # Slot-pinned overwrite is the android repair contract: the importer
+        # proves ownership before replacing.
+        assert kwargs == {"pack_id": "jp", "overwrite": True}
+
+    def test_never_opens_a_picker(self, tab, monkeypatch, stub_worker, tmp_path):
+        """A batch that stopped on a picker per pack would strand the user."""
+        _install_pack_slot(tab.config.audio_packs_root, "gone", pack_dir=tmp_path / "deleted")
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="gone", enabled=True),))
+        monkeypatch.setattr(file_dialogs, "pick_directory", _explode)
+        monkeypatch.setattr(file_dialogs, "pick_open_file", _explode)
+        _capture_infos(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"gone"}))
+
+        stub_worker.repair_factory.assert_not_called()
+
+    def test_names_packs_it_cannot_rebuild(self, tab, monkeypatch, stub_worker, tmp_path):
+        _install_pack_slot(tab.config.audio_packs_root, "gone", pack_dir=tmp_path / "deleted")
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="gone", enabled=True),))
+        infos = _capture_infos(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"gone"}))
+
+        assert infos, "the batch must report what it skipped"
+        assert "Gone" in infos[-1][1]
+
+    def test_reports_an_empty_chain(self, tab, monkeypatch, stub_worker):
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="jpod101", enabled=True),))
+        infos = _capture_infos(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all()
+
+        assert infos and "No audio packs in the chain." in infos[-1][1]
+
+    def test_refuses_while_resources_are_held(self, tab, monkeypatch, stub_worker, tmp_path):
+        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
+        monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
+        warnings = _capture_warnings(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"forvo"}))
+
+        stub_worker.repair_factory.assert_not_called()
+        assert any("Indexed resources are in use" in body for _title, body in warnings)
+
+    @pytest.mark.parametrize("scenario", ["nothing_to_do", "release_refused", "batch_runs"])
+    def test_on_complete_fires_once_on_every_terminal_path(self, tab, monkeypatch, stub_worker, tmp_path, scenario):
+        """The startup prompt chains the next family off this callback: a
+        missed fire strands the chain, a double fire runs a family twice."""
+        _capture_infos(monkeypatch)
+        _capture_warnings(monkeypatch)
+        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
+
+        if scenario == "nothing_to_do":
+            tab.audio_panel.set_chain(())
+        else:
+            tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
+        if scenario == "release_refused":
+            monkeypatch.setattr(tab.audio_panel, "request_resource_release", lambda: False, raising=False)
+
+        calls: list[int] = []
+        tab._audio_pack_import_flow.reimport_all(on_complete=lambda: calls.append(1))
+
+        if scenario == "batch_runs":
+            assert calls == [], "the callback waits for the batch"
+            _complete_worker(stub_worker.instances[0], "forvo", {"entry_count": 3})
+        assert calls == [1]
+
+    def test_success_refreshes_the_panel_once_and_leaves_the_chain(self, tab, monkeypatch, stub_worker, tmp_path):
+        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
+        infos = _capture_infos(monkeypatch)
+        _capture_warnings(monkeypatch)
+        persist_calls: list = []
+        tab._audio_pack_import_flow._persist_chain = persist_calls.append
+        notify_calls: list[None] = []
+        monkeypatch.setattr(
+            tab._audio_pack_import_flow,
+            "_notify_config_changed",
+            lambda: notify_calls.append(None),
+            raising=False,
+        )
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"forvo"}))
+        _complete_worker(stub_worker.instances[0], "forvo", {"entry_count": 3})
+
+        assert infos, "the batch must report its summary"
+        assert "Forvo" in infos[-1][1]
+        assert persist_calls == [], "a reimport rebuilds an index, it does not move the chain"
+        assert notify_calls == [None], "one config_changed for the whole batch"

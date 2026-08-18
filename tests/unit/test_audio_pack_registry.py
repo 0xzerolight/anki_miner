@@ -9,7 +9,7 @@ from pathlib import Path
 from anki_miner.config.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.importer import import_audio_pack
-from anki_miner.services.audio_packs.registry import AudioPackRegistry
+from anki_miner.services.audio_packs.registry import AudioPackRegistry, stale_enabled_audio_packs
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
     create_index,
@@ -396,3 +396,90 @@ class TestBuildFetcherChain:
             result = reg.build_fetcher_chain(config, tmp_path / "cache")
 
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# stale_enabled tests
+# ---------------------------------------------------------------------------
+
+
+def _stale_pack(root: Path, pack_id: str, *, fmt: str = "ajt") -> Path:
+    """Write a pack slot whose index schema is one the app no longer reads."""
+    pack_dir = root / pack_id
+    pack_dir.mkdir(parents=True)
+    db = pack_dir / "index.sqlite"
+    create_index(db)
+    write_meta(
+        db,
+        {
+            "pack_id": pack_id,
+            "source": pack_id.title(),
+            "format": fmt,
+            "entry_count": "1",
+            "schema_version": str(SCHEMA_VERSION - 1),
+            "pack_dir": str(pack_dir),
+        },
+    )
+    return pack_dir
+
+
+class TestStaleEnabled:
+    def test_reports_enabled_schema_mismatched_packs(self, tmp_path: Path):
+        root = tmp_path / "audio_packs"
+        _stale_pack(root, "old_pack")
+        # _import_pack imports into this same root, so one scan sees both.
+        _packs_root, _final_dir, good_id = _import_pack(tmp_path)
+
+        reg = AudioPackRegistry(root)
+        reg.load()
+        config = _config_with_chain(
+            AudioSourceEntry(kind="pack", pack_id="old_pack", enabled=True),
+            AudioSourceEntry(kind="pack", pack_id=good_id, enabled=True),
+        )
+
+        assert [m.pack_id for m in reg.stale_enabled(config)] == ["old_pack"]
+
+    def test_ignores_disabled_absent_and_online_entries(self, tmp_path: Path):
+        root = tmp_path / "audio_packs"
+        _stale_pack(root, "off_pack")
+        reg = AudioPackRegistry(root)
+        reg.load()
+        config = _config_with_chain(
+            # Disabled: the user opted out; nothing to migrate for them.
+            AudioSourceEntry(kind="pack", pack_id="off_pack", enabled=False),
+            # Absent from disk: no index left to rebuild from.
+            AudioSourceEntry(kind="pack", pack_id="gone_pack", enabled=True),
+            # Online sources carry no index and cannot be stale.
+            AudioSourceEntry(kind="jpod101", enabled=True),
+            AudioSourceEntry(kind="pack", pack_id=None, enabled=True),
+        )
+
+        assert reg.stale_enabled(config) == []
+
+    def test_current_schema_is_not_stale(self, tmp_path: Path):
+        packs_root, _final_dir, pack_id = _import_pack(tmp_path)
+        reg = AudioPackRegistry(packs_root)
+        reg.load()
+        config = _config_with_chain(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True))
+
+        assert reg.stale_enabled(config) == []
+
+
+class TestStaleEnabledAudioPacksHelper:
+    def test_scans_a_fresh_registry(self, tmp_path: Path):
+        root = tmp_path / "audio_packs"
+        _stale_pack(root, "old_pack")
+        config = AnkiMinerConfig(
+            audio_packs_root=root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="old_pack", enabled=True),),
+        )
+
+        assert [m.pack_id for m in stale_enabled_audio_packs(config)] == ["old_pack"]
+
+    def test_a_missing_root_reports_no_staleness(self, tmp_path: Path):
+        config = AnkiMinerConfig(
+            audio_packs_root=tmp_path / "nonexistent",
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="old_pack", enabled=True),),
+        )
+
+        assert stale_enabled_audio_packs(config) == []
