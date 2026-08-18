@@ -683,6 +683,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.audio_panel.add_pack_requested.connect(self._audio_pack_import_flow.add_pack)
         self.audio_panel.add_android_db_requested.connect(self._audio_pack_import_flow.add_android_db)
         self.audio_panel.reimport_pack_requested.connect(self._audio_pack_import_flow.reimport_pack)
+        self.audio_panel.reimport_all_requested.connect(self._audio_pack_import_flow.reimport_all)
         self.audio_panel.restore_requested.connect(self._restore_audio_from_disk)
         # Persist chain immediately after reorder/toggle.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
@@ -1299,6 +1300,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             "dictionary": ("dictionaries", self._dict_import_flow),
             "frequency": ("frequency", self._frequency_import_flow),
             "pitch": ("pitch", self._pitch_import_flow),
+            "audio": ("audio", self._audio_pack_import_flow),
         }
         subtab, flow = flows[kind]
         self.open_subtab(subtab)

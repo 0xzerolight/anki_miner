@@ -300,6 +300,7 @@ class TestTriggerReimportAll:
             ("dictionary", "dictionaries", "_dict_import_flow"),
             ("frequency", "frequency", "_frequency_import_flow"),
             ("pitch", "pitch", "_pitch_import_flow"),
+            ("audio", "audio", "_audio_pack_import_flow"),
         ],
     )
     def test_dispatches_to_the_right_flow_and_subtab(self, tab, monkeypatch, kind, subtab, flow_attr):
@@ -317,3 +318,18 @@ class TestTriggerReimportAll:
 
         assert opened == [subtab]
         assert called == [{"only_ids": frozenset({"x"}), "on_complete": done}]
+
+    @pytest.mark.parametrize(
+        "panel_attr",
+        ["dictionary_panel", "frequency_panel", "pitch_panel", "audio_panel"],
+    )
+    def test_every_resource_panel_has_a_wired_reimport_all_button(self, tab, panel_attr):
+        """The manual button and the startup prompt share one implementation.
+
+        The connection itself is the assertion: Qt binds the slot at connect
+        time, so patching the flow afterwards cannot observe the emission.
+        """
+        panel = getattr(tab, panel_attr)
+
+        assert panel._reimport_btn.text() == "Reimport All"
+        assert panel.receivers(panel.reimport_all_requested) == 1
