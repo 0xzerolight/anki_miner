@@ -53,23 +53,31 @@ def _patch_stale(monkeypatch, *, dicts=(), freqs=(), pitches=()):
     monkeypatch.setattr(pitch_reg, "stale_enabled_pitch_sources", lambda config: list(pitches))
 
 
-def _answer_prompt(monkeypatch, *, accept: bool) -> MagicMock:
-    """Answer the stale-resource prompt without running a real Qt modal.
+def _answer_prompt(monkeypatch, *, accept: bool) -> SimpleNamespace:
+    """Answer the stale-resource prompt by clicking a real button, as a user does.
 
-    One seam for every test in the module: the prompt's dialog shape is an
-    implementation detail that has changed once already.
+    ``exec`` is the seam (same one ``test_recovery_controller`` uses) so
+    ``clickedButton()`` reports a genuine click rather than a stubbed enum.
+    Returns a record of what the prompt put on screen.
     """
     from PyQt6.QtWidgets import QMessageBox
 
-    shown = MagicMock(name="prompt")
-    answer = QMessageBox.StandardButton.Yes if accept else QMessageBox.StandardButton.No
+    from anki_miner.gui import main_window as mw_module
 
-    def _question(*_args, **_kwargs):
-        shown()
-        return answer
+    role = QMessageBox.ButtonRole.AcceptRole if accept else QMessageBox.ButtonRole.RejectRole
+    seen = SimpleNamespace(bodies=[], buttons=[])
 
-    monkeypatch.setattr(QMessageBox, "question", _question)
-    return shown
+    def _click(box) -> int:
+        seen.bodies.append(box.text())
+        seen.buttons.append([b.text() for b in box.buttons()])
+        for button in box.buttons():
+            if box.buttonRole(button) == role:
+                button.click()
+                return 0
+        raise AssertionError(f"no button with role {role}")
+
+    monkeypatch.setattr(mw_module.QMessageBox, "exec", _click)
+    return seen
 
 
 def _stub_prewarm(monkeypatch, window) -> list[str]:
@@ -96,10 +104,24 @@ def _stub_settings_trigger(qtbot, window) -> MagicMock:
     return fake.trigger_reimport_all
 
 
-def test_stale_prompt_yes_triggers_reimport(main_window, monkeypatch, qtbot):
-    from PyQt6.QtWidgets import QMessageBox
+def test_prompt_offers_a_named_reimport_button(main_window, monkeypatch, qtbot):
+    """The accept button runs every family's Reimport All, so it says so.
 
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+    'Yes' named the answer to a question the dialog then had to spell out;
+    the button names the action instead.
+    """
+    seen = _answer_prompt(monkeypatch, accept=True)
+    _stub_settings_trigger(qtbot, main_window)
+
+    main_window._stale_resource_prompt_handled = False
+    main_window._on_stale_resources_scanned({"dictionary": [("old-dict", "Old Dict")]})
+
+    assert seen.buttons == [["Reimport All", "Later"]]
+    assert "Re-import them now?" not in seen.bodies[0]
+
+
+def test_stale_prompt_yes_triggers_reimport(main_window, monkeypatch, qtbot):
+    _answer_prompt(monkeypatch, accept=True)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_resource_prompt_handled = False
@@ -114,9 +136,7 @@ def test_stale_prompt_yes_triggers_reimport(main_window, monkeypatch, qtbot):
 
 
 def test_stale_prompt_later_does_not_reimport(main_window, monkeypatch, qtbot):
-    from PyQt6.QtWidgets import QMessageBox
-
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.No)
+    _answer_prompt(monkeypatch, accept=False)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_resource_prompt_handled = False
@@ -126,10 +146,7 @@ def test_stale_prompt_later_does_not_reimport(main_window, monkeypatch, qtbot):
 
 
 def test_no_stale_resource_no_prompt(main_window, monkeypatch, qtbot):
-    from PyQt6.QtWidgets import QMessageBox
-
-    called = MagicMock()
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: called() or QMessageBox.StandardButton.Yes)
+    seen = _answer_prompt(monkeypatch, accept=True)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     main_window._stale_resource_prompt_handled = False
@@ -137,17 +154,14 @@ def test_no_stale_resource_no_prompt(main_window, monkeypatch, qtbot):
     # configured, which is the common case and must stay silent.
     main_window._on_stale_resources_scanned({"dictionary": [], "frequency": [], "pitch": []})
 
-    called.assert_not_called()  # no dialog shown
+    assert seen.bodies == []  # no dialog shown
     trigger.assert_not_called()
     # Guard stays down so a later launch re-offers if still stale.
     assert main_window._stale_resource_prompt_handled is False
 
 
 def test_prompt_handled_once_per_session(main_window, monkeypatch, qtbot):
-    from PyQt6.QtWidgets import QMessageBox
-
-    q = MagicMock(return_value=QMessageBox.StandardButton.No)
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: q())
+    seen = _answer_prompt(monkeypatch, accept=False)
     _stub_settings_trigger(qtbot, main_window)
 
     stale = {"dictionary": [("old-dict", "Old Dict")]}
@@ -155,7 +169,7 @@ def test_prompt_handled_once_per_session(main_window, monkeypatch, qtbot):
     main_window._on_stale_resources_scanned(stale)
     main_window._on_stale_resources_scanned(stale)  # second call is a no-op (guard set)
 
-    assert q.call_count == 1
+    assert len(seen.bodies) == 1
 
 
 def test_families_run_one_after_another(main_window, monkeypatch, qtbot):
@@ -164,9 +178,7 @@ def test_families_run_one_after_another(main_window, monkeypatch, qtbot):
     Firing them together would stack three ApplicationModal progress dialogs,
     so each batch starts only when the previous one reports completion.
     """
-    from PyQt6.QtWidgets import QMessageBox
-
-    monkeypatch.setattr(QMessageBox, "question", lambda *a, **kw: QMessageBox.StandardButton.Yes)
+    _answer_prompt(monkeypatch, accept=True)
     trigger = _stub_settings_trigger(qtbot, main_window)
 
     completions: list = []

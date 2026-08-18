@@ -1519,16 +1519,20 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             + "\n\n"
             + "\n\n".join(blocks)
             + "\n\n"
-            + self.tr("Mining is blocked until you do. Re-import them now?")
+            + self.tr("Mining is blocked until you do.")
         )
-        reply = QMessageBox.question(
-            self,
-            self.tr("Resources need re-importing"),
-            body,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(self.tr("Resources need re-importing"))
+        box.setText(body)
+        # Named rather than Yes/No: this button runs every stale family's
+        # Reimport All, one batch after another, and "Yes" does not say that —
+        # it left the dialog spelling the action out in its own last sentence.
+        reimport = box.addButton(self.tr("Reimport All"), QMessageBox.ButtonRole.AcceptRole)
+        box.addButton(self.tr("Later"), QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(reimport)
+        box.exec()
+        if box.clickedButton() is not reimport:
             self._start_prewarm()
             return
         idx = self._settings_tab_index()
