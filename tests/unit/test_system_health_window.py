@@ -56,9 +56,15 @@ def _result(*, ankiconnect_ok=True, deck=True, note_type=True, issues=None, vers
 
 
 def test_healthy_sweep_marks_every_row_ready():
-    # Frequency and pitch report a summary only once configured; an empty chain
-    # is a choice, not a fault, and is pinned separately below.
-    result = _result(versions={"frequency-sources": "JPDB (1,000 entries)", "pitch-sources": "NHK (2,000 entries)"})
+    # Frequency, pitch and audio packs report a summary only once configured; an
+    # empty chain is a choice, not a fault, and is pinned separately below.
+    result = _result(
+        versions={
+            "frequency-sources": "JPDB (1,000 entries)",
+            "pitch-sources": "NHK (2,000 entries)",
+            "audio-packs": "NHK 2016 (5,000 entries)",
+        }
+    )
 
     checks = checks_from_validation(result, CHECKED_AT)
 
@@ -67,14 +73,14 @@ def test_healthy_sweep_marks_every_row_ready():
 
 
 def test_unconfigured_optional_resources_read_as_unknown_not_ready():
-    """Frequency and pitch are optional, so absent must not paint a green tick.
+    """The three optional families must not paint a green tick when absent.
 
     The rows come from a static group tuple and so always render; without this
     the screen would claim a resource is ready when the user never added one.
     """
     checks = checks_from_validation(_result(), CHECKED_AT)
 
-    for key in ("resources.frequency", "resources.pitch"):
+    for key in ("resources.frequency", "resources.pitch", "resources.audio"):
         assert checks[key].state == HEALTH_UNKNOWN
         assert checks[key].detail == "Not configured (optional)"
     assert checks["resources.dictionary"].state == HEALTH_OK
@@ -100,6 +106,27 @@ def test_stale_optional_resource_warns_and_can_be_repaired():
     # The Fix button has somewhere to land.
     assert HEALTH_FIX_ANCHORS["resources.frequency"] == "frequency.chain"
     assert HEALTH_FIX_ANCHORS["resources.pitch"] == "pitch.chain"
+    assert HEALTH_FIX_ANCHORS["resources.audio"] == "audio.chain"
+
+
+def test_stale_audio_pack_warns_on_its_own_row():
+    """The component string is the only link from the check to the row; a
+    mismatch drops the warning off the screen entirely."""
+    result = _result(
+        issues=[
+            ValidationIssue(
+                component="Audio Packs",
+                severity="WARNING",
+                message="Audio pack(s) need reimporting after an upgrade: NHK 2016. "
+                "Use Settings → Audio → Reimport All.",
+            )
+        ]
+    )
+
+    checks = checks_from_validation(result, CHECKED_AT)
+
+    assert checks["resources.audio"].state == HEALTH_WARN
+    assert "NHK 2016" in checks["resources.audio"].detail
 
 
 def test_unreachable_anki_leaves_dependent_rows_unknown():
