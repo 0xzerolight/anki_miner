@@ -85,12 +85,12 @@
 #   Windows: delvewheel repair --exclude vulkan-1.dll ...
 # Excluding the loader is the whole point: ggml-vulkan must bind the system's
 # Vulkan loader (the user's GPU driver), not a copy frozen at build time.
-auditwheel==6.7.0
+auditwheel==6.8.1
 delvewheel==1.13.0
 # `wheel` unpacks/repacks the raw wheel to inject the ggml-vulkan MODULE backend
 # lib, which ggml builds to CMAKE_BINARY_DIR/bin (NOT the wheel) and dlopens at
 # runtime, so neither auditwheel nor delvewheel grafts it on its own.
-wheel==0.47.0
+wheel==0.48.0
 # `ninja` — Windows only: pin CMAKE_MAKE_PROGRAM to this real ninja.exe so the
 # vulkan-shaders-gen ExternalProject sub-build does not inherit pip's broken
 # console-script shim from the parent CMake cache (FTK1011 fix uses Ninja).
