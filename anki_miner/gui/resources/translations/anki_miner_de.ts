@@ -8869,6 +8869,18 @@ Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher
         <translation>Prüft beim Start einmal täglich und lädt in den eigenen Ordner von Anki Miner herunter. Wenn dies deaktiviert bleibt, funktioniert YouTube-Mining irgendwann nicht mehr.</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>Vorabversionen von yt-dlp verwenden</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>Vorabversion</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>Updates installieren den Nightly-Kanal von yt-dlp, der YouTube-Ausfälle Tage vor einer stabilen Version behebt. Wird dies deaktiviert, bleibt die installierte Version erhalten, bis eine neuere stabile Version sie ersetzt.</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>Optional: Pfad zu Ihrer eigenen ausführbaren yt-dlp-Datei...</translation>
     </message>

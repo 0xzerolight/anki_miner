@@ -8797,6 +8797,18 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation type="unfinished" />
     </message>

@@ -8869,6 +8869,18 @@ O seletor “Frases” oferece uma opção por linha de legenda, então costuma 
         <translation>Verifica uma vez por dia na inicialização e baixa para a própria pasta do Anki Miner. Deixar isso desativado significa que a mineração do YouTube acabará deixando de funcionar.</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>Usar versões de pré-lançamento do yt-dlp</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>Pré-lançamento</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>As atualizações instalam o canal nightly do yt-dlp, que corrige falhas do YouTube dias antes de uma versão estável. Ao desativar, a versão instalada permanece até ser substituída por uma versão estável mais recente.</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>Opcional: caminho para seu próprio executável yt-dlp...</translation>
     </message>

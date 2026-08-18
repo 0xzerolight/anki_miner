@@ -8869,6 +8869,18 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
         <translation>Comprueba una vez al día al iniciar y descarga en la propia carpeta de Anki Miner. Dejarlo desactivado significa que la minería de YouTube acabará dejando de funcionar.</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>Usar versiones preliminares de yt-dlp</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>Preliminar</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>Las actualizaciones instalan el canal nightly de yt-dlp, que corrige los fallos de YouTube días antes de una versión estable. Si se desactiva, la versión instalada se conserva hasta que la reemplace una versión estable más reciente.</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>Opcional: ruta a su propio ejecutable de yt-dlp...</translation>
     </message>

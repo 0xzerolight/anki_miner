@@ -8854,6 +8854,18 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
         <translation>Kiểm tra mỗi ngày một lần khi khởi động và tải vào thư mục riêng của Anki Miner. Nếu tắt, khai thác YouTube cuối cùng sẽ ngừng hoạt động.</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>Dùng bản tiền phát hành của yt-dlp</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>Bản tiền phát hành</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>Các bản cập nhật sẽ cài kênh nightly của yt-dlp, giúp sửa lỗi YouTube sớm hơn bản ổn định vài ngày. Nếu tắt, bản đã cài sẽ được giữ nguyên cho đến khi có bản ổn định mới hơn thay thế.</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>Tùy chọn: đường dẫn đến tệp thực thi yt-dlp riêng...</translation>
     </message>

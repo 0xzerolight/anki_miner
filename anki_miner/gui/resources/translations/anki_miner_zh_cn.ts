@@ -8854,6 +8854,18 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>启动时每天检查一次，并下载到 Anki Miner 自己的文件夹。关闭此选项最终会导致 YouTube 挖词无法工作。</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>使用 yt-dlp 预发布版本</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>预发布</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>更新时将安装 yt-dlp 的 nightly 渠道版本，可在稳定版发布前几天修复 YouTube 故障。关闭后，已安装的版本会保留，直到被更新的稳定版替换。</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>可选：你自己的 yt-dlp 可执行文件路径…</translation>
     </message>
