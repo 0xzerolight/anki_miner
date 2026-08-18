@@ -147,7 +147,7 @@ class TestEpisodeProcessorCancel:
         mock_services["word_filter"].filter_unknown.return_value = words
         mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
 
-        def define_and_cancel(lemmas, cb, fallback_context=None, *, is_cancelled):
+        def define_and_cancel(lemmas, cb, fallback_context=None, *, is_cancelled, lemma_context=None):
             assert is_cancelled() is False
             processor.cancel()
             assert is_cancelled() is True

@@ -130,6 +130,25 @@ def sanitize_source_label(label: str) -> str:
     return _ARR_METADATA_RE.sub("", label).strip()
 
 
+def _build_lemma_context(words: list[TokenizedWord]) -> dict[str, str]:
+    """Map each word's ``mined_form`` to its UniDic lemma for the definition /
+    glossary batches' Rule A′ homograph scope.
+
+    A kana front (mined_form ゆう, lemma 言う) resolves only through the
+    dictionary's folded-reading scan, where score ranking prefers the wrong
+    same-reading homograph (有/夕/結う over 言う); the lemma names the lexeme
+    the tokenizer actually chose. Identity pairs carry no signal and an empty
+    lemma (fully-OOV shapes) has nothing to point at, so both are skipped.
+    First-seen wins for duplicate mined_forms, mirroring the batches' own
+    first-reading-wins dedup.
+    """
+    context: dict[str, str] = {}
+    for w in words:
+        if w.lemma and w.lemma != w.mined_form:
+            context.setdefault(w.mined_form, w.lemma)
+    return context
+
+
 @dataclass
 class _EpisodeContext:
     """Mutable accumulator carried through the five phase helpers.
@@ -1321,11 +1340,19 @@ class EpisodeProcessor:
             if alternate != w.mined_form and not _differs_by_okurigana_only(w.mined_form, alternate):
                 alternate = ""
             fallback_context.setdefault(w.mined_form, (alternate, None))
+        # Rule A′ lemma scope: a kana front's lemma names its lexeme so the
+        # lookup keeps 言う's rows for ゆう instead of the highest-scored
+        # same-reading homograph (有/夕/結う). Passed only when non-empty —
+        # the same legacy-call-shape convention the service applies toward
+        # providers, so kanji-only runs keep the pre-A′ call signature.
+        lemma_context = _build_lemma_context(words_with_media)
+        lemma_kwargs: dict[str, dict[str, str]] = {"lemma_context": lemma_context} if lemma_context else {}
         definitions = self.definition_service.get_definitions_batch(
             lookup_pairs,
             progress_callback,
             fallback_context,
             is_cancelled=lambda: self.cancelled,
+            **lemma_kwargs,
         )
         self.presenter.show_success(
             QCoreApplication.translate(
@@ -1342,6 +1369,7 @@ class EpisodeProcessor:
                 lookup_pairs,
                 progress_callback,
                 is_cancelled=lambda: self.cancelled,
+                **lemma_kwargs,
             )
             # get_glossaries_batch has no miss-fallback mechanism, so a miss may
             # retry once under a same-kanji, okurigana-only lemma alternate.

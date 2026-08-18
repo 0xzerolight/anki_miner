@@ -115,7 +115,7 @@ def _make_processor(
     definition_service = definition_service or MagicMock(name="DefinitionService")
     definition_service.has_offline_definitions.side_effect = lambda lemmas: dict.fromkeys(lemmas, True)
 
-    def _defs(pairs, pc=None, fb=None, *, is_cancelled):
+    def _defs(pairs, pc=None, fb=None, *, is_cancelled, lemma_context=None):
         assert is_cancelled() is False
         if pc is not None:
             pc.on_start(len(pairs), "definitions")
@@ -124,7 +124,7 @@ def _make_processor(
             pc.on_complete()
         return ["<def>"] * len(pairs)
 
-    def _gloss(pairs, pc=None, *, is_cancelled):
+    def _gloss(pairs, pc=None, *, is_cancelled, lemma_context=None):
         assert is_cancelled() is False
         if pc is not None:
             pc.on_start(len(pairs), "glossaries")

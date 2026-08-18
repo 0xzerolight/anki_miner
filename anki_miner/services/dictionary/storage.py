@@ -236,13 +236,13 @@ def _fold_reading(reading: str | None) -> str | None:
     return katakana_to_hiragana(unicodedata.normalize("NFC", reading)) if reading is not None else None
 
 
-def _homograph_keep_mask(word: str, rows: list[tuple[str, str]]) -> list[bool]:
+def _homograph_keep_mask(word: str, rows: list[tuple[str, str]], lemma: str | None = None) -> list[bool]:
     """Render-path homograph scope (U2): a keep-mask aligned to ``rows``.
 
     ``rows`` are ``(term, content)`` pairs for the rows a lookup fetched for
     ``word`` (each already matched ``term = word`` OR the folded reading), so a
     row is *term-exact* iff its term equals ``word`` and *reading-only* otherwise.
-    Two rules drop wrong-homograph reading matches from the RENDERED definition
+    Three rules drop wrong-homograph reading matches from the RENDERED definition
     (existence/attestation probes bypass this — see ``lookup_many``'s
     ``scope_homographs`` flag):
 
@@ -255,10 +255,20 @@ def _homograph_keep_mask(word: str, rows: list[tuple[str, str]]) -> list[bool]:
       both rows' tags on a kana query — that reading-only row is the SAME gloss,
       not a wrong homograph. Monotone-safe: term-exact rows always survive, so a
       word with one can never be emptied.
-    * **Rule B** — kana-only query with NO term-exact row ⇒ keep only reading
-      matches whose term carries at least one kanji (しゃべる keeps 喋る, drops the
-      kana-term シャベル). May legitimately empty a junk kana front (accepted).
-      Same-script kanji-vs-kanji ordering (汁 vs 知る) is out of scope.
+    * **Rule A′** — no term-exact row, but the caller supplied the token's
+      lemma and at least one row's term equals it ⇒ keep the lemma-exact rows
+      (plus same-content duplicates, the Rule A carve-out). This is the
+      kana-front fix: mined_form ゆう (lemma 言う) resolves purely through the
+      folded-reading scan where every ゆう-reading homograph qualifies and
+      score ranking buries 言う under 有/夕/結う — the tokenizer already chose
+      the lexeme, so its lemma names the right rows. Kanji fronts can't reach
+      this rule: a kanji query fetches no reading matches, so it either has
+      term-exact rows (Rule A) or zero rows (miss → 5.2 fallback).
+    * **Rule B** — kana-only query with NO term-exact (or lemma-exact) row ⇒
+      keep only reading matches whose term carries at least one kanji (しゃべる
+      keeps 喋る, drops the kana-term シャベル). May legitimately empty a junk
+      kana front (accepted). Same-script kanji-vs-kanji ordering (汁 vs 知る)
+      is out of scope.
 
     Any other case (kanji query with no term-exact row — reading matches against a
     kanji query are impossible) leaves the set intact.
@@ -267,6 +277,11 @@ def _homograph_keep_mask(word: str, rows: list[tuple[str, str]]) -> list[bool]:
     if any(term_exact):
         exact_contents = {content for (_, content), ex in zip(rows, term_exact, strict=True) if ex}
         return [ex or content in exact_contents for (_, content), ex in zip(rows, term_exact, strict=True)]
+    if lemma and lemma != word:
+        lemma_exact = [term == lemma for term, _ in rows]
+        if any(lemma_exact):
+            lemma_contents = {content for (_, content), ex in zip(rows, lemma_exact, strict=True) if ex}
+            return [ex or content in lemma_contents for (_, content), ex in zip(rows, lemma_exact, strict=True)]
     if _is_kana_only(word):
         return [any(_is_kanji(c) for c in term) for term, _ in rows]
     return [True] * len(rows)
@@ -452,13 +467,20 @@ def read_meta_cached(db_path: Path) -> dict[str, str]:
     return _sqlite_index.read_meta_cached(db_path, read_meta)
 
 
-def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> list[tuple[str, str, int | None]]:
+def lookup(
+    conn: sqlite3.Connection, word: str, reading: str | None = None, lemma: str | None = None
+) -> list[tuple[str, str, int | None]]:
     """Return up to ``_LOOKUP_LIMIT`` (content, tags, sequence) triples matching
     word (term or folded reading), reading-boosted then ranked.
 
     ``reading`` is the token's contextual kana reading (e.g. ``w.lemma_reading``)
     and acts as a ranking BOOST only: rows whose stored reading equals it sort
     first, the rest survive below. ``None`` = wildcard (no boost) = 4.6 behavior.
+
+    ``lemma`` is the token's UniDic lemma; it feeds the Rule A′ homograph scope
+    (see :func:`_homograph_keep_mask`) so a kana front (ゆう, lemma 言う) keeps
+    its own lexeme's rows instead of every same-reading homograph. ``None``
+    keeps pre-A′ behavior.
 
     Readings are stored hiragana-folded, so the reading-match WHERE clause binds
     the folded query word and the boost binds the folded contextual reading,
@@ -469,11 +491,12 @@ def lookup(conn: sqlite3.Connection, word: str, reading: str | None = None) -> l
     word = unicodedata.normalize("NFC", word)
     folded_word = katakana_to_hiragana(word)
     folded_boost = _fold_reading(reading)
+    normalized_lemma = unicodedata.normalize("NFC", lemma) if lemma else None
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
-    # rows: (content, tags, sequence, term). Scope homographs (Rule A/B) over the
-    # ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
+    # rows: (content, tags, sequence, term). Scope homographs (Rule A/A′/B) over
+    # the ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
     # filter-before-cap order ``lookup_many`` uses so both stay row-for-row equal.
-    keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows])
+    keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows], normalized_lemma)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     return [(row[0], row[1], row[2]) for row in kept[:_LOOKUP_LIMIT]]
 
@@ -505,7 +528,10 @@ _BIND_CHUNK = 450
 
 
 def lookup_many(
-    conn: sqlite3.Connection, pairs: list[tuple[str, str | None]], scope_homographs: bool = True
+    conn: sqlite3.Connection,
+    pairs: list[tuple[str, str | None]],
+    scope_homographs: bool = True,
+    lemmas: dict[str, str] | None = None,
 ) -> dict[str, list[tuple[str, str, int | None]]]:
     """Batch variant of :func:`lookup`.
 
@@ -515,6 +541,10 @@ def lookup_many(
     instead of one query per word, then reproduces ``_LOOKUP_SQL``'s reading
     boost, ordering, and pool cap in Python so each per-word result is
     byte-identical, row-for-row, to ``lookup(conn, word, reading)``.
+
+    ``lemmas`` optionally maps a requested word to its token's UniDic lemma,
+    threaded into the Rule A′ homograph scope per word (see
+    :func:`_homograph_keep_mask`); inert when ``scope_homographs`` is False.
 
     ``scope_homographs`` (default ``True``) applies the render-path Rule A/B
     homograph scope (:func:`_homograph_keep_mask`) per word before the sort/cap,
@@ -621,7 +651,9 @@ def lookup_many(
                 # Filter BEFORE sort/cap: order-independent per-row predicate, so
                 # scoping then sorting equals ``lookup``'s scope-the-sorted-set.
                 # e[5]=term, e[6]=content (see the entry tuple above).
-                keep = _homograph_keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries])
+                raw_lemma = (lemmas or {}).get(w)
+                normalized_lemma = unicodedata.normalize("NFC", raw_lemma) if raw_lemma else None
+                keep = _homograph_keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries], normalized_lemma)
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
             result[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries[:_LOOKUP_LIMIT]]
