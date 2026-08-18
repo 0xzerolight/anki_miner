@@ -84,6 +84,8 @@ LEDGER: dict[str, str] = {
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow._add_android_db_picked.on_success": "notice",
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.add_pack.on_finished": "notice",
     "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow._run_pack_reimport.on_success": "notice",
+    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.reimport_all": "notice",
+    "gui/controllers/audio_pack_import_flow.py::AudioPackImportFlow.reimport_all.on_finished": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow._add_dict_picked.on_finished": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all": "notice",
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.reimport_all.on_finished": "notice",

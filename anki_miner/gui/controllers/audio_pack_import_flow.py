@@ -25,6 +25,7 @@ from anki_miner.gui.controllers.import_flow_common import (
     _log_import_persist,
     _log_import_picker_enter,
     _log_import_picker_return,
+    _OnceCallback,
     format_batch_summary,
 )
 from anki_miner.gui.utils import file_dialogs
@@ -35,6 +36,7 @@ from anki_miner.gui.workers.import_worker import ImportWorker
 from anki_miner.services._sqlite_index import resolve_managed_slot
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
+from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.audio_packs.storage import read_meta_cached
 from anki_miner.utils.i18n import tr_format
 
@@ -43,6 +45,9 @@ from anki_miner.utils.i18n import tr_format
 # as returned by _derive_pack_id (which maps canonical folder names such as
 # "nhk16_files" → "nhk16", "forvo_files" → "forvo", etc.).
 # Unknown pack_ids sort after all known ones (stable).
+#: One batch-reimport job: (kind, pack_id, display name, source path).
+_PackJob = tuple[str, str, str, Path]
+
 _PACK_PRIORITY: dict[str, int] = {
     "nhk16": 0,
     "shinmeikai8": 1,
@@ -549,4 +554,233 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             ),
             reimported_title=QCoreApplication.translate("AudioPackImportFlow", "Audio Pack Re-imported"),
             join_noun="audio pack import worker",
+        )
+
+    # ------------------------------------------------------------------
+    # Reimport all
+    # ------------------------------------------------------------------
+
+    def reimport_all(
+        self,
+        *,
+        only_ids: frozenset[str] | None = None,
+        on_complete: Callable[[], None] | None = None,
+        _scan_result: tuple[list[_PackJob], list[str]] | None = None,
+        _trace_id: str | None = None,
+    ) -> None:
+        """Rebuild every chained pack from the source path its meta recorded.
+
+        Audio is the one family that keeps no ``source.<ext>`` copy — the blobs
+        stay in the user's own folder and an ``android.db`` is multi-gigabyte —
+        so the importer records the external path instead and
+        ``AudioPackMeta.source_available`` is what says whether it still
+        resolves. A pack whose folder or database is gone is *reported*, never
+        prompted for: a batch that stopped on a picker per pack would strand
+        the user mid-upgrade. Those land in the summary pointing at the per-row
+        Re-import…, which does prompt.
+
+        ``only_ids`` scopes the batch to the ids the startup stale scan found,
+        leaving the manual button's ``None`` to mean "everything in the chain",
+        matching the other three families.
+
+        Runs sequentially so one ApplicationModal progress dialog tracks the
+        whole batch; per-pack failures accumulate rather than aborting the loop,
+        and ``config_changed`` fires once at the end.
+
+        ``on_complete`` fires exactly once on every terminal path, including the
+        refusals and the nothing-to-do case. The startup prompt uses it to run
+        one family after another.
+        """
+        done = _OnceCallback(on_complete)
+        trace_id = _trace_id or _begin_import_trace("audio pack reimport all")
+        if _scan_result is None:
+            if not self._begin_mutation("reimport-all"):
+                done()
+                return
+            packs_root = self._get_config().audio_packs_root
+            chain = self._panel.get_chain()
+
+            def _scan() -> tuple[list[_PackJob], list[str]]:
+                registry = AudioPackRegistry(packs_root)
+                registry.load()
+                metas = registry.packs
+                jobs: list[_PackJob] = []
+                skipped: list[str] = []
+                for entry in chain:
+                    if entry.kind != "pack" or not entry.pack_id:
+                        continue
+                    if only_ids is not None and entry.pack_id not in only_ids:
+                        continue
+                    meta = metas.get(entry.pack_id)
+                    if meta is None:
+                        skipped.append(entry.pack_id)
+                        continue
+                    display = meta.source or meta.pack_id
+                    if not meta.source_available:
+                        skipped.append(display)
+                        continue
+                    if meta.format == "android_db" and meta.source_db is not None:
+                        jobs.append(("android_db", meta.pack_id, display, meta.source_db))
+                    else:
+                        jobs.append(("folder", meta.pack_id, display, meta.pack_dir))
+                return jobs, skipped
+
+            def _on_done(result: object) -> None:
+                assert isinstance(result, tuple)
+                self.reimport_all(
+                    only_ids=only_ids,
+                    on_complete=on_complete,
+                    _scan_result=result,
+                    _trace_id=trace_id,
+                )
+
+            def _on_error(message: str) -> None:
+                self._set_import_buttons_enabled(True)
+                self._report_import_issue(
+                    QCoreApplication.translate("AudioPackImportFlow", "The audio pack folder could not be scanned."),
+                    message,
+                )
+                done()
+
+            self._run_latest_scan(_scan, _on_done, _on_error)
+            return
+
+        jobs, skipped = _scan_result
+
+        if not jobs:
+            if skipped:
+                body = QCoreApplication.translate(
+                    "AudioPackImportFlow",
+                    "No audio packs eligible for automatic repair were found.\n\n"
+                    "Skipped (source folder or database not found; use per-row Re-import…):\n",
+                ) + "\n".join(f"  • {name}" for name in skipped)
+            else:
+                body = QCoreApplication.translate("AudioPackImportFlow", "No audio packs in the chain.")
+            QMessageBox.information(
+                self._parent,
+                QCoreApplication.translate("AudioPackImportFlow", "Nothing to reimport"),
+                body,
+            )
+            self._set_import_buttons_enabled(True)
+            done()
+            return
+
+        # Drop sqlite handles before any worker touches the pack folders. On
+        # Windows the importer's directory rename fails with "Access denied"
+        # while a service still holds its read-only connection open (Issue #32).
+        if not self._panel.request_resource_release():
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "AudioPackImportFlow",
+                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
+                    "Wait for the active task to finish and try again.",
+                ),
+            )
+            self._set_import_buttons_enabled(True)
+            done()
+            return
+
+        def make_worker(job: _PackJob) -> ImportWorker:
+            kind, pack_id, _display, source_path = job
+            if kind == "android_db":
+                # Pin the slot id and overwrite: import_android_audio_db proves
+                # ownership before replacing, which is the repair contract. It
+                # re-registers the same external database — nothing is copied.
+                return ImportWorker.for_android_audio_db(
+                    source_path,
+                    self._get_config().audio_packs_root,
+                    pack_id=pack_id,
+                    overwrite=True,
+                )
+            return ImportWorker.for_pack_repair(
+                source_path,
+                self._get_config().audio_packs_root,
+                pack_id=pack_id,
+            )
+
+        def format_label(index: int, total: int, job: _PackJob, message: str | None) -> str:
+            _kind, _pack_id, display, _source_path = job
+            label = tr_format(
+                QCoreApplication.translate("AudioPackImportFlow", "Audio pack %1 of %2: %3"),
+                index,
+                total,
+                display,
+            )
+            return f"{label}\n{message}" if message is not None else label
+
+        def on_finished(result: _ChainedImportResult[_PackJob]) -> None:
+            # One refresh + one config_changed for the whole batch so cached
+            # services rebuild once, not N times.
+            _log_import_persist(trace_id, "start")
+            current_chain = self._panel.get_chain()
+            self._panel.refresh_registry()
+            self._panel.set_chain(current_chain)
+            self._notify_config_changed()
+            _log_import_persist(trace_id, "done")
+
+            reimported = [job[2] for job, _pack_id, _meta in result.successes]
+            errors = [(job[2], message) for job, message in result.failures]
+            summary = format_batch_summary(
+                [
+                    (
+                        tr_format(
+                            QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1 audio pack(s):"),
+                            len(reimported),
+                        ),
+                        [f"  • {name}" for name in reimported],
+                    ),
+                    (
+                        QCoreApplication.translate(
+                            "AudioPackImportFlow",
+                            "Skipped (source folder or database not found; use per-row Re-import…):",
+                        ),
+                        [f"  • {name}" for name in skipped],
+                    ),
+                    (
+                        QCoreApplication.translate("AudioPackImportFlow", "Failed:"),
+                        [f"  • {name}: {message}" for name, message in errors],
+                    ),
+                ],
+                cancelled_note=(
+                    QCoreApplication.translate("AudioPackImportFlow", "Cancelled before the batch finished.")
+                    if result.cancelled
+                    else None
+                ),
+                empty=QCoreApplication.translate("AudioPackImportFlow", "Nothing to do."),
+            )
+            QMessageBox.information(
+                self._parent,
+                QCoreApplication.translate("AudioPackImportFlow", "Audio Packs Re-imported"),
+                summary,
+            )
+            done()
+
+        def on_finished_error(exc: Exception, _result: _ChainedImportResult[_PackJob]) -> None:
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "AudioPackImportFlow", "The import finished, but the settings could not be updated."
+                ),
+                str(exc),
+            )
+            done()
+
+        self._run_chained_imports(
+            jobs=jobs,
+            make_worker=make_worker,
+            format_label=format_label,
+            cancel_label=QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
+            cancelling_label=QCoreApplication.translate("AudioPackImportFlow", "Cancelling…"),
+            # Busy/indeterminate like add_pack — the pack importer reports
+            # progress messages, not percentages.
+            determinate=False,
+            join_noun="audio pack import worker",
+            failure_summary=QCoreApplication.translate(
+                "AudioPackImportFlow", "Some audio packs could not be re-imported."
+            ),
+            missing_result_message=QCoreApplication.translate(
+                "AudioPackImportFlow", "The import worker finished without a completion result."
+            ),
+            trace_id=trace_id,
+            on_finished=on_finished,
+            on_finished_error=on_finished_error,
         )
