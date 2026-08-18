@@ -8854,6 +8854,18 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>每天在啟動時檢查一次，並下載到 Anki Miner 自己的資料夾。關閉此選項表示 YouTube 採集最終會停止運作。</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>使用 yt-dlp 預先發布版本</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>預先發布</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>更新時將安裝 yt-dlp 的 nightly 頻道版本，可在穩定版發布前幾天修復 YouTube 故障。關閉後，已安裝的版本會保留，直到被更新的穩定版取代。</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>選填：自訂 yt-dlp 可執行檔路徑...</translation>
     </message>

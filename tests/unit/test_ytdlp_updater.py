@@ -43,22 +43,22 @@ _LINUX_ASSET = ytdlp_updater._ASSET_BY_PLATFORM["linux"]
 _ALL_ASSETS = [*ytdlp_updater._ASSET_BY_PLATFORM.values(), "SHA2-256SUMS"]
 
 
-def _asset_url(asset_name=None, tag="2024.03.10"):
+def _asset_url(asset_name=None, tag="2024.03.10", repo="yt-dlp/yt-dlp"):
     """Canonical release-download URL for *asset_name* (default: this OS's asset)."""
     name = _LINUX_ASSET if asset_name is None else asset_name
-    return f"https://github.com/yt-dlp/yt-dlp/releases/download/{tag}/{name}"
+    return f"https://github.com/{repo}/releases/download/{tag}/{name}"
 
 
-def _releases_json(tag="2024.03.10", asset_names=None):
+def _releases_json(tag="2024.03.10", asset_names=None, repo="yt-dlp/yt-dlp"):
     if asset_names is None:
         asset_names = list(_ALL_ASSETS)
     return {
         "tag_name": tag,
-        "html_url": "https://github.com/yt-dlp/yt-dlp/releases/tag/" + tag,
+        "html_url": f"https://github.com/{repo}/releases/tag/{tag}",
         "assets": [
             {
                 "name": name,
-                "browser_download_url": f"https://github.com/yt-dlp/yt-dlp/releases/download/{tag}/{name}",
+                "browser_download_url": _asset_url(name, tag=tag, repo=repo),
             }
             for name in asset_names
         ],
@@ -246,6 +246,65 @@ class TestLatestVersionAndAsset:
         monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _raise)
         updater = YtdlpUpdater(config)
         assert updater.latest_version_and_asset() == (None, None)
+
+
+_NIGHTLY_REPO = "yt-dlp/yt-dlp-nightly-builds"
+_NIGHTLY_TAG = "2026.08.18.122307"
+
+
+class TestPrereleaseChannel:
+    """config.ytdlp_prerelease=True flips the updater to the nightly-builds repo."""
+
+    def _prerelease_config(self, tmp_path):
+        return AnkiMinerConfig(media_temp_folder=tmp_path / "temp_media", ytdlp_prerelease=True)
+
+    def test_stable_config_queries_stable_repo(self, config, home, monkeypatch):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        seen = []
+
+        def _open(request, timeout=None):  # noqa: ARG001
+            seen.append(request.full_url)
+            return _FakeResponse(json.dumps(_releases_json()).encode("utf-8"))
+
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _open)
+        YtdlpUpdater(config).latest_version_and_asset()
+        assert seen == ["https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"]
+
+    def test_prerelease_config_queries_nightly_repo(self, tmp_path, home, monkeypatch):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        seen = []
+        payload = _releases_json(tag=_NIGHTLY_TAG, repo=_NIGHTLY_REPO)
+
+        def _open(request, timeout=None):  # noqa: ARG001
+            seen.append(request.full_url)
+            return _FakeResponse(json.dumps(payload).encode("utf-8"))
+
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _open)
+        version, url = YtdlpUpdater(self._prerelease_config(tmp_path)).latest_version_and_asset()
+        assert seen == [f"https://api.github.com/repos/{_NIGHTLY_REPO}/releases/latest"]
+        assert version == _NIGHTLY_TAG
+        assert url == _asset_url(tag=_NIGHTLY_TAG, repo=_NIGHTLY_REPO)
+
+    def test_prerelease_rejects_stable_repo_asset_urls(self, tmp_path, home, monkeypatch):
+        """A nightly release whose assets point at the stable repo is off-shape: no URL."""
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        payload = _releases_json(tag=_NIGHTLY_TAG)  # stable-repo URLs
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(payload))
+        version, url = YtdlpUpdater(self._prerelease_config(tmp_path)).latest_version_and_asset()
+        assert version == _NIGHTLY_TAG
+        assert url is None
+
+    def test_release_tag_round_trip_with_nightly_repo(self):
+        url = ytdlp_updater._release_asset_url(_NIGHTLY_TAG, _LINUX_ASSET, repo=_NIGHTLY_REPO)
+        assert ytdlp_updater._release_tag_from_asset_url(url, _LINUX_ASSET, repo=_NIGHTLY_REPO) == _NIGHTLY_TAG
+        # Cross-repo must NOT round-trip: stable parser rejects nightly URLs.
+        assert ytdlp_updater._release_tag_from_asset_url(url, _LINUX_ASSET) is None
+
+    def test_nightly_orders_above_stable_and_below_next_stable(self):
+        from anki_miner.utils.version_compare import is_newer
+
+        assert is_newer(_NIGHTLY_TAG, "2026.07.04")
+        assert is_newer("2026.09.01", _NIGHTLY_TAG)
 
 
 class TestThrottle:

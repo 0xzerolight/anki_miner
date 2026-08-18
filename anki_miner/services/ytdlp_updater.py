@@ -34,8 +34,26 @@ from anki_miner.utils.version_compare import is_newer
 
 logger = logging.getLogger(__name__)
 
+_STABLE_REPO = "yt-dlp/yt-dlp"
+# Official nightly channel, selected by config.ytdlp_prerelease. Same publisher,
+# same asset names, same SHA2-256SUMS manifest; only the repo differs. Extra
+# assets it carries (yt-dlp_x86.exe, *.zip variants) are invisible to the
+# exact-name matching below.
+_PRERELEASE_REPO = "yt-dlp/yt-dlp-nightly-builds"
+
+
+def _api_url(repo: str) -> str:
+    return f"https://api.github.com/repos/{repo}/releases/latest"
+
+
+def _download_prefix(repo: str) -> str:
+    return f"/{repo}/releases/download/"
+
+
 # Latest-release endpoint for the yt-dlp project (no auth / key — free API).
-GITHUB_API_URL = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
+# Kept as stable-channel constants: the CDN canary and containment tests import
+# them, and scripts/check_ytdlp_pin.py mirrors the stable URL.
+GITHUB_API_URL = _api_url(_STABLE_REPO)
 
 # Per-OS release asset name. Every entry MUST be a *standalone* build: the bare
 # "yt-dlp" asset is a zipimport archive whose shebang runs the system python3, so
@@ -50,7 +68,7 @@ _ASSET_BY_PLATFORM: dict[str, str] = {
 }
 
 _SUMS_ASSET_NAME = "SHA2-256SUMS"
-_RELEASE_DOWNLOAD_PREFIX = "/yt-dlp/yt-dlp/releases/download/"
+_RELEASE_DOWNLOAD_PREFIX = _download_prefix(_STABLE_REPO)
 
 # Allowlist for URLs we contact / download from. Only HTTPS on these hosts is
 # accepted; everything else is fail-closed. (Mirrors update_checker's allowlist —
@@ -107,36 +125,37 @@ def _validate_github_url(url: str) -> bool:
     return parts.scheme == "https" and parts.netloc.lower() in _GITHUB_URL_ALLOWLIST
 
 
-def _release_asset_url(tag: str, asset_name: str) -> str:
+def _release_asset_url(tag: str, asset_name: str, repo: str = _STABLE_REPO) -> str:
     """Return the canonical download URL for one yt-dlp release asset."""
     quoted_tag = urllib.parse.quote(tag, safe="")
     quoted_name = urllib.parse.quote(asset_name, safe="")
-    return f"https://github.com{_RELEASE_DOWNLOAD_PREFIX}{quoted_tag}/{quoted_name}"
+    return f"https://github.com{_download_prefix(repo)}{quoted_tag}/{quoted_name}"
 
 
-def _release_tag_from_asset_url(url: str, asset_name: str) -> str | None:
-    """Extract a tag only from the exact yt-dlp repo release URL shape."""
+def _release_tag_from_asset_url(url: str, asset_name: str, repo: str = _STABLE_REPO) -> str | None:
+    """Extract a tag only from the exact release URL shape for *repo*."""
     if not isinstance(url, str):
         return None
     try:
         parts = urllib.parse.urlsplit(url)
     except ValueError:
         return None
+    prefix = _download_prefix(repo)
     suffix = f"/{urllib.parse.quote(asset_name, safe='')}"
     if (
         parts.scheme != "https"
         or parts.netloc.lower() != "github.com"
         or parts.query
         or parts.fragment
-        or not parts.path.startswith(_RELEASE_DOWNLOAD_PREFIX)
+        or not parts.path.startswith(prefix)
         or not parts.path.endswith(suffix)
     ):
         return None
-    quoted_tag = parts.path[len(_RELEASE_DOWNLOAD_PREFIX) : -len(suffix)]
+    quoted_tag = parts.path[len(prefix) : -len(suffix)]
     if not quoted_tag or "/" in quoted_tag:
         return None
     tag = urllib.parse.unquote(quoted_tag)
-    return tag if _release_asset_url(tag, asset_name) == url else None
+    return tag if _release_asset_url(tag, asset_name, repo) == url else None
 
 
 def _manifest_sha256(manifest: bytes, asset_name: str) -> str:
@@ -196,6 +215,7 @@ class YtdlpUpdater:
         """
         self._config = config
         self._cancel = cancel
+        self._repo = _PRERELEASE_REPO if config.ytdlp_prerelease else _STABLE_REPO
 
     # --- paths -------------------------------------------------------------
 
@@ -251,14 +271,15 @@ class YtdlpUpdater:
         the release assets are invalid). Never raises.
         """
         try:
+            api_url = _api_url(self._repo)
             request = urllib.request.Request(
-                GITHUB_API_URL,
+                api_url,
                 headers={
                     "Accept": "application/vnd.github.v3+json",
                     "User-Agent": "anki-miner (+https://github.com/0xzerolight/anki_miner)",
                 },
             )
-            if not _validate_github_url(GITHUB_API_URL):
+            if not _validate_github_url(api_url):
                 return (None, None)
             with urllib.request.urlopen(request, timeout=10) as response:
                 data = json.loads(response.read().decode("utf-8"))
@@ -280,8 +301,8 @@ class YtdlpUpdater:
                     if (
                         isinstance(asset_url, str)
                         and isinstance(sums_url, str)
-                        and asset_url == _release_asset_url(tag_name, asset_name)
-                        and sums_url == _release_asset_url(tag_name, _SUMS_ASSET_NAME)
+                        and asset_url == _release_asset_url(tag_name, asset_name, self._repo)
+                        and sums_url == _release_asset_url(tag_name, _SUMS_ASSET_NAME, self._repo)
                     ):
                         url = asset_url
             return (version, url)
@@ -410,10 +431,10 @@ class YtdlpUpdater:
         asset_name = _ASSET_BY_PLATFORM.get(sys.platform)
         if asset_name is None:
             raise ValueError(f"No yt-dlp asset for platform {sys.platform!r}")
-        tag = _release_tag_from_asset_url(url, asset_name)
+        tag = _release_tag_from_asset_url(url, asset_name, self._repo)
         if tag is None or tag.lstrip("v") != version:
             raise ValueError(f"Refusing non-release or mismatched yt-dlp asset URL: {url!r}")
-        sums_url = _release_asset_url(tag, _SUMS_ASSET_NAME)
+        sums_url = _release_asset_url(tag, _SUMS_ASSET_NAME, self._repo)
 
         bin_dir = self.download_dir()
         bin_dir.mkdir(parents=True, exist_ok=True)

@@ -8854,6 +8854,18 @@ Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya da
         <translation>Memeriksa sekali sehari saat memulai dan mengunduh ke folder Anki Miner sendiri. Jika dinonaktifkan, mining YouTube pada akhirnya akan berhenti berfungsi.</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>Gunakan build pra-rilis yt-dlp</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>Pra-rilis</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>Pembaruan memasang kanal nightly yt-dlp, yang memperbaiki kerusakan YouTube beberapa hari sebelum rilis stabil. Jika dimatikan, build yang terpasang tetap dipakai sampai digantikan versi stabil yang lebih baru.</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>Opsional: jalur ke eksekutabel yt-dlp Anda sendiri...</translation>
     </message>

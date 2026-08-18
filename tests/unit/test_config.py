@@ -189,6 +189,11 @@ class TestYouTubeConfig:
         config = AnkiMinerConfig()
         assert config.auto_update_ytdlp is True
 
+    def test_ytdlp_prerelease_defaults_false(self):
+        """The nightly-channel updater is opt-in; stable stays the default."""
+        config = AnkiMinerConfig()
+        assert config.ytdlp_prerelease is False
+
 
 def test_dictionary_chain_default():
     from anki_miner.config import AnkiMinerConfig, ChainEntry

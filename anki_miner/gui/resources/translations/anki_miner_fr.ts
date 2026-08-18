@@ -8869,6 +8869,18 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
         <translation>Vérifie une fois par jour au démarrage et télécharge dans le dossier propre à Anki Miner. Si cette option est désactivée, l'extraction YouTube finira par ne plus fonctionner.</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>Utiliser les versions préliminaires de yt-dlp</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>Pré-version</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>Les mises à jour installent le canal nightly de yt-dlp, qui corrige les pannes YouTube plusieurs jours avant une version stable. Si cette option est désactivée, la version installée reste en place jusqu'à ce qu'une version stable plus récente la remplace.</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>Facultatif : chemin vers votre propre exécutable yt-dlp...</translation>
     </message>

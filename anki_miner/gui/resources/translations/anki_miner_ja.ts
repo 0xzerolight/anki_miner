@@ -8854,6 +8854,18 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>起動時に 1 日 1 回確認し、Anki Miner 専用フォルダにダウンロードします。オフのままにすると、YouTube マイニングはいずれ動作しなくなります。</translation>
     </message>
     <message>
+        <source>Use pre-release yt-dlp builds</source>
+        <translation>yt-dlp のプレリリース版を使用</translation>
+    </message>
+    <message>
+        <source>Pre-release</source>
+        <translation>プレリリース</translation>
+    </message>
+    <message>
+        <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
+        <translation>更新時に yt-dlp の nightly チャンネルをインストールします。安定版の公開より数日早く YouTube の不具合が修正されます。オフにしても、より新しい安定版に置き換わるまでインストール済みのビルドはそのまま使われます。</translation>
+    </message>
+    <message>
         <source>Optional: path to your own yt-dlp executable...</source>
         <translation>任意：独自の yt-dlp 実行ファイルへのパス...</translation>
     </message>
