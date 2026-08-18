@@ -100,6 +100,11 @@ class Services:
     # gated, since frequency and pitch are optional.
     frequency_registry: FrequencySourceRegistry | None
     pitch_registry: PitchSourceRegistry | None
+    # Scanned audio pack registry (the handle that built the fetcher chain
+    # above), injected for the same gate. None when the expression_audio field
+    # is unmapped or no pack entry is enabled — the two conditions under which
+    # no pack is ever consulted, so None is exactly when nothing should gate.
+    audio_pack_registry: AudioPackRegistry | None
     load_result: ServiceLoadResult
 
 
@@ -379,9 +384,30 @@ def create_shared_lookup_services(config: AnkiMinerConfig) -> SharedLookupServic
     )
 
 
+def _load_audio_pack_registry(config: AnkiMinerConfig) -> AudioPackRegistry | None:
+    """Scan the audio pack registry, but only when a pack could be consulted.
+
+    ``None`` unless the expression_audio Anki field is mapped AND at least one
+    enabled ``kind="pack"`` entry is present — the same two conditions that
+    make the fetcher chain consult a pack at all. That keeps a default
+    (unmapped field) or jpod101-only config free of disk access, and makes
+    ``None`` mean "no pack is in play", which is exactly when the staleness
+    gate must stay quiet.
+    """
+    if not config.anki_fields.get("expression_audio"):
+        return None
+    if not any(e.kind == "pack" and e.enabled for e in config.expression_audio_chain):
+        return None
+    registry = AudioPackRegistry(config.audio_packs_root)
+    registry.load()
+    return registry
+
+
 def _build_expression_audio_fetcher(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult | None = None,
+    *,
+    pack_registry: AudioPackRegistry | None = None,
 ) -> ExpressionAudioFetcher:
     """Build the expression audio fetcher chain from ``config.expression_audio_chain``.
 
@@ -398,19 +424,22 @@ def _build_expression_audio_fetcher(
     I/O gating is needed — and none is in the default chain, so a default config
     never constructs them.
 
-    I/O neutrality: ``AudioPackRegistry`` is only constructed + loaded when the
-    expression_audio Anki field is mapped (``config.anki_fields["expression_audio"]``
-    non-empty) AND at least one enabled ``kind="pack"`` entry is present —
-    mirrors the dictionary eager-load gating so a default (unmapped field) or
-    jpod101-only config causes no disk access.  With the field unmapped the
-    fetcher is never consulted (Phase 3 two-part gate), so pack entries are
-    skipped silently; jpod101 entries are still constructed (I/O-free) to keep
-    the chain shape uniform and ``Services.expression_audio_fetcher`` non-Optional.
+    I/O neutrality: the ``AudioPackRegistry`` scan is owned by
+    :func:`_load_audio_pack_registry`, which returns ``None`` unless a pack
+    could actually be consulted — mirrors the dictionary eager-load gating so a
+    default (unmapped field) or jpod101-only config causes no disk access.  With
+    the field unmapped the fetcher is never consulted (Phase 3 two-part gate),
+    so pack entries are skipped silently; jpod101 entries are still constructed
+    (I/O-free) to keep the chain shape uniform and
+    ``Services.expression_audio_fetcher`` non-Optional.
 
     Args:
         config: Mining configuration.
         load_result: Optional sink for human-readable warnings (e.g. missing
             pack_id). ``None`` suppresses those messages; logger always fires.
+        pack_registry: Already-scanned registry to resolve pack entries against.
+            ``create_services`` passes the handle it keeps for the staleness
+            gate so the folder is scanned once, not twice; ``None`` scans here.
 
     Returns:
         A :class:`ChainedExpressionAudioFetcher` wrapping the resolved list.
@@ -421,14 +450,11 @@ def _build_expression_audio_fetcher(
     googletts_cache = audio_cache_root / "googletts"
     pack_cache = audio_cache_root / "local_packs"
 
-    # Build registry only when needed — avoids disk scan for default config
-    # and when the expression-audio field is unmapped (fetcher never consulted).
+    # Scan only when needed — see _load_audio_pack_registry for the predicate.
     field_mapped = bool(config.anki_fields.get("expression_audio"))
-    has_pack_entries = field_mapped and any(e.kind == "pack" and e.enabled for e in config.expression_audio_chain)
     pack_fetchers_by_id: dict[str, LocalAudioPackFetcher] = {}
-    if has_pack_entries:
-        registry = AudioPackRegistry(config.audio_packs_root)
-        registry.load()
+    registry = pack_registry if pack_registry is not None else _load_audio_pack_registry(config)
+    if registry is not None:
         for pack_fetcher in registry.build_fetcher_chain(config, pack_cache):
             pack_fetchers_by_id[pack_fetcher.pack_id] = pack_fetcher
 
@@ -633,7 +659,12 @@ def create_services(
     if anki_service is None:
         anki_service = AnkiService(config)
     youtube_fetcher = YouTubeFetcherService(config=config)
-    expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result)
+    # Scanned once here, then handed to both consumers: the fetcher chain that
+    # resolves pack entries, and Services, whose EpisodeProcessor reads it for
+    # the staleness gate (the built chain drops stale packs, so gating off it
+    # would mean the gate never fires).
+    audio_pack_registry = _load_audio_pack_registry(config)
+    expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result, pack_registry=audio_pack_registry)
     sentence_audio_fetcher = _build_sentence_audio_fetcher(config)
 
     # Optional services (reused from the bundle on the shared path).
@@ -679,6 +710,7 @@ def create_services(
     return Services(
         frequency_registry=frequency_registry,
         pitch_registry=pitch_registry,
+        audio_pack_registry=audio_pack_registry,
         subtitle_parser=subtitle_parser,
         word_filter=word_filter,
         media_extractor=media_extractor,
@@ -756,6 +788,7 @@ def create_episode_processor(
         dictionary_registry=services.dictionary_registry,
         frequency_registry=services.frequency_registry,
         pitch_registry=services.pitch_registry,
+        audio_pack_registry=services.audio_pack_registry,
         owns_lookup_services=shared_lookup is None,
     )
 

@@ -120,6 +120,97 @@ class TestBuildExpressionAudioFetcher:
         service_factory._build_expression_audio_fetcher(base_config)
         assert constructed == [], "AudioPackRegistry must not be constructed for jpod101-only config"
 
+    def test_supplied_registry_is_used_instead_of_rescanning(self, monkeypatch, tmp_path, base_config):
+        """create_services scans once and hands the same handle to both consumers."""
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            anki_fields=_map_audio_field(base_config),
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),),
+        )
+        supplied = service_factory._load_audio_pack_registry(cfg)
+        assert supplied is not None
+
+        constructed: list[bool] = []
+        monkeypatch.setattr(
+            service_factory,
+            "AudioPackRegistry",
+            lambda *a, **kw: constructed.append(True),
+            raising=True,
+        )
+        service_factory._build_expression_audio_fetcher(cfg, pack_registry=supplied)
+
+        assert constructed == [], "a supplied registry must not trigger a second scan"
+
+
+class TestLoadAudioPackRegistry:
+    """The one predicate deciding whether a pack scan happens at all."""
+
+    def test_default_config_scans_nothing(self, base_config):
+        assert service_factory._load_audio_pack_registry(base_config) is None
+
+    def test_unmapped_field_scans_nothing(self, tmp_path, base_config):
+        """No mapped expression_audio field means no pack is ever consulted."""
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),),
+        )
+        assert service_factory._load_audio_pack_registry(cfg) is None
+
+    def test_disabled_pack_entry_scans_nothing(self, tmp_path, base_config):
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            anki_fields=_map_audio_field(base_config),
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=False),),
+        )
+        assert service_factory._load_audio_pack_registry(cfg) is None
+
+    def test_mapped_field_with_enabled_pack_returns_loaded_registry(self, tmp_path, base_config):
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            anki_fields=_map_audio_field(base_config),
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),),
+        )
+        registry = service_factory._load_audio_pack_registry(cfg)
+        assert registry is not None
+        assert pack_id in registry.packs
+
+    def test_registry_reaches_the_episode_processor_gate(self, tmp_path, base_config):
+        """Services carries the handle; the processor's staleness gate reads it."""
+        from anki_miner.presenters.null_presenter import NullPresenter
+
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            anki_fields=_map_audio_field(base_config),
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),),
+        )
+        proc = service_factory.create_episode_processor(cfg, NullPresenter())
+        try:
+            assert proc._audio_pack_registry is not None
+            assert pack_id in proc._audio_pack_registry.packs
+        finally:
+            proc.close()
+
+    def test_no_pack_configured_leaves_the_gate_uninjected(self, tmp_path, base_config):
+        from anki_miner.presenters.null_presenter import NullPresenter
+
+        proc = service_factory.create_episode_processor(base_config, NullPresenter())
+        try:
+            assert proc._audio_pack_registry is None
+        finally:
+            proc.close()
+
+
+class TestBuildExpressionAudioFetcherChain:
     def test_jpod101_disabled_only_pack_enabled(self, tmp_path, base_config):
         """When jpod101 is disabled and one pack is enabled, chain holds only the pack fetcher."""
         packs_root, pack_id = _import_pack(tmp_path)

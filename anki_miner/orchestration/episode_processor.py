@@ -71,6 +71,7 @@ if TYPE_CHECKING:
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
     from anki_miner.models import LineLemmas
     from anki_miner.models.reading import ImageRef, ReadingDocument
+    from anki_miner.services.audio_packs.registry import AudioPackRegistry
     from anki_miner.services.dictionary.registry import DictionaryRegistry
     from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
     from anki_miner.services.frequency.registry import FrequencySourceRegistry
@@ -210,6 +211,7 @@ class EpisodeProcessor:
         dictionary_registry: DictionaryRegistry | None = None,
         frequency_registry: FrequencySourceRegistry | None = None,
         pitch_registry: PitchSourceRegistry | None = None,
+        audio_pack_registry: AudioPackRegistry | None = None,
         sentence_audio_fetcher: SentenceAudioFetcher | None = None,
         owns_lookup_services: bool = True,
     ):
@@ -246,6 +248,9 @@ class EpisodeProcessor:
                 must not be gated.
             pitch_registry: Optional loaded pitch registry, same role and same
                 inactive-means-ungated rule.
+            audio_pack_registry: Optional loaded audio pack registry, same role.
+                ``None`` whenever the expression_audio field is unmapped or no
+                pack entry is enabled — the same inactive-means-ungated rule.
             sentence_audio_fetcher: Optional sentence-TTS fetcher. Consulted
                 ONLY by ``process_reading`` phase 3' (reading sources have no
                 source audio); video/YouTube/audiobook paths never touch it.
@@ -280,6 +285,7 @@ class EpisodeProcessor:
         self._dictionary_registry = dictionary_registry
         self._frequency_registry = frequency_registry
         self._pitch_registry = pitch_registry
+        self._audio_pack_registry = audio_pack_registry
         self.owns_lookup_services = owns_lookup_services
         self._cancelled = False
         # Per-run external cancel source (e.g. a worker's threading.Event
@@ -2391,31 +2397,34 @@ class EpisodeProcessor:
         """Raise SetupError if any enabled indexed slot needs reimport (4.0).
 
         The single-episode backstop for the schema-bump migration gate, across
-        all three indexed families: consults each injected registry's per-slot
+        all four indexed families: consults each injected registry's per-slot
         ``schema_ok`` (NOT the built chains, which silently drop stale slots) so
         a user who upgraded and mines before reimporting gets one actionable
         error instead of a silent zero-card run, an unfiltered flood of rare
-        words, or a blank pitch field.
+        words, a blank pitch field, or cards quietly falling back to the online
+        audio sources.
 
         Queue workers front-run this with their own pre-loop check so a batch
         aborts once rather than per item; this covers the direct single-episode
         callers (episode / manual-pair / deck-builder).
 
-        A family whose registry was not injected is skipped — for frequency and
-        pitch that is the normal state when the user has not configured them,
-        and it is what keeps both optional.
+        A family whose registry was not injected is skipped — for frequency,
+        pitch and audio packs that is the normal state when the user has not
+        configured them, and it is what keeps all three optional.
         """
         message = stale_resource_reimport_error(
             self.config,
             dictionary_registry=self._dictionary_registry,
             frequency_registry=self._frequency_registry,
             pitch_registry=self._pitch_registry,
+            audio_registry=self._audio_pack_registry,
             families=frozenset(
                 kind
                 for kind, registry in (
                     ("dictionary", self._dictionary_registry),
                     ("frequency", self._frequency_registry),
                     ("pitch", self._pitch_registry),
+                    ("audio", self._audio_pack_registry),
                 )
                 if registry is not None
             ),
