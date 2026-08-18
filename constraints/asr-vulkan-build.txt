@@ -85,7 +85,7 @@
 #   Windows: delvewheel repair --exclude vulkan-1.dll ...
 # Excluding the loader is the whole point: ggml-vulkan must bind the system's
 # Vulkan loader (the user's GPU driver), not a copy frozen at build time.
-auditwheel==6.7.0
+auditwheel==6.8.1
 delvewheel==1.13.0
 # `wheel` unpacks/repacks the raw wheel to inject the ggml-vulkan MODULE backend
 # lib, which ggml builds to CMAKE_BINARY_DIR/bin (NOT the wheel) and dlopens at
