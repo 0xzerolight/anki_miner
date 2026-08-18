@@ -447,6 +447,12 @@ class AnkiMinerConfig:
     # host-allowlisted, SHA-256 verified against the release manifest, atomically
     # installed, and receipt-gated before the resolver will select it.
     auto_update_ytdlp: bool = True
+    # Install yt-dlp *nightly* builds (repo yt-dlp/yt-dlp-nightly-builds) instead
+    # of stable when updating. Opt-in: nightlies are what fix YouTube breakage in
+    # the days before a stable release (e.g. the 2026-08 android_vr kill,
+    # yt-dlp#17456). Off does NOT uninstall an installed nightly — the managed
+    # copy stays until a newer stable supersedes it (packaging.Version ordering).
+    ytdlp_prerelease: bool = False
 
     # --- Bundled media tooling ---
     # Optional explicit overrides for the ffmpeg/ffprobe executables. When unset,
