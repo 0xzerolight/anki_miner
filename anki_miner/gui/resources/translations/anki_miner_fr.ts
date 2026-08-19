@@ -2440,6 +2440,14 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Terminé — %1 fichiers traités</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Terminé — %1 traités, %2 ignorés</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>Rien condensé — tous les %1 fichiers ont été ignorés car leur sortie existe déjà. Activez Écraser pour condenser à nouveau.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Sélectionner le dossier de sortie</translation>
     </message>
@@ -7667,6 +7675,14 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Terminé — %1 fichiers traités</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Terminé — %1 traités, %2 ignorés</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>Aucun sous-titre généré — tous les %1 fichiers ont été ignorés car leur sortie existe déjà. Activez Écraser pour régénérer.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Sélectionner le dossier de sortie</translation>
     </message>
@@ -7907,6 +7923,14 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>Complete — %1 files processed</source>
         <translation>Terminé — %1 fichiers traités</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Terminé — %1 traités, %2 ignorés</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>Aucun fichier resynchronisé — tous les %1 fichiers ont été ignorés. Activez Écraser pour resynchroniser sur place, ou choisissez un autre dossier de sortie.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

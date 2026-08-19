@@ -2440,6 +2440,14 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>Abgeschlossen — %1 Dateien verarbeitet</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Abgeschlossen — %1 Dateien verarbeitet, %2 übersprungen</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>Nichts kondensiert — alle %1 übersprungen, weil ihre Ausgabe bereits existiert. Aktivieren Sie Überschreiben, um erneut zu kondensieren.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Ausgabeordner auswählen</translation>
     </message>
@@ -7667,6 +7675,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Abgeschlossen — %1 Dateien verarbeitet</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Abgeschlossen — %1 Dateien verarbeitet, %2 übersprungen</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>Keine Untertitel generiert — alle %1 übersprungen, weil ihre Ausgabe bereits existiert. Aktivieren Sie Überschreiben, um erneut zu generieren.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Ausgabeordner wählen</translation>
     </message>
@@ -7907,6 +7923,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>Complete — %1 files processed</source>
         <translation>Abgeschlossen — %1 Dateien verarbeitet</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Abgeschlossen — %1 Dateien verarbeitet, %2 übersprungen</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>Keine Dateien neu getaktet — alle %1 übersprungen. Aktivieren Sie Überschreiben, um an Ort und Stelle neu zu takten, oder wählen Sie einen anderen Ausgabeordner.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

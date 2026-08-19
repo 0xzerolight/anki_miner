@@ -2438,6 +2438,14 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Hoàn tất — đã xử lý %1 tệp</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Hoàn tất — đã xử lý %1, đã bỏ qua %2</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>Không có gì được cô đọng — tất cả %1 đã bỏ qua do đầu ra đã tồn tại. Bật Ghi đè để cô đọng lại.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Chọn thư mục đầu ra</translation>
     </message>
@@ -7652,6 +7660,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Hoàn tất — đã xử lý %1 tệp</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Hoàn tất — đã xử lý %1, đã bỏ qua %2</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>Không có phụ đề nào được tạo — tất cả %1 đã bỏ qua do đầu ra đã tồn tại. Bật Ghi đè để tạo lại.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Chọn thư mục đầu ra</translation>
     </message>
@@ -7892,6 +7908,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>Complete — %1 files processed</source>
         <translation>Hoàn tất — đã xử lý %1 tệp</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Hoàn tất — đã xử lý %1, đã bỏ qua %2</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>Không có tệp nào được định thời lại — tất cả %1 đã bỏ qua. Bật Ghi đè để định thời lại tại chỗ, hoặc chọn thư mục đầu ra khác.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

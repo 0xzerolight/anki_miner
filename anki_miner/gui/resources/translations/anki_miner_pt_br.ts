@@ -2440,6 +2440,14 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Concluído — %1 arquivos processados</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Concluído — %1 processados, %2 ignorados</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>Nada foi condensado — todos os %1 foram ignorados porque a saída já existe. Habilite Sobrescrever para condensar novamente.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Selecionar Pasta de Saída</translation>
     </message>
@@ -7667,6 +7675,14 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Concluído — %1 arquivos processados</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Concluído — %1 processados, %2 ignorados</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>Nenhuma legenda gerada — todos os %1 foram ignorados porque a saída já existe. Habilite Sobrescrever para gerar novamente.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Selecionar Pasta de Saída</translation>
     </message>
@@ -7907,6 +7923,14 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>Complete — %1 files processed</source>
         <translation>Concluído — %1 arquivos processados</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Concluído — %1 processados, %2 ignorados</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>Nenhum arquivo reajustado — todos os %1 foram ignorados. Habilite Sobrescrever para reajustar o tempo no lugar, ou escolha uma pasta de saída diferente.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

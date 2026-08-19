@@ -2438,6 +2438,14 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Selesai — %1 berkas diproses</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Selesai — %1 diproses, %2 dilewati</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>Tidak ada yang dipadatkan — semua %1 dilewati karena keluarannya sudah ada. Aktifkan Timpa untuk memadatkan ulang.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Pilih Folder Keluaran</translation>
     </message>
@@ -7652,6 +7660,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Selesai — %1 berkas diproses</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Selesai — %1 diproses, %2 dilewati</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>Tidak ada subtitel dibuat — semua %1 dilewati karena keluarannya sudah ada. Aktifkan Timpa untuk membuat ulang.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Pilih Folder Keluaran</translation>
     </message>
@@ -7892,6 +7908,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Complete — %1 files processed</source>
         <translation>Selesai — %1 berkas diproses</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Selesai — %1 diproses, %2 dilewati</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>Tidak ada berkas diatur ulang waktunya — semua %1 dilewati. Aktifkan Timpa untuk mengatur ulang waktu di tempat, atau pilih folder keluaran lain.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

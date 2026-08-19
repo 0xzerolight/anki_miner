@@ -2442,6 +2442,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Завершено — обработано файлов: %1</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Завершено — обработано файлов: %1, пропущено файлов: %2</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>Ничего не сжато — пропущено файлов: %1, так как их вывод уже существует. Включите «Перезаписывать», чтобы сжать повторно.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Выбрать папку для вывода</translation>
     </message>
@@ -7682,6 +7690,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Завершено — обработано файлов: %1</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Завершено — обработано файлов: %1, пропущено файлов: %2</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>Субтитры не созданы — пропущено файлов: %1, так как их вывод уже существует. Включите «Перезаписывать», чтобы создать заново.</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>Выбрать папку для вывода</translation>
     </message>
@@ -7922,6 +7938,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Complete — %1 files processed</source>
         <translation>Завершено — обработано файлов: %1</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>Завершено — обработано файлов: %1, пропущено файлов: %2</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>Файлы не пересинхронизированы — пропущено файлов: %1. Включите «Перезаписывать», чтобы пересинхронизировать на месте, или выберите другую папку для вывода.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
