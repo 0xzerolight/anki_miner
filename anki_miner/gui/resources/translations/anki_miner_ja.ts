@@ -2438,6 +2438,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>完了 — %1 個のファイルを処理しました</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完了 — %1 個を処理、%2 個をスキップしました</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>凝縮対象なし — %1 個すべてが出力済みのためスキップしました。再度凝縮するには「上書き」を有効にしてください。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>出力フォルダを選択</translation>
     </message>
@@ -7652,6 +7660,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完了 — %1 個のファイルを処理しました</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完了 — %1 個を処理、%2 個をスキップしました</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>字幕生成なし — %1 個すべてが出力済みのためスキップしました。再生成するには「上書き」を有効にしてください。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>出力フォルダを選択</translation>
     </message>
@@ -7892,6 +7908,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Complete — %1 files processed</source>
         <translation>完了 — %1 個のファイルを処理しました</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完了 — %1 個を処理、%2 個をスキップしました</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>再タイミングなし — %1 個すべてをスキップしました。その場で再タイミングするには「上書き」を有効にするか、別の出力フォルダーを選択してください。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

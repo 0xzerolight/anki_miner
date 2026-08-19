@@ -2438,6 +2438,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成——已处理 %1 个，已跳过 %2 个</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>未压缩任何文件——全部 %1 个因输出已存在而跳过。启用“覆盖”以重新压缩。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>选择输出文件夹</translation>
     </message>
@@ -7652,6 +7660,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完成——已处理 %1 个文件</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成——已处理 %1 个，已跳过 %2 个</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>未生成任何字幕——全部 %1 个因输出已存在而跳过。启用“覆盖”以重新生成。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>选择输出文件夹</translation>
     </message>
@@ -7892,6 +7908,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Complete — %1 files processed</source>
         <translation>完成——已处理 %1 个文件</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成——已处理 %1 个，已跳过 %2 个</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>未重新校准任何文件——全部 %1 个已跳过。启用“覆盖”以就地重新校准，或选择其他输出文件夹。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

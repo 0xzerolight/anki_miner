@@ -953,7 +953,7 @@ def _capture_skipped_slots(signal_mock):
 
 
 def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
-    """file_skipped(idx, out_path) logs 'Skipped: <name>', not 'Done:' (T1)."""
+    """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done:' (T1)."""
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     video.write_bytes(b"fake")
@@ -974,11 +974,12 @@ def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
         tab.generate_button.click()
 
     for slot in skipped_slots:
-        slot(0, out_srt)
+        slot(0, out_srt, "Skipped, exists")
 
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Skipped" in log_text
     assert "episode.srt" in log_text
+    assert "Skipped, exists" in log_text
     assert "Done" not in log_text
 
 
@@ -1008,11 +1009,11 @@ def test_file_skipped_advances_progress(qtbot, tmp_path):
     assert tab.progress_widget.progress_bar.value() == 0
 
     for slot in skipped_slots:
-        slot(0, tmp_path / "ep01.srt")
+        slot(0, tmp_path / "ep01.srt", "Skipped, exists")
     assert tab.progress_widget.progress_bar.value() == 50
 
     for slot in skipped_slots:
-        slot(1, tmp_path / "ep02.srt")
+        slot(1, tmp_path / "ep02.srt", "Skipped, exists")
     assert tab.progress_widget.progress_bar.value() == 100
 
 

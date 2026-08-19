@@ -64,16 +64,22 @@ def classify_terminal_outcome(
     succeeded: int,
     failed: int,
     *,
+    skipped: int = 0,
     cancelled: bool = False,
     fatal: bool = False,
 ) -> TerminalOutcome:
-    """Classify whole-run counts with cancel/fatal precedence."""
+    """Classify whole-run counts with cancel/fatal precedence.
+
+    ``skipped`` items (output exists, overwrite off) are neutral: they never
+    make a run a success on their own count, but they keep a run with failures
+    at PARTIAL rather than FAILED — a deliberate skip is not a failed item.
+    """
     if cancelled:
         return TerminalOutcome.CANCELLED
     if fatal:
         return TerminalOutcome.FAILED
     if failed:
-        return TerminalOutcome.PARTIAL if succeeded else TerminalOutcome.FAILED
+        return TerminalOutcome.PARTIAL if (succeeded or skipped) else TerminalOutcome.FAILED
     return TerminalOutcome.SUCCESS
 
 

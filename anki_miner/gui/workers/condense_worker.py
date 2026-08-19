@@ -140,7 +140,7 @@ class CondenseWorker(FileQueueWorker):
     1. Emits ``file_started(idx)``.
     2. Uses the planned ``<stem>_condensed.<format>`` path in *output_dir* (or
        next to the media). If it already exists and *overwrite* is False — emits
-       ``file_skipped(idx, out_audio)`` and continues.
+       ``file_skipped(idx, out_audio, reason)`` and continues.
     3. Delegates to :func:`~anki_miner.services.audio_condenser.condense_one`,
        which resolves a subtitle source (D9 priority), runs the pipeline, invokes
        ffmpeg, and optionally writes sidecars.
@@ -240,8 +240,9 @@ class CondenseWorker(FileQueueWorker):
         # Skip-if-exists keyed on the audio file only (D11).
         if out_audio.exists() and not self._overwrite:
             logger.debug("condense_worker: skipped %s (exists)", out_audio)
-            self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
-            self.file_skipped.emit(idx, out_audio)
+            msg = self.tr("Skipped, exists")
+            self.file_progress.emit(idx, 100, msg)
+            self.file_skipped.emit(idx, out_audio, msg)
             return
 
         if self._output_dir is not None:

@@ -28,7 +28,7 @@ class SubtitleRetimeWorker(FileQueueWorker):
     2. Determines output path: ``video.stem + in_sub.suffix``, in *output_dir* if
        given, else next to the video.
     3. If the output already exists and *overwrite* is False — emits
-       ``file_skipped(idx, out_sub)`` and continues.
+       ``file_skipped(idx, out_sub, reason)`` and continues.
     4. Calls the retimer; forwards pipeline decision/progress lines via
        ``file_progress``.
     5. Emits ``file_finished(idx, out_sub, None)`` on success, or
@@ -110,7 +110,7 @@ class SubtitleRetimeWorker(FileQueueWorker):
                 logger.debug("subtitle_retime_worker: skipped %s (exists)", out_sub)
                 msg = self.tr("Skipped, exists")
             self.file_progress.emit(idx, 100, msg)
-            self.file_skipped.emit(idx, out_sub)
+            self.file_skipped.emit(idx, out_sub, msg)
             return
 
         # Ensure output directory exists before writing.

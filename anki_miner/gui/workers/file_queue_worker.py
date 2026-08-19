@@ -10,7 +10,7 @@ signals, so the per-worker declarations were removed):
     ``file_started(int)``                  — start of each item (idx)
     ``file_progress(int, int, str)``       — (idx, pct 0-100, message)
     ``file_finished(int, object, object)`` — (idx, out_path|None, error_str|None)
-    ``file_skipped(int, object)``          — (idx, out_path) when output exists and overwrite is False
+    ``file_skipped(int, object, str)``     — (idx, out_path, reason) when output exists and overwrite is False
     ``queue_finished()``                   — emitted once after the last item
 
 Subclasses implement two hooks and keep their own per-item logic:
@@ -51,8 +51,10 @@ class FileQueueWorker(CancellableWorker):
     file_progress = pyqtSignal(int, int, str)
     #: (idx, out_path|None, error_str|None) — outcome for each item.
     file_finished = pyqtSignal(int, object, object)
-    #: (idx, out_path) — emitted when the output already exists and overwrite is False.
-    file_skipped = pyqtSignal(int, object)
+    #: (idx, out_path, reason) — emitted when the output already exists and
+    #: overwrite is False. ``reason`` is the user-facing skip explanation; the
+    #: tab logs it, so a skip is never silent.
+    file_skipped = pyqtSignal(int, object, str)
     #: Emitted once after all items have been processed (or skipped / errored).
     queue_finished = pyqtSignal(object)
 
@@ -71,6 +73,7 @@ class FileQueueWorker(CancellableWorker):
         # without poisoning is_cancelled (a tool error, not a user cancel).
         self._stop_queue = False
         self._succeeded_count = 0
+        self._skipped_count = 0
         self._failed_count = 0
         self._fatal_error = False
         self.file_finished.connect(self._record_file_finished, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]
@@ -92,6 +95,7 @@ class FileQueueWorker(CancellableWorker):
             outcome = classify_terminal_outcome(
                 self._succeeded_count,
                 self._failed_count,
+                skipped=self._skipped_count,
                 cancelled=self.is_cancelled,
                 fatal=self._fatal_error,
             )
@@ -104,9 +108,9 @@ class FileQueueWorker(CancellableWorker):
         else:
             self._succeeded_count += 1
 
-    @pyqtSlot(int, object)
-    def _record_file_skipped(self, _idx: int, _out_path: object) -> None:
-        self._succeeded_count += 1
+    @pyqtSlot(int, object, str)
+    def _record_file_skipped(self, _idx: int, _out_path: object, _reason: str) -> None:
+        self._skipped_count += 1
 
     def _process_queue(self) -> None:
         for idx, item in enumerate(self._queue_items()):

@@ -26,6 +26,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
+from anki_miner.models import TerminalOutcome
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import FilePair
 
@@ -812,7 +813,7 @@ def _capture_signal_slots(signal_mock):
 
 
 def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
-    """file_skipped(idx, out_path) logs 'Skipped: <name>', not 'Done:' (T1)."""
+    """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done:' (T1)."""
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     sub = tmp_path / "episode.srt"
@@ -835,11 +836,13 @@ def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
         tab.retime_button.click()
 
     for slot in skipped_slots:
-        slot(0, out_srt)
+        slot(0, out_srt, "Output equals input; enable Overwrite to retime in place")
 
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Skipped" in log_text
     assert "episode.srt" in log_text
+    # The worker's reason reaches the Activity log, not just a transient label.
+    assert "enable Overwrite" in log_text
     assert "Done" not in log_text
 
 
@@ -875,12 +878,129 @@ def test_file_skipped_advances_progress(qtbot, tmp_path):
     assert tab.progress_widget.progress_bar.value() == 0
 
     for slot in skipped_slots:
-        slot(0, video1.with_suffix(".srt"))
+        slot(0, video1.with_suffix(".srt"), "Skipped, exists")
     assert tab.progress_widget.progress_bar.value() == 50
 
     for slot in skipped_slots:
-        slot(1, video2.with_suffix(".srt"))
+        slot(1, video2.with_suffix(".srt"), "Skipped, exists")
     assert tab.progress_widget.progress_bar.value() == 100
+
+
+def test_all_skipped_run_names_the_remedy(qtbot, tmp_path):
+    """A run where every pair was skipped must NOT report 'Complete — N files
+    processed'; the completion status names the skip count and the remedy
+    (enable Overwrite / different output folder)."""
+    config = _make_config(tmp_path)
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    sub1 = tmp_path / "ep01.srt"
+    sub2 = tmp_path / "ep02.srt"
+    for p in (video1, video2, sub1, sub2):
+        p.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
+    finished_slots = _capture_signal_slots(fake_worker.queue_finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+
+    fake_pairs = [FilePair(video1, sub1), FilePair(video2, sub2)]
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+    ):
+        tab.retime_button.click()
+
+    for slot in skipped_slots:
+        slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
+        slot(1, sub2, "Output equals input; enable Overwrite to retime in place")
+    for slot in finished_slots:
+        slot(TerminalOutcome.SUCCESS)
+
+    status = tab.progress_widget.status_label.text()
+    assert "No files retimed" in status
+    assert "2" in status
+    assert "Overwrite" in status
+    assert "files processed" not in status
+
+
+def test_partially_skipped_run_reports_both_counts(qtbot, tmp_path):
+    """One retimed + one skipped → completion says '1 processed, 1 skipped'."""
+    config = _make_config(tmp_path)
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    sub1 = tmp_path / "ep01.srt"
+    sub2 = tmp_path / "ep02.srt"
+    for p in (video1, video2, sub1, sub2):
+        p.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
+    done_slots = _capture_signal_slots(fake_worker.file_finished)
+    finished_slots = _capture_signal_slots(fake_worker.queue_finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+
+    fake_pairs = [FilePair(video1, sub1), FilePair(video2, sub2)]
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+    ):
+        tab.retime_button.click()
+
+    for slot in done_slots:
+        slot(0, sub1, None)
+    for slot in skipped_slots:
+        slot(1, sub2, "Skipped, exists")
+    for slot in finished_slots:
+        slot(TerminalOutcome.SUCCESS)
+
+    status = tab.progress_widget.status_label.text()
+    assert "1 processed" in status
+    assert "1 skipped" in status
+
+
+def test_unskipped_run_keeps_original_completion_wording(qtbot, tmp_path):
+    """No skips → the historical 'Complete — N files processed' line is unchanged."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    sub = tmp_path / "episode.srt"
+    video.write_bytes(b"fake")
+    sub.write_text("1\n")
+
+    fake_worker = _FakeWorker()
+    done_slots = _capture_signal_slots(fake_worker.file_finished)
+    finished_slots = _capture_signal_slots(fake_worker.queue_finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.video_file_selector.set_path(str(video))
+    tab.subtitle_file_selector.set_path(str(sub))
+
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.retime_button.click()
+
+    for slot in done_slots:
+        slot(0, sub, None)
+    for slot in finished_slots:
+        slot(TerminalOutcome.SUCCESS)
+
+    status = tab.progress_widget.status_label.text()
+    assert "1 files processed" in status
+    assert "skipped" not in status
 
 
 def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):

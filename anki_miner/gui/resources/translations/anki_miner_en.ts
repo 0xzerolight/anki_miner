@@ -2423,6 +2423,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation type="unfinished" />
     </message>
@@ -7596,6 +7604,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation type="unfinished" />
     </message>
@@ -7835,6 +7851,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Complete — %1 files processed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
         <translation type="unfinished" />
     </message>
     <message>

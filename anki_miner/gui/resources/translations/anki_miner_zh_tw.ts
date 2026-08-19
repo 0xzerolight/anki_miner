@@ -2438,6 +2438,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>完成 — 已處理 %1 個檔案</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成 — 已處理 %1 個，已略過 %2 個</translation>
+    </message>
+    <message>
+        <source>Nothing condensed — all %1 skipped because their output already exists. Enable Overwrite to condense again.</source>
+        <translation>未濃縮任何檔案 — 全部 %1 個因輸出已存在而略過。啟用覆寫即可重新濃縮。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>選擇輸出資料夾</translation>
     </message>
@@ -7652,6 +7660,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完成 — 已處理 %1 個檔案</translation>
     </message>
     <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成 — 已處理 %1 個，已略過 %2 個</translation>
+    </message>
+    <message>
+        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
+        <translation>未產生任何字幕 — 全部 %1 個因輸出已存在而略過。啟用覆寫即可重新產生。</translation>
+    </message>
+    <message>
         <source>Select Output Folder</source>
         <translation>選擇輸出資料夾</translation>
     </message>
@@ -7892,6 +7908,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Complete — %1 files processed</source>
         <translation>完成 — 已處理 %1 個檔案</translation>
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 skipped</source>
+        <translation>完成 — 已處理 %1 個，已略過 %2 個</translation>
+    </message>
+    <message>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
+        <translation>未重新校時任何檔案 — 全部 %1 個已略過。啟用覆寫以就地重新校時，或選擇其他輸出資料夾。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>

@@ -141,7 +141,7 @@ def _capture(worker: CondenseWorker) -> dict:
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
-    worker.file_skipped.connect(lambda idx, out: cap["skipped"].append((idx, out)))
+    worker.file_skipped.connect(lambda idx, out, reason: cap["skipped"].append((idx, out, reason)))
     worker.queue_finished.connect(lambda _outcome: cap["queue_finished"].append(True))
     return cap
 
@@ -392,7 +392,10 @@ def test_worker_keeps_existing_exact_nfc_nfd_output_twins(qapp, tmp_path, supply
     worker.run()
     worker.wait(2000)
 
-    assert cap["skipped"] == [(0, output_paths[0]), (1, output_paths[1])]
+    assert cap["skipped"] == [
+        (0, output_paths[0], "Skipped, exists"),
+        (1, output_paths[1], "Skipped, exists"),
+    ]
     assert cap["finished"] == []
     assert service.condense_calls == []
 
@@ -417,7 +420,7 @@ def test_skip_if_exists_no_overwrite(qapp, tmp_path):
     worker.run()
     worker.wait(2000)
 
-    assert cap["skipped"] == [(0, existing)]
+    assert cap["skipped"] == [(0, existing, "Skipped, exists")]
     assert cap["finished"] == []
     assert cap["queue_finished"] == [True]
     assert service.condense_calls == []
@@ -968,7 +971,7 @@ def test_queue_finished_on_empty_list(qapp, tmp_path):
 
 
 def test_file_skipped_signal_exists(qapp, tmp_path):
-    """CondenseWorker exposes a file_skipped(int, object) signal."""
+    """CondenseWorker exposes a file_skipped(int, object, str) signal."""
     worker = _make_worker([], _make_config(tmp_path), service=_FakeService())
     assert hasattr(worker, "file_skipped")
 
