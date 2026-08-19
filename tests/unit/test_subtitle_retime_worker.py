@@ -69,7 +69,7 @@ def _capture(worker: SubtitleRetimeWorker) -> dict:
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
-    worker.file_skipped.connect(lambda idx, out: cap["skipped"].append((idx, out)))
+    worker.file_skipped.connect(lambda idx, out, reason: cap["skipped"].append((idx, out, reason)))
     worker.queue_finished.connect(lambda _outcome: cap["queue_finished"].append(True))
     return cap
 
@@ -278,8 +278,8 @@ def test_skip_if_exists_no_overwrite(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    # Skip must emit file_skipped, NOT file_finished.
-    assert cap["skipped"] == [(0, out)]
+    # Skip must emit file_skipped (with the reason), NOT file_finished.
+    assert cap["skipped"] == [(0, out, "Skipped, exists")]
     assert cap["finished"] == []
     assert cap["queue_finished"] == [True]
     # Retimer must NOT have been called.
@@ -333,8 +333,14 @@ def test_aliased_output_reports_distinct_message(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    assert cap["skipped"] == [(0, in_sub)]
     assert retimer_calls == []
+    # The reason must ride the file_skipped signal itself — the payload the tab
+    # logs — not only the transient file_progress status message.
+    assert len(cap["skipped"]) == 1
+    idx, out_path, reason = cap["skipped"][0]
+    assert (idx, out_path) == (0, in_sub)
+    assert "Overwrite" in reason
+    assert reason != "Skipped, exists"
     progress_msgs = [p[2] for p in cap["progress"] if p[0] == 0 and p[1] == 100]
     assert any("Overwrite" in m for m in progress_msgs)
     assert not any(m == "Skipped, exists" for m in progress_msgs)

@@ -81,6 +81,13 @@ class _ToolTabStrings:
     #: message goes in Details, never here (D24).
     run_problem: str
     complete_template: str
+    #: Completion line when some (but not all) files were skipped:
+    #: ``%1`` = processed count, ``%2`` = skipped count.
+    complete_skipped_template: str
+    #: Completion line when EVERY file was skipped: ``%1`` = skipped count.
+    #: Per-tab wording so the remedy can be tool-specific (e.g. Retime names
+    #: the Overwrite checkbox).
+    all_skipped_template: str
     select_output_folder: str
     output_default: str
     #: What this tool's run is called on a surface that is not this screen
@@ -104,6 +111,10 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     log_widget: LogWidget
     _availability_worker: SingleCallWorker | None = None
     _availability_generation: int = 0
+    #: Files skipped in the current run (reset when the run starts). Counted
+    #: here rather than read back from the worker so the completion line never
+    #: races the worker thread's teardown.
+    _run_skipped: int = 0
 
     #: Stable session key for this tool's remembered OUTPUT folder (D7), e.g.
     #: ``"tools.condense.output"``. Left empty by a subclass that does not want
@@ -261,6 +272,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             total: Real number of files or pairs this run will process.
         """
         self._cancelled = False
+        self._run_skipped = 0
         self._publish_task_start(self._strings.task_title, total=total)
 
     # ------------------------------------------------------------------
@@ -289,16 +301,20 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                 self._strings.done_prefix + Path(path_label).name if path_label else self._strings.done
             )
 
-    def _on_file_skipped(self, idx: int, out_path: object) -> None:
+    def _on_file_skipped(self, idx: int, out_path: object, reason: str = "") -> None:
         # Advance the progress bar just like a finished file.
         total = self._item_total()
         if total:
             self.progress_widget.set_percent(int((idx + 1) / total * 100))
-        self._publish_task_count(current=idx + 1, total=total or None, detail="")
+        self._run_skipped += 1
+        # The reason rides the task detail (Activity / global surfaces), not
+        # the old empty string — a skip must say why it skipped.
+        self._publish_task_count(current=idx + 1, total=total or None, detail=reason)
         path_label = str(out_path) if out_path else ""
-        self.log_widget.append_info(
-            self._strings.skipped_prefix + Path(path_label).name if path_label else self._strings.skipped
-        )
+        line = self._strings.skipped_prefix + Path(path_label).name if path_label else self._strings.skipped
+        if reason:
+            line = f"{line} — {reason}"
+        self.log_widget.append_info(line)
 
     def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
         cancelled = self._cancelled or outcome is TerminalOutcome.CANCELLED
@@ -321,7 +337,18 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             self.progress_widget.reset()
             self.progress_widget.set_status(self._strings.failed)
         else:
-            self.progress_widget.show_completion(tr_format(self._strings.complete_template, self._item_total()))
+            # An honest completion line: a skipped file was not "processed".
+            # All-skipped runs (the same-folder Retime case) name the remedy
+            # instead of claiming success.
+            total = self._item_total()
+            skipped = self._run_skipped
+            if total and skipped >= total:
+                message = tr_format(self._strings.all_skipped_template, skipped)
+            elif skipped:
+                message = tr_format(self._strings.complete_skipped_template, total - skipped, skipped)
+            else:
+                message = tr_format(self._strings.complete_template, total)
+            self.progress_widget.show_completion(message)
 
     def _on_run_error(self, message: str) -> None:
         self.log_widget.append_error(message)

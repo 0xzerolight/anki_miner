@@ -125,6 +125,11 @@ class SubtitleRetimeTab(_ToolTabBase):
             failed=self.tr("Failed — see log"),
             run_problem=self.tr("Some files could not be retimed."),
             complete_template=self.tr("Complete — %1 files processed"),
+            complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
+            all_skipped_template=self.tr(
+                "No files retimed — all %1 skipped. Enable Overwrite to retime in place, "
+                "or choose a different output folder."
+            ),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
             task_title=self.tr("Subtitle retiming"),

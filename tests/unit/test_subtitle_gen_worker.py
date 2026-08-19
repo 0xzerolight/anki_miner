@@ -100,7 +100,7 @@ def _capture(worker: SubtitleGenWorker) -> dict:
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
-    worker.file_skipped.connect(lambda idx, out: cap["skipped"].append((idx, out)))
+    worker.file_skipped.connect(lambda idx, out, reason: cap["skipped"].append((idx, out, reason)))
     worker.queue_finished.connect(lambda _outcome: cap["queue_finished"].append(True))
     return cap
 
@@ -514,7 +514,7 @@ def test_skip_if_exists_no_overwrite(qapp, tmp_path, monkeypatch):
 
     assert cap["started"] == [0]
     # Skip must emit file_skipped, NOT file_finished.
-    assert cap["skipped"] == [(0, existing_srt)]
+    assert cap["skipped"] == [(0, existing_srt, "Skipped, exists")]
     assert cap["finished"] == []
     assert cap["queue_finished"] == [True]
     # Transcription must NOT have been called.
@@ -945,7 +945,7 @@ def test_transcribe_receives_device_and_cuda_libs_root_from_config(qapp, tmp_pat
 
 
 def test_file_skipped_signal_exists(qapp, tmp_path):
-    """SubtitleGenWorker exposes a file_skipped(int, object) signal."""
+    """SubtitleGenWorker exposes a file_skipped(int, object, str) signal."""
     config = _make_config(tmp_path)
     extractor = _FakeExtractor()
     worker = _make_worker([], config, extractor=extractor)
@@ -980,7 +980,7 @@ def test_overwrite_off_skips_nfd_twin(qapp, tmp_path, monkeypatch):
     cap = _capture(worker)
     worker.run()
 
-    assert cap["skipped"] == [(0, existing)]
+    assert cap["skipped"] == [(0, existing, "Skipped, exists")]
     assert cap["finished"] == []
     assert transcribe_calls == []
     assert extractor.calls == []

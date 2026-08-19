@@ -173,6 +173,11 @@ class CondenseTab(_ToolTabBase):
             failed=self.tr("Failed — see log"),
             run_problem=self.tr("Some files could not be condensed."),
             complete_template=self.tr("Complete — %1 files processed"),
+            complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
+            all_skipped_template=self.tr(
+                "Nothing condensed — all %1 skipped because their output already exists. "
+                "Enable Overwrite to condense again."
+            ),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source"),
             task_title=self.tr("Audio condensing"),

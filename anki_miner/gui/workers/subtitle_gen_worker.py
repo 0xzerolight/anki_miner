@@ -38,7 +38,7 @@ class SubtitleGenWorker(FileQueueWorker):
     Per file:
     1. Emits ``file_started(idx)``.
     2. If ``<stem>.srt`` already exists and *overwrite* is False — emits
-       ``file_skipped(idx, existing_path)`` and continues.
+       ``file_skipped(idx, existing_path, reason)`` and continues.
     3. Delegates to
        :func:`~anki_miner.services.asr.subtitle_generation.generate_subtitle_one`,
        which extracts audio, transcribes, and writes the SRT (progress forwarded
@@ -113,8 +113,9 @@ class SubtitleGenWorker(FileQueueWorker):
         # Skip-if-exists logic.
         if out_srt.exists() and not self._overwrite:
             logger.debug("subtitle_gen_worker: skipped %s (exists)", out_srt)
-            self.file_progress.emit(idx, 100, self.tr("Skipped, exists"))
-            self.file_skipped.emit(idx, out_srt)
+            msg = self.tr("Skipped, exists")
+            self.file_progress.emit(idx, 100, msg)
+            self.file_skipped.emit(idx, out_srt, msg)
             return
 
         self._process_file(idx, video_path, out_srt)

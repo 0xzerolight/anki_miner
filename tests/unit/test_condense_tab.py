@@ -840,7 +840,7 @@ def test_file_finished_error_logs_error(qtbot, tmp_path):
 
 
 def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
-    """file_skipped(idx, out_path) logs 'Skipped: <name>', not 'Done'."""
+    """file_skipped(idx, out_path, reason) logs 'Skipped: <name> — <reason>', not 'Done'."""
     config = _make_config(tmp_path)
     media = tmp_path / "episode.mkv"
     media.write_bytes(b"fake")
@@ -854,11 +854,12 @@ def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
     _start_condense(tab, fake_worker)
 
     for slot in slots:
-        slot(0, out_audio)
+        slot(0, out_audio, "Skipped, exists")
 
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Skipped" in log_text
     assert "episode_condensed.mp3" in log_text
+    assert "Skipped, exists" in log_text
     assert "Done" not in log_text
 
 
