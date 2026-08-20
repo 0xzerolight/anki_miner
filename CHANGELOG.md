@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [2.12.0] - 2026-08-20
+
+A correctness release with one large rewrite behind it. Retiming stopped being a single `alass` call whose output was written out unconditionally and became a clean → align → validate → commit pipeline over four alignment candidates, with the guarantee that a subtitle it cannot improve is left exactly as it was. Alongside it: three parsing and lookup fixes that change which word a card fronts and what its back says, the audio pack staleness gate that brings the fourth resource family up to the other three, and a curator that can take a Known Words mark back.
+
+**One thing to know before updating.** The nominalization fix changes the front some words card under: お願いします now mines お願い rather than 願う, お帰りなさい mines お帰り rather than 帰る, and ご存じですか mines ご存じ rather than 存じる. Those words card once more under their new front, and the old cards are not migrated.
+
+### Added
 - **Pick one card image for pasted text (Reading → Text).** Text mining has no video frame and no page scan behind it, so its cards were the only ones that came out with no picture at all. A card image can now be chosen once and is shared by every card mined from that block of text — one file read, one Anki media upload, one filename, however many words the text yields. A pre-run gate checks the file before the run starts rather than failing per word deep into it: a path that has since been moved or deleted, a format Anki will not display, and — folded in from this cycle's review — an image picked while the Picture field is left unmapped in Settings → Anki, which used to run to completion and quietly write cards without the image the user had just chosen. All three now stop the run up front and name what to change.
 - **Re-run a series the queue has already finished (Video → Batch).** A completed series row could only be mined again by clearing the queue and adding the folder back, which lost the rest of the queue with it. Selecting a completed series and running it now resets that row's own run history and mines it again; a queue in which every row is complete points its action bar at "Run selected" instead of a "Run" that had nothing left to do. `reset_for_new_inputs` is renamed `reset_run_history` to say what it actually clears, and the worker's PENDING-only gate is unchanged — a re-run moves the row back to PENDING rather than teaching the worker to pick up completed rows.
 - **Take a Known Words mark back in the Word Curator.** "Add to Known Words" flips to "Remove from Known Words" once every target row is already staged, so a row marked by mistake is unmarked in place. Until now the mark was one-way inside the review — `_mark_row_known` strips the row's checkable flag, and nothing cleared the stage but a successful Confirm — leaving Cancel as the only escape, which discards the whole review and, because `MiningTabBase._resolve_curation` reads a rejected curator as a run-level stop, cancels the run with it. A mixed selection still stages the rest rather than unstaging, matching what the label says. Nothing about the deferred write changes: both directions write nothing and Confirm remains the only writer (D34-B). The unstage restores the row's pre-stage check state instead of defaulting to included, and the stage is re-derived from the table rather than reference-counted, so two rows printing the same mined form cannot have one unstage clear both. Removing a word already committed to the list is unchanged: Settings → Filtering → Manage Known Words.
