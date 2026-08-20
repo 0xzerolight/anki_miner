@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
+<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -111,7 +111,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - **Buku Audio** - mining buku audio, podcast, radio, lagu (pasangan audio + subtitel/transkrip).
 - **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks Jepang yang ditempel.
 - **Analitik** - riwayat mining, peringkat kesulitan, milestone.
-- **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (alass), memadatkan media menjadi audio berisi dialog saja, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, dan mengisi ulang bidang pada kartu yang sudah ada.
+- **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (ffsubsync/alass), memadatkan media menjadi audio berisi dialog saja, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, dan mengisi ulang bidang pada kartu yang sudah ada.
 - **Pengaturan** - semua yang bisa dikonfigurasi.
 
 ## Fitur Lainnya

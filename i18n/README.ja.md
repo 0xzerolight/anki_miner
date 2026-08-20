@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
+<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -111,7 +111,7 @@ anki_miner_gui
 - **オーディオブック** - オーディオブック、ポッドキャスト、ラジオ、楽曲（音声 + 字幕/文字起こしのペア）をマイニングします。
 - **読み** - 漫画（mokuro）、小説（`.epub`、`.txt`。1 冊でもフォルダ全体でも可）、単体の字幕ファイル、貼り付けた日本語テキストをマイニングします。
 - **分析** - マイニング履歴、難易度ランキング、マイルストーン。
-- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（alass）、メディアをセリフだけの音声に凝縮、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完。
+- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（ffsubsync/alass）、メディアをセリフだけの音声に凝縮、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完。
 - **設定** - 設定できるものすべて。
 
 ## その他の機能

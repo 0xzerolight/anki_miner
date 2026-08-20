@@ -109,7 +109,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
 - **Analytics** - mining history, difficulty rankings, milestones.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features

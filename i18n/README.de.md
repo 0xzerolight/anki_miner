@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
+<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -111,7 +111,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten japanischen Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
-- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (alass), Medien auf reines Dialog-Audio kondensieren, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren und Felder bestehender Karten nachträglich befüllen.
+- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren und Felder bestehender Karten nachträglich befüllen.
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen

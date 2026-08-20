@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
+<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -111,7 +111,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 - **Audiolivros** - minere audiolivros, podcasts, rádio, músicas (pares de áudio + legenda/transcrição).
 - **Leitura** - minere mangás (mokuro), romances (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto em japonês colado.
 - **Análises** - histórico de mineração, classificações de dificuldade, marcos.
-- **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (alass), condensar mídia em áudio só com diálogos, copiar a parte que vale a pena aprender de um baralho pronto para um novo, e preencher retroativamente campos em cartões existentes.
+- **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (ffsubsync/alass), condensar mídia em áudio só com diálogos, copiar a parte que vale a pena aprender de um baralho pronto para um novo, e preencher retroativamente campos em cartões existentes.
 - **Configurações** - tudo que é configurável.
 
 ## Outros Recursos

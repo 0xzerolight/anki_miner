@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
+<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -111,7 +111,7 @@ anki_miner_gui
 - **有声书** - 挖词有声书、播客、广播和歌曲（音频 + 字幕/文稿配对）。
 - **阅读** - 挖词漫画（mokuro）、小说（`.epub`、`.txt`；单本书或整个文件夹）、独立字幕文件，或粘贴的日语文本。
 - **分析** - 挖词历史、难度排名、里程碑。
-- **工具** - 生成字幕（本地 Whisper）、重新校准字幕时间轴（alass）、把媒体压缩成纯对话音频、把现成牌组中值得学习的部分复制到新牌组，以及为已有卡片回填字段。
+- **工具** - 生成字幕（本地 Whisper）、重新校准字幕时间轴（ffsubsync/alass）、把媒体压缩成纯对话音频、把现成牌组中值得学习的部分复制到新牌组，以及为已有卡片回填字段。
 - **设置** - 所有可配置项。
 
 ## 其他功能
