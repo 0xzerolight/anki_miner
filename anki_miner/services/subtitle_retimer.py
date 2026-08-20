@@ -232,6 +232,11 @@ def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event 
     def run_ffsubsync(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
         return sync_with_ffsubsync(config, reference, in_sub, out, cancel_event=cancel_event, log_cb=log_cb)
 
+    def run_ffsubsync_offset(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
+        return sync_with_ffsubsync(
+            config, reference, in_sub, out, split_mode=False, cancel_event=cancel_event, log_cb=log_cb
+        )
+
     def run_alass_split(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
         return sync_with_alass(
             config,
@@ -259,6 +264,7 @@ def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event 
     yield "ffsubsync", run_ffsubsync
     yield "alass", run_alass_split
     yield "alass (single offset)", run_alass_offset
+    yield "ffsubsync (single offset)", run_ffsubsync_offset
 
 
 def _commit(candidate: Path, out_sub: Path) -> None:

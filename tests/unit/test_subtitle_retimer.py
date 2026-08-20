@@ -138,6 +138,26 @@ class TestEngineChain:
         assert [call.get("no_split") for call in alass_calls] == [False, True]
         assert _cue_starts(out_sub) == [s + 700 for s in _starts()]
 
+    def test_fourth_attempt_runs_ffsubsync_no_split(self, cfg, video, in_sub, out_sub):
+        ffs_calls: list[dict[str, Any]] = []
+
+        def _ffs(config, reference, sub, out, **kwargs):
+            ffs_calls.append(kwargs)
+            if kwargs.get("split_mode", True):
+                return SyncResult(ok=False, engine="ffsubsync", detail="split failed")
+            return _fake_engine(400, engine="ffsubsync")(config, reference, sub, out, **kwargs)
+
+        with (
+            patch(_FFS, side_effect=_ffs),
+            patch(_ALASS, side_effect=_fake_engine(ok=False, engine="alass")),
+        ):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert outcome
+        assert outcome.attempts[-1].startswith("ffsubsync (single offset)")
+        assert [call.get("split_mode", True) for call in ffs_calls] == [True, False]
+        assert _cue_starts(out_sub) == [s + 400 for s in _starts()]
+
     def test_all_engines_fail_keeps_original(self, cfg, video, in_sub, out_sub):
         before = in_sub.read_bytes()
         with (
@@ -150,7 +170,13 @@ class TestEngineChain:
         assert "original left untouched" in outcome.reason
         assert not out_sub.exists()
         assert in_sub.read_bytes() == before
-        assert len(outcome.attempts) == 3
+        assert len(outcome.attempts) == 4
+        assert [a.split(":", 1)[0] for a in outcome.attempts] == [
+            "ffsubsync",
+            "alass",
+            "alass (single offset)",
+            "ffsubsync (single offset)",
+        ]
 
     def test_missing_alass_skips_remaining_alass_attempts(self, cfg, video, in_sub, out_sub):
         alass_calls: list[Any] = []
@@ -168,6 +194,11 @@ class TestEngineChain:
         assert not outcome
         assert len(alass_calls) == 1
         assert any("not installed" in a for a in outcome.attempts)
+        assert [a.split(":", 1)[0] for a in outcome.attempts] == [
+            "ffsubsync",
+            "alass",
+            "ffsubsync (single offset)",
+        ]
 
     def test_sub_reference_forwarded_to_alass(self, cfg, video, in_sub, out_sub, tmp_path):
         reference = _write_sub(tmp_path / "ref.srt", _starts())
