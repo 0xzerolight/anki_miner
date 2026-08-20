@@ -423,14 +423,32 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.include_highlighted_button.clicked.connect(self._include_highlighted)
         controls_layout.addWidget(self.include_highlighted_button)
 
-        # Stage rows for the local known/ignore list. Acts on the highlighted
-        # rows, or the current row when nothing is highlighted — deliberately NOT
-        # all visible rows, to avoid ignoring the whole list by accident.
-        self.add_known_button = ModernButton(self.tr("Add to Known Words"), variant="secondary")
+        # Stage rows for the local known/ignore list, or take the mark back off
+        # them. Acts on the highlighted rows, or the current row when nothing is
+        # highlighted — deliberately NOT all visible rows, to avoid ignoring the
+        # whole list by accident.
+        #
+        # This is the one verb in the row that changes meaning with the
+        # selection, and it has to: an undo the user cannot see is not an undo.
+        # _refresh_known_button re-derives the label and tooltip on every
+        # selection change, so the button always names the click it is about to
+        # perform instead of leaving the user to infer it.
+        self.add_known_button = ModernButton(variant="secondary")
         self.add_known_button.clicked.connect(self._on_add_to_known)
-        self.add_known_button.setToolTip(
-            self.tr("Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.")
-        )
+        # The width is pinned to the wider of the two faces, measured through the
+        # rendered button. This row IS the dialog's width floor (see the search
+        # field above), so a label that flips must not reflow the toolbar under
+        # the user's cursor halfway through a review.
+        widest = 0
+        for label in self._known_button_labels():
+            self.add_known_button.setText(label)
+            widest = max(widest, self.add_known_button.sizeHint().width())
+        self.add_known_button.setMinimumWidth(widest)
+        # The table does not exist yet — this row is built before
+        # _build_left_pane — so the real label comes from the _refresh_summary in
+        # the constructor tail. Seed the add face rather than leaving whichever
+        # one the measuring loop set last.
+        self.add_known_button.setText(self._known_button_labels()[0])
         # Nowhere to commit means the verb would silently stage marks that can
         # never be written, so it is a dead control rather than a lie.
         self.add_known_button.setEnabled(self._commit_known_callback is not None)
@@ -2178,6 +2196,38 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             button.setAccessibleName(text)
         # A verb with an empty target is a dead control, not a silent no-op.
         self.include_highlighted_button.setEnabled(highlighted > 0)
+        self._refresh_known_button()
+
+    def _known_button_labels(self) -> tuple[str, str]:
+        """The Known Words verb's two faces: ``(stage, unstage)``.
+
+        One place, because the width pin in :meth:`_build_toolbar_row` measures
+        both and :meth:`_refresh_known_button` picks between them.
+        """
+        return (self.tr("Add to Known Words"), self.tr("Remove from Known Words"))
+
+    def _refresh_known_button(self) -> None:
+        """Name the click this button is about to perform, for the current target.
+
+        Mirrors :meth:`_on_add_to_known`'s rule exactly — any active target row
+        means "add", every target already staged means "remove". The label is
+        the only statement of which of the two a click will do, so the two rules
+        are written to be read together.
+        """
+        add_label, remove_label = self._known_button_labels()
+        targets = self._known_target_rows()
+        removing = bool(targets) and not any(self._row_is_active(row) for row in targets)
+        if removing:
+            self.add_known_button.setText(remove_label)
+            self.add_known_button.setToolTip(
+                self.tr("Take the Known · pending mark back off the highlighted rows and return them to this review.")
+            )
+        else:
+            self.add_known_button.setText(add_label)
+            self.add_known_button.setToolTip(
+                self.tr("Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.")
+            )
+        self.add_known_button.setAccessibleName(self.add_known_button.text())
 
     def _update_word_count(self) -> None:
         """Update the counter line: position, included total, filtered total."""

@@ -816,3 +816,54 @@ class TestRemoveFromKnownWords(TestAddToKnownWords):
         _select_rows(dlg, [0])
         dlg._on_add_to_known()
         assert dlg.pending_known_forms() == set()
+
+    # --- the button says which click it is about to perform ------------
+
+    def test_button_reads_add_by_default(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_button_flips_to_remove_when_every_target_is_staged(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.text() == "Remove from Known Words"
+
+    def test_button_flips_back_after_the_unstage(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_button_reads_add_for_a_mixed_selection(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        _select_rows(dlg, [0, 1])
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_button_follows_the_selection_moving_off_a_staged_row(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        _select_rows(dlg, [1])
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_tooltip_flips_with_the_label(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        before = dlg.add_known_button.toolTip()
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.toolTip() != before
+        assert "back" in dlg.add_known_button.toolTip().lower()
+
+    def test_accessible_name_tracks_the_label(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.accessibleName() == dlg.add_known_button.text()
+
+    def test_the_label_flip_cannot_reflow_the_toolbar(self, qtbot, make_tokenized_words):
+        """That row IS the dialog's width floor — it must not resize mid-review."""
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        width_before = dlg.add_known_button.minimumWidth()
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.minimumWidth() == width_before
+        assert width_before >= dlg.add_known_button.sizeHint().width()
