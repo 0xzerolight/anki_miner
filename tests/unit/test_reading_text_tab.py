@@ -20,6 +20,7 @@ inspected. ``detect`` is never patched: this tab builds its ref directly.
 
 from __future__ import annotations
 
+import dataclasses
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -188,6 +189,31 @@ class TestCardImage:
     def test_image_selector_does_not_gate_mine(self, tab):
         tab.text_edit.setPlainText("本文")
         assert tab.mine_button.isEnabled()  # the image is optional
+
+    def test_picked_image_unmapped_picture_refuses_the_run(self, tab, tmp_path):
+        """A picked image with no Picture field mapped is not silently dropped."""
+        tab.config = dataclasses.replace(tab.config, anki_fields={**tab.config.anki_fields, "picture": ""})
+        picture = tmp_path / "shot.png"
+        Image.new("RGB", (16, 16), "white").save(picture)
+        tab.image_selector.set_path(str(picture))
+
+        _mine(tab, "今日は晴れ。")
+
+        tab._queue_worker_cls.assert_not_called()
+        assert tab.worker_thread is None
+        log_text = tab.log_widget.text_edit.toPlainText()
+        assert "Settings" in log_text
+        assert "Anki" in log_text
+
+    def test_no_image_picked_unmapped_picture_does_not_gate(self, tab):
+        """Absence stays optional: no picked image never trips the mapping gate."""
+        tab.config = dataclasses.replace(tab.config, anki_fields={**tab.config.anki_fields, "picture": ""})
+
+        _mine(tab, "今日は晴れ。")
+
+        tab._queue_worker_cls.assert_called_once()
+        items = tab._queue_worker_cls.call_args.kwargs["items"]
+        assert items[0].source.image_root is None
 
 
 class TestItemSlots:
