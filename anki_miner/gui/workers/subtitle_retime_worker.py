@@ -147,6 +147,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
             def _log_cb(line: str) -> None:
                 self.file_progress.emit(idx, 0, line)
 
+            # Captured before the run: a successful commit always leaves
+            # out_sub in place, so this is the only point that can tell
+            # whether _commit() found something there to back up.
+            existed_before = out_sub.exists()
+
             outcome = self._retimer(
                 self._config,
                 video,
@@ -158,18 +163,28 @@ class SubtitleRetimeWorker(FileQueueWorker):
             )
 
             if outcome:
-                self.file_progress.emit(idx, 100, self.tr("Done"))
+                engine = getattr(outcome, "engine", None)
+                if engine:
+                    self.file_progress.emit(idx, 100, tr_format(self.tr("Retimed with %1"), engine))
+                else:
+                    self.file_progress.emit(idx, 100, self.tr("Done"))
+                if existed_before:
+                    from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX
+
+                    self.file_progress.emit(
+                        idx,
+                        100,
+                        tr_format(self.tr("Original backed up as %1"), out_sub.name + BACKUP_SUFFIX),
+                    )
                 self.file_finished.emit(idx, out_sub, None)
             elif self.is_cancelled or getattr(outcome, "cancelled", False):
                 self.file_finished.emit(idx, None, self.tr("Cancelled"))
             else:
+                reason = getattr(outcome, "reason", "") or self.tr("no trustworthy sync; original kept unchanged")
                 self.file_finished.emit(
                     idx,
                     None,
-                    tr_format(
-                        self.tr("No trustworthy sync for %1; original kept unchanged"),
-                        video.name,
-                    ),
+                    tr_format(self.tr("Retiming failed for %1: %2"), video.name, reason),
                 )
 
         except Exception as exc:  # noqa: BLE001 — per-pair isolation

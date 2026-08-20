@@ -842,6 +842,10 @@ Skipped (source folder or database not found; use per-row Re-import…):
 </translation>
     </message>
     <message>
+        <source>The selected audio pack is no longer in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No audio packs in the chain.</source>
         <translation>鏈中沒有音訊包。</translation>
     </message>
@@ -6620,6 +6624,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>請先貼上文字。</translation>
     </message>
     <message>
+        <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
         <translation>此圖片無法讀取。請另選一張圖片，或清除此欄位以在不使用圖片的情況下採集。</translation>
     </message>
@@ -7002,6 +7010,40 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Failed to delete notes. Check that Anki is running.</source>
         <translation>無法刪除筆記。請確認 Anki 正在執行。</translation>
+    </message>
+</context><context>
+    <name>RetimeReference</name>
+    <message>
+        <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: not a dialogue track.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No usable embedded subtitle track; aligning against audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Aligning against audio (%1).</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8136,16 +8178,58 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>已略過，已存在</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Done</source>
         <translation>完成</translation>
+    </message>
+    <message>
+        <source>Original backed up as %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelled</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation>%1 沒有可信賴的同步結果；原始檔案保持不變</translation>
+        <source>no trustworthy sync; original kept unchanged</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retiming failed for %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitleRetimer</name>
+    <message>
+        <source>Ignoring %1 non-dialogue lines during alignment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass is not installed; skipping alass attempts.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 result rejected: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>no engine produced a trustworthy sync; original left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retimed with %1 (offset %2).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retimed with %1.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8730,14 +8814,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>依任一欄位篩選…</translation>
     </message>
     <message>
-        <source>Add to Known Words</source>
-        <translation>加入已知單字</translation>
-    </message>
-    <message>
-        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
-        <translation>將醒目提示的列標記為已知 · 待處理。確認會儲存；取消會捨棄。</translation>
-    </message>
-    <message>
         <source>Word (mined)</source>
         <translation>單字（已採集）</translation>
     </message>
@@ -8832,6 +8908,22 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     <message>
         <source>Include highlighted (%1)</source>
         <translation>包含醒目提示項目（%1）</translation>
+    </message>
+    <message>
+        <source>Add to Known Words</source>
+        <translation>加入已知單字</translation>
+    </message>
+    <message>
+        <source>Remove from Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>將醒目提示的列標記為已知 · 待處理。確認會儲存；取消會捨棄。</translation>
     </message>
     <message>
         <source>Word %1 of %2 · %3 included · %4 shown of %5</source>

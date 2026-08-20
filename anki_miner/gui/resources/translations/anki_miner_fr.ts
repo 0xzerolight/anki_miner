@@ -843,6 +843,10 @@ Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter�
 </translation>
     </message>
     <message>
+        <source>The selected audio pack is no longer in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No audio packs in the chain.</source>
         <translation>Aucun pack audio dans la chaîne.</translation>
     </message>
@@ -6633,6 +6637,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Veuillez d'abord coller du texte.</translation>
     </message>
     <message>
+        <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
         <translation>Impossible de lire cette image. Choisissez-en une autre, ou videz le champ pour extraire sans image.</translation>
     </message>
@@ -7015,6 +7023,40 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Failed to delete notes. Check that Anki is running.</source>
         <translation>Échec de la suppression des notes. Vérifiez qu'Anki est lancé.</translation>
+    </message>
+</context><context>
+    <name>RetimeReference</name>
+    <message>
+        <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: not a dialogue track.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No usable embedded subtitle track; aligning against audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Aligning against audio (%1).</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8151,16 +8193,58 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ignoré, existe déjà</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Done</source>
         <translation>Terminé</translation>
+    </message>
+    <message>
+        <source>Original backed up as %1</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelled</source>
         <translation>Annulé</translation>
     </message>
     <message>
-        <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation>Aucune synchronisation fiable pour %1 ; l'original reste inchangé</translation>
+        <source>no trustworthy sync; original kept unchanged</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retiming failed for %1: %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>SubtitleRetimer</name>
+    <message>
+        <source>Ignoring %1 non-dialogue lines during alignment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>alass is not installed; skipping alass attempts.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 result rejected: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>no engine produced a trustworthy sync; original left untouched</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retimed with %1 (offset %2).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retimed with %1.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8745,14 +8829,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Filtrer par n'importe quel champ…</translation>
     </message>
     <message>
-        <source>Add to Known Words</source>
-        <translation>Ajouter aux mots connus</translation>
-    </message>
-    <message>
-        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
-        <translation>Marquez les lignes surlignées comme Connues · en attente. Confirmer les enregistre ; Annuler les ignore.</translation>
-    </message>
-    <message>
         <source>Word (mined)</source>
         <translation>Mot (extrait)</translation>
     </message>
@@ -8847,6 +8923,22 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
     <message>
         <source>Include highlighted (%1)</source>
         <translation>Inclure les éléments surlignés (%1)</translation>
+    </message>
+    <message>
+        <source>Add to Known Words</source>
+        <translation>Ajouter aux mots connus</translation>
+    </message>
+    <message>
+        <source>Remove from Known Words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>Marquez les lignes surlignées comme Connues · en attente. Confirmer les enregistre ; Annuler les ignore.</translation>
     </message>
     <message>
         <source>Word %1 of %2 · %3 included · %4 shown of %5</source>

@@ -38,6 +38,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
 from anki_miner.services.subtitle_cleaner import clean_for_alignment, map_deltas_back
@@ -47,6 +49,7 @@ from anki_miner.services.sync_engines.ffsubsync_engine import sync_with_ffsubsyn
 from anki_miner.services.sync_validator import validate_candidate
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +144,15 @@ def retime_subtitle(
         if cleaned is not None:
             temps.append(cleaned.path)
             if cleaned.dropped:
-                _log(log_cb, f"Ignoring {cleaned.dropped} non-dialogue lines during alignment.")
+                _log(
+                    log_cb,
+                    tr_format(
+                        QCoreApplication.translate(
+                            "SubtitleRetimer", "Ignoring %1 non-dialogue lines during alignment."
+                        ),
+                        cleaned.dropped,
+                    ),
+                )
         align_input = cleaned.path if cleaned is not None else in_sub
 
         attempts: list[str] = []
@@ -165,7 +176,10 @@ def retime_subtitle(
             except AlassNotFoundError:
                 alass_missing = True
                 attempts.append(f"{label}: binary not installed")
-                _log(log_cb, "alass is not installed; skipping alass attempts.")
+                _log(
+                    log_cb,
+                    QCoreApplication.translate("SubtitleRetimer", "alass is not installed; skipping alass attempts."),
+                )
                 continue
 
             final_candidate = candidate
@@ -190,7 +204,7 @@ def retime_subtitle(
                     reference_label,
                     summary,
                 )
-                _log(log_cb, f"Retimed with {label}{summary}.")
+                _log(log_cb, _success_message(label, result))
                 return RetimeOutcome(
                     ok=True,
                     engine=result.engine,
@@ -200,9 +214,14 @@ def retime_subtitle(
 
             reason = "; ".join(verdict.reasons) or "rejected"
             attempts.append(f"{label}: {reason}")
-            _log(log_cb, f"{label} result rejected: {reason}")
+            _log(
+                log_cb,
+                tr_format(QCoreApplication.translate("SubtitleRetimer", "%1 result rejected: %2"), label, reason),
+            )
 
-        reason = "no engine produced a trustworthy sync; original left untouched"
+        reason = QCoreApplication.translate(
+            "SubtitleRetimer", "no engine produced a trustworthy sync; original left untouched"
+        )
         logger.warning(
             "retime: kept original for %s (reference %s). Attempts: %s",
             video.name,
@@ -294,6 +313,32 @@ def _success_summary(result: SyncResult) -> str:
             return f" (offset {shifts[0]:+.2f}s)"
         return f" ({len(shifts)} blocks, shifts {min(shifts):+.2f}s..{max(shifts):+.2f}s)"
     return ""
+
+
+def _success_message(label: str, result: SyncResult) -> str:
+    """User-facing counterpart of :func:`_success_summary` — same numbers, translated."""
+    if result.offset_seconds is not None:
+        return tr_format(
+            QCoreApplication.translate("SubtitleRetimer", "Retimed with %1 (offset %2)."),
+            label,
+            f"{result.offset_seconds:+.2f}s",
+        )
+    if result.block_shifts_seconds:
+        shifts = result.block_shifts_seconds
+        if len(shifts) == 1:
+            return tr_format(
+                QCoreApplication.translate("SubtitleRetimer", "Retimed with %1 (offset %2)."),
+                label,
+                f"{shifts[0]:+.2f}s",
+            )
+        return tr_format(
+            QCoreApplication.translate("SubtitleRetimer", "Retimed with %1 (%2 blocks, shifts %3..%4)."),
+            label,
+            len(shifts),
+            f"{min(shifts):+.2f}s",
+            f"{max(shifts):+.2f}s",
+        )
+    return tr_format(QCoreApplication.translate("SubtitleRetimer", "Retimed with %1."), label)
 
 
 def _cancelled(cancel_event: threading.Event | None) -> bool:
