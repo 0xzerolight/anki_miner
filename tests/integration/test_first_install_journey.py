@@ -279,9 +279,9 @@ def test_first_install_journey(
         def gated_progress(current: int, total: int, message: str) -> None:
             if progress is not None:
                 progress(current, total, message)
-            # current/total are files_done/total_term_files now (a bank
-            # count); the first-bank-flushed checkpoint is only visible in the
-            # message's real inserted count.
+            # current/total are a scaled files_done/bank fraction now, not a
+            # raw entry count; the first-batch-flushed checkpoint is only
+            # visible in the message's real inserted count.
             if message == "Inserted 5,000 entries":
                 first_bank_done.set()
 
