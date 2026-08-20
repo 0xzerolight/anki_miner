@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
+<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -170,6 +170,7 @@ anki_miner_gui
 | ピッチ | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | ピッチアクセント -> ピッチソースを追加… |
 | 頻度 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻度 -> 頻度ソースを追加… |
 | 頻度 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻度 -> 頻度ソースを追加… |
+| 単語音声 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | コレクションの torrent または生成した `android.db` | 音声 -> 音声ソースを追加… |
 
 
 <details>
