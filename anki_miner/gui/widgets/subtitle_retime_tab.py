@@ -513,7 +513,8 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _on_tracks_clicked(self) -> None:
         """Open RetimeReferenceDialog to pick what alass aligns against."""
-        self.clear_screen_issue()
+        # Not a fresh attempt (D24): opening the picker must not clear a real
+        # run failure still on screen.
         video_path = self.video_file_selector.path_or_none()
         if video_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))

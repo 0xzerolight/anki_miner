@@ -8,12 +8,14 @@ and failed everywhere else: the mining and file-tool screens raise banners from
 "No valid series in the queue to process." outlived the run the user then went
 on to complete. Ninety-six reporting sites shared fifteen clear sites.
 
-The rule these tests pin: pressing a screen's run or probe action clears that
+The rule these tests pin: pressing a screen's *run* action clears that
 screen's banner first, so the sentence on display always describes the attempt
-the user just made. The banner is still never on a timer -- see
-``tests/unit/test_screen_issue_banner.py``.
+the user just made. Opening a track picker or a timing probe is not a fresh
+attempt, so it does not (B-11) -- a real run failure stays on screen through a
+probe the user opens afterwards, and only a fresh run supersedes it. The
+banner is still never on a timer -- see ``tests/unit/test_screen_issue_banner.py``.
 
-The one ordering hazard is pinned at the bottom: the clear belongs at the
+The one ordering hazard is pinned near the bottom: the clear belongs at the
 *entry*, not at ``_publish_task_start``, because Batch raises its "was skipped"
 warnings in between.
 """
@@ -103,7 +105,7 @@ def _surviving_summary(tab) -> str | None:
 
 #: ``(id, fixture, entry method, owner of the first post-clear call, its name,
 #: what to return from it)``. The sixth element short-circuits the entry point
-#: the instant it has been observed, so no worker, dialog or probe ever starts.
+#: the instant it has been observed, so no worker or dialog ever starts.
 #:
 #: Reading the banner *inside* that first call is what makes these tests mean
 #: something. Asserting on the state afterwards would not: every entry point
@@ -111,13 +113,22 @@ def _surviving_summary(tab) -> str | None:
 #: that never cleared anything still ends up showing a different sentence.
 #: Only the reading taken between the clear and the first validation branch
 #: tells replacement and clearing apart.
-ENTRY_POINTS = [
+RUN_ENTRY_POINTS = [
     ("batch: process queue", "batch_tab", "_process_queue", lambda t: t.queue_panel, "runnable_items", []),
     ("batch: process pairs", "batch_tab", "_process_pairs", lambda t: t, "_get_validated_folders", None),
     ("single: mine", "single_tab", "_start_processing", lambda t: t.video_selector, "path_or_none", None),
+    ("condense: condense", "condense_tab", "_on_condense", lambda t: t.log_widget, "clear_log", None),
+    ("retime: retime", "retime_tab", "_on_retime", lambda t: t.log_widget, "clear_log", None),
+    ("creation: generate", "creation_tab", "_on_generate", lambda t: t, "_collect_video_files", []),
+]
+
+#: The same shape as ``RUN_ENTRY_POINTS``, but for the probe entry points --
+#: track pickers and the timing viewer -- that must NOT clear (B-11): opening
+#: one is not a fresh attempt, so a real run failure has to still be there
+#: when the probe returns without picking anything.
+PROBE_ENTRY_POINTS = [
     ("single: audio tracks", "single_tab", "_on_tracks_clicked", lambda t: t.video_selector, "path_or_none", None),
     ("single: test timing", "single_tab", "_on_timing_clicked", lambda t: t.video_selector, "path_or_none", None),
-    ("condense: condense", "condense_tab", "_on_condense", lambda t: t.log_widget, "clear_log", None),
     (
         "condense: audio tracks",
         "condense_tab",
@@ -134,7 +145,6 @@ ENTRY_POINTS = [
         "path_or_none",
         None,
     ),
-    ("retime: retime", "retime_tab", "_on_retime", lambda t: t.log_widget, "clear_log", None),
     (
         "retime: reference",
         "retime_tab",
@@ -143,13 +153,12 @@ ENTRY_POINTS = [
         "path_or_none",
         None,
     ),
-    ("creation: generate", "creation_tab", "_on_generate", lambda t: t, "_collect_video_files", []),
 ]
 
 
 @pytest.mark.parametrize(
     ("fixture", "entry", "owner_of", "first_call", "returns"),
-    [pytest.param(*case[1:], id=case[0]) for case in ENTRY_POINTS],
+    [pytest.param(*case[1:], id=case[0]) for case in RUN_ENTRY_POINTS],
 )
 def test_the_entry_point_clears_before_it_validates(request, fixture, entry, owner_of, first_call, returns):
     """Press the action with the previous attempt's complaint on screen, and
@@ -167,6 +176,34 @@ def test_the_entry_point_clears_before_it_validates(request, fixture, entry, own
 
     assert seen, f"{entry} never reached {first_call}"
     assert seen[0] is None, f"{entry} carried the previous attempt's issue past its own entry"
+
+
+@pytest.mark.parametrize(
+    ("fixture", "entry", "owner_of", "first_call", "returns"),
+    [pytest.param(*case[1:], id=case[0]) for case in PROBE_ENTRY_POINTS],
+)
+def test_the_probe_entry_point_does_not_clear(request, fixture, entry, owner_of, first_call, returns):
+    """Publish a run failure, then open the probe: it must still be there.
+
+    D24's rule is a fresh *attempt* supersedes a stale complaint. A track
+    picker or the timing viewer is not an attempt -- it does not run
+    anything and reports nothing of its own on this path -- so a real run
+    failure the user has not fixed yet must not vanish just because they
+    looked at a picker.
+    """
+    tab = request.getfixturevalue(fixture)
+    tab.show_screen_issue(STALE)
+    seen: list[str | None] = []
+
+    def _record(*_args, **_kwargs):
+        seen.append(_surviving_summary(tab))
+        return returns
+
+    with patch.object(owner_of(tab), first_call, _record):
+        getattr(tab, entry)()
+
+    assert seen, f"{entry} never reached {first_call}"
+    assert seen[0] == STALE.summary, f"{entry} cleared the previous run's failure just by being opened"
 
 
 class TestTheReportedCase:

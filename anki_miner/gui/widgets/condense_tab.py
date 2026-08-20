@@ -645,7 +645,8 @@ class CondenseTab(_ToolTabBase):
 
     def _on_audio_tracks_clicked(self) -> None:
         """Open AudioTracksDialog to pick which audio track to condense."""
-        self.clear_screen_issue()
+        # Not a fresh attempt (D24): opening the picker must not clear a real
+        # run failure still on screen.
         media_path = self.media_file_selector.path_or_none()
         if media_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file first.")))
@@ -712,7 +713,8 @@ class CondenseTab(_ToolTabBase):
 
     def _on_subtitle_tracks_clicked(self) -> None:
         """Open SubtitleTracksDialog to pick which embedded subtitle track to use."""
-        self.clear_screen_issue()
+        # Not a fresh attempt (D24): opening the picker must not clear a real
+        # run failure still on screen.
         media_path = self.media_file_selector.path_or_none()
         if media_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media file first.")))
