@@ -1441,7 +1441,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """Dispatch the schema-staleness scan off-thread; prompt in the callback (4.0).
 
         The probe builds fresh registries and reads every enabled slot's index
-        sidecar (per-slot SQLite) across all three indexed families, so it runs
+        sidecar (per-slot SQLite) across all four indexed families, so it runs
         on a worker thread via ``run_off_thread`` rather than blocking the GUI
         during startup. The prompt is shown from ``_on_stale_resources_scanned``
         on the GUI thread. The ``QTimer.singleShot`` startup deferral is
@@ -1489,9 +1489,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         silent and all are fixed by reimporting, so they share one prompt
         rather than queueing a dialog each.
 
-        Audio is the one family here that does *not* gate a run — it is
-        deliberately absent from ``services.resource_staleness`` — so the
-        "mining is blocked" line is only added when a gating family is present.
+        All four families gate a run; see services/resource_staleness.py.
 
         Only present-but-stale slots reach here. A family the user never
         configured contributes nothing, which is what keeps frequency, pitch
@@ -1527,8 +1525,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             + "\n\n"
             + "\n\n".join(blocks)
         )
-        if any(kind != "audio" for kind, _entries in families):
-            body += "\n\n" + self.tr("Mining is blocked until you do.")
+        body += "\n\n" + self.tr("Mining is blocked until you do.")
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Question)
         box.setWindowTitle(self.tr("Resources need re-importing"))

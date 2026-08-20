@@ -372,8 +372,8 @@ def test_audio_family_is_repaired_with_the_others(main_window, monkeypatch, qtbo
     assert [kind for kind, _cb in completions] == ["dictionary", "audio"]
 
 
-def test_audio_only_staleness_does_not_claim_mining_is_blocked(main_window, monkeypatch, qtbot):
-    """A stale pack costs expression audio; it is not in the pre-run gate."""
+def test_audio_only_staleness_also_claims_mining_is_blocked(main_window, monkeypatch, qtbot):
+    """Audio packs gate mining, so stale audio claims mining is blocked."""
     seen = _answer_prompt(monkeypatch, accept=False)
     _stub_settings_trigger(qtbot, main_window)
 
@@ -381,7 +381,7 @@ def test_audio_only_staleness_does_not_claim_mining_is_blocked(main_window, monk
     main_window._on_stale_resources_scanned({"audio": [("kore", "Kore Audio")]})
 
     assert "Kore Audio" in seen.bodies[0]
-    assert "Mining is blocked" not in seen.bodies[0]
+    assert "Mining is blocked" in seen.bodies[0]
 
 
 def test_a_gating_family_still_says_mining_is_blocked(main_window, monkeypatch, qtbot):
