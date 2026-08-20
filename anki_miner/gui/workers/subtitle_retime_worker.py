@@ -150,8 +150,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
     def _process_pair(self, idx: int, video: Path, in_sub: Path, out_sub: Path) -> None:
         """Process a single (video, subtitle) pair.
 
-        Per-pair errors are forwarded as signals; only a ``_FATAL_QUEUE_EXCEPTIONS``
-        member (alass missing) propagates, for the base loop to stop the queue.
+        Per-pair errors are forwarded as signals; this worker declares no
+        ``_FATAL_QUEUE_EXCEPTIONS`` (the base default is an empty tuple), so
+        nothing here stops the queue. A missing alass no longer qualifies —
+        the self-tuning engine chain shortens itself instead, falling through
+        to ffsubsync candidates; see :func:`~anki_miner.services.subtitle_retimer.retime_subtitle`.
         """
         try:
             # log_cb forwards pipeline decision/progress lines via
