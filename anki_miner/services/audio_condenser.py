@@ -10,8 +10,8 @@ lives in plain module-level functions so it can be unit-tested without any
 external process. The second half of the file adds
 :class:`AudioCondenserService` (ffmpeg orchestration): it composes those pure
 functions plus a :class:`MediaExtractorService` (deliberate same-package private
-reuse of ``_resolve_audio_track_global_index`` / ``_check_encoder_available``)
-and drives a single streaming ffmpeg pass per file.
+reuse of ``_resolve_audio_track_global_index`` / ``_check_encoder_available`` /
+``_audio_filter_capability``) and drives a single streaming ffmpeg pass per file.
 
 Reference frame (binding, see design D1/D3/D4):
 
@@ -307,6 +307,20 @@ class EncoderUnavailableError(Exception):
     """
 
 
+class FilterUnavailableError(Exception):
+    """Raised by :meth:`AudioCondenserService.condense` when this ffmpeg build's
+    ``aselect`` filter does not filter.
+
+    Some builds (Ubuntu's ffmpeg 8.0.1-3ubuntu2 among them) ship an ``aselect``
+    that passes every frame whatever its expression. The condense pass then
+    "succeeds" and writes the WHOLE source track, so the user gets a full-length
+    file named like a condensed one. Refusing is the only honest outcome.
+
+    Fatal for a batch like :class:`EncoderUnavailableError`: every remaining file
+    would hit the same binary.
+    """
+
+
 class _CondenseOutputIncomplete(Exception):
     """Internal control flow: discard a failed/cancelled staged output.
 
@@ -421,9 +435,10 @@ class AudioCondenserService:
     """ffmpeg orchestration for the Audio Condenser tool.
 
     Composes a :class:`MediaExtractorService` purely to reuse its private
-    ``_resolve_audio_track_global_index`` (audio-track selection) and
-    ``_check_encoder_available`` (encoder probe) — a deliberate same-package
-    reuse documented in design D1. Callers may inject an *extractor* (tests do);
+    ``_resolve_audio_track_global_index`` (audio-track selection),
+    ``_check_encoder_available`` (encoder probe) and ``_audio_filter_capability``
+    (filter-file flag + ``aselect`` health) — a deliberate same-package reuse
+    documented in design D1. Callers may inject an *extractor* (tests do);
     otherwise one is built from *config*.
     """
 
@@ -510,7 +525,9 @@ class AudioCondenserService:
         ``out_audio.suffix`` (``.mp3`` → libmp3lame, ``.opus`` → libopus + stereo
         downmix, ``.flac`` → flac). libmp3lame/libopus are pre-probed and a
         missing encoder raises :class:`EncoderUnavailableError` (so a batch
-        aborts once). An empty *periods* list fails immediately (never runs
+        aborts once), and an ffmpeg whose ``aselect`` does not filter raises
+        :class:`FilterUnavailableError` the same way. An empty *periods* list
+        fails immediately (never runs
         ffmpeg with a select-nothing graph). Progress is reported 0–100 via
         *progress_cb* off the ``-progress`` stream; *cancel_event* kills the
         in-flight process.
@@ -540,6 +557,17 @@ class AudioCondenserService:
 
             global_index = self.extractor._resolve_audio_track_global_index(media, audio_track_override)
 
+            # One cached probe answers both "which spelling does this ffmpeg take"
+            # (-filter_script was removed in ffmpeg 9, -/filter needs 7.0+) and
+            # "does its aselect actually select". See _audio_filter_capability.
+            filter_flag, aselect_ok = self.extractor._audio_filter_capability()
+            if not aselect_ok:
+                raise FilterUnavailableError(
+                    "This ffmpeg build's 'aselect' filter does not filter, so condensing would "
+                    "write the full-length track instead of a condensed one. Use the bundled "
+                    "ffmpeg, or set a working one in Settings → Media."
+                )
+
             try:
                 with atomic_write_path(out_audio) as staged_audio:
                     cmd = [
@@ -557,7 +585,7 @@ class AudioCondenserService:
                     else:
                         # Untagged single-track raws: mirror _extract_audio's 0:a:0 fallback.
                         cmd += ["-map", "0:a:0"]
-                    cmd += ["-vn", "-sn", "-dn", "-filter_script:a", str(graph_path), "-c:a", encoder]
+                    cmd += ["-vn", "-sn", "-dn", filter_flag, str(graph_path), "-c:a", encoder]
                     if uses_bitrate:
                         cmd += ["-b:a", f"{bitrate_kbps}k"]
                     if downmix:
@@ -732,9 +760,9 @@ def _emit_progress(
 # which maps each :class:`CondenseStatus` back to a translated ``tr()`` message.
 # This keeps the policy unit-testable without a QThread.
 #
-# ``EncoderUnavailableError`` is deliberately NOT caught here: it propagates out
-# so the worker can re-raise it into the queue-stopping path (every remaining
-# file would hit the same missing encoder).
+# ``EncoderUnavailableError`` and ``FilterUnavailableError`` are deliberately NOT
+# caught here: they propagate out so the worker can re-raise them into the
+# queue-stopping path (every remaining file would hit the same broken binary).
 
 # Subtitle-source priority for the condenser (D9). Unlike the mining default it
 # includes ``.vtt`` — the condenser accepts WebVTT sidecars (D12).
@@ -820,8 +848,9 @@ def condense_one(
        result).
 
     The extracted embedded-subtitle temp file (when one was created) is always
-    deleted here before returning. :class:`EncoderUnavailableError` from the
-    condense pass is NOT caught — it propagates for the caller to stop the queue.
+    deleted here before returning. :class:`EncoderUnavailableError` and
+    :class:`FilterUnavailableError` from the condense pass are NOT caught — they
+    propagate for the caller to stop the queue.
     """
     temp_sub: Path | None = None
     try:
@@ -864,7 +893,7 @@ def condense_one(
     finally:
         # Delete the extracted embedded-subtitle temp file (external / sibling
         # subs are user-owned and never touched). Runs on every path, including
-        # the EncoderUnavailableError propagation.
+        # the Encoder/FilterUnavailableError propagation.
         if temp_sub is not None:
             with contextlib.suppress(OSError):
                 if temp_sub.exists():

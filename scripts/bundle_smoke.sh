@@ -324,6 +324,10 @@ echo
 # the emitted SHAPE is pinned on the Python side by
 # test_build_aselect_graph_nesting_stays_logarithmic; what this proves is that
 # the VENDORED ffmpeg accepts a graph of that shape at a real episode's size.
+#
+# -/filter:a unconditionally, no probe: the bundle is pinned to ffmpeg 8 and the
+# app picks this same spelling on it, so the smoke must exercise the spelling
+# that actually ships. The old -filter_script:a was removed in ffmpeg 9.
 GRAPH_TERMS="${BUNDLE_SMOKE_GRAPH_TERMS:-200}"
 echo "=== smoke: condenser filter graph ($GRAPH_TERMS periods) ==="
 if [ -z "$FF" ]; then
@@ -347,7 +351,7 @@ else
   ' > "$GRAPH_FILE"
   if "$FF" -hide_banner -nostdin -v error \
       -f lavfi -i "anullsrc=r=44100:cl=stereo" -t 0.1 \
-      -filter_script:a "$GRAPH_FILE" -f null - 2>&1; then
+      -/filter:a "$GRAPH_FILE" -f null - 2>&1; then
     echo "BUNDLED_FFMPEG_GRAPH_PASS: $GRAPH_TERMS periods"
     echo "PASS condenser-filter-graph"
   else

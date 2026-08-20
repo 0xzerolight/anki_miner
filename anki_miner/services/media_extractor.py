@@ -5,6 +5,7 @@ import hashlib
 import itertools
 import logging
 import subprocess
+import tempfile
 import threading
 import wave
 from collections.abc import Callable
@@ -38,6 +39,25 @@ logger = logging.getLogger(__name__)
 # orchestrator threads a concrete ``str | None`` down the call chain; direct
 # callers (and existing tests) omit it and get the self-resolving behavior.
 _RESOLVE: Any = object()
+
+#: Filter-file option spellings. ``-/opt <path>`` (read an option's value from a
+#: file) arrived in ffmpeg 7.0; ``-filter_script`` was deprecated the same cycle
+#: and REMOVED in ffmpeg 9.0. No single spelling spans both ends, so
+#: :meth:`MediaExtractorService._audio_filter_capability` probes for one.
+_FILTER_FILE_FLAG_MODERN = "-/filter:a"
+_FILTER_FILE_FLAG_LEGACY = "-filter_script:a"
+
+#: Probe input. The duration is load-bearing: ``anullsrc`` is an INFINITE source
+#: and ``-t`` caps OUTPUT duration, so pairing an unbounded source with a
+#: select-nothing graph means no output frame ever arrives and ffmpeg spins
+#: forever. ``d=`` bounds the source itself, which terminates either way.
+_FILTER_PROBE_SOURCE = "anullsrc=r=44100:cl=stereo:d=0.1"
+
+#: Probe filtergraph, selecting a window far past the probe input: a healthy
+#: ``aselect`` emits nothing. Deliberately NOT the caller's real condense graph —
+#: a real episode's first keep-period often starts at t=0, which would pass the
+#: probe input legitimately and read as a broken filter.
+_FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 
 #: Shortest clip a user-edited window may produce. Guards against a zero- or
 #: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
@@ -194,6 +214,10 @@ class MediaExtractorService:
         # Keyed by ffmpeg encoder name (e.g. "libsvtav1", "libwebp_anim").
         self._animated_encoder_ok: dict[str, bool] = {}
         self._encoder_probe_lock = threading.Lock()
+        # Lazy, cached (filter-file flag, aselect works?) probe — see
+        # _audio_filter_capability. Shares _encoder_probe_lock: both are leaf
+        # probes that never call each other, so there is nothing to deadlock.
+        self._filter_capability: tuple[str, bool] | None = None
         # Per-extraction discriminator for temp clip filenames. Two words that
         # share lemma+start_time (kanji-variant collapse, or the Deck Builder's
         # dedup bypass) would otherwise map to the same {word}_{ms} name and, run
@@ -954,6 +978,98 @@ class MediaExtractorService:
                     encoder,
                 )
             return available
+
+    def _audio_filter_capability(self) -> tuple[str, bool]:
+        """Probe ffmpeg once for the filter-file flag and a working ``aselect``.
+
+        Returns ``(flag, aselect_ok)``:
+
+        * *flag* — :data:`_FILTER_FILE_FLAG_MODERN` on ffmpeg 7.0+, else
+          :data:`_FILTER_FILE_FLAG_LEGACY`. Guessing breaks one end or the other
+          with ``exit 8`` / "Error splitting the argument list: Option not found".
+        * *aselect_ok* — False when this build's ``aselect`` passes every frame
+          whatever its expression. Ubuntu's ffmpeg 8.0.1-3ubuntu2 ships exactly
+          that, and condensing against it silently yields FULL-LENGTH audio, so
+          the caller must refuse rather than write a useless file.
+
+        One probe answers both: run a select-nothing graph over a short synthetic
+        input and emit raw PCM to stdout. A rejected flag exits nonzero; a healthy
+        ``aselect`` writes zero bytes; an inert one writes the whole input.
+
+        Cached for the service's lifetime. A probe that cannot run at all (binary
+        missing, timeout) falls back to the legacy flag and assumes ``aselect``
+        works: that is the pre-probe behaviour, so an inconclusive probe cannot
+        regress a setup that works today, and a genuinely broken binary still
+        fails the real run with its own message.
+        """
+        with self._encoder_probe_lock:
+            if self._filter_capability is None:
+                self._filter_capability = self._probe_audio_filter_capability()
+            return self._filter_capability
+
+    def _probe_audio_filter_capability(self) -> tuple[str, bool]:
+        """Run the probe for :meth:`_audio_filter_capability` (called under its lock)."""
+        with tempfile.NamedTemporaryFile(
+            "w",
+            suffix=".txt",
+            prefix="filter_probe_",
+            dir=str(self.config.media_temp_folder),
+            encoding="utf-8",
+            delete=False,
+        ) as fh:
+            fh.write(_FILTER_PROBE_GRAPH)
+            graph_path = Path(fh.name)
+
+        try:
+            for flag in (_FILTER_FILE_FLAG_MODERN, _FILTER_FILE_FLAG_LEGACY):
+                cmd = [
+                    resolve_ffmpeg(self.config),
+                    "-hide_banner",
+                    "-v",
+                    "error",
+                    "-nostdin",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    _FILTER_PROBE_SOURCE,
+                    flag,
+                    str(graph_path),
+                    "-c:a",
+                    "pcm_s16le",
+                    "-f",
+                    "s16le",
+                    "pipe:1",
+                ]
+                try:
+                    # No text=True: stdout is raw PCM and its SIZE is the signal.
+                    proc = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        timeout=15,
+                        **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
+                    )
+                except (subprocess.SubprocessError, OSError) as e:
+                    logger.warning("ffmpeg filter-file option probe failed: %s", e)
+                    break
+                if proc.returncode != 0:
+                    continue  # This spelling is not in this build; try the other.
+                if proc.stdout:
+                    logger.warning(
+                        "ffmpeg at %r has a non-functional 'aselect' filter: a probe graph that "
+                        "selects nothing returned %d bytes of audio. Condensing against this build "
+                        "would produce full-length output.",
+                        cmd[0],
+                        len(proc.stdout),
+                    )
+                    return flag, False
+                if flag == _FILTER_FILE_FLAG_LEGACY:
+                    logger.info("ffmpeg predates 7.0; falling back to the deprecated %s.", flag)
+                return flag, True
+        finally:
+            with contextlib.suppress(OSError):
+                graph_path.unlink()
+
+        return _FILTER_FILE_FLAG_LEGACY, True
 
     def resolve_animated_format(self) -> str | None:
         """Effective animated screenshot format usable on this ffmpeg build.

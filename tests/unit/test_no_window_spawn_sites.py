@@ -55,6 +55,19 @@ def test_check_encoder_available_spreads_no_window(extractor):
     assert mrun.call_args.kwargs.get("creationflags") == 0x424242
 
 
+def test_audio_filter_capability_spreads_no_window(extractor, test_config):
+    # The probe writes its graph here; the fixture patches out the ensure_directory
+    # call __init__ makes in production.
+    Path(test_config.media_temp_folder).mkdir(parents=True, exist_ok=True)
+    run_result = MagicMock(returncode=0, stdout=b"")
+    with (
+        patch(f"{ME}.no_window_kwargs", return_value=SENTINEL),
+        patch(f"{ME}.subprocess.run", return_value=run_result) as mrun,
+    ):
+        extractor._audio_filter_capability()
+    assert mrun.call_args.kwargs.get("creationflags") == 0x424242
+
+
 def test_run_ffprobe_json_spreads_no_window():
     run_result = MagicMock(returncode=0, stdout="{}")
     with (

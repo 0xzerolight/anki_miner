@@ -24,6 +24,7 @@ from anki_miner.services.audio_condenser import (
     CondenseStatus,
     EncoderUnavailableError,
     FfmpegStepFailure,
+    FilterUnavailableError,
     build_aselect_graph,
     build_periods,
     condense_one,
@@ -466,9 +467,14 @@ def _factory(captured: dict, lines: list[str], returncode: int = 0):
     def _make(cmd: list[str], **kwargs: Any) -> _FakePopen:
         captured["cmd"] = cmd
         captured["kwargs"] = kwargs
-        if "-filter_script:a" in cmd:
-            graph_path = cmd[cmd.index("-filter_script:a") + 1]
-            captured["graph"] = Path(graph_path).read_text(encoding="utf-8")
+        # Either filter-file spelling: -/filter:a on ffmpeg 7.0+, -filter_script:a
+        # on older builds (it was removed in ffmpeg 9). _service picks which.
+        for flag in ("-/filter:a", "-filter_script:a"):
+            if flag in cmd:
+                captured["filter_flag"] = flag
+                captured["graph_path"] = cmd[cmd.index(flag) + 1]
+                captured["graph"] = Path(captured["graph_path"]).read_text(encoding="utf-8")
+                break
         fake = _FakePopen(lines, returncode)
         captured["proc"] = fake
         return fake
@@ -496,15 +502,33 @@ def _make_config(tmp_path: Path) -> MagicMock:
     return cfg
 
 
-def _make_extractor(global_index: int | None = None, encoder_ok: bool = True) -> MagicMock:
+def _make_extractor(
+    global_index: int | None = None,
+    encoder_ok: bool = True,
+    filter_flag: str = "-/filter:a",
+    aselect_ok: bool = True,
+) -> MagicMock:
     ext = MagicMock()
     ext._resolve_audio_track_global_index.return_value = global_index
     ext._check_encoder_available.return_value = encoder_ok
+    # Must be stubbed: an unstubbed MagicMock returns a MagicMock, which would
+    # land in the ffmpeg argv as a non-string.
+    ext._audio_filter_capability.return_value = (filter_flag, aselect_ok)
     return ext
 
 
-def _service(tmp_path: Path, *, global_index: int | None = None, encoder_ok: bool = True) -> AudioCondenserService:
-    return AudioCondenserService(_make_config(tmp_path), _make_extractor(global_index, encoder_ok))
+def _service(
+    tmp_path: Path,
+    *,
+    global_index: int | None = None,
+    encoder_ok: bool = True,
+    filter_flag: str = "-/filter:a",
+    aselect_ok: bool = True,
+) -> AudioCondenserService:
+    return AudioCondenserService(
+        _make_config(tmp_path),
+        _make_extractor(global_index, encoder_ok, filter_flag, aselect_ok),
+    )
 
 
 # --- build_aselect_graph (pure) --------------------------------------------
@@ -621,7 +645,93 @@ def test_condense_disables_video_subtitle_data_streams(tmp_path):
     cmd = captured["cmd"]
     for flag in ("-vn", "-sn", "-dn"):
         assert flag in cmd
-    assert "-filter_script:a" in cmd
+    assert "-/filter:a" in cmd
+
+
+# --- filter-file flag: ffmpeg 9 removed -filter_script ----------------------
+
+
+def test_condense_uses_probed_modern_filter_flag(tmp_path):
+    """ffmpeg 7.0+ must get ``-/filter:a``.
+
+    ``-filter_script`` was removed in ffmpeg 9.0, where it aborts the run with
+    ``exit 8`` / "Error splitting the argument list: Option not found" before any
+    decoding happens. Fails without the fix, which hardcoded the removed spelling.
+    """
+    svc = _service(tmp_path, global_index=0, filter_flag="-/filter:a")
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        ok, _ = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert ok
+    assert captured["filter_flag"] == "-/filter:a"
+    assert "-filter_script:a" not in captured["cmd"]
+
+
+def test_condense_uses_probed_legacy_filter_flag(tmp_path):
+    """ffmpeg <= 6.x must keep getting ``-filter_script:a`` — ``-/opt`` landed in 7.0.
+
+    A pin on the fallback branch, not a regression proof: it also passes against
+    the pre-fix code, which always emitted this spelling.
+    """
+    svc = _service(tmp_path, global_index=0, filter_flag="-filter_script:a")
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        ok, _ = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert ok
+    assert captured["filter_flag"] == "-filter_script:a"
+    assert "-/filter:a" not in captured["cmd"]
+
+
+def test_condense_passes_the_real_graph_file_to_the_probed_flag(tmp_path):
+    """The flag's payload stays the condense graph — the probe owns no extra temp."""
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000), (3000, 5000)], tmp_path / "out.mp3")
+
+    svc.extractor._audio_filter_capability.assert_called_once_with()
+    assert captured["graph"] == build_aselect_graph([(0, 2000), (3000, 5000)])
+
+
+def test_condense_refuses_when_aselect_does_not_filter(tmp_path):
+    """An inert ``aselect`` must abort, not write a full-length "condensed" file.
+
+    Ubuntu's ffmpeg 8.0.1-3ubuntu2 passes every frame whatever the expression, so
+    the encode "succeeds" and silently yields the whole source track.
+    """
+    svc = _service(tmp_path, global_index=0, aselect_ok=False)
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN) as popen,
+        pytest.raises(FilterUnavailableError, match="aselect"),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    popen.assert_not_called()
+
+
+def test_condense_cleans_up_the_graph_file_when_aselect_is_inert(tmp_path):
+    """The graph temp is unlinked on the refusal path too (it is written first)."""
+    svc = _service(tmp_path, global_index=0, aselect_ok=False)
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN),
+        pytest.raises(FilterUnavailableError),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert list(tmp_path.glob("condense_graph_*.txt")) == []
 
 
 def test_condense_graph_file_content_between_seconds_and_asetpts(tmp_path):
