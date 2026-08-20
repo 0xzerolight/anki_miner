@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -1209,7 +1210,7 @@ class TestScanSupersession:
     and the reimport-all mutation token was never released (refusing every
     panel mutation for the rest of the session)."""
 
-    def test_stale_scan_result_still_releases_the_token_and_completes(self, tab, monkeypatch):
+    def test_stale_scan_result_still_releases_the_token_and_completes(self, tab, monkeypatch, caplog):
         flow = tab._audio_pack_import_flow
         # The `tab` fixture stubs _run_latest_scan to run synchronously; this
         # test exercises the real generation-tracking contract instead.
@@ -1242,8 +1243,15 @@ class TestScanSupersession:
         flow._run_latest_scan(lambda: None, lambda _r: None, lambda _m: None)
         assert len(captured) == 2
 
-        stale_on_done(([], [], True))
+        with caplog.at_level(logging.INFO, logger="anki_miner.gui.controllers.import_flow_common"):
+            stale_on_done(([], [], True))
 
         assert completed == [True], "on_complete must still fire for the superseded caller"
         assert flow._mutation_token is None, "the reimport-all mutation token must not leak"
-        assert warnings, "the superseded scan is reported, not silently dropped"
+        # Nothing failed -- a newer scan won the race -- so this must not
+        # banner the family's "could not be scanned" failure sentence, which
+        # would be false here. It is still logged, just not shown.
+        assert warnings == [], "a superseded scan is not a failure; it must not banner one"
+        assert any(
+            "superseded" in record.message.lower() for record in caplog.records
+        ), "the superseded scan is still logged, just not banner'd"

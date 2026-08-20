@@ -201,7 +201,22 @@ class ModalImportFlowMixin:
         and the retry are — otherwise the Settings surface hosting the flow. A
         modal here stopped a run the user had walked away from; the banner does
         not, and the raw worker message stays behind Details.
+
+        A superseded scan (see ``_run_latest_scan``) is routed through this
+        same ``on_error`` path so its caller's token release and
+        ``on_complete`` firing still run — but every flow's ``on_error``
+        hardcodes its own family's failure sentence as ``summary``
+        (e.g. "The audio pack folder could not be scanned."), which is false
+        here: nothing failed, a newer scan won the race. ``details`` is the
+        one thing ``_run_latest_scan`` controls, so a superseded call is
+        recognised by its marker text and logged instead of banner'd — a
+        quiet surface is fine because the race is unreachable from live UI
+        today (every scan dispatch is gated behind a mutation token that
+        blocks a second one starting before the first resolves).
         """
+        if details == _SCAN_SUPERSEDED_MESSAGE:
+            logger.info("Import scan superseded by a newer request, not shown: summary=%s", summary)
+            return
         origin = getattr(self, "_panel", None) or self._parent
         report_screen_issue(origin, ScreenIssue(summary=summary, details=details))
 
@@ -230,7 +245,10 @@ class ModalImportFlowMixin:
         marker, exactly once per dispatch (``_OnceCallback``). Every call
         site's ``on_error`` already releases its mutation token — and, for
         the chained reimport-all flows, advances ``on_complete`` — so
-        routing the drop through it is what makes both hold.
+        routing the drop through it is what makes both hold. The marker is
+        recognised by ``_report_import_issue`` and logged rather than
+        banner'd (nothing failed; a newer scan just won the race), so the
+        only user-visible effect is the button/token release.
         """
         self._scan_generation += 1
         generation = self._scan_generation
