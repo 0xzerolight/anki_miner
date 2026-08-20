@@ -25,6 +25,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.models import TerminalOutcome
 from anki_miner.services.retime_reference import ReferenceOverride
@@ -927,6 +928,94 @@ def test_all_skipped_run_names_the_remedy(qtbot, tmp_path):
     assert "2" in status
     assert "Overwrite" in status
     assert "files processed" not in status
+
+
+def test_all_skipped_run_publishes_failed_outcome(qtbot, tmp_path):
+    """An all-skipped run names the remedy on screen but must not report
+    SUCCEEDED to the Activity drawer/pinned bar/notification (C-2): those
+    global surfaces publish the failed outcome instead."""
+    config = _make_config(tmp_path)
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    sub1 = tmp_path / "ep01.srt"
+    sub2 = tmp_path / "ep02.srt"
+    for p in (video1, video2, sub1, sub2):
+        p.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
+    finished_slots = _capture_signal_slots(fake_worker.queue_finished)
+
+    tab = _make_tab(config, qtbot)
+    registry = TaskRegistry()
+    tab.bind_task_registry(registry)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+
+    fake_pairs = [FilePair(video1, sub1), FilePair(video2, sub2)]
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+    ):
+        tab.retime_button.click()
+
+    for slot in skipped_slots:
+        slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
+        slot(1, sub2, "Output equals input; enable Overwrite to retime in place")
+    for slot in finished_slots:
+        slot(TerminalOutcome.SUCCESS)
+
+    closed = registry.snapshot("tools.retime")
+    assert closed.outcome is TaskOutcome.FAILED
+
+    registry.shutdown()
+
+
+def test_cancelled_all_skipped_run_publishes_cancelled_outcome(qtbot, tmp_path):
+    """A cancelled run that happened to skip everything stays CANCELLED, not
+    relabelled FAILED by the all-skipped rule (cancel wins)."""
+    config = _make_config(tmp_path)
+    video1 = tmp_path / "ep01.mp4"
+    video2 = tmp_path / "ep02.mp4"
+    sub1 = tmp_path / "ep01.srt"
+    sub2 = tmp_path / "ep02.srt"
+    for p in (video1, video2, sub1, sub2):
+        p.write_bytes(b"fake")
+
+    fake_worker = _FakeWorker()
+    skipped_slots = _capture_signal_slots(fake_worker.file_skipped)
+    finished_slots = _capture_signal_slots(fake_worker.queue_finished)
+
+    tab = _make_tab(config, qtbot)
+    registry = TaskRegistry()
+    tab.bind_task_registry(registry)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(tmp_path))
+    tab.subtitle_folder_selector.set_path(str(tmp_path))
+
+    fake_pairs = [FilePair(video1, sub1), FilePair(video2, sub2)]
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+        patch(_FIND_PAIRS, return_value=fake_pairs),
+    ):
+        tab.retime_button.click()
+
+    for slot in skipped_slots:
+        slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
+        slot(1, sub2, "Output equals input; enable Overwrite to retime in place")
+    tab._on_cancel()
+    for slot in finished_slots:
+        slot(TerminalOutcome.CANCELLED)
+
+    closed = registry.snapshot("tools.retime")
+    assert closed.outcome is TaskOutcome.CANCELLED
+
+    registry.shutdown()
 
 
 def test_partially_skipped_run_reports_both_counts(qtbot, tmp_path):

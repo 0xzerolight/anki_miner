@@ -318,10 +318,17 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
 
     def _on_queue_finished(self, outcome: object = TerminalOutcome.SUCCESS) -> None:
         cancelled = self._cancelled or outcome is TerminalOutcome.CANCELLED
+        total = self._item_total()
+        skipped = self._run_skipped
+        # A run where every item was skipped is not a success on the global
+        # surfaces (Activity drawer/pinned bar/notification) even though the
+        # on-screen status names the remedy instead of an error. Cancel still
+        # wins: a cancel that happened to skip everything stays CANCELLED.
+        all_skipped = bool(total) and skipped >= total and outcome is TerminalOutcome.SUCCESS
         self._publish_task_finish(
             self._task_outcome(
                 cancelled=cancelled,
-                failed=outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED),
+                failed=outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED) or all_skipped,
             )
         )
         self._primary_button.setEnabled(True)
@@ -340,9 +347,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             # An honest completion line: a skipped file was not "processed".
             # All-skipped runs (the same-folder Retime case) name the remedy
             # instead of claiming success.
-            total = self._item_total()
-            skipped = self._run_skipped
-            if total and skipped >= total:
+            if all_skipped:
                 message = tr_format(self._strings.all_skipped_template, skipped)
             elif skipped:
                 message = tr_format(self._strings.complete_skipped_template, total - skipped, skipped)
