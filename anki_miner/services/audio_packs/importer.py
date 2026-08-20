@@ -162,6 +162,9 @@ def import_android_audio_db(
     finally:
         robust_rmtree(staging_parent, mode="outcome")
 
+    if overwrite:
+        purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)
+
     if progress:
         progress(f"Registered '{pack_id}' ({entry_count:,} entries)")
     return AudioPackImportResult(
