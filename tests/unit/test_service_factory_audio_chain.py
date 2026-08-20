@@ -591,6 +591,61 @@ class TestCreateServicesAudioChain:
         assert isinstance(fetcher._fetchers[1], JPod101AudioFetcher)
 
 
+class TestSharedLookupAudioPackReuse:
+    """B-5: SharedLookupServices carries the audio pack registry scan too, so a
+    batch run pays one scan instead of one per queue item."""
+
+    def test_shared_bundle_reuses_pack_registry_across_items(self, monkeypatch, tmp_path, base_config):
+        """Two create_services(shared_lookup=...) calls must not rescan the pack
+        folder, and both must see the identical registry instance."""
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            anki_fields=_map_audio_field(base_config),
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),),
+        )
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            assert bundle.audio_pack_registry is not None
+            load_calls: list[bool] = []
+            monkeypatch.setattr(
+                service_factory.AudioPackRegistry,
+                "load",
+                lambda self: load_calls.append(True),
+                raising=True,
+            )
+
+            services_1 = service_factory.create_services(cfg, shared_lookup=bundle)
+            services_2 = service_factory.create_services(cfg, shared_lookup=bundle)
+
+            assert load_calls == [], "AudioPackRegistry.load must not run for a shared-bundle item"
+            assert services_1.audio_pack_registry is bundle.audio_pack_registry
+            assert services_2.audio_pack_registry is bundle.audio_pack_registry
+        finally:
+            bundle.close()
+
+    def test_old_style_bundle_with_unset_pack_registry_falls_back_to_fresh_scan(self, tmp_path, base_config):
+        """A bundle built before this field existed (or by a constructor site
+        that missed it) leaves audio_pack_registry None — create_services must
+        not silently drop the gate; it scans fresh instead."""
+        packs_root, pack_id = _import_pack(tmp_path)
+        cfg = dataclasses.replace(
+            base_config,
+            audio_packs_root=packs_root,
+            anki_fields=_map_audio_field(base_config),
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id=pack_id, enabled=True),),
+        )
+        bundle = service_factory.create_shared_lookup_services(cfg)
+        try:
+            stale_bundle = dataclasses.replace(bundle, audio_pack_registry=None)
+            services = service_factory.create_services(cfg, shared_lookup=stale_bundle)
+            assert services.audio_pack_registry is not None
+            assert pack_id in services.audio_pack_registry.packs
+        finally:
+            bundle.close()
+
+
 class TestBuildSentenceAudioFetcher:
     """Sentence-TTS chain composition (reading sources)."""
 
