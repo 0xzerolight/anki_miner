@@ -260,3 +260,51 @@ class TestClearPlacement:
         batch_tab._is_processing = True
         batch_tab._process_queue()
         assert _surviving_summary(batch_tab) == STALE.summary
+
+
+class TestReentrancyGuardOrdersBeforeClear:
+    """The second choke point (B-7), distinct from the one above.
+
+    Every one of these entry methods repeats the same two-statement opening:
+    a reentrancy guard that returns early when a run is already in flight,
+    THEN ``clear_screen_issue()`` -- the exact ordering
+    ``test_a_click_during_a_live_run_keeps_that_runs_problem`` pins for
+    ``batch_tab`` above ("After the reentrancy guard, before anything that
+    re-raises" is the literal comment repeated at each site:
+    ``condense_tab._on_condense``, ``subtitle_retime_tab._on_retime``,
+    ``subtitle_creation_tab._on_generate``, and
+    ``single_episode_tab._start_processing``).
+
+    Only ``batch_tab`` had a test proving it. On the other four screens,
+    swapping the two statements -- clear firing before the guard checks
+    whether a run is already going -- would let a stray second click, made
+    while that live run is already showing its own failure, silently wipe
+    it. Nothing here today would catch that on any of these four screens.
+    """
+
+    def test_single_tab_click_during_run_keeps_the_running_runs_problem(self, single_tab):
+        single_tab.show_screen_issue(STALE)
+        single_tab._is_processing = True
+        single_tab._start_processing()
+        assert _surviving_summary(single_tab) == STALE.summary
+
+    def test_condense_tab_click_during_run_keeps_the_running_runs_problem(self, condense_tab):
+        condense_tab.show_screen_issue(STALE)
+        condense_tab.worker_thread = MagicMock(name="worker")
+        condense_tab.worker_thread.isRunning.return_value = True
+        condense_tab._on_condense()
+        assert _surviving_summary(condense_tab) == STALE.summary
+
+    def test_retime_tab_click_during_run_keeps_the_running_runs_problem(self, retime_tab):
+        retime_tab.show_screen_issue(STALE)
+        retime_tab.worker_thread = MagicMock(name="worker")
+        retime_tab.worker_thread.isRunning.return_value = True
+        retime_tab._on_retime()
+        assert _surviving_summary(retime_tab) == STALE.summary
+
+    def test_creation_tab_click_during_run_keeps_the_running_runs_problem(self, creation_tab):
+        creation_tab.show_screen_issue(STALE)
+        creation_tab.worker_thread = MagicMock(name="worker")
+        creation_tab.worker_thread.isRunning.return_value = True
+        creation_tab._on_generate()
+        assert _surviving_summary(creation_tab) == STALE.summary

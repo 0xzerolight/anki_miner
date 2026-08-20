@@ -178,6 +178,41 @@ class TestEngineChain:
             "ffsubsync (single offset)",
         ]
 
+    def test_all_candidates_rejected_by_validator_keeps_original_bytes(self, cfg, video, in_sub, out_sub):
+        """Every engine can report success (``ok=True``) and still lose every
+        candidate to the validator -- an aligner that locks onto the wrong
+        optimum exits 0 and writes a syntactically valid file. The
+        keep-original guarantee has to hold on THIS path too, not only when
+        an engine itself reports failure
+        (``test_all_engines_fail_keeps_original`` above)."""
+        before = in_sub.read_bytes()
+        # Shift far past the validator's 5-minute max-shift bound: every
+        # engine "succeeds" but every real candidate file gets rejected.
+        huge_shift = _fake_engine(30 * 60 * 1000, ok=True, engine="huge-shift")
+        with patch(_FFS, side_effect=huge_shift), patch(_ALASS, side_effect=huge_shift):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert not outcome
+        assert "original left untouched" in outcome.reason
+        assert not out_sub.exists()
+        assert in_sub.read_bytes() == before
+        assert len(outcome.attempts) == 4
+        assert all("max cue shift" in a for a in outcome.attempts)
+
+    def test_all_candidates_rejected_by_validator_in_place_leaves_input_untouched(self, cfg, video, in_sub):
+        """In-place variant: ``out_sub`` aliases ``in_sub``, so a wrongly
+        "successful" candidate on every engine must never reach ``os.replace``
+        -- the input has to come out byte-identical, with no backup written
+        (nothing was ever committed to overwrite)."""
+        before = in_sub.read_bytes()
+        huge_shift = _fake_engine(30 * 60 * 1000, ok=True, engine="huge-shift")
+        with patch(_FFS, side_effect=huge_shift), patch(_ALASS, side_effect=huge_shift):
+            outcome = retime_subtitle(cfg, video, in_sub, in_sub)
+
+        assert not outcome
+        assert in_sub.read_bytes() == before
+        assert not in_sub.with_name(in_sub.name + BACKUP_SUFFIX).exists()
+
     def test_missing_alass_skips_remaining_alass_attempts(self, cfg, video, in_sub, out_sub):
         alass_calls: list[Any] = []
 
