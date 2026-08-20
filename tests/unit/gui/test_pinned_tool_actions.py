@@ -105,7 +105,6 @@ def _valid_plan() -> BackfillPlan:
         scanned=1,
         skipped_no_identity=0,
         unavailable_fields=(),
-        sentinel_only_sorts=0,
         expression_field="Expression",
         config_version=0,
     )

@@ -61,7 +61,6 @@ def _plan(notes, field_keys=frozenset({"frequency"}), **kwargs):
         "scanned": len(notes),
         "skipped_no_identity": 0,
         "unavailable_fields": (),
-        "sentinel_only_sorts": 0,
         "expression_field": "Expression",
         "config_version": 0,
     }
@@ -380,11 +379,6 @@ class TestPreviewTable:
         plan = _plan([], scanned=12, unavailable_fields=("pitch_graph", "pitch_text"))
         tab._on_scan_finished(plan)
         assert "pitch" in tab.summary_label.text().lower()
-
-    def test_sentinel_only_sorts_called_out(self, tab):
-        plan = _plan([_note_plan(1)], sentinel_only_sorts=5)
-        tab._on_scan_finished(plan)
-        assert "5" in tab.summary_label.text()
 
 
 class TestLayoutSizing:

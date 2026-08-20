@@ -454,7 +454,6 @@ class TestScanLogging:
         assert "skipped_no_identity=1" in line
         assert "identical=1" in line
         assert "guessed_reading=0" in line
-        assert "sentinel_only_sorts=0" in line
 
     def test_preflight_missing_note_type_logs_before_raising(self, backfill_config, caplog):
         anki = FakeAnkiService(note_types=["Basic", "Other"])
@@ -603,14 +602,34 @@ class TestScanFrequency:
         assert plan.notes == ()
         assert calls == [("賭ける", "かける")]
 
-    def test_miss_writes_sort_sentinel_and_counts_it(self, backfill_config):
+    def test_miss_proposes_neither_frequency_field(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="")})
         freq = FakeFrequencyService({})
         plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency", "frequency_sort"}))
+        assert _changes_by_key(plan, 1) == {}
+        assert plan.notes == ()
+
+    def test_legacy_sentinel_is_replaced_in_fill_mode(self, backfill_config):
+        """A 9999999 left by v2.7.8-v2.11.0 is treated as empty, not as a rank."""
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="9999999")})
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency_sort"}))
         changes = _changes_by_key(plan, 1)
-        assert "frequency" not in changes  # miss never proposes the display field
-        assert changes["frequency_sort"] == "9999999"
-        assert plan.sentinel_only_sorts == 1
+        assert changes["frequency_sort"] == "42"
+        assert plan.notes[0].changes[0].old_display == "9999999"
+
+    def test_real_stored_rank_still_blocks_fill_mode(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="9999")})
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency_sort"}))
+        assert plan.notes == ()
+
+    def test_legacy_sentinel_in_another_field_is_not_fillable(self, backfill_config):
+        """The legacy escape is scoped to the sort field, not to the digits."""
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="9999999", FrequencySort="")})
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}))
+        assert plan.notes == ()
 
     def test_service_unavailable_reported_not_raised(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", Frequency="")})
@@ -1005,7 +1024,6 @@ def _plan(notes, overwrite=False):
         scanned=len(notes),
         skipped_no_identity=0,
         unavailable_fields=(),
-        sentinel_only_sorts=0,
         expression_field="",
         config_version=0,
     )
@@ -1038,6 +1056,25 @@ class TestApplyBackfill:
         assert result.failed == 1
         assert result.tagged == 1
         assert anki.tag_calls == [([1], BACKFILL_TAG)]
+
+    def test_legacy_sort_sentinel_written_over_at_apply(self):
+        """The apply-time recheck runs the same fill test as the scan."""
+        anki = RecordingAnkiService({1: _note(1, word="word1", FrequencySort="9999999")})
+        plan = _plan([_note_plan(1, [("frequency_sort", "FrequencySort", "9999999", "42")])])
+
+        result = apply_backfill(anki, plan)
+
+        assert result.fields_filled == 1
+        assert anki.updates == [[(1, {"FrequencySort": "42"})]]
+
+    def test_real_stored_rank_skipped_at_apply(self):
+        anki = RecordingAnkiService({1: _note(1, word="word1", FrequencySort="9999")})
+        plan = _plan([_note_plan(1, [("frequency_sort", "FrequencySort", "", "42")])])
+
+        result = apply_backfill(anki, plan)
+
+        assert result.skipped_stale == 1
+        assert anki.updates == []
 
     def test_stale_backfill_note_skipped(self, backfill_config):
         word_field = backfill_config.anki_fields["word"]

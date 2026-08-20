@@ -586,12 +586,6 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
                     "Map an Expression Reading or Furigana field to overwrite them."
                 ).format(count=plan.guessed_reading_skips)
             )
-        if plan.sentinel_only_sorts:
-            parts.append(
-                self.tr("{count} sort value(s) are the 9999999 no-frequency-found placeholder.").format(
-                    count=plan.sentinel_only_sorts
-                )
-            )
         if plan.absent_fields:
             # Distinct from unavailable_fields (resource not loaded): the field
             # name itself is not on the note type, so the mapping is stale and
