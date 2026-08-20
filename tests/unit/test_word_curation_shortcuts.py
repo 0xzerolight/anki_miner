@@ -697,3 +697,173 @@ class TestAddToKnownWords:
 
         assert calls == [{mined}, {mined}]
         assert dlg.result() == int(QDialog.DialogCode.Accepted)
+
+
+class TestRemoveFromKnownWords(TestAddToKnownWords):
+    """Undoing a stage — a misclick must not cost the whole review.
+
+    Cancel was the only escape from a staged row, and Cancel cancels the run
+    (MiningTabBase._resolve_curation), so the fix is an unstage in place.
+
+    Subclassing re-runs every staging case under this class id too. That is
+    deliberate: an unstage regression that breaks staging shows up twice.
+    """
+
+    def _stage_row(self, dlg, row: int) -> str:
+        """Stage one row and return the mined form it printed.
+
+        Asserts membership, not set equality: callers stage a second row on top
+        of a first, and the stage is cumulative.
+        """
+        mined = dlg.table.item(row, 1).text()
+        _select_rows(dlg, [row])
+        dlg._on_add_to_known()
+        assert mined in dlg.pending_known_forms()
+        return mined
+
+    def test_second_click_unstages_the_row(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()  # same selection, now all-staged
+        assert dlg.pending_known_forms() == set()
+        assert captured == []
+
+    def test_unstaged_row_is_checkable_again(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        item = dlg.table.item(0, 0)
+        assert bool(item.flags() & Qt.ItemFlag.ItemIsUserCheckable)
+        assert item.text() == ""
+
+    def test_unstaged_row_loses_the_strike_through_and_the_grey(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        for col in range(1, dlg.table.columnCount()):
+            item = dlg.table.item(0, col)
+            assert item.font().strikeOut() is False
+            assert item.data(Qt.ItemDataRole.ForegroundRole) is None
+
+    def test_unstaged_row_is_back_in_the_selection(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        mined = self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        assert mined in {w.mined_form for w in dlg.get_selected_words()}
+
+    def test_unstage_restores_an_excluded_row_as_excluded(self, qtbot, make_tokenized_words):
+        """The row the user had deliberately unchecked must not come back included."""
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        dlg.table.setCurrentCell(0, 0)
+        dlg._toggle_current_row()  # exclude row 0 first
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Unchecked
+
+    def test_bulk_verbs_reach_the_row_again(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        dlg._deselect_all()
+        dlg._select_all()
+        assert dlg.table.item(0, 0).checkState() == Qt.CheckState.Checked
+
+    def test_mixed_selection_stages_the_rest_instead_of_unstaging(self, qtbot, make_tokenized_words):
+        """Any active target means "add" — the additive reading of an Add button."""
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        first = self._stage_row(dlg, 0)
+        second = dlg.table.item(1, 1).text()
+        _select_rows(dlg, [0, 1])
+        dlg._on_add_to_known()
+        assert dlg.pending_known_forms() == {first, second}
+
+    def test_unstaging_one_row_leaves_the_other_staged(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        first = self._stage_row(dlg, 0)
+        self._stage_row(dlg, 1)
+        _select_rows(dlg, [1])
+        dlg._on_add_to_known()
+        assert dlg.pending_known_forms() == {first}
+
+    def test_unstage_then_confirm_commits_only_what_is_left(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        first = self._stage_row(dlg, 0)
+        self._stage_row(dlg, 1)
+        _select_rows(dlg, [1])
+        dlg._on_add_to_known()
+
+        with qtbot.waitSignal(dlg.finished, timeout=3000):
+            dlg.accept()
+
+        assert captured == [{first}]
+
+    def test_unstage_everything_then_confirm_never_calls_the_callback(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        dlg.accept()
+        assert captured == []
+        assert dlg.result() == int(QDialog.DialogCode.Accepted)
+
+    def test_unstage_after_a_failed_write_shrinks_the_retry(self, qtbot, make_tokenized_words):
+        """The banner says Confirm-again-to-retry; the retry must honour an undo."""
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words, fail=True)
+        self._stage_row(dlg, 0)
+        dlg.accept()
+        qtbot.waitUntil(lambda: dlg.issue_banner().current_issue() is not None, timeout=3000)
+
+        _select_rows(dlg, [0])
+        dlg._on_add_to_known()
+        assert dlg.pending_known_forms() == set()
+
+    # --- the button says which click it is about to perform ------------
+
+    def test_button_reads_add_by_default(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_button_flips_to_remove_when_every_target_is_staged(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.text() == "Remove from Known Words"
+
+    def test_button_flips_back_after_the_unstage(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        dlg._on_add_to_known()
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_button_reads_add_for_a_mixed_selection(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        _select_rows(dlg, [0, 1])
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_button_follows_the_selection_moving_off_a_staged_row(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        _select_rows(dlg, [1])
+        assert dlg.add_known_button.text() == "Add to Known Words"
+
+    def test_tooltip_flips_with_the_label(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        before = dlg.add_known_button.toolTip()
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.toolTip() != before
+        assert "back" in dlg.add_known_button.toolTip().lower()
+
+    def test_accessible_name_tracks_the_label(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.accessibleName() == dlg.add_known_button.text()
+
+    def test_the_label_flip_cannot_reflow_the_toolbar(self, qtbot, make_tokenized_words):
+        """That row IS the dialog's width floor — it must not resize mid-review."""
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        width_before = dlg.add_known_button.minimumWidth()
+        self._stage_row(dlg, 0)
+        assert dlg.add_known_button.minimumWidth() == width_before
+        assert width_before >= dlg.add_known_button.sizeHint().width()

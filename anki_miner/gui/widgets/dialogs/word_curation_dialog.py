@@ -155,6 +155,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # This reverses the immediate write documented against Issue #42.
         self._commit_known_callback = commit_known_callback
         self._pending_known_forms: set[str] = set()
+        # Check state each row carried before it was staged known, keyed by the
+        # ORIGINAL word index (col-0 UserRole) so it survives a re-sort.
+        # Unstaging restores what the user had rather than assuming Checked: a
+        # row they deliberately excluded and then marked known must not come
+        # back included.
+        self._known_prior_check: dict[int, Qt.CheckState] = {}
         # Stale-guard for the commit: cancel() silences a worker only if it wins
         # the race against an already-queued result signal, so every callback
         # also checks its generation. Bumped by force_reject and by teardown.
@@ -417,14 +423,32 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.include_highlighted_button.clicked.connect(self._include_highlighted)
         controls_layout.addWidget(self.include_highlighted_button)
 
-        # Stage rows for the local known/ignore list. Acts on the highlighted
-        # rows, or the current row when nothing is highlighted — deliberately NOT
-        # all visible rows, to avoid ignoring the whole list by accident.
-        self.add_known_button = ModernButton(self.tr("Add to Known Words"), variant="secondary")
+        # Stage rows for the local known/ignore list, or take the mark back off
+        # them. Acts on the highlighted rows, or the current row when nothing is
+        # highlighted — deliberately NOT all visible rows, to avoid ignoring the
+        # whole list by accident.
+        #
+        # This is the one verb in the row that changes meaning with the
+        # selection, and it has to: an undo the user cannot see is not an undo.
+        # _refresh_known_button re-derives the label and tooltip on every
+        # selection change, so the button always names the click it is about to
+        # perform instead of leaving the user to infer it.
+        self.add_known_button = ModernButton(variant="secondary")
         self.add_known_button.clicked.connect(self._on_add_to_known)
-        self.add_known_button.setToolTip(
-            self.tr("Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.")
-        )
+        # The width is pinned to the wider of the two faces, measured through the
+        # rendered button. This row IS the dialog's width floor (see the search
+        # field above), so a label that flips must not reflow the toolbar under
+        # the user's cursor halfway through a review.
+        widest = 0
+        for label in self._known_button_labels():
+            self.add_known_button.setText(label)
+            widest = max(widest, self.add_known_button.sizeHint().width())
+        self.add_known_button.setMinimumWidth(widest)
+        # The table does not exist yet — this row is built before
+        # _build_left_pane — so the real label comes from the _refresh_summary in
+        # the constructor tail. Seed the add face rather than leaving whichever
+        # one the measuring loop set last.
+        self.add_known_button.setText(self._known_button_labels()[0])
         # Nowhere to commit means the verb would silently stage marks that can
         # never be written, so it is a dead control rather than a lie.
         self.add_known_button.setEnabled(self._commit_known_callback is not None)
@@ -1915,33 +1939,49 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         return []
 
     def _on_add_to_known(self) -> None:
-        """Stage the target rows for the local known/ignore list (D34-B).
+        """Stage the target rows for the local known/ignore list, or unstage them (D34-B).
 
-        Writes NOTHING. The rows are marked "Known · pending", greyed and
-        excluded from this run; :meth:`accept` commits the stage, and every
-        other exit throws it away with the rest of the review. The previous
-        behaviour wrote immediately, so a Cancel that abandoned the run still
-        excluded those words from every future one.
+        Writes NOTHING in either direction. Staged rows are marked
+        "Known · pending", greyed and excluded from this run; :meth:`accept`
+        commits the stage, and every other exit throws it away with the rest of
+        the review. The previous behaviour wrote immediately, so a Cancel that
+        abandoned the run still excluded those words from every future one.
+
+        The direction is decided by the target rows, not by a mode. Any row
+        still active means "add", and a mixed selection stages the rest — the
+        additive reading of a button whose label says Add. Only when EVERY
+        target row is already staged does the click take the mark back, which is
+        the moment the label flips (:meth:`_refresh_known_button` mirrors this
+        rule; if the two drift the button lies about what it does).
+
+        Undo has to live here because Cancel is not one: it discards the whole
+        review, and MiningTabBase reads a rejected curator as "stop the run".
         """
         if self._commit_known_callback is None or self._known_commit_running:
             return
-        rows = [row for row in self._known_target_rows() if self._row_is_active(row)]
-        if not rows:
-            return
+        targets = self._known_target_rows()
+        active = [row for row in targets if self._row_is_active(row)]
+        if active:
+            self._stage_rows_known(active)
+        elif targets:
+            self._unstage_rows_known(targets)
 
-        forms: set[str] = set()
-        for row in rows:
-            word_item = self.table.item(row, 1)  # "Word (mined)" column
-            if word_item:
-                forms.add(word_item.text())
-        if not forms:
-            return
-
-        self._pending_known_forms |= forms
+    def _stage_rows_known(self, rows: list[int]) -> None:
+        """Mark rows Known · pending and re-derive the stage."""
         self.table.blockSignals(True)
         for row in rows:
             self._mark_row_known(row)
         self.table.blockSignals(False)
+        self._recompute_pending_known()
+        self._refresh_summary()
+
+    def _unstage_rows_known(self, rows: list[int]) -> None:
+        """Take the Known · pending mark back off rows and re-derive the stage."""
+        self.table.blockSignals(True)
+        for row in rows:
+            self._unmark_row_known(row)
+        self.table.blockSignals(False)
+        self._recompute_pending_known()
         self._refresh_summary()
 
     def pending_known_forms(self) -> set[str]:
@@ -2067,6 +2107,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Mark a row staged-known: labelled, struck through, grey, unchecked, locked."""
         check_item = self.table.item(row, 0)
         if check_item:
+            # Remembered BEFORE the uncheck, so _unmark_row_known can put back
+            # what the user chose instead of a default.
+            self._known_prior_check[check_item.data(Qt.ItemDataRole.UserRole)] = check_item.checkState()
             check_item.setCheckState(Qt.CheckState.Unchecked)
             # Strip the checkable flag so bulk actions / the S toggle key can't re-include it.
             check_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
@@ -2082,6 +2125,53 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 font.setStrikeOut(True)
                 item.setFont(font)
                 item.setForeground(grey)
+
+    def _unmark_row_known(self, row: int) -> None:
+        """Undo :meth:`_mark_row_known` — the row rejoins the review.
+
+        The exact inverse, cell for cell. The checkable flag comes back, so the
+        bulk verbs and the S key can reach the row again; the "Known · pending"
+        label goes, and column 0's ResizeToContents rule shrinks the column back
+        on its own.
+
+        The foreground is CLEARED rather than repainted a colour.
+        ``make_table_item`` never sets one, so an empty ForegroundRole is the
+        state a fresh row is in — and a hard-coded black would survive a theme
+        change into an unreadable cell.
+        """
+        check_item = self.table.item(row, 0)
+        if check_item:
+            check_item.setFlags(
+                Qt.ItemFlag.ItemIsUserCheckable | Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
+            )
+            check_item.setText("")
+            prior = self._known_prior_check.pop(check_item.data(Qt.ItemDataRole.UserRole), Qt.CheckState.Checked)
+            check_item.setCheckState(prior)
+        for col in range(1, self.table.columnCount()):
+            item = self.table.item(row, col)
+            if item:
+                font = item.font()
+                font.setStrikeOut(False)
+                item.setFont(font)
+                item.setData(Qt.ItemDataRole.ForegroundRole, None)
+
+    def _recompute_pending_known(self) -> None:
+        """Re-derive the stage from the table, which is its single source of truth.
+
+        Stripping the checkable flag is what MAKES a row staged, so the marked
+        rows ARE the stage. Re-reading them is cheaper to keep correct than
+        reference-counting forms, and it means two rows printing the same mined
+        form cannot have one unstage silently clear both.
+        """
+        forms: set[str] = set()
+        for row in range(self.table.rowCount()):
+            check_item = self.table.item(row, 0)
+            if check_item is None or self._is_checkable(check_item):
+                continue
+            word_item = self.table.item(row, 1)  # "Word (mined)" column
+            if word_item:
+                forms.add(word_item.text())
+        self._pending_known_forms = forms
 
     def _refresh_summary(self) -> None:
         """Re-derive everything on screen that describes the current state.
@@ -2106,6 +2196,38 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             button.setAccessibleName(text)
         # A verb with an empty target is a dead control, not a silent no-op.
         self.include_highlighted_button.setEnabled(highlighted > 0)
+        self._refresh_known_button()
+
+    def _known_button_labels(self) -> tuple[str, str]:
+        """The Known Words verb's two faces: ``(stage, unstage)``.
+
+        One place, because the width pin in :meth:`_build_toolbar_row` measures
+        both and :meth:`_refresh_known_button` picks between them.
+        """
+        return (self.tr("Add to Known Words"), self.tr("Remove from Known Words"))
+
+    def _refresh_known_button(self) -> None:
+        """Name the click this button is about to perform, for the current target.
+
+        Mirrors :meth:`_on_add_to_known`'s rule exactly — any active target row
+        means "add", every target already staged means "remove". The label is
+        the only statement of which of the two a click will do, so the two rules
+        are written to be read together.
+        """
+        add_label, remove_label = self._known_button_labels()
+        targets = self._known_target_rows()
+        removing = bool(targets) and not any(self._row_is_active(row) for row in targets)
+        if removing:
+            self.add_known_button.setText(remove_label)
+            self.add_known_button.setToolTip(
+                self.tr("Take the Known · pending mark back off the highlighted rows and return them to this review.")
+            )
+        else:
+            self.add_known_button.setText(add_label)
+            self.add_known_button.setToolTip(
+                self.tr("Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.")
+            )
+        self.add_known_button.setAccessibleName(self.add_known_button.text())
 
     def _update_word_count(self) -> None:
         """Update the counter line: position, included total, filtered total."""
