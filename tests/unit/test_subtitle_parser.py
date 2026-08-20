@@ -6677,11 +6677,11 @@ class TestMasuStemNominalizationWiring:
     """
 
     @staticmethod
-    def _service(test_config, dictionary):
+    def _service(test_config, dictionary, reading_lookup=None):
         def term_lookup(terms):
             return dictionary & set(terms)
 
-        return SubtitleParserService(test_config, term_lookup=term_lookup)
+        return SubtitleParserService(test_config, term_lookup=term_lookup, reading_lookup=reading_lookup)
 
     @staticmethod
     def _mined(service, text):
@@ -6739,3 +6739,16 @@ class TestMasuStemNominalizationWiring:
 
         unmerged = self._mined(self._service(test_config, {"存じ"}), "ご存じですか")
         assert "存じ" not in unmerged
+
+    def test_dictionary_attestation_does_not_override_the_nominalized_reading(self, test_config):
+        """A-4: unidic's context reading is absent from the dictionary's
+        attested set for 差し入れ (the dictionary attests a different single
+        reading instead), so ``attest_merged_readings`` must leave the
+        nominalizer's kana alone."""
+        service = self._service(
+            test_config,
+            {"差し入れ"},
+            reading_lookup=lambda terms: {"差し入れ": ["さしいれもの"]},
+        )
+        word = self._mined(service, self.SENTENCE)["差し入れ"]
+        assert word.expression_reading == "さしいれ"

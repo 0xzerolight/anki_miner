@@ -3,7 +3,7 @@
 from unittest.mock import MagicMock
 
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
-from anki_miner.services.morphology import SyntheticToken
+from anki_miner.services.morphology import SyntheticToken, attest_merged_readings
 
 
 def _tok(surface, pos1, pos2=None, lemma=None, kana=None, orth_base=None, c_form=None):
@@ -187,3 +187,17 @@ class TestLookupAndPreservation:
         token.feature = None
         tokens = [token, _tok("みんな", "名詞")]
         assert _nominalizer({"x"}).rewrite_line(tokens) is tokens
+
+
+class TestKanaOutranksDictionaryAttestation:
+    """A-4: the nominalizer's kana is context-authoritative (see
+    ``_nominalize``'s docstring), so ``attest_merged_readings`` must never
+    touch it — even when the dictionary attests a DIFFERENT single reading
+    for the nominalized surface."""
+
+    def test_disagreeing_attested_reading_does_not_override_the_kana(self):
+        out = _nominalizer({"差し入れ"}).rewrite_line(_sashiire())
+        token = out[0]
+        attest_merged_readings(out, lambda terms: {"差し入れ": ["さしいれもの"]})
+        assert token.feature.kana == "サシイレ"
+        assert getattr(token.feature, "kana_attested", False) is False

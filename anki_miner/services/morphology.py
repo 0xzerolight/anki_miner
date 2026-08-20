@@ -210,9 +210,9 @@ class SyntheticToken:
 
     __slots__ = ("surface", "feature")
 
-    def __init__(self, surface: str, pos1: str, pos2: str, lemma: str, kana: str):
+    def __init__(self, surface: str, pos1: str, pos2: str, lemma: str, kana: str, *, kana_locked: bool = False):
         self.surface = surface
-        self.feature = SimpleNamespace(pos1=pos1, pos2=pos2, lemma=lemma, kana=kana)
+        self.feature = SimpleNamespace(pos1=pos1, pos2=pos2, lemma=lemma, kana=kana, kana_locked=kana_locked)
 
 
 # Back-compat alias for the pre-rename private name.
@@ -508,9 +508,12 @@ def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -
        rather than the top entry しにん.
 
     Tokens whose kana came from the curated kinship table
-    (``feature.kana_special``, d848257) are skipped — the table outranks the
-    dictionary. Real UniDic tokens are never touched (polyphonic 方/中 keep
-    their contextual reading). Flags land on ``token.feature`` (a
+    (``feature.kana_special``, d848257) or from a context-locked 1:1
+    replacement (``feature.kana_locked`` — e.g. ``masu_stem_nominalizer``'s
+    nominalization, whose kana is unidic's context-disambiguated reading, not
+    a re-tokenization) are skipped — both outrank the dictionary. Real UniDic
+    tokens are never touched (polyphonic 方/中 keep their contextual reading).
+    Flags land on ``token.feature`` (a
     ``SimpleNamespace`` — ``SyntheticToken`` declares ``__slots__``):
     ``kana_attested`` on cases 1-3 (``_emit_word`` trusts the token kana), and
     ``kana_overridden`` on cases 2-3 only. The sentence display path carries
@@ -522,7 +525,13 @@ def attest_merged_readings(tokens: list, reading_lookup: ReadingLookup | None) -
     """
     if reading_lookup is None:
         return tokens
-    synthetics = [t for t in tokens if isinstance(t, SyntheticToken) and not getattr(t.feature, "kana_special", False)]
+    synthetics = [
+        t
+        for t in tokens
+        if isinstance(t, SyntheticToken)
+        and not getattr(t.feature, "kana_special", False)
+        and not getattr(t.feature, "kana_locked", False)
+    ]
     if not synthetics:
         return tokens
     attested_map = reading_lookup(sorted({t.surface for t in synthetics}))
