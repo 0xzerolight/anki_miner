@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f22dd6c4029097f -->
+<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -111,7 +111,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
 - **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte japonais collé.
 - **Statistiques** - historique d'extraction, classements de difficulté, jalons.
-- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (alass), condenser les médias en audio dialogue uniquement, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
+- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
 - **Paramètres** - tout ce qui est configurable.
 
 ## Autres fonctionnalités
