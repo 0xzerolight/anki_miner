@@ -89,7 +89,8 @@ def sync_with_ffsubsync(
 
         args = make_parser().parse_args(argv)
         result = ffsubsync_run(args)
-    except Exception as exc:  # noqa: BLE001 — an engine crash is a failed candidate, never fatal
+    # noqa: BLE001 — a crash (incl. argparse's SystemExit on a rejected argv) fails the candidate, never fatal
+    except (Exception, SystemExit) as exc:
         logger.warning("ffsubsync failed on %s", in_sub.name, exc_info=True)
         _unlink_quiet(out)
         return SyncResult(ok=False, engine="ffsubsync", detail=f"raised {type(exc).__name__}: {exc}")

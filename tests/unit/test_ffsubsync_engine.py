@@ -11,6 +11,7 @@ import pytest
 from anki_miner.services.sync_engines.ffsubsync_engine import sync_with_ffsubsync
 
 _RUN = "ffsubsync.ffsubsync.run"
+_MAKE_PARSER = "ffsubsync.ffsubsync.make_parser"
 _RESOLVE_FFMPEG = "anki_miner.services.sync_engines.ffsubsync_engine.resolve_ffmpeg"
 
 
@@ -112,6 +113,22 @@ class TestSyncWithFfsubsync:
             result = sync_with_ffsubsync(cfg, reference, in_sub, out)
         assert not result.ok
         assert "RuntimeError" in result.detail
+
+    def test_rejected_argv_systemexit_is_a_failed_candidate(self, cfg, paths):
+        """argparse's parser.error() raises SystemExit (a BaseException) — must not escape."""
+        reference, in_sub, out = paths
+        out.touch()  # stale temp from a prior attempt; must be unlinked, not left behind
+        mock_parser = MagicMock()
+        mock_parser.parse_args.side_effect = SystemExit(2)
+        with (
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_MAKE_PARSER, return_value=mock_parser),
+        ):
+            result = sync_with_ffsubsync(cfg, reference, in_sub, out)
+        assert not result.ok
+        assert result.engine == "ffsubsync"
+        assert "SystemExit" in result.detail
+        assert not out.exists()
 
     def test_pre_set_cancel_short_circuits(self, cfg, paths):
         import threading
