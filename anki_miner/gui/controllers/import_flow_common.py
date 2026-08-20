@@ -40,6 +40,12 @@ logger = logging.getLogger(__name__)
 
 _NO_PROGRESS_WARNING_MS = 10_000
 
+# Not translated: this never reaches a banner's summary line (the flow's own
+# on_error still supplies that, pre-translated) -- only the collapsed Details
+# text, the same slot every other on_error message fills with a raw,
+# untranslated exception string.
+_SCAN_SUPERSEDED_MESSAGE = "Scan superseded by a newer request."
+
 _OutcomeKind = Literal["success", "failed", "cancelled"]
 _JobT = TypeVar("_JobT")
 
@@ -211,24 +217,48 @@ class ModalImportFlowMixin:
         *,
         pass_cancel_check: bool = False,
     ) -> None:
-        """Run bounded discovery work off-thread and ignore superseded results."""
+        """Run bounded discovery work off-thread, reporting a superseded result.
+
+        ``SingleCallWorker`` only re-checks its cancel flag around the emit
+        itself, not the cross-thread delivery — a worker that raced past that
+        checkpoint just before ``cancel()`` landed still queues its
+        ``result_ready``/``error`` signal, which then arrives here after a
+        newer scan has already bumped ``_scan_generation``. Silently dropping
+        that stale delivery is what used to strand a caller holding a
+        mutation token or chaining through ``on_complete`` (B-8/B-9): it is
+        reported here instead, through ``on_error`` with a superseded
+        marker, exactly once per dispatch (``_OnceCallback``). Every call
+        site's ``on_error`` already releases its mutation token — and, for
+        the chained reimport-all flows, advances ``on_complete`` — so
+        routing the drop through it is what makes both hold.
+        """
         self._scan_generation += 1
         generation = self._scan_generation
         if still_running(self._scan_worker):
             assert self._scan_worker is not None
             self._scan_worker.cancel()
 
+        report_superseded = _OnceCallback(lambda: on_error(_SCAN_SUPERSEDED_MESSAGE))
+
         def _on_done(result: object) -> None:
-            if generation == self._scan_generation:
-                # bucket C: a deleted Qt receiver makes this superseded callback irrelevant.
+            if generation != self._scan_generation:
+                # bucket C: a deleted Qt receiver makes this superseded report irrelevant.
                 with contextlib.suppress(RuntimeError):
-                    on_done(result)
+                    report_superseded()
+                return
+            # bucket C: a deleted Qt receiver makes this superseded callback irrelevant.
+            with contextlib.suppress(RuntimeError):
+                on_done(result)
 
         def _on_error(message: str) -> None:
-            if generation == self._scan_generation:
-                # bucket C: a deleted Qt receiver makes this superseded callback irrelevant.
+            if generation != self._scan_generation:
+                # bucket C: a deleted Qt receiver makes this superseded report irrelevant.
                 with contextlib.suppress(RuntimeError):
-                    on_error(message)
+                    report_superseded()
+                return
+            # bucket C: a deleted Qt receiver makes this superseded callback irrelevant.
+            with contextlib.suppress(RuntimeError):
+                on_error(message)
 
         try:
             self._scan_worker = run_off_thread(
