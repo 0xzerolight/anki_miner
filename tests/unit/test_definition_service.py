@@ -1046,6 +1046,54 @@ class TestLookupAllOffline:
         online.lookup.assert_not_called()
         off2.lookup.assert_called_once_with("word")
 
+    def test_lemma_reaches_lookup_many_for_batch_capable_provider(self, test_config):
+        """Rule A' pane fix: a lemma passed to lookup_all_offline threads into a
+        lookup_many-capable provider instead of the arity-1 lookup, so a kana
+        front (ゆう, lemma 言う) scopes to its own lexeme rather than every
+        same-reading homograph (有/夕/結う) — matching the card's own
+        get_definitions_batch(lemma_context=...) scoping."""
+        seen: list[dict[str, str] | None] = []
+        provider = make_batch_provider("lemma-aware")
+        provider.lookup_fallback = None  # unspecced Mock: no deinflection fallback surface
+
+        def lookup_many(pairs, scope_homographs=True, lemmas=None):
+            seen.append(lemmas)
+            return {w: "<div>言う</div>" for w, _ in pairs}
+
+        provider.lookup_many.side_effect = lookup_many
+        service = DefinitionService(test_config, providers=[provider])
+
+        result = service.lookup_all_offline("ゆう", lemma="言う")
+
+        assert result == [("lemma-aware", "<div>言う</div>")]
+        assert seen == [{"ゆう": "言う"}]
+        provider.lookup.assert_not_called()
+
+    def test_lemma_falls_back_to_lookup_for_provider_without_lookup_many(self, test_config):
+        """A provider lacking lookup_many (e.g. a legacy offline dict, or the
+        arity-1 provider fakes throughout this suite) keeps the arity-1
+        ``lookup(word)`` path even when a lemma is supplied — the getattr probe
+        never fires, so older provider stubs keep working unchanged."""
+        legacy = make_provider("Legacy", return_value="<div>legacy</div>")
+        service = DefinitionService(test_config, providers=[legacy])
+
+        result = service.lookup_all_offline("ゆう", lemma="言う")
+
+        assert result == [("Legacy", "<div>legacy</div>")]
+        legacy.lookup.assert_called_once_with("ゆう")
+
+    def test_no_lemma_does_not_probe_lookup_many(self, test_config):
+        """Absent lemma (the legacy call shape) never probes lookup_many at
+        all, even for a provider that has it — byte-identical to pre-A′."""
+        provider = make_batch_provider("batch-capable", table={"x": "<div>x</div>"})
+        service = DefinitionService(test_config, providers=[provider])
+
+        result = service.lookup_all_offline("x")
+
+        assert result == [("batch-capable", "<div>x</div>")]
+        provider.lookup_many.assert_not_called()
+        provider.lookup.assert_called_once_with("x")
+
 
 class TestProviderRaisesMidChain:
     """A provider raising DURING a lookup is skipped (degrade-and-warn, OVH-046).

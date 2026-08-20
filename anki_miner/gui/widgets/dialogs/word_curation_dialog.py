@@ -143,7 +143,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         *,
         commit_known_callback: Callable[[set[str]], int] | None = None,
         media_context: CurationMediaContext | None = None,
-        lookup_fn: Callable[[str], list[tuple[str, str]]] | None = None,
+        lookup_fn: Callable[..., list[tuple[str, str]]] | None = None,
     ):
         super().__init__(parent)
         self._words = words
@@ -1333,10 +1333,17 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         * a generation stamp on every request, so a result that arrives after
           the user has moved on is cached but never painted.
 
-        ``fallback_term`` is the miss-only lemma retry: unidic's canonical lemma
-        collapses kanji variants (殺る → 遣る), so keying the pane on it showed
-        the wrong homograph. Both terms are fetched inside the one background
-        job, keeping the retry off the GUI thread as well.
+        ``fallback_term`` (the token's lemma) does double duty. First, it
+        SCOPES the primary ``term`` lookup (Rule A′): when it differs from
+        ``term``, it is threaded to ``lookup_fn`` as the lemma so a kana front
+        (mined_form ゆう, lemma 言う) keeps its own lexeme's entry instead of
+        every same-reading homograph (有/夕/結う) — matching the card's own
+        ``get_definitions_batch(lemma_context=...)`` scope, so the pane beside
+        the card agrees with it. Second, it is the MISS-only retry: unidic's
+        canonical lemma collapses kanji variants (殺る → 遣る), so on a ``term``
+        miss it is looked up as its own (unscoped) term. Both terms are
+        fetched inside the one background job, keeping both off the GUI
+        thread.
         """
         if self._closing or not self._show_dict:
             return
@@ -1380,7 +1387,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._lookup_inflight = True
 
         def work() -> dict[str, list[tuple[str, str]]]:
-            fetched = {term: lookup_fn(term)}
+            # Rule A′ scope: only when the lemma differs from term (the
+            # non-empty convention every lemma-threading call site in this
+            # codebase shares) — so a word whose mined_form already IS its
+            # lemma calls lookup_fn arity-1, exactly as before, and only the
+            # kana-front/kanji-variant minority pays for the second arg.
+            scope_lemma = fallback_term if fallback_term and fallback_term != term else None
+            fetched = {term: lookup_fn(term, scope_lemma) if scope_lemma else lookup_fn(term)}
             if not fetched[term] and fallback_term and fallback_term != term:
                 fetched[fallback_term] = lookup_fn(fallback_term)
             return fetched

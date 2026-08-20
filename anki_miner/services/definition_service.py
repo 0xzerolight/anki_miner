@@ -938,7 +938,7 @@ class DefinitionService:
             progress_callback.on_complete()
         return results
 
-    def lookup_all_offline(self, word: str) -> list[tuple[str, str]]:
+    def lookup_all_offline(self, word: str, lemma: str | None = None) -> list[tuple[str, str]]:
         """Aggregate results from all available OFFLINE providers.
 
         Returns a list of (provider_name, html) tuples for every offline
@@ -958,6 +958,19 @@ class DefinitionService:
 
         Args:
             word: Japanese word (raw user input or a lemma form).
+            lemma: the token's UniDic lemma, for the curator side pane's Rule
+                A′ homograph scope (mirrors ``get_definitions_batch``'s
+                ``lemma_context``, one word at a time) — the card and the pane
+                beside it must agree on which lexeme a kana front (ゆう, lemma
+                言う) names, not just the reading. When non-empty, the exact
+                ``word`` hit is routed through a provider's optional
+                ``lookup_many`` (via the same getattr probe used elsewhere) so
+                the storage-side ``_homograph_keep_mask`` can prefer the
+                lemma-exact rows; a provider without ``lookup_many`` (e.g. the
+                online Jisho fallback, already excluded here, or a legacy
+                offline stub) keeps the arity-1 ``lookup(word)`` path.
+                ``None``/empty skips the probe entirely, so this is
+                byte-identical to pre-A′ behavior for every existing caller.
 
         Returns:
             List of (provider_name, html) tuples in provider chain order. Empty
@@ -970,8 +983,12 @@ class DefinitionService:
             if p.is_online or not p.is_available():
                 continue
             seen_html: set[str] = set()
+            batch_fn = getattr(p, "lookup_many", None) if lemma else None
             try:
-                html = p.lookup(word)
+                if callable(batch_fn):
+                    html = batch_fn([(word, None)], lemmas={word: lemma}).get(word)
+                else:
+                    html = p.lookup(word)
             except Exception as e:
                 logger.warning(
                     "Provider '%s' raised during lookup of '%s'; skipping: %s",
