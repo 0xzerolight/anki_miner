@@ -680,6 +680,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         worker.file_started.connect(self._on_file_started)
         worker.file_progress.connect(self._on_file_progress)
         worker.file_finished.connect(self._on_file_finished)
+        worker.file_note.connect(self._on_file_note)
         worker.file_skipped.connect(self._on_file_skipped)
         worker.queue_finished.connect(self._on_queue_finished)
         worker.error.connect(self._on_run_error)
@@ -800,3 +801,12 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.progress_widget.set_status(
             tr_format(self.tr("Retiming file %1 of %2"), str(idx + 1), str(self._total_pairs))
         )
+
+    def _on_file_note(self, idx: int, note: str) -> None:
+        """Durable per-file detail (C-7/C-10): the engine that won, and — when
+        an existing output was overwritten — the ``.pre-retime.bak`` sibling's
+        name. Unlike ``file_progress``, this always lands in the Activity log,
+        so it survives past the moment the next status update overwrites the
+        transient label.
+        """
+        self.log_widget.append_info(note)

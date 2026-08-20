@@ -12,6 +12,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from PyQt6.QtCore import pyqtSignal
+
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import resolve_output_path
@@ -35,7 +37,12 @@ class SubtitleRetimeWorker(FileQueueWorker):
        ``file_finished(idx, None, error_str)`` on failure / cancel. A pipeline
        that kept the original (every engine's result failed validation) is a
        per-pair failure whose message says the original was left untouched;
-       the queue continues.
+       the queue continues. On success, ``file_note(idx, line)`` also fires
+       once per fact worth keeping around after the run — which engine won,
+       and whether a ``.pre-retime.bak`` sibling was written (C-7/C-10).
+       Deliberately separate from ``file_progress``: the base tab renders that
+       one as transient status text, overwritten by the next update, so it
+       cannot carry information the user needs to find after the run ends.
 
     Cancel is honoured between pairs and propagated into the retimer via
     ``self._cancel_event``.
@@ -56,6 +63,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
             defaults to that function.  Injected by tests.
         parent: Optional parent QObject.
     """
+
+    #: One durable fact about a just-finished file, for the Activity log —
+    #: NOT for the transient status label (see the class docstring). Fired
+    #: zero or more times per pair, always before that pair's ``file_finished``.
+    file_note = pyqtSignal(int, str)
 
     def __init__(
         self,
@@ -163,17 +175,18 @@ class SubtitleRetimeWorker(FileQueueWorker):
             )
 
             if outcome:
+                # Transient status text only — see file_note below for the
+                # durable record of the same facts.
+                self.file_progress.emit(idx, 100, self.tr("Done"))
+
                 engine = getattr(outcome, "engine", None)
                 if engine:
-                    self.file_progress.emit(idx, 100, tr_format(self.tr("Retimed with %1"), engine))
-                else:
-                    self.file_progress.emit(idx, 100, self.tr("Done"))
+                    self.file_note.emit(idx, tr_format(self.tr("Retimed with %1"), engine))
                 if existed_before:
                     from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX
 
-                    self.file_progress.emit(
+                    self.file_note.emit(
                         idx,
-                        100,
                         tr_format(self.tr("Original backed up as %1"), out_sub.name + BACKUP_SUFFIX),
                     )
                 self.file_finished.emit(idx, out_sub, None)

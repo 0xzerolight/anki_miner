@@ -64,6 +64,7 @@ class _FakeWorker:
         self.file_started = MagicMock()
         self.file_progress = MagicMock()
         self.file_finished = MagicMock()
+        self.file_note = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
         self.error = MagicMock()
@@ -1121,6 +1122,51 @@ def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Done" in log_text
     assert "episode.srt" in log_text
+
+
+def test_file_note_durably_logs_engine_and_backup(qtbot, tmp_path):
+    """file_note(idx, line) — the engine used and the .pre-retime.bak sibling —
+    lands in the Activity log and survives past the transient status label
+    the next file_progress/file_finished overwrites (C-7/C-10)."""
+    config = _make_config(tmp_path)
+    video = tmp_path / "episode.mp4"
+    sub = tmp_path / "episode.srt"
+    video.write_bytes(b"fake")
+    sub.write_text("1\n")
+    out_srt = tmp_path / "episode.srt"
+
+    fake_worker = _FakeWorker()
+    note_slots = _capture_signal_slots(fake_worker.file_note)
+    progress_slots = _capture_signal_slots(fake_worker.file_progress)
+    finished_slots = _capture_signal_slots(fake_worker.file_finished)
+
+    tab = _make_tab(config, qtbot)
+    tab.video_file_selector.set_path(str(video))
+    tab.subtitle_file_selector.set_path(str(sub))
+
+    with (
+        patch(_AVAILABLE, return_value=True),
+        patch(_OS_ACCESS, return_value=True),
+        patch(_WORKER_CLS, return_value=fake_worker),
+    ):
+        tab.retime_button.click()
+
+    # Mirrors the real worker's emission order: notes, then the transient
+    # "Done" progress flash, then file_finished.
+    for slot in note_slots:
+        slot(0, "Retimed with ffsubsync")
+        slot(0, "Original backed up as episode.srt.pre-retime.bak")
+    for slot in progress_slots:
+        slot(0, 100, "Done")
+    for slot in finished_slots:
+        slot(0, out_srt, None)
+
+    # A later status update would blank the transient label, but the log
+    # widget is append-only — the durable content must still be there.
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Retimed with ffsubsync" in log_text
+    assert "episode.srt.pre-retime.bak" in log_text
+    assert "Done" in log_text
 
 
 # ---------------------------------------------------------------------------
