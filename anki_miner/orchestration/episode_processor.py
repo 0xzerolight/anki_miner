@@ -1552,15 +1552,17 @@ class EpisodeProcessor:
             if word.frequency_sources:
                 extra_fields["frequency"] = render_frequency_html(word.frequency_sources)
             # Numeric sort column: the harmonic mean of the per-source ranks
-            # (Yomitan getFrequencyHarmonic), with the 9999999 sentinel for
-            # words no source ranks so they sort *last* rather than before rank 1
-            # (an omitted field reads as empty string in Anki's browser). Gated on
-            # the field being mapped so the default config's notes stay byte-for-
-            # byte identical; the sentinel is emitted only when a user opts in.
-            if self.config.anki_fields.get("frequency_sort"):
-                extra_fields["frequency_sort"] = (
-                    str(word.frequency_harmonic_rank) if word.frequency_harmonic_rank is not None else "9999999"
-                )
+            # (Yomitan getFrequencyHarmonic). A word no source ranks gets NOTHING
+            # written — the field must never claim a rank the word does not have.
+            # v2.7.8-v2.11.0 wrote a 9999999 "missing" sentinel here so unranked
+            # words sorted last; it read as a real (absurd) rank on the card, and
+            # because the write was gated only on the mapping, a user with a
+            # preset-mapped FreqSort and no frequency source got it on EVERY card.
+            # `frequency_harmonic_rank` is set only inside the source-gated block
+            # in _phase2_filter, so a None here covers all three misses: no source
+            # loaded, source loaded but no row, and categorical-only attestation.
+            if self.config.anki_fields.get("frequency_sort") and word.frequency_harmonic_rank is not None:
+                extra_fields["frequency_sort"] = str(word.frequency_harmonic_rank)
             if glossary:
                 extra_fields["glossary"] = (
                     attach_card_style_block(glossary, dict_css_entries=episode_dict_css_entries)
