@@ -156,6 +156,112 @@ class TestBuildLemmaContext:
         assert _build_lemma_context([a, b]) == {"ゆう": "言う"}
 
 
+class TestLemmaContextCallShape:
+    """Seam-1 (A-5): the legacy call shape at the ``get_definitions_batch`` /
+    ``get_glossaries_batch`` call sites. An empty ``lemma_context`` must call
+    both services WITHOUT the ``lemma_context`` kwarg at all (the pre-Rule-A'
+    call shape some callers still rely on); a non-empty one must always pass
+    it.
+
+    A plain ``MagicMock`` would accept any kwarg silently and could not catch
+    either regression, so the double here is a real function with a real
+    signature: one variant has no ``lemma_context`` parameter at all (an
+    unconditional ``lemma_context=...`` raises "unexpected keyword
+    argument"), the other requires it with no default (dropping
+    ``**lemma_kwargs`` entirely raises "missing 1 required keyword-only
+    argument"). Either mutation surfaces as a caught exception that fails the
+    run (`process_episode`'s broad ``except Exception`` turns it into
+    ``result.errors``), not a crash — so the assertions read the result, not
+    a raised exception.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _strict_service(self, *, requires_lemma_context: bool) -> MagicMock:
+        service = MagicMock(name="definition_service")
+        if requires_lemma_context:
+
+            def get_definitions_batch(
+                words, progress_callback=None, fallback_context=None, *, is_cancelled=None, lemma_context
+            ):
+                assert lemma_context
+                return ["1. def"] * len(words)
+
+            def get_glossaries_batch(words, progress_callback=None, *, is_cancelled=None, lemma_context):
+                assert lemma_context
+                return ["1. gloss"] * len(words)
+
+        else:
+
+            def get_definitions_batch(words, progress_callback=None, fallback_context=None, *, is_cancelled=None):
+                return ["1. def"] * len(words)
+
+            def get_glossaries_batch(words, progress_callback=None, *, is_cancelled=None):
+                return ["1. gloss"] * len(words)
+
+        service.get_definitions_batch = get_definitions_batch
+        service.get_glossaries_batch = get_glossaries_batch
+        service.has_usable_offline_provider.return_value = True
+        return service
+
+    def _run(self, test_config, mock_services, tmp_path, word, service):
+        # Glossary field mapped so get_glossaries_batch's call shape is
+        # exercised too, not just get_definitions_batch's.
+        cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
+        mock_services["definition_service"] = service
+        proc = build_processor(config=cfg, **mock_services, presenter=NullPresenter())
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media("w"))]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        return proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+    def test_empty_lemma_context_calls_without_the_kwarg(self, test_config, mock_services, tmp_path):
+        word = _make_word("食べる")  # mined_form == lemma -> empty lemma_context
+        service = self._strict_service(requires_lemma_context=False)
+
+        result = self._run(test_config, mock_services, tmp_path, word, service)
+
+        assert result.errors == []
+        assert result.cards_created == 1
+
+    def test_nonempty_lemma_context_calls_with_the_kwarg(self, test_config, mock_services, tmp_path):
+        word = TokenizedWord(
+            surface="ゆう",
+            lemma="言う",
+            reading="ユウ",
+            sentence="そうゆうことか",
+            start_time=1.0,
+            end_time=2.0,
+            duration=1.0,
+            orth_base="ゆう",
+            pos="動詞",
+        )
+        service = self._strict_service(requires_lemma_context=True)
+
+        result = self._run(test_config, mock_services, tmp_path, word, service)
+
+        assert result.errors == []
+        assert result.cards_created == 1
+
+
 class TestProcessEpisode:
     """Tests for EpisodeProcessor.process_episode method."""
 

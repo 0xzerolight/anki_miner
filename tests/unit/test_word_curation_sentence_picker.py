@@ -630,7 +630,7 @@ class TestPickRefreshesDefinitionPane:
     def test_a_pick_looks_up_the_chosen_mined_form(self, qtbot, noun_words, sync_off_thread):
         terms: list[str] = []
 
-        def lookup(term: str):
+        def lookup(term: str, lemma: str | None = None):
             terms.append(term)
             return [(term, f"gloss for {term}")]
 
@@ -649,7 +649,7 @@ class TestPickRefreshesDefinitionPane:
         and back re-rendered the first occurrence's definition."""
         terms: list[str] = []
 
-        def lookup(term: str):
+        def lookup(term: str, lemma: str | None = None):
             terms.append(term)
             return [(term, f"gloss for {term}")]
 
@@ -680,7 +680,7 @@ class TestPickRefreshesDefinitionPane:
 
         monkeypatch.setattr(wcd, "run_off_thread", fake_run_off_thread)
 
-        dlg = WordCurationDialog(noun_words, lookup_fn=lambda term: [(term, f"gloss for {term}")])
+        dlg = WordCurationDialog(noun_words, lookup_fn=lambda term, lemma=None: [(term, f"gloss for {term}")])
         qtbot.addWidget(dlg)
         # Land the focus lookup first: only one request is ever in flight, so a
         # pick made while it is outstanding would queue rather than dispatch.

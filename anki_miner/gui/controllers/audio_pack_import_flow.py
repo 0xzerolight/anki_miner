@@ -565,7 +565,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         *,
         only_ids: frozenset[str] | None = None,
         on_complete: Callable[[], None] | None = None,
-        _scan_result: tuple[list[_PackJob], list[str]] | None = None,
+        _scan_result: tuple[list[_PackJob], list[str], bool] | None = None,
         _trace_id: str | None = None,
     ) -> None:
         """Rebuild every chained pack from the source path its meta recorded.
@@ -600,17 +600,25 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             packs_root = self._get_config().audio_packs_root
             chain = self._panel.get_chain()
 
-            def _scan() -> tuple[list[_PackJob], list[str]]:
+            def _scan() -> tuple[list[_PackJob], list[str], bool]:
                 registry = AudioPackRegistry(packs_root)
                 registry.load()
                 metas = registry.packs
                 jobs: list[_PackJob] = []
                 skipped: list[str] = []
+                # True once any chain entry matches the requested scope, so the
+                # nothing-to-do branch below can tell "the chain has no packs"
+                # apart from "only_ids named a pack that isn't in the chain
+                # anymore" (the startup stale scan found it, the user removed
+                # it before repair ran). Irrelevant when only_ids is None
+                # (unscoped — the manual button's "everything" case).
+                only_ids_matched = only_ids is None
                 for entry in chain:
                     if entry.kind != "pack" or not entry.pack_id:
                         continue
                     if only_ids is not None and entry.pack_id not in only_ids:
                         continue
+                    only_ids_matched = True
                     meta = metas.get(entry.pack_id)
                     if meta is None:
                         skipped.append(entry.pack_id)
@@ -623,7 +631,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                         jobs.append(("android_db", meta.pack_id, display, meta.source_db))
                     else:
                         jobs.append(("folder", meta.pack_id, display, meta.pack_dir))
-                return jobs, skipped
+                return jobs, skipped, only_ids_matched
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
@@ -645,7 +653,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._run_latest_scan(_scan, _on_done, _on_error)
             return
 
-        jobs, skipped = _scan_result
+        jobs, skipped, only_ids_matched = _scan_result
 
         if not jobs:
             if skipped:
@@ -654,6 +662,10 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     "No audio packs eligible for automatic repair were found.\n\n"
                     "Skipped (source folder or database not found; use per-row Re-import…):\n",
                 ) + "\n".join(f"  • {name}" for name in skipped)
+            elif not only_ids_matched:
+                body = QCoreApplication.translate(
+                    "AudioPackImportFlow", "The selected audio pack is no longer in the chain."
+                )
             else:
                 body = QCoreApplication.translate("AudioPackImportFlow", "No audio packs in the chain.")
             QMessageBox.information(

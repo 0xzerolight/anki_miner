@@ -842,6 +842,10 @@ Skipped (source folder or database not found; use per-row Re-import…):
 </translation>
     </message>
     <message>
+        <source>The selected audio pack is no longer in the chain.</source>
+        <translation>選択されたオーディオパックはチェーンに含まれていません。</translation>
+    </message>
+    <message>
         <source>No audio packs in the chain.</source>
         <translation>チェーンに音声パックがありません。</translation>
     </message>
@@ -6620,6 +6624,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>先にテキストを貼り付けてください。</translation>
     </message>
     <message>
+        <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
+        <translation>このカードイメージには配置先の画像フィールドがありません。設定 → Anki でマッピングするか、イメージを削除してマイニングしてください。</translation>
+    </message>
+    <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
         <translation>この画像を読み込めません。別の画像を選択するか、フィールドを空にして画像なしでマイニングしてください。</translation>
     </message>
@@ -7002,6 +7010,40 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Failed to delete notes. Check that Anki is running.</source>
         <translation>ノートを削除できませんでした。Anki が起動していることを確認してください。</translation>
+    </message>
+</context><context>
+    <name>RetimeReference</name>
+    <message>
+        <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
+        <translation>選択された字幕トラック %1 は使用できません。代わりにオーディオを使用します。</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: not a dialogue track.</source>
+        <translation>字幕トラック %1 をスキップ。対話トラックではありません。</translation>
+    </message>
+    <message>
+        <source>No usable embedded subtitle track; aligning against audio.</source>
+        <translation>使用可能な埋め込み字幕トラックがありません。オーディオで調整します。</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
+        <translation>字幕トラック %1 をスキップ。対話行は %2 行のみです。</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
+        <translation>字幕トラック %1 をスキップ。エピソード全体の %2 のみをカバーしています。</translation>
+    </message>
+    <message>
+        <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
+        <translation>埋め込み字幕トラック %1（%2、%3 行）で調整します。</translation>
+    </message>
+    <message>
+        <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
+        <translation>日本語タグ付きオーディオトラックが見つかりません。最初のオーディオトラックを使用します。二重音声リリースでは、ダブの場合があります。</translation>
+    </message>
+    <message>
+        <source>Aligning against audio (%1).</source>
+        <translation>オーディオで調整します（%1）。</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8140,12 +8182,54 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完了</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>%1 で再タイミング</translation>
+    </message>
+    <message>
+        <source>Original backed up as %1</source>
+        <translation>オリジナルは %1 にバックアップされました</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>キャンセルされました</translation>
     </message>
     <message>
-        <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation>%1 の同期結果は信頼できません；元のファイルは変更されていません</translation>
+        <source>no trustworthy sync; original kept unchanged</source>
+        <translation>信頼できる同期がありません。オリジナルは変更されていません</translation>
+    </message>
+    <message>
+        <source>Retiming failed for %1: %2</source>
+        <translation>%1 の再タイミングに失敗しました。%2</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimer</name>
+    <message>
+        <source>Ignoring %1 non-dialogue lines during alignment.</source>
+        <translation>調整中に %1 個の非対話行を無視します。</translation>
+    </message>
+    <message>
+        <source>alass is not installed; skipping alass attempts.</source>
+        <translation>alass がインストールされていません。alass の試行をスキップします。</translation>
+    </message>
+    <message>
+        <source>%1 result rejected: %2</source>
+        <translation>%1 の結果が拒否されました。%2</translation>
+    </message>
+    <message>
+        <source>no engine produced a trustworthy sync; original left untouched</source>
+        <translation>エンジンが信頼できる同期を生成しませんでした。オリジナルは変更されていません</translation>
+    </message>
+    <message>
+        <source>Retimed with %1 (offset %2).</source>
+        <translation>%1 で再タイミングしました（オフセット %2）。</translation>
+    </message>
+    <message>
+        <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
+        <translation>%1 で再タイミングしました（%2 ブロック、シフト %3..%4）。</translation>
+    </message>
+    <message>
+        <source>Retimed with %1.</source>
+        <translation>%1 で再タイミングしました。</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8730,14 +8814,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>任意のフィールドで絞り込み...</translation>
     </message>
     <message>
-        <source>Add to Known Words</source>
-        <translation>既知単語に追加</translation>
-    </message>
-    <message>
-        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
-        <translation>ハイライト行を「既知・保留中」としてマークします。確認で保存、キャンセルで破棄します。</translation>
-    </message>
-    <message>
         <source>Word (mined)</source>
         <translation>単語（マイニング済み）</translation>
     </message>
@@ -8832,6 +8908,22 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     <message>
         <source>Include highlighted (%1)</source>
         <translation>ハイライトを含める（%1）</translation>
+    </message>
+    <message>
+        <source>Add to Known Words</source>
+        <translation>既知単語に追加</translation>
+    </message>
+    <message>
+        <source>Remove from Known Words</source>
+        <translation>既知単語から削除</translation>
+    </message>
+    <message>
+        <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
+        <translation>ハイライト行から既知単語・保留中マークを削除して、このレビューに戻します</translation>
+    </message>
+    <message>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>ハイライト行を「既知・保留中」としてマークします。確認で保存、キャンセルで破棄します。</translation>
     </message>
     <message>
         <source>Word %1 of %2 · %3 included · %4 shown of %5</source>

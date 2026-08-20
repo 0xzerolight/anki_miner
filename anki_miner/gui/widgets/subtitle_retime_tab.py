@@ -9,8 +9,9 @@ per-pair pass/fail lines.
 
 There are no alignment knobs here or anywhere: the retime pipeline
 (services/subtitle_retimer.py) tunes itself — engine chain (ffsubsync, then
-alass), dialogue-only cleaning, and result validation with a keep-original
-guarantee. The one decision on this screen is which files.
+alass, then ffsubsync again), dialogue-only cleaning, and result validation
+with a keep-original guarantee. The one decision on this screen is which
+files.
 
 Guard contract:
 - alass not found → notice visible; retiming stays enabled (ffsubsync-only).
@@ -512,7 +513,8 @@ class SubtitleRetimeTab(_ToolTabBase):
 
     def _on_tracks_clicked(self) -> None:
         """Open RetimeReferenceDialog to pick what alass aligns against."""
-        self.clear_screen_issue()
+        # Not a fresh attempt (D24): opening the picker must not clear a real
+        # run failure still on screen.
         video_path = self.video_file_selector.path_or_none()
         if video_path is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file first.")))
@@ -678,6 +680,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         worker.file_started.connect(self._on_file_started)
         worker.file_progress.connect(self._on_file_progress)
         worker.file_finished.connect(self._on_file_finished)
+        worker.file_note.connect(self._on_file_note)
         worker.file_skipped.connect(self._on_file_skipped)
         worker.queue_finished.connect(self._on_queue_finished)
         worker.error.connect(self._on_run_error)
@@ -798,3 +801,12 @@ class SubtitleRetimeTab(_ToolTabBase):
         self.progress_widget.set_status(
             tr_format(self.tr("Retiming file %1 of %2"), str(idx + 1), str(self._total_pairs))
         )
+
+    def _on_file_note(self, idx: int, note: str) -> None:
+        """Durable per-file detail (C-7/C-10): the engine that won, and — when
+        an existing output was overwritten — the ``.pre-retime.bak`` sibling's
+        name. Unlike ``file_progress``, this always lands in the Activity log,
+        so it survives past the moment the next status update overwrites the
+        transient label.
+        """
+        self.log_widget.append_info(note)

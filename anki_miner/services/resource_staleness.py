@@ -118,7 +118,7 @@ def stale_resource_reimport_error(
         if pitch_stale:
             messages.append(format_stale_family_message("pitch", [m.source_name for m in pitch_stale]))
 
-    if "audio" in wanted:
+    if "audio" in wanted and config.anki_fields.get("expression_audio"):
         # AudioPackMeta's display field is ``source``, not ``source_name``.
         audio_stale: list[AudioPackMeta] = (
             audio_registry.stale_enabled(config) if audio_registry is not None else stale_enabled_audio_packs(config)

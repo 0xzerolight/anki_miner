@@ -629,7 +629,8 @@ class AudioCondenserService:
     ) -> tuple[bool, FfmpegStepFailure | None]:
         """Run *cmd* streaming, parsing ``-progress`` and honouring cancel/timeout.
 
-        Modeled on ``subtitle_retimer._run_alass``: ``stderr`` is merged into the
+        Modeled on ``sync_engines/alass_engine.py`` (via ``utils/process_supervisor.run_supervised``,
+        the retime pipeline's own supervised-subprocess runner): ``stderr`` is merged into the
         read pipe (an undrained stderr PIPE deadlocks ffmpeg on long inputs), the
         line loop parses ``key=value`` ``-progress`` records (``out_time_us`` /
         ``out_time_ms`` are BOTH microseconds — ffmpeg trac #7345), non-progress

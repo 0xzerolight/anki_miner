@@ -341,6 +341,17 @@ class SharedLookupServices:
     # gated, since frequency and pitch are optional.
     frequency_registry: FrequencySourceRegistry | None
     pitch_registry: PitchSourceRegistry | None
+    # Scanned audio pack registry (mirrors frequency_registry/pitch_registry
+    # above — same handle that would build the fetcher chain, injected for the
+    # staleness gate). None when no pack is in play (see
+    # _load_audio_pack_registry), OR when a bundle was built by a constructor
+    # site that predates this field — create_services' fallback treats both
+    # the same way (a cheap re-check of the config, not a rescan for the
+    # legitimate case) so a missed call site degrades to per-item scanning
+    # instead of silently losing the gate. Defaulted + kw_only so it can sit
+    # next to its siblings above rather than after the defaultless
+    # load_result field.
+    audio_pack_registry: AudioPackRegistry | None = field(default=None, kw_only=True)
     load_result: ServiceLoadResult
 
     def close(self) -> None:
@@ -365,14 +376,16 @@ def create_shared_lookup_services(config: AnkiMinerConfig) -> SharedLookupServic
 
     Same construction as :func:`create_services` (shared private builders), so
     a bundle-backed processor behaves byte-identically to a per-item build:
-    registry scan + eager dict load, pitch CSV parse, frequency registry load.
-    The caller owns the bundle's lifetime — close it in a ``finally``.
+    registry scan + eager dict load, pitch CSV parse, frequency registry load,
+    audio pack registry scan. The caller owns the bundle's lifetime — close it
+    in a ``finally``.
     """
     load_result = ServiceLoadResult()
     dictionary_registry = _load_dict_registry(config, load_result)
     definition_service = build_definition_service(config, load_result, registry=dictionary_registry)
     pitch_accent_service, pitch_registry = _build_pitch_service(config, load_result)
     frequency_service, frequency_registry = _build_frequency_service(config, load_result)
+    audio_pack_registry = _load_audio_pack_registry(config)
     return SharedLookupServices(
         dictionary_registry=dictionary_registry,
         definition_service=definition_service,
@@ -380,6 +393,7 @@ def create_shared_lookup_services(config: AnkiMinerConfig) -> SharedLookupServic
         frequency_service=frequency_service,
         frequency_registry=frequency_registry,
         pitch_registry=pitch_registry,
+        audio_pack_registry=audio_pack_registry,
         load_result=load_result,
     )
 
@@ -563,13 +577,14 @@ def create_services(
             deck-builder behaviour (a fresh instance per call).
         shared_lookup: Optional pre-built :class:`SharedLookupServices` bundle.
             When provided, the dictionary registry scan, eager dictionary load,
-            pitch CSV parse, and frequency registry load are all SKIPPED and
-            the bundle's instances are used — the batch queue worker builds one
-            bundle per run so N queue items pay one lookup-stack build instead
-            of N. The bundle's owner (the worker) closes it; processors built
-            over it must not (``owns_lookup_services=False``). The returned
-            ``load_result`` then excludes the bundle's load messages — the
-            owner surfaces those once per run.
+            pitch CSV parse, frequency registry load, and audio pack registry
+            scan are all SKIPPED and the bundle's instances are used — the
+            batch queue worker builds one bundle per run so N queue items pay
+            one lookup-stack build instead of N. The bundle's owner (the
+            worker) closes it; processors built over it must not
+            (``owns_lookup_services=False``). The returned ``load_result``
+            then excludes the bundle's load messages — the owner surfaces
+            those once per run.
 
     Returns:
         A frozen :class:`Services` bundle holding every constructed
@@ -662,8 +677,20 @@ def create_services(
     # Scanned once here, then handed to both consumers: the fetcher chain that
     # resolves pack entries, and Services, whose EpisodeProcessor reads it for
     # the staleness gate (the built chain drops stale packs, so gating off it
-    # would mean the gate never fires).
-    audio_pack_registry = _load_audio_pack_registry(config)
+    # would mean the gate never fires). Reused from the bundle on the shared
+    # path like dictionary/pitch/frequency above — a bundle whose field is
+    # None (either legitimately, per _load_audio_pack_registry's predicate, or
+    # because a constructor site predates this field) falls back to a fresh
+    # scan; the legitimate case still costs no I/O since the predicate
+    # short-circuits before touching disk.
+    if shared_lookup is not None:
+        audio_pack_registry = (
+            shared_lookup.audio_pack_registry
+            if shared_lookup.audio_pack_registry is not None
+            else _load_audio_pack_registry(config)
+        )
+    else:
+        audio_pack_registry = _load_audio_pack_registry(config)
     expression_audio_fetcher = _build_expression_audio_fetcher(config, load_result, pack_registry=audio_pack_registry)
     sentence_audio_fetcher = _build_sentence_audio_fetcher(config)
 

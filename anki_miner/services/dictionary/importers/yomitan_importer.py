@@ -56,6 +56,13 @@ ProgressFn = Callable[[int, int, str], None]
 # progress UI cannot render a running count without a fraction use this.
 BankProgressFn = Callable[[int, int], None]
 
+# Insert-phase ``progress`` calls report (current, total) in units of
+# ``_PROGRESS_SCALE`` per term bank rather than raw bank counts: within a
+# bank, ``bank_yielded / bank_size`` supplies a sub-bank fraction, so a
+# single-bank dict no longer sits at 0% for the whole insert and then jumps
+# to 100%. See ``on_insert_progress`` in ``import_yomitan_zip``.
+_PROGRESS_SCALE = 1000
+
 # index.json is a tiny metadata file (title, revision, format, a handful of
 # scalar fields). Cap how much we ever pull into memory when *peeking* at a zip
 # the user picked for a reimport slot (derive_dict_id_from_zip), so a small zip
@@ -128,18 +135,23 @@ def import_yomitan_zip(
         progress: Optional (current, total, message) callback. ``total == 0``
                   means the stage is indeterminate; consumers must call
                   ``setRange(0, 0)``. During entry insertion, calls are
-                  determinate against the term-bank count: ``(files_done,
-                  total_term_files, "Inserted N entries")``, where
-                  ``files_done`` is the number of fully-consumed term-bank
-                  files (the row total isn't known until the last bank is
-                  parsed, so the bank count is the only determinate
-                  denominator available). A terminal ``(total, total, ...)``
-                  call fires once ``bulk_insert`` returns, before the
-                  "Finalizing import" stage marker.
-        bank_progress: Optional (banks_done, bank_total) callback, fired once per
-                  consumed term bank. The only determinate denominator this
-                  import has — ``progress`` stays indeterminate during the load
-                  because the row total is unknown until the last bank is
+                  determinate against the term-bank count scaled by
+                  ``_PROGRESS_SCALE``: ``(files_done * SCALE + within_bank_
+                  fraction, total_term_files * SCALE, "Inserted N entries")``,
+                  where the within-bank fraction is ``bank_yielded /
+                  bank_size`` for the bank currently being consumed (the row
+                  total isn't known until the last bank is parsed, so the
+                  bank count is the only determinate denominator available —
+                  the scale gives a sub-bank reading instead of holding at
+                  0% for the whole insert). A terminal ``(total, total, ...)``
+                  call fires once ``bulk_insert`` returns, and the same full
+                  numerator carries through the "Finalizing import" stage
+                  marker (the bar holds 100% while the lookup indexes build).
+        bank_progress: Optional (banks_done, bank_total) callback, fired when a
+                  term bank is *parsed* — i.e. as soon as it opens, before any
+                  of its rows are inserted. The only determinate denominator
+                  this import has — ``progress`` stays indeterminate during the
+                  load because the row total is unknown until the last bank is
                   parsed. For consumers that need a fraction rather than a
                   running count.
         overwrite: If True and the destination dict_id already exists, the old
@@ -254,9 +266,15 @@ def import_yomitan_zip(
         # rather than bank_progress's before-the-loop "starting bank N" one.
         total_files = len(term_files)
         files_done = 0
+        # Denominator/numerator for the within-bank fraction ``on_insert_
+        # progress`` reads at arbitrary generator-suspension points (bulk_
+        # insert pulls rows in chunks). Reset per bank so a fraction from the
+        # PREVIOUS bank can never leak into the next one's readout.
+        bank_size = 1
+        bank_yielded = 0
 
         def rows() -> Any:
-            nonlocal total_entries, skipped_malformed, banks_done, files_done
+            nonlocal total_entries, skipped_malformed, banks_done, files_done, bank_size, bank_yielded
             for term_file in term_files:
                 _raise_if_cancelled(cancel_check)
                 try:
@@ -266,6 +284,8 @@ def import_yomitan_zip(
                 # A bank whose top-level JSON is not an array is wholly
                 # unreadable — raise instead of skipping every "entry".
                 ensure_bank_array(entries, term_file.name)
+                bank_size = max(1, len(entries))
+                bank_yielded = 0
                 banks_done += 1
                 if bank_progress is not None:
                     bank_progress(banks_done, bank_total)
@@ -318,6 +338,7 @@ def import_yomitan_zip(
                     if not _has_rendered_glossary_content(content):
                         continue
                     total_entries += 1
+                    bank_yielded += 1
                     yield DictRow(
                         term=term,
                         reading=reading,
@@ -334,7 +355,25 @@ def import_yomitan_zip(
 
         def on_insert_progress(inserted: int) -> None:
             if progress:
-                progress(files_done, total_files, f"Inserted {inserted:,} entries")
+                total = total_files * _PROGRESS_SCALE
+                cur = files_done * _PROGRESS_SCALE + min(
+                    _PROGRESS_SCALE - 1, (_PROGRESS_SCALE * bank_yielded) // bank_size
+                )
+                # bulk_insert's trailing (post-loop) flush fires after the
+                # generator has been fully exhausted: files_done has already
+                # advanced to total_files for the just-finished bank, but
+                # bank_yielded/bank_size still hold that bank's own (capped)
+                # fraction, so the sum above can run past total. Clamp so the
+                # raw values stay monotonic — never let the wire number exceed
+                # what "done" means, even though a real progress widget would
+                # have no-op'd the out-of-range value anyway.
+                # NOTE: "Inserted {n:,} entries" is an internal English
+                # contract string — resource_download_worker._ItemPhaseReporter
+                # .importing parses it with a regex to recover the real entry
+                # count (``cur`` here is a bank-derived progress unit, not an
+                # entry count). Never reword or translate without updating
+                # that regex.
+                progress(min(cur, total), total, f"Inserted {inserted:,} entries")
 
         bulk_insert(
             db_path,
@@ -344,8 +383,18 @@ def import_yomitan_zip(
         )
 
         if progress:
-            progress(total_files, total_files, f"Inserted {total_entries:,} entries")
-            progress(0, 0, "Finalizing import")
+            # NOTE: "Inserted {n:,} entries" is an internal English contract
+            # string — resource_download_worker._ItemPhaseReporter.importing
+            # parses it with a regex to recover the real entry count (current
+            # here is a bank-derived progress unit, not an entry count).
+            # Never reword or translate this without updating that regex.
+            progress(
+                total_files * _PROGRESS_SCALE, total_files * _PROGRESS_SCALE, f"Inserted {total_entries:,} entries"
+            )
+            # Same full numerator as above rather than the old (0, 0): the bar
+            # holds 100% while the lookup indexes build instead of dropping
+            # back to a busy spinner right after finishing the insert.
+            progress(total_files * _PROGRESS_SCALE, total_files * _PROGRESS_SCALE, "Finalizing import")
         _raise_if_cancelled(cancel_check)
 
         # Deferred to here so the load did not maintain two B-trees per insert.

@@ -241,6 +241,31 @@ class TestResolveReference:
 
         assert reference is None  # fell through to audio, which also failed
 
+    def test_low_coverage_track_accepted_under_explicit_override(
+        self, config: MagicMock, video: Path, tmp_path: Path
+    ) -> None:
+        """The auto-pick path rejects this exact track
+        (``test_low_coverage_track_rejected_when_duration_known`` above: 40
+        cues spanning ~40s of a 2-minute episode). An explicit override must
+        accept it anyway -- the coverage gate is skipped entirely on that
+        path, not just relaxed, because the user outranks the heuristic."""
+        clustered = _dialogue_srt(tmp_path / "clustered.srt", 40)
+        with (
+            patch(_LIST_STREAMS, return_value=[_stream(0)]),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(_CONDENSER) as condenser,
+        ):
+            condenser.return_value.extract_embedded_subtitle.return_value = clustered
+            reference = resolve_reference(
+                config,
+                video,
+                override=ReferenceOverride(kind="subtitle", index=0),
+                video_duration_seconds=120.0,
+            )
+
+        assert reference is not None
+        assert reference.kind == "subtitle"
+
     def test_coverage_gate_passes_a_full_episode_track(self, config: MagicMock, video: Path, tmp_path: Path) -> None:
         dense = _dialogue_srt(tmp_path / "dense.srt", 40)  # spans ~40s
         with (

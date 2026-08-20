@@ -842,6 +842,10 @@ Skipped (source folder or database not found; use per-row Re-import…):
 </translation>
     </message>
     <message>
+        <source>The selected audio pack is no longer in the chain.</source>
+        <translation>所選的音聲套件已不在鏈中。</translation>
+    </message>
+    <message>
         <source>No audio packs in the chain.</source>
         <translation>鏈中沒有音訊包。</translation>
     </message>
@@ -6620,6 +6624,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>請先貼上文字。</translation>
     </message>
     <message>
+        <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
+        <translation>此卡片圖片沒有圖片欄位可以放置。請在「設定 → Anki」中設定圖片欄位，或清除圖片以不使用圖片進行採集。</translation>
+    </message>
+    <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
         <translation>此圖片無法讀取。請另選一張圖片，或清除此欄位以在不使用圖片的情況下採集。</translation>
     </message>
@@ -7002,6 +7010,40 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Failed to delete notes. Check that Anki is running.</source>
         <translation>無法刪除筆記。請確認 Anki 正在執行。</translation>
+    </message>
+</context><context>
+    <name>RetimeReference</name>
+    <message>
+        <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
+        <translation>所選字幕軌道 %1 無法使用；改用音聲。</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: not a dialogue track.</source>
+        <translation>跳過字幕軌道 %1：不是對話軌道。</translation>
+    </message>
+    <message>
+        <source>No usable embedded subtitle track; aligning against audio.</source>
+        <translation>沒有可用的內嵌字幕軌道；將對齊音聲。</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
+        <translation>跳過字幕軌道 %1：僅 %2 行對話。</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
+        <translation>跳過字幕軌道 %1：只涵蓋該集數的 %2。</translation>
+    </message>
+    <message>
+        <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
+        <translation>對齊內嵌字幕軌道 %1（%2，%3 行）。</translation>
+    </message>
+    <message>
+        <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
+        <translation>未找到標記為日語的音聲軌道；使用第一個音聲軌道——在雙音聲版本中這可能是配音版。</translation>
+    </message>
+    <message>
+        <source>Aligning against audio (%1).</source>
+        <translation>對齊音聲（%1）。</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8140,12 +8182,54 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完成</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>已使用 %1 重新計時</translation>
+    </message>
+    <message>
+        <source>Original backed up as %1</source>
+        <translation>原始檔案備份為 %1</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation>%1 沒有可信賴的同步結果；原始檔案保持不變</translation>
+        <source>no trustworthy sync; original kept unchanged</source>
+        <translation>沒有可信任的同步；保留原始檔案不變</translation>
+    </message>
+    <message>
+        <source>Retiming failed for %1: %2</source>
+        <translation>%1 重新計時失敗：%2</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimer</name>
+    <message>
+        <source>Ignoring %1 non-dialogue lines during alignment.</source>
+        <translation>對齊期間忽略 %1 行非對話內容。</translation>
+    </message>
+    <message>
+        <source>alass is not installed; skipping alass attempts.</source>
+        <translation>未安裝 alass；跳過 alass 嘗試。</translation>
+    </message>
+    <message>
+        <source>%1 result rejected: %2</source>
+        <translation>%1 結果被拒絕：%2</translation>
+    </message>
+    <message>
+        <source>no engine produced a trustworthy sync; original left untouched</source>
+        <translation>沒有引擎產生可信任的同步；保留原始檔案不變</translation>
+    </message>
+    <message>
+        <source>Retimed with %1 (offset %2).</source>
+        <translation>已使用 %1 重新計時（偏移 %2）。</translation>
+    </message>
+    <message>
+        <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
+        <translation>已使用 %1 重新計時（%2 個區塊，移位 %3..%4）。</translation>
+    </message>
+    <message>
+        <source>Retimed with %1.</source>
+        <translation>已使用 %1 重新計時。</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8730,14 +8814,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>依任一欄位篩選…</translation>
     </message>
     <message>
-        <source>Add to Known Words</source>
-        <translation>加入已知單字</translation>
-    </message>
-    <message>
-        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
-        <translation>將醒目提示的列標記為已知 · 待處理。確認會儲存；取消會捨棄。</translation>
-    </message>
-    <message>
         <source>Word (mined)</source>
         <translation>單字（已採集）</translation>
     </message>
@@ -8832,6 +8908,22 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     <message>
         <source>Include highlighted (%1)</source>
         <translation>包含醒目提示項目（%1）</translation>
+    </message>
+    <message>
+        <source>Add to Known Words</source>
+        <translation>加入已知單字</translation>
+    </message>
+    <message>
+        <source>Remove from Known Words</source>
+        <translation>從已知單字移除</translation>
+    </message>
+    <message>
+        <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
+        <translation>移除已突出顯示行上的「已知·待處理」標記，並將它們返回到此複審。</translation>
+    </message>
+    <message>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>將醒目提示的列標記為已知 · 待處理。確認會儲存；取消會捨棄。</translation>
     </message>
     <message>
         <source>Word %1 of %2 · %3 included · %4 shown of %5</source>

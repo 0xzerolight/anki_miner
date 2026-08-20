@@ -120,6 +120,11 @@ class MasuStemNominalizer:
         (definitions, known words, frequency, pitch) agrees with the card front.
         The kana comes from the ORIGINAL token, i.e. unidic's context-
         disambiguated reading, never a re-tokenization of the surface.
+        ``kana_locked=True`` keeps that reading out of
+        ``morphology.attest_merged_readings`` — this is a 1:1 nominalization,
+        not a dictionary-attested compound merge, so the dictionary's reading
+        for the surface (which may be for an unrelated homograph) must not
+        override unidic's context-disambiguated one.
         """
         return SyntheticToken(
             surface=token.surface,
@@ -127,4 +132,5 @@ class MasuStemNominalizer:
             pos2="普通名詞",
             lemma=token.surface,
             kana=extract_reading(token),
+            kana_locked=True,
         )

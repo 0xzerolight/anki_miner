@@ -665,11 +665,19 @@ class ValidationService:
         degrades the same way but is not upgrade damage, matching how a source
         missing from disk is treated for the other three families.
 
+        A pack is only ever consulted when ``expression_audio`` is also mapped
+        (the fetcher's two-part gate — see ``audio_stage.py``). An unmapped
+        field must report the same as no enabled pack at all, never an
+        OK-green for a feature that will not run.
+
         Returns:
             ``(None, "")`` when nothing is configured, ``(True, names)`` when
             usable, ``(False, message)`` when stale.
         """
         from anki_miner.services.audio_packs.registry import AudioPackRegistry
+
+        if not self.config.anki_fields.get("expression_audio"):
+            return None, ""
 
         enabled_ids = [
             e.pack_id for e in self.config.expression_audio_chain if e.enabled and e.kind == "pack" and e.pack_id

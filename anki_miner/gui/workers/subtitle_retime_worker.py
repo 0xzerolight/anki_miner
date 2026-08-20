@@ -12,6 +12,8 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from PyQt6.QtCore import pyqtSignal
+
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.retime_reference import ReferenceOverride
 from anki_miner.utils.file_pairing import resolve_output_path
@@ -35,7 +37,12 @@ class SubtitleRetimeWorker(FileQueueWorker):
        ``file_finished(idx, None, error_str)`` on failure / cancel. A pipeline
        that kept the original (every engine's result failed validation) is a
        per-pair failure whose message says the original was left untouched;
-       the queue continues.
+       the queue continues. On success, ``file_note(idx, line)`` also fires
+       once per fact worth keeping around after the run — which engine won,
+       and whether a ``.pre-retime.bak`` sibling was written (C-7/C-10).
+       Deliberately separate from ``file_progress``: the base tab renders that
+       one as transient status text, overwritten by the next update, so it
+       cannot carry information the user needs to find after the run ends.
 
     Cancel is honoured between pairs and propagated into the retimer via
     ``self._cancel_event``.
@@ -56,6 +63,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
             defaults to that function.  Injected by tests.
         parent: Optional parent QObject.
     """
+
+    #: One durable fact about a just-finished file, for the Activity log —
+    #: NOT for the transient status label (see the class docstring). Fired
+    #: zero or more times per pair, always before that pair's ``file_finished``.
+    file_note = pyqtSignal(int, str)
 
     def __init__(
         self,
@@ -138,14 +150,22 @@ class SubtitleRetimeWorker(FileQueueWorker):
     def _process_pair(self, idx: int, video: Path, in_sub: Path, out_sub: Path) -> None:
         """Process a single (video, subtitle) pair.
 
-        Per-pair errors are forwarded as signals; only a ``_FATAL_QUEUE_EXCEPTIONS``
-        member (alass missing) propagates, for the base loop to stop the queue.
+        Per-pair errors are forwarded as signals; this worker declares no
+        ``_FATAL_QUEUE_EXCEPTIONS`` (the base default is an empty tuple), so
+        nothing here stops the queue. A missing alass no longer qualifies —
+        the self-tuning engine chain shortens itself instead, falling through
+        to ffsubsync candidates; see :func:`~anki_miner.services.subtitle_retimer.retime_subtitle`.
         """
         try:
             # log_cb forwards pipeline decision/progress lines via
             # file_progress. There is no percentage — emit pct=0.
             def _log_cb(line: str) -> None:
                 self.file_progress.emit(idx, 0, line)
+
+            # Captured before the run: a successful commit always leaves
+            # out_sub in place, so this is the only point that can tell
+            # whether _commit() found something there to back up.
+            existed_before = out_sub.exists()
 
             outcome = self._retimer(
                 self._config,
@@ -158,18 +178,29 @@ class SubtitleRetimeWorker(FileQueueWorker):
             )
 
             if outcome:
+                # Transient status text only — see file_note below for the
+                # durable record of the same facts.
                 self.file_progress.emit(idx, 100, self.tr("Done"))
+
+                engine = getattr(outcome, "engine", None)
+                if engine:
+                    self.file_note.emit(idx, tr_format(self.tr("Retimed with %1"), engine))
+                if existed_before:
+                    from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX
+
+                    self.file_note.emit(
+                        idx,
+                        tr_format(self.tr("Original backed up as %1"), out_sub.name + BACKUP_SUFFIX),
+                    )
                 self.file_finished.emit(idx, out_sub, None)
             elif self.is_cancelled or getattr(outcome, "cancelled", False):
                 self.file_finished.emit(idx, None, self.tr("Cancelled"))
             else:
+                reason = getattr(outcome, "reason", "") or self.tr("no trustworthy sync; original kept unchanged")
                 self.file_finished.emit(
                     idx,
                     None,
-                    tr_format(
-                        self.tr("No trustworthy sync for %1; original kept unchanged"),
-                        video.name,
-                    ),
+                    tr_format(self.tr("Retiming failed for %1: %2"), video.name, reason),
                 )
 
         except Exception as exc:  # noqa: BLE001 — per-pair isolation

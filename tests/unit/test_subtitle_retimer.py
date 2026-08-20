@@ -18,8 +18,9 @@ import pytest
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import RetimeReference
-from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, retime_subtitle
+from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, TMP_SUBDIR_NAME, retime_subtitle
 from anki_miner.services.sync_engines import SyncResult
+from anki_miner.utils.file_pairing import FilePairMatcher
 
 _FFS = "anki_miner.services.subtitle_retimer.sync_with_ffsubsync"
 _ALASS = "anki_miner.services.subtitle_retimer.sync_with_alass"
@@ -137,6 +138,26 @@ class TestEngineChain:
         assert [call.get("no_split") for call in alass_calls] == [False, True]
         assert _cue_starts(out_sub) == [s + 700 for s in _starts()]
 
+    def test_fourth_attempt_runs_ffsubsync_no_split(self, cfg, video, in_sub, out_sub):
+        ffs_calls: list[dict[str, Any]] = []
+
+        def _ffs(config, reference, sub, out, **kwargs):
+            ffs_calls.append(kwargs)
+            if kwargs.get("split_mode", True):
+                return SyncResult(ok=False, engine="ffsubsync", detail="split failed")
+            return _fake_engine(400, engine="ffsubsync")(config, reference, sub, out, **kwargs)
+
+        with (
+            patch(_FFS, side_effect=_ffs),
+            patch(_ALASS, side_effect=_fake_engine(ok=False, engine="alass")),
+        ):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert outcome
+        assert outcome.attempts[-1].startswith("ffsubsync (single offset)")
+        assert [call.get("split_mode", True) for call in ffs_calls] == [True, False]
+        assert _cue_starts(out_sub) == [s + 400 for s in _starts()]
+
     def test_all_engines_fail_keeps_original(self, cfg, video, in_sub, out_sub):
         before = in_sub.read_bytes()
         with (
@@ -149,7 +170,48 @@ class TestEngineChain:
         assert "original left untouched" in outcome.reason
         assert not out_sub.exists()
         assert in_sub.read_bytes() == before
-        assert len(outcome.attempts) == 3
+        assert len(outcome.attempts) == 4
+        assert [a.split(":", 1)[0] for a in outcome.attempts] == [
+            "ffsubsync",
+            "alass",
+            "alass (single offset)",
+            "ffsubsync (single offset)",
+        ]
+
+    def test_all_candidates_rejected_by_validator_keeps_original_bytes(self, cfg, video, in_sub, out_sub):
+        """Every engine can report success (``ok=True``) and still lose every
+        candidate to the validator -- an aligner that locks onto the wrong
+        optimum exits 0 and writes a syntactically valid file. The
+        keep-original guarantee has to hold on THIS path too, not only when
+        an engine itself reports failure
+        (``test_all_engines_fail_keeps_original`` above)."""
+        before = in_sub.read_bytes()
+        # Shift far past the validator's 5-minute max-shift bound: every
+        # engine "succeeds" but every real candidate file gets rejected.
+        huge_shift = _fake_engine(30 * 60 * 1000, ok=True, engine="huge-shift")
+        with patch(_FFS, side_effect=huge_shift), patch(_ALASS, side_effect=huge_shift):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert not outcome
+        assert "original left untouched" in outcome.reason
+        assert not out_sub.exists()
+        assert in_sub.read_bytes() == before
+        assert len(outcome.attempts) == 4
+        assert all("max cue shift" in a for a in outcome.attempts)
+
+    def test_all_candidates_rejected_by_validator_in_place_leaves_input_untouched(self, cfg, video, in_sub):
+        """In-place variant: ``out_sub`` aliases ``in_sub``, so a wrongly
+        "successful" candidate on every engine must never reach ``os.replace``
+        -- the input has to come out byte-identical, with no backup written
+        (nothing was ever committed to overwrite)."""
+        before = in_sub.read_bytes()
+        huge_shift = _fake_engine(30 * 60 * 1000, ok=True, engine="huge-shift")
+        with patch(_FFS, side_effect=huge_shift), patch(_ALASS, side_effect=huge_shift):
+            outcome = retime_subtitle(cfg, video, in_sub, in_sub)
+
+        assert not outcome
+        assert in_sub.read_bytes() == before
+        assert not in_sub.with_name(in_sub.name + BACKUP_SUFFIX).exists()
 
     def test_missing_alass_skips_remaining_alass_attempts(self, cfg, video, in_sub, out_sub):
         alass_calls: list[Any] = []
@@ -167,6 +229,11 @@ class TestEngineChain:
         assert not outcome
         assert len(alass_calls) == 1
         assert any("not installed" in a for a in outcome.attempts)
+        assert [a.split(":", 1)[0] for a in outcome.attempts] == [
+            "ffsubsync",
+            "alass",
+            "ffsubsync (single offset)",
+        ]
 
     def test_sub_reference_forwarded_to_alass(self, cfg, video, in_sub, out_sub, tmp_path):
         reference = _write_sub(tmp_path / "ref.srt", _starts())
@@ -247,8 +314,65 @@ class TestCommit:
         ):
             retime_subtitle(cfg, video, in_sub, out_sub)
 
+        # Nothing named ".retime-" leaks at the pairing-folder top level...
         leftovers = [p.name for p in tmp_path.iterdir() if ".retime-" in p.name]
         assert leftovers == []
+        # ...and the working subdirectory itself is gone (emptied, then rmdir'd).
+        assert not (out_sub.parent / TMP_SUBDIR_NAME).exists()
+
+
+class TestTempFileLocation:
+    """Working files must never land in the pairing folder itself.
+
+    A crash-orphaned ``ep01.retime-cand-0.srt`` sitting directly beside the
+    real subtitle is a pairable file (real ``.srt`` suffix) that the next
+    folder run's episode matcher would consume, shadowing the genuine
+    subtitle. Confining temps to a subdirectory keeps them invisible to
+    FilePairMatcher's non-recursive folder scan.
+    """
+
+    def test_temps_live_under_tmp_subdir(self, cfg, video, in_sub, out_sub):
+        seen: list[Path] = []
+
+        def _ffs(config, reference, sub, out, **kwargs):
+            seen.append(sub)
+            seen.append(out)
+            return _fake_engine(1500, engine="ffsubsync")(config, reference, sub, out, **kwargs)
+
+        with patch(_FFS, side_effect=_ffs), patch(_ALASS):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert outcome
+        tmp_dir = out_sub.parent / TMP_SUBDIR_NAME
+        seen_temps = [p for p in seen if p != in_sub]
+        assert seen_temps, "engine should have been handed at least one temp path"
+        for p in seen_temps:
+            assert p.parent == tmp_dir
+            # Engines infer the output format from the suffix, so it must
+            # stay a real subtitle extension even while hidden from pairing.
+            assert p.suffix in FilePairMatcher.SUBTITLE_EXTENSIONS
+
+    def test_tmp_dir_removed_when_empty_after_run(self, cfg, video, in_sub, out_sub):
+        with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert not (out_sub.parent / TMP_SUBDIR_NAME).exists()
+
+    def test_leftover_temp_not_paired_as_subtitle(self, tmp_path):
+        """Documents the hazard the fix removes: an orphaned temp from a
+        crashed run must not be pickable as the episode's subtitle."""
+        tmp_dir = tmp_path / TMP_SUBDIR_NAME
+        tmp_dir.mkdir()
+        (tmp_dir / "ep01.retime-cand-0.srt").write_text("orphaned candidate", encoding="utf-8")
+        real_sub = tmp_path / "ep01.srt"
+        real_sub.write_text("real subtitle", encoding="utf-8")
+        video_file = tmp_path / "ep01.mkv"
+        video_file.touch()
+
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path, tmp_path)
+
+        assert len(pairs) == 1
+        assert pairs[0].subtitle == real_sub
 
 
 class TestCancellation:

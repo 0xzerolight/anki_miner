@@ -430,10 +430,29 @@ class TestLookupUsesMinedForm:
         assert word.lemma != word.mined_form
         return word
 
+    def _kana_front_word(self):
+        # ゆう: verb written kana-only in the source line (orth_base "ゆう"),
+        # unidic's canonical lemma is 言う → mined_form (ゆう) != lemma (言う).
+        # This is the Rule A' homograph case: 有/夕/結う share the ゆう reading.
+        word = TokenizedWord(
+            surface="ゆう",
+            lemma="言う",
+            reading="ゆう",
+            sentence="ゆうとね",
+            start_time=1.0,
+            end_time=3.0,
+            duration=2.0,
+            pos="動詞",
+            orth_base="ゆう",
+        )
+        assert word.mined_form == "ゆう"
+        assert word.lemma != word.mined_form
+        return word
+
     def test_lookup_uses_mined_form_when_it_hits(self, qtbot):
         received: list[str] = []
 
-        def capturing_lookup(term: str) -> list[tuple[str, str]]:
+        def capturing_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
             received.append(term)
             return [("JMdict", "<div>to do someone in</div>")]
 
@@ -448,7 +467,7 @@ class TestLookupUsesMinedForm:
     def test_lookup_retries_lemma_on_miss(self, qtbot):
         received: list[str] = []
 
-        def capturing_lookup(term: str) -> list[tuple[str, str]]:
+        def capturing_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
             received.append(term)
             return [] if term == "殺る" else [("JMdict", "<div>to do</div>")]
 
@@ -461,7 +480,7 @@ class TestLookupUsesMinedForm:
         assert "to do" in dlg.definition_view.toHtml()
 
     def test_both_miss_placeholder_names_mined_form(self, qtbot):
-        dlg = WordCurationDialog([self._variant_word()], lookup_fn=lambda term: [])
+        dlg = WordCurationDialog([self._variant_word()], lookup_fn=lambda term, lemma=None: [])
         qtbot.addWidget(dlg)
         _select_row(dlg, 0)
         _fire_timer(dlg)
@@ -469,6 +488,67 @@ class TestLookupUsesMinedForm:
         html = dlg.definition_view.toHtml()
         assert "No offline dictionary entry" in html
         assert "殺る" in html
+
+    def test_lookup_scopes_the_primary_call_by_lemma(self, qtbot):
+        """Rule A' pane fix: the token's lemma reaches the PRIMARY (hit) call,
+        not just the miss-only fallback retry, so a kana front (ゆう, lemma
+        言う) can be scoped to its own lexeme instead of showing every
+        same-reading homograph beside the card's lemma-scoped entry."""
+        received: list[tuple[str, str | None]] = []
+
+        def capturing_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
+            received.append((term, lemma))
+            return [("JMdict", "<div>to say</div>")]
+
+        dlg = WordCurationDialog([self._kana_front_word()], lookup_fn=capturing_lookup)
+        qtbot.addWidget(dlg)
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        assert received == [("ゆう", "言う")]
+
+    def test_same_mined_form_different_lemma_does_not_share_cache(self, qtbot):
+        """The cache key must include the scope lemma, not just the term:
+        upstream dedup is by lemma (word_filter.py), so two curator rows can
+        share a mined_form (ゆう) with different lemmas (言う vs 結う). A
+        term-only cache key would serve row 1's lemma-scoped entry to row 2 —
+        the exact wrong-homograph pane bug this task exists to fix."""
+        calls: list[tuple[str, str | None]] = []
+
+        def recording_lookup(term: str, lemma: str | None = None) -> list[tuple[str, str]]:
+            calls.append((term, lemma))
+            return [("JMdict", f"<div>{lemma or term}</div>")]
+
+        word_iu = self._kana_front_word()  # ゆう, lemma 言う
+        word_yuu = TokenizedWord(
+            surface="ゆう",
+            lemma="結う",
+            reading="ゆう",
+            sentence="髪をゆう",
+            start_time=10.0,
+            end_time=12.0,
+            duration=2.0,
+            pos="動詞",
+            orth_base="ゆう",
+        )
+        assert word_yuu.mined_form == word_iu.mined_form == "ゆう"
+        assert word_yuu.lemma != word_iu.lemma
+
+        dlg = WordCurationDialog([word_iu, word_yuu], lookup_fn=recording_lookup)
+        qtbot.addWidget(dlg)
+
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+        assert "言う" in dlg.definition_view.toHtml()
+
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+
+        # Two distinct scoped calls — the second row was NOT served from the
+        # first row's cache entry.
+        assert calls == [("ゆう", "言う"), ("ゆう", "結う")]
+        assert "結う" in dlg.definition_view.toHtml()
+        assert "言う" not in dlg.definition_view.toHtml()
 
 
 # ---------------------------------------------------------------------------
@@ -766,7 +846,7 @@ class TestLookupIsAsynchronous:
         _fire_timer(dlg)  # row 0 in flight
 
         # Row 1 resolves from cache, so it paints immediately and supersedes.
-        dlg._lookup_cache["走る"] = [("JMdict", "<div>fresher</div>")]
+        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>fresher</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
         assert "fresher" in dlg.definition_view.toHtml()
@@ -785,7 +865,7 @@ class TestLookupIsAsynchronous:
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
-        dlg._lookup_cache["走る"] = [("JMdict", "<div>fresher</div>")]
+        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>fresher</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
 
@@ -802,7 +882,7 @@ class TestLookupIsAsynchronous:
 
         _select_row(dlg, 0)
         _fire_timer(dlg)
-        dlg._lookup_cache["走る"] = [("JMdict", "<div>fresher</div>")]
+        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>fresher</div>")]
         _select_row(dlg, 1)
         _fire_timer(dlg)
 
@@ -819,7 +899,7 @@ class TestLookupIsAsynchronous:
     def test_cache_hit_renders_without_dispatching(self, qtbot, words, deferred_off_thread):
         dlg = WordCurationDialog(words, lookup_fn=_entry_lookup([]))
         qtbot.addWidget(dlg)
-        dlg._lookup_cache["食べる"] = [("JMdict", "<div>cached</div>")]
+        dlg._lookup_cache[("食べる", None)] = [("JMdict", "<div>cached</div>")]
 
         _select_row(dlg, 0)
         _fire_timer(dlg)

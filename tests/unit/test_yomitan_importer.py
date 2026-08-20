@@ -10,6 +10,7 @@ from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import read_ownership_marker
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.importers.yomitan_importer import (
+    _PROGRESS_SCALE,
     YomitanImportResult,
     derive_dict_id_from_zip,
     import_yomitan_zip,
@@ -190,12 +191,18 @@ class TestImportYomitanZip:
         completion_events = [event for event in events if event[2] == "Done"]
         assert [(msg, promoted, count) for _, _, msg, promoted, count in completion_events] == [("Done", True, 2)]
 
+        # "finalizing" holds the full scaled total (the bar stays at 100%
+        # while the lookup indexes build) — every earlier stage marker is
+        # still indeterminate (0, 0).
         stage_positions: list[int] = []
         for stage in ("validating", "extracting", "inserting", "finalizing"):
             position, event = next(
                 (position, event) for position, event in enumerate(events) if stage in event[2].lower()
             )
-            assert event[:2] == (0, 0)
+            if stage == "finalizing":
+                assert event[:2] == (_PROGRESS_SCALE, _PROGRESS_SCALE)
+            else:
+                assert event[:2] == (0, 0)
             stage_positions.append(position)
         assert stage_positions == sorted(stage_positions)
 
@@ -216,9 +223,11 @@ class TestImportYomitanZip:
 
     def test_insert_progress_reports_files_done_against_bank_total(self, tmp_path: Path):
         """``progress`` calls during entry insertion are determinate against the
-        term-bank count: ``total`` is pinned to the bank count and ``files_done``
-        is non-decreasing, ending with a terminal ``(total, total)`` call once
-        ``bulk_insert`` returns. Stage markers stay ``(0, 0, ...)``."""
+        term-bank count scaled by ``_PROGRESS_SCALE``: ``total`` is pinned to
+        ``bank_total * _PROGRESS_SCALE``, ``cur`` never exceeds ``total``, and
+        the raw sequence is non-decreasing, ending with a terminal ``(total,
+        total)`` call once ``bulk_insert`` returns. Stage markers stay
+        ``(0, 0, ...)``."""
         bank_size = 2000
         banks = [
             [[f"t{bank}-{i}", "", "", "", 0, [f"d{bank}-{i}"], i, ""] for i in range(bank_size)] for bank in range(3)
@@ -232,21 +241,27 @@ class TestImportYomitanZip:
             progress=lambda cur, total, msg: events.append((cur, total, msg)),
         )
 
+        total = 3 * _PROGRESS_SCALE
         insert_events = [event for event in events if event[2].startswith("Inserted ")]
         assert len(insert_events) >= 2
-        assert all(total == 3 for _, total, _ in insert_events)
-        files_done = [cur for cur, _, _ in insert_events]
-        assert files_done == sorted(files_done)
-        assert files_done[0] < 3  # at least one non-terminal reading mid-insert
-        assert insert_events[-1][:2] == (3, 3)
+        assert all(evt_total == total for _, evt_total, _ in insert_events)
+        # bulk_insert's trailing (post-loop) flush fires after files_done has
+        # already advanced for the just-finished bank; on_insert_progress
+        # clamps its own emission to total, so the RAW sequence stays
+        # monotonic and bounded — no consumer-side clamping needed here.
+        raw = [cur for cur, _, _ in insert_events]
+        assert raw == sorted(raw)
+        assert all(cur <= total for cur in raw)
+        assert raw[0] < total  # at least one non-terminal reading mid-insert
+        assert insert_events[-1][:2] == (total, total)
 
-        stage_events = [
-            event
-            for event in events
-            if event[2] in {"Validating archive", "Extracting archive", "Inserting entries", "Finalizing import"}
+        indeterminate_stage_events = [
+            event for event in events if event[2] in {"Validating archive", "Extracting archive", "Inserting entries"}
         ]
-        assert stage_events
-        assert all(event[:2] == (0, 0) for event in stage_events)
+        assert indeterminate_stage_events
+        assert all(event[:2] == (0, 0) for event in indeterminate_stage_events)
+        finalizing_events = [event for event in events if event[2] == "Finalizing import"]
+        assert finalizing_events == [(total, total, "Finalizing import")]
 
     def test_bank_progress_reports_every_bank_against_a_fixed_total(self, tmp_path: Path):
         banks = [[[f"t{bank}-{i}", "", "", "", 0, [f"d{bank}-{i}"], i, ""] for i in range(3)] for bank in range(4)]
@@ -289,18 +304,29 @@ class TestImportYomitanZip:
             progress=lambda cur, total, msg: events.append((cur, total, msg)),
         )
 
-        # ``cur``/``total`` now carry files_done/total_term_files (single bank
-        # here, so total == 1 throughout); the real inserted count is only in
-        # the message. Recover it from there to keep verifying the underlying
-        # bulk_insert batch cadence is monotonic across flushes.
+        # ``cur``/``total`` now carry a scaled files_done/bank fraction (single
+        # bank here, so total == _PROGRESS_SCALE throughout); the real
+        # inserted count is only in the message. Recover it from there to
+        # keep verifying the underlying bulk_insert batch cadence is
+        # monotonic across flushes.
+        total = _PROGRESS_SCALE
         insert_events = [event for event in events if event[2].startswith("Inserted ")]
         assert len(insert_events) >= 2
         inserted_counts = [int(msg.split()[1].replace(",", "")) for _, _, msg in insert_events]
         assert inserted_counts == sorted(inserted_counts)
         assert inserted_counts[:2] == [5000, 5001]
-        files_done = [cur for cur, _, _ in insert_events]
-        assert files_done == sorted(files_done)
-        assert all(total == 1 for _, total, _ in insert_events)
+        # A single-bank import must not sit at 0% for the whole insert and
+        # then jump straight to 100%: the mid-batch flush reads a real
+        # fraction below total, and on_insert_progress clamps its own
+        # emission so the RAW sequence never exceeds total and stays
+        # monotonic (see the multi-bank test above for why the internal
+        # arithmetic can otherwise overshoot at a bank's last flush).
+        raw = [cur for cur, _, _ in insert_events]
+        assert raw == sorted(raw)
+        assert all(cur <= total for cur in raw)
+        assert 0 < raw[0] < total
+        assert all(evt_total == total for _, evt_total, _ in insert_events)
+        assert insert_events[-1][:2] == (total, total)
 
     def test_rejects_old_format_version(self, tmp_path: Path):
         zip_path = build_yomitan_zip(tmp_path / "src" / "old.zip", format_version=2)

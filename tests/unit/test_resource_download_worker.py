@@ -1070,11 +1070,13 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
         dict_id=None,
         before_promote=None,
     ):
-        # cur/total during insert are files_done/total_term_files (a bank
-        # count), not entries — the real entry count is only in the message.
+        # cur/total during insert are a scaled files_done/bank fraction, not
+        # entries — cur=4 here is deliberately a plausible-looking bank-count
+        # reading that must NOT be latched as an entry count; only the
+        # message's real inserted figure may be.
         progress(0, 0, "Validating archive")
         progress(4, 4, "Inserted 184,200 entries")
-        progress(0, 0, "Finalizing import")  # A message with no count is not a regression.
+        progress(1000, 1000, "Finalizing import")  # A message with no count is not a regression.
         return _FakeYomitanResult()
 
     monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
@@ -1088,14 +1090,11 @@ def test_entry_counts_promote_to_indexing_and_never_fall_back(tmp_path, monkeypa
     phases = [e.phase for e in events]
     assert resource_download_worker.ResourcePhase.INDEXING in phases
     indexed = [e for e in events if e.phase is resource_download_worker.ResourcePhase.INDEXING]
-    # The reporter has no way to tell a files-done reading from an entries
-    # reading (both are positive numerics on the same channel) — during the
-    # dict importer's insert phase it now surfaces the bank count, not a real
-    # entry count. The importer's own trailing "Done" call (still a real
-    # entries figure, unchanged by this contract) is what an exact live count
-    # would need; this fake doesn't emit it, so the reporter latches on the
-    # bank-count reading it does see.
-    assert [e.entries for e in indexed] == [4, 4]
+    # ``current`` (4) is a bank-fraction reading and never becomes the entry
+    # count; the reporter parses the true figure out of the "Inserted N
+    # entries" message text instead, so both INDEXING events read 184,200 —
+    # the "Finalizing import" call carries no count but the reading latches.
+    assert [e.entries for e in indexed] == [184200, 184200]
     # Once a count is landing, nothing walks the phase back to installing.
     assert phases.index(resource_download_worker.ResourcePhase.INDEXING) == len(phases) - 2
 

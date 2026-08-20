@@ -15,6 +15,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
 from anki_miner.services.retime_reference import ReferenceOverride
+from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, RetimeOutcome
 
 # A dakuten kana stem that genuinely decomposes under NFD (common kana like ねこ
 # are byte-identical NFC/NFD and would be a false-green for the dedup tests).
@@ -63,12 +64,14 @@ def _capture(worker: SubtitleRetimeWorker) -> dict:
         "started": [],
         "progress": [],
         "finished": [],
+        "notes": [],
         "skipped": [],
         "queue_finished": [],
     }
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
+    worker.file_note.connect(lambda idx, note: cap["notes"].append((idx, note)))
     worker.file_skipped.connect(lambda idx, out, reason: cap["skipped"].append((idx, out, reason)))
     worker.queue_finished.connect(lambda _outcome: cap["queue_finished"].append(True))
     return cap
@@ -397,6 +400,87 @@ def test_success_emits_100_progress(qapp, tmp_path):
 
     file_progresses = [p for p in cap["progress"] if p[0] == 0]
     assert file_progresses[-1][1] == 100
+
+
+# ---------------------------------------------------------------------------
+# file_note: the durable per-file record (C-7/C-10) — separate from the
+# transient file_progress label, which the tab overwrites on the next update.
+# ---------------------------------------------------------------------------
+
+
+def test_success_emits_file_note_naming_the_engine(qapp, tmp_path):
+    """A real RetimeOutcome's engine reaches file_note, not just file_progress."""
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    v.write_bytes(b"")
+    s.write_bytes(b"")
+
+    def _retimer(*args, cancel_event=None, log_cb=None, **kwargs):
+        return RetimeOutcome(ok=True, engine="ffsubsync (single offset)")
+
+    worker = _make_worker([(v, s)], retimer=_retimer)
+    cap = _capture(worker)
+    worker.run()
+
+    notes = [note for idx, note in cap["notes"] if idx == 0]
+    assert any("ffsubsync (single offset)" in note for note in notes)
+    # Every note precedes the pair's file_finished — the durable line is
+    # readable in the log before "Done: <name>" appears underneath it.
+    assert len(cap["finished"]) == 1
+
+
+def test_success_without_engine_emits_no_engine_note(qapp, tmp_path):
+    """A bare bool (most test doubles, and any non-RetimeOutcome retimer) has
+    no engine to report — file_note must not fire a blank/garbage line."""
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    v.write_bytes(b"")
+    s.write_bytes(b"")
+
+    worker = _make_worker([(v, s)], retimer=_fake_retimer_success)
+    cap = _capture(worker)
+    worker.run()
+
+    assert cap["notes"] == []
+
+
+def test_overwrite_emits_backup_file_note(qapp, tmp_path):
+    """Overwriting an existing output emits a durable note naming the
+    .pre-retime.bak sibling the service's own _commit() actually wrote."""
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    out = tmp_path / "ep01.srt"
+    v.write_bytes(b"")
+    s.write_bytes(b"")
+    out.write_text("OLD SRT")
+
+    def _retimer(*args, cancel_event=None, log_cb=None, **kwargs):
+        return RetimeOutcome(ok=True, engine="ffsubsync")
+
+    worker = _make_worker([(v, s)], overwrite=True, retimer=_retimer)
+    cap = _capture(worker)
+    worker.run()
+
+    notes = [note for idx, note in cap["notes"] if idx == 0]
+    assert any(out.name + BACKUP_SUFFIX in note for note in notes)
+
+
+def test_no_backup_note_when_output_is_new(qapp, tmp_path):
+    """No pre-existing output → no backup was written → no backup note."""
+    v = tmp_path / "ep01.mkv"
+    s = tmp_path / "ep01_orig.srt"
+    v.write_bytes(b"")
+    s.write_bytes(b"")
+
+    def _retimer(*args, cancel_event=None, log_cb=None, **kwargs):
+        return RetimeOutcome(ok=True, engine="ffsubsync")
+
+    worker = _make_worker([(v, s)], retimer=_retimer)
+    cap = _capture(worker)
+    worker.run()
+
+    notes = [note for idx, note in cap["notes"] if idx == 0]
+    assert not any(BACKUP_SUFFIX in note for note in notes)
 
 
 # ---------------------------------------------------------------------------

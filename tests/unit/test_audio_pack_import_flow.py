@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -1118,6 +1119,25 @@ class TestReimportAll:
 
         assert infos and "No audio packs in the chain." in infos[-1][1]
 
+    def test_only_ids_naming_a_pack_gone_from_the_chain_is_not_an_empty_chain(
+        self, tab, monkeypatch, stub_worker, tmp_path
+    ):
+        """The startup stale scan's only_ids can name a pack the user removed
+        from the chain before the repair batch ran. A chain that still has
+        packs — just not the one that was asked for — reads differently from
+        a chain with nothing in it."""
+        pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
+        _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
+        tab.audio_panel.set_chain((AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),))
+        infos = _capture_infos(monkeypatch)
+
+        tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"gone-pack"}))
+
+        assert infos
+        assert "No audio packs in the chain." not in infos[-1][1]
+        assert "no longer in the chain" in infos[-1][1]
+        stub_worker.repair_factory.assert_not_called()
+
     def test_refuses_while_resources_are_held(self, tab, monkeypatch, stub_worker, tmp_path):
         pack_dir = _make_forvo_pack(tmp_path / "forvo_src")
         _install_pack_slot(tab.config.audio_packs_root, "forvo", pack_dir=pack_dir)
@@ -1177,3 +1197,61 @@ class TestReimportAll:
         assert "Forvo" in infos[-1][1]
         assert persist_calls == [], "a reimport rebuilds an index, it does not move the chain"
         assert notify_calls == [None], "one config_changed for the whole batch"
+
+
+# ---------------------------------------------------------------------------
+# _run_latest_scan: a superseded scan must not strand its caller (B-8/B-9)
+# ---------------------------------------------------------------------------
+
+
+class TestScanSupersession:
+    """A scan that resolves after being superseded used to drop both of its
+    callbacks: on_complete never fired (stalling the startup family chain)
+    and the reimport-all mutation token was never released (refusing every
+    panel mutation for the rest of the session)."""
+
+    def test_stale_scan_result_still_releases_the_token_and_completes(self, tab, monkeypatch, caplog):
+        flow = tab._audio_pack_import_flow
+        # The `tab` fixture stubs _run_latest_scan to run synchronously; this
+        # test exercises the real generation-tracking contract instead.
+        del flow._run_latest_scan
+        warnings = _capture_warnings(monkeypatch)
+
+        captured: list[tuple] = []
+
+        def _fake_run_off_thread(parent, work, on_done, on_error, *, pass_cancel_check=False, on_finished=None):
+            worker = MagicMock(name="scan_worker")
+            worker.isRunning.return_value = True
+            captured.append((on_done, on_error))
+            return worker
+
+        monkeypatch.setattr(
+            "anki_miner.gui.controllers.import_flow_common.run_off_thread",
+            _fake_run_off_thread,
+        )
+
+        completed: list[bool] = []
+        flow.reimport_all(on_complete=lambda: completed.append(True))
+        assert len(captured) == 1
+        stale_on_done, _stale_on_error = captured[0]
+
+        # A newer scan supersedes the first — bumping _scan_generation and
+        # cancelling the still-running worker — before the first scan's
+        # queued result arrives on the GUI thread. SingleCallWorker only
+        # re-checks its cancel flag around the emit itself, so a worker that
+        # raced past that checkpoint still delivers here.
+        flow._run_latest_scan(lambda: None, lambda _r: None, lambda _m: None)
+        assert len(captured) == 2
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.gui.controllers.import_flow_common"):
+            stale_on_done(([], [], True))
+
+        assert completed == [True], "on_complete must still fire for the superseded caller"
+        assert flow._mutation_token is None, "the reimport-all mutation token must not leak"
+        # Nothing failed -- a newer scan won the race -- so this must not
+        # banner the family's "could not be scanned" failure sentence, which
+        # would be false here. It is still logged, just not shown.
+        assert warnings == [], "a superseded scan is not a failure; it must not banner one"
+        assert any(
+            "superseded" in record.message.lower() for record in caplog.records
+        ), "the superseded scan is still logged, just not banner'd"

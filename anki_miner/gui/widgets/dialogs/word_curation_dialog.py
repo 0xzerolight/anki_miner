@@ -143,7 +143,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         *,
         commit_known_callback: Callable[[set[str]], int] | None = None,
         media_context: CurationMediaContext | None = None,
-        lookup_fn: Callable[[str], list[tuple[str, str]]] | None = None,
+        lookup_fn: Callable[..., list[tuple[str, str]]] | None = None,
     ):
         super().__init__(parent)
         self._words = words
@@ -213,12 +213,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._candidate_list_words: list[TokenizedWord] = []
         self._populating_candidates = False
 
-        # Lookup result cache keyed by term (empty results are cached too).
-        # The fetch itself runs off the GUI thread: at most one request is in
-        # flight, the newest queued request replaces any older one, and every
-        # callback is checked against _lookup_gen so a fast scroll can never
-        # paint an entry the user has already scrolled past.
-        self._lookup_cache: dict[str, list[tuple[str, str]]] = {}
+        # Lookup result cache keyed by (term, scope_lemma) (empty results are
+        # cached too). scope_lemma (see _scope_lemma) is part of the key, not
+        # just an input: two curator rows can share a mined_form but differ in
+        # lemma (kana front ゆう from 言う vs from 結う — upstream dedups by
+        # lemma, word_filter.py, so both survive as distinct rows), and a
+        # term-only key would serve one row's lemma-scoped entry to the
+        # other — the exact wrong-homograph pane bug Rule A' exists to fix.
+        # The miss-only fallback-term retry is always unscoped, so it caches
+        # under (fallback_term, None). The fetch itself runs off the GUI
+        # thread: at most one request is in flight, the newest queued request
+        # replaces any older one, and every callback is checked against
+        # _lookup_gen so a fast scroll can never paint an entry the user has
+        # already scrolled past.
+        self._lookup_cache: dict[tuple[str, str | None], list[tuple[str, str]]] = {}
         self._lookup_gen = 0
         self._lookup_inflight = False
         self._pending_lookup: tuple[str, str | None] | None = None
@@ -1333,10 +1341,17 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         * a generation stamp on every request, so a result that arrives after
           the user has moved on is cached but never painted.
 
-        ``fallback_term`` is the miss-only lemma retry: unidic's canonical lemma
-        collapses kanji variants (殺る → 遣る), so keying the pane on it showed
-        the wrong homograph. Both terms are fetched inside the one background
-        job, keeping the retry off the GUI thread as well.
+        ``fallback_term`` (the token's lemma) does double duty. First, it
+        SCOPES the primary ``term`` lookup (Rule A′): when it differs from
+        ``term``, it is threaded to ``lookup_fn`` as the lemma so a kana front
+        (mined_form ゆう, lemma 言う) keeps its own lexeme's entry instead of
+        every same-reading homograph (有/夕/結う) — matching the card's own
+        ``get_definitions_batch(lemma_context=...)`` scope, so the pane beside
+        the card agrees with it. Second, it is the MISS-only retry: unidic's
+        canonical lemma collapses kanji variants (殺る → 遣る), so on a ``term``
+        miss it is looked up as its own (unscoped) term. Both terms are
+        fetched inside the one background job, keeping both off the GUI
+        thread.
         """
         if self._closing or not self._show_dict:
             return
@@ -1358,20 +1373,33 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         self._dispatch_lookup(term, fallback_term, self._lookup_gen)
 
+    @staticmethod
+    def _scope_lemma(term: str, fallback_term: str | None) -> str | None:
+        """The Rule A′ scope for ``term``'s own lookup: ``fallback_term`` (the
+        token's lemma) when it differs from ``term``, else ``None`` — the
+        non-empty convention every lemma-threading call site in this codebase
+        shares, so a word whose mined_form already IS its lemma calls
+        ``lookup_fn`` arity-1 exactly as before. Also the ``_lookup_cache``
+        key discriminant (see its declaration in ``__init__``).
+        """
+        return fallback_term if fallback_term and fallback_term != term else None
+
     def _cached_entries(self, term: str, fallback_term: str | None) -> list[tuple[str, str]] | None:
         """Entries resolvable from the cache alone, or ``None`` if a fetch is needed.
 
         An empty list is a real answer (a cached miss), which is why the
         "unresolved" signal is ``None`` rather than falsiness.
         """
-        if term not in self._lookup_cache:
+        key = (term, self._scope_lemma(term, fallback_term))
+        if key not in self._lookup_cache:
             return None
-        entries = self._lookup_cache[term]
+        entries = self._lookup_cache[key]
         if entries or not fallback_term or fallback_term == term:
             return entries
-        if fallback_term not in self._lookup_cache:
+        fallback_key = (fallback_term, None)
+        if fallback_key not in self._lookup_cache:
             return None
-        return self._lookup_cache[fallback_term]
+        return self._lookup_cache[fallback_key]
 
     def _dispatch_lookup(self, term: str, fallback_term: str | None, gen: int) -> None:
         """Run the (possibly two-term) query on a worker thread."""
@@ -1379,10 +1407,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         assert lookup_fn is not None  # guarded by self._show_dict
         self._lookup_inflight = True
 
-        def work() -> dict[str, list[tuple[str, str]]]:
-            fetched = {term: lookup_fn(term)}
-            if not fetched[term] and fallback_term and fallback_term != term:
-                fetched[fallback_term] = lookup_fn(fallback_term)
+        def work() -> dict[tuple[str, str | None], list[tuple[str, str]]]:
+            scope_lemma = self._scope_lemma(term, fallback_term)
+            key = (term, scope_lemma)
+            fetched = {key: lookup_fn(term, scope_lemma) if scope_lemma else lookup_fn(term)}
+            if not fetched[key] and fallback_term and fallback_term != term:
+                fetched[(fallback_term, None)] = lookup_fn(fallback_term)
             return fetched
 
         run_off_thread(

@@ -62,8 +62,11 @@ class FileQueueWorker(CancellableWorker):
     #: (a missing tool/encoder dooms every remaining item). The loop reports the
     #: triggering item's error, then stops WITHOUT touching ``_cancel_event`` —
     #: ``is_cancelled`` must stay False so callers can tell a tool error from a
-    #: user cancel. Subclasses override, e.g. ``(AlassNotFoundError,)``. The
-    #: default empty tuple means no exception stops the queue.
+    #: user cancel. Subclasses override, e.g. condense's
+    #: ``(EncoderUnavailableError, FilterUnavailableError)``. The default
+    #: empty tuple means no exception stops the queue — retiming's self-tuning
+    #: engine chain shortens itself on a missing alass rather than raising, so
+    #: it declares no override.
     _FATAL_QUEUE_EXCEPTIONS: tuple[type[BaseException], ...] = ()
 
     def __init__(self, parent=None) -> None:

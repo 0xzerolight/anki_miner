@@ -42,6 +42,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.services.subtitle_cleaner import clean_reference as _clean_reference
 from anki_miner.utils.audio_track_detector import (
     JAPANESE_LANGUAGE_CODES,
@@ -50,6 +52,7 @@ from anki_miner.utils.audio_track_detector import (
     list_subtitle_streams,
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -156,20 +159,37 @@ def resolve_reference(
             reference = _try_subtitle_stream(config, video, picked, None, cancel_event, log_cb)
             if reference is not None:
                 return reference
-        _log(log_cb, f"Chosen subtitle track {override.index + 1} is unusable; using audio instead.")
+        _log(
+            log_cb,
+            tr_format(
+                QCoreApplication.translate(
+                    "RetimeReference", "Chosen subtitle track %1 is unusable; using audio instead."
+                ),
+                override.index + 1,
+            ),
+        )
         return _audio_reference(config, video, None, cancel_event, log_cb)
 
     for stream in list_reference_subtitle_streams(config, video):
         if _cancelled(cancel_event):
             return None
         if _is_non_dialogue_stream(stream):
-            _log(log_cb, f"Skipping subtitle track {stream.sub_index + 1}: not a dialogue track.")
+            _log(
+                log_cb,
+                tr_format(
+                    QCoreApplication.translate("RetimeReference", "Skipping subtitle track %1: not a dialogue track."),
+                    stream.sub_index + 1,
+                ),
+            )
             continue
         reference = _try_subtitle_stream(config, video, stream, video_duration_seconds, cancel_event, log_cb)
         if reference is not None:
             return reference
 
-    _log(log_cb, "No usable embedded subtitle track; aligning against audio.")
+    _log(
+        log_cb,
+        QCoreApplication.translate("RetimeReference", "No usable embedded subtitle track; aligning against audio."),
+    )
     return _audio_reference(config, video, None, cancel_event, log_cb)
 
 
@@ -236,7 +256,11 @@ def _try_subtitle_stream(
         _unlink(cleaned)
         _log(
             log_cb,
-            f"Skipping subtitle track {stream.sub_index + 1}: only {cue_count} dialogue lines.",
+            tr_format(
+                QCoreApplication.translate("RetimeReference", "Skipping subtitle track %1: only %2 dialogue lines."),
+                stream.sub_index + 1,
+                cue_count,
+            ),
         )
         return None
 
@@ -246,12 +270,28 @@ def _try_subtitle_stream(
             _unlink(cleaned)
             _log(
                 log_cb,
-                f"Skipping subtitle track {stream.sub_index + 1}: " f"covers only {coverage:.0%} of the episode.",
+                tr_format(
+                    QCoreApplication.translate(
+                        "RetimeReference", "Skipping subtitle track %1: covers only %2 of the episode."
+                    ),
+                    stream.sub_index + 1,
+                    f"{coverage:.0%}",
+                ),
             )
             return None
 
     label = _stream_label(stream)
-    _log(log_cb, f"Aligning against embedded subtitle track {stream.sub_index + 1} ({label}, {cue_count} lines).")
+    _log(
+        log_cb,
+        tr_format(
+            QCoreApplication.translate(
+                "RetimeReference", "Aligning against embedded subtitle track %1 (%2, %3 lines)."
+            ),
+            stream.sub_index + 1,
+            label,
+            cue_count,
+        ),
+    )
     return RetimeReference(path=cleaned, kind="subtitle", temp=cleaned, label=label)
 
 
@@ -349,10 +389,16 @@ def _audio_reference(
             label = "first audio track (no Japanese tag)"
             _log(
                 log_cb,
-                "No Japanese-tagged audio track found; using the first audio track — "
-                "on a dual-audio release this may be a dub.",
+                QCoreApplication.translate(
+                    "RetimeReference",
+                    "No Japanese-tagged audio track found; using the first audio track — "
+                    "on a dual-audio release this may be a dub.",
+                ),
             )
-    _log(log_cb, f"Aligning against audio ({label}).")
+    _log(
+        log_cb,
+        tr_format(QCoreApplication.translate("RetimeReference", "Aligning against audio (%1)."), label),
+    )
     return RetimeReference(path=tmp_wav, kind="audio", temp=tmp_wav, label=label)
 
 

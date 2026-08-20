@@ -11,7 +11,9 @@ One episode's retime is a pipeline, not a single tool call:
 3. **Align** — engines are tried in order until one produces a candidate that
    survives validation: ffsubsync in split mode (in-process, has its own
    quality gate), then alass in split mode, then alass with a single global
-   offset. A missing alass binary (macOS) just shortens the chain.
+   offset, then ffsubsync with a single global offset. A missing alass binary
+   (macOS) skips straight from ffsubsync split mode to ffsubsync single-offset,
+   so alignment still gets two attempts, not one.
 4. **Map back** — the winning candidate's timings are applied to the untouched
    original, so every line and all ASS styling survive.
 5. **Validate** — :mod:`anki_miner.services.sync_validator` rejects the failure
@@ -36,6 +38,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
 from anki_miner.services.subtitle_cleaner import clean_for_alignment, map_deltas_back
@@ -45,6 +49,7 @@ from anki_miner.services.sync_engines.ffsubsync_engine import sync_with_ffsubsyn
 from anki_miner.services.sync_validator import validate_candidate
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +57,15 @@ __all__ = ["RetimeOutcome", "retime_subtitle"]
 
 #: Sibling suffix for the pre-overwrite copy of an existing output subtitle.
 BACKUP_SUFFIX = ".pre-retime.bak"
+
+#: Subdirectory of ``out_sub.parent`` where working files are written. Keeping
+#: them out of the pairing folder itself means a crash-orphaned temp can never
+#: be picked up as a subtitle by ``FilePairMatcher`` (its folder scan is
+#: non-recursive) — the temp keeps its real ``.srt``/``.ass`` suffix, which the
+#: sync engines need to infer the output format, while staying invisible to
+#: the episode matcher. Same filesystem as *out_sub*, so ``_commit``'s
+#: ``os.replace`` cannot hit EXDEV.
+TMP_SUBDIR_NAME = ".anki-miner-retime-tmp"
 
 
 @dataclass(frozen=True)
@@ -105,9 +119,11 @@ def retime_subtitle(
         log_cb: Called with human-readable progress/decision lines.
     """
     logger.info("retime: %s <- %s (out %s)", video.name, in_sub.name, out_sub.name)
+    tmp_dir = out_sub.parent / TMP_SUBDIR_NAME
     temps: list[Path] = []
     reference = None
     try:
+        tmp_dir.mkdir(exist_ok=True)
         duration_s = get_media_duration_seconds(video, resolve_ffprobe(config))
         reference = resolve_reference(
             config,
@@ -124,11 +140,19 @@ def retime_subtitle(
         reference_path = reference.path if reference is not None else video
         sub_reference = reference is not None and reference.kind == "subtitle"
 
-        cleaned = clean_for_alignment(in_sub, out_sub.parent / (out_sub.stem + ".retime-clean" + in_sub.suffix))
+        cleaned = clean_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + in_sub.suffix))
         if cleaned is not None:
             temps.append(cleaned.path)
             if cleaned.dropped:
-                _log(log_cb, f"Ignoring {cleaned.dropped} non-dialogue lines during alignment.")
+                _log(
+                    log_cb,
+                    tr_format(
+                        QCoreApplication.translate(
+                            "SubtitleRetimer", "Ignoring %1 non-dialogue lines during alignment."
+                        ),
+                        cleaned.dropped,
+                    ),
+                )
         align_input = cleaned.path if cleaned is not None else in_sub
 
         attempts: list[str] = []
@@ -145,19 +169,22 @@ def retime_subtitle(
             if alass_missing and label.startswith("alass"):
                 continue
 
-            candidate = out_sub.parent / f"{out_sub.stem}.retime-cand-{len(attempts)}{out_sub.suffix}"
+            candidate = tmp_dir / f"{out_sub.stem}.retime-cand-{len(attempts)}{out_sub.suffix}"
             temps.append(candidate)
             try:
                 result = runner(reference_path, align_input, candidate, log_cb)
             except AlassNotFoundError:
                 alass_missing = True
                 attempts.append(f"{label}: binary not installed")
-                _log(log_cb, "alass is not installed; skipping alass attempts.")
+                _log(
+                    log_cb,
+                    QCoreApplication.translate("SubtitleRetimer", "alass is not installed; skipping alass attempts."),
+                )
                 continue
 
             final_candidate = candidate
             if result.ok and cleaned is not None:
-                mapped = out_sub.parent / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
+                mapped = tmp_dir / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
                 temps.append(mapped)
                 if map_deltas_back(in_sub, candidate, cleaned.kept_indices, mapped):
                     final_candidate = mapped
@@ -177,7 +204,7 @@ def retime_subtitle(
                     reference_label,
                     summary,
                 )
-                _log(log_cb, f"Retimed with {label}{summary}.")
+                _log(log_cb, _success_message(label, result))
                 return RetimeOutcome(
                     ok=True,
                     engine=result.engine,
@@ -187,9 +214,14 @@ def retime_subtitle(
 
             reason = "; ".join(verdict.reasons) or "rejected"
             attempts.append(f"{label}: {reason}")
-            _log(log_cb, f"{label} result rejected: {reason}")
+            _log(
+                log_cb,
+                tr_format(QCoreApplication.translate("SubtitleRetimer", "%1 result rejected: %2"), label, reason),
+            )
 
-        reason = "no engine produced a trustworthy sync; original left untouched"
+        reason = QCoreApplication.translate(
+            "SubtitleRetimer", "no engine produced a trustworthy sync; original left untouched"
+        )
         logger.warning(
             "retime: kept original for %s (reference %s). Attempts: %s",
             video.name,
@@ -207,6 +239,12 @@ def retime_subtitle(
             _unlink_quiet(temp)
         if reference is not None and reference.temp is not None:
             _unlink_quiet(reference.temp)
+        # Guarded, not unconditional: a concurrent run in the same folder may
+        # still have files in tmp_dir, and rmdir on a non-empty or already
+        # gone (mkdir never ran / another run already removed it) directory
+        # both raise OSError — either way there is nothing more to do here.
+        with contextlib.suppress(OSError):
+            tmp_dir.rmdir()
 
 
 def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event | None):
@@ -214,6 +252,11 @@ def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event 
 
     def run_ffsubsync(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
         return sync_with_ffsubsync(config, reference, in_sub, out, cancel_event=cancel_event, log_cb=log_cb)
+
+    def run_ffsubsync_offset(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
+        return sync_with_ffsubsync(
+            config, reference, in_sub, out, split_mode=False, cancel_event=cancel_event, log_cb=log_cb
+        )
 
     def run_alass_split(reference: Path, in_sub: Path, out: Path, log_cb) -> SyncResult:
         return sync_with_alass(
@@ -242,6 +285,7 @@ def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event 
     yield "ffsubsync", run_ffsubsync
     yield "alass", run_alass_split
     yield "alass (single offset)", run_alass_offset
+    yield "ffsubsync (single offset)", run_ffsubsync_offset
 
 
 def _commit(candidate: Path, out_sub: Path) -> None:
@@ -269,6 +313,32 @@ def _success_summary(result: SyncResult) -> str:
             return f" (offset {shifts[0]:+.2f}s)"
         return f" ({len(shifts)} blocks, shifts {min(shifts):+.2f}s..{max(shifts):+.2f}s)"
     return ""
+
+
+def _success_message(label: str, result: SyncResult) -> str:
+    """User-facing counterpart of :func:`_success_summary` — same numbers, translated."""
+    if result.offset_seconds is not None:
+        return tr_format(
+            QCoreApplication.translate("SubtitleRetimer", "Retimed with %1 (offset %2)."),
+            label,
+            f"{result.offset_seconds:+.2f}s",
+        )
+    if result.block_shifts_seconds:
+        shifts = result.block_shifts_seconds
+        if len(shifts) == 1:
+            return tr_format(
+                QCoreApplication.translate("SubtitleRetimer", "Retimed with %1 (offset %2)."),
+                label,
+                f"{shifts[0]:+.2f}s",
+            )
+        return tr_format(
+            QCoreApplication.translate("SubtitleRetimer", "Retimed with %1 (%2 blocks, shifts %3..%4)."),
+            label,
+            len(shifts),
+            f"{min(shifts):+.2f}s",
+            f"{max(shifts):+.2f}s",
+        )
+    return tr_format(QCoreApplication.translate("SubtitleRetimer", "Retimed with %1."), label)
 
 
 def _cancelled(cancel_event: threading.Event | None) -> bool:

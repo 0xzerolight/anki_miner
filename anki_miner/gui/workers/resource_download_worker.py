@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
@@ -176,15 +177,24 @@ class _ItemPhaseReporter:
         """Announce the download→install transition before the importer runs."""
         self._publish(ResourcePhase.INSTALLING)
 
-    def importing(self, current: int, _total: int, _message: str) -> None:
+    def importing(self, _current: int, _total: int, message: str) -> None:
         """Record an importer observation, promoting to INDEXING once counting.
 
         The promotion latches: an importer that finishes inserting and then
         emits an uncounted "Finalizing" step has not stopped indexing, and a
         readout that drops back to a vaguer phase reads as going backwards.
+
+        ``current`` is NOT an entry count for the dict route — since the
+        monotonic-progress fix it is a scaled files_done/bank fraction (see
+        ``_PROGRESS_SCALE`` in yomitan_importer.py), so latching it here would
+        surface a bank-derived number as if it were entries. The real count
+        only exists in the message text; both sides of this coupling are
+        internal English strings, never translated.
         """
-        if self._counts_entries and current > 0:
-            self._entries = max(current, self._entries or 0)
+        if self._counts_entries:
+            match = re.match(r"Inserted ([\d,]+) entries", message)
+            if match:
+                self._entries = max(int(match.group(1).replace(",", "")), self._entries or 0)
         self._publish(ResourcePhase.INDEXING if self._entries else ResourcePhase.INSTALLING)
 
     def _publish(self, phase: ResourcePhase) -> None:

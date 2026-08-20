@@ -843,6 +843,10 @@ Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter�
 </translation>
     </message>
     <message>
+        <source>The selected audio pack is no longer in the chain.</source>
+        <translation>Le paquet audio sélectionné n'est plus dans la chaîne.</translation>
+    </message>
+    <message>
         <source>No audio packs in the chain.</source>
         <translation>Aucun pack audio dans la chaîne.</translation>
     </message>
@@ -6633,6 +6637,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Veuillez d'abord coller du texte.</translation>
     </message>
     <message>
+        <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
+        <translation>Cette image de carte n'a pas de champ Image pour la contenir. Configurez-en un dans Paramètres → Anki, ou supprimez l'image pour l'extraire sans celui-ci.</translation>
+    </message>
+    <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
         <translation>Impossible de lire cette image. Choisissez-en une autre, ou videz le champ pour extraire sans image.</translation>
     </message>
@@ -7015,6 +7023,40 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Failed to delete notes. Check that Anki is running.</source>
         <translation>Échec de la suppression des notes. Vérifiez qu'Anki est lancé.</translation>
+    </message>
+</context><context>
+    <name>RetimeReference</name>
+    <message>
+        <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
+        <translation>La piste de sous-titres choisie %1 n'est pas utilisable ; utilisation de l'audio à la place.</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: not a dialogue track.</source>
+        <translation>Piste de sous-titres %1 ignorée : ce n'est pas une piste de dialogue.</translation>
+    </message>
+    <message>
+        <source>No usable embedded subtitle track; aligning against audio.</source>
+        <translation>Aucune piste de sous-titres intégrée utilisable ; alignement par rapport à l'audio.</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
+        <translation>Piste de sous-titres %1 ignorée : seulement %2 lignes de dialogue.</translation>
+    </message>
+    <message>
+        <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
+        <translation>Piste de sous-titres %1 ignorée : couvre seulement %2 de l'épisode.</translation>
+    </message>
+    <message>
+        <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
+        <translation>Alignement par rapport à la piste de sous-titres intégrée %1 (%2, %3 lignes).</translation>
+    </message>
+    <message>
+        <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
+        <translation>Aucune piste audio marquée en japonais trouvée ; utilisation de la première piste audio — sur une version bilingue, cela peut être un doublage.</translation>
+    </message>
+    <message>
+        <source>Aligning against audio (%1).</source>
+        <translation>Alignement par rapport à l'audio (%1).</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8155,12 +8197,54 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Terminé</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>Réajusté avec %1</translation>
+    </message>
+    <message>
+        <source>Original backed up as %1</source>
+        <translation>Original sauvegardé sous %1</translation>
+    </message>
+    <message>
         <source>Cancelled</source>
         <translation>Annulé</translation>
     </message>
     <message>
-        <source>No trustworthy sync for %1; original kept unchanged</source>
-        <translation>Aucune synchronisation fiable pour %1 ; l'original reste inchangé</translation>
+        <source>no trustworthy sync; original kept unchanged</source>
+        <translation>pas de synchronisation fiable ; original conservé inchangé</translation>
+    </message>
+    <message>
+        <source>Retiming failed for %1: %2</source>
+        <translation>Le réajustement a échoué pour %1 : %2</translation>
+    </message>
+</context><context>
+    <name>SubtitleRetimer</name>
+    <message>
+        <source>Ignoring %1 non-dialogue lines during alignment.</source>
+        <translation>Ignoration de %1 lignes non-dialogue lors de l'alignement.</translation>
+    </message>
+    <message>
+        <source>alass is not installed; skipping alass attempts.</source>
+        <translation>alass n'est pas installé ; omission des tentatives alass.</translation>
+    </message>
+    <message>
+        <source>%1 result rejected: %2</source>
+        <translation>Résultat %1 rejeté : %2</translation>
+    </message>
+    <message>
+        <source>no engine produced a trustworthy sync; original left untouched</source>
+        <translation>aucun moteur n'a produit une synchronisation fiable ; original laissé inchangé</translation>
+    </message>
+    <message>
+        <source>Retimed with %1 (offset %2).</source>
+        <translation>Réajusté avec %1 (décalage %2).</translation>
+    </message>
+    <message>
+        <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
+        <translation>Réajusté avec %1 (%2 blocs, décalages %3..%4).</translation>
+    </message>
+    <message>
+        <source>Retimed with %1.</source>
+        <translation>Réajusté avec %1.</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8745,14 +8829,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Filtrer par n'importe quel champ…</translation>
     </message>
     <message>
-        <source>Add to Known Words</source>
-        <translation>Ajouter aux mots connus</translation>
-    </message>
-    <message>
-        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
-        <translation>Marquez les lignes surlignées comme Connues · en attente. Confirmer les enregistre ; Annuler les ignore.</translation>
-    </message>
-    <message>
         <source>Word (mined)</source>
         <translation>Mot (extrait)</translation>
     </message>
@@ -8847,6 +8923,22 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
     <message>
         <source>Include highlighted (%1)</source>
         <translation>Inclure les éléments surlignés (%1)</translation>
+    </message>
+    <message>
+        <source>Add to Known Words</source>
+        <translation>Ajouter aux mots connus</translation>
+    </message>
+    <message>
+        <source>Remove from Known Words</source>
+        <translation>Retirer des Mots connus</translation>
+    </message>
+    <message>
+        <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
+        <translation>Retirer la marque « Connu · en attente » des lignes sélectionnées et les reprendre dans cet examen.</translation>
+    </message>
+    <message>
+        <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
+        <translation>Marquez les lignes surlignées comme Connues · en attente. Confirmer les enregistre ; Annuler les ignore.</translation>
     </message>
     <message>
         <source>Word %1 of %2 · %3 included · %4 shown of %5</source>

@@ -306,6 +306,19 @@ class ReadingTextTab(_ReadingMiningTabBase):
         usable, image_root = self._picked_image()
         if not usable:  # picked but unreadable — the user already heard why
             return
+        if image_root is not None and not self.config.anki_fields.get("picture"):
+            # episode_processor.py gates image preparation on this same
+            # mapping (picture_mapped) — an unmapped field there silently
+            # drops the picked image rather than raising. Catch it here,
+            # before the run starts, using the same log_widget mechanism as
+            # the unreadable-image branch above.
+            self.log_widget.append_warning(
+                self.tr(
+                    "This card image has no Picture field to land in. Map one"
+                    " in Settings → Anki, or clear the image to mine without one."
+                )
+            )
+            return
 
         # Constant identity by design (see text_source.py) — untranslated data
         # constant, like aozora's series="Books".
