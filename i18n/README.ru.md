@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:bda48395da8dad23 -->
+<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -170,6 +170,7 @@ anki_miner_gui
 | Тональное ударение | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Тональное ударение -> Добавить источник тонального ударения… |
 | Частотность | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Частотность -> Добавить источник частотности… |
 | Частотность | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Частотность -> Добавить источник частотности… |
+| Аудио слов | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Торрент коллекции или созданный `android.db` | Аудио -> Добавить источник аудио… |
 
 
 <details>
