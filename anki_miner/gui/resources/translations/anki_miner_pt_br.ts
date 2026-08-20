@@ -2280,10 +2280,6 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>{count} campo(s) de acento tonal mantido(s) — a leitura só pôde ser estimada pela palavra isolada; portanto, a substituição poderia aplicar o acento do homógrafo errado. Mapeie um campo de Leitura da Expressão ou Furigana para substituí-los.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>Valores de ordenação com o marcador 9999999 de frequência não encontrada: {count}.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Não estão neste tipo de nota (mapeamento desatualizado): {fields}. Corrija no mapeamento de campos em Configurações → Anki.</translation>
     </message>

@@ -2278,10 +2278,6 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>{count} bidang aksen nada dipertahankan — bacaan hanya dapat ditebak dari kata saja, sehingga penimpaan dapat menerapkan aksen homograf yang salah. Petakan bidang Bacaan Ekspresi atau Furigana untuk menimpanya.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>{count} nilai pengurutan merupakan nilai penanda 9999999 untuk frekuensi yang tidak ditemukan.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Tidak ada pada tipe catatan ini (pemetaan usang): {fields}. Perbaiki di pemetaan bidang Pengaturan → Anki.</translation>
     </message>

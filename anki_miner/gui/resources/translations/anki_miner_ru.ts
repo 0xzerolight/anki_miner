@@ -2282,10 +2282,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Сохранено полей тонального ударения: {count} — чтение можно было лишь предположить по одному слову, поэтому перезапись могла применить ударение неверного омографа. Сопоставьте поле чтения выражения или фуриганы, чтобы перезаписать их.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>Сортировочные значения, равные заглушке 9999999 для ненайденной частотности: {count}.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Нет в этом типе заметки (устаревшее сопоставление): {fields}. Исправьте сопоставление полей в Настройки → Anki.</translation>
     </message>

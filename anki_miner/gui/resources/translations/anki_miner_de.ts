@@ -2280,10 +2280,6 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>{count} Tonhöhenfeld(er) beibehalten — die Lesung konnte nur anhand des Wortes geraten werden; ein Überschreiben hätte daher den Akzent des falschen Homographen anwenden können. Ordnen Sie ein Feld für Ausdruckslesung oder Furigana zu, um sie zu überschreiben.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>Sortierwerte mit dem Platzhalter 9999999 für nicht gefundene Häufigkeiten: {count}.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Nicht in diesem Notiztyp vorhanden (veraltete Zuordnung): {fields}. Korrigieren Sie dies unter Einstellungen → Anki-Feldzuordnung.</translation>
     </message>
