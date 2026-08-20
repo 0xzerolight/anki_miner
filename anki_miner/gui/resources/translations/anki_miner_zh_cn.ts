@@ -843,7 +843,7 @@ Skipped (source folder or database not found; use per-row Re-import…):
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>所选音频包已不在链中。</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6625,7 +6625,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>此卡片图像没有可用的图片字段。请在设置→Anki中映射一个，或清除图像，无需此字段即可挖词。</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7015,35 +7015,35 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>所选字幕轨道%1无法使用；改用音频。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>跳过字幕轨道%1：非对话轨道。</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>没有可用的内嵌字幕轨道；改用音频对齐。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>跳过字幕轨道%1：仅%2行对话。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>跳过字幕轨道%1：仅覆盖剧集的%2。</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>对齐内嵌字幕轨道%1（%2，%3行）。</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>未找到日语标记的音频轨道；使用第一个音频轨道——在双音频版本中这可能是配音版。</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>对齐音频（%1）。</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8178,16 +8178,16 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>已跳过，已存在</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>完成</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>用%1重新同步</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>原文件已备份为%1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8195,41 +8195,41 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>无可信同步；原始文件保持不变</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1同步失败：%2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>对齐期间忽略了%1行非对话行。</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass未安装；跳过alass尝试。</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>%1结果被拒绝：%2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>没有引擎生成可靠的同步；保留原始文件不变</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>用%1重新同步（偏移%2）。</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>用%1重新同步（%2个块，偏移%3..%4）。</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>用%1重新同步。</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8915,11 +8915,11 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>从已知单词中删除</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>移除突出显示行的已知·待处理标记，将其放回审查。</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

@@ -843,7 +843,7 @@ Dilewati (folder sumber atau database tidak ditemukan; gunakan Impor Ulang… pe
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>Paket audio yang dipilih tidak lagi ada dalam rantai</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6625,7 +6625,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>Gambar kartu ini tidak memiliki bidang Gambar untuk meletakkannya. Tetapkan satu di Setelan → Anki, atau hapus gambar untuk mining tanpa bidang.</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7015,35 +7015,35 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>Trek subtitel %1 yang dipilih tidak dapat digunakan; menggunakan audio sebagai gantinya.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>Melewati trek subtitel %1: bukan trek dialog.</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada trek subtitel tertanam yang dapat digunakan; menyelaraskan terhadap audio.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>Melewati trek subtitel %1: hanya %2 baris dialog.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>Melewati trek subtitel %1: hanya mencakup %2 dari episode.</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>Menyelaraskan terhadap trek subtitel tertanam %1 (%2, %3 baris).</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada trek audio berlabel Jepang yang ditemukan; menggunakan trek audio pertama — pada rilis audio ganda ini mungkin dub.</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>Menyelaraskan terhadap audio (%1).</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8178,16 +8178,16 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Dilewati, sudah ada</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>Selesai</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>Waktu diselaraskan dengan %1</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>Asli dicadangkan sebagai %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8195,41 +8195,41 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>tidak ada sinkronisasi yang dapat dipercaya; asli tetap tidak berubah</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Penyelarasan waktu gagal untuk %1: %2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>Mengabaikan %1 baris non-dialog selama penyelarasan.</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass tidak terpasang; melewati upaya alass.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>Hasil %1 ditolak: %2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>tidak ada mesin yang menghasilkan sinkronisasi yang dapat dipercaya; asli dibiarkan tidak disentuh</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>Waktu diselaraskan dengan %1 (offset %2).</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>Waktu diselaraskan dengan %1 (%2 blok, shift %3..%4).</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>Waktu diselaraskan dengan %1.</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8915,11 +8915,11 @@ Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya da
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>Hapus dari Kata yang Dikenal</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>Lepas tanda Dikenal · tertunda dari baris yang disorot dan kembalikan ke ulasan ini.</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

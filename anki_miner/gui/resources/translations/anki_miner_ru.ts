@@ -845,7 +845,7 @@ Skipped (source folder or database not found; use per-row Re-import…):
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>Выбранный аудиопакет больше не находится в цепочке.</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6651,7 +6651,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>У этой карточки нет поля Picture для изображения. Назначьте поле в «Настройки → Anki» либо очистите изображение, чтобы майнить без него.</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7041,35 +7041,35 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>Выбранная дорожка субтитров %1 непригодна для использования; вместо неё используется аудио.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>Дорожка субтитров %1 пропущена: не является дорожкой диалогов.</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>Нет пригодной встроенной дорожки субтитров; выравнивание выполняется по аудио.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>Дорожка субтитров %1 пропущена: строк диалога — %2.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>Дорожка субтитров %1 пропущена: охватывает только %2 эпизода.</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>Выравнивание по встроенной дорожке субтитров %1 (%2, строк: %3).</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>Аудиодорожка с японской меткой не найдена; используется первая аудиодорожка — на релизе с двумя дорожками это может быть дубляж.</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>Выравнивание по аудио (%1).</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8208,16 +8208,16 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Пропущено, уже существует</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>Готово</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>Синхронизировано с помощью %1</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>Резервная копия оригинала сохранена как %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8225,41 +8225,41 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>нет надёжной синхронизации; оригинал оставлен без изменений</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Синхронизация не удалась для %1: %2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>При выравнивании проигнорировано %1 недиалоговых строк.</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass не установлен; попытки использования alass пропущены.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>Результат %1 отклонён: %2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>ни один движок не выдал надёжной синхронизации; оригинал оставлен без изменений</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>Синхронизировано с помощью %1 (смещение %2).</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>Синхронизировано с помощью %1 (блоков: %2, смещения: %3..%4).</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>Синхронизировано с помощью %1.</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8945,11 +8945,11 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>Удалить из известных слов</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>Снимите отметку «Известно · в ожидании» с выделенных строк и верните их в этот список для проверки.</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

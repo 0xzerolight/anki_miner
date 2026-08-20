@@ -844,7 +844,7 @@ Skipped (source folder or database not found; use per-row Re-import…):
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>Das gewählte Audio-Paket befindet sich nicht mehr in der Kette.</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6638,7 +6638,7 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>Dieses Kartenbild hat kein Bildfeld zum Einfügen. Ordnen Sie ein Feld in Einstellungen → Anki zu oder löschen Sie das Bild, um ohne eines zu sammeln.</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7028,35 +7028,35 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>Gewählte Untertitel-Spur %1 ist nicht verwendbar; stattdessen wird Ton verwendet.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>Untertitel-Spur %1 wird übersprungen: keine Dialogspur.</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>Keine verwendbare eingebettete Untertitel-Spur; Ausrichtung erfolgt an Ton.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>Untertitel-Spur %1 wird übersprungen: nur %2 Dialogzeilen.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>Untertitel-Spur %1 wird übersprungen: deckt nur %2 der Folge ab.</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>Ausrichtung erfolgt an eingebetteter Untertitel-Spur %1 (%2, %3 Zeilen).</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>Keine mit Japanisch gekennzeichnete Audio-Spur gefunden; die erste Audio-Spur wird verwendet — bei einer Dual-Audio-Veröffentlichung könnte dies eine Synchronfassung sein.</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>Ausrichtung erfolgt an Ton (%1).</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8193,16 +8193,16 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Übersprungen, existiert bereits</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>Fertig</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>Neu zeitlich abgestimmt mit %1</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>Original gesichert als %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8210,41 +8210,41 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>Keine zuverlässige Synchronisierung; Original unverändert behalten</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Zeitliche Abstimmung fehlgeschlagen für %1: %2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>%1 Nicht-Dialogzeilen werden während der Ausrichtung ignoriert.</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass ist nicht installiert; alass-Versuche werden übersprungen.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>%1-Ergebnis abgelehnt: %2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>Keine Engine hat eine zuverlässige Synchronisierung erzeugt; Original unverändert gelassen</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>Neu zeitlich abgestimmt mit %1 (Versatz %2).</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>Neu zeitlich abgestimmt mit %1 (%2 Blöcke, Verschiebungen %3..%4).</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>Neu zeitlich abgestimmt mit %1.</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8930,11 +8930,11 @@ Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>Aus bekannten Wörtern entfernen</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>Entfernen Sie die Markierung „Bekannt · ausstehend“ von den ausgewählten Zeilen und geben Sie diese zur Überprüfung zurück.</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

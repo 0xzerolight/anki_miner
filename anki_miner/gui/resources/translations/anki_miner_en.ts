@@ -8122,11 +8122,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Retimed with %1</source>
+        <source>Done</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Done</source>
+        <source>Retimed with %1</source>
         <translation type="unfinished" />
     </message>
     <message>

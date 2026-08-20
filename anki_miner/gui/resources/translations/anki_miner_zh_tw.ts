@@ -843,7 +843,7 @@ Skipped (source folder or database not found; use per-row Re-import…):
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>所選的音聲套件已不在鏈中。</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6625,7 +6625,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>此卡片圖片沒有圖片欄位可以放置。請在「設定 → Anki」中設定圖片欄位，或清除圖片以不使用圖片進行採集。</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7015,35 +7015,35 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>所選字幕軌道 %1 無法使用；改用音聲。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>跳過字幕軌道 %1：不是對話軌道。</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>沒有可用的內嵌字幕軌道；將對齊音聲。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>跳過字幕軌道 %1：僅 %2 行對話。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>跳過字幕軌道 %1：只涵蓋該集數的 %2。</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>對齊內嵌字幕軌道 %1（%2，%3 行）。</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>未找到標記為日語的音聲軌道；使用第一個音聲軌道——在雙音聲版本中這可能是配音版。</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>對齊音聲（%1）。</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8178,16 +8178,16 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>已略過，已存在</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>完成</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>已使用 %1 重新計時</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>原始檔案備份為 %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8195,41 +8195,41 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>沒有可信任的同步；保留原始檔案不變</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 重新計時失敗：%2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>對齊期間忽略 %1 行非對話內容。</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>未安裝 alass；跳過 alass 嘗試。</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 結果被拒絕：%2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>沒有引擎產生可信任的同步；保留原始檔案不變</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>已使用 %1 重新計時（偏移 %2）。</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>已使用 %1 重新計時（%2 個區塊，移位 %3..%4）。</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>已使用 %1 重新計時。</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8915,11 +8915,11 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>從已知單字移除</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>移除已突出顯示行上的「已知·待處理」標記，並將它們返回到此複審。</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

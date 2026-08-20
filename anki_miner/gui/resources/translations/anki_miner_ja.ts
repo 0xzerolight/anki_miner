@@ -843,7 +843,7 @@ Skipped (source folder or database not found; use per-row Re-import…):
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>選択されたオーディオパックはチェーンに含まれていません。</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6625,7 +6625,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>このカードイメージには配置先の画像フィールドがありません。設定 → Anki でマッピングするか、イメージを削除してマイニングしてください。</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7015,35 +7015,35 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>選択された字幕トラック %1 は使用できません。代わりにオーディオを使用します。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>字幕トラック %1 をスキップ。対話トラックではありません。</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>使用可能な埋め込み字幕トラックがありません。オーディオで調整します。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>字幕トラック %1 をスキップ。対話行は %2 行のみです。</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>字幕トラック %1 をスキップ。エピソード全体の %2 のみをカバーしています。</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>埋め込み字幕トラック %1（%2、%3 行）で調整します。</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>日本語タグ付きオーディオトラックが見つかりません。最初のオーディオトラックを使用します。二重音声リリースでは、ダブの場合があります。</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>オーディオで調整します（%1）。</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8178,16 +8178,16 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>スキップしました（既に存在）</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>完了</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>%1 で再タイミング</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>オリジナルは %1 にバックアップされました</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8195,41 +8195,41 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>信頼できる同期がありません。オリジナルは変更されていません</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 の再タイミングに失敗しました。%2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>調整中に %1 個の非対話行を無視します。</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass がインストールされていません。alass の試行をスキップします。</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 の結果が拒否されました。%2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>エンジンが信頼できる同期を生成しませんでした。オリジナルは変更されていません</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>%1 で再タイミングしました（オフセット %2）。</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>%1 で再タイミングしました（%2 ブロック、シフト %3..%4）。</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>%1 で再タイミングしました。</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8915,11 +8915,11 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>既知単語から削除</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>ハイライト行から既知単語・保留中マークを削除して、このレビューに戻します</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

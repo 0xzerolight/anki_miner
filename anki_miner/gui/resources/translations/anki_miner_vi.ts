@@ -843,7 +843,7 @@ Skipped (source folder or database not found; use per-row Re-import…):
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>Gói âm thanh được chọn không còn trong chuỗi.</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6625,7 +6625,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>Hình ảnh của thẻ không có trường Picture để đặt vào. Hãy cấu hình một trong Cài đặt → Anki, hoặc xóa hình ảnh để khai thác mà không cần.</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7015,35 +7015,35 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>Tuyến phụ đề được chọn %1 không thể sử dụng được; sử dụng âm thanh thay vào.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua tuyến phụ đề %1: không phải là tuyến đối thoại.</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>Không có tuyến phụ đề được nhúng có thể sử dụng; căn chỉnh với âm thanh.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua tuyến phụ đề %1: chỉ %2 dòng đối thoại.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua tuyến phụ đề %1: chỉ bao phủ %2 của tập.</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>Căn chỉnh với tuyến phụ đề được nhúng %1 (%2, %3 dòng).</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tuyến âm thanh được gắn thẻ tiếng Nhật; sử dụng tuyến âm thanh đầu tiên — trên bản phát hành có hai âm thanh, đây có thể là phiên bản lồng tiếng.</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>Căn chỉnh với âm thanh (%1).</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8178,16 +8178,16 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Đã bỏ qua, đã tồn tại</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>Xong</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>Đã căn chỉnh lại thời gian với %1</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>Bản gốc được sao lưu dưới dạng %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8195,41 +8195,41 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>không đồng bộ đáng tin cậy; bản gốc giữ nguyên không thay đổi</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Căn chỉnh lại thời gian không thành công cho %1: %2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>Bỏ qua %1 dòng không phải đối thoại trong quá trình căn chỉnh.</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass chưa được cài đặt; bỏ qua các nỗ lực với alass.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>Kết quả %1 bị từ chối: %2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>không có công cụ nào tạo ra đồng bộ đáng tin cậy; giữ nguyên bản gốc</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>Đã căn chỉnh lại thời gian với %1 (độ lệch %2).</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>Đã căn chỉnh lại thời gian với %1 (%2 khối, dịch chuyển %3..%4).</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>Đã căn chỉnh lại thời gian với %1.</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8915,11 +8915,11 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>Loại bỏ khỏi Từ Đã Biết</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>Xóa dấu Từ Đã Biết · chờ xử lý khỏi các hàng được tô sáng và đưa chúng quay lại bản đánh giá này.</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>

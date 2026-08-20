@@ -844,7 +844,7 @@ Ignorados (pasta de origem ou banco de dados não encontrados; use Reimportar…
     </message>
     <message>
         <source>The selected audio pack is no longer in the chain.</source>
-        <translation type="unfinished" />
+        <translation>O pacote de áudio selecionado não está mais na cadeia.</translation>
     </message>
     <message>
         <source>No audio packs in the chain.</source>
@@ -6638,7 +6638,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation type="unfinished" />
+        <translation>Esta imagem do cartão não tem um campo de Imagem para ser inserida. Configure um em Configurações → Anki, ou limpe a imagem para minerar sem um.</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7028,35 +7028,35 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <name>RetimeReference</name>
     <message>
         <source>Chosen subtitle track %1 is unusable; using audio instead.</source>
-        <translation type="unfinished" />
+        <translation>A faixa de legenda %1 selecionada é inutilizável; usando o áudio em vez disso.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: not a dialogue track.</source>
-        <translation type="unfinished" />
+        <translation>Pulando a faixa de legenda %1: não é uma faixa de diálogo.</translation>
     </message>
     <message>
         <source>No usable embedded subtitle track; aligning against audio.</source>
-        <translation type="unfinished" />
+        <translation>Nenhuma faixa de legenda incorporada utilizável; alinhando com o áudio.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: only %2 dialogue lines.</source>
-        <translation type="unfinished" />
+        <translation>Pulando a faixa de legenda %1: apenas %2 linhas de diálogo.</translation>
     </message>
     <message>
         <source>Skipping subtitle track %1: covers only %2 of the episode.</source>
-        <translation type="unfinished" />
+        <translation>Pulando a faixa de legenda %1: cobre apenas %2 do episódio.</translation>
     </message>
     <message>
         <source>Aligning against embedded subtitle track %1 (%2, %3 lines).</source>
-        <translation type="unfinished" />
+        <translation>Alinhando com a faixa de legenda incorporada %1 (%2, %3 linhas).</translation>
     </message>
     <message>
         <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation type="unfinished" />
+        <translation>Nenhuma faixa de áudio marcada em japonês encontrada; usando a primeira faixa de áudio — em um lançamento de áudio duplo, isso pode ser uma dublagem.</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
-        <translation type="unfinished" />
+        <translation>Alinhando com áudio (%1).</translation>
     </message>
 </context><context>
     <name>RetimeReferenceDialog</name>
@@ -8193,16 +8193,16 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Ignorado, já existe</translation>
     </message>
     <message>
-        <source>Retimed with %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Done</source>
         <translation>Concluído</translation>
     </message>
     <message>
+        <source>Retimed with %1</source>
+        <translation>Ressincronizado com %1</translation>
+    </message>
+    <message>
         <source>Original backed up as %1</source>
-        <translation type="unfinished" />
+        <translation>Original salvo como %1</translation>
     </message>
     <message>
         <source>Cancelled</source>
@@ -8210,41 +8210,41 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     </message>
     <message>
         <source>no trustworthy sync; original kept unchanged</source>
-        <translation type="unfinished" />
+        <translation>nenhuma sincronização confiável; original mantido inalterado</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
-        <translation type="unfinished" />
+        <translation>Falha na ressincronização de %1: %2</translation>
     </message>
 </context><context>
     <name>SubtitleRetimer</name>
     <message>
         <source>Ignoring %1 non-dialogue lines during alignment.</source>
-        <translation type="unfinished" />
+        <translation>Ignorando %1 linhas que não são diálogo durante o alinhamento.</translation>
     </message>
     <message>
         <source>alass is not installed; skipping alass attempts.</source>
-        <translation type="unfinished" />
+        <translation>alass não está instalado; ignorando tentativas de alass.</translation>
     </message>
     <message>
         <source>%1 result rejected: %2</source>
-        <translation type="unfinished" />
+        <translation>Resultado de %1 rejeitado: %2</translation>
     </message>
     <message>
         <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation type="unfinished" />
+        <translation>nenhum mecanismo produziu uma sincronização confiável; original deixado intacto</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
-        <translation type="unfinished" />
+        <translation>Ressincronizado com %1 (deslocamento %2).</translation>
     </message>
     <message>
         <source>Retimed with %1 (%2 blocks, shifts %3..%4).</source>
-        <translation type="unfinished" />
+        <translation>Ressincronizado com %1 (%2 blocos, deslocamentos %3..%4).</translation>
     </message>
     <message>
         <source>Retimed with %1.</source>
-        <translation type="unfinished" />
+        <translation>Ressincronizado com %1.</translation>
     </message>
 </context><context>
     <name>SubtitleTracksDialog</name>
@@ -8930,11 +8930,11 @@ O seletor “Frases” oferece uma opção por linha de legenda, então costuma 
     </message>
     <message>
         <source>Remove from Known Words</source>
-        <translation type="unfinished" />
+        <translation>Remover de Palavras Conhecidas</translation>
     </message>
     <message>
         <source>Take the Known · pending mark back off the highlighted rows and return them to this review.</source>
-        <translation type="unfinished" />
+        <translation>Remova a marca 'Conhecida · pendente' das linhas destacadas e as devolva para esta revisão.</translation>
     </message>
     <message>
         <source>Mark highlighted rows Known · pending. Confirm saves them; Cancel discards them.</source>
