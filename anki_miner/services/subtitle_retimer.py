@@ -53,6 +53,15 @@ __all__ = ["RetimeOutcome", "retime_subtitle"]
 #: Sibling suffix for the pre-overwrite copy of an existing output subtitle.
 BACKUP_SUFFIX = ".pre-retime.bak"
 
+#: Subdirectory of ``out_sub.parent`` where working files are written. Keeping
+#: them out of the pairing folder itself means a crash-orphaned temp can never
+#: be picked up as a subtitle by ``FilePairMatcher`` (its folder scan is
+#: non-recursive) — the temp keeps its real ``.srt``/``.ass`` suffix, which the
+#: sync engines need to infer the output format, while staying invisible to
+#: the episode matcher. Same filesystem as *out_sub*, so ``_commit``'s
+#: ``os.replace`` cannot hit EXDEV.
+TMP_SUBDIR_NAME = ".anki-miner-retime-tmp"
+
 
 @dataclass(frozen=True)
 class RetimeOutcome:
@@ -105,9 +114,11 @@ def retime_subtitle(
         log_cb: Called with human-readable progress/decision lines.
     """
     logger.info("retime: %s <- %s (out %s)", video.name, in_sub.name, out_sub.name)
+    tmp_dir = out_sub.parent / TMP_SUBDIR_NAME
     temps: list[Path] = []
     reference = None
     try:
+        tmp_dir.mkdir(exist_ok=True)
         duration_s = get_media_duration_seconds(video, resolve_ffprobe(config))
         reference = resolve_reference(
             config,
@@ -124,7 +135,7 @@ def retime_subtitle(
         reference_path = reference.path if reference is not None else video
         sub_reference = reference is not None and reference.kind == "subtitle"
 
-        cleaned = clean_for_alignment(in_sub, out_sub.parent / (out_sub.stem + ".retime-clean" + in_sub.suffix))
+        cleaned = clean_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + in_sub.suffix))
         if cleaned is not None:
             temps.append(cleaned.path)
             if cleaned.dropped:
@@ -145,7 +156,7 @@ def retime_subtitle(
             if alass_missing and label.startswith("alass"):
                 continue
 
-            candidate = out_sub.parent / f"{out_sub.stem}.retime-cand-{len(attempts)}{out_sub.suffix}"
+            candidate = tmp_dir / f"{out_sub.stem}.retime-cand-{len(attempts)}{out_sub.suffix}"
             temps.append(candidate)
             try:
                 result = runner(reference_path, align_input, candidate, log_cb)
@@ -157,7 +168,7 @@ def retime_subtitle(
 
             final_candidate = candidate
             if result.ok and cleaned is not None:
-                mapped = out_sub.parent / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
+                mapped = tmp_dir / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
                 temps.append(mapped)
                 if map_deltas_back(in_sub, candidate, cleaned.kept_indices, mapped):
                     final_candidate = mapped
@@ -207,6 +218,12 @@ def retime_subtitle(
             _unlink_quiet(temp)
         if reference is not None and reference.temp is not None:
             _unlink_quiet(reference.temp)
+        # Guarded, not unconditional: a concurrent run in the same folder may
+        # still have files in tmp_dir, and rmdir on a non-empty or already
+        # gone (mkdir never ran / another run already removed it) directory
+        # both raise OSError — either way there is nothing more to do here.
+        with contextlib.suppress(OSError):
+            tmp_dir.rmdir()
 
 
 def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event | None):

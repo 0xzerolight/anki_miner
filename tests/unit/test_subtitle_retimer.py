@@ -18,8 +18,9 @@ import pytest
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import RetimeReference
-from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, retime_subtitle
+from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, TMP_SUBDIR_NAME, retime_subtitle
 from anki_miner.services.sync_engines import SyncResult
+from anki_miner.utils.file_pairing import FilePairMatcher
 
 _FFS = "anki_miner.services.subtitle_retimer.sync_with_ffsubsync"
 _ALASS = "anki_miner.services.subtitle_retimer.sync_with_alass"
@@ -247,8 +248,65 @@ class TestCommit:
         ):
             retime_subtitle(cfg, video, in_sub, out_sub)
 
+        # Nothing named ".retime-" leaks at the pairing-folder top level...
         leftovers = [p.name for p in tmp_path.iterdir() if ".retime-" in p.name]
         assert leftovers == []
+        # ...and the working subdirectory itself is gone (emptied, then rmdir'd).
+        assert not (out_sub.parent / TMP_SUBDIR_NAME).exists()
+
+
+class TestTempFileLocation:
+    """Working files must never land in the pairing folder itself.
+
+    A crash-orphaned ``ep01.retime-cand-0.srt`` sitting directly beside the
+    real subtitle is a pairable file (real ``.srt`` suffix) that the next
+    folder run's episode matcher would consume, shadowing the genuine
+    subtitle. Confining temps to a subdirectory keeps them invisible to
+    FilePairMatcher's non-recursive folder scan.
+    """
+
+    def test_temps_live_under_tmp_subdir(self, cfg, video, in_sub, out_sub):
+        seen: list[Path] = []
+
+        def _ffs(config, reference, sub, out, **kwargs):
+            seen.append(sub)
+            seen.append(out)
+            return _fake_engine(1500, engine="ffsubsync")(config, reference, sub, out, **kwargs)
+
+        with patch(_FFS, side_effect=_ffs), patch(_ALASS):
+            outcome = retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert outcome
+        tmp_dir = out_sub.parent / TMP_SUBDIR_NAME
+        seen_temps = [p for p in seen if p != in_sub]
+        assert seen_temps, "engine should have been handed at least one temp path"
+        for p in seen_temps:
+            assert p.parent == tmp_dir
+            # Engines infer the output format from the suffix, so it must
+            # stay a real subtitle extension even while hidden from pairing.
+            assert p.suffix in FilePairMatcher.SUBTITLE_EXTENSIONS
+
+    def test_tmp_dir_removed_when_empty_after_run(self, cfg, video, in_sub, out_sub):
+        with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert not (out_sub.parent / TMP_SUBDIR_NAME).exists()
+
+    def test_leftover_temp_not_paired_as_subtitle(self, tmp_path):
+        """Documents the hazard the fix removes: an orphaned temp from a
+        crashed run must not be pickable as the episode's subtitle."""
+        tmp_dir = tmp_path / TMP_SUBDIR_NAME
+        tmp_dir.mkdir()
+        (tmp_dir / "ep01.retime-cand-0.srt").write_text("orphaned candidate", encoding="utf-8")
+        real_sub = tmp_path / "ep01.srt"
+        real_sub.write_text("real subtitle", encoding="utf-8")
+        video_file = tmp_path / "ep01.mkv"
+        video_file.touch()
+
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path, tmp_path)
+
+        assert len(pairs) == 1
+        assert pairs[0].subtitle == real_sub
 
 
 class TestCancellation:
