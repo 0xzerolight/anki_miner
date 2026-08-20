@@ -181,6 +181,7 @@ class TestReporting:
         _build_audio_pack(config.audio_packs_root, "nhk16", stale=True, name="NHK 2016")
         cfg = replace(
             config,
+            anki_fields={**config.anki_fields, "expression_audio": "ExpressionAudio"},
             expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
         )
 
@@ -188,6 +189,22 @@ class TestReporting:
 
         assert message is not None
         assert message == ("Audio pack 'NHK 2016' needs reimport (schema upgrade) — Settings → Audio → Reimport All")
+
+    def test_stale_audio_pack_with_unmapped_field_does_not_gate(self, config: AnkiMinerConfig) -> None:
+        """A pack is only ever consulted when expression_audio is mapped too.
+
+        The fetcher (``audio_stage.py``) and the injected-registry episode-
+        processor path both honour this two-part condition; the queue workers'
+        fallback rescan must match it or a run aborts over a dead feature.
+        """
+        _build_audio_pack(config.audio_packs_root, "nhk16", stale=True, name="NHK 2016")
+        cfg = replace(
+            config,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
+        )
+        assert cfg.anki_fields.get("expression_audio") == ""
+
+        assert stale_resource_reimport_error(cfg) is None
 
     def test_several_stale_sources_in_one_family_are_pluralised(self, config: AnkiMinerConfig) -> None:
         _build_freq(config.freqs_root, "jpdb", stale=True, name="JPDB")
@@ -267,6 +284,7 @@ class TestInjectedRegistries:
         _build_audio_pack(config.audio_packs_root, "nhk16", stale=True, name="NHK 2016")
         cfg = replace(
             config,
+            anki_fields={**config.anki_fields, "expression_audio": "ExpressionAudio"},
             expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
         )
         registry = AudioPackRegistry(cfg.audio_packs_root)

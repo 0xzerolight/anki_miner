@@ -1554,6 +1554,7 @@ class TestOptionalIndexedResourceChecks:
         self._build_pack(packs_root, "nhk16", entries=5000, name="NHK 2016")
         config = replace(
             test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
             audio_packs_root=packs_root,
             expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
         )
@@ -1571,6 +1572,7 @@ class TestOptionalIndexedResourceChecks:
         self._build_pack(packs_root, "nhk16", stale=True, name="NHK 2016")
         config = replace(
             test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
             audio_packs_root=packs_root,
             expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
         )
@@ -1580,6 +1582,27 @@ class TestOptionalIndexedResourceChecks:
         assert ok is False
         assert "NHK 2016" in message
         assert "Settings → Audio → Reimport All" in message
+
+    def test_audio_packs_report_not_configured_when_field_unmapped(self, test_config, tmp_path):
+        """A pack is only ever consulted when expression_audio is mapped too.
+
+        An enabled, schema-current, usable pack must still report itself as
+        unconfigured (not an OK-green) when the field the fetcher gates on is
+        unmapped — the same two-part condition the fetcher and the pre-run
+        stale-reimport gate use.
+        """
+        from anki_miner.config import AudioSourceEntry
+
+        packs_root = tmp_path / "audio_packs"
+        self._build_pack(packs_root, "nhk16", entries=5000, name="NHK 2016")
+        assert not test_config.anki_fields.get("expression_audio")
+        config = replace(
+            test_config,
+            audio_packs_root=packs_root,
+            expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
+        )
+
+        assert ValidationService(config)._check_audio_packs() == (None, "")
 
     def test_pack_absent_from_disk_stays_silent(self, test_config, tmp_path):
         from anki_miner.config import AudioSourceEntry
@@ -1615,6 +1638,7 @@ class TestOptionalIndexedResourceChecks:
         self._build_pack(packs_root, "nhk16", stale=True, name="NHK 2016")
         config = replace(
             test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
             audio_packs_root=packs_root,
             expression_audio_chain=(AudioSourceEntry(kind="pack", pack_id="nhk16"),),
             media_temp_folder=tmp_path / "temp",
