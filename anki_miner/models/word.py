@@ -148,7 +148,8 @@ class TokenizedWord:
     frequency_sources: list[tuple[str, int, str | None]] = field(default_factory=list)
     # Harmonic mean of the per-source ranks (Yomitan getFrequencyHarmonic); backs
     # the numeric ``frequency_sort`` card field. None when no source ranks the
-    # word (card writes the 9999999 "missing" sentinel so it sorts last).
+    # word, and the card then leaves that field unwritten rather than stamping a
+    # placeholder rank.
     frequency_harmonic_rank: int | None = None
     # Times this word's lemma occurs in the current episode. Display/sort-only,
     # attached on the interactive curation path (Issue #88); 0 when not computed.

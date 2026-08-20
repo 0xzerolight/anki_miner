@@ -90,7 +90,10 @@ FIELD_GROUPS: dict[str, tuple[str, ...]] = {
 
 _PITCH_KEYS = frozenset(FIELD_GROUPS["pitch"])
 _FREQ_KEYS = frozenset(FIELD_GROUPS["frequency"])
-_FREQ_MISS_SENTINEL = "9999999"
+# v2.7.8-v2.11.0 wrote this into the sort field for a word no source ranked.
+# READ-ONLY now: nothing writes it, and `_is_fillable` treats a stored one as
+# empty so a normal fill-only scan can replace it with a real rank.
+_LEGACY_FREQ_MISS_SENTINEL = "9999999"
 _OLD_DISPLAY_CAP = 200
 
 # One `kanji[reading]` furigana group as _format_furigana renders it: a run
@@ -133,10 +136,6 @@ class BackfillPlan:
     scanned: int
     skipped_no_identity: int
     unavailable_fields: tuple[str, ...]
-    # Sort-field writes proposed on a frequency MISS (the 9999999 sentinel,
-    # mining-faithful). Surfaced separately so the summary doesn't read as
-    # "N cards ranked" when many only received the sentinel.
-    sentinel_only_sorts: int
     # Exact mapped field used to capture ``NotePlan.expression``. Apply uses
     # this scan-time name for its compare-before-write identity check.
     expression_field: str
@@ -189,6 +188,21 @@ def _is_empty(value: str) -> bool:
     if _HTML_TAG_RE.search(text):
         return False
     return _strip_for_dedup(value or "") == ""
+
+
+def _is_fillable(field_key: str, value: str) -> bool:
+    """True when fill-only-empty mode may write ``field_key`` over ``value``.
+
+    Empty is fillable, plus one legacy case: cards mined by v2.7.8-v2.11.0 carry
+    a literal 9999999 in the sort field for words no source ranked. It is a
+    placeholder, not a rank, so fill mode replaces it once a source ranks the
+    word — otherwise those cards would be stuck at 9999999 forever, since
+    ``_is_empty`` reads it as real content. Scoped to the one field that ever
+    held it: every other field keeps plain ``_is_empty`` semantics.
+    """
+    if _is_empty(value):
+        return True
+    return field_key == "frequency_sort" and (value or "").strip() == _LEGACY_FREQ_MISS_SENTINEL
 
 
 def _display(value: str) -> str:
@@ -345,7 +359,7 @@ def _scan_backfill_impl(
 
     tagger = get_shared_tagger()
 
-    scanned = skipped_no_identity = sentinel_only_sorts = identical_skips = 0
+    scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = reading_failures = lemma_failures = 0
     first_failed_mined_form: str | None = None
     note_plans: list[NotePlan] = []
@@ -395,9 +409,6 @@ def _scan_backfill_impl(
             )
             identical_skips += note_identicals
             guessed_reading_skips += note_guessed
-            sentinel_only_sorts += sum(
-                1 for c in changes if c.field_key == "frequency_sort" and c.new_value == _FREQ_MISS_SENTINEL
-            )
             if changes:
                 note_plans.append(NotePlan(ctx.note_id, ctx.mined_form, tuple(changes)))
 
@@ -420,7 +431,6 @@ def _scan_backfill_impl(
         scanned=scanned,
         skipped_no_identity=skipped_no_identity,
         unavailable_fields=tuple(unavailable),
-        sentinel_only_sorts=sentinel_only_sorts,
         expression_field=word_field,
         config_version=config.config_version,
         identical_skips=identical_skips,
@@ -445,7 +455,6 @@ def _scan_backfill_impl(
         skipped_no_identity=skipped_no_identity,
         identical=identical_skips,
         guessed_reading=guessed_reading_skips,
-        sentinel_only_sorts=sentinel_only_sorts,
         reading_failures=reading_failures,
         lemma_failures=lemma_failures,
     )
@@ -722,7 +731,7 @@ def _compute_note_changes(
             if new_value == current:
                 identical_skips += 1
                 continue
-        elif not _is_empty(current):
+        elif not _is_fillable(key, current):
             continue
         changes.append(FieldChange(key, field_name, _display(current), new_value))
     return changes, identical_skips, guessed_reading_skips
@@ -779,8 +788,9 @@ def _frequency_proposals(
 
     Keyed on mined_form + hiragana reading with the WHOLE-RESULT miss-only
     lemma fallback (never per-source — Issues #19/#5; see the long rationale
-    in EpisodeProcessor._phase2_filter, mirrored here). The sort field's
-    9999999 miss-sentinel is mining-faithful (sorts unranked words last).
+    in EpisodeProcessor._phase2_filter, mirrored here). A miss proposes NO sort
+    value at all, mirroring mining: the field never claims a rank the word
+    does not have.
     """
     sources = frequency_service.lookup_all(ctx.mined_form, ctx.reading)
     if (
@@ -798,7 +808,8 @@ def _frequency_proposals(
             proposals["frequency"] = rendered
     if "frequency_sort" in selected:
         rank = harmonic_rank(sources)
-        proposals["frequency_sort"] = str(rank) if rank is not None else _FREQ_MISS_SENTINEL
+        if rank is not None:
+            proposals["frequency_sort"] = str(rank)
     return proposals
 
 
@@ -879,7 +890,7 @@ def _apply_backfill_impl(
                 if current is None:
                     skipped_stale += 1
                     continue
-                if not overwrite and not _is_empty(current):
+                if not overwrite and not _is_fillable(change.field_key, current):
                     skipped_stale += 1
                     continue
                 payload[change.field_name] = change.new_value

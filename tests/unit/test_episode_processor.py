@@ -1465,11 +1465,11 @@ class TestOptionalServices:
         assert "frequency" not in extra_fields
         assert "frequency_sort" not in extra_fields
 
-    def test_unranked_word_writes_missing_sentinel_when_field_mapped(self, test_config, mock_services, tmp_path):
-        """Unranked word + mapped frequency_sort field: writes the 9999999 sentinel.
+    def test_unranked_word_leaves_sort_field_unwritten_when_mapped(self, test_config, mock_services, tmp_path):
+        """Unranked word + mapped frequency_sort field: the field is left unwritten.
 
-        The sentinel sorts no-data cards *last* in Anki's browser instead of
-        before rank 1 (an omitted field reads as the empty string).
+        v2.7.8-v2.11.0 stamped a 9999999 placeholder here, which read as a real
+        (absurd) rank on the card. No rank means no value.
         """
         word = _make_word("食べる")
         media = _make_media()
@@ -1498,9 +1498,40 @@ class TestOptionalServices:
 
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         extra_fields = card_data[0].extra_fields or {}
-        # No per-source breakdown, but the sort field carries the missing sentinel.
+        # Neither the per-source breakdown nor the sort value: no rank, no claim.
         assert "frequency" not in extra_fields
-        assert extra_fields["frequency_sort"] == "9999999"
+        assert "frequency_sort" not in extra_fields
+
+    def test_no_frequency_service_leaves_sort_field_unwritten(self, test_config, mock_services, tmp_path):
+        """Mapped frequency_sort + NO frequency source at all: nothing is written.
+
+        Applying a note-type preset auto-maps FreqSort, so this is the config a
+        preset user with no frequency list installed runs — every card used to
+        get the 9999999 placeholder.
+        """
+        word = _make_word("食べる")
+        media = _make_media()
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, media)]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        config = replace(test_config, anki_fields={**test_config.anki_fields, "frequency_sort": "FrequencySort"})
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            frequency_service=None,
+            **mock_services,
+        )
+
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
+        extra_fields = card_data[0].extra_fields or {}
+        assert "frequency_sort" not in extra_fields
 
 
 class TestPitchLemmaReading:

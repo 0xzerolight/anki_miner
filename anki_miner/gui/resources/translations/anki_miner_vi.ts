@@ -2278,10 +2278,6 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Đã giữ {count} trường trọng âm cao độ — cách đọc chỉ có thể đoán từ riêng từ đó, vì vậy ghi đè có thể áp dụng trọng âm của từ đồng hình sai. Ánh xạ trường Cách đọc biểu thức hoặc Furigana để ghi đè chúng.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>Có {count} giá trị sắp xếp là giá trị giữ chỗ 9999999 cho trường hợp không tìm thấy tần suất.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Không có trên loại ghi chú này (ánh xạ cũ): {fields}. Hãy sửa trong ánh xạ trường Cài đặt → Anki.</translation>
     </message>

@@ -2278,10 +2278,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>已保留 {count} 個高低音調欄位 — 讀音只能從單字本身推測，覆寫可能套用到錯誤同形詞的音調。請對應「表達式讀音」或「振假名」欄位以覆寫它們。</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>有 {count} 個排序值為代表找不到頻率的預留值 9999999。</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>此筆記類型上不存在（對應已過期）：{fields}。請在「設定 → Anki」的欄位對應中修正。</translation>
     </message>

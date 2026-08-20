@@ -2278,10 +2278,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>保留了 {count} 个音调字段——只能根据单词本身猜测读音，覆盖可能会应用错误同形词的音调。映射“表达式读音”或“振假名”字段即可覆盖它们。</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>有 {count} 个排序值使用了表示未找到词频的占位值 9999999。</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>此笔记类型上不存在（映射已过期）：{fields}。请在设置 → Anki 的字段映射中修正。</translation>
     </message>

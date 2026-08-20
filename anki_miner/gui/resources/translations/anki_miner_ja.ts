@@ -2278,10 +2278,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>{count} 個のピッチフィールドを保持しました — 読みは単語だけから推測することしかできず、上書きすると別の同形異義語のアクセントが適用される可能性があったためです。これらを上書きするには、Expression Reading または Furigana フィールドを対応付けてください。</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>ソート値 {count} 件が、頻度未検出時のプレースホルダー 9999999 です。</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>このノートタイプには存在しません（マッピングが古い）：{fields}。設定 → Anki のフィールド割り当てで修正してください。</translation>
     </message>

@@ -2280,10 +2280,6 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
         <translation>{count} campi di accento tonale mantenuti — la lettura poteva essere solo dedotta dalla parola, quindi la sovrascrittura avrebbe potuto applicare l'accento dell'omografo errato. Mappare un campo Lettura dell'espressione o Furigana per sovrascriverli.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>Numero di valori di ordinamento uguali al segnaposto 9999999 che indica una frequenza non trovata: {count}.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Non presenti in questo tipo di nota (mappatura obsoleta): {fields}. Correggere in Impostazioni → Anki, mappatura dei campi.</translation>
     </message>

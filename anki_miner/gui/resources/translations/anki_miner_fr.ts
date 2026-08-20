@@ -2280,10 +2280,6 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>{count} champ(s) d’accent de hauteur conservé(s) — la lecture ne pouvait être devinée qu’à partir du mot seul ; l’écrasement aurait donc pu appliquer l’accent de hauteur du mauvais homographe. Mappez un champ Lecture de l’expression ou Furigana pour les écraser.</translation>
     </message>
     <message>
-        <source>{count} sort value(s) are the 9999999 no-frequency-found placeholder.</source>
-        <translation>Nombre de valeurs de tri égales au marqueur 9999999 (« fréquence introuvable ») : {count}.</translation>
-    </message>
-    <message>
         <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
         <translation>Absents de ce type de note (mappage obsolète) : {fields}. Corrigez le mappage des champs dans Paramètres → Anki.</translation>
     </message>
