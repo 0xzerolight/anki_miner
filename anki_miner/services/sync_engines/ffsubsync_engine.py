@@ -61,8 +61,10 @@ def sync_with_ffsubsync(
     a low-confidence sync comes back rejected rather than silently written.
     Never raises: any exception out of ffsubsync is a failed candidate.
     """
+    engine = "ffsubsync (single offset)" if not split_mode else "ffsubsync"
+
     if cancel_event is not None and cancel_event.is_set():
-        return SyncResult(ok=False, engine="ffsubsync", detail="cancelled")
+        return SyncResult(ok=False, engine=engine, detail="cancelled")
 
     argv = [
         str(reference),
@@ -93,7 +95,7 @@ def sync_with_ffsubsync(
     except (Exception, SystemExit) as exc:
         logger.warning("ffsubsync failed on %s", in_sub.name, exc_info=True)
         _unlink_quiet(out)
-        return SyncResult(ok=False, engine="ffsubsync", detail=f"raised {type(exc).__name__}: {exc}")
+        return SyncResult(ok=False, engine=engine, detail=f"raised {type(exc).__name__}: {exc}")
 
     successful = bool(result.get("sync_was_successful")) and result.get("retval", 1) == 0
     offset = result.get("offset_seconds")
@@ -105,7 +107,7 @@ def sync_with_ffsubsync(
         _unlink_quiet(out)
         return SyncResult(
             ok=False,
-            engine="ffsubsync",
+            engine=engine,
             offset_seconds=offset,
             framerate_scale=scale,
             detail="low-quality sync rejected" if result.get("retval", 1) == 0 else "ffsubsync error",
@@ -113,7 +115,7 @@ def sync_with_ffsubsync(
 
     return SyncResult(
         ok=True,
-        engine="ffsubsync",
+        engine=engine,
         offset_seconds=offset,
         framerate_scale=scale,
     )

@@ -89,6 +89,19 @@ class TestSyncWithFfsubsync:
 
         assert captured[0].split_penalty is None
 
+    def test_split_mode_off_reports_single_offset_engine_label(self, cfg, paths):
+        """Matches alass_engine's `no_split` convention: label carries the mode, not just the tool."""
+        reference, in_sub, out = paths
+        with patch(_RESOLVE_FFMPEG, return_value="ffmpeg"), patch(_RUN, side_effect=_success_run(out)):
+            result = sync_with_ffsubsync(cfg, reference, in_sub, out, split_mode=False)
+        assert result.engine == "ffsubsync (single offset)"
+
+    def test_split_mode_on_reports_plain_engine_label(self, cfg, paths):
+        reference, in_sub, out = paths
+        with patch(_RESOLVE_FFMPEG, return_value="ffmpeg"), patch(_RUN, side_effect=_success_run(out)):
+            result = sync_with_ffsubsync(cfg, reference, in_sub, out, split_mode=True)
+        assert result.engine == "ffsubsync"
+
     def test_low_quality_rejection_unlinks_output(self, cfg, paths):
         """On a rejected sync ffsubsync writes the ORIGINAL to out — remove it."""
         reference, in_sub, out = paths

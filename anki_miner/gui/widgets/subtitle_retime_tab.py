@@ -9,8 +9,9 @@ per-pair pass/fail lines.
 
 There are no alignment knobs here or anywhere: the retime pipeline
 (services/subtitle_retimer.py) tunes itself — engine chain (ffsubsync, then
-alass), dialogue-only cleaning, and result validation with a keep-original
-guarantee. The one decision on this screen is which files.
+alass, then ffsubsync again), dialogue-only cleaning, and result validation
+with a keep-original guarantee. The one decision on this screen is which
+files.
 
 Guard contract:
 - alass not found → notice visible; retiming stays enabled (ffsubsync-only).

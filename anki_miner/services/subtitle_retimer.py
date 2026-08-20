@@ -11,7 +11,9 @@ One episode's retime is a pipeline, not a single tool call:
 3. **Align** — engines are tried in order until one produces a candidate that
    survives validation: ffsubsync in split mode (in-process, has its own
    quality gate), then alass in split mode, then alass with a single global
-   offset. A missing alass binary (macOS) just shortens the chain.
+   offset, then ffsubsync with a single global offset. A missing alass binary
+   (macOS) skips straight from ffsubsync split mode to ffsubsync single-offset,
+   so alignment still gets two attempts, not one.
 4. **Map back** — the winning candidate's timings are applied to the untouched
    original, so every line and all ASS styling survive.
 5. **Validate** — :mod:`anki_miner.services.sync_validator` rejects the failure
