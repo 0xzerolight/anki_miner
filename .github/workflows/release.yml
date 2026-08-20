@@ -735,7 +735,10 @@ jobs:
           set -euo pipefail
           # auditwheel repairs + excludes the loader; wheel unpacks/repacks to
           # inject the dlopen backend (see constraints/asr-vulkan-build.txt).
-          pip install -c constraints/asr-vulkan-build.txt auditwheel wheel
+          # patchelf comes from PyPI, not apt: auditwheel 6.8.1 requires
+          # >= 0.14.5 and ubuntu-22.04 ships 0.14.3 (see the constraints file).
+          pip install -c constraints/asr-vulkan-build.txt auditwheel wheel patchelf
+          patchelf --version
           mkdir -p dist-vulkan-raw dist-vulkan
           # git+ (not the PyPI sdist) so the whisper.cpp/pybind11 submodules are
           # fetched at the SHAs the pinned tag records. --no-build-isolation would
