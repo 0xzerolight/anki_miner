@@ -27,7 +27,11 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseOutputCollisionError,
     CondenseWorker,
 )
-from anki_miner.services.audio_condenser import EncoderUnavailableError, FfmpegStepFailure
+from anki_miner.services.audio_condenser import (
+    EncoderUnavailableError,
+    FfmpegStepFailure,
+    FilterUnavailableError,
+)
 from anki_miner.services.audio_tagger import TrackMetadata
 from anki_miner.utils.audio_track_detector import SubtitleStream
 
@@ -79,6 +83,7 @@ class _FakeService:
         *,
         condense_result: bool = True,
         encoder_error: bool = False,
+        filter_error: bool = False,
         cancel_on_condense: bool = False,
         extract_returns: bool = True,
         condense_failure: FfmpegStepFailure | None = None,
@@ -86,6 +91,7 @@ class _FakeService:
         self._condense_result = condense_result
         self._condense_failure = condense_failure
         self._encoder_error = encoder_error
+        self._filter_error = filter_error
         self._cancel_on_condense = cancel_on_condense
         self._extract_returns = extract_returns
         self.condense_calls: list[dict] = []
@@ -121,6 +127,8 @@ class _FakeService:
         )
         if self._encoder_error:
             raise EncoderUnavailableError("ffmpeg encoder 'libmp3lame' is unavailable")
+        if self._filter_error:
+            raise FilterUnavailableError("This ffmpeg build's 'aselect' filter does not filter")
         if self._cancel_on_condense and cancel_event is not None:
             cancel_event.set()
             return False, None
@@ -783,6 +791,37 @@ def test_encoder_unavailable_stops_queue(qapp, tmp_path):
     # Encoder-missing is a tool error, not a user cancel.
     assert worker.is_cancelled is False
     # condense attempted once (file 0), never for file 1.
+    assert len(service.condense_calls) == 1
+
+
+def test_inert_aselect_stops_queue(qapp, tmp_path):
+    """An ffmpeg whose aselect does not filter dooms every file — stop the queue.
+
+    Otherwise each file "succeeds" and writes the whole source track, so the user
+    gets a queue of full-length files named like condensed ones.
+    """
+    config = _make_config(tmp_path)
+    m1 = tmp_path / "ep01.mkv"
+    m2 = tmp_path / "ep02.mkv"
+    m1.write_bytes(b"")
+    m2.write_bytes(b"")
+    s1 = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "a")])
+    s2 = _write_srt(tmp_path / "ep02.srt", [(1000, 2000, "b")])
+
+    service = _FakeService(filter_error=True)
+    worker = _make_worker([CondenseItem(m1, s1), CondenseItem(m2, s2)], config, service=service)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert len(cap["finished"]) == 1
+    idx, out, err = cap["finished"][0]
+    assert idx == 0 and out is None
+    assert "aselect" in err
+    assert 1 not in cap["started"]
+    assert cap["queue_finished"] == [True]
+    # A broken ffmpeg is a tool error, not a user cancel.
+    assert worker.is_cancelled is False
     assert len(service.condense_calls) == 1
 
 

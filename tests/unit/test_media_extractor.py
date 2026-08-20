@@ -2762,3 +2762,114 @@ class TestExtractFullAudioWaveReadable:
         assert duration == pytest.approx(1.0, abs=0.2)
         # A 440 Hz tone is not silence — confirms real audio survived the pipeline.
         assert float(np.max(np.abs(samples))) > 0.01
+
+
+class TestAudioFilterCapabilityProbe:
+    """``_audio_filter_capability``: which filter-file flag, and does aselect work.
+
+    ``-filter_script`` was removed in ffmpeg 9.0 and ``-/opt <path>`` only exists
+    from 7.0, so the spelling has to be probed. The same probe catches builds
+    whose ``aselect`` passes every frame (Ubuntu's ffmpeg 8.0.1-3ubuntu2), which
+    would otherwise write a full-length file named like a condensed one.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _media_temp_folder(self, test_config):
+        """The probe writes its graph there; the ``service`` fixture patches out the
+        ``ensure_directory`` call that ``__init__`` makes in production."""
+        Path(test_config.media_temp_folder).mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _probe(returncode: int = 0, stdout: bytes = b"") -> MagicMock:
+        proc = MagicMock()
+        proc.returncode = returncode
+        proc.stdout = stdout
+        return proc
+
+    def test_modern_flag_when_probe_succeeds_and_selects_nothing(self, service):
+        with patch(f"{MODULE}.subprocess.run", return_value=self._probe()) as mock_run:
+            assert service._audio_filter_capability() == ("-/filter:a", True)
+
+        assert mock_run.call_count == 1
+        cmd = mock_run.call_args[0][0]
+        assert cmd[0] == "ffmpeg"
+        assert "-/filter:a" in cmd
+        assert cmd[cmd.index("-i") + 1].startswith("anullsrc=")
+        # A finite source is load-bearing: anullsrc is otherwise infinite and -t
+        # caps OUTPUT duration, so a select-nothing graph would never terminate.
+        assert ":d=" in cmd[cmd.index("-i") + 1]
+        assert cmd[-3:] == ["-f", "s16le", "pipe:1"]
+
+    def test_probe_graph_file_is_written_selects_nothing_and_removed(self, service, tmp_path):
+        seen: dict = {}
+
+        def _capture(cmd, **kwargs):
+            graph_path = Path(cmd[cmd.index("-/filter:a") + 1])
+            seen["path"] = graph_path
+            seen["graph"] = graph_path.read_text(encoding="utf-8")
+            return self._probe()
+
+        with patch(f"{MODULE}.subprocess.run", side_effect=_capture):
+            service._audio_filter_capability()
+
+        assert seen["graph"].startswith("aselect=")
+        # Far past any probe input, so a healthy aselect emits zero samples.
+        assert "between(t,1000,1001)" in seen["graph"]
+        assert not seen["path"].exists()
+
+    def test_legacy_flag_when_modern_spelling_is_rejected(self, service):
+        """ffmpeg <= 6.x rejects -/filter:a with exit 8; fall back to -filter_script:a."""
+        results = [self._probe(returncode=8), self._probe()]
+        with patch(f"{MODULE}.subprocess.run", side_effect=results) as mock_run:
+            assert service._audio_filter_capability() == ("-filter_script:a", True)
+
+        assert mock_run.call_count == 2
+        assert "-filter_script:a" in mock_run.call_args_list[1][0][0]
+
+    def test_inert_aselect_reported_when_probe_returns_audio(self, service):
+        """Output from a select-nothing graph means aselect is not filtering."""
+        with patch(f"{MODULE}.subprocess.run", return_value=self._probe(stdout=b"\x00" * 17640)):
+            assert service._audio_filter_capability() == ("-/filter:a", False)
+
+    def test_inert_aselect_detected_on_the_legacy_flag_too(self, service):
+        results = [self._probe(returncode=8), self._probe(stdout=b"\x00" * 128)]
+        with patch(f"{MODULE}.subprocess.run", side_effect=results):
+            assert service._audio_filter_capability() == ("-filter_script:a", False)
+
+    def test_result_is_cached(self, service):
+        with patch(f"{MODULE}.subprocess.run", return_value=self._probe()) as mock_run:
+            for _ in range(3):
+                assert service._audio_filter_capability() == ("-/filter:a", True)
+
+        assert mock_run.call_count == 1
+
+    @pytest.mark.parametrize(
+        "boom",
+        [subprocess.TimeoutExpired(cmd="ffmpeg", timeout=15), OSError("no such binary")],
+    )
+    def test_unrunnable_probe_falls_back_to_pre_probe_behaviour(self, service, caplog, boom):
+        """An inconclusive probe must not regress a setup that works today."""
+        with patch(f"{MODULE}.subprocess.run", side_effect=boom):
+            assert service._audio_filter_capability() == ("-filter_script:a", True)
+
+        assert "probe failed" in caplog.text
+
+    def test_probe_leaves_no_graph_file_behind_when_it_cannot_run(self, service, test_config):
+        with patch(f"{MODULE}.subprocess.run", side_effect=OSError("boom")):
+            service._audio_filter_capability()
+
+        assert list(Path(test_config.media_temp_folder).glob("filter_probe_*.txt")) == []
+
+    def test_probe_uses_config_override(self, test_config, tmp_path):
+        """Probe cmd[0] honours config.ffmpeg_location, like the encoder probe."""
+        fake_ffmpeg = tmp_path / "my_ffmpeg"
+        fake_ffmpeg.write_text("#!/bin/sh\n")
+        fake_ffmpeg.chmod(0o755)
+        cfg = dataclasses.replace(test_config, ffmpeg_location=str(fake_ffmpeg))
+        with patch(f"{MODULE}.ensure_directory"):
+            svc = MediaExtractorService(cfg)
+
+        with patch(f"{MODULE}.subprocess.run", return_value=self._probe()) as mock_run:
+            svc._audio_filter_capability()
+
+        assert mock_run.call_args[0][0][0] == str(fake_ffmpeg)

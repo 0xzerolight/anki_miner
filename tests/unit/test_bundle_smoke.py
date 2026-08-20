@@ -253,14 +253,14 @@ def test_smoke_graph_matches_build_aselect_graph(tmp_path: Path) -> None:
     app.write_text("#!/usr/bin/env bash\nexit 3\n", encoding="utf-8")
     app.chmod(0o755)
 
-    # Fake ffmpeg: echo the encoder list, and copy any -filter_script:a payload
+    # Fake ffmpeg: echo the encoder list, and copy any -/filter:a payload
     # out so the test can compare the graph the script actually generated.
     ffmpeg = dist / "ffmpeg"
     ffmpeg.write_text(
         "#!/usr/bin/env bash\n"
         "prev=''\n"
         'for arg in "$@"; do\n'
-        '  if [ "$prev" = "-filter_script:a" ]; then cp "$arg" "$SMOKE_GRAPH_RECORD"; fi\n'
+        '  if [ "$prev" = "-/filter:a" ]; then cp "$arg" "$SMOKE_GRAPH_RECORD"; fi\n'
         '  prev="$arg"\n'
         "done\n"
         "echo 'libmp3lame libopus libsvtav1 libwebp libwebp_anim'\n",
