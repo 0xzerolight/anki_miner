@@ -355,10 +355,25 @@ def import_yomitan_zip(
 
         def on_insert_progress(inserted: int) -> None:
             if progress:
+                total = total_files * _PROGRESS_SCALE
                 cur = files_done * _PROGRESS_SCALE + min(
                     _PROGRESS_SCALE - 1, (_PROGRESS_SCALE * bank_yielded) // bank_size
                 )
-                progress(cur, total_files * _PROGRESS_SCALE, f"Inserted {inserted:,} entries")
+                # bulk_insert's trailing (post-loop) flush fires after the
+                # generator has been fully exhausted: files_done has already
+                # advanced to total_files for the just-finished bank, but
+                # bank_yielded/bank_size still hold that bank's own (capped)
+                # fraction, so the sum above can run past total. Clamp so the
+                # raw values stay monotonic — never let the wire number exceed
+                # what "done" means, even though a real progress widget would
+                # have no-op'd the out-of-range value anyway.
+                # NOTE: "Inserted {n:,} entries" is an internal English
+                # contract string — resource_download_worker._ItemPhaseReporter
+                # .importing parses it with a regex to recover the real entry
+                # count (``cur`` here is a bank-derived progress unit, not an
+                # entry count). Never reword or translate without updating
+                # that regex.
+                progress(min(cur, total), total, f"Inserted {inserted:,} entries")
 
         bulk_insert(
             db_path,
@@ -368,6 +383,11 @@ def import_yomitan_zip(
         )
 
         if progress:
+            # NOTE: "Inserted {n:,} entries" is an internal English contract
+            # string — resource_download_worker._ItemPhaseReporter.importing
+            # parses it with a regex to recover the real entry count (current
+            # here is a bank-derived progress unit, not an entry count).
+            # Never reword or translate this without updating that regex.
             progress(
                 total_files * _PROGRESS_SCALE, total_files * _PROGRESS_SCALE, f"Inserted {total_entries:,} entries"
             )

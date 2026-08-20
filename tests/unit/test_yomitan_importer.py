@@ -224,9 +224,10 @@ class TestImportYomitanZip:
     def test_insert_progress_reports_files_done_against_bank_total(self, tmp_path: Path):
         """``progress`` calls during entry insertion are determinate against the
         term-bank count scaled by ``_PROGRESS_SCALE``: ``total`` is pinned to
-        ``bank_total * _PROGRESS_SCALE`` and ``cur`` (clamped to ``total``) is
-        non-decreasing, ending with a terminal ``(total, total)`` call once
-        ``bulk_insert`` returns. Stage markers stay ``(0, 0, ...)``."""
+        ``bank_total * _PROGRESS_SCALE``, ``cur`` never exceeds ``total``, and
+        the raw sequence is non-decreasing, ending with a terminal ``(total,
+        total)`` call once ``bulk_insert`` returns. Stage markers stay
+        ``(0, 0, ...)``."""
         bank_size = 2000
         banks = [
             [[f"t{bank}-{i}", "", "", "", 0, [f"d{bank}-{i}"], i, ""] for i in range(bank_size)] for bank in range(3)
@@ -244,16 +245,14 @@ class TestImportYomitanZip:
         insert_events = [event for event in events if event[2].startswith("Inserted ")]
         assert len(insert_events) >= 2
         assert all(evt_total == total for _, evt_total, _ in insert_events)
-        # The very last internal flush of a bank fires once files_done has
-        # already advanced past it (the within-bank fraction for the just-
-        # completed bank hasn't reset yet), so it can transiently read above
-        # ``total`` before the terminal call snaps back down to it. Clamping
-        # to ``total`` is what a real progress bar (setRange/setValue, which
-        # clamps automatically) actually shows the user, and that view is
-        # monotonic.
-        clamped = [min(cur, total) for cur, _, _ in insert_events]
-        assert clamped == sorted(clamped)
-        assert clamped[0] < total  # at least one non-terminal reading mid-insert
+        # bulk_insert's trailing (post-loop) flush fires after files_done has
+        # already advanced for the just-finished bank; on_insert_progress
+        # clamps its own emission to total, so the RAW sequence stays
+        # monotonic and bounded — no consumer-side clamping needed here.
+        raw = [cur for cur, _, _ in insert_events]
+        assert raw == sorted(raw)
+        assert all(cur <= total for cur in raw)
+        assert raw[0] < total  # at least one non-terminal reading mid-insert
         assert insert_events[-1][:2] == (total, total)
 
         indeterminate_stage_events = [
@@ -318,13 +317,14 @@ class TestImportYomitanZip:
         assert inserted_counts[:2] == [5000, 5001]
         # A single-bank import must not sit at 0% for the whole insert and
         # then jump straight to 100%: the mid-batch flush reads a real
-        # fraction below total. Clamped to total (what setRange/setValue
-        # actually shows), the sequence is monotonic — see the multi-bank
-        # test above for why the raw (unclamped) last internal reading can
-        # transiently exceed total just before the terminal call snaps to it.
-        clamped = [min(cur, total) for cur, _, _ in insert_events]
-        assert clamped == sorted(clamped)
-        assert 0 < clamped[0] < total
+        # fraction below total, and on_insert_progress clamps its own
+        # emission so the RAW sequence never exceeds total and stays
+        # monotonic (see the multi-bank test above for why the internal
+        # arithmetic can otherwise overshoot at a bank's last flush).
+        raw = [cur for cur, _, _ in insert_events]
+        assert raw == sorted(raw)
+        assert all(cur <= total for cur in raw)
+        assert 0 < raw[0] < total
         assert all(evt_total == total for _, evt_total, _ in insert_events)
         assert insert_events[-1][:2] == (total, total)
 
