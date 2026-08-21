@@ -883,6 +883,20 @@ class ResourcesPage(_LiveCheckPage):
         self.dictionary_label.setWordWrap(True)
         layout.addWidget(self.dictionary_label)
 
+        # Frequency and pitch get their own lines rather than sharing the
+        # dictionary's. They never gate Next, and a required verdict and an
+        # optional one that read as a single sentence is how a user concludes
+        # an optional resource is what blocked them.
+        self.frequency_label = QLabel("")
+        self.frequency_label.setObjectName("helper-text")
+        self.frequency_label.setWordWrap(True)
+        layout.addWidget(self.frequency_label)
+
+        self.pitch_label = QLabel("")
+        self.pitch_label.setObjectName("helper-text")
+        self.pitch_label.setWordWrap(True)
+        layout.addWidget(self.pitch_label)
+
         # Retained past the run's end: the terminal window offers Retry setup,
         # which calls back into the session. Dropping the reference on finish
         # would collect the session and leave that button inert.
@@ -891,42 +905,71 @@ class ResourcesPage(_LiveCheckPage):
 
     def initializePage(self) -> None:
         """Ask the disk, every time the page is entered."""
-        self._recheck_dictionary()
+        self._recheck_resources()
 
     def isComplete(self) -> bool:
         return self._dictionary_ready
 
     # --- live dictionary readiness ---
 
-    def _recheck_dictionary(self) -> None:
-        """Probe off-thread whether an offline dictionary can answer a lookup.
+    def _recheck_resources(self) -> None:
+        """Probe off-thread what all three resource families can do.
 
-        Off-thread because the probe scans the dictionaries folder, which can be
-        a slow network path.
+        Off-thread because the probe scans three resource folders, any of which
+        can be a slow network path. One worker, not three: the base class keeps
+        a single ``_live_check`` as its generation counter, so a second
+        concurrent probe would have no way to be recognised as stale.
         """
         self._dictionary_ready = False
         self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
+        self.frequency_label.clear()
+        self.pitch_label.clear()
         self.completeChanged.emit()
         self._start_live_check(
-            self._wizard.validation_service().check_offline_dictionary,
-            error_prefix=self.tr("Could not check the offline dictionary: "),
-            on_result=self._on_dictionary_probe_result,
-            on_error=self._on_dictionary_probe_error,
+            self._wizard.validation_service().check_resource_readiness,
+            error_prefix=self.tr("Could not check the installed resources: "),
+            on_result=self._on_readiness_result,
+            on_error=self._on_readiness_error,
         )
 
-    def _on_dictionary_probe_result(self, result: object) -> None:
+    def _on_readiness_result(self, result: object) -> None:
+        from anki_miner.services.validation_service import ResourceReadiness  # noqa: PLC0415
+
         if not self._is_live_check():
             return
-        ok, message = result if isinstance(result, tuple) else (False, str(result))
+        if not isinstance(result, ResourceReadiness):
+            self._on_readiness_error(str(result))
+            return
+
+        ok, message = result.dictionary
         self._dictionary_ready = bool(ok)
         self.dictionary_label.setText(tr_format(self.tr("Dictionary ready: %1"), message) if ok else message)
+
+        self.frequency_label.setText(
+            self._optional_line(result.frequency, self.tr("Frequency"), self.tr("Frequency ready: %1"))
+        )
+        self.pitch_label.setText(
+            self._optional_line(result.pitch, self.tr("Pitch accent"), self.tr("Pitch accent ready: %1"))
+        )
         self.completeChanged.emit()
 
-    def _on_dictionary_probe_error(self, message: str) -> None:
+    def _optional_line(self, answer: tuple[bool | None, str], noun: str, ready_template: str) -> str:
+        """Render one optional family. ``None`` is a resting state, not a fault."""
+        ok, message = answer
+        if ok is None:
+            return tr_format(self.tr("%1: not set up (optional)"), noun)
+        if ok:
+            return tr_format(ready_template, message)
+        return message
+
+    def _on_readiness_error(self, message: str) -> None:
+        """One failed probe answered all three questions -- clear all three."""
         if not self._is_live_check():
             return
         self._dictionary_ready = False
         self.dictionary_label.setText(message)
+        self.frequency_label.clear()
+        self.pitch_label.clear()
         self.completeChanged.emit()
 
     def _on_download_clicked(self) -> None:
@@ -1008,7 +1051,7 @@ class ResourcesPage(_LiveCheckPage):
         self.status_label.setText(status)
         # Re-ask rather than infer: a summary saying the dictionary imported is
         # not the same claim as the chain being able to answer with it.
-        self._recheck_dictionary()
+        self._recheck_resources()
 
 
 #: The final page's required checks, in the order they are reported. Optional
