@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Merge the previous or next subtitle line into a word's sentence and clip (Word Curator).** A sentence split across subtitle cues could only be captured by dragging the clip slider over the neighbouring line — which widened the audio but never the exported sentence, and took real timing effort to land. "+ Previous line" / "+ Next line" under the video preview now merge the neighbouring cue into the focused word's line, and both the card sentence and the extracted media window follow: sentence text, bold span and furigana are rebuilt over the merged text, audio spans first cue to last, and the screenshot is taken from the merged region's start. Presses accumulate (two lines back, one forward); "Reset lines" restores the original single line. Adding a previous line snaps the preview to the new start so it can be auditioned without scrubbing. A direction disables when no cue exists that way or when the merged clip plus padding would exceed the clip slider's 30-second ceiling — the guardrail against merging across a long dead gap between cues. The clip slider composes on top: expanding reseeds the slider to the merged window (dropping any old fine-tune, exactly as picking a different example sentence does), and a drag made afterwards still wins over the default. Sentence-length and duplicate-sentence filters ran before the curator opened and are deliberately not re-applied to a sentence the user grew on purpose (#120).
 
 ### Changed
 
