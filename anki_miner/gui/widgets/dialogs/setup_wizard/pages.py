@@ -20,6 +20,7 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -45,6 +46,7 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
+    from anki_miner.services.resource_catalog import ResourceSpec
     from anki_miner.services.validation_service import ValidationService
 
     from .setup_wizard import SetupWizard
@@ -61,6 +63,15 @@ RESOURCES_BLURB = QT_TRANSLATE_NOOP(
     "Download the recommended frequency list, pitch accent data, and dictionary now?",
 )
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-resources"
+
+#: Family noun per catalog ``kind``, so a checkbox says what a resource *is*
+#: rather than only what it is called. Keyed by ``ResourceSpec.kind``; a kind
+#: with no entry here falls back to the display name alone.
+_RESOURCE_KIND_NOUNS = {
+    "dict": QT_TRANSLATE_NOOP("SetupWizard", "Dictionary"),
+    "freq": QT_TRANSLATE_NOOP("SetupWizard", "Frequency"),
+    "pitch": QT_TRANSLATE_NOOP("SetupWizard", "Pitch accent"),
+}
 
 #: Eight themes spanning light/dark and warm/cool, shown before the full set.
 #: A shortlist keeps the first page of onboarding a glance rather than a wall;
@@ -866,6 +877,31 @@ class ResourcesPage(_LiveCheckPage):
         link.linkActivated.connect(lambda: _open_url(RESOURCES_HELP_URL))
         layout.addWidget(link)
 
+        # Built from the catalog, never hand-listed: a spec added to
+        # RECOMMENDED_DEFAULT_SET has to appear here without touching this page.
+        from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET  # noqa: PLC0415
+
+        # _sync_download_button reads _download_running, and the toggled
+        # connection below deliberately comes AFTER setChecked: a fresh
+        # unchecked box emits toggled the first time it is checked, and that
+        # slot touches download_button, which this loop runs before.
+        self._download_running = False
+        self._specs = list(RECOMMENDED_DEFAULT_SET)
+        self.resource_checks: dict[str, QCheckBox] = {}
+        for spec in self._specs:
+            noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
+            label = (
+                tr_format("%1 — %2", QCoreApplication.translate("SetupWizard", noun), spec.display_name)
+                if noun
+                else spec.display_name
+            )
+            box = QCheckBox(label)
+            box.setToolTip(spec.license_note)
+            box.setChecked(True)
+            box.toggled.connect(self._sync_download_button)
+            layout.addWidget(box)
+            self.resource_checks[spec.id] = box
+
         self.download_button = ModernButton(self.tr("Download recommended resources"), variant="primary")
         self.download_button.clicked.connect(self._on_download_clicked)
         layout.addWidget(self.download_button)
@@ -883,50 +919,100 @@ class ResourcesPage(_LiveCheckPage):
         self.dictionary_label.setWordWrap(True)
         layout.addWidget(self.dictionary_label)
 
+        # Frequency and pitch get their own lines rather than sharing the
+        # dictionary's. They never gate Next, and a required verdict and an
+        # optional one that read as a single sentence is how a user concludes
+        # an optional resource is what blocked them.
+        self.frequency_label = QLabel("")
+        self.frequency_label.setObjectName("helper-text")
+        self.frequency_label.setWordWrap(True)
+        layout.addWidget(self.frequency_label)
+
+        self.pitch_label = QLabel("")
+        self.pitch_label.setObjectName("helper-text")
+        self.pitch_label.setWordWrap(True)
+        layout.addWidget(self.pitch_label)
+
         # Retained past the run's end: the terminal window offers Retry setup,
         # which calls back into the session. Dropping the reference on finish
         # would collect the session and leave that button inert.
         self._session: ResourceDownloadSession | None = None
-        self._download_running = False
+
+    def selected_specs(self) -> list[ResourceSpec]:
+        """Catalog order, filtered to what is ticked."""
+        return [spec for spec in self._specs if self.resource_checks[spec.id].isChecked()]
+
+    def _sync_download_button(self) -> None:
+        """Nothing ticked is not a run: an empty spec list reports success for no work."""
+        self.download_button.setEnabled(bool(self.selected_specs()) and not self._download_running)
 
     def initializePage(self) -> None:
         """Ask the disk, every time the page is entered."""
-        self._recheck_dictionary()
+        self._recheck_resources()
 
     def isComplete(self) -> bool:
         return self._dictionary_ready
 
     # --- live dictionary readiness ---
 
-    def _recheck_dictionary(self) -> None:
-        """Probe off-thread whether an offline dictionary can answer a lookup.
+    def _recheck_resources(self) -> None:
+        """Probe off-thread what all three resource families can do.
 
-        Off-thread because the probe scans the dictionaries folder, which can be
-        a slow network path.
+        Off-thread because the probe scans three resource folders, any of which
+        can be a slow network path. One worker, not three: the base class keeps
+        a single ``_live_check`` as its generation counter, so a second
+        concurrent probe would have no way to be recognised as stale.
         """
         self._dictionary_ready = False
         self.dictionary_label.setText(self.tr("Checking for an offline dictionary..."))
+        self.frequency_label.clear()
+        self.pitch_label.clear()
         self.completeChanged.emit()
         self._start_live_check(
-            self._wizard.validation_service().check_offline_dictionary,
-            error_prefix=self.tr("Could not check the offline dictionary: "),
-            on_result=self._on_dictionary_probe_result,
-            on_error=self._on_dictionary_probe_error,
+            self._wizard.validation_service().check_resource_readiness,
+            error_prefix=self.tr("Could not check the installed resources: "),
+            on_result=self._on_readiness_result,
+            on_error=self._on_readiness_error,
         )
 
-    def _on_dictionary_probe_result(self, result: object) -> None:
+    def _on_readiness_result(self, result: object) -> None:
+        from anki_miner.services.validation_service import ResourceReadiness  # noqa: PLC0415
+
         if not self._is_live_check():
             return
-        ok, message = result if isinstance(result, tuple) else (False, str(result))
+        if not isinstance(result, ResourceReadiness):
+            self._on_readiness_error(str(result))
+            return
+
+        ok, message = result.dictionary
         self._dictionary_ready = bool(ok)
         self.dictionary_label.setText(tr_format(self.tr("Dictionary ready: %1"), message) if ok else message)
+
+        self.frequency_label.setText(
+            self._optional_line(result.frequency, self.tr("Frequency"), self.tr("Frequency ready: %1"))
+        )
+        self.pitch_label.setText(
+            self._optional_line(result.pitch, self.tr("Pitch accent"), self.tr("Pitch accent ready: %1"))
+        )
         self.completeChanged.emit()
 
-    def _on_dictionary_probe_error(self, message: str) -> None:
+    def _optional_line(self, answer: tuple[bool | None, str], noun: str, ready_template: str) -> str:
+        """Render one optional family. ``None`` is a resting state, not a fault."""
+        ok, message = answer
+        if ok is None:
+            return tr_format(self.tr("%1: not set up (optional)"), noun)
+        if ok:
+            return tr_format(ready_template, message)
+        return message
+
+    def _on_readiness_error(self, message: str) -> None:
+        """One failed probe answered all three questions -- clear all three."""
         if not self._is_live_check():
             return
         self._dictionary_ready = False
         self.dictionary_label.setText(message)
+        self.frequency_label.clear()
+        self.pitch_label.clear()
         self.completeChanged.emit()
 
     def _on_download_clicked(self) -> None:
@@ -943,6 +1029,9 @@ class ResourcesPage(_LiveCheckPage):
         if self._download_running:
             return
         self.status_label.clear()
+        specs = self.selected_specs()
+        if not specs:
+            return
         session = start_resource_download(
             self,
             self._wizard.working_config(),
@@ -950,6 +1039,7 @@ class ResourcesPage(_LiveCheckPage):
             release_resources=self._wizard._release_resources,
             task_registry=getattr(self._wizard.parent(), "task_registry", None),
             adopt_worker=self._wizard.register_worker,
+            specs=specs,
         )
         if session is None:
             return
@@ -984,7 +1074,9 @@ class ResourcesPage(_LiveCheckPage):
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
 
         self._download_running = False
-        self.download_button.setEnabled(True)
+        # Not setEnabled(True): a finished run must not resurrect the button
+        # for a selection the user has since emptied.
+        self._sync_download_button()
         if not isinstance(outcome, ResourceDownloadOutcome):
             return
 
@@ -1008,7 +1100,7 @@ class ResourcesPage(_LiveCheckPage):
         self.status_label.setText(status)
         # Re-ask rather than infer: a summary saying the dictionary imported is
         # not the same claim as the chain being able to answer with it.
-        self._recheck_dictionary()
+        self._recheck_resources()
 
 
 #: The final page's required checks, in the order they are reported. Optional

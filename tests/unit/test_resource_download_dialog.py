@@ -989,3 +989,46 @@ def test_outcome_reports_activation_separately_from_import():
     outcome = ResourceDownloadOutcome(config=create_default_config(), summary=summary, activated=False)
     assert outcome.activated is False
     assert result_headline(outcome.summary, activated=outcome.activated).startswith("Imported, but not active")
+
+
+def test_start_resource_download_forwards_a_spec_subset(qtbot, monkeypatch):
+    """A page-level picker is worthless if the entry point drops the choice."""
+    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    only_pitch = [s for s in RECOMMENDED_DEFAULT_SET if s.kind == "pitch"]
+    seen: list[object] = []
+
+    def fake_start(self):
+        seen.append(list(self._specs))
+        return True
+
+    monkeypatch.setattr(ResourceDownloadSession, "start", fake_start)
+    session = start_resource_download(
+        parent,
+        create_default_config(),
+        activate=lambda _s: None,
+        specs=only_pitch,
+    )
+
+    assert session is not None
+    assert seen == [only_pitch]
+
+
+def test_start_resource_download_defaults_to_the_whole_catalog(qtbot, monkeypatch):
+    """Tools -> Download Recommended Resources passes no specs and must not narrow."""
+    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+
+    parent = QWidget()
+    qtbot.addWidget(parent)
+    seen: list[object] = []
+
+    def fake_start(self):
+        seen.append(list(self._specs))
+        return True
+
+    monkeypatch.setattr(ResourceDownloadSession, "start", fake_start)
+    start_resource_download(parent, create_default_config(), activate=lambda _s: None)
+
+    assert seen == [list(RECOMMENDED_DEFAULT_SET)]

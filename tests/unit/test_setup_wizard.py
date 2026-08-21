@@ -51,13 +51,17 @@ class _FakeValidation:
     much of the contract as their answers.
     """
 
-    def __init__(self, **answers: bool) -> None:
+    def __init__(self, **answers: bool | None) -> None:
+        # Frequency and pitch default to None: unconfigured is their resting
+        # state, and the page must render that as optional, not as broken.
         self.answers = {
             "ankiconnect": True,
             "deck": True,
             "note_type": True,
             "fields": True,
             "dictionary": True,
+            "frequency": None,
+            "pitch": None,
             **answers,
         }
         self.calls: list[str] = []
@@ -84,6 +88,26 @@ class _FakeValidation:
 
     def check_offline_dictionary(self):
         return self._answer("dictionary")
+
+    def _optional_answer(self, name: str) -> tuple[bool | None, str]:
+        self.calls.append(name)
+        if self.raises is not None:
+            raise self.raises
+        ok = self.answers[name]
+        if ok is None:
+            return None, ""
+        return ok, f"{name} ok" if ok else f"{name} is not ready"
+
+    def check_resource_readiness(self):
+        # Routes the dictionary leg through the public wrapper the real service
+        # uses, so the call log still records exactly one "dictionary" per probe.
+        from anki_miner.services.validation_service import ResourceReadiness
+
+        return ResourceReadiness(
+            dictionary=self.check_offline_dictionary(),
+            frequency=self._optional_answer("frequency"),
+            pitch=self._optional_answer("pitch"),
+        )
 
 
 def _wizard_with_validation(qtbot, monkeypatch, config, fake):
@@ -1484,6 +1508,8 @@ def test_resources_probe_joins_the_wizards_close_barrier(qtbot, wiz_config, monk
 
 def test_resources_page_drops_a_superseded_probes_answer(qtbot, wiz_config, monkeypatch):
     """Worker identity is the generation counter — an older probe's answer is dropped."""
+    from anki_miner.services.validation_service import ResourceReadiness  # noqa: PLC0415
+
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     page = wiz.resources_page
     _run_page_check(qtbot, page, page.dictionary_label)
@@ -1494,9 +1520,120 @@ def test_resources_page_drops_a_superseded_probes_answer(qtbot, wiz_config, monk
     page._live_check = None
     monkeypatch.setattr(page, "sender", lambda: stale)
     page.dictionary_label.setText("newer answer")
-    page._on_dictionary_probe_result((False, "stale answer"))
+    page._on_readiness_result(
+        ResourceReadiness(dictionary=(False, "stale answer"), frequency=(None, ""), pitch=(None, ""))
+    )
 
     assert page.dictionary_label.text() == "newer answer"
+
+
+# ---------------------------------------------------------------------------
+# ResourcesPage: frequency and pitch are reported, never required
+# ---------------------------------------------------------------------------
+
+
+def test_resources_page_reports_frequency_and_pitch_alongside_the_dictionary(qtbot, wiz_config, monkeypatch):
+    """All three families land; the page used to show evidence for only one."""
+    fake = _FakeValidation(frequency=True, pitch=True)
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert "frequency ok" in page.frequency_label.text()
+    assert "pitch ok" in page.pitch_label.text()
+
+
+def test_resources_page_calls_unconfigured_optional_resources_optional_not_broken(qtbot, wiz_config, monkeypatch):
+    """None means nothing configured — a resting state, never a problem."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert "not set up" in page.frequency_label.text()
+    assert "not set up" in page.pitch_label.text()
+
+
+def test_resources_page_surfaces_a_broken_optional_resource_verbatim(qtbot, wiz_config, monkeypatch):
+    """A stale index silently costs the card its rank — say so."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(frequency=False))
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert "frequency is not ready" in page.frequency_label.text()
+
+
+def test_optional_resources_never_gate_next(qtbot, wiz_config, monkeypatch):
+    """Only the dictionary is required (D26); freq and pitch stay informational."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation(frequency=False, pitch=False))
+    page = wiz.resources_page
+
+    _run_page_check(qtbot, page, page.dictionary_label)
+
+    assert page.isComplete() is True
+
+
+def test_a_probe_error_clears_every_family_line(qtbot, wiz_config, monkeypatch):
+    """One failed probe answered all three questions; none may keep a stale answer."""
+    fake = _FakeValidation()
+    fake.raises = RuntimeError("disk gone")
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+    page = wiz.resources_page
+
+    page.initializePage()
+    qtbot.waitUntil(lambda: not page.dictionary_label.text().startswith("Checking"), timeout=5000)
+
+    assert page.isComplete() is False
+    assert "disk gone" in page.dictionary_label.text()
+    assert page.frequency_label.text() == ""
+    assert page.pitch_label.text() == ""
+
+
+# ---------------------------------------------------------------------------
+# ResourcesPage: choosing which recommended resources to download
+# ---------------------------------------------------------------------------
+
+
+def test_resources_page_offers_one_checkbox_per_catalog_entry_all_on(qtbot, wiz_config, monkeypatch):
+    """Adding a spec to the catalog must add its checkbox with no page edit."""
+    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+
+    assert set(page.resource_checks) == {s.id for s in RECOMMENDED_DEFAULT_SET}
+    assert all(box.isChecked() for box in page.resource_checks.values())
+    assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
+
+
+def test_unchecked_resources_are_not_downloaded(qtbot, wiz_config, monkeypatch):
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+    seen: list[object] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.dialogs.resource_download_dialog.start_resource_download",
+        lambda *a, **kw: seen.append(kw.get("specs")) or None,
+    )
+
+    page.resource_checks["jpdb-freq"].setChecked(False)
+    page._on_download_clicked()
+
+    assert [s.id for s in seen[0]] == ["jmdict-english", "kanjium-pitch"]
+
+
+def test_download_button_is_dead_with_nothing_selected(qtbot, wiz_config, monkeypatch):
+    """A run with an empty spec list would report success having done nothing."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+
+    for box in page.resource_checks.values():
+        box.setChecked(False)
+    assert page.download_button.isEnabled() is False
+
+    page.resource_checks["kanjium-pitch"].setChecked(True)
+    assert page.download_button.isEnabled() is True
 
 
 # ---------------------------------------------------------------------------
