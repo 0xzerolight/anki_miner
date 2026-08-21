@@ -1371,6 +1371,32 @@ class TestPublicChecks:
         assert isinstance(public, tuple) and len(public) == 2
         assert isinstance(public[0], bool) and isinstance(public[1], str)
 
+    def test_check_resource_readiness_gathers_all_three_families(self, test_config):
+        from anki_miner.services.validation_service import ResourceReadiness
+
+        service = ValidationService(test_config)
+        with (
+            patch.object(service, "_check_offline_dictionary", return_value=(True, "JMdict (100 entries)")),
+            patch.object(service, "_check_frequency_sources", return_value=(None, "")),
+            patch.object(service, "_check_pitch_sources", return_value=(False, "needs reimport")),
+        ):
+            readiness = service.check_resource_readiness()
+
+        assert isinstance(readiness, ResourceReadiness)
+        assert readiness.dictionary == (True, "JMdict (100 entries)")
+        assert readiness.frequency == (None, "")
+        assert readiness.pitch == (False, "needs reimport")
+
+    def test_check_resource_readiness_reuses_the_public_dictionary_check(self, test_config):
+        service = ValidationService(test_config)
+        with (
+            patch.object(service, "check_offline_dictionary", return_value=(True, "ok")) as pub,
+            patch.object(service, "_check_frequency_sources", return_value=(None, "")),
+            patch.object(service, "_check_pitch_sources", return_value=(None, "")),
+        ):
+            service.check_resource_readiness()
+        pub.assert_called_once_with()
+
 
 class TestOptionalIndexedResourceChecks:
     """Frequency and pitch: reported when broken, silent when simply absent.

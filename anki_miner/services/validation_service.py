@@ -3,6 +3,7 @@
 import logging
 import subprocess
 import sys
+from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 
@@ -30,6 +31,26 @@ logger = logging.getLogger(__name__)
 #: day, so this must not fire on a healthy install that simply has auto-update off
 #: and a recent manual download.
 _YTDLP_STALE_AFTER_DAYS = 120
+
+
+@dataclass(frozen=True)
+class ResourceReadiness:
+    """What each resource family can actually do right now.
+
+    One object rather than three separate probes because the setup wizard's
+    page base keeps exactly one live-check worker as its generation counter --
+    a second concurrent probe would have no way to be recognised as stale.
+
+    The dictionary's ``bool`` and the other two families' ``bool | None`` are
+    deliberately different types. ``None`` means "nothing configured", which
+    for frequency and pitch is a legitimate resting state and must never be
+    rendered as a problem; a dictionary has no such state, because without one
+    every mined card comes out with no definition (D26).
+    """
+
+    dictionary: tuple[bool, str]
+    frequency: tuple[bool | None, str]
+    pitch: tuple[bool | None, str]
 
 
 def _classify_resolved(base: str, resolved: str) -> str:
@@ -313,6 +334,23 @@ class ValidationService:
             Tuple of (success, message) — identical to the private method.
         """
         return self._check_offline_dictionary()
+
+    def check_resource_readiness(self) -> ResourceReadiness:
+        """Probe all three resource families in one pass (setup wizard).
+
+        Goes through the public :meth:`check_offline_dictionary` for the
+        dictionary leg so that wrapper stays the single dictionary-readiness
+        entry point rather than becoming a second, drifting copy of the same
+        question.
+
+        Scans registry snapshots only -- see :meth:`_check_offline_dictionary`
+        for why a readiness probe must never open a provider.
+        """
+        return ResourceReadiness(
+            dictionary=self.check_offline_dictionary(),
+            frequency=self._check_frequency_sources(),
+            pitch=self._check_pitch_sources(),
+        )
 
     def _check_ankiconnect(self) -> tuple[bool, str]:
         """Check if AnkiConnect is running and accessible.
