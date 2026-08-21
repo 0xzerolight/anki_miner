@@ -284,3 +284,99 @@ class TestSelection:
         dlg.get_selected_words()
 
         assert words[0].line_expansion == (0, 0)
+
+
+class TestSpaceKey:
+    """Space is play/pause everywhere in the player pane, including on the
+    expansion buttons and the clip slider.
+
+    Issue #120 put the buttons in the player pane but left the Space shortcut
+    on ``player_widget``, which is their *sibling*. A ``ModernButton`` inherits
+    ``QAbstractButton``'s StrongFocus, so clicking ``+ Next line`` focused it
+    and the next Space fell through to ``QAbstractButton::keyPressEvent`` and
+    merged another line. The clip slider (StrongFocus, arrows-only
+    ``keyPressEvent``) had the same hole, where Space simply went dead.
+    """
+
+    @staticmethod
+    def _space_shortcuts(widget) -> list:
+        """Every Space QShortcut anywhere under ``widget`` (recursive)."""
+        from PyQt6.QtGui import QKeySequence, QShortcut
+
+        space = QKeySequence(Qt.Key.Key_Space)
+        return [sc for sc in widget.findChildren(QShortcut) if sc.key() == space]
+
+    def test_shortcut_is_parented_to_the_pane_not_the_player(self, qtbot, words, existing_video):
+        dlg, _ = _dialog(qtbot, words, existing_video)
+
+        shortcuts = self._space_shortcuts(dlg.player_pane)
+
+        assert len(shortcuts) == 1
+        assert shortcuts[0].parent() is dlg.player_pane
+        assert shortcuts[0].context() == Qt.ShortcutContext.WidgetWithChildrenShortcut
+
+    def test_exactly_one_space_shortcut_covers_the_pane(self, qtbot, words, existing_video):
+        """Two matching WidgetWithChildren shortcuts in one ancestry chain make
+        Qt fire ``activatedAmbiguously`` and nothing else -- Space would die."""
+        dlg, _ = _dialog(qtbot, words, existing_video)
+
+        assert len(self._space_shortcuts(dlg.player_pane)) == 1
+
+    def test_space_on_the_next_line_button_plays_instead_of_merging(self, qtbot, words, existing_video):
+        """The reported bug, driven through real Qt key dispatch.
+
+        ``shortcut.activated.emit()`` cannot catch this: only a real keypress
+        exercises the shortcut-map-versus-``keyPressEvent`` race that the button
+        was winning.
+        """
+        from PyQt6.QtTest import QTest
+        from PyQt6.QtWidgets import QApplication
+
+        dlg, mock_player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        assert dlg.expand_next_button.isEnabled()
+        dlg.show()
+        QApplication.setActiveWindow(dlg)
+        dlg.expand_next_button.setFocus()
+        qtbot.waitUntil(lambda: dlg.expand_next_button.hasFocus(), timeout=1000)
+
+        QTest.keyClick(dlg.expand_next_button, Qt.Key.Key_Space)
+
+        assert dlg._line_expansions == {}
+        assert mock_player.toggle_play_pause.called
+        dlg.hide()
+
+    def test_space_on_the_prev_line_button_plays_instead_of_merging(self, qtbot, words, existing_video):
+        from PyQt6.QtTest import QTest
+        from PyQt6.QtWidgets import QApplication
+
+        dlg, mock_player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        assert dlg.expand_prev_button.isEnabled()
+        dlg.show()
+        QApplication.setActiveWindow(dlg)
+        dlg.expand_prev_button.setFocus()
+        qtbot.waitUntil(lambda: dlg.expand_prev_button.hasFocus(), timeout=1000)
+
+        QTest.keyClick(dlg.expand_prev_button, Qt.Key.Key_Space)
+
+        assert dlg._line_expansions == {}
+        assert mock_player.toggle_play_pause.called
+        dlg.hide()
+
+    def test_space_on_the_clip_slider_reaches_the_player(self, qtbot, words, existing_video):
+        """Same pane, older instance: the slider took focus and ate Space."""
+        from PyQt6.QtTest import QTest
+        from PyQt6.QtWidgets import QApplication
+
+        dlg, mock_player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        dlg.show()
+        QApplication.setActiveWindow(dlg)
+        dlg.clip_editor.slider.setFocus()
+        qtbot.waitUntil(lambda: dlg.clip_editor.slider.hasFocus(), timeout=1000)
+
+        QTest.keyClick(dlg.clip_editor.slider, Qt.Key.Key_Space)
+
+        assert mock_player.toggle_play_pause.called
+        dlg.hide()

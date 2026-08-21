@@ -357,9 +357,11 @@ class TestPlayPauseShortcut:
         assert self._has_space_play_pause(dlg.sentence_list)
 
     def test_space_shortcut_on_player_pane(self, qtbot, mixed_words, tmp_path):
+        """The shortcut hangs off the pane container, so it also covers the clip
+        strip and the prev/next line buttons that sit beside the player (#120)."""
         dlg = _dialog_with_stub_player(mixed_words, tmp_path)
         qtbot.addWidget(dlg)
-        assert self._has_space_play_pause(dlg.player_widget)
+        assert self._has_space_play_pause(dlg.player_pane)
 
 
 class TestContextMenuCopy:

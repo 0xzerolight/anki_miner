@@ -866,7 +866,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Nothing focused yet; the first row-focus seeds it.
         self.clip_editor.clear_word()
 
-        container = QWidget()
+        # Named because the Space play/pause shortcut hangs off THIS container,
+        # not off self.player_widget: the clip strip and the expansion buttons
+        # below are the player's siblings, so a shortcut scoped to the player
+        # never reached them and a focused button ate Space instead (#120).
+        self.player_pane = QWidget()
+        container = self.player_pane
         vbox = QVBoxLayout(container)
         vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(SPACING.xs)
@@ -1137,11 +1142,18 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Install a widget-scoped Space play/pause shortcut on ``widget``.
 
         ``WidgetWithChildrenShortcut`` so it only fires when ``widget`` (or one of
-        its children) has focus — never the Search box. Installed on every pane the
-        user clicks into to preview a scene (the table plus the right-pane player,
-        sentence picker, and dictionary), so Space keeps reaching the player after
-        focus leaves the table. A window-scoped shortcut can't be used: it would
-        swallow spaces typed in the Search box (Issue #55).
+        its children) has focus — never the Search box. Installed on the table and
+        on each preview pane the user clicks into (the player PANE, the sentence
+        picker, and the dictionary), so Space keeps reaching the player after focus
+        leaves the table. A window-scoped shortcut can't be used: it would swallow
+        spaces typed in the Search box (Issue #55).
+
+        For the player it must be the pane container, never ``self.player_widget``:
+        the clip strip and the prev/next line buttons are the player's siblings, and
+        a ``QPushButton`` that holds focus activates on Space unless a shortcut in
+        scope claims the key first (#120). Never install on both — two matching
+        WidgetWithChildren shortcuts in one ancestry chain fire
+        ``activatedAmbiguously`` and nothing happens at all.
         """
         shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), widget)
         shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
@@ -1155,8 +1167,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # table the moment a sentence/scene is clicked, so the table alone isn't
         # enough.
         self._install_play_pause_shortcut(self.table)
-        if self._show_player and hasattr(self, "player_widget"):
-            self._install_play_pause_shortcut(self.player_widget)
+        if self._show_player and hasattr(self, "player_pane"):
+            # The PANE, not self.player_widget. Installing on both would put two
+            # WidgetWithChildren Space shortcuts in one ancestry chain, which Qt
+            # resolves as activatedAmbiguously — neither fires and Space dies.
+            self._install_play_pause_shortcut(self.player_pane)
         if self._has_candidates and hasattr(self, "sentence_list"):
             self._install_play_pause_shortcut(self.sentence_list)
         if self._show_dict and hasattr(self, "definition_view"):
