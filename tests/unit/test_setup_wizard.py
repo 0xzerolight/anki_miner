@@ -1592,6 +1592,51 @@ def test_a_probe_error_clears_every_family_line(qtbot, wiz_config, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# ResourcesPage: choosing which recommended resources to download
+# ---------------------------------------------------------------------------
+
+
+def test_resources_page_offers_one_checkbox_per_catalog_entry_all_on(qtbot, wiz_config, monkeypatch):
+    """Adding a spec to the catalog must add its checkbox with no page edit."""
+    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET  # noqa: PLC0415
+
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+
+    assert set(page.resource_checks) == {s.id for s in RECOMMENDED_DEFAULT_SET}
+    assert all(box.isChecked() for box in page.resource_checks.values())
+    assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
+
+
+def test_unchecked_resources_are_not_downloaded(qtbot, wiz_config, monkeypatch):
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+    seen: list[object] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.dialogs.resource_download_dialog.start_resource_download",
+        lambda *a, **kw: seen.append(kw.get("specs")) or None,
+    )
+
+    page.resource_checks["jpdb-freq"].setChecked(False)
+    page._on_download_clicked()
+
+    assert [s.id for s in seen[0]] == ["jmdict-english", "kanjium-pitch"]
+
+
+def test_download_button_is_dead_with_nothing_selected(qtbot, wiz_config, monkeypatch):
+    """A run with an empty spec list would report success having done nothing."""
+    wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
+    page = wiz.resources_page
+
+    for box in page.resource_checks.values():
+        box.setChecked(False)
+    assert page.download_button.isEnabled() is False
+
+    page.resource_checks["kanjium-pitch"].setChecked(True)
+    assert page.download_button.isEnabled() is True
+
+
+# ---------------------------------------------------------------------------
 # DonePage
 # ---------------------------------------------------------------------------
 

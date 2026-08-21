@@ -20,6 +20,7 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -45,6 +46,7 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadSession
+    from anki_miner.services.resource_catalog import ResourceSpec
     from anki_miner.services.validation_service import ValidationService
 
     from .setup_wizard import SetupWizard
@@ -61,6 +63,15 @@ RESOURCES_BLURB = QT_TRANSLATE_NOOP(
     "Download the recommended frequency list, pitch accent data, and dictionary now?",
 )
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-resources"
+
+#: Family noun per catalog ``kind``, so a checkbox says what a resource *is*
+#: rather than only what it is called. Keyed by ``ResourceSpec.kind``; a kind
+#: with no entry here falls back to the display name alone.
+_RESOURCE_KIND_NOUNS = {
+    "dict": QT_TRANSLATE_NOOP("SetupWizard", "Dictionary"),
+    "freq": QT_TRANSLATE_NOOP("SetupWizard", "Frequency"),
+    "pitch": QT_TRANSLATE_NOOP("SetupWizard", "Pitch accent"),
+}
 
 #: Eight themes spanning light/dark and warm/cool, shown before the full set.
 #: A shortlist keeps the first page of onboarding a glance rather than a wall;
@@ -866,6 +877,31 @@ class ResourcesPage(_LiveCheckPage):
         link.linkActivated.connect(lambda: _open_url(RESOURCES_HELP_URL))
         layout.addWidget(link)
 
+        # Built from the catalog, never hand-listed: a spec added to
+        # RECOMMENDED_DEFAULT_SET has to appear here without touching this page.
+        from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET  # noqa: PLC0415
+
+        # _sync_download_button reads _download_running, and the toggled
+        # connection below deliberately comes AFTER setChecked: a fresh
+        # unchecked box emits toggled the first time it is checked, and that
+        # slot touches download_button, which this loop runs before.
+        self._download_running = False
+        self._specs = list(RECOMMENDED_DEFAULT_SET)
+        self.resource_checks: dict[str, QCheckBox] = {}
+        for spec in self._specs:
+            noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
+            label = (
+                tr_format("%1 — %2", QCoreApplication.translate("SetupWizard", noun), spec.display_name)
+                if noun
+                else spec.display_name
+            )
+            box = QCheckBox(label)
+            box.setToolTip(spec.license_note)
+            box.setChecked(True)
+            box.toggled.connect(self._sync_download_button)
+            layout.addWidget(box)
+            self.resource_checks[spec.id] = box
+
         self.download_button = ModernButton(self.tr("Download recommended resources"), variant="primary")
         self.download_button.clicked.connect(self._on_download_clicked)
         layout.addWidget(self.download_button)
@@ -901,7 +937,14 @@ class ResourcesPage(_LiveCheckPage):
         # which calls back into the session. Dropping the reference on finish
         # would collect the session and leave that button inert.
         self._session: ResourceDownloadSession | None = None
-        self._download_running = False
+
+    def selected_specs(self) -> list[ResourceSpec]:
+        """Catalog order, filtered to what is ticked."""
+        return [spec for spec in self._specs if self.resource_checks[spec.id].isChecked()]
+
+    def _sync_download_button(self) -> None:
+        """Nothing ticked is not a run: an empty spec list reports success for no work."""
+        self.download_button.setEnabled(bool(self.selected_specs()) and not self._download_running)
 
     def initializePage(self) -> None:
         """Ask the disk, every time the page is entered."""
@@ -986,6 +1029,9 @@ class ResourcesPage(_LiveCheckPage):
         if self._download_running:
             return
         self.status_label.clear()
+        specs = self.selected_specs()
+        if not specs:
+            return
         session = start_resource_download(
             self,
             self._wizard.working_config(),
@@ -993,6 +1039,7 @@ class ResourcesPage(_LiveCheckPage):
             release_resources=self._wizard._release_resources,
             task_registry=getattr(self._wizard.parent(), "task_registry", None),
             adopt_worker=self._wizard.register_worker,
+            specs=specs,
         )
         if session is None:
             return
@@ -1027,7 +1074,9 @@ class ResourcesPage(_LiveCheckPage):
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import ResourceDownloadOutcome
 
         self._download_running = False
-        self.download_button.setEnabled(True)
+        # Not setEnabled(True): a finished run must not resurrect the button
+        # for a selection the user has since emptied.
+        self._sync_download_button()
         if not isinstance(outcome, ResourceDownloadOutcome):
             return
 
