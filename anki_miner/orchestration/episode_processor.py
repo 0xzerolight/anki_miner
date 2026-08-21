@@ -1799,6 +1799,24 @@ class EpisodeProcessor:
             )
         return curated
 
+    def _materialize_line_expansions(self, words: list[TokenizedWord], subtitle_file: Path) -> list[TokenizedWord]:
+        """Rebuild curator-expanded words against the episode's full cue list (Issue #120).
+
+        Runs between curation and phase 3 so the merged sentence/timings feed
+        media extraction, lookups and card creation alike. ``parse_raw_entries``
+        is the neighbor source — it is the complete ordered list (``line_index``
+        drops zero-lemma lines) and applies the same ``subtitle_offset`` the
+        words carry, so both sides share one timeline. The all-zero fast path
+        skips the re-parse entirely (every run without an expansion).
+        """
+        if all(word.line_expansion == (0, 0) for word in words):
+            return words
+        entries = self.subtitle_parser.parse_raw_entries(subtitle_file)
+        return [
+            self.word_filter.expand_word_lines(word, entries) if word.line_expansion != (0, 0) else word
+            for word in words
+        ]
+
     def process_episode(
         self,
         video_file: Path,
@@ -1917,7 +1935,7 @@ class EpisodeProcessor:
                 )
                 if isinstance(outcome, ProcessingResult):
                     return outcome
-                unknown_words = outcome
+                unknown_words = self._materialize_line_expansions(outcome, subtitle_file)
 
             with timed_phase("extract", logger):
                 media_results = self._phase3_extract(
