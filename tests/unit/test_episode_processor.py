@@ -6024,3 +6024,84 @@ class TestCurationQuietMarker:
     def test_unmarked_callback_keeps_mining_info(self, test_config, mock_services, tmp_path):
         infos = self._run(test_config, mock_services, tmp_path, lambda words: list(words))
         assert any("selected word" in msg for msg in infos)
+
+
+class TestCurationLineExpansion:
+    """Issue #120: curator line expansions materialize between curation and phase 3."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _wire(self, mock_services, words, media):
+        sp = mock_services["subtitle_parser"]
+        # Curation builds the line index; mirror the plain parse result through
+        # the with-index path (no sentence candidates).
+        sp.parse_subtitle_file_with_index.side_effect = lambda f: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file.return_value = list(words)
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = list(words)
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
+        mock_services["definition_service"].get_definitions_batch.side_effect = lambda ws, *a, **kw: ["1. def"] * len(
+            ws
+        )
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    def test_curation_expansion_materialized_before_extraction(self, test_config, mock_services, tmp_path):
+        """A curated word carrying line_expansion is rebuilt via expand_word_lines
+        against parse_raw_entries, and phase 3 extracts the rebuilt word."""
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        intent = replace(word, line_expansion=(1, 0))
+        merged = replace(word, sentence="前の行 食べるのテスト", start_time=0.0)
+        entries = [(0.0, 1.0, "前の行"), (1.0, 3.0, "食べるのテスト")]
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = entries
+        mock_services["word_filter"].expand_word_lines.return_value = merged
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [intent])
+
+        mock_services["word_filter"].expand_word_lines.assert_called_once_with(intent, entries)
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert extracted == [merged]
+
+    def test_untouched_words_bypass_expand(self, test_config, mock_services, tmp_path):
+        """Only nonzero-expansion words go through expand_word_lines; the rest
+        pass through identity, preserving list order."""
+        word_a = _make_word("食べる", start_time=1.0)
+        word_b = _make_word("走る", start_time=5.0)
+        self._wire(mock_services, [word_a, word_b], _make_media())
+        intent = replace(word_a, line_expansion=(0, 1))
+        merged = replace(word_a, sentence="merged", line_expansion=(0, 0))
+        mock_services["word_filter"].expand_word_lines.return_value = merged
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [intent, word_b])
+
+        mock_services["word_filter"].expand_word_lines.assert_called_once()
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert extracted == [merged, word_b]
+
+    def test_no_expansion_skips_extra_raw_entry_parse(self, test_config, mock_services, tmp_path):
+        """The all-zero fast path never re-parses: parse_raw_entries stays at the
+        single phase-1 logging call and expand_word_lines is untouched."""
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: list(ws))
+
+        mock_services["word_filter"].expand_word_lines.assert_not_called()
+        assert mock_services["subtitle_parser"].parse_raw_entries.call_count == 1
