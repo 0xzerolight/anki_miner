@@ -188,6 +188,13 @@ class TokenizedWord:
     # meaning. Consumed by media_extractor.resolve_audio_window, which is the
     # only place either bound is read.
     clip_override: tuple[float, float] | None = None
+    # Curator "add previous/next subtitle line" intent: (lines_before,
+    # lines_after) merged into this word's sentence + media window (Issue
+    # #120). (0, 0) = untouched (every non-interactive path). Stamped by the
+    # Word Curator, materialized by EpisodeProcessor via
+    # WordFilterService.expand_word_lines before phase 3 — the dialog stores
+    # intent, the processor rebuilds text/spans/furigana.
+    line_expansion: tuple[int, int] = (0, 0)
 
     @property
     def bold_end(self) -> int:
