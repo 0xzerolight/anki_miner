@@ -1,5 +1,6 @@
 """Tests for word_filter service."""
 
+import dataclasses
 import re
 import unicodedata
 
@@ -7,7 +8,12 @@ import pytest
 
 from anki_miner.models import LineLemmas
 from anki_miner.models.word import TokenizedWord
-from anki_miner.services.word_filter import WordFilterService
+from anki_miner.services.word_filter import (
+    CUE_JOINER,
+    WordFilterService,
+    find_cue_index,
+    merge_cue_window,
+)
 from anki_miner.services.word_list_service import WordListService
 
 
@@ -1593,3 +1599,190 @@ class TestScriptTypeFilterAgainstRealParser:
         assert leaked == []
         # The filter must not have simply eaten everything.
         assert "人" in {w.mined_form for w in kept}
+
+
+# Cue list for the Issue #120 line-expansion tests: three consecutive subtitle
+# lines; the middle one is the line the target word was mined from.
+EXPANSION_ENTRIES = [
+    (1.0, 3.0, "前の行です"),
+    (5.0, 7.0, "彼はりんごを食べた"),
+    (9.0, 11.0, "次の行です"),
+]
+
+
+def _expansion_word(**overrides) -> TokenizedWord:
+    """Word mined from the middle EXPANSION_ENTRIES cue (食べた at chars 6..9)."""
+    base = {
+        "surface": "食べた",
+        "lemma": "食べる",
+        "reading": "タベタ",
+        "sentence": "彼はりんごを食べた",
+        "start_time": 5.0,
+        "end_time": 7.0,
+        "duration": 2.0,
+        "surface_start": 6,
+        "surface_end": 9,
+        "highlight_end": 9,
+        "line_expansion": (1, 0),
+    }
+    base.update(overrides)
+    return TokenizedWord(**base)
+
+
+class TestFindCueIndex:
+    """Tests for the module-level find_cue_index helper."""
+
+    def test_matches_by_text_and_time(self):
+        assert find_cue_index(EXPANSION_ENTRIES, 5.0, "彼はりんごを食べた") == 1
+
+    def test_duplicate_text_broken_by_nearest_time(self):
+        # OP/ED lyric: the same line at two timestamps.
+        entries = [(5.0, 7.0, "同じ歌詞"), (100.0, 102.0, "同じ歌詞")]
+        assert find_cue_index(entries, 100.0, "同じ歌詞") == 1
+
+    def test_offset_applied_with_clamp(self):
+        # Raw start 1.0 with offset -2.0 clamps to 0.0 on the word timeline,
+        # mirroring parse_raw_entries' max(0, ...) — a plain 1.0 + (-2.0) would
+        # miss by the clamp delta.
+        assert find_cue_index(EXPANSION_ENTRIES, 0.0, "前の行です", offset=-2.0) == 0
+
+    def test_no_match_returns_none(self):
+        assert find_cue_index(EXPANSION_ENTRIES, 50.0, "存在しない行") is None
+
+
+class TestMergeCueWindow:
+    """Tests for the module-level merge_cue_window helper."""
+
+    def test_prev_only_prepends_in_file_order(self):
+        window = merge_cue_window(EXPANSION_ENTRIES, 1, 1, 0)
+        assert window.text == "前の行です" + CUE_JOINER + "彼はりんごを食べた"
+        assert window.prefix_len == len("前の行です") + len(CUE_JOINER)
+
+    def test_next_only_appends_prefix_zero(self):
+        window = merge_cue_window(EXPANSION_ENTRIES, 1, 0, 1)
+        assert window.text == "彼はりんごを食べた" + CUE_JOINER + "次の行です"
+        assert window.prefix_len == 0
+
+    def test_counts_clamp_at_file_edges(self):
+        assert merge_cue_window(EXPANSION_ENTRIES, 1, 5, 0) == merge_cue_window(EXPANSION_ENTRIES, 1, 1, 0)
+        assert merge_cue_window(EXPANSION_ENTRIES, 1, 0, 5) == merge_cue_window(EXPANSION_ENTRIES, 1, 0, 1)
+
+    def test_times_span_min_start_max_end(self):
+        window = merge_cue_window(EXPANSION_ENTRIES, 1, 1, 1)
+        assert (window.start, window.end) == (1.0, 11.0)
+
+
+class TestExpandWordLines:
+    """Tests for WordFilterService.expand_word_lines (Issue #120)."""
+
+    def test_zero_expansion_returns_same_object(self, test_config):
+        service = WordFilterService(test_config)
+        word = _expansion_word(line_expansion=(0, 0))
+        assert service.expand_word_lines(word, EXPANSION_ENTRIES) is word
+
+    def test_prev_line_prepends_text_and_shifts_spans(self, test_config):
+        service = WordFilterService(test_config)
+        result = service.expand_word_lines(_expansion_word(), EXPANSION_ENTRIES)
+        assert result.sentence == "前の行です" + CUE_JOINER + "彼はりんごを食べた"
+        assert (result.surface_start, result.surface_end) == (12, 15)
+        assert result.highlight_end == 15
+        assert result.sentence[result.surface_start : result.surface_end] == "食べた"
+
+    def test_next_line_appends_text_keeps_spans(self, test_config):
+        service = WordFilterService(test_config)
+        result = service.expand_word_lines(_expansion_word(line_expansion=(0, 1)), EXPANSION_ENTRIES)
+        assert result.sentence == "彼はりんごを食べた" + CUE_JOINER + "次の行です"
+        assert (result.surface_start, result.surface_end) == (6, 9)
+        assert result.highlight_end == 9
+        assert result.sentence[result.surface_start : result.surface_end] == "食べた"
+
+    def test_sentence_invariant_holds_after_shift(self, test_config):
+        service = WordFilterService(test_config)
+        result = service.expand_word_lines(_expansion_word(line_expansion=(1, 1)), EXPANSION_ENTRIES)
+        assert result.sentence[result.surface_start : result.surface_end] == result.surface
+
+    def test_untracked_spans_stay_sentinel(self, test_config):
+        service = WordFilterService(test_config)
+        word = _expansion_word(
+            surface_start=-1,
+            surface_end=-1,
+            highlight_end=-1,
+            sentence_bolded="<b>stale</b>",
+            sentence_furigana_bolded="<b>stale</b>",
+        )
+        result = service.expand_word_lines(word, EXPANSION_ENTRIES)
+        assert (result.surface_start, result.surface_end, result.highlight_end) == (-1, -1, -1)
+        assert result.sentence_bolded == ""
+        assert result.sentence_furigana_bolded == ""
+
+    def test_times_span_first_to_last_cue(self, test_config):
+        service = WordFilterService(test_config)
+        result = service.expand_word_lines(_expansion_word(line_expansion=(1, 1)), EXPANSION_ENTRIES)
+        assert (result.start_time, result.end_time) == (1.0, 11.0)
+        assert result.duration == 10.0
+
+    def test_taggerless_clears_sentence_furigana_and_reading(self, test_config):
+        service = WordFilterService(test_config)  # no tagger
+        word = _expansion_word(sentence_furigana="stale[furi]", sentence_reading="stale")
+        result = service.expand_word_lines(word, EXPANSION_ENTRIES)
+        assert result.sentence_furigana == ""
+        assert result.sentence_reading == ""
+
+    def test_furigana_reading_regenerated_over_merged_text(self, test_config, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "anki_miner.services.word_filter.generate_furigana",
+            lambda text, tagger: calls.append(("furigana", text)) or "merged[furi]",
+        )
+        monkeypatch.setattr(
+            "anki_miner.services.word_filter.generate_reading",
+            lambda text, tagger: calls.append(("reading", text)) or "merged-reading",
+        )
+        service = WordFilterService(test_config, tagger=object())
+        result = service.expand_word_lines(_expansion_word(), EXPANSION_ENTRIES)
+        merged = "前の行です" + CUE_JOINER + "彼はりんごを食べた"
+        assert ("furigana", merged) in calls
+        assert ("reading", merged) in calls
+        assert result.sentence_furigana == "merged[furi]"
+        assert result.sentence_reading == "merged-reading"
+
+    def test_bolded_variants_rebuilt_when_config_bolds(self, test_config, monkeypatch):
+        monkeypatch.setattr("anki_miner.services.word_filter.generate_furigana", lambda text, tagger: "")
+        monkeypatch.setattr("anki_miner.services.word_filter.generate_reading", lambda text, tagger: "")
+        plain_calls = []
+        furi_calls = []
+        monkeypatch.setattr(
+            "anki_miner.services.word_filter.wrap_target_plain",
+            lambda text, start, end: plain_calls.append((text, start, end)) or "<b>plain</b>",
+        )
+        monkeypatch.setattr(
+            "anki_miner.services.word_filter.wrap_target_furigana",
+            lambda text, tagger, start, end: furi_calls.append((text, start, end)) or "<b>furi</b>",
+        )
+        config = dataclasses.replace(test_config, bold_target_in_sentence=True)
+        service = WordFilterService(config, tagger=object())
+        result = service.expand_word_lines(_expansion_word(), EXPANSION_ENTRIES)
+        merged = "前の行です" + CUE_JOINER + "彼はりんごを食べた"
+        assert plain_calls == [(merged, 12, 15)]
+        assert furi_calls == [(merged, 12, 15)]
+        assert result.sentence_bolded == "<b>plain</b>"
+        assert result.sentence_furigana_bolded == "<b>furi</b>"
+
+    def test_cue_miss_returns_word_unchanged(self, test_config):
+        service = WordFilterService(test_config)
+        word = _expansion_word(sentence="見つからない行", start_time=999.0)
+        assert service.expand_word_lines(word, EXPANSION_ENTRIES) is word
+
+    def test_result_resets_line_expansion_and_clears_candidates(self, test_config):
+        service = WordFilterService(test_config)
+        candidate = _expansion_word(line_expansion=(0, 0))
+        word = _expansion_word(sentence_candidates=[candidate])
+        result = service.expand_word_lines(word, EXPANSION_ENTRIES)
+        assert result.line_expansion == (0, 0)
+        assert result.sentence_candidates == []
+
+    def test_clip_override_preserved(self, test_config):
+        service = WordFilterService(test_config)
+        word = _expansion_word(clip_override=(4.0, 8.0))
+        result = service.expand_word_lines(word, EXPANSION_ENTRIES)
+        assert result.clip_override == (4.0, 8.0)

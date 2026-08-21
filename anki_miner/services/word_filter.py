@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import unicodedata
-from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas, TokenizedWord
@@ -24,6 +25,74 @@ from anki_miner.utils import (
 if TYPE_CHECKING:
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
+
+logger = logging.getLogger(__name__)
+
+#: Joiner between merged cue texts (Issue #120 line expansion). A space
+#: mirrors _clean_line_text's own physical-line flattening (" ".join), and the
+#: curator preview concatenates with the same constant so the cell text and the
+#: mined sentence stay byte-identical.
+CUE_JOINER = " "
+
+
+class MergedLineWindow(NamedTuple):
+    """A run of adjacent subtitle cues merged into one sentence/media window."""
+
+    start: float  # min start over the merged cues (entry timeline)
+    end: float  # max end over the merged cues
+    text: str  # CUE_JOINER.join of the cue texts, file order
+    prefix_len: int  # chars prepended before the word's own line (incl. joiner)
+
+
+def find_cue_index(
+    entries: Sequence[tuple[float, float, str]],
+    start_time: float,
+    sentence: str,
+    *,
+    offset: float = 0.0,
+    tolerance: float = 0.05,
+) -> int | None:
+    """Locate the cue a word was mined from.
+
+    Text equality is the primary key (``_clean_line_text`` is shared by the
+    mining parse and ``parse_raw_entries``, so the word's own cue matches
+    verbatim); the nearest clamped time — ``max(0, start + offset)``, mirroring
+    ``parse_raw_entries``'s own clamp — breaks duplicate-text ties (OP/ED
+    lyrics). Falls back to time-only within ``tolerance`` when no text matches.
+    Returns None when nothing lands within ``tolerance``.
+    """
+
+    def dist(i: int) -> float:
+        return abs(max(0.0, entries[i][0] + offset) - start_time)
+
+    text_hits = [i for i, (_, _, text) in enumerate(entries) if text == sentence]
+    pool: Sequence[int] = text_hits or range(len(entries))
+    best = min(pool, key=dist, default=None)
+    if best is None or dist(best) > tolerance:
+        return None
+    return best
+
+
+def merge_cue_window(
+    entries: Sequence[tuple[float, float, str]],
+    index: int,
+    prev_count: int,
+    next_count: int,
+) -> MergedLineWindow:
+    """Merge ``entries[index - prev_count : index + next_count + 1]``.
+
+    Counts clamp at the file edges. Times span min start to max end over the
+    merged range (defensive against out-of-order ASS events).
+    """
+    lo = max(0, index - prev_count)
+    hi = min(len(entries) - 1, index + next_count)
+    cues = entries[lo : hi + 1]
+    return MergedLineWindow(
+        start=min(cue[0] for cue in cues),
+        end=max(cue[1] for cue in cues),
+        text=CUE_JOINER.join(cue[2] for cue in cues),
+        prefix_len=sum(len(cue[2]) + len(CUE_JOINER) for cue in entries[lo:index]),
+    )
 
 
 def _normalize_sentence(text: str) -> str:
@@ -486,9 +555,7 @@ class WordFilterService:
             # Bold the full inflected form on the swapped-in line (same
             # highlight_end semantics as parse-time bolding; -1 sentinel in
             # hand-built indexes falls back to the surface span).
-            bold_end = new_highlight_end if new_highlight_end >= 0 else new_end
-            new_bolded = wrap_target_plain(match.line_text, new_start, bold_end)
-            new_furi_bolded = wrap_target_furigana(match.line_text, self.tagger, new_start, bold_end)
+            new_bolded, new_furi_bolded = self._bolded_pair(match.line_text, new_start, new_highlight_end, new_end)
         else:
             new_bolded = ""
             new_furi_bolded = ""
@@ -529,6 +596,85 @@ class WordFilterService:
             sentence_bolded=new_bolded,
             sentence_furigana_bolded=new_furi_bolded,
             sentence_candidates=[],
+        )
+
+    def _bolded_pair(self, text: str, start: int, highlight_end: int, end: int) -> tuple[str, str]:
+        """``(sentence_bolded, sentence_furigana_bolded)`` for a target span.
+
+        Same highlight_end semantics as parse-time bolding: the -1 sentinel
+        falls back to the surface span end. Caller guarantees
+        ``config.bold_target_in_sentence``, tracked spans, and a tagger.
+        """
+        bold_end = highlight_end if highlight_end >= 0 else end
+        return (
+            wrap_target_plain(text, start, bold_end),
+            wrap_target_furigana(text, self.tagger, start, bold_end),
+        )
+
+    def expand_word_lines(
+        self,
+        word: TokenizedWord,
+        entries: Sequence[tuple[float, float, str]],
+    ) -> TokenizedWord:
+        """Materialize ``word.line_expansion`` against the full cue list (Issue #120).
+
+        Merges the requested previous/next cues into the word's sentence and
+        media window: sentence text joined with :data:`CUE_JOINER`, timings
+        spanning first to last merged cue, surface/highlight offsets shifted by
+        the prepended length (the ``sentence[surface_start:surface_end] ==
+        surface`` invariant holds by construction), and
+        ``sentence_furigana``/``sentence_reading``/bolded variants regenerated
+        over the merged text — stale single-line values would be actively
+        wrong, so without a tagger they are cleared, not kept. ``entries`` must
+        come from ``parse_raw_entries`` on the same timeline as the word
+        (``line_index`` drops zero-lemma lines and cannot supply neighbors).
+
+        Returns ``word`` unchanged for the ``(0, 0)`` default and for a cue
+        miss (pathological: the curator matched the same parse). The result's
+        ``line_expansion`` resets to ``(0, 0)`` — the intent is absorbed, so a
+        second pass cannot double-apply it. ``clip_override`` is preserved: the
+        curator only lets an override exist that postdates the expansion.
+        """
+        prev_count, next_count = word.line_expansion
+        if (prev_count, next_count) == (0, 0):
+            return word
+        index = find_cue_index(entries, word.start_time, word.sentence, tolerance=1e-3)
+        if index is None:
+            logger.warning(
+                "line expansion: no cue matches %r at %.3fs; keeping the original line",
+                word.sentence,
+                word.start_time,
+            )
+            return word
+        window = merge_cue_window(entries, index, prev_count, next_count)
+        shift = window.prefix_len
+        new_start = word.surface_start + shift if word.surface_start >= 0 else -1
+        new_end = word.surface_end + shift if word.surface_end >= 0 else -1
+        new_highlight = word.highlight_end + shift if word.highlight_end >= 0 else -1
+        if self.tagger is not None:
+            new_furigana = generate_furigana(window.text, self.tagger)
+            new_reading = generate_reading(window.text, self.tagger)
+        else:
+            new_furigana = new_reading = ""
+        if self.config.bold_target_in_sentence and new_start >= 0 and self.tagger is not None:
+            new_bolded, new_furi_bolded = self._bolded_pair(window.text, new_start, new_highlight, new_end)
+        else:
+            new_bolded = new_furi_bolded = ""
+        return dataclasses.replace(
+            word,
+            sentence=window.text,
+            start_time=window.start,
+            end_time=window.end,
+            duration=window.end - window.start,
+            surface_start=new_start,
+            surface_end=new_end,
+            highlight_end=new_highlight,
+            sentence_furigana=new_furigana,
+            sentence_reading=new_reading,
+            sentence_bolded=new_bolded,
+            sentence_furigana_bolded=new_furi_bolded,
+            sentence_candidates=[],
+            line_expansion=(0, 0),
         )
 
     def attach_sentence_candidates(
