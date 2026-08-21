@@ -811,6 +811,7 @@ def start_resource_download(
     blocked: BlockedReporter | None = None,
     task_registry: TaskRegistry | None = None,
     adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
+    specs: Sequence[ResourceSpec] = RECOMMENDED_DEFAULT_SET,
 ) -> ResourceDownloadSession | None:
     """Start a background recommended-resource run; None means it never started.
 
@@ -825,6 +826,10 @@ def start_resource_download(
 
     The returned session must be retained by the caller: it is not Qt-parented,
     because the widget that started it may be gone long before the run ends.
+
+    ``specs`` narrows the run to a subset of the catalog. It defaults to the
+    whole set, so a caller that offers no choice — the Tools menu — is
+    unchanged.
     """
     session = ResourceDownloadSession(
         parent,
@@ -835,5 +840,6 @@ def start_resource_download(
         blocked=blocked,
         task_registry=task_registry,
         adopt_worker=adopt_worker,
+        specs=specs,
     )
     return session if session.start() else None
