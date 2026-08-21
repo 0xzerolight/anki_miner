@@ -61,7 +61,7 @@ from anki_miner.gui.utils.qt_helpers import (
     update_table_item,
 )
 from anki_miner.gui.utils.run_off_thread import join_tracked_workers, run_off_thread
-from anki_miner.gui.widgets.audio_clip_editor import AudioClipEditor
+from anki_miner.gui.widgets.audio_clip_editor import MAX_CLIP_SECONDS, AudioClipEditor
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.gui.widgets.base.sizing import metric_row_height
@@ -70,6 +70,7 @@ from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qima
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.models import TokenizedWord
 from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_html
+from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -206,6 +207,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # The word the audio clip strip is currently showing, so an edit lands
         # on the right index no matter how the table has been sorted.
         self._clip_index: int | None = None
+        # Per-word subtitle-line expansion (prev_count, next_count), keyed by
+        # original word index exactly like _chosen/_clip_overrides (Issue
+        # #120). Stamped onto the selection as TokenizedWord.line_expansion;
+        # the processor materializes the merged sentence/timings.
+        self._line_expansions: dict[int, tuple[int, int]] = {}
         # Context for the candidate list while a row is focused: the focused
         # word's index + its candidate variants. Guards programmatic
         # repopulation from being mistaken for a user pick.
@@ -866,6 +872,40 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         vbox.setSpacing(SPACING.xs)
         vbox.addWidget(self.player_widget, 1)
         vbox.addWidget(self.clip_editor)
+        # Prev/next subtitle-line expansion (Issue #120). Inside this pane on
+        # purpose: a new top-level pane would change _side_key and orphan every
+        # saved splitter layout. Entry-less contexts (manga, reading) never
+        # build the row.
+        if self._media_context is not None and self._media_context.subtitle_entries:
+            expand_row = QHBoxLayout()
+            expand_row.setContentsMargins(0, 0, 0, 0)
+            expand_row.setSpacing(SPACING.xs)
+            self.expand_prev_button = ModernButton(self.tr("+ Previous line"), variant="ghost")
+            self.expand_next_button = ModernButton(self.tr("+ Next line"), variant="ghost")
+            self.expand_reset_button = ModernButton(self.tr("Reset lines"), variant="ghost")
+            self.expand_prev_button.setToolTip(
+                self.tr(
+                    "Merge the previous subtitle line into this word's sentence and media clip. "
+                    "Disabled when there is no earlier line or the combined clip would exceed 30 seconds."
+                )
+            )
+            self.expand_next_button.setToolTip(
+                self.tr(
+                    "Merge the next subtitle line into this word's sentence and media clip. "
+                    "Disabled when there is no later line or the combined clip would exceed 30 seconds."
+                )
+            )
+            self.expand_reset_button.setToolTip(
+                self.tr("Restore this word's original single-line sentence and clip window.")
+            )
+            self.expand_prev_button.clicked.connect(lambda: self._on_expand_line(-1))
+            self.expand_next_button.clicked.connect(lambda: self._on_expand_line(1))
+            self.expand_reset_button.clicked.connect(self._on_expand_reset)
+            for button in (self.expand_prev_button, self.expand_next_button, self.expand_reset_button):
+                button.setEnabled(False)
+                expand_row.addWidget(button)
+            expand_row.addStretch(1)
+            vbox.addLayout(expand_row)
         return container
 
     # ------------------------------------------------------------------
@@ -881,9 +921,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.clip_editor.clear_word()
             return
         assert self._media_context is not None  # the strip exists only with one
+        start, end = word.start_time, word.end_time
+        window = self._expanded_window(word, idx)
+        if window is not None:
+            # Line expansion active: the strip edits the merged window.
+            start, end = window.start, window.end
         self.clip_editor.set_word(
-            word.start_time,
-            word.end_time,
+            start,
+            end,
             self._media_context.audio_padding,
             self._clip_overrides.get(idx),
         )
@@ -911,6 +956,123 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _on_clip_stop_requested(self) -> None:
         if self._show_player and hasattr(self, "player_widget"):
             self.player_widget.pause()  # cancels the range, which resets the button
+
+    # ------------------------------------------------------------------
+    # Prev/next subtitle-line expansion (Issue #120)
+    # ------------------------------------------------------------------
+
+    def _expansion_entries(self, chosen: TokenizedWord) -> tuple[list[tuple[float, float, str]], float] | None:
+        """``(cue entries, offset)`` for the chosen variant's episode, or None.
+
+        Season curation: a variant from another episode resolves through
+        ``_media_ctx_cache``; a miss (the context swap is still in flight)
+        disables the buttons until ``_apply_media_context`` lands and
+        refreshes them.
+        """
+        ctx = self._media_context
+        if ctx is None:
+            return None
+        video = chosen.video_file or ctx.video_file
+        active = ctx if video is None or ctx.video_file == video else self._media_ctx_cache.get(video)
+        if active is None or not active.subtitle_entries:
+            return None
+        return active.subtitle_entries, active.offset
+
+    def _expanded_window(self, chosen: TokenizedWord, idx: int | None) -> MergedLineWindow | None:
+        """``idx``'s active expansion as a VIDEO-timeline window, or None when
+        inactive or unresolvable (no entries yet, cue unmatched)."""
+        if idx is None:
+            return None
+        expansion = self._line_expansions.get(idx, (0, 0))
+        if expansion == (0, 0):
+            return None
+        resolved = self._expansion_entries(chosen)
+        if resolved is None:
+            return None
+        entries, offset = resolved
+        cue = find_cue_index(entries, chosen.start_time, chosen.sentence, offset=offset)
+        if cue is None:
+            return None
+        window = merge_cue_window(entries, cue, *expansion)
+        # Entries are raw-timeline (the context parser zeroes the offset);
+        # word timings are raw+offset, with the same max(0, ...) clamp.
+        return MergedLineWindow(
+            start=max(0.0, window.start + offset),
+            end=max(0.0, window.end + offset),
+            text=window.text,
+            prefix_len=window.prefix_len,
+        )
+
+    def _on_expand_line(self, direction: int) -> None:
+        word, idx = self._pending_word, self._pending_index
+        if word is None or idx is None:
+            return
+        chosen = self._chosen.get(idx, word)
+        prev_count, next_count = self._line_expansions.get(idx, (0, 0))
+        if direction < 0:
+            prev_count += 1
+        else:
+            next_count += 1
+        self._line_expansions[idx] = (prev_count, next_count)
+        self._apply_expansion(chosen, idx, snap=direction < 0)
+
+    def _on_expand_reset(self) -> None:
+        word, idx = self._pending_word, self._pending_index
+        if word is None or idx is None:
+            return
+        self._line_expansions.pop(idx, None)
+        self._apply_expansion(self._chosen.get(idx, word), idx, snap=True)
+
+    def _apply_expansion(self, chosen: TokenizedWord, idx: int, *, snap: bool) -> None:
+        """Shared add/reset tail: drop the stale clip override (the
+        sentence-pick precedent — it was measured against the old window),
+        reseed the strip, repaint the sentence cell, refresh button states,
+        and optionally snap the preview to the (new) start."""
+        self._clip_overrides.pop(idx, None)
+        self._seed_clip_editor(chosen, idx)
+        window = self._expanded_window(chosen, idx)
+        display = chosen if window is None else dataclasses.replace(chosen, sentence=window.text)
+        self._apply_pick_to_row(idx, display)
+        self._refresh_expansion_buttons()
+        if snap:
+            start = window.start if window is not None else chosen.start_time
+            video = chosen.video_file
+            # Defer: clicked handlers run mid-event — see _on_candidate_chosen.
+            QTimer.singleShot(0, lambda: self._preview_scene(start, video))
+
+    def _refresh_expansion_buttons(self) -> None:
+        """Recompute the three expansion buttons' enabled states.
+
+        A direction disables when no cue exists that way or when the would-be
+        merged window plus audio padding would exceed the clip strip's
+        MAX_CLIP_SECONDS — the single guardrail against merging across a long
+        cue gap. Enforced only here, at stamp time: the processor materializes
+        the stamped counts verbatim, so what the preview promised is what the
+        card gets.
+        """
+        if not hasattr(self, "expand_prev_button"):
+            return
+        word, idx = self._pending_word, self._pending_index
+        prev_ok = next_ok = reset_ok = False
+        if word is not None and idx is not None and self._media_context is not None:
+            chosen = self._chosen.get(idx, word)
+            resolved = self._expansion_entries(chosen)
+            if resolved is not None:
+                entries, offset = resolved
+                cue = find_cue_index(entries, chosen.start_time, chosen.sentence, offset=offset)
+                if cue is not None:
+                    prev_count, next_count = self._line_expansions.get(idx, (0, 0))
+                    padding = self._media_context.audio_padding
+                    reset_ok = (prev_count, next_count) != (0, 0)
+                    if cue - (prev_count + 1) >= 0:
+                        window = merge_cue_window(entries, cue, prev_count + 1, next_count)
+                        prev_ok = (window.end - window.start) + 2 * padding <= MAX_CLIP_SECONDS
+                    if cue + next_count + 1 < len(entries):
+                        window = merge_cue_window(entries, cue, prev_count, next_count + 1)
+                        next_ok = (window.end - window.start) + 2 * padding <= MAX_CLIP_SECONDS
+        self.expand_prev_button.setEnabled(prev_ok)
+        self.expand_next_button.setEnabled(next_ok)
+        self.expand_reset_button.setEnabled(reset_ok)
 
     def _build_sentence_pane(self) -> QWidget:
         """Build the "Sentences" picker pane (label + candidate list).
@@ -1297,8 +1459,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # raw+offset from the mining parse; ctx.offset only aligns the subtitle
         # overlay — see the set_source call in _create_player_widget. This handler
         # already runs from the debounce timer (outside any active event handler),
-        # so the seek can be issued directly — see _on_candidate_chosen.
-        self._preview_scene(chosen.start_time, chosen.video_file)
+        # so the seek can be issued directly — see _on_candidate_chosen. An
+        # active line expansion previews its merged window's start instead.
+        window = self._expanded_window(chosen, idx)
+        self._preview_scene(window.start if window is not None else chosen.start_time, chosen.video_file)
 
         # Audio clip strip: the CHOSEN variant's window, for the same reason the
         # dictionary follows the pick — the strip edits the clip this row will
@@ -1309,6 +1473,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # POS (nouns) the pick moves mined_form, so a word-keyed pane showed the
         # first occurrence's entry after the user picked another (Issue #108).
         self._refresh_definition(chosen)
+
+        # Line-expansion buttons follow the focused word.
+        self._refresh_expansion_buttons()
 
     def _refresh_definition(self, word: TokenizedWord) -> None:
         """Point the definition pane at ``word``'s card front.
@@ -1540,8 +1707,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # A clip window was measured against the OLD line's timings, so the pick
         # invalidates it: dropping the override and reseeding from the new
         # variant's default is the only reading that cannot mine a window
-        # belonging to a different scene.
+        # belonging to a different scene. A line expansion was counted against
+        # the old cue for the same reason, so it dies with the pick too.
         self._clip_overrides.pop(idx, None)
+        self._line_expansions.pop(idx, None)
         self._seed_clip_editor(chosen, idx)
 
         # Everything that describes the occurrence follows the pick, not just the
@@ -1550,6 +1719,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # definition beside it (Issue #108).
         self._apply_pick_to_row(idx, chosen)
         self._refresh_definition(chosen)
+        self._refresh_expansion_buttons()
 
         # Preview the chosen scene. Defer the seek to the next event-loop tick:
         # this handler runs synchronously inside the list's currentRowChanged
@@ -1696,6 +1866,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             audio_track_override=ctx.audio_track_override,
         )
         self._displayed_media_video = ctx.video_file
+        # The landed context may make the focused word's neighbors resolvable.
+        self._refresh_expansion_buttons()
 
     def _chosen_episode_displayed(self) -> bool:
         """Whether the player shows the focused word's episode.
@@ -2303,7 +2475,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 if original_index is not None and 0 <= original_index < len(self._words):
                     word = self._chosen.get(original_index, self._words[original_index])
                     override = self._clip_overrides.get(original_index)
-                    if override is not None:
-                        word = dataclasses.replace(word, clip_override=override)
+                    expansion = self._line_expansions.get(original_index, (0, 0))
+                    if override is not None or expansion != (0, 0):
+                        word = dataclasses.replace(
+                            word,
+                            clip_override=override if override is not None else word.clip_override,
+                            line_expansion=expansion,
+                        )
                     selected.append(word)
         return selected
