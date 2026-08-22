@@ -2,6 +2,7 @@
 
 import logging
 import re
+import time
 from collections.abc import Callable, Iterator
 
 import requests
@@ -42,6 +43,17 @@ _JAPANESE_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\u3400-\u4DB
 # AND note count, with a per-note fallback when a chunk still trips the reset.
 _UPDATE_NOTES_CHUNK = 500
 _UPDATE_NOTES_MAX_BYTES = 4 * 1024 * 1024
+
+# In-place retry for the read-only duplicate probes (canAddNotes /
+# canAddNotesWithErrorDetail). A read timeout on these means Anki accepted the
+# connection but was too busy to answer (sync, dialog, database check); the
+# probes write nothing, so replaying them is safe even after an earlier chunk's
+# addNotes confirmed a write — exactly the window where the queue-level D30-B
+# whole-item retry is locked out. Values mirror the worker's MAX_ATTEMPTS /
+# RETRY_DELAY_S (gui/workers/_queue_worker_base.py), not imported from there:
+# services must not import gui.
+_PROBE_ATTEMPTS = 3
+_PROBE_RETRY_DELAY_S = 8.0
 
 
 def _chunk_note_updates(
@@ -1026,6 +1038,42 @@ class AnkiService:
             stripped["fields"] = {}
         return stripped
 
+    def _post_probe_with_retry(self, action: str, params: dict, timeout: int) -> object:
+        """``post_action`` for the read-only duplicate probes, with bounded retry.
+
+        Retries ONLY source-proven transient transport failures
+        (:func:`is_transient_anki_transport_error`: a connection drop or a
+        timeout, i.e. Anki busy) — an AnkiConnect-side payload error such as
+        "unsupported action" re-raises on the first attempt so the callers'
+        fallback branches fire unchanged. Safe precisely because these probes
+        write nothing; never route ``addNotes`` (or any other write) through
+        here — replaying a write could duplicate cards (D30).
+
+        The between-attempt wait sleeps in 1s slices checking
+        ``self._cancelled_check`` so Stop lands promptly instead of sitting out
+        the delay.
+        """
+        for attempt in range(1, _PROBE_ATTEMPTS + 1):
+            try:
+                return post_action(self.config.ankiconnect_url, action, params=params, timeout=timeout)
+            except AnkiConnectionError as e:
+                cancelled = self._cancelled_check is not None and self._cancelled_check()
+                if not is_transient_anki_transport_error(e) or attempt == _PROBE_ATTEMPTS or cancelled:
+                    raise
+                logger.warning(
+                    "Anki probe transient failure, retrying: action=%s attempt=%d/%d error=%s",
+                    action,
+                    attempt,
+                    _PROBE_ATTEMPTS,
+                    type(e.__cause__).__name__,
+                )
+                deadline = time.monotonic() + _PROBE_RETRY_DELAY_S
+                while time.monotonic() < deadline:
+                    if self._cancelled_check is not None and self._cancelled_check():
+                        raise
+                    time.sleep(min(1.0, max(0.0, deadline - time.monotonic())))
+        raise AssertionError("unreachable: every attempt returns or raises")
+
     def _probe_duplicates(self, notes: list[dict]) -> list[bool]:
         """Return, per note, whether AnkiConnect would reject it as a duplicate.
 
@@ -1061,8 +1109,7 @@ class AnkiService:
 
         try:
             result = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
+                self._post_probe_with_retry(
                     "canAddNotesWithErrorDetail",
                     params={"notes": no_dup},
                     timeout=60,
@@ -1112,8 +1159,7 @@ class AnkiService:
         dup_allowed = [{**note, "options": {**note.get("options", {}), "allowDuplicate": True}} for note in stripped]
         try:
             result = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
+                self._post_probe_with_retry(
                     "canAddNotesWithErrorDetail",
                     params={"notes": dup_allowed},
                     timeout=60,
@@ -1126,8 +1172,7 @@ class AnkiService:
             if _UNSUPPORTED_ACTION_SUBSTRING not in str(e).lower():
                 raise
             addible = _expect_list(
-                post_action(
-                    self.config.ankiconnect_url,
+                self._post_probe_with_retry(
                     "canAddNotes",
                     params={"notes": dup_allowed},
                     timeout=60,
@@ -1164,8 +1209,7 @@ class AnkiService:
         logger.debug("Anki duplicate fallback probe: notes=%d", len(stripped))
         dup_allowed = [{**note, "options": {**note.get("options", {}), "allowDuplicate": True}} for note in stripped]
         with_dup = _expect_list(
-            post_action(
-                self.config.ankiconnect_url,
+            self._post_probe_with_retry(
                 "canAddNotes",
                 params={"notes": dup_allowed},
                 timeout=60,
@@ -1175,8 +1219,7 @@ class AnkiService:
             bool,
         )
         without_dup = _expect_list(
-            post_action(
-                self.config.ankiconnect_url,
+            self._post_probe_with_retry(
                 "canAddNotes",
                 params={"notes": no_dup},
                 timeout=60,

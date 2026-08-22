@@ -157,6 +157,56 @@ def test_http_error_is_not_ankiconnect_success(call):
     resp.json.assert_not_called()
 
 
+class TestReadTimeoutCopy:
+    """A read timeout names the busy-Anki cause instead of raw requests text.
+
+    Anki accepts the TCP connection even while its main thread is busy (sync,
+    dialog, database check), so 'connected' indicators stay green while the
+    action times out — the message must say Anki is busy, not that the network
+    failed (user report: canAddNotesWithErrorDetail read timeout at 60s with
+    Anki open and 'connected').
+    """
+
+    def test_post_action_read_timeout_names_busy_anki(self):
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ReadTimeout("read timed out"),
+            ),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            post_action("http://localhost:8765", "canAddNotesWithErrorDetail", timeout=60)
+
+        message = str(exc_info.value)
+        assert "'canAddNotesWithErrorDetail' timed out after 60s" in message
+        assert "likely busy" in message
+        # The cause chain is load-bearing: is_transient_anki_transport_error
+        # classifies via __cause__, and the queue-level retry hangs off it.
+        assert isinstance(exc_info.value.__cause__, requests.exceptions.ReadTimeout)
+        assert is_transient_anki_transport_error(exc_info.value)
+
+    def test_post_multi_read_timeout_names_busy_anki(self):
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ReadTimeout("read timed out"),
+            ),
+            pytest.raises(AnkiConnectionError, match="'multi' timed out after 30s"),
+        ):
+            post_multi("http://localhost:8765", [{"action": "findNotes", "version": 6, "params": {}}])
+
+    def test_connect_timeout_still_reports_cannot_connect(self):
+        """ConnectTimeout is a ConnectionError first: nothing answered the port."""
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectTimeout("connect timed out"),
+            ),
+            pytest.raises(AnkiConnectionError, match="Cannot connect"),
+        ):
+            post_action("http://localhost:8765", "findNotes")
+
+
 @pytest.fixture(autouse=True)
 def _stub_duplicate_probe(request):
     """Neutralize the pre-add duplicate probe by default (all non-duplicate).
@@ -3934,6 +3984,12 @@ class TestProbeDuplicates:
 
     pytestmark = pytest.mark.real_probe
 
+    @pytest.fixture(autouse=True)
+    def _no_retry_delay(self, monkeypatch):
+        """Zero the probe-retry backoff: the transport-error test would
+        otherwise sit out two real 8s waits before propagating."""
+        monkeypatch.setattr("anki_miner.services.anki_service._PROBE_RETRY_DELAY_S", 0.0)
+
     def _make_word_data(self, make_tokenized_word, n=1):
         items = []
         for i in range(n):
@@ -4124,6 +4180,90 @@ class TestProbeDuplicates:
             pytest.raises(AnkiConnectionError, match="canAddNotesWithErrorDetail"),
         ):
             service.create_cards_batch(items)
+
+
+class TestProbeRetry:
+    """In-place bounded retry of the read-only duplicate probes.
+
+    A busy Anki (sync, dialog, database check) accepts the connection but lets
+    the probe time out; the probe writes nothing, so replaying it is safe even
+    after an earlier chunk's addNotes confirmed a write — the window where the
+    queue-level whole-item retry (D30-B) is locked out. addNotes itself must
+    never be replayed.
+    """
+
+    pytestmark = pytest.mark.real_probe
+
+    _NOTE = {"fields": {"Expression": "食べる"}}
+
+    @pytest.fixture(autouse=True)
+    def _no_retry_delay(self, monkeypatch):
+        monkeypatch.setattr("anki_miner.services.anki_service._PROBE_RETRY_DELAY_S", 0.0)
+
+    def test_transient_timeout_retried_then_succeeds(self, test_config):
+        service = AnkiService(test_config)
+        ok = _mock_response(result=[{"canAdd": True, "error": None}])
+
+        with patch(
+            "anki_miner.services._ankiconnect.requests.post",
+            side_effect=[requests.exceptions.ReadTimeout("busy"), ok],
+        ) as mock_post:
+            assert service._probe_duplicates([dict(self._NOTE)]) == [False]
+
+        assert mock_post.call_count == 2
+
+    def test_gives_up_after_three_attempts(self, test_config):
+        service = AnkiService(test_config)
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ReadTimeout("busy"),
+            ) as mock_post,
+            pytest.raises(AnkiConnectionError, match="timed out after 60s"),
+        ):
+            service._probe_duplicates([dict(self._NOTE)])
+
+        assert mock_post.call_count == 3
+
+    def test_cancel_stops_retry_after_first_attempt(self, test_config):
+        service = AnkiService(test_config)
+        service.set_cancelled_check(lambda: True)
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ReadTimeout("busy"),
+            ) as mock_post,
+            pytest.raises(AnkiConnectionError, match="timed out"),
+        ):
+            service._probe_duplicates([dict(self._NOTE)])
+
+        assert mock_post.call_count == 1
+
+    def test_add_notes_timeout_never_replayed(self, test_config, make_tokenized_word):
+        """The write is not retried: a timeout during addNotes propagates once."""
+        service = AnkiService(test_config)
+        word = make_tokenized_word(lemma="word_0")
+        items = [CardPayload(word=word, media=MediaData(), definition="def")]
+        probe = _mock_response(result=[{"canAdd": True, "error": None}])
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[probe, requests.exceptions.ReadTimeout("busy")],
+            ) as mock_post,
+            pytest.raises(AnkiConnectionError, match="'addNotes' timed out"),
+        ):
+            service.create_cards_batch(items)
+
+        assert [c[1]["json"]["action"] for c in mock_post.call_args_list] == [
+            "canAddNotesWithErrorDetail",
+            "addNotes",
+        ]
+        # D30: an escaped write attempt leaves uncertainty behind — exactly what
+        # blocks the queue-level whole-item replay for this failure.
+        assert service.anki_write_state is AnkiWriteState.NOTE_WRITE_UNCERTAIN
 
 
 class TestNoteFieldPrimitives:

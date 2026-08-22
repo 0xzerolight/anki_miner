@@ -19,6 +19,24 @@ from anki_miner.exceptions import AnkiConnectionError
 logger = logging.getLogger(__name__)
 
 
+def _timeout_message(action: str, timeout: int) -> str:
+    """User-facing copy for a read timeout: connected, but Anki never answered.
+
+    AnkiConnect accepts the TCP connection regardless of what Anki is doing (the
+    kernel completes the handshake), but the action itself runs on Anki's main
+    thread against the collection. A sync in progress, an open dialog, or a
+    database check therefore holds the response past the deadline while every
+    quick "is Anki connected?" probe still looks green — so the message must
+    name the busy state, not the network.
+    """
+    return (
+        f"AnkiConnect call '{action}' timed out after {timeout}s. "
+        "Anki accepted the connection but did not respond - it is likely busy "
+        "(syncing, showing a dialog, or checking the database). "
+        "Wait for Anki to finish and try again."
+    )
+
+
 def post_action(
     ankiconnect_url: str,
     action: str,
@@ -63,6 +81,15 @@ def post_action(
             type(e).__name__,
         )
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
+    except requests.exceptions.Timeout as e:
+        # Only read timeouts reach here: ConnectTimeout is also a
+        # ConnectionError, so the branch above already claimed it.
+        logger.warning(
+            "AnkiConnect request timed out: action=%s timeout=%d",
+            action,
+            timeout,
+        )
+        raise AnkiConnectionError(_timeout_message(action, timeout)) from e
     except (requests.RequestException, ValueError) as e:
         logger.warning(
             "AnkiConnect request failed: action=%s status=%s exc=%s",
@@ -136,6 +163,14 @@ def post_multi(
             type(e).__name__,
         )
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
+    except requests.exceptions.Timeout as e:
+        # Only read timeouts reach here: ConnectTimeout is also a
+        # ConnectionError, so the branch above already claimed it.
+        logger.warning(
+            "AnkiConnect request timed out: action=multi timeout=%d",
+            timeout,
+        )
+        raise AnkiConnectionError(_timeout_message("multi", timeout)) from e
     except (requests.RequestException, ValueError) as e:
         logger.warning(
             "AnkiConnect request failed: action=multi status=%s exc=%s",
