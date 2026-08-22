@@ -1977,3 +1977,47 @@ class TestOfflineKanaAttestQuality:
         q = service.offline_kana_attest_quality(["有る"])
         assert q is not None
         assert q["有る"]["term_rules"] == frozenset({"v5"})
+
+
+class TestRedirectFallsThroughChain:
+    """A dict whose only row for a word is an unresolvable redirect (negative
+    sequence + ⟶ arrow, target absent) is a MISS for that word, so the next
+    provider in the chain gets consulted instead of the arrow becoming the
+    card's definition."""
+
+    def _make_provider(self, db: Path, rows: list[DictRow], dict_id: str) -> IndexedDictProvider:
+        create_index(db)
+        bulk_insert(db, rows)
+        write_meta(db, {"schema_version": str(SCHEMA_VERSION), "source_name": dict_id})
+        provider = IndexedDictProvider(dict_id, db, display_name=dict_id)
+        assert provider.load() is True
+        return provider
+
+    def test_unresolvable_redirect_falls_through_to_next_dict(self, test_config, tmp_path: Path):
+        first = self._make_provider(
+            tmp_path / "a.sqlite",
+            [
+                DictRow(
+                    term="お互いさま",
+                    reading=None,
+                    content='<li class="gloss-item">⟶お互い様</li>',
+                    score=-101,
+                    sequence=-1270320,
+                )
+            ],
+            "dict-a",
+        )
+        second = self._make_provider(
+            tmp_path / "b.sqlite",
+            [DictRow(term="お互いさま", reading=None, content="<li>we are even</li>", sequence=99)],
+            "dict-b",
+        )
+        service = DefinitionService(test_config, providers=[first, second])
+        try:
+            result = service.get_definitions_batch([("お互いさま", None)])[0]
+            assert result is not None
+            assert "we are even" in result
+            assert "⟶" not in result
+        finally:
+            first.close()
+            second.close()

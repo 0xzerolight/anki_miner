@@ -1515,3 +1515,74 @@ class TestAttestQuality:
             "日本": {"term_rules": frozenset(), "common_rules": frozenset()},
         }
         assert "boom-dict" in caplog.text
+
+
+class TestRedirectResolution:
+    """Redirect rows (negative sequence + ⟶ arrow) render as their canonical
+    entry — never as a pointer — and an unresolvable redirect is a miss."""
+
+    def _seed_redirect_dict(self, db: Path):
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="お互い様",
+                    reading="おたがいさま",
+                    content="<li>mutual</li>",
+                    tags="n",
+                    sequence=1270320,
+                ),
+                DictRow(
+                    term="お互いさま",
+                    reading=None,
+                    content='<li class="gloss-item">⟶お互い様</li>',
+                    score=-101,
+                    sequence=-1270320,
+                ),
+            ],
+        )
+
+    def test_redirect_renders_as_canonical_entry(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed_redirect_dict(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        assert provider.load() is True
+
+        via_redirect = provider.lookup("お互いさま")
+        direct = provider.lookup("お互い様")
+
+        assert via_redirect is not None
+        assert via_redirect == direct
+        assert "⟶" not in via_redirect
+        provider.close()
+
+    def test_lookup_many_matches_lookup_through_a_redirect(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed_redirect_dict(db)
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        assert provider.load() is True
+
+        batch = provider.lookup_many([("お互いさま", None)])
+        assert batch["お互いさま"] == provider.lookup("お互いさま")
+        provider.close()
+
+    def test_unresolvable_redirect_is_a_provider_miss(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        _seed_db(
+            db,
+            [
+                DictRow(
+                    term="孤児",
+                    reading=None,
+                    content='<li class="gloss-item">⟶親</li>',
+                    score=-101,
+                    sequence=-999,
+                )
+            ],
+        )
+        provider = IndexedDictProvider("test-dict", db, display_name="DictName")
+        assert provider.load() is True
+
+        assert provider.lookup("孤児") is None
+        assert provider.lookup_many([("孤児", None)])["孤児"] is None
+        provider.close()

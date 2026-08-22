@@ -81,12 +81,16 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
-# The two lookup indexes every reader needs. Split out of the table DDL so an
-# importer can populate first and build them once, instead of maintaining two
-# B-trees across every one of a million inserts.
+# The lookup indexes every reader needs. Split out of the table DDL so an
+# importer can populate first and build them once, instead of maintaining the
+# B-trees across every one of a million inserts. ``idx_sequence`` serves the
+# redirect-row resolution (_fetch_rows_for_sequences); pre-existing indexes
+# without it are still correct — the resolution query just falls back to a
+# table scan, so no schema bump / forced reimport.
 _LOOKUP_INDEXES_SQL = """
-CREATE INDEX IF NOT EXISTS idx_term    ON entries(term);
-CREATE INDEX IF NOT EXISTS idx_reading ON entries(reading);
+CREATE INDEX IF NOT EXISTS idx_term     ON entries(term);
+CREATE INDEX IF NOT EXISTS idx_reading  ON entries(reading);
+CREATE INDEX IF NOT EXISTS idx_sequence ON entries(sequence);
 """
 
 _SCHEMA_SQL = _TABLES_SQL + _LOOKUP_INDEXES_SQL
@@ -467,6 +471,102 @@ def read_meta_cached(db_path: Path) -> dict[str, str]:
     return _sqlite_index.read_meta_cached(db_path, read_meta)
 
 
+# ---------------------------------------------------------------------------
+# Redirect ("pointer") rows — the yomidevs / Jitendex JMdict-family exports.
+#
+# Those dictionaries emit JMdict search-only spellings (sK/sk keys, e.g.
+# お互いさま) as dedicated pointer rows whose whole glossary is "⟶ お互い様"
+# (Jitendex 4.7 "redirections"). Their convention, verified exact on both
+# catalog dicts (Jitendex 2026-06-06: 136,905/432,643 rows; JMdict 2026-06-28:
+# 19,796/523,745): a redirect row's ``sequence`` is the NEGATION of the
+# canonical entry's sequence, its content carries the U+27F6 arrow, and no
+# real row has either marker. An arrow rendered into a card's definition field
+# is junk (nothing to click on a card), so the read paths below splice each
+# surviving redirect row's canonical rows in at the redirect's own rank.
+# One hop only — targets are positive and a positive row is never a redirect.
+# A redirect whose target is absent contributes nothing, so a fully-redirect
+# result collapses to a miss and the provider chain (other dicts, deinflection
+# fallback, Jisho) gets its shot.
+#
+# Both predicate halves are required: a foreign dictionary using negative
+# sequences for real content (no arrow) must pass through untouched.
+_REDIRECT_ARROW = "⟶"  # ⟶
+
+
+def _is_redirect_row(content: str, sequence: int | None) -> bool:
+    return sequence is not None and sequence < 0 and _REDIRECT_ARROW in content
+
+
+def _fetch_rows_for_sequences(
+    conn: sqlite3.Connection, sequences: list[int]
+) -> dict[int, list[tuple[str, str, int | None, str]]]:
+    """(content, tags, sequence, rules) rows per requested sequence, each list
+    in ``score DESC, sequence, id`` order so a resolved stand-in keeps the
+    canonical entry's own internal ranking. Pre-``idx_sequence`` indexes serve
+    this with a table scan — batched by the callers and only paid when a
+    redirect row actually survived scoping."""
+    grouped: dict[int, list[tuple[tuple[int, int], tuple[int, int], int, str, str, int | None, str]]] = {}
+    for start in range(0, len(sequences), _EXIST_CHUNK):
+        chunk = sequences[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT id, content, tags, rules, score, sequence FROM entries WHERE sequence IN ({placeholders})",
+            chunk,
+        ).fetchall()
+        for row_id, content, tags, rules, score, sequence in rows:
+            grouped.setdefault(sequence, []).append(
+                (
+                    _score_key(score),
+                    _seq_key(sequence),
+                    row_id,
+                    content,
+                    tags if tags is not None else "",
+                    sequence,
+                    rules if rules is not None else "",
+                )
+            )
+    return {
+        seq: [(content, tags, sequence, rules) for _s, _q, _i, content, tags, sequence, rules in sorted(entries)]
+        for seq, entries in grouped.items()
+    }
+
+
+def _substitute_redirect_rows(
+    conn: sqlite3.Connection,
+    rows: list[tuple[str, str, int | None]] | list[tuple[str, str, int | None, str]],
+    resolved_by_seq: dict[int, list[tuple[str, str, int | None, str]]] | None = None,
+    *,
+    with_rules: bool = False,
+) -> list[tuple[str, str, int | None]] | list[tuple[str, str, int | None, str]]:
+    """Splice each redirect row's canonical rows in at the redirect's own rank.
+
+    ``rows`` are one word's projected, scoped, sorted result tuples —
+    ``(content, tags, sequence)`` or, with ``with_rules``,
+    ``(content, tags, sequence, rules)`` — BEFORE the ``_LOOKUP_LIMIT`` cap.
+    Non-redirect rows keep their positions; a target already spliced for this
+    word is not spliced twice. No redirect rows ⇒ input returned as-is, so the
+    hot path pays no query. ``resolved_by_seq`` lets ``lookup_many`` share one
+    batch-wide fetch; ``None`` fetches for just these rows."""
+    targets = list(dict.fromkeys(-row[2] for row in rows if row[2] is not None and _is_redirect_row(row[0], row[2])))
+    if not targets:
+        return rows
+    if resolved_by_seq is None:
+        resolved_by_seq = _fetch_rows_for_sequences(conn, targets)
+    out: list[tuple[str, str, int | None]] | list[tuple[str, str, int | None, str]] = []
+    spliced: set[int] = set()
+    for row in rows:
+        if row[2] is None or not _is_redirect_row(row[0], row[2]):
+            out.append(row)  # type: ignore[arg-type]
+            continue
+        target = -row[2]
+        if target in spliced:
+            continue
+        spliced.add(target)
+        for content, tags, sequence, rules in resolved_by_seq.get(target, []):
+            out.append((content, tags, sequence, rules) if with_rules else (content, tags, sequence))  # type: ignore[arg-type]
+    return out
+
+
 def lookup(
     conn: sqlite3.Connection, word: str, reading: str | None = None, lemma: str | None = None
 ) -> list[tuple[str, str, int | None]]:
@@ -498,7 +598,10 @@ def lookup(
     # filter-before-cap order ``lookup_many`` uses so both stay row-for-row equal.
     keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows], normalized_lemma)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
-    return [(row[0], row[1], row[2]) for row in kept[:_LOOKUP_LIMIT]]
+    # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
+    # resolved canonical entry can't be truncated by its own pointer row.
+    projected = _substitute_redirect_rows(conn, [(row[0], row[1], row[2]) for row in kept])
+    return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
 def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, str, int | None, str]]:
@@ -518,7 +621,12 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
     # homographs (Rule A/B) then apply the pool cap, mirroring ``lookup``.
     keep = _homograph_keep_mask(word, [(row[4], row[0]) for row in rows])
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
-    return [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept[:_LOOKUP_LIMIT]]
+    projected = _substitute_redirect_rows(
+        conn,
+        [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept],
+        with_rules=True,
+    )
+    return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
 # sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. lookup_many binds each
@@ -646,6 +754,7 @@ def lookup_many(
                     (term_priority, reading_priority, score_key, seq_key, row_id, term, content, tags_val, sequence)
                 )
 
+        pending: dict[str, list[tuple[str, str, int | None]]] = {}
         for w, entries in buckets.items():
             if scope_homographs:
                 # Filter BEFORE sort/cap: order-independent per-row predicate, so
@@ -656,7 +765,24 @@ def lookup_many(
                 keep = _homograph_keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries], normalized_lemma)
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
-            result[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries[:_LOOKUP_LIMIT]]
+            pending[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries]
+
+        # Redirect substitution BEFORE the pool cap, sharing ONE target fetch
+        # across the whole chunk (a table scan on pre-idx_sequence indexes must
+        # not repeat per word). Per-word splice order matches ``lookup``'s, so
+        # the lookup == lookup_many parity invariant survives.
+        chunk_targets = list(
+            dict.fromkeys(
+                -row[2]
+                for rows3 in pending.values()
+                for row in rows3
+                if row[2] is not None and _is_redirect_row(row[0], row[2])
+            )
+        )
+        resolved_by_seq = _fetch_rows_for_sequences(conn, chunk_targets) if chunk_targets else {}
+        for w, rows3 in pending.items():
+            substituted = _substitute_redirect_rows(conn, rows3, resolved_by_seq)
+            result[w] = substituted[:_LOOKUP_LIMIT]  # type: ignore[assignment]
 
     return result
 
@@ -739,6 +865,13 @@ def exact_term_sequences(
     lexemes, so a query for ``いでる`` must not inherit ``出でる``'s sequence.
     Rows without a sequence cannot provide stable dictionary identity and are
     omitted.
+
+    Sequences are reported as ``abs(sequence)``: a redirect row (negative
+    sequence, see ``_is_redirect_row``) is the same lexeme as its canonical
+    entry, so a kana redirect that carries a reading (e.g. あかーん) must share
+    identity with the entry it points at — otherwise the orthographic-alias
+    dedup would treat ``-seq`` and ``+seq`` as two lexemes. Both sides of every
+    identity comparison flow through this probe, so the fold is consistent.
     """
     normalized_pairs: list[tuple[str, str]] = []
     for term, reading in pairs:
@@ -767,7 +900,7 @@ def exact_term_sequences(
                 continue
             key = (term, folded_reading)
             if key in requested:
-                found.setdefault(key, set()).add(sequence)
+                found.setdefault(key, set()).add(abs(sequence))
 
     return found
 
