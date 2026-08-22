@@ -1843,3 +1843,186 @@ class TestAttestDetail:
         finally:
             conn.close()
         assert all(res[f"w{i}"] == [AttestRow("term", "", "")] for i in range(n))
+
+
+class TestRedirectRows:
+    """Redirect ("pointer") rows from the yomidevs/Jitendex JMdict exports.
+
+    Convention (verified on both catalog dicts): a search-only spelling's row
+    carries the U+27F6 arrow in its content and the NEGATION of the canonical
+    entry's sequence. The read paths splice the canonical rows in at the
+    redirect's rank instead of returning the arrow as a definition.
+    """
+
+    ARROW_CONTENT = '<li class="gloss-item">⟶お互い様</li>'
+
+    def _seed(self, db_path: Path):
+        create_index(db_path)
+        bulk_insert(
+            db_path,
+            [
+                DictRow(
+                    term="お互い様",
+                    reading="おたがいさま",
+                    content="<li>mutual</li>",
+                    tags="n",
+                    rules="",
+                    score=0,
+                    sequence=1270320,
+                ),
+                DictRow(
+                    term="お互いさま",
+                    reading=None,
+                    content=self.ARROW_CONTENT,
+                    score=-101,
+                    sequence=-1270320,
+                ),
+            ],
+        )
+
+    def test_lookup_resolves_redirect_to_canonical_rows(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            assert lookup(conn, "お互いさま") == [("<li>mutual</li>", "n", 1270320)]
+        finally:
+            conn.close()
+
+    def test_lookup_many_matches_lookup(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        self._seed(db)
+        conn = open_readonly(db)
+        try:
+            single = lookup(conn, "お互いさま")
+            batch = lookup_many(conn, [("お互いさま", None), ("お互い様", "おたがいさま")])
+            assert batch["お互いさま"] == single
+            assert batch["お互い様"] == [("<li>mutual</li>", "n", 1270320)]
+        finally:
+            conn.close()
+
+    def test_mixed_result_splices_at_the_redirect_rank(self, tmp_path: Path):
+        """A term-exact redirect resolves in place, ahead of reading-only rows."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="借り", reading="かり", content="<li>debt</li>", sequence=5),
+                DictRow(term="狩り", reading="かり", content="<li>hunting</li>", sequence=6),
+                DictRow(
+                    term="かり", reading=None, content='<li class="gloss-item">⟶借り</li>', score=-101, sequence=-5
+                ),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            results = lookup(conn, "かり")
+            assert results[0] == ("<li>debt</li>", "", 5)
+            assert "⟶" not in "".join(content for content, _t, _s in results)
+        finally:
+            conn.close()
+
+    def test_arrowless_negative_sequence_passes_through(self, tmp_path: Path):
+        """A foreign dict using negative sequences for real content is untouched."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [DictRow(term="変", reading="へん", content="<li>strange</li>", sequence=-42)])
+        conn = open_readonly(db)
+        try:
+            assert lookup(conn, "変") == [("<li>strange</li>", "", -42)]
+        finally:
+            conn.close()
+
+    def test_unresolvable_redirect_is_a_miss(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [DictRow(term="孤児", reading=None, content='<li class="gloss-item">⟶親</li>', score=-101, sequence=-999)],
+        )
+        conn = open_readonly(db)
+        try:
+            assert lookup(conn, "孤児") == []
+            assert lookup_many(conn, [("孤児", None)])["孤児"] == []
+        finally:
+            conn.close()
+
+    def test_duplicate_redirects_splice_target_once(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="的", reading="まと", content="<li>target</li>", sequence=7),
+                DictRow(
+                    term="まとい", reading=None, content='<li class="gloss-item">⟶的</li>', score=-101, sequence=-7
+                ),
+                DictRow(
+                    term="まとい", reading=None, content='<li class="gloss-item">⟶的 b</li>', score=-102, sequence=-7
+                ),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            assert lookup(conn, "まとい") == [("<li>target</li>", "", 7)]
+        finally:
+            conn.close()
+
+    def test_lookup_with_rules_resolves_and_carries_canonical_rules(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="頷く", reading="うなずく", content="<li>nod</li>", rules="v5", sequence=8),
+                DictRow(
+                    term="うなづく", reading=None, content='<li class="gloss-item">⟶頷く</li>', score=-101, sequence=-8
+                ),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            assert lookup_with_rules(conn, "うなづく") == [("<li>nod</li>", "", 8, "v5")]
+        finally:
+            conn.close()
+
+    def test_redirect_free_batch_pays_no_extra_query(self, tmp_path: Path):
+        """Hot path: one execute per lookup_many chunk when nothing redirects."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [DictRow(term="猫", reading="ねこ", content="<li>cat</li>", sequence=1)])
+        conn = open_readonly(db)
+        try:
+            spy = _ExecSpy(conn)
+            lookup_many(spy, [("猫", None), ("犬", None)])
+            assert spy.calls == 1
+        finally:
+            conn.close()
+
+    def test_exact_term_sequences_folds_to_abs(self, tmp_path: Path):
+        """A kana redirect with a reading shares lexeme identity with its target."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="あかん", reading="あかん", content="<li>no good</li>", sequence=1000230),
+                DictRow(
+                    term="あかーん",
+                    reading="あかーん",
+                    content='<li class="gloss-item">⟶あかん</li>',
+                    score=-103,
+                    sequence=-1000230,
+                ),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            found = exact_term_sequences(conn, [("あかーん", "あかーん"), ("あかん", "あかん")])
+            assert found == {
+                ("あかーん", "あかーん"): {1000230},
+                ("あかん", "あかん"): {1000230},
+            }
+        finally:
+            conn.close()
