@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import threading
 from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtCore import QEvent
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
+from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.services.deck_filter import (
     DeckFilterOptions,
     DeckFilterPlan,
@@ -230,3 +233,34 @@ class TestReceipts:
         tab._on_worker_error("Deck filter scan failed: boom")
 
         assert tab.status_label.text() == "Deck filter scan failed: boom"
+
+
+class TestCloseWorkerHandles:
+    """``iter_close_workers`` runs inside MainWindow.closeEvent -- it may not raise."""
+
+    def test_a_finished_inspect_worker_is_skipped_not_raised_on(self, tab):
+        # run_off_thread deleteLater()s the worker it returns once the work
+        # finishes, but _inspect_worker keeps pointing at the wrapper. A raw
+        # isRunning() on that dead wrapper escaped closeEvent and reached the
+        # excepthook dialog, skipping the config save at the end of it.
+        worker = SingleCallWorker(lambda: None, parent=tab)
+        tab._inspect_worker = worker
+        worker.deleteLater()
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        with pytest.raises(RuntimeError):  # precondition: the wrapper really is dead
+            worker.isRunning()
+
+        assert list(tab.iter_close_workers()) == []
+
+    def test_a_running_inspect_worker_is_still_yielded(self, qtbot, tab):
+        gate = threading.Event()
+        worker = SingleCallWorker(gate.wait, parent=tab)
+        tab._inspect_worker = worker
+        worker.start()
+        try:
+            qtbot.waitUntil(worker.isRunning)
+
+            assert list(tab.iter_close_workers()) == [worker]
+        finally:
+            gate.set()
+            assert worker.wait(2000)
