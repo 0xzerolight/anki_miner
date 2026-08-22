@@ -48,7 +48,7 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
     urls_from_event,
 )
-from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import (
     PageWidth,
     TaskPublisherMixin,
@@ -322,15 +322,22 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         self._refresh_filters_summary()
 
     def iter_close_workers(self) -> Iterator[DeckFilterScanWorker | DeckFilterApplyWorker | SingleCallWorker]:
-        if self.worker_thread is not None and self.worker_thread.isRunning():
-            yield self.worker_thread
         # Both lazy fetches run blocking AnkiConnect calls; abandoning them to
         # Qt teardown aborts with "QThread: Destroyed while thread is still
-        # running", so surface them for the close-join policy too.
-        if self._deck_worker is not None and self._deck_worker.isRunning():
-            yield self._deck_worker
-        if self._inspect_worker is not None and self._inspect_worker.isRunning():
-            yield self._inspect_worker
+        # running", so surface them for the close-join policy alongside the run
+        # worker.
+        #
+        # ``still_running``, never a raw ``isRunning()``: ``_inspect_worker``
+        # comes from ``run_off_thread``, which owns the worker's lifetime and
+        # deleteLater()s it on finish. The handle is not cleared, so once an
+        # inspect completes it is a live Python wrapper around a destroyed C++
+        # object and ``isRunning()`` raises RuntimeError -- out of closeEvent,
+        # into the excepthook dialog, and past the config save at the end of
+        # MainWindow.closeEvent.
+        for worker in (self.worker_thread, self._deck_worker, self._inspect_worker):
+            if still_running(worker):
+                assert worker is not None
+                yield worker
 
     # ------------------------------------------------------------------
     # Deck dropdown (lazy fetch on first show) + source inspection
