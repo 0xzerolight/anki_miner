@@ -453,6 +453,33 @@ class YouTubeFetcherService:
         lang = (data.get("language") or "").lower()
         return not lang or lang == "ja"
 
+    @staticmethod
+    def _has_ja_audio_track(data: dict) -> bool:
+        """Detect a Japanese audio-only format among the probed formats.
+
+        This is the fetch-side reachability check for the auto-dub route: the
+        ``auto_dub`` format selector asks for ``bestaudio[language^=ja]``, which
+        can only ever match an audio-only format, so that is what we require
+        here. A muxed format's ``language`` names its container audio (the
+        original), never a dub, and ``bestaudio`` cannot select it.
+
+        On a genuinely Japanese video the original audio-only track also
+        matches ("ja audio track" is the semantic, dub or not) — harmless,
+        because ``_classify_probe_result`` only consults the dub flag after
+        the native routes have already been ruled out.
+
+        Matches ``ja`` exactly or a regional variant like ``ja-JP``; a plain
+        prefix test would also admit unrelated codes (e.g. ``jav``), so the
+        variant must be dash-separated.
+        """
+        for fmt in data.get("formats") or []:
+            if fmt.get("vcodec") not in (None, "none"):
+                continue
+            lang = (fmt.get("language") or "").lower()
+            if lang == "ja" or lang.startswith("ja-"):
+                return True
+        return False
+
     # ------------------------------------------------------------------
     # fetch_video
     # ------------------------------------------------------------------

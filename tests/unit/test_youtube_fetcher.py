@@ -586,6 +586,58 @@ class TestHasNativeAutoJa:
 
 
 # ---------------------------------------------------------------------------
+# _has_ja_audio_track (helper unit tests)
+# ---------------------------------------------------------------------------
+
+
+class TestHasJaAudioTrack:
+    """_has_ja_audio_track: detect a selectable Japanese audio-only format."""
+
+    @staticmethod
+    def _call(data: dict[str, Any]) -> bool:
+        return YouTubeFetcherService._has_ja_audio_track(data)
+
+    def test_no_formats_key(self) -> None:
+        assert self._call({}) is False
+
+    def test_empty_formats(self) -> None:
+        assert self._call({"formats": []}) is False
+
+    def test_ja_audio_only_format(self) -> None:
+        data = {"formats": [{"vcodec": "none", "acodec": "opus", "language": "ja"}]}
+        assert self._call(data) is True
+
+    def test_ja_regional_variant(self) -> None:
+        data = {"formats": [{"vcodec": "none", "acodec": "opus", "language": "ja-JP"}]}
+        assert self._call(data) is True
+
+    def test_missing_vcodec_treated_as_audio_only(self) -> None:
+        # yt-dlp sometimes omits vcodec instead of writing "none".
+        data = {"formats": [{"acodec": "opus", "language": "ja"}]}
+        assert self._call(data) is True
+
+    def test_muxed_ja_format_ignored(self) -> None:
+        # A muxed format's language names the container audio, not a dub track;
+        # bestaudio[language^=ja] could never select it anyway.
+        data = {"formats": [{"vcodec": "avc1", "acodec": "mp4a", "language": "ja"}]}
+        assert self._call(data) is False
+
+    def test_non_ja_audio_only_ignored(self) -> None:
+        data = {"formats": [{"vcodec": "none", "acodec": "opus", "language": "en-US"}]}
+        assert self._call(data) is False
+
+    def test_language_absent_ignored(self) -> None:
+        data = {"formats": [{"vcodec": "none", "acodec": "opus"}]}
+        assert self._call(data) is False
+
+    def test_javanese_not_mistaken_for_japanese(self) -> None:
+        # "jv" is Javanese; also guard the prefix match against bare startswith
+        # false-positives — only "ja" exact or "ja-<region>" qualify.
+        data = {"formats": [{"vcodec": "none", "acodec": "opus", "language": "jav"}]}
+        assert self._call(data) is False
+
+
+# ---------------------------------------------------------------------------
 # fetch_video
 # ---------------------------------------------------------------------------
 
