@@ -259,6 +259,65 @@ class TestProbeMetadata:
             info = service.probe_metadata("https://youtu.be/abc123")
         assert info.has_auto_ja_subs is False
 
+    def test_dubbed_video_sets_dub_flag(self, service: YouTubeFetcherService) -> None:
+        """EN original with a JA auto-dub: MT ja captions + ja audio track -> dub route."""
+        payload = _make_metadata(
+            automatic_captions={"ja": [{"name": "Japanese"}], "en-orig": [{"name": "English (Original)"}]},
+            language="en",
+            formats=[
+                {"vcodec": "avc1", "acodec": "none", "language": None},
+                {"vcodec": "none", "acodec": "opus", "language": "en-US"},
+                {"vcodec": "none", "acodec": "opus", "language": "ja"},
+            ],
+        )
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_auto_ja_subs is False
+        assert info.has_dub_ja_subs is True
+
+    def test_mt_captions_without_dub_audio_stay_rejected(self, service: YouTubeFetcherService) -> None:
+        """The original MT-caption rejection is intact when no JA audio exists."""
+        payload = _make_metadata(
+            automatic_captions={"ja": [{"name": "Japanese"}], "en-orig": [{"name": "English (Original)"}]},
+            language="en",
+            formats=[{"vcodec": "none", "acodec": "opus", "language": "en-US"}],
+        )
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_auto_ja_subs is False
+        assert info.has_dub_ja_subs is False
+
+    def test_native_auto_video_does_not_set_dub_flag(self, service: YouTubeFetcherService) -> None:
+        """Exclusivity: a native-auto video takes the auto_only route, never auto_dub."""
+        payload = _make_metadata(
+            automatic_captions={"ja": [{"name": "Japanese"}], "ja-orig": [{"name": "Japanese (Original)"}]},
+            language="ja",
+            formats=[{"vcodec": "none", "acodec": "opus", "language": "ja"}],
+        )
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_auto_ja_subs is True
+        assert info.has_dub_ja_subs is False
+
+    def test_no_ja_captions_no_dub_flag(self, service: YouTubeFetcherService) -> None:
+        """A JA audio track alone is not mineable — captions are still required."""
+        payload = _make_metadata(
+            automatic_captions={"en-orig": [{"name": "English (Original)"}]},
+            language="en",
+            formats=[{"vcodec": "none", "acodec": "opus", "language": "ja"}],
+        )
+        with patch(
+            "anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))
+        ):
+            info = service.probe_metadata("https://youtu.be/abc123")
+        assert info.has_dub_ja_subs is False
+
     def test_non_ja_language_with_auto_ja_rejected(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata(
             automatic_captions={"ja": [{"name": "Japanese"}]},

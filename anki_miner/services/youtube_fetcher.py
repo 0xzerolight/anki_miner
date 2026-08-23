@@ -227,8 +227,15 @@ class YouTubeFetcherService:
             )
 
         subs = data.get("subtitles") or {}
+        auto_captions = data.get("automatic_captions") or {}
         has_manual_ja = bool(subs.get("ja"))
         has_auto_ja = self._has_native_auto_ja(data)
+        # Auto-dub relaxation: machine-translated ja captions are normally
+        # rejected because they do not match the audio — but when YouTube also
+        # carries a Japanese (auto-dub) audio track, captions and dub come from
+        # the same translation pipeline, so together they are mineable. The
+        # fetch side requests that track fail-closed (see _build_fetch_cmd).
+        has_dub_ja = (not has_auto_ja) and bool(auto_captions.get("ja")) and self._has_ja_audio_track(data)
 
         logger.info("youtube probe ok: id=%s duration=%s", video_id, duration_s)
         return VideoInfo(
@@ -237,6 +244,7 @@ class YouTubeFetcherService:
             duration_s=duration_s,
             has_manual_ja_subs=has_manual_ja,
             has_auto_ja_subs=has_auto_ja,
+            has_dub_ja_subs=has_dub_ja,
             is_live=bool(data.get("is_live")),
             is_age_restricted=int(data.get("age_limit") or 0) >= 18,
         )

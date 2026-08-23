@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-SubMode = Literal["manual_only", "auto_only"]
+SubMode = Literal["manual_only", "auto_only", "auto_dub"]
 
 
 @dataclass(frozen=True)
@@ -24,6 +24,10 @@ class VideoInfo:
     has_auto_ja_subs: bool
     is_live: bool
     is_age_restricted: bool
+    has_dub_ja_subs: bool = False
+    """JA auto-captions usable only via the auto-dub route: a JA audio track
+    exists to match them, and they are not already native (has_auto_ja_subs).
+    Exactly one of manual/native-auto/dub claims a video."""
 
 
 @dataclass(frozen=True)
