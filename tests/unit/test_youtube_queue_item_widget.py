@@ -165,6 +165,29 @@ def test_ready_auto_sub_source_is_hover_detail(qtbot) -> None:
     assert widget.toolTip() == "Auto JA subs"
 
 
+def test_ready_auto_dub_sub_source_is_hover_detail(qtbot) -> None:
+    item = _pending_item()
+    item.video_info = _make_video_info()
+    item.status = YouTubeItemStatus.READY
+    item.resolved_sub_mode = "auto_dub"
+
+    widget = YouTubeQueueItemWidget(_pending_item())
+    qtbot.addWidget(widget)
+    widget.update_from(item)
+
+    assert widget.toolTip() == "Auto JA subs (dub audio)"
+
+
+def test_sub_mode_label_covers_every_sub_mode() -> None:
+    """Every SubMode value must have a label, so a future mode can't ship blank."""
+    from typing import get_args
+
+    from anki_miner.gui.widgets.youtube_queue_item_widget import _SUB_MODE_LABEL
+    from anki_miner.models.youtube import SubMode
+
+    assert set(_SUB_MODE_LABEL) == set(get_args(SubMode))
+
+
 # ---------------------------------------------------------------------------
 # PROCESSING / COMPLETED
 # ---------------------------------------------------------------------------

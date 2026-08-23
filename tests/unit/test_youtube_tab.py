@@ -51,6 +51,7 @@ def _make_video_info(
     duration_s: int = 600,
     has_manual_ja_subs: bool = True,
     has_auto_ja_subs: bool = False,
+    has_dub_ja_subs: bool = False,
     is_live: bool = False,
     is_age_restricted: bool = False,
 ) -> VideoInfo:
@@ -61,6 +62,7 @@ def _make_video_info(
         duration_s=duration_s,
         has_manual_ja_subs=has_manual_ja_subs,
         has_auto_ja_subs=has_auto_ja_subs,
+        has_dub_ja_subs=has_dub_ja_subs,
         is_live=is_live,
         is_age_restricted=is_age_restricted,
     )
@@ -336,6 +338,46 @@ class TestProbeOutcomes:
 
         assert item.status == YouTubeItemStatus.READY
         assert item.resolved_sub_mode == "auto_only"
+
+    def test_probe_done_auto_dub(self, tab):
+        tab.url_edit.setText("https://youtu.be/abc")
+        tab._on_add_clicked()
+        item = tab._queue.all_items()[-1]
+
+        tab._add_flow._on_probe_done(
+            item,
+            _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False, has_dub_ja_subs=True),
+        )
+
+        assert item.status == YouTubeItemStatus.READY
+        assert item.resolved_sub_mode == "auto_dub"
+
+    def test_probe_done_manual_beats_dub(self, tab):
+        """Priority: a manual track wins even when the dub flag is also set."""
+        tab.url_edit.setText("https://youtu.be/abc")
+        tab._on_add_clicked()
+        item = tab._queue.all_items()[-1]
+
+        tab._add_flow._on_probe_done(
+            item,
+            _make_video_info(has_manual_ja_subs=True, has_dub_ja_subs=True),
+        )
+
+        assert item.resolved_sub_mode == "manual_only"
+
+    def test_probe_done_no_subs_still_rejected(self, tab):
+        """All three flags False keeps the original rejection message."""
+        tab.url_edit.setText("https://youtu.be/abc")
+        tab._on_add_clicked()
+        item = tab._queue.all_items()[-1]
+
+        tab._add_flow._on_probe_done(
+            item,
+            _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False),
+        )
+
+        assert item.status == YouTubeItemStatus.PROBE_ERROR
+        assert "No Japanese subtitles" in (item.error_message or "")
 
     def test_probe_done_live_marks_probe_error(self, tab):
         tab.url_edit.setText("https://youtu.be/abc")

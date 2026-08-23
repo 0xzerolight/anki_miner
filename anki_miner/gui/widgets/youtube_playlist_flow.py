@@ -115,6 +115,11 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
         return True, None, "manual_only"
     if info.has_auto_ja_subs:
         return True, None, "auto_only"
+    if info.has_dub_ja_subs:
+        # Auto-dub route: MT ja captions matched by a JA dub audio track (see
+        # VideoInfo.has_dub_ja_subs). Lowest priority — a real manual track or
+        # native captions always describe the video better than the dub pipeline.
+        return True, None, "auto_dub"
     return False, "No Japanese subtitles available for this video.", None
 
 
