@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import collections
 import io
 import json
 import os
@@ -1005,6 +1006,39 @@ class TestBuildFetchCmdPercentPath:
         result = service._resolve_outputs(workspace, "abc123", "manual_only")
         assert result.video_file.name == "abc123.mp4"
         assert result.subtitle_file.name == "abc123.ja.srt"
+
+
+class TestBuildFetchCmdAutoDub:
+    """The auto-dub route's format selection and its failure diagnostics."""
+
+    def test_build_fetch_cmd_auto_dub_requests_ja_audio_fail_closed(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        """auto_dub must pin the JA audio track with no non-JA fallback: MT ja
+        subs over foreign audio is the exact mismatch the caption gate exists
+        to prevent, so an unavailable dub must fail the fetch, not degrade it."""
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "auto_dub")
+        assert "--write-auto-sub" in cmd
+        assert "--write-sub" not in cmd
+        fmt = cmd[cmd.index("--format") + 1]
+        assert fmt == "bestvideo[height<=720]+bestaudio[language^=ja]"
+        assert "/" not in fmt  # no fallback alternative may reintroduce non-JA audio
+
+    def test_build_fetch_cmd_auto_only_format_unchanged(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """The two existing modes keep the historical selector byte-identical."""
+        for mode in ("manual_only", "auto_only"):
+            cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, mode)
+            fmt = cmd[cmd.index("--format") + 1]
+            assert fmt == "bestvideo[height<=720]+bestaudio/best[height<=720]"
+
+    def test_raise_for_error_names_missing_dub_track(self, service: YouTubeFetcherService) -> None:
+        """'Requested format is not available' on the dub route means the dub
+        vanished between probe and fetch — saying 'update yt-dlp' would mislead."""
+        tail = collections.deque(["ERROR: Requested format is not available"])
+        with pytest.raises(YouTubeFetchError, match="dub"):
+            service._raise_for_error(tail, "auto_dub")
+        with pytest.raises(YouTubeFetchError, match="yt-dlp is out of date"):
+            service._raise_for_error(tail, "auto_only")
 
 
 class TestFetchVideoResolverFallback:

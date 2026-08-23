@@ -510,7 +510,9 @@ class YouTubeFetcherService:
                 native auto-captions if the manual track turns out to be
                 unavailable at download time. Callers pass the probe's
                 ``has_auto_ja_subs`` so the fallback can only reach a track already
-                certified native — never a machine translation.
+                certified native — never a machine translation. Ignored for
+                ``"auto_dub"``, which always fetches the machine-translated ja
+                captions together with the Japanese auto-dub audio track.
 
         Raises:
             FfmpegNotFoundError: ffmpeg preflight failed.
@@ -567,7 +569,7 @@ class YouTubeFetcherService:
         if process_result.state is SupervisedState.FAILED:
             if process_result.returncode is None and process_result.error is not None:
                 raise YouTubeFetchError(f"yt-dlp process failed: {process_result.error}") from process_result.error
-            self._raise_for_error(tail)
+            self._raise_for_error(tail, sub_mode)
 
         # Success: locate output files by globbing on video_id.
         result = self._resolve_outputs(workspace, video_id, sub_mode)
@@ -636,6 +638,15 @@ class YouTubeFetcherService:
         # template and the fetch failed with a misleading "outputs are missing".
         output_tpl = "%(id)s.%(ext)s"
         fmt = f"bestvideo[height<={max_height}]+bestaudio/best[height<={max_height}]"
+        if sub_mode == "auto_dub":
+            # Auto-dub route: the ja captions are machine-translated, matching
+            # the Japanese auto-dub audio track — so that exact track must be
+            # fetched. [language^=ja] catches "ja" and regional "ja-JP"; the
+            # selector deliberately has NO "/bestaudio" fallback, because
+            # falling back to the original (non-JA) audio would silently mine
+            # MT subs against foreign audio. If the dub vanished since the
+            # probe, the fetch fails and _raise_for_error names the cause.
+            fmt = f"bestvideo[height<={max_height}]+bestaudio[language^=ja]"
 
         cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
@@ -655,7 +666,7 @@ class YouTubeFetcherService:
             cmd.append("--write-sub")
             if fallback_allowed:
                 cmd.append("--write-auto-sub")
-        elif sub_mode == "auto_only":
+        elif sub_mode in ("auto_only", "auto_dub"):
             cmd.append("--write-auto-sub")
         else:  # pragma: no cover - exhaustiveness guard
             raise ValueError(f"Unsupported sub_mode: {sub_mode!r}")
@@ -758,7 +769,7 @@ class YouTubeFetcherService:
             return True
         return "[download] 100%" in line and "Deleting original file" in line
 
-    def _raise_for_error(self, tail: collections.deque[str]) -> None:
+    def _raise_for_error(self, tail: collections.deque[str], sub_mode: SubMode) -> None:
         joined_lower = "\n".join(tail).lower()
 
         if ("sign in" in joined_lower and "confirm" in joined_lower) or ("sign in to confirm" in joined_lower):
@@ -789,6 +800,16 @@ class YouTubeFetcherService:
             "drm protected",
         )
         if any(marker in joined_lower for marker in stale_extractor_markers):
+            if sub_mode == "auto_dub" and "requested format is not available" in joined_lower:
+                # On this route the format selector pins the JA dub track with
+                # no fallback, so "no format" almost always means the dub
+                # disappeared between probe and fetch — "update yt-dlp" would
+                # send the user to the wrong remedy.
+                raise YouTubeFetchError(
+                    "The Japanese auto-dub audio track listed at probe time is no "
+                    "longer available, so this video cannot be mined via the dub "
+                    f"route. yt-dlp said: {_tail(tail, 5)}"
+                )
             raise YouTubeFetchError(
                 "YouTube served no downloadable format for this video, which usually "
                 "means yt-dlp is out of date (YouTube's DRM/SABR experiments break "

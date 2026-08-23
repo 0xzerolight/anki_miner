@@ -2511,8 +2511,10 @@ class EpisodeProcessor:
                 write file names with (the worker takes it from probe_metadata).
             workspace: Pre-created, caller-owned directory that yt-dlp writes
                 the video and subtitle files into.
-            sub_mode: "manual_only" or "auto_only" — chosen by the user based
-                on what probe_metadata reported as available.
+            sub_mode: "manual_only", "auto_only" or "auto_dub" — resolved from
+                what probe_metadata reported as available ("auto_dub" pairs the
+                machine-translated ja captions with the Japanese auto-dub audio
+                track).
             fallback_allowed: Forwarded to the fetcher. When True (the worker
                 passes ``VideoInfo.has_auto_ja_subs``), a ``manual_only`` fetch may
                 fall back to the video's *native* auto-captions if the listed manual
