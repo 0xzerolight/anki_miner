@@ -31,6 +31,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from anki_miner.gui.widgets.base.screen_issue_banner import ScreenIssue
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
@@ -38,6 +39,7 @@ from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 _FFMPEG_AVAILABLE = "anki_miner.gui.widgets.condense_tab.CondenseTab._compute_ffmpeg_available"
 _ALASS_AVAILABLE = "anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab._compute_alass_available"
 _ENGINE_AVAILABLE = "anki_miner.services.asr._engine.available"
+_YTDLP_AVAILABLE = "anki_miner.gui.widgets.download_tab.DownloadTab._compute_ytdlp_available"
 
 #: Stands in for whatever the *previous* attempt complained about. Deliberately
 #: a sentence no entry point under test can re-raise, so surviving it is proof
@@ -88,6 +90,17 @@ def retime_tab(qapp, qtbot, test_config):
 
 
 @pytest.fixture
+def download_tab(qapp, qtbot, test_config):
+    with patch(_YTDLP_AVAILABLE, return_value=True):
+        tab = DownloadTab(test_config)
+        qtbot.addWidget(tab)
+        assert tab._availability_worker is not None
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.download_button.isEnabled, timeout=3000)
+    return tab
+
+
+@pytest.fixture
 def creation_tab(qapp, qtbot, test_config):
     with patch(_ENGINE_AVAILABLE, return_value=True):
         tab = SubtitleCreationTab(test_config)
@@ -120,6 +133,7 @@ RUN_ENTRY_POINTS = [
     ("condense: condense", "condense_tab", "_on_condense", lambda t: t.log_widget, "clear_log", None),
     ("retime: retime", "retime_tab", "_on_retime", lambda t: t.log_widget, "clear_log", None),
     ("creation: generate", "creation_tab", "_on_generate", lambda t: t, "_collect_video_files", []),
+    ("download: download", "download_tab", "_on_download", lambda t: t.log_widget, "clear_log", None),
 ]
 
 #: The same shape as ``RUN_ENTRY_POINTS``, but for the probe entry points --

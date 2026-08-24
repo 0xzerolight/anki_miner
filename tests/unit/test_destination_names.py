@@ -94,7 +94,9 @@ def test_stable_keys_did_not_move_with_the_labels():
     """A renamed label that shifts its key makes the destination unreachable."""
     assert set(MAIN_TABS) == {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}
     assert SUBTAB_KEYS["reading"] == frozenset({"manga", "novels", "subtitles", "text"})
-    assert SUBTAB_KEYS["subtitles"] == frozenset({"generate", "retime", "condense", "backfill", "deckfilter"})
+    assert SUBTAB_KEYS["subtitles"] == frozenset(
+        {"generate", "retime", "condense", "backfill", "deckfilter", "download"}
+    )
     assert "audio" in SETTINGS_SUBTABS
     assert "subtitles" in SETTINGS_SUBTABS
 

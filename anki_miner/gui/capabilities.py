@@ -43,7 +43,7 @@ SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
-    "subtitles": frozenset({"generate", "retime", "condense", "backfill", "deckfilter"}),
+    "subtitles": frozenset({"generate", "retime", "condense", "backfill", "deckfilter", "download"}),
 }
 
 # Display categories (deduped; translated at display time).
@@ -872,7 +872,27 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings"),
         keywords=("update", "new version", "upgrade", "release", "check for updates"),
     ),
-    # --- Tools & maintenance (menu/dialog features; no Open button) --------
+    # --- Tools & maintenance (standalone tools plus menu/dialog features) --
+    Capability(
+        id="media-downloader",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Download videos or audio"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. "
+            "Works with any site yt-dlp supports.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "download"),
+        keywords=(
+            "download",
+            "downloader",
+            "yt-dlp",
+            "save video",
+            "mp3",
+            "audio only",
+            "url",
+        ),
+    ),
     Capability(
         id="restyle-mined-cards",
         title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
