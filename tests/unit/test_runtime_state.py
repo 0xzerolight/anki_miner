@@ -99,7 +99,11 @@ class TestNeverExported:
         assert "resource-dict-jmdict" not in text
         payload = json.loads(text)
         assert set(payload) == {"anki_miner_settings", "app_version", "config_schema_version", "settings"}
-        assert not any("queue" in key or "download" in key for key in payload["settings"])
+        # downloader_* are the Download tool's persisted run options — genuine
+        # settings (like condenser_*), exempt from the runtime-state heuristic.
+        assert not any(
+            ("queue" in key or "download" in key) and not key.startswith("downloader_") for key in payload["settings"]
+        )
 
     def test_a_profile_sidecar_carries_no_runtime_state(self, _home):
         _seed_runtime_state(_home)
