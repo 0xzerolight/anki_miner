@@ -4,12 +4,19 @@ import platform
 import re
 import sys
 
+import budoux
 import unidic_lite
 
 block_cipher = None
 
 project_root = os.path.abspath(".")
 unidic_data = os.path.dirname(unidic_lite.__file__)
+# budoux opens its data relative to its own __file__ (no importlib.resources):
+# the ML model JSONs on parser load, and skip_nodes.json at IMPORT time
+# (html_processor reads it module-level), so both must land beside the module.
+budoux_dir = os.path.dirname(budoux.__file__)
+budoux_models = os.path.join(budoux_dir, "models")
+budoux_skip_nodes = os.path.join(budoux_dir, "skip_nodes.json")
 
 # Platform-specific icon
 if platform.system() == "Windows":
@@ -250,6 +257,9 @@ a = Analysis(
         ),
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
+        # BudouX phrase-segmentation data (curator sentence wrapping)
+        (budoux_models, os.path.join("budoux", "models")),
+        (budoux_skip_nodes, "budoux"),
     ]
     + ffmpeg_license_datas
     + alass_license_datas
@@ -273,6 +283,11 @@ a = Analysis(
         # data files; its VAD/chardet deps are ordinary static imports it pulls
         # in itself.
         "ffsubsync",
+        # budoux: imported function-locally in gui/utils/phrase_wrap.py so a
+        # broken install degrades to unwrapped display instead of failing
+        # startup. Bytecode analysis should find the IMPORT opcode; pinned
+        # here like mpv/ffsubsync so the graph never loses it.
+        "budoux",
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).

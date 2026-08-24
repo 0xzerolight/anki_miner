@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtWidgets import QAbstractItemView, QApplication, QMenu
 
+from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
 from anki_miner.gui.utils.qt_helpers import COPY_ROLE
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
@@ -702,3 +703,32 @@ class TestPickRefreshesDefinitionPane:
         done(work())
         assert "子ども" not in dlg.definition_view.toHtml()
         assert "子供" in dlg.definition_view.toHtml()
+
+
+class TestPhraseWrappedDisplay:
+    """Candidate rows wrap at BudouX phrase boundaries — display text only.
+
+    The joiner is U+2060 WORD JOINER, injected by ``phrase_wrap_ja``. Every
+    other surface stays pristine: ``COPY_ROLE`` (what Ctrl+C lifts), the
+    tooltip, and the candidate model itself, so no invisible character can
+    reach the clipboard or a card.
+    """
+
+    def test_display_wrapped_copy_tooltip_and_model_pristine(self, qtbot, mixed_words):
+        dlg = WordCurationDialog(mixed_words)
+        qtbot.addWidget(dlg)
+        _select_and_fire(dlg, 0)
+
+        cands = mixed_words[0].sentence_candidates
+        assert dlg.sentence_list.count() == len(cands)
+        saw_joiner = False
+        for i, cand in enumerate(cands):
+            item = dlg.sentence_list.item(i)
+            assert item.text().replace(WORD_JOINER, "") == cand.sentence
+            assert item.data(COPY_ROLE) == cand.sentence
+            assert item.toolTip() == cand.sentence
+            saw_joiner = saw_joiner or WORD_JOINER in item.text()
+        # The fixtures are real multi-phrase sentences; at least one must
+        # actually gain a boundary or the transform is wired to nothing.
+        assert saw_joiner
+        assert all(WORD_JOINER not in cand.sentence for cand in cands)

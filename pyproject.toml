@@ -60,6 +60,10 @@ dependencies = [
     # ffsubsync_engine.py), called in-process via its Python API. Pure Python +
     # numpy/webrtcvad wheels, no torch. Also supplies pysubs2/srt transitively.
     "ffsubsync>=0.5.1",
+    # Runtime: gui/utils/phrase_wrap.py segments curator sentences into BudouX
+    # phrases so Qt line-wraps them at phrase boundaries instead of mid-word.
+    # Pure Python, zero deps, ships its ML model as packaged JSON.
+    "budoux>=0.9.0",
     # Runtime: video preview backend (python-mpv, one pure-Python ctypes file).
     # `import mpv` dlopens libmpv at IMPORT time, so every import must go
     # through anki_miner/utils/mpv_loader.py — never import mpv directly.

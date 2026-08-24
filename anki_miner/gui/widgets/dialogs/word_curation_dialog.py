@@ -51,6 +51,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.fonts import japanese_cell_font, make_scaled_font
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
+from anki_miner.gui.utils.phrase_wrap import phrase_wrap_ja
 from anki_miner.gui.utils.qt_helpers import (
     COPY_ROLE,
     CellRole,
@@ -1674,8 +1675,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 text = cand.sentence
                 if multi_episode and cand.video_file is not None:
                     text = f"[{cand.video_file.stem}] {cand.sentence}"
-                list_item = QListWidgetItem(text)
+                # Display text carries BudouX word joiners so the row wraps at
+                # phrase boundaries; COPY_ROLE and the tooltip keep the pristine
+                # string so Ctrl+C never lifts an invisible character.
+                list_item = QListWidgetItem(phrase_wrap_ja(text))
                 list_item.setToolTip(text)
+                list_item.setData(COPY_ROLE, text)
                 list_item.setFont(japanese_cell_font())
                 self.sentence_list.addItem(list_item)
                 if self._same_pick(cand, chosen):

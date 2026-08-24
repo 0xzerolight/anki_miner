@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.gui.utils.phrase_wrap import WORD_JOINER
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
@@ -232,10 +233,12 @@ class TestCandidatePresentation:
         single.sentence_candidates = [c1, c2]
         dlg, _player = _build_dialog(qtbot, [word, single], _ctx_for(ep1))
         dlg._populate_candidate_list(word, 0)
-        texts = [dlg.sentence_list.item(i).text() for i in range(dlg.sentence_list.count())]
+        # Strip the BudouX word joiners: this test pins the episode prefix,
+        # phrase wrapping is TestPhraseWrappedDisplay's contract.
+        texts = [dlg.sentence_list.item(i).text().replace(WORD_JOINER, "") for i in range(dlg.sentence_list.count())]
         assert texts == ["[ep1] 一の文", "[ep2] 二の文"]
         dlg._populate_candidate_list(single, 1)
-        texts = [dlg.sentence_list.item(i).text() for i in range(dlg.sentence_list.count())]
+        texts = [dlg.sentence_list.item(i).text().replace(WORD_JOINER, "") for i in range(dlg.sentence_list.count())]
         assert texts == ["犬文A", "犬文B"]
 
 
