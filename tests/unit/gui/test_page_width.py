@@ -45,6 +45,7 @@ from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
+from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
@@ -80,6 +81,7 @@ PAGES = (
     CardBackfillTab,
     DeckFilterTab,
     DeckBuilderTab,
+    DownloadTab,
 )
 
 PAGE_NAMES = sorted(cls.__name__ for cls in PAGES)
@@ -105,6 +107,7 @@ def _build_page(name: str, config):
         "CardBackfillTab": lambda: CardBackfillTab(config),
         "DeckFilterTab": lambda: DeckFilterTab(config),
         "DeckBuilderTab": lambda: DeckBuilderTab(config, MagicMock(), MagicMock()),
+        "DownloadTab": lambda: DownloadTab(config, suppress_optional_startup=True),
     }
     return builders[name]()
 

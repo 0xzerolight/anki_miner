@@ -113,6 +113,9 @@ ALLOWLIST: dict[str, set[str]] = {
         # `urlparse(spec.url).netloc` when building the sources area: the host
         # is shown instead of the full URL. Pure string parsing, no I/O.
         "widgets/dialogs/resource_download_dialog.py",
+        # `urlsplit(line)` validating pasted URLs in _collect_urls: pure string
+        # parsing, no network I/O. Cheap.
+        "widgets/download_tab.py",
     },
     # shutil.which — a single cheap PATH scan to test for a binary, cached on the
     # widget (`_alass_is_available` / `_ffmpeg_is_available`); readers use the cache.

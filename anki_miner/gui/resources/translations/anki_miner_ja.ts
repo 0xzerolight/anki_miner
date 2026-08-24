@@ -2060,6 +2060,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>ヘルプメニューから Anki Miner の新しいバージョンを確認したり、設定画面のフッターで起動時の自動確認を切り替えたりできます。</translation>
     </message>
     <message>
+        <source>Download videos or audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. Works with any site yt-dlp supports.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>マイニングしたカードのスタイルを再適用</translation>
     </message>
@@ -3664,6 +3672,198 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>オフライン辞書の準備完了：&lt;b&gt;%1&lt;/b&gt;</translation>
     </message>
 </context><context>
+    <name>DownloadTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Some URLs could not be downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 downloaded, %2 already present</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing downloaded — all %1 already present in the download folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Download Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>URLs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>One URL per line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Options</source>
+        <translation type="unfinished">オプション</translation>
+    </message>
+    <message>
+        <source>Quality:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Best available</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Up to 1080p</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Up to 720p</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio only (MP3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio only (M4A)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Custom format:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional yt-dlp format string</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When set, the quality preset above is ignored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save subtitles next to the media file. Prefers manual subtitles, falls back to automatic.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Languages:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Comma-separated language codes, e.g. ja,en</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Embed thumbnail</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Embed title and metadata</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">出力</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">出力:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">フォルダを選択…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">リセット</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download folder is not writable: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste at least one URL to download.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>DownloadWorker</name>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
+    </message>
+    <message>
+        <source>Already downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">キャンセルされました</translation>
+    </message>
+</context><context>
     <name>EnhancedDialog</name>
     <message>
         <source>Close</source>
@@ -5264,6 +5464,10 @@ Continue?</source>
         <translation>デッキフィルター</translation>
     </message>
     <message>
+        <source>Download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Single</source>
         <translation>単一</translation>
     </message>
@@ -5278,6 +5482,16 @@ Continue?</source>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>デスクトップショートカットの作成に失敗しました。</translation>
+    </message>
+</context><context>
+    <name>MediaDownloader</name>
+    <message>
+        <source>Downloading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing</source>
+        <translation type="unfinished">処理中</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -6836,12 +7050,32 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>オフライン辞書を確認しています...</translation>
     </message>
     <message>
-        <source>Could not check the offline dictionary: </source>
-        <translation>オフライン辞書を確認できませんでした： </translation>
+        <source>Could not check the installed resources: </source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Dictionary ready: %1</source>
         <translation>辞書の準備完了：%1</translation>
+    </message>
+    <message>
+        <source>Frequency</source>
+        <translation type="unfinished">頻度</translation>
+    </message>
+    <message>
+        <source>Frequency ready: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished">ピッチアクセント</translation>
+    </message>
+    <message>
+        <source>Pitch accent ready: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: not set up (optional)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
@@ -7414,6 +7648,18 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
         <translation>推奨の頻度リスト、ピッチアクセントデータ、辞書を今すぐダウンロードしますか？</translation>
+    </message>
+    <message>
+        <source>Dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency</source>
+        <translation type="unfinished">頻度</translation>
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished">ピッチアクセント</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -8854,6 +9100,30 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>S：含める／除外　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
     </message>
     <message>
+        <source>+ Previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed 30 seconds.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed 30 seconds.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore this word's original single-line sentence and clip window.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>文</translation>
     </message>
@@ -8970,6 +9240,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     <message>
         <source>Auto JA subs</source>
         <translation>自動日本語字幕</translation>
+    </message>
+    <message>
+        <source>Auto JA subs (dub audio)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Checking</source>

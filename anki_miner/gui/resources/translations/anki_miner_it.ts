@@ -2062,6 +2062,14 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
         <translation>Controlla la presenza di una nuova versione di Anki Miner dal menu Aiuto, oppure attiva/disattiva il controllo automatico all'avvio dal piè di pagina delle Impostazioni.</translation>
     </message>
     <message>
+        <source>Download videos or audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. Works with any site yt-dlp supports.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Riapplica stile alle carte estratte</translation>
     </message>
@@ -3664,6 +3672,198 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     <message>
         <source>Offline dictionary ready: &lt;b&gt;%1&lt;/b&gt;</source>
         <translation>Dizionario offline pronto: &lt;b&gt;%1&lt;/b&gt;</translation>
+    </message>
+</context><context>
+    <name>DownloadTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Avanzamento</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Completato</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">Completato: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">Saltato</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">Saltato: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Annulla</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Annullamento…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Annullato</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Non riuscito — vedi il registro</translation>
+    </message>
+    <message>
+        <source>Some URLs could not be downloaded.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 downloaded, %2 already present</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing downloaded — all %1 already present in the download folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Download Folder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Media download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>URLs</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>One URL per line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Options</source>
+        <translation type="unfinished">Opzioni</translation>
+    </message>
+    <message>
+        <source>Quality:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Best available</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Up to 1080p</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Up to 720p</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio only (MP3)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio only (M4A)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Custom format:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional yt-dlp format string</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When set, the quality preset above is ignored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Save subtitles next to the media file. Prefers manual subtitles, falls back to automatic.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Languages:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Comma-separated language codes, e.g. ja,en</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Embed thumbnail</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Embed title and metadata</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">Uscita</translation>
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">Uscita:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">Scegli cartella…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">Reimposta</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download folder is not writable: </source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste at least one URL to download.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>DownloadWorker</name>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Completato</translation>
+    </message>
+    <message>
+        <source>Already downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Annullato</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -5277,6 +5477,10 @@ Continuare?</translation>
         <translation>Filtro mazzo</translation>
     </message>
     <message>
+        <source>Download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Single</source>
         <translation>Singolo</translation>
     </message>
@@ -5291,6 +5495,16 @@ Continuare?</translation>
     <message>
         <source>Failed to create desktop shortcut.</source>
         <translation>Creazione del collegamento sul desktop non riuscita.</translation>
+    </message>
+</context><context>
+    <name>MediaDownloader</name>
+    <message>
+        <source>Downloading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Processing</source>
+        <translation type="unfinished">Elaborazione</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -6849,12 +7063,32 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Controllo del dizionario offline...</translation>
     </message>
     <message>
-        <source>Could not check the offline dictionary: </source>
-        <translation>Impossibile controllare il dizionario offline: </translation>
+        <source>Could not check the installed resources: </source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Dictionary ready: %1</source>
         <translation>Dizionario pronto: %1</translation>
+    </message>
+    <message>
+        <source>Frequency</source>
+        <translation type="unfinished">Frequenza</translation>
+    </message>
+    <message>
+        <source>Frequency ready: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished">Accento tonale</translation>
+    </message>
+    <message>
+        <source>Pitch accent ready: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: not set up (optional)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
@@ -7427,6 +7661,18 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
     <message>
         <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
         <translation>Scaricare ora l'elenco delle frequenze, i dati dell'accento tonale e il dizionario consigliati?</translation>
+    </message>
+    <message>
+        <source>Dictionary</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency</source>
+        <translation type="unfinished">Frequenza</translation>
+    </message>
+    <message>
+        <source>Pitch accent</source>
+        <translation type="unfinished">Accento tonale</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -8869,6 +9115,30 @@ Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi d
         <translation>S includi/escludi · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
     </message>
     <message>
+        <source>+ Previous line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>+ Next line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed 30 seconds.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed 30 seconds.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore this word's original single-line sentence and clip window.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Frasi</translation>
     </message>
@@ -8985,6 +9255,10 @@ Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi d
     <message>
         <source>Auto JA subs</source>
         <translation>Sottotitoli JA automatici</translation>
+    </message>
+    <message>
+        <source>Auto JA subs (dub audio)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Checking</source>

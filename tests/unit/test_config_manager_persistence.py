@@ -647,6 +647,48 @@ class TestRoundTripImmutabilityAndPaths:
         assert loaded.condenser_filtered_chars == "XYZ★"
         assert loaded.condenser_write_subtitles is True
 
+    def test_downloader_defaults(self, tmp_config: Path):
+        """A default config carries the Download tool's option defaults."""
+        cfg = AnkiMinerConfig()
+        assert cfg.downloader_format_preset == "best"
+        assert cfg.downloader_custom_format == ""
+        assert cfg.downloader_write_subtitles is False
+        assert cfg.downloader_subtitle_langs == "ja"
+        assert cfg.downloader_embed_thumbnail is False
+        assert cfg.downloader_embed_metadata is False
+
+    def test_downloader_fields_round_trip(self, tmp_config: Path):
+        """All six downloader_* fields must survive save→load into gui_config.json."""
+        import json
+
+        cfg = replace(
+            create_default_config(),
+            downloader_format_preset="audio_mp3",
+            downloader_custom_format="bestaudio[ext=m4a]",
+            downloader_write_subtitles=True,
+            downloader_subtitle_langs="ja,en",
+            downloader_embed_thumbnail=True,
+            downloader_embed_metadata=True,
+        )
+        GUIConfigManager.save_config(cfg)
+
+        # Fields are actually serialized into the on-disk JSON.
+        on_disk = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert on_disk["downloader_format_preset"] == "audio_mp3"
+        assert on_disk["downloader_custom_format"] == "bestaudio[ext=m4a]"
+        assert on_disk["downloader_write_subtitles"] is True
+        assert on_disk["downloader_subtitle_langs"] == "ja,en"
+        assert on_disk["downloader_embed_thumbnail"] is True
+        assert on_disk["downloader_embed_metadata"] is True
+
+        loaded = GUIConfigManager.load_config()
+        assert loaded.downloader_format_preset == "audio_mp3"
+        assert loaded.downloader_custom_format == "bestaudio[ext=m4a]"
+        assert loaded.downloader_write_subtitles is True
+        assert loaded.downloader_subtitle_langs == "ja,en"
+        assert loaded.downloader_embed_thumbnail is True
+        assert loaded.downloader_embed_metadata is True
+
     def test_condenser_defaults_round_trip(self, tmp_config: Path):
         """A default config round-trips with the documented condenser defaults."""
         GUIConfigManager.save_config(create_default_config())

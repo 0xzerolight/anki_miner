@@ -163,6 +163,19 @@ class AnkiMinerConfig:
     condenser_write_subtitles: bool = False  # Also write condensed .srt + .lrc sidecars
     condenser_tag_outputs: bool = False  # Show the pre-run metadata editor and tag outputs (Issue #113)
 
+    # Media Downloader settings (Utilities → Download). Persisted defaults for
+    # the Download tab's inline run options, seeded/written back the same way as
+    # condenser_* via config_changed → MainWindow.update_config. All plain
+    # scalars (auto-persist; no __post_init__ coercion). The destination folder
+    # is deliberately NOT config — it is session state (ui_state.ini), like the
+    # other tool tabs' output folders.
+    downloader_format_preset: str = "best"  # key into services.media_downloader.FORMAT_PRESETS
+    downloader_custom_format: str = ""  # raw yt-dlp -f string; non-empty overrides the preset
+    downloader_write_subtitles: bool = False  # --write-subs/--write-auto-subs (manual preferred)
+    downloader_subtitle_langs: str = "ja"  # --sub-langs value
+    downloader_embed_thumbnail: bool = False  # --embed-thumbnail
+    downloader_embed_metadata: bool = False  # --embed-metadata
+
     # Animated screenshot settings (opt-in; static JPEG remains default)
     screenshot_animated: bool = False
     screenshot_animated_format: str = "avif"  # "avif" | "webp"

@@ -33,6 +33,8 @@ _SHUTIL_WHICH = "anki_miner.gui.widgets.subtitle_retime_tab.shutil.which"
 # this its condense_button never enables and _make_tab's waitUntil hangs. Fake
 # it available, mirroring test_condense_tab._make_tab.
 _FFMPEG_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.condense_tab.CondenseTab._compute_ffmpeg_available"
+# Same rationale for the Download sub-tab's yt-dlp resolver probe.
+_YTDLP_COMPUTE_AVAILABLE = "anki_miner.gui.widgets.download_tab.DownloadTab._compute_ytdlp_available"
 
 
 def _make_config(tmp_path: Path) -> AnkiMinerConfig:
@@ -48,15 +50,17 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_ALASS_RESOLVER, return_value="/fake/alass"),
         patch(_FFMPEG_COMPUTE_AVAILABLE, return_value=True),
+        patch(_YTDLP_COMPUTE_AVAILABLE, return_value=True),
         patch("pathlib.Path.exists", return_value=True),
     ):
         tab = SubtitlesTab(config)
         qtbot.addWidget(tab)
-        for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab):
+        for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab, tab.download_tab):
             assert child._availability_worker.wait(3000)
         qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.retime_tab.retime_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.condense_tab.condense_button.isEnabled, timeout=3000)
+        qtbot.waitUntil(tab.download_tab.download_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -66,9 +70,9 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly five tabs."""
+    """Inner QTabWidget must have exactly six tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 5
+    assert tab._inner_tabs.count() == 6
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
@@ -79,6 +83,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(2) == "Condense"
     assert tab._inner_tabs.tabText(3) == "Card Backfill"
     assert tab._inner_tabs.tabText(4) == "Deck Filter"
+    assert tab._inner_tabs.tabText(5) == "Download"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -111,6 +116,12 @@ def test_deck_filter_tab_is_fifth(qtbot, tmp_path):
     assert tab._inner_tabs.widget(4) is tab.deck_filter_tab
 
 
+def test_download_tab_is_sixth(qtbot, tmp_path):
+    """download_tab is the widget at index 5."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(5) is tab.download_tab
+
+
 def test_the_sub_tab_underline_slides(qtbot, tmp_path):
     """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -123,7 +134,8 @@ def test_the_sub_tab_underline_slides(qtbot, tmp_path):
 
 
 @pytest.mark.parametrize(
-    ("key", "expected_index"), [("generate", 0), ("retime", 1), ("backfill", 3), ("deckfilter", 4)]
+    ("key", "expected_index"),
+    [("generate", 0), ("retime", 1), ("backfill", 3), ("deckfilter", 4), ("download", 5)],
 )
 def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -148,7 +160,7 @@ def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", ["generate", "retime", "condense", "backfill", "deckfilter"])
+@pytest.mark.parametrize("key", ["generate", "retime", "condense", "backfill", "deckfilter", "download"])
 def test_current_subtab_key_round_trips_with_open_subtab(qtbot, tmp_path, key):
     tab = _make_tab(_make_config(tmp_path), qtbot)
 
@@ -180,6 +192,7 @@ def test_update_config_propagates_to_generate_tab(qtbot, tmp_path):
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
     tab.backfill_tab.update_config = MagicMock()
+    tab.download_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -198,6 +211,7 @@ def test_update_config_propagates_to_retime_tab(qtbot, tmp_path):
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
     tab.backfill_tab.update_config = MagicMock()
+    tab.download_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -216,6 +230,7 @@ def test_update_config_propagates_to_condense_tab(qtbot, tmp_path):
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
     tab.backfill_tab.update_config = MagicMock()
+    tab.download_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -234,10 +249,30 @@ def test_update_config_propagates_to_backfill_tab(qtbot, tmp_path):
     tab.retime_tab.update_config = MagicMock()
     tab.condense_tab.update_config = MagicMock()
     tab.backfill_tab.update_config = MagicMock()
+    tab.download_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
     tab.backfill_tab.update_config.assert_called_once_with(new_config)
+
+
+def test_update_config_propagates_to_download_tab(qtbot, tmp_path):
+    """update_config must call download_tab.update_config with the new config."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    tab.generate_tab.update_config = MagicMock()
+    tab.retime_tab.update_config = MagicMock()
+    tab.condense_tab.update_config = MagicMock()
+    tab.backfill_tab.update_config = MagicMock()
+    tab.download_tab.update_config = MagicMock()
+
+    tab.update_config(new_config)
+
+    tab.download_tab.update_config.assert_called_once_with(new_config)
 
 
 def test_update_config_stores_config(qtbot, tmp_path):
@@ -277,6 +312,7 @@ def test_iter_close_workers_yields_generate_worker(qtbot, tmp_path):
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -291,6 +327,7 @@ def test_iter_close_workers_yields_retime_worker(qtbot, tmp_path):
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_retime_worker in workers
@@ -305,6 +342,7 @@ def test_iter_close_workers_yields_condense_worker(qtbot, tmp_path):
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_condense_worker in workers
@@ -318,17 +356,20 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     fake_retime_worker = MagicMock(name="retime_worker")
     fake_condense_worker = MagicMock(name="condense_worker")
     fake_backfill_worker = MagicMock(name="backfill_worker")
+    fake_download_worker = MagicMock(name="download_worker")
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([fake_backfill_worker]))
+    tab.download_tab.iter_close_workers = MagicMock(return_value=iter([fake_download_worker]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
     assert fake_retime_worker in workers
     assert fake_condense_worker in workers
     assert fake_backfill_worker in workers
-    assert len(workers) == 4
+    assert fake_download_worker in workers
+    assert len(workers) == 5
 
 
 # ---------------------------------------------------------------------------
