@@ -890,12 +890,14 @@ def exact_term_sequences(
     Rows without a sequence cannot provide stable dictionary identity and are
     omitted.
 
-    Sequences are reported as ``abs(sequence)``: a redirect row (negative
-    sequence, see ``_is_redirect_row``) is the same lexeme as its canonical
-    entry, so a kana redirect that carries a reading (e.g. あかーん) must share
-    identity with the entry it points at — otherwise the orthographic-alias
-    dedup would treat ``-seq`` and ``+seq`` as two lexemes. Both sides of every
-    identity comparison flow through this probe, so the fold is consistent.
+    A redirect row (negative sequence AND the ``⟶`` arrow, see
+    ``_is_redirect_row``) is folded to its canonical (positive) sequence: a kana
+    redirect that carries a reading (e.g. あかーん) must share identity with the
+    entry it points at, or the orthographic-alias dedup would treat ``-seq`` and
+    ``+seq`` as two lexemes. A foreign dictionary's own negative-sequence rows
+    (no arrow) are real content and pass through untouched, so ``-N`` and ``+N``
+    stay distinct identities for those. Both sides of every identity comparison
+    flow through this probe, so the fold is consistent.
     """
     normalized_pairs: list[tuple[str, str]] = []
     for term, reading in pairs:
@@ -913,18 +915,19 @@ def exact_term_sequences(
         chunk = terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            "SELECT DISTINCT term, reading, sequence FROM entries "
+            "SELECT DISTINCT term, reading, sequence, content FROM entries "
             f"WHERE term IN ({placeholders}) AND reading IS NOT NULL "
             "AND reading != '' AND sequence IS NOT NULL",
             chunk,
         ).fetchall()
-        for term, reading, sequence in rows:
+        for term, reading, sequence, content in rows:
             folded_reading = _fold_reading(reading)
             if folded_reading is None:
                 continue
             key = (term, folded_reading)
             if key in requested:
-                found.setdefault(key, set()).add(abs(sequence))
+                seq = -sequence if _is_redirect_row(content, sequence) else sequence
+                found.setdefault(key, set()).add(seq)
 
     return found
 

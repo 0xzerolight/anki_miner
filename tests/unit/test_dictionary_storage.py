@@ -2046,3 +2046,22 @@ class TestRedirectRows:
             assert contents.count('["do (canonical)"]') == 1
         finally:
             conn.close()
+
+    def test_exact_term_sequences_keeps_foreign_negative_sequences(self, tmp_path: Path):
+        """A dict using negative sequences for real content (no arrow) must keep
+        -N and +N as distinct identities."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="語", reading="ご", content='["sense A"]', sequence=7),
+                DictRow(term="語", reading="ご", content='["sense B (foreign negative)"]', sequence=-7),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            found = exact_term_sequences(conn, [("語", "ご")])
+            assert found[("語", "ご")] == {7, -7}
+        finally:
+            conn.close()
