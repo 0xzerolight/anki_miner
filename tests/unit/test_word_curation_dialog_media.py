@@ -19,7 +19,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from anki_miner.gui.widgets.dialogs import word_curation_dialog as wcd
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
@@ -714,6 +715,79 @@ class TestSinglePlayerInstance:
 
             assert len(dlg.findChildren(SubtitlePlayerWidget)) == 1
             assert factory.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# 6c. The player is released on EVERY destruction path
+# ---------------------------------------------------------------------------
+
+
+class _ReleaseSpyPlayer(QWidget):
+    """Player stand-in that records ``release()`` calls.
+
+    A real ``QWidget`` subclass because the pane layout takes it as a child;
+    the other player tests substitute a bare ``QWidget``, which cannot show
+    whether the release happened.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.releases = 0
+
+    def release(self) -> None:
+        self.releases += 1
+
+
+def _drain_deletes() -> None:
+    """Deliver pending ``deleteLater`` deletions.
+
+    ``processEvents()`` alone never runs ``DeferredDelete`` events, so a
+    ``destroyed``-driven release would look dead without the explicit send.
+    """
+    QApplication.processEvents()
+    QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+    QApplication.processEvents()
+
+
+class TestReleaseOnDestruction:
+    """``finished`` is not the only way a curator dies.
+
+    A tab destroyed outside the shutdown flow deletes its child dialog without
+    ``finished`` ever emitting, and a ``__init__`` that raises after the player
+    exists never hands the caller a dialog to close at all. Either way the mpv
+    core stays alive with its event thread firing observers into a dead widget.
+    """
+
+    def test_release_on_delete_without_finished(self, qtbot, words, existing_video):
+        """deleteLater() alone releases the player; ``finished`` never emits."""
+        ctx = _make_media_context(video_file=existing_video)
+        player = _ReleaseSpyPlayer()
+        with patch.object(WordCurationDialog, "_create_player_widget", return_value=player):
+            dlg = WordCurationDialog(words, media_context=ctx)
+        # Deliberately NOT qtbot.addWidget: this test destroys the dialog
+        # itself, and pytest-qt's teardown would then call close() on the dead
+        # C++ object through its still-live Python wrapper.
+        codes: list[int] = []
+        dlg.finished.connect(codes.append)
+
+        dlg.deleteLater()
+        _drain_deletes()
+
+        assert codes == []
+        assert player.releases == 1
+
+    def test_release_when_init_raises_after_the_player_exists(self, qtbot, words, existing_video):
+        """A raise after the player is built releases it before propagating."""
+        ctx = _make_media_context(video_file=existing_video)
+        player = _ReleaseSpyPlayer()
+        with (
+            patch.object(WordCurationDialog, "_create_player_widget", return_value=player),
+            patch.object(WordCurationDialog, "_populate_table", side_effect=RuntimeError("boom")),
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            WordCurationDialog(words, media_context=ctx)
+
+        assert player.releases == 1
 
 
 # ---------------------------------------------------------------------------

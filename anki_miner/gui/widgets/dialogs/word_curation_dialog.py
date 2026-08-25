@@ -262,20 +262,35 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._layout_state_saved = False
         self._side_key = ""
         self._side_stretch: list[int] = []
-        self._setup_ui()
-        self._populate_table()
-        self._refresh_summary()
-        # Connected FIRST, deliberately: MiningTabBase connects its curation
-        # resolver to the same signal afterwards, and Qt runs direct connections
-        # in connection order, so the mpv core / page decode / dictionary workers
-        # are always released before the tab reads the selection and schedules
-        # this window for deletion. Do not reorder these two connections.
-        self.finished.connect(self._stop_player)
-        add_min_max_buttons(self)
-        self._configure_as_owned_window()
-        # Last, because both calls above go through setWindowFlag, which resets
-        # a window's geometry on some platforms.
-        self._restore_layout_state()
+        # A raise anywhere below leaves the caller with `dialog = None` and no
+        # way to release the player it already built: there is no dialog to
+        # close, so `finished` never fires, and the half-built window stays
+        # parented to the tab with a live mpv core decoding inside it. The
+        # release is idempotent, so the normal path pays nothing.
+        try:
+            self._setup_ui()
+            self._populate_table()
+            self._refresh_summary()
+            # Connected FIRST, deliberately: MiningTabBase connects its curation
+            # resolver to the same signal afterwards, and Qt runs direct connections
+            # in connection order, so the mpv core / page decode / dictionary workers
+            # are always released before the tab reads the selection and schedules
+            # this window for deletion. Do not reorder these two connections.
+            self.finished.connect(self._stop_player)
+            add_min_max_buttons(self)
+            self._configure_as_owned_window()
+            # Last, because both calls above go through setWindowFlag, which resets
+            # a window's geometry on some platforms.
+            self._restore_layout_state()
+        except BaseException:
+            # getattr twice: the player may not exist yet (the raise came before
+            # the pane was built, or there is no player pane at all), and a test
+            # stub may not carry release. Never let this cleanup replace the
+            # exception the caller has to see.
+            release = getattr(getattr(self, "player_widget", None), "release", None)
+            if release is not None:
+                release()
+            raise
 
     def _configure_as_owned_window(self) -> None:
         """Present the curator as a non-modal window owned by its tab (D33).
@@ -851,6 +866,33 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         is small enough that a disclosure only cost a click and hid it.
         """
         self.player_widget = self._create_player_widget()
+        # Last-resort release: `finished -> _stop_player` covers every path the
+        # user can take, but not a dialog deleted without ever finishing (a tab
+        # destroyed outside the shutdown flow) nor an `__init__` that raises
+        # after this line. Either leaves a live mpv core whose event thread
+        # keeps firing observe_property callbacks into a dead widget.
+        #
+        # SAFETY CONSTRAINT — the handler must stay Qt-free. By the time
+        # `destroyed` is emitted, ~QWidget has ALREADY deleted the children, so
+        # a Qt call on the player here is a call on a deleted C++ object. It is
+        # safe only because `release()`/`_teardown_player` touches no Qt on this
+        # path: the GL render context was already freed by the
+        # `aboutToBeDestroyed` net in mpv_video_widget (so `detach()` early-
+        # returns instead of calling makeCurrent), and `terminate_mpv_player` is
+        # pure python-mpv. Keep it that way; do not grow this into a teardown.
+        #
+        # The closure captures the WIDGET's own bound method, never `self` — a
+        # lambda holding the dialog would keep the object it is meant to be
+        # cleaning up after alive. `release()` is idempotent, so a normal
+        # `finished` release makes this a free no-op.
+        #
+        # getattr for the same reason the stretch factor above uses it: tests
+        # substitute a bare QWidget for the player. It also keeps the handler
+        # total — an exception raised out of a `destroyed` slot reaches the app
+        # excepthook mid-destruction, which is strictly worse than the leak.
+        release = getattr(self.player_widget, "release", None)
+        if release is not None:
+            self.destroyed.connect(lambda *_: release())
         self.clip_editor = AudioClipEditor()
         self.clip_editor.clip_changed.connect(self._on_clip_changed)
         self.clip_editor.clip_reset.connect(self._on_clip_reset)
