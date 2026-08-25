@@ -890,15 +890,21 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self.expand_next_button = ModernButton(self.tr("+ Next line"), variant="ghost")
             self.expand_reset_button = ModernButton(self.tr("Reset lines"), variant="ghost")
             self.expand_prev_button.setToolTip(
-                self.tr(
-                    "Merge the previous subtitle line into this word's sentence and media clip. "
-                    "Disabled when there is no earlier line or the combined clip would exceed 30 seconds."
+                tr_format(
+                    self.tr(
+                        "Merge the previous subtitle line into this word's sentence and media clip. "
+                        "Disabled when there is no earlier line or the combined clip would exceed %1 seconds."
+                    ),
+                    int(MAX_CLIP_SECONDS),
                 )
             )
             self.expand_next_button.setToolTip(
-                self.tr(
-                    "Merge the next subtitle line into this word's sentence and media clip. "
-                    "Disabled when there is no later line or the combined clip would exceed 30 seconds."
+                tr_format(
+                    self.tr(
+                        "Merge the next subtitle line into this word's sentence and media clip. "
+                        "Disabled when there is no later line or the combined clip would exceed %1 seconds."
+                    ),
+                    int(MAX_CLIP_SECONDS),
                 )
             )
             self.expand_reset_button.setToolTip(

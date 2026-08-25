@@ -9127,11 +9127,11 @@ Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>
