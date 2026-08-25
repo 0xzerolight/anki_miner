@@ -12,12 +12,13 @@ Close contract (differs from ``ReadingTab`` — read before changing):
   an exception raised while stopping one child must not strand another child's
   still-running worker at app close.
 - Timing: only YouTube joins its worker inline (``YouTubeTab.shutdown`` bounded
-  ``wait()`` at ``_SHUTDOWN_WAIT_MS`` = 30s, and it nulls ``worker_thread`` on
-  both join-OK and timeout). Single/Batch inherit the ``MiningTabBase``
-  ``shutdown()`` which poisons the curation gate WITHOUT joining — their live
-  workers are cancelled+joined later by the controller at
-  ``_CLOSE_JOIN_GRACE_MS`` (2s each), so worst-case close is ~30s + 2x2s,
-  not 3x30s.
+  ``wait()`` at ``_SHUTDOWN_WAIT_MS`` = 2s; on join-OK it nulls ``worker_thread``,
+  but on timeout it RETAINS the handle — same deferred-close design as
+  Single/Batch). Single/Batch inherit the ``MiningTabBase`` ``shutdown()``
+  which poisons the curation gate WITHOUT joining — their live workers are
+  cancelled+joined later by the controller at ``_CLOSE_JOIN_GRACE_MS`` (2s
+  each), so worst-case close is ~2s inline join + 2x2s deferred grace
+  (~6s total).
 - Ordering: YouTube's inline join runs before Single/Batch workers are
   cancelled. No deadlock — the base ``shutdown()`` gate-poison *unparks* a
   curation-blocked worker rather than cancelling it, so nothing waits on a
