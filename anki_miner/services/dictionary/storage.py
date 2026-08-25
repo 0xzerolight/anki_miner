@@ -339,6 +339,28 @@ def create_lookup_indexes(db_path: Path) -> None:
         conn.close()
 
 
+def ensure_sequence_index(db_path: Path) -> None:
+    """Create any missing lookup index (notably ``idx_sequence``) on an
+    existing index file. v6 indexes imported before redirect resolution lack
+    ``idx_sequence`` and pay a full table scan per redirect batch; this
+    backfills it once, without a schema bump (the data is correct). Refreshes
+    the ``meta.json`` sidecar mtime so the fast path is not invalidated by the
+    write.
+
+    Raises on failure (read-only filesystem, locked DB) — this function does
+    NOT swallow; the caller (``IndexedDictProvider.load()``) catches and logs
+    so the scan fallback stays correct instead of failing the whole load."""
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.executescript(_LOOKUP_INDEXES_SQL)
+        conn.commit()
+    finally:
+        conn.close()
+    sidecar = db_path.parent / "meta.json"
+    if sidecar.is_file():
+        sidecar.touch()
+
+
 def bulk_insert(
     db_path: Path,
     rows: Iterable[DictRow],
@@ -553,7 +575,9 @@ def _substitute_redirect_rows(
     if resolved_by_seq is None:
         resolved_by_seq = _fetch_rows_for_sequences(conn, targets)
     out: list[tuple[str, str, int | None]] | list[tuple[str, str, int | None, str]] = []
-    spliced: set[int] = set()
+    spliced: set[int] = {
+        row[2] for row in rows if row[2] is not None and row[2] > 0 and not _is_redirect_row(row[0], row[2])
+    }
     for row in rows:
         if row[2] is None or not _is_redirect_row(row[0], row[2]):
             out.append(row)  # type: ignore[arg-type]
@@ -866,12 +890,14 @@ def exact_term_sequences(
     Rows without a sequence cannot provide stable dictionary identity and are
     omitted.
 
-    Sequences are reported as ``abs(sequence)``: a redirect row (negative
-    sequence, see ``_is_redirect_row``) is the same lexeme as its canonical
-    entry, so a kana redirect that carries a reading (e.g. あかーん) must share
-    identity with the entry it points at — otherwise the orthographic-alias
-    dedup would treat ``-seq`` and ``+seq`` as two lexemes. Both sides of every
-    identity comparison flow through this probe, so the fold is consistent.
+    A redirect row (negative sequence AND the ``⟶`` arrow, see
+    ``_is_redirect_row``) is folded to its canonical (positive) sequence: a kana
+    redirect that carries a reading (e.g. あかーん) must share identity with the
+    entry it points at, or the orthographic-alias dedup would treat ``-seq`` and
+    ``+seq`` as two lexemes. A foreign dictionary's own negative-sequence rows
+    (no arrow) are real content and pass through untouched, so ``-N`` and ``+N``
+    stay distinct identities for those. Both sides of every identity comparison
+    flow through this probe, so the fold is consistent.
     """
     normalized_pairs: list[tuple[str, str]] = []
     for term, reading in pairs:
@@ -889,18 +915,19 @@ def exact_term_sequences(
         chunk = terms[start : start + _EXIST_CHUNK]
         placeholders = ", ".join("?" for _ in chunk)
         rows = conn.execute(
-            "SELECT DISTINCT term, reading, sequence FROM entries "
+            "SELECT DISTINCT term, reading, sequence, content FROM entries "
             f"WHERE term IN ({placeholders}) AND reading IS NOT NULL "
             "AND reading != '' AND sequence IS NOT NULL",
             chunk,
         ).fetchall()
-        for term, reading, sequence in rows:
+        for term, reading, sequence, content in rows:
             folded_reading = _fold_reading(reading)
             if folded_reading is None:
                 continue
             key = (term, folded_reading)
             if key in requested:
-                found.setdefault(key, set()).add(abs(sequence))
+                seq = -sequence if _is_redirect_row(content, sequence) else sequence
+                found.setdefault(key, set()).add(seq)
 
     return found
 

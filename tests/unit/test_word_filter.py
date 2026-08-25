@@ -1773,6 +1773,15 @@ class TestExpandWordLines:
         word = _expansion_word(sentence="見つからない行", start_time=999.0)
         assert service.expand_word_lines(word, EXPANSION_ENTRIES) is word
 
+    def test_expand_bails_on_text_mismatched_cue(self, test_config):
+        """Time matches within tolerance but text differs → keep the original word."""
+        service = WordFilterService(test_config)
+        entries = [(0.0, 1.0, "前の行"), (5.0, 6.0, "違う文面"), (10.0, 11.0, "次の行")]
+        word = _expansion_word(sentence="本来の文面", start_time=5.0, line_expansion=(1, 0))
+        result = service.expand_word_lines(word, entries)
+        assert result.sentence == "本来の文面"
+        assert result.line_expansion == (1, 0)  # untouched — nothing was absorbed
+
     def test_result_resets_line_expansion_and_clears_candidates(self, test_config):
         service = WordFilterService(test_config)
         candidate = _expansion_word(line_expansion=(0, 0))

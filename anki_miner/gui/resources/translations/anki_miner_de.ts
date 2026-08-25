@@ -3836,7 +3836,11 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download folder is not writable: </source>
+        <source>Download folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check permissions for %1.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3853,6 +3857,10 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     </message>
 </context><context>
     <name>DownloadWorker</name>
+    <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Done</source>
         <translation type="unfinished">Fertig</translation>
@@ -7055,6 +7063,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Was sind diese Ressourcen?</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation>Empfohlene Ressourcen herunterladen</translation>
     </message>
@@ -7071,19 +7083,7 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Wörterbuch bereit: %1</translation>
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished">Häufigkeit</translation>
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished">Tonhöhenakzent</translation>
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9127,11 +9127,11 @@ Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>

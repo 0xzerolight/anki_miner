@@ -646,6 +646,14 @@ class WordFilterService:
                 word.start_time,
             )
             return word
+        if entries[index][2] != word.sentence:
+            logger.warning(
+                "line expansion: cue at %.3fs reads %r, word expected %r; keeping the original line",
+                word.start_time,
+                entries[index][2],
+                word.sentence,
+            )
+            return word
         window = merge_cue_window(entries, index, prev_count, next_count)
         shift = window.prefix_len
         new_start = word.surface_start + shift if word.surface_start >= 0 else -1

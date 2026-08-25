@@ -25,6 +25,7 @@ from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
+    DubAudioUnavailableError,
     NoJapaneseSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
@@ -122,6 +123,7 @@ def make_worker(qapp, processor, test_config):
         CookieDatabaseLockedError("locked"),
         VideoTooLongError("too long"),
         YtdlpNotFoundError("missing"),
+        DubAudioUnavailableError("gone"),
     ],
     ids=lambda e: type(e).__name__,
 )
