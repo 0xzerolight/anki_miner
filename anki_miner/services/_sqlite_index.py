@@ -39,6 +39,7 @@ import stat
 from pathlib import Path, PureWindowsPath
 from typing import Callable, Literal, TypeVar
 
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.slug import is_windows_device_basename
 
 logger = logging.getLogger(__name__)
@@ -372,7 +373,7 @@ def write_meta(
     value verbatim. The sidecar lets the next :func:`read_meta_cached` call avoid
     re-opening SQLite when nothing changed.
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         for key, value in items.items():
             stored = value_transform(value) if value_transform is not None else value
@@ -427,7 +428,13 @@ def read_meta_cached(
         return {}
     sidecar = db_path.parent / sidecar_name
     try:
-        if sidecar.is_file() and sidecar.stat().st_mtime >= db_path.stat().st_mtime:
+        # Nanosecond mtimes (not float st_mtime, which truncates to microsecond-
+        # ish resolution on some platforms and can round two same-second writes
+        # to equal floats): a promoted index that writes its meta.json sidecar
+        # in the same wall-clock second the DB itself was written would
+        # otherwise look "not older than" the DB and be trusted as fresh even
+        # when it is actually stale.
+        if sidecar.is_file() and sidecar.stat().st_mtime_ns >= db_path.stat().st_mtime_ns:
             data = json.loads(sidecar.read_text(encoding="utf-8"))
             if isinstance(data, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
                 return data
@@ -438,10 +445,19 @@ def read_meta_cached(
 
 
 def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str = _META_SIDECAR) -> None:
-    """Best-effort sidecar write. Publication failures are logged, not raised."""
+    """Best-effort sidecar write. Publication failures are logged, not raised.
+
+    Written via :func:`atomic_write_path` (write-to-temp-then-``os.replace``) so
+    a crash or exception mid-write can never leave a truncated/partial
+    ``meta.json`` next to the promoted, live index — a reader would otherwise
+    hit the ``json.JSONDecodeError`` guard in :func:`read_meta_cached` and
+    silently fall through to a full re-scan, or worse, briefly observe a
+    half-written file that happens to parse as valid but incomplete JSON.
+    """
     sidecar = db_path.parent / sidecar_name
     try:
-        sidecar.write_text(json.dumps(meta), encoding="utf-8")
+        with atomic_write_path(sidecar) as tmp:
+            tmp.write_text(json.dumps(meta), encoding="utf-8")
     except (OSError, TypeError, ValueError, RecursionError) as e:  # pragma: no cover - defensive
         logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
 

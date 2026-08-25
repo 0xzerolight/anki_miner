@@ -1710,16 +1710,23 @@ class EpisodeProcessor:
 
         Owns ONLY the machinery both entry points share verbatim: the pre-flight
         gates (staleness backstop, card-target verify, then offline dictionary),
-        all *outside* the try so a ``SetupError`` propagates instead of collapsing into a
-        "completed" result and *before* temp allocation so no dir leaks on
-        failure), the per-run temp folder, the partial-IDs reset, the per-run
-        ``_external_cancel`` bridge, and the try/except/finally tail (partial-card
-        harvest on failure; bridge drop + temp cleanup in ``finally``). ``body``
-        receives the allocated ``run_temp_folder`` and returns this run's
-        ``ProcessingResult``; it may early-return at phase boundaries and may
-        raise (caught here). Everything path-specific — identity/ctx construction,
-        the video-only audio-stream-cache invalidation, the reading occurrence
-        floor — lives in the caller's ``body`` closure.
+        all *outside* the main try so a ``SetupError``/``AnkiConnectionError``
+        propagates instead of collapsing into a "completed" result and *before*
+        temp allocation so no dir leaks on failure), the per-run temp folder, the
+        partial-IDs reset, the per-run ``_external_cancel`` bridge, and the
+        try/except/finally tail (partial-card harvest on failure; bridge drop +
+        temp cleanup in ``finally``). A narrower try wraps only the two pre-flight
+        steps that touch the network/filesystem (card-target verify, temp-folder
+        allocation): any ``AnkiMinerException`` they raise still propagates raw
+        (unchanged contract), but a genuinely unexpected exception (e.g. an
+        ``OSError`` from ``mkdtemp``) is converted to a structured
+        ``ProcessingResult`` via :meth:`_unexpected_exception_result` instead of
+        escaping with no result at all (Task 15 / SM7). ``body`` receives the
+        allocated ``run_temp_folder`` and returns this run's ``ProcessingResult``;
+        it may early-return at phase boundaries and may raise (caught here).
+        Everything path-specific — identity/ctx construction, the video-only
+        audio-stream-cache invalidation, the reading occurrence floor — lives in
+        the caller's ``body`` closure.
         """
         # Reset the run-scoped Anki accumulators FIRST — before the pre-flight
         # gates, which can raise SetupError straight out of this method. A
@@ -1737,9 +1744,25 @@ class EpisodeProcessor:
         self._reset_run_write_state()
 
         self.check_resource_staleness()
-        self._preflight_card_target()
-        self.check_offline_dictionary()
-        run_temp_folder = self._allocate_run_temp_folder()
+        try:
+            self._preflight_card_target()
+            self.check_offline_dictionary()
+            run_temp_folder = self._allocate_run_temp_folder()
+        except AnkiMinerException:
+            # SetupError (bad note type/field mapping, no offline dictionary) and
+            # AnkiConnectionError (AnkiConnect unreachable) are the documented,
+            # test-pinned contract above: they propagate raw out of
+            # _run_pipeline instead of collapsing into a ProcessingResult.
+            raise
+        except MemoryError:
+            raise
+        except Exception as e:
+            # _preflight_card_target reaches AnkiConnect and
+            # _allocate_run_temp_folder does mkdtemp — an OSError or other bug
+            # here used to escape as a raw exception with no ProcessingResult,
+            # bypassing MiningOutcome classification entirely (Task 15 / SM7).
+            # Reuse the same conversion the pipeline body's catch-all uses below.
+            return self._unexpected_exception_result(ctx, e)
         keep_temp = bool(os.environ.get("ANKI_MINER_KEEP_TEMP"))
 
         # Bridge the caller's cancel_event into this run's cancellation
@@ -1764,13 +1787,7 @@ class EpisodeProcessor:
         except MemoryError:
             raise
         except Exception as e:
-            logger.exception("EpisodeProcessor unhandled exception")
-            ctx.errors.append(f"Unexpected error: {e}")
-            partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(
-                tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
-            )
-            return self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+            return self._unexpected_exception_result(ctx, e)
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
@@ -2036,6 +2053,28 @@ class EpisodeProcessor:
         result.anki_write_state = state if isinstance(state, AnkiWriteState) else AnkiWriteState.NOTE_WRITE_UNCERTAIN
         result.failure_is_transient = failure is not None and is_transient_anki_transport_error(failure)
         return result
+
+    def _unexpected_exception_result(self, ctx: _EpisodeContext, e: Exception) -> ProcessingResult:
+        """Convert a non-``AnkiMinerException`` failure into a structured ``ProcessingResult``.
+
+        Shared by :meth:`_run_pipeline`'s own catch-all and its pre-flight wrapper
+        (``_preflight_card_target`` / ``_allocate_run_temp_folder``, Task 15 / SM7)
+        so both routes produce the identical failure shape instead of one of them
+        letting the exception escape raw with no ``ProcessingResult`` at all.
+        """
+        # logger.error(..., exc_info=e), not logger.exception()/exc_info=True:
+        # this helper is called from more than one except block, and ruff's
+        # LOG004/LOG014 rules flag both of those forms as lexically outside a
+        # handler even though the traceback is genuinely live here. Passing
+        # the caught exception object itself sidesteps both checks while
+        # logging the identical traceback.
+        logger.error("EpisodeProcessor unhandled exception", exc_info=e)
+        ctx.errors.append(f"Unexpected error: {e}")
+        partial_ids = list(self.anki_service.last_created_note_ids)
+        self.presenter.show_error(
+            tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
+        )
+        return self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
         """Shared except-handler tail: note any partial cards and build the failure result."""

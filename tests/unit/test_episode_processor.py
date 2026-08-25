@@ -4538,6 +4538,31 @@ class TestPreflightCardTarget:
 
         mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
 
+    def test_preflight_card_target_os_error_yields_structured_failure(self, processor, mock_services, tmp_path):
+        """Task 15 / SM7: a non-AnkiMinerException from verify_card_target (OSError)
+        must not escape process_episode raw — it converts to a structured
+        ProcessingResult failure, unlike SetupError/AnkiConnectionError above,
+        which are pinned to keep propagating raw."""
+        mock_services["anki_service"].verify_card_target.side_effect = OSError("disk full")
+
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is False
+        assert result.cards_created == 0
+        assert any("disk full" in e for e in result.errors)
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_allocate_temp_folder_os_error_yields_structured_failure(self, processor, mock_services, tmp_path):
+        """Task 15 / SM7: mkdtemp failure inside _allocate_run_temp_folder also
+        converts to a structured ProcessingResult instead of a raw escape."""
+        with patch.object(processor, "_allocate_run_temp_folder", side_effect=OSError("no space left on device")):
+            result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is False
+        assert result.cards_created == 0
+        assert any("no space left on device" in e for e in result.errors)
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
     def test_preflight_called_before_subtitle_parsing(self, test_config, mock_services, tmp_path):
         """verify_card_target is called exactly once and before parse_subtitle_file."""
         word = _make_word("食べる")

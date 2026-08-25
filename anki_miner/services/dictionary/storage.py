@@ -300,7 +300,7 @@ def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
     defaults (rollback journal, ``synchronous=FULL``) cost an fsync per batch
     and a journal write per page for exactly that discarded state.
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     conn.execute("PRAGMA journal_mode=OFF")
     conn.execute("PRAGMA synchronous=OFF")
     conn.execute("PRAGMA temp_store=MEMORY")
@@ -317,7 +317,7 @@ def create_index(db_path: Path, *, with_lookup_indexes: bool = True) -> None:
     default has always produced.
     """
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         conn.executescript(_SCHEMA_SQL if with_lookup_indexes else _TABLES_SQL)
         conn.commit()
@@ -411,7 +411,7 @@ def write_tags(db_path: Path, tags: Iterable[TagMeta]) -> int:
     write seam (Issue #67).
     """
     total = 0
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         conn.executemany(
             "INSERT OR REPLACE INTO tags (name, category, ord, notes, score) VALUES (?, ?, ?, ?, ?)",

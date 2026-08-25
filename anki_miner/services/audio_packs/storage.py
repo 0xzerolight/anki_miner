@@ -87,7 +87,7 @@ class AudioEntry:
 def create_index(db_path: Path) -> None:
     """Create a fresh audio pack index at db_path. Idempotent (uses IF NOT EXISTS)."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         conn.executescript(_SCHEMA_SQL)
         conn.commit()
@@ -110,7 +110,7 @@ def bulk_insert(
     """
     total = 0
     skipped_malformed = 0
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         batch: list[tuple] = []
         for row in rows:

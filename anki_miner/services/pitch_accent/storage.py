@@ -62,7 +62,7 @@ PitchStorageRow = tuple[str, str, str, str, str]
 def create_index(db_path: Path) -> None:
     """Create a fresh pitch index at ``db_path``. Idempotent (IF NOT EXISTS)."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         conn.executescript(_SCHEMA_SQL)
         conn.commit()
@@ -77,7 +77,7 @@ def bulk_insert(db_path: Path, rows: Iterable[PitchStorageRow], batch_size: int 
     db file is not held open across the importer's staging-dir cleanup.
     """
     total = 0
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         batch: list[PitchStorageRow] = []
         for reading, kanji, pattern, nasal, devoice in rows:

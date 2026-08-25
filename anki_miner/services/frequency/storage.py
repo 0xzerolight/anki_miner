@@ -65,7 +65,7 @@ FreqRow = tuple[str, str | None, int, str | None]
 def create_index(db_path: Path) -> None:
     """Create a fresh frequency index at ``db_path``. Idempotent (IF NOT EXISTS)."""
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         conn.executescript(_SCHEMA_SQL)
         conn.commit()
@@ -80,7 +80,7 @@ def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) 
     db file is not held open across the importer's staging-dir cleanup.
     """
     total = 0
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path, timeout=5.0)
     try:
         batch: list[FreqRow] = []
         for term, reading, rank, display_value in rows:
