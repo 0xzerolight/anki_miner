@@ -14,6 +14,7 @@ caller keeps its own pre-checks (e.g. the "already exists and not overwrite"
 
 from __future__ import annotations
 
+import contextlib
 import errno
 import os
 import tempfile
@@ -35,16 +36,118 @@ from anki_miner.services._sqlite_index import (
 from anki_miner.utils.atomic_io import atomic_replace_dir
 from anki_miner.utils.robust_fs import robust_rmtree
 
+# Lockfile name for the cross-process promotion guard, placed beside the
+# family root (e.g. dicts_root), not beside an individual slot -- matching
+# the in-process RLock's granularity below. Dot-prefixed so
+# startup_store_recovery's is_generated_store_artifact() ignores it outright:
+# it is infrastructure, never a slot's recovery candidate.
+_PROMOTION_LOCK_FILENAME = ".anki-miner-promotion.lock"
+
+# How long a cross-process promotion lockfile may sit before a later
+# promotion is allowed to steal it. A real promotion is a fast rename/
+# replace, so this budget exists only to recover from a lockfile a process
+# left behind after crashing mid-promotion (kill -9, OOM kill, host power
+# loss) -- a crashed holder must never permanently brick imports for that
+# slot family.
+_PROMOTION_LOCK_STALE_SECONDS = 60 * 60
+
+
+class _PromotionLock:
+    """In-process RLock plus an O_EXCL lockfile, both keyed by family root.
+
+    The RLock alone only serializes writers inside one process; two OS
+    processes (e.g. two app instances past the advisory single-instance
+    guard) can still race ``os.replace`` on the same slot. The lockfile adds
+    a cross-process guard at the same granularity as the RLock -- one lock
+    per family root, not per slot. Reentry within one thread
+    (``repair_managed_slot`` holds the lock across a call into an importer
+    that itself calls ``promote_staged_dir`` on the same root) only touches
+    the lockfile at the outermost acquisition, mirroring the RLock.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+        self._rlock = threading.RLock()
+        self._lock_path = root / _PROMOTION_LOCK_FILENAME
+        self._depth = 0
+
+    def __enter__(self) -> _PromotionLock:
+        self._rlock.acquire()
+        self._depth += 1
+        if self._depth == 1:
+            try:
+                self._acquire_file_lock()
+            except BaseException:
+                self._depth -= 1
+                self._rlock.release()
+                raise
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        if self._depth == 1:
+            self._release_file_lock()
+        self._depth -= 1
+        self._rlock.release()
+
+    def _acquire_file_lock(self) -> None:
+        self._root.mkdir(parents=True, exist_ok=True)
+        payload = f"{os.getpid()}\n".encode("ascii")
+        stale_retries = 3
+        while True:
+            try:
+                fd = os.open(self._lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+            except FileExistsError:
+                if stale_retries > 0 and self._steal_if_stale():
+                    stale_retries -= 1
+                    continue
+                raise FileExistsError(
+                    errno.EEXIST,
+                    "Slot is being promoted by another Anki Miner process",
+                    str(self._root),
+                ) from None
+            try:
+                os.write(fd, payload)
+            finally:
+                os.close(fd)
+            return
+
+    def _steal_if_stale(self) -> bool:
+        try:
+            age = time.time() - self._lock_path.stat().st_mtime
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        if age < _PROMOTION_LOCK_STALE_SECONDS:
+            return False
+        try:
+            os.unlink(self._lock_path)
+        except FileNotFoundError:
+            return True
+        except OSError:
+            return False
+        return True
+
+    def _release_file_lock(self) -> None:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(self._lock_path)
+
+
 _promotion_locks_guard = threading.Lock()
-_promotion_locks: weakref.WeakValueDictionary[Path, threading.RLock] = weakref.WeakValueDictionary()
+_promotion_locks: weakref.WeakValueDictionary[Path, _PromotionLock] = weakref.WeakValueDictionary()
 _RepairResult = TypeVar("_RepairResult")
 
 
-def _promotion_lock(final: Path) -> threading.RLock:
-    """Return the in-process promotion lock for ``final``'s resolved root."""
+def _promotion_lock(final: Path) -> _PromotionLock:
+    """Return the promotion lock for ``final``'s resolved root.
+
+    Serializes both in-process (RLock) and cross-process (O_EXCL lockfile)
+    writers at the granularity of the family root (``final.parent``),
+    matching the prior in-process-only lock's scope.
+    """
     root = final.parent.resolve()
     with _promotion_locks_guard:
-        return _promotion_locks.setdefault(root, threading.RLock())
+        return _promotion_locks.setdefault(root, _PromotionLock(root))
 
 
 def _unique_repair_path(final: Path, marker: str) -> Path:
@@ -145,9 +248,13 @@ def promote_staged_dir(
         FileExistsError: When ``overwrite`` is false and ``final`` exists.
         Whatever the placement primitive raises. On replacement failure, the
         backup is restored before the exception propagates.
+        FileExistsError: Also raised (same errno) when another OS process
+            currently holds the cross-process promotion lock for this slot's
+            family root.
 
-    The no-clobber lock covers writers in this process only. It does not claim
-    cross-process atomicity.
+    The no-clobber lock covers writers across processes too, via an O_EXCL
+    lockfile beside the family root (see ``_PromotionLock``); it stays scoped
+    to one family root, not the whole app.
     """
     with _promotion_lock(final):
         ownership = read_ownership_marker(staging)

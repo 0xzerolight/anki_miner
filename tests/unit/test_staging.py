@@ -5,6 +5,7 @@ import gc
 import os
 import shutil
 import threading
+import time
 import weakref
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -310,6 +311,85 @@ def test_cleanup_failure_does_not_mask_primary_promotion_error(
 
     assert exc_info.value.errno == errno.ENOSPC
     assert cleanup_modes == ["outcome"]
+
+
+def test_promote_staged_dir_removes_lockfile_on_success(tmp_path: Path) -> None:
+    final = tmp_path / "resource"
+    staging = tmp_path / ".staging-resource"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"new")
+
+    promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+    assert (final / "payload").read_bytes() == b"new"
+    assert not (tmp_path / staging_module._PROMOTION_LOCK_FILENAME).exists()
+
+
+def test_promote_staged_dir_removes_lockfile_on_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    final = tmp_path / "resource"
+    final.mkdir()
+    (final / "payload").write_bytes(b"old")
+    write_ownership_marker(final, "resource", "dictionary")
+    staging = tmp_path / ".staging-resource"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"new")
+    write_ownership_marker(staging, "resource", "dictionary")
+    real_replace = os.replace
+
+    def crash_during_promotion(src, dst):
+        if Path(src) == staging and Path(dst) == final:
+            raise KeyboardInterrupt
+        return real_replace(src, dst)
+
+    monkeypatch.setattr(os, "replace", crash_during_promotion)
+
+    with pytest.raises(KeyboardInterrupt):
+        promote_staged_dir(staging, final, mover=os.replace, overwrite=True)
+
+    assert not (tmp_path / staging_module._PROMOTION_LOCK_FILENAME).exists()
+
+
+def test_promote_staged_dir_raises_when_another_process_holds_the_lock(tmp_path: Path) -> None:
+    """Process A holds the lockfile directly (bypassing the in-process RLock,
+
+    like a second OS process would); process B's ``promote_staged_dir`` must
+    see the contention as the same staging-failure type callers already
+    catch for a same-process "already exists" race.
+    """
+    final = tmp_path / "resource"
+    staging = tmp_path / ".staging-resource"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"new")
+
+    lock_path = tmp_path / staging_module._PROMOTION_LOCK_FILENAME
+    held_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    os.write(held_fd, b"999999\n")
+    os.close(held_fd)
+
+    with pytest.raises(FileExistsError):
+        promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+    assert not final.exists()
+    assert staging.exists()
+    assert lock_path.exists()
+
+
+def test_promote_staged_dir_steals_stale_lockfile(tmp_path: Path) -> None:
+    final = tmp_path / "resource"
+    staging = tmp_path / ".staging-resource"
+    staging.mkdir()
+    (staging / "payload").write_bytes(b"new")
+
+    lock_path = tmp_path / staging_module._PROMOTION_LOCK_FILENAME
+    stale_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    os.close(stale_fd)
+    stale_time = time.time() - staging_module._PROMOTION_LOCK_STALE_SECONDS - 1
+    os.utime(lock_path, (stale_time, stale_time))
+
+    promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+    assert (final / "payload").read_bytes() == b"new"
+    assert not lock_path.exists()
 
 
 def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:
