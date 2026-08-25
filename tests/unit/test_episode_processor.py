@@ -4823,6 +4823,18 @@ class TestDictionaryResourceFacade:
     def test_offline_lookup_fn_is_definition_service_offline_lookup(self, processor):
         assert processor.offline_lookup_fn is processor.definition_service.lookup_all_offline
 
+    def test_release_dictionary_resources_closes_audio_fetcher(self, test_config):
+        """PB3: the persistent audio-pack handle must drop before Settings ->
+        Audio panel's pack-removal rmtree runs, same as the dict sqlite handles."""
+        fetcher = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+        )
+        proc.release_dictionary_resources()
+        fetcher.close.assert_called_once_with()
+
 
 class TestProcessorClose:
     """close() releases all per-run resources (Windows back-to-back-mining freeze)."""
@@ -5768,6 +5780,21 @@ class TestSharedLookupOwnership:
         proc.release_dictionary_resources()
         proc.definition_service.close.assert_not_called()
         freq.close.assert_not_called()
+
+    def test_release_dictionary_resources_closes_audio_fetcher_even_when_shared(self, test_config):
+        """The audio fetcher is processor-owned even over a shared lookup bundle
+        (SharedLookupServices holds no audio fetcher) — release_dictionary_resources
+        must close it regardless of ownership, so pack-removal rmtree still works."""
+        fetcher = MagicMock()
+        proc = build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            expression_audio_fetcher=fetcher,
+            owns_lookup_services=False,
+        )
+        proc.release_dictionary_resources()
+        fetcher.close.assert_called_once_with()
+        proc.definition_service.close.assert_not_called()
 
     def test_default_ownership_still_closes(self, test_config):
         freq = MagicMock()

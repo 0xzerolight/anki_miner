@@ -146,8 +146,9 @@ def test_blob_serving_opens_the_source_db_once_and_skips_rowless_entries(tmp_pat
 
     assert fetched is not None
     assert fetched.read_bytes() == b"ID3-hit"
-    # One connection for the entry lookup, one for the blob walk. Not one per row.
-    assert len(opens) == 2
+    # Entry lookup and blob walk share the fetcher's one persistent connection
+    # to the source db (PB3) — not a fresh open per row, nor even per phase.
+    assert len(opens) == 1
 
 
 def test_overwrite_reimport_purges_stale_pack_cache(tmp_path: Path, monkeypatch):

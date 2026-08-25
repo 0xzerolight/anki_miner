@@ -65,10 +65,14 @@ class LocalAudioPackFetcher:
     Misses are NOT cached (no .miss markers) because local SQLite lookups are
     cheap — re-querying on every call avoids stale negatives after re-import.
 
-    Connection idiom: a new read-only connection is opened per ``fetch`` call
-    and closed in a finally block.  This avoids long-lived handles that would
-    block pack removal or re-import on Windows (where open file handles
-    prevent directory deletion).
+    Connection idiom: the read-only sqlite handle is opened lazily on the
+    first ``fetch`` call and held open across every later call on this
+    instance. An android_db pack's lookup index and audio blobs are the SAME
+    multi-GB file (``blob_db_path``), so reopening per call cost up to two
+    fresh opens of that file per word. ``close()`` releases the handle —
+    callers must close it before removing or re-importing a pack (Windows
+    keeps a directory locked while a file inside it is open); a ``fetch``
+    after ``close`` reopens lazily.
     """
 
     def __init__(
@@ -84,6 +88,7 @@ class LocalAudioPackFetcher:
         self._pack_id = pack_id
         self._cache_dir = _pack_cache_dir(cache_dir, pack_id)
         self._blob_db_path = blob_db_path
+        self._conn: sqlite3.Connection | None = None
 
     @property
     def pack_id(self) -> str:
@@ -150,39 +155,33 @@ class LocalAudioPackFetcher:
         #    of falling through to code that reads `rows` past a point where it
         #    might never have been bound.
         try:
-            conn: sqlite3.Connection | None = None
-            try:
-                # An android_db pack's managed index holds no rows: it is a
-                # metadata token, and the entries live in the registered source db.
-                lookup_db = self._blob_db_path or self._db_path
-                conn = storage.open_readonly(lookup_db)
+            # An android_db pack's managed index holds no rows: it is a
+            # metadata token, and the entries live in the registered source db.
+            conn = self._connection()
 
-                if is_kana_only(reading):
-                    rows = storage.lookup(conn, mined_form, reading)
-                    katakana_variant = hiragana_to_katakana(reading)
-                    if not rows and katakana_variant != reading:
-                        # Packs store kana verbatim (often katakana for
-                        # NHK/SMK) while miner readings are hiragana-folded;
-                        # retry the exact match in the other script.
-                        rows = storage.lookup(conn, mined_form, katakana_variant)
-                else:
-                    # Non-kana (or empty) reading: the exact key is useless.
-                    # Wildcard the expression, then guard on ambiguity.
-                    rows = storage.lookup(conn, mined_form, "")
-                    distinct = {katakana_to_hiragana(r.reading) for r in rows if r.reading}
-                    if len(distinct) > 1:
-                        # Genuinely ambiguous — only wildcard (NULL-reading)
-                        # rows may serve, matching what the old exact path
-                        # returned for a non-kana reading.
-                        rows = [r for r in rows if r.reading is None]
-            finally:
-                if conn is not None:
-                    conn.close()
+            if is_kana_only(reading):
+                rows = storage.lookup(conn, mined_form, reading)
+                katakana_variant = hiragana_to_katakana(reading)
+                if not rows and katakana_variant != reading:
+                    # Packs store kana verbatim (often katakana for
+                    # NHK/SMK) while miner readings are hiragana-folded;
+                    # retry the exact match in the other script.
+                    rows = storage.lookup(conn, mined_form, katakana_variant)
+            else:
+                # Non-kana (or empty) reading: the exact key is useless.
+                # Wildcard the expression, then guard on ambiguity.
+                rows = storage.lookup(conn, mined_form, "")
+                distinct = {katakana_to_hiragana(r.reading) for r in rows if r.reading}
+                if len(distinct) > 1:
+                    # Genuinely ambiguous — only wildcard (NULL-reading)
+                    # rows may serve, matching what the old exact path
+                    # returned for a non-kana reading.
+                    rows = [r for r in rows if r.reading is None]
 
             # 3a. An android_db pack keeps its audio as blobs in the source db:
             #     there is no file to resolve, so the containment guard is moot.
             if self._blob_db_path is not None:
-                return self._serve_from_blobs(rows, stem)
+                return self._serve_from_blobs(conn, rows, stem)
 
             # 3. Walk rows in id order; apply containment guard; copy first safe hit.
             for row in rows:
@@ -215,56 +214,65 @@ class LocalAudioPackFetcher:
         return _first_candidate_hit(self, candidates, cancelled_check)
 
     def close(self) -> None:
-        """No-op: sqlite connections are opened and closed per ``fetch`` call.
+        """Release the persistent sqlite handle, if one was ever opened.
 
-        This fetcher holds no long-lived sqlite handle (see the connection
-        idiom in the class docstring), so there is nothing to release between
-        sequential mining runs. Present for uniform duck-typed ``close()``
-        fan-out from ChainedExpressionAudioFetcher.
+        Drops the read-only connection held since the first ``fetch`` call so
+        Settings → Remove/re-import can ``rmtree`` the pack out from under an
+        idle fetcher (Windows keeps a directory locked while a file inside it
+        stays open). Safe to call on a fetcher that never fetched, and safe to
+        call more than once; a later ``fetch`` reopens lazily.
         """
-        # Nothing to close — each fetch opens its own short-lived connection.
-        pass
+        if self._conn is not None:
+            with contextlib.suppress(Exception):
+                self._conn.close()
+            self._conn = None
 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
 
-    def _serve_from_blobs(self, rows: list[storage.AudioEntry], stem: str) -> Path | None:
+    def _connection(self) -> sqlite3.Connection:
+        """Return the persistent read-only connection, opening it lazily.
+
+        An android_db pack's lookup index and audio blobs are the SAME
+        multi-GB file (``blob_db_path``); sharing one handle between the
+        entry lookup and the blob walk (see ``_serve_from_blobs``) collapses
+        what used to be up to two opens of that file per ``fetch`` call into
+        at most one per fetcher lifetime.
+        """
+        if self._conn is None:
+            lookup_db = self._blob_db_path or self._db_path
+            self._conn = storage.open_readonly(lookup_db)
+        return self._conn
+
+    def _serve_from_blobs(self, conn: sqlite3.Connection, rows: list[storage.AudioEntry], stem: str) -> Path | None:
         """Cache the first row whose blob can be read out of the android.db.
 
-        One connection for the whole walk: the registered database can be tens
-        of gigabytes, and reopening it per candidate row costs a fresh page-cache
-        warm-up each time.
+        Reuses the connection ``fetch`` already holds open on this file
+        rather than opening a second one — for an android_db pack this is
+        the same multi-GB file as the entry lookup.
         """
         assert self._blob_db_path is not None
-        try:
-            conn = storage.open_readonly(self._blob_db_path)
-        except (sqlite3.Error, OSError) as exc:
-            logger.debug("LocalAudioPackFetcher: cannot open blob db %s: %s", self._blob_db_path, exc)
-            return None
-        try:
-            for row in rows:
-                try:
-                    found = conn.execute(
-                        "SELECT data FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
-                        (row.file, row.source),
-                    ).fetchone()
-                except sqlite3.Error as exc:
-                    # An unreadable row is this row's problem, not the lookup's:
-                    # the next candidate may still serve.
-                    logger.debug("LocalAudioPackFetcher: blob read failed for %s: %s", row.file, exc)
-                    continue
-                if found is None or not isinstance(found[0], bytes) or not found[0]:
-                    continue
-                data = found[0]
-                suffix = Path(row.file).suffix.lower() or ".mp3"
+        for row in rows:
+            try:
+                found = conn.execute(
+                    "SELECT data FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
+                    (row.file, row.source),
+                ).fetchone()
+            except sqlite3.Error as exc:
+                # An unreadable row is this row's problem, not the lookup's:
+                # the next candidate may still serve.
+                logger.debug("LocalAudioPackFetcher: blob read failed for %s: %s", row.file, exc)
+                continue
+            if found is None or not isinstance(found[0], bytes) or not found[0]:
+                continue
+            data = found[0]
+            suffix = Path(row.file).suffix.lower() or ".mp3"
 
-                def write_blob(part: Path, blob: bytes = data) -> None:
-                    part.write_bytes(blob)
+            def write_blob(part: Path, blob: bytes = data) -> None:
+                part.write_bytes(blob)
 
-                return self._write_cached(stem, suffix, write_blob)
-        finally:
-            conn.close()
+            return self._write_cached(stem, suffix, write_blob)
         return None
 
     def _write_cached(self, stem: str, suffix: str, writer: Callable[[Path], object]) -> Path | None:

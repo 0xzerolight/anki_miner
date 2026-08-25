@@ -398,10 +398,22 @@ class EpisodeProcessor:
         The per-run frequency sources hold their own ``index.sqlite`` handles,
         so they are released here too (idempotent; safe when absent).
 
-        Skipped entirely when the lookup services are worker-owned
-        (``owns_lookup_services=False``): only the owner closes shared handles,
-        in its end-of-run ``finally``.
+        The expression-audio fetcher chain is closed unconditionally, even
+        when the lookup services are worker-owned: ``SharedLookupServices``
+        never holds an audio fetcher, so this processor is always the sole
+        owner of its persistent audio-pack handles (PB3) — Settings → Audio
+        panel's pack-removal ``rmtree`` needs them released regardless of
+        ``owns_lookup_services``.
+
+        The definition/frequency handles below are skipped when the lookup
+        services are worker-owned (``owns_lookup_services=False``): only the
+        owner closes those shared handles, in its end-of-run ``finally``.
         """
+        if self.expression_audio_fetcher is not None:
+            close = getattr(self.expression_audio_fetcher, "close", None)
+            if callable(close):
+                with contextlib.suppress(Exception):
+                    close()
         if not self.owns_lookup_services:
             return
         self.definition_service.close()

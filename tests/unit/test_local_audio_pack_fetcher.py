@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 import threading
 from pathlib import Path
 
@@ -684,9 +685,81 @@ class TestDistinctCacheNames:
         assert r1.name != r2.name
 
 
-def test_close_is_noop_and_does_not_raise(tmp_path: Path):
-    """close() is a documented no-op (connections are per-fetch); must not raise."""
-    db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
-    cache_dir = tmp_path / "cache"
-    fetcher = _make_fetcher(db, pack_dir, cache_dir)
-    fetcher.close()  # no exception expected
+# ---------------------------------------------------------------------------
+# Persistent handle (PB3): opened lazily on first fetch, reused, real close()
+# ---------------------------------------------------------------------------
+
+
+class TestPersistentHandle:
+    def test_two_fetches_open_the_index_once(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3"), ("飲む", "のむ", "nomu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        opens: list[Path] = []
+        real_open = audio_pack_fetcher.storage.open_readonly
+        monkeypatch.setattr(
+            audio_pack_fetcher.storage,
+            "open_readonly",
+            lambda path: (opens.append(path), real_open(path))[1],
+        )
+
+        # Two DIFFERENT words: a repeat of the same word would short-circuit
+        # on the file cache before ever touching the connection.
+        assert fetcher.fetch("食べる", "たべる") is not None
+        assert fetcher.fetch("飲む", "のむ") is not None
+
+        assert len(opens) == 1
+
+    def test_close_releases_handle_and_next_fetch_reopens(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3"), ("飲む", "のむ", "nomu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        opens: list[Path] = []
+        real_open = audio_pack_fetcher.storage.open_readonly
+        monkeypatch.setattr(
+            audio_pack_fetcher.storage,
+            "open_readonly",
+            lambda path: (opens.append(path), real_open(path))[1],
+        )
+
+        assert fetcher.fetch("食べる", "たべる") is not None
+        assert len(opens) == 1
+
+        fetcher.close()
+
+        assert fetcher.fetch("飲む", "のむ") is not None
+        assert len(opens) == 2
+
+    def test_close_actually_closes_the_connection(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        assert fetcher.fetch("食べる", "たべる") is not None
+        conn = fetcher._conn
+        assert conn is not None
+
+        fetcher.close()
+
+        # Windows pack-removal rmtree needs the OS handle gone, not just the
+        # Python reference — assert the sqlite connection is really closed.
+        with pytest.raises(sqlite3.ProgrammingError):
+            conn.execute("SELECT 1")
+
+    def test_close_before_any_fetch_does_not_raise(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        fetcher.close()  # nothing was ever opened — no exception expected
+
+    def test_close_twice_does_not_raise(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        fetcher.fetch("食べる", "たべる")
+        fetcher.close()
+        fetcher.close()  # idempotent
