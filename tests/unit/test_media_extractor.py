@@ -2676,6 +2676,157 @@ class TestWavToFloat32:
         assert abs(duration - num_samples / sample_rate) < 1e-6
 
 
+class TestWavToFloat32DurationCeiling:
+    """The 20h-audiobook OOM-kill: refuse a WAV whose HEADER duration exceeds
+    ``_MAX_ASR_DURATION_S`` before any frame data is read. Deliberately not
+    ``asr``-marked (default suite) — this is a crash-prevention guard, not an
+    ASR-engine behavior, and it must run on every CI leg.
+    """
+
+    def test_ceiling_check_precedes_any_frame_read(self, monkeypatch, tmp_path):
+        """A stub wave file whose ``readframes`` fails the test if called proves
+        the check runs off the header (nframes/framerate) alone."""
+        from anki_miner.services import media_extractor
+        from anki_miner.services.media_extractor import _MAX_ASR_DURATION_S, wav_to_float32
+
+        framerate = 16000
+        over_cap_s = _MAX_ASR_DURATION_S + 3600  # 1h past the cap
+        over_cap_frames = framerate * over_cap_s
+
+        class _ExplodingWave:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc_info):
+                return False
+
+            def getnchannels(self):
+                return 1
+
+            def getsampwidth(self):
+                return 2
+
+            def getcomptype(self):
+                return "NONE"
+
+            def getframerate(self):
+                return framerate
+
+            def getnframes(self):
+                return over_cap_frames
+
+            def readframes(self, n):
+                pytest.fail("readframes called before the duration ceiling check")
+
+        monkeypatch.setattr(media_extractor.wave, "open", lambda *a, **k: _ExplodingWave())
+
+        with pytest.raises(ValueError) as exc_info:
+            wav_to_float32(tmp_path / "huge.wav")
+
+        msg = str(exc_info.value)
+        assert str(over_cap_s) in msg, msg
+        assert str(_MAX_ASR_DURATION_S) in msg, msg
+
+    def test_duration_at_cap_is_accepted(self, monkeypatch, tmp_path):
+        """The cap itself is inclusive — only durations strictly past it refuse."""
+        from anki_miner.services import media_extractor
+        from anki_miner.services.media_extractor import _MAX_ASR_DURATION_S
+
+        framerate = 16000
+        at_cap_frames = framerate * _MAX_ASR_DURATION_S
+
+        class _AtCapWave:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc_info):
+                return False
+
+            def getnchannels(self):
+                return 1
+
+            def getsampwidth(self):
+                return 2
+
+            def getcomptype(self):
+                return "NONE"
+
+            def getframerate(self):
+                return framerate
+
+            def getnframes(self):
+                return at_cap_frames
+
+            def readframes(self, n):
+                if n <= 0:
+                    return b""
+                take = min(n, at_cap_frames - self._read)
+                self._read += take
+                return b"\x00\x00" * take
+
+            _read = 0
+
+        monkeypatch.setattr(media_extractor.wave, "open", lambda *a, **k: _AtCapWave())
+
+        samples, sr, duration = media_extractor.wav_to_float32(tmp_path / "at_cap.wav")
+
+        assert sr == framerate
+        assert duration == pytest.approx(_MAX_ASR_DURATION_S)
+        assert samples.shape[0] == at_cap_frames
+
+
+class TestWavToFloat32ChunkedFill:
+    """Peak-memory fix: fill a preallocated float32 array from chunked
+    ``readframes`` reads instead of materializing the whole int16 byte buffer
+    at once. Correctness only — not asr-marked, no engine involved.
+    """
+
+    def test_chunked_read_matches_whole_file_conversion(self, monkeypatch, tmp_path):
+        """A tiny WAV read through a deliberately small chunk size must produce
+        the exact same samples as a plain whole-buffer int16->float32 conversion.
+
+        Deliberately avoids importing numpy in this file's own source (via
+        ``.tolist()``/``str(dtype)`` on the array the SUT returns) — this test
+        must stay in the default suite per ``test_asr_marker_gating.py``,
+        which treats any direct ``numpy`` import or ``importorskip`` in an
+        unmarked test as a latent ``ModuleNotFoundError`` in the ``[dev]``-only
+        CI lane. int16 values here divide by 32768 (a power of two), which
+        int16->float32 division represents exactly, so plain-float comparison
+        needs no tolerance.
+        """
+        import struct
+
+        from anki_miner.services import media_extractor
+        from anki_miner.services.media_extractor import wav_to_float32
+
+        sample_rate = 16000
+        num_samples = 37  # not a multiple of the shrunk chunk size below
+        step = 65535 // (num_samples - 1)
+        original_int16 = [(-32768 + i * step) for i in range(num_samples)]
+        raw = struct.pack(f"<{num_samples}h", *original_int16)
+        expected = [value / 32768.0 for value in original_int16]
+
+        wav_path = tmp_path / "chunked.wav"
+        with wave.open(str(wav_path), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            wf.writeframes(raw)
+
+        # Force several readframes calls over this tiny file so the chunked
+        # fill path — not a single whole-file read — is what's under test.
+        monkeypatch.setattr(media_extractor, "_WAV_READ_CHUNK_FRAMES", 4)
+
+        samples, sr, duration = wav_to_float32(wav_path)
+
+        assert samples.tolist() == expected
+        assert str(samples.dtype) == "float32"
+        assert len(samples) == len(expected)
+        assert samples.flags.writeable
+        assert sr == sample_rate
+        assert abs(duration - num_samples / sample_rate) < 1e-6
+
+
 # Codecs Python's stdlib ``wave`` module can actually read (WAVE format tag 1 /
 # integer PCM). pcm_f32le (tag 3, IEEE float) is NOT here — it raises
 # "unknown format: 3" at wave.open() time and silently broke every extraction.

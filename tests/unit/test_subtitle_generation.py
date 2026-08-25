@@ -26,6 +26,15 @@ _FAKE_SEGMENTS = [(0.0, 1.0, "こんにちは"), (1.0, 2.0, "世界")]
 
 
 def test_wav_normalization_reuses_the_owned_float_buffer(tmp_path, monkeypatch):
+    """The float32 output is preallocated exactly once and scaled in place.
+
+    Pins the peak-memory fix: ``wav_to_float32`` must never hold a whole-file
+    int16 buffer and a separately-allocated whole-file float32 buffer at the
+    same time. Tracking ``np.empty`` (not ``np.frombuffer``, which now only
+    ever views small per-chunk reads) proves there is exactly one float32
+    allocation, and that the returned array IS that allocation — i.e. the
+    ``/= 32768.0`` scaling happened in place, not into a second buffer.
+    """
     np = pytest.importorskip("numpy")
 
     from anki_miner.services.media_extractor import wav_to_float32
@@ -41,33 +50,16 @@ def test_wav_normalization_reuses_the_owned_float_buffer(tmp_path, monkeypatch):
         wav_file.writeframes(pcm.tobytes())
 
     float_buffer_addresses: list[int] = []
+    real_empty = np.empty
 
-    class TrackingArray(np.ndarray):
-        def astype(self, dtype, *args, **kwargs):
-            result = super().astype(dtype, *args, **kwargs)
-            if result.dtype == np.float32:
-                float_buffer_addresses.append(result.ctypes.data)
-            return result
-
-        def __truediv__(self, value):
-            result = super().__truediv__(value)
-            if result.dtype == np.float32:
-                float_buffer_addresses.append(result.ctypes.data)
-            return result
-
-        def __itruediv__(self, value):
-            result = super().__itruediv__(value)
-            if result.dtype == np.float32:
-                float_buffer_addresses.append(result.ctypes.data)
-            return result
-
-    real_frombuffer = np.frombuffer
-
-    def tracking_frombuffer(*args, **kwargs):
-        return real_frombuffer(*args, **kwargs).view(TrackingArray)
+    def tracking_empty(*args, **kwargs):
+        result = real_empty(*args, **kwargs)
+        if result.dtype == np.float32:
+            float_buffer_addresses.append(result.ctypes.data)
+        return result
 
     with monkeypatch.context() as context:
-        context.setattr(np, "frombuffer", tracking_frombuffer)
+        context.setattr(np, "empty", tracking_empty)
         samples, sample_rate, duration = wav_to_float32(wav_path)
 
     np.testing.assert_array_equal(samples, expected)

@@ -63,6 +63,17 @@ _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 #: negative-length ffmpeg ``-t`` if a bound ever arrives unclamped.
 MIN_CLIP_SECONDS = 0.2
 
+#: Longest track ``wav_to_float32`` will decode. Deliberately generous — this
+#: stops the 20h-audiobook OOM-kill (whole-track float32 ≈ 115 MB/hour, so a
+#: 20h input peaks around 7 GB resident), not policing any normal episode or
+#: film length. Checked against the WAV header before any frame data is read.
+_MAX_ASR_DURATION_S = 6 * 60 * 60  # 6 hours
+
+#: Frames per ``readframes`` call while filling the preallocated float32
+#: output array. Keeps only one small int16 chunk resident alongside the
+#: full-length float32 array, instead of the whole int16 byte buffer.
+_WAV_READ_CHUNK_FRAMES = 1_000_000
+
 
 def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, float]:
     """Return ``(start, duration)`` in seconds for ``word``'s audio clip.
@@ -97,13 +108,19 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     float32 in ``[-1.0, 1.0]`` — Whisper's expected input — by dividing by
     32768.
 
-    Memory note: the whole track is loaded at once (~115 MB/hour at 16 kHz
-    float32). Fine for episodes; a multi-hour film loads ~0.5 GB. If that
-    becomes a problem, pass the WAV path straight to ``WhisperModel.transcribe``
-    (it decodes internally) instead of materializing the float32 array here.
+    Memory note: a track whose HEADER duration (``nframes / framerate``)
+    exceeds :data:`_MAX_ASR_DURATION_S` is refused before any frame data is
+    read — the 20h-audiobook OOM-kill this guards against. Within the cap,
+    the float32 output (~115 MB/hour at 16 kHz) is preallocated and filled
+    from chunked ``readframes`` reads, so the whole int16 byte buffer is
+    never resident alongside it.
 
     Args:
         path: Path to the WAV file written by ``extract_full_audio``.
+
+    Raises:
+        ValueError: The WAV is not mono ``pcm_s16le``, or its header duration
+            exceeds :data:`_MAX_ASR_DURATION_S`.
 
     Returns:
         A 3-tuple of:
@@ -124,14 +141,40 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
             )
         sample_rate = wf.getframerate()
         n_frames = wf.getnframes()
-        raw = wf.readframes(n_frames)
 
-    # int16 → float32 in [-1.0, 1.0]. astype already yields a writable, owned
-    # array (np.frombuffer over immutable bytes is read-only), which
-    # faster-whisper/ctranslate2 may require — no separate .copy() needed.
-    samples = np.frombuffer(raw, dtype=np.int16).astype(np.float32)
+        # Ceiling check off the HEADER, before any readframes call — the
+        # allocation this prevents does not exist yet at this point.
+        duration = n_frames / sample_rate
+        if duration > _MAX_ASR_DURATION_S:
+            raise ValueError(
+                f"Audio duration {duration:.0f}s exceeds the ASR ceiling of "
+                f"{_MAX_ASR_DURATION_S}s ({_MAX_ASR_DURATION_S // 3600}h); refusing to "
+                "load a track this long into memory."
+            )
+
+        # Preallocate the float32 output and fill it from chunked int16 reads
+        # — never the whole int16 byte buffer and the whole float32 array
+        # alive at once. np.frombuffer is a view pinning the source bytes, so
+        # a whole-file read + astype keeps both resident until the function
+        # returns; chunking keeps only one small int16 chunk resident at a
+        # time alongside the (already-required) float32 output.
+        samples = np.empty(n_frames, dtype=np.float32)
+        filled = 0
+        while filled < n_frames:
+            raw = wf.readframes(min(_WAV_READ_CHUNK_FRAMES, n_frames - filled))
+            if not raw:
+                break
+            chunk = np.frombuffer(raw, dtype=np.int16)
+            samples[filled : filled + len(chunk)] = chunk
+            filled += len(chunk)
+        # A short final read (truncated file) leaves samples shorter than the
+        # header claimed; trim rather than return trailing garbage.
+        samples = samples[:filled]
+
+    # int16 → float32 in [-1.0, 1.0]. The assignment above already casts
+    # element-wise (int16 is exactly representable in float32), matching the
+    # old whole-buffer ``.astype(np.float32)`` bit-for-bit.
     samples /= 32768.0
-    duration = n_frames / sample_rate
     return samples, sample_rate, duration
 
 
