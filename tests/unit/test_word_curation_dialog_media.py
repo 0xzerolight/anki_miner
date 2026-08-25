@@ -993,6 +993,66 @@ class TestLookupIsAsynchronous:
         assert "No offline dictionary entry" in dlg.definition_view.toHtml()
 
 
+class TestLateCallbackGuards:
+    """Guards for late callbacks after dialog teardown (M1+M9).
+
+    The _closing flag + generation counters ensure off-thread callbacks
+    do not touch widgets after the dialog is being destroyed.
+    """
+
+    def test_preview_scene_guards_against_closing_dialog(self, qtbot, words, existing_video):
+        """_preview_scene must not call player methods when _closing=True."""
+        ctx = _make_media_context(video_file=existing_video)
+        dlg, mock_player = _build_dialog_with_mock_player(qtbot, words, ctx)
+
+        # Mark dialog as closing before calling _preview_scene
+        dlg._closing = True
+
+        # Call _preview_scene with the focused word
+        dlg._preview_scene(words[0].start_time)
+
+        # Assert that no player method was called (seek_seconds or pause)
+        mock_player.seek_seconds.assert_not_called()
+        mock_player.pause.assert_not_called()
+
+    def test_on_lookup_done_guards_with_stale_generation(self, qtbot, words, deferred_off_thread):
+        """_on_lookup_done must not mutate _lookup_inflight if generation is stale during teardown.
+
+        The generation check is BEFORE the _lookup_inflight write so a late
+        result after dialog teardown returns without modifying any Qt state.
+        """
+
+        def fake_lookup(term: str) -> list[tuple[str, str]]:
+            return [("JMdict", f"<div>{term} entry</div>")]
+
+        dlg = WordCurationDialog(words, lookup_fn=fake_lookup)
+        qtbot.addWidget(dlg)
+
+        # Start a lookup for the first word
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        # Simulate teardown: set _closing and bump the generation counter (as _stop_player does)
+        dlg._closing = True
+        dlg._lookup_gen += 1
+
+        # Get the callback from the deferred list
+        assert len(deferred_off_thread) > 0
+        work, on_done, _ = deferred_off_thread[0]
+
+        # Deliver the result with the now-stale generation during teardown
+        result = work()
+        # Record the initial state before calling the callback
+        inflight_before = dlg._lookup_inflight
+
+        # Call the callback with stale generation during teardown
+        on_done(result)
+
+        # _lookup_inflight must NOT have been mutated (no False write)
+        # because the closing/gen checks reject the stale callback
+        assert dlg._lookup_inflight == inflight_before
+
+
 class TestPreviewSuppressedInCurator:
     """The curator with the video preview turned off.
 

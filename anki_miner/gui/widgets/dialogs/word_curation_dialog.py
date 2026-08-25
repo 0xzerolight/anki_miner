@@ -1655,12 +1655,17 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         fetched: object,
     ) -> None:
         """GUI-thread landing point for a completed lookup."""
+        # Gen check FIRST: reads only a plain Python attribute before any Qt touch.
+        # Late results after teardown check here before modifying state.
+        is_gen_current = gen == self._lookup_gen
+        if self._closing:
+            return
         self._lookup_inflight = False
         # Cache even a superseded result: it was a correct answer for its term,
         # and scrolling back to that row must not re-query.
         if isinstance(fetched, dict):
             self._lookup_cache.update(fetched)
-        if gen == self._lookup_gen:
+        if is_gen_current:
             self._render_definitions(term, self._cached_entries(term, fallback_term) or [])
         self._drain_pending_lookup()
 
@@ -1861,6 +1866,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         ``_ensure_player_source`` returning False means an off-thread context
         resolve is in flight and will re-fire this preview itself.
         """
+        if self._closing:
+            return
         if self._show_player and hasattr(self, "player_widget") and self._ensure_player_source(video_file):
             self.player_widget.seek_seconds(start_time)
             self.player_widget.pause()
