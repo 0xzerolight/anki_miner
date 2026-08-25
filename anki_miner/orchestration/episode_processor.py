@@ -41,7 +41,6 @@ from anki_miner.services import (
     WordFilterService,
 )
 from anki_miner.services.anki_service import is_transient_anki_transport_error
-from anki_miner.services.definition_service import collect_dictionary_css_entries
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
@@ -1490,11 +1489,12 @@ class EpisodeProcessor:
             QCoreApplication.translate("EpisodeProcessor", "Creating Anki cards"),
         )
         card_data: list[CardPayload] = []
-        # Self-contained PER-FIELD glossary styling: collect the dictionary CSS
-        # entries ONCE per episode (collect_dictionary_css_entries does registry
-        # + per-dict SQLite I/O) but attach a <style> block to EVERY mapped
-        # styled field inside the loop — tree-shaken against that field's own
-        # HTML and filtered to the dictionaries present in it (Issue #93;
+        # Self-contained PER-FIELD glossary styling: read the dictionary CSS
+        # entries ONCE per episode off the already-loaded provider chain
+        # (DefinitionService.css_entries — no registry rescan, no per-dict
+        # SQLite I/O; PB1) but attach a <style> block to EVERY mapped styled
+        # field inside the loop — tree-shaken against that field's own HTML
+        # and filtered to the dictionaries present in it (Issue #93;
         # witness/variant scans are cheap cached string work; freshly rendered
         # bodies are born stamped, so witnesses are already post-stamp). Each
         # field must carry its own TRAILING block: JS-driven note types (Kiku)
@@ -1502,12 +1502,12 @@ class EpisodeProcessor:
         # through DOMParser→body.innerHTML, so a <style> in another field never
         # applies and a field-LEADING <style> is hoisted to <head> and dropped
         # (attach_card_style_block enforces both — the old single-carrier
-        # "card-wide <style>" model broke every Kiku page). Skipping the collect
-        # when neither field is mapped keeps the no-styling path I/O-free.
+        # "card-wide <style>" model broke every Kiku page). Skipping the read
+        # when neither field is mapped keeps the no-styling path work-free.
         glossary_mapped = bool(self.config.anki_fields.get("glossary"))
         definition_mapped = bool(self.config.anki_fields.get("definition"))
         styling_on = glossary_mapped or definition_mapped
-        episode_dict_css_entries = collect_dictionary_css_entries(self.config) if styling_on else []
+        episode_dict_css_entries = self.definition_service.css_entries() if styling_on else []
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):

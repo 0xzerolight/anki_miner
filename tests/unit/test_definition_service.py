@@ -242,6 +242,63 @@ class TestCollectDictionaryCssEntries:
         assert collect_dictionary_css(config) == "\n\n".join(css for _, _, css in entries)
 
 
+class TestCssEntries:
+    """``DefinitionService.css_entries`` reads the already-loaded provider
+    chain (PB1) instead of rescanning the dictionary registry from disk —
+    same filters, same order as ``collect_dictionary_css_entries``."""
+
+    @staticmethod
+    def _build(config: AnkiMinerConfig) -> DefinitionService:
+        registry = DictionaryRegistry(config.dicts_root)
+        registry.load()
+        service = DefinitionService(config, providers=registry.build_provider_chain(config), registry=registry)
+        service.ensure_loaded()
+        return service
+
+    def test_matches_scan_based_collector(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        config = _config(
+            tmp_path,
+            ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+            ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+        )
+        service = self._build(config)
+
+        assert service.css_entries() == collect_dictionary_css_entries(config)
+
+    def test_skips_empty_css_and_disabled_dicts(self, tmp_path: Path):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css=None)
+        _seed_dict(tmp_path, "b-dict", "B", styles_css="span { color: blue }")
+        _seed_dict(tmp_path, "c-dict", "C", styles_css="span { color: green }")
+        config = _config(
+            tmp_path,
+            ChainEntry(kind="indexed", dict_id="a-dict", enabled=True),
+            ChainEntry(kind="indexed", dict_id="b-dict", enabled=True),
+            ChainEntry(kind="indexed", dict_id="c-dict", enabled=False),
+        )
+        service = self._build(config)
+
+        entries = service.css_entries()
+        assert [(dict_id, name) for dict_id, name, _ in entries] == [("b-dict", "B")]
+        assert entries == collect_dictionary_css_entries(config)
+
+    def test_reads_without_constructing_a_registry(self, tmp_path: Path, monkeypatch):
+        _seed_dict(tmp_path, "a-dict", "A", styles_css="span { color: red }")
+        config = _config(tmp_path, ChainEntry(kind="indexed", dict_id="a-dict", enabled=True))
+        service = self._build(config)
+
+        monkeypatch.setattr(
+            "anki_miner.services.dictionary.registry.DictionaryRegistry",
+            MagicMock(side_effect=AssertionError("css_entries must not rescan the registry")),
+        )
+
+        entries = service.css_entries()
+
+        assert [(dict_id, name) for dict_id, name, _ in entries] == [("a-dict", "A")]
+        assert '[data-dictionary-id="a-dict"]' in entries[0][2]
+
+
 def make_provider(name="Test", available=True, return_value=None, load_raises=None):
     """Create a mock DictionaryProvider with configurable behavior.
 

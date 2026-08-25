@@ -135,6 +135,36 @@ class DefinitionService:
                 logger.warning("Failed to load provider '%s': %s", provider.name, e)
         return any(p.is_available() for p in self._providers)
 
+    def css_entries(self) -> list[tuple[str, str, str]]:
+        """(dict_id, display_name, scoped_css) from the ALREADY-LOADED chain.
+
+        Same filters and order as the scan-based ``collect_dictionary_css_entries``
+        (non-str ``dict_id`` skipped, empty/blank CSS skipped, ``.strip()``
+        applied, chain order) but reads straight off ``self._providers`` —
+        no ``DictionaryRegistry`` construction, no per-dict SQLite open/close.
+        This is the ``EpisodeProcessor._phase5_create`` seam (PB1): by Phase 5
+        the processor already holds a fully loaded chain, so rescanning
+        ``dicts_root`` and reopening every dict's ``index.sqlite`` per episode
+        is pure waste.
+
+        Known asymmetry vs. the scan-based collector: a provider whose
+        ``load()`` failed at run start contributes no CSS here (its CSS
+        attribute stays empty), whereas the scan-based collector calls
+        ``load()`` fresh each time and would retry. Callers with no
+        already-loaded chain (``card_restyler``, ``card_backfiller`` — once
+        per run) should keep using ``collect_dictionary_css_entries``.
+        """
+        self.ensure_loaded()
+        entries: list[tuple[str, str, str]] = []
+        for provider in self._providers:
+            css = getattr(provider, "dictionary_css", "")
+            if not css or not css.strip():
+                continue
+            dict_id = getattr(provider, "dict_id", None)
+            if isinstance(dict_id, str):
+                entries.append((dict_id, provider.name, css.strip()))
+        return entries
+
     def has_usable_offline_provider(self) -> bool:
         """Whether the loaded chain has an available, non-empty offline index.
 

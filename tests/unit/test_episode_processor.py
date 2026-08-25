@@ -513,7 +513,7 @@ class TestProcessEpisode:
         payload = mock_services["anki_service"].create_cards_batch.call_args.args[0][0]
         assert payload.media == MediaData()
 
-    def test_data_flow_between_phases(self, processor, mock_services, tmp_path, monkeypatch):
+    def test_data_flow_between_phases(self, processor, mock_services, tmp_path):
         """Verify that outputs of one phase are passed as inputs to the next."""
         video = tmp_path / "v.mkv"
         sub = tmp_path / "s.ass"
@@ -521,10 +521,9 @@ class TestProcessEpisode:
         media = _make_media()
 
         # Neutralize the per-field styling seam so this data-flow assertion stays
-        # focused on phase wiring (and avoids real dictionary-registry / SQLite
-        # I/O). The plain "1. to eat" definition carries no miner markup, so
-        # attach_card_style_block leaves it unchanged anyway.
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", lambda cfg: [])
+        # focused on phase wiring. The plain "1. to eat" definition carries no
+        # miner markup, so attach_card_style_block leaves it unchanged anyway.
+        mock_services["definition_service"].css_entries.return_value = []
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
@@ -4076,22 +4075,22 @@ class TestGlossaryFetch:
             "anki_service": anki_service,
         }
 
-    def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_glossary_fetched_when_field_mapped(self, test_config, mock_services, tmp_path):
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
         processor = build_processor(config=cfg, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
 
         glossary_html = '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">X def</li></ol></div>'
         mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
-
-        # Avoid real dictionary-registry / SQLite I/O at the per-field <style> seam.
-        collect = MagicMock(return_value=[("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}')])
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", collect)
+        mock_services["definition_service"].css_entries.return_value = [
+            ("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}')
+        ]
 
         processor.process_episode(video, sub)
 
         mock_services["definition_service"].get_glossaries_batch.assert_called_once()
-        collect.assert_called_once()  # entries collected once per episode, not per card
+        # entries read once per episode, not per card
+        mock_services["definition_service"].css_entries.assert_called_once()
         call_args = mock_services["anki_service"].create_cards_batch.call_args
         card_data = call_args[0][0]
         assert len(card_data) == 1
@@ -4110,7 +4109,7 @@ class TestGlossaryFetch:
         # no block — attach_card_style_block leaves it byte-identical.
         assert payload.definition == "1. to eat"
 
-    def test_style_block_tree_shaken_per_card(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_style_block_tree_shaken_per_card(self, test_config, mock_services, tmp_path):
         # Issue #93: the <style> head is witness-selected PER CARD — a card whose
         # glossary carries an image embeds the images group, a plain stamped-dict
         # card gets a smaller block — while dictionary CSS is collected once.
@@ -4133,13 +4132,12 @@ class TestGlossaryFetch:
             '<li data-dictionary="X" data-has-styles=""><img class="gloss-image" src="p.svg"></li></ol></div>'
         )
         mock_services["definition_service"].get_glossaries_batch.return_value = [plain, with_image]
-
-        collect = MagicMock(return_value=[])
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", collect)
+        mock_services["definition_service"].css_entries.return_value = []
 
         processor.process_episode(video, sub)
 
-        collect.assert_called_once()  # dict CSS still collected once per episode
+        # dict CSS still read once per episode
+        mock_services["definition_service"].css_entries.assert_called_once()
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         assert len(card_data) == 2
         head_plain = card_data[0].extra_fields["glossary"].split("<style>")[1]
@@ -4148,7 +4146,7 @@ class TestGlossaryFetch:
         assert "gloss-image" in head_image  # …but embedded where witnessed
         assert len(head_plain) < len(head_image)
 
-    def test_glossary_miss_does_not_retry_unsafe_lemma(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_glossary_miss_does_not_retry_unsafe_lemma(self, test_config, mock_services, tmp_path):
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
         processor = build_processor(config=cfg, **mock_services)
 
@@ -4165,7 +4163,7 @@ class TestGlossaryFetch:
         mock_services["anki_service"].create_cards_batch.return_value = [1]
 
         mock_services["definition_service"].get_glossaries_batch.return_value = [None]
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", lambda cfg: [])
+        mock_services["definition_service"].css_entries.return_value = []
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -4175,7 +4173,7 @@ class TestGlossaryFetch:
         payload = mock_services["anki_service"].create_cards_batch.call_args[0][0][0]
         assert "glossary" not in (payload.extra_fields or {})
 
-    def test_glossary_miss_retries_same_stem_lemma(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_glossary_miss_retries_same_stem_lemma(self, test_config, mock_services, tmp_path):
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
         processor = build_processor(config=cfg, **mock_services)
 
@@ -4192,7 +4190,7 @@ class TestGlossaryFetch:
 
         lemma_glossary = '<div class="yomitan-glossary"><ol><li>search</li></ol></div>'
         mock_services["definition_service"].get_glossaries_batch.side_effect = [[None], [lemma_glossary]]
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", lambda cfg: [])
+        mock_services["definition_service"].css_entries.return_value = []
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
@@ -4203,28 +4201,26 @@ class TestGlossaryFetch:
         ]
         assert all(glossary_call.kwargs["is_cancelled"]() is False for glossary_call in glossary_calls)
 
-    def test_glossary_miss_no_retry_for_non_variant(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_glossary_miss_no_retry_for_non_variant(self, test_config, mock_services, tmp_path):
         """A miss on a word whose mined_form == lemma retries nothing — there is
         no second spelling to try."""
         cfg = replace(test_config, anki_fields={**test_config.anki_fields, "glossary": "Glossary"})
         processor = build_processor(config=cfg, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
         mock_services["definition_service"].get_glossaries_batch.return_value = [None]
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", lambda cfg: [])
+        mock_services["definition_service"].css_entries.return_value = []
 
         processor.process_episode(video, sub)
 
         mock_services["definition_service"].get_glossaries_batch.assert_called_once()
 
-    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_glossary_skipped_when_field_unmapped(self, test_config, mock_services, tmp_path):
         # Default test_config has anki_fields["glossary"] == "" but definition
         # mapped, so the style block is still built (it rides the definition
-        # field). Mock the CSS collection to avoid real registry / SQLite I/O.
+        # field).
         processor = build_processor(config=test_config, **mock_services)
         video, sub = self._seed_happy_path(mock_services, tmp_path)
-
-        collect = MagicMock(return_value=[])
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", collect)
+        mock_services["definition_service"].css_entries.return_value = []
 
         processor.process_episode(video, sub)
 
@@ -4236,9 +4232,7 @@ class TestGlossaryFetch:
         if payload.extra_fields is not None:
             assert "glossary" not in payload.extra_fields
 
-    def test_style_block_trails_definition_when_glossary_unmapped(
-        self, test_config, mock_services, tmp_path, monkeypatch
-    ):
+    def test_style_block_trails_definition_when_glossary_unmapped(self, test_config, mock_services, tmp_path):
         # Default config maps definition but not glossary: the DEFINITION field
         # must carry its own TRAILING <style> block (base glossary.css + scoped
         # dict CSS) so default-config cards are self-contained — exactly once,
@@ -4251,12 +4245,14 @@ class TestGlossaryFetch:
             '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">1. to eat</li></ol></div>'
         )
         mock_services["definition_service"].get_definitions_batch.return_value = [definition_html]
-        collect = MagicMock(return_value=[("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}')])
-        monkeypatch.setattr("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", collect)
+        mock_services["definition_service"].css_entries.return_value = [
+            ("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}')
+        ]
 
         processor.process_episode(video, sub)
 
-        collect.assert_called_once()  # collected once per episode, not per card
+        # entries read once per episode, not per card
+        mock_services["definition_service"].css_entries.assert_called_once()
         card_data = mock_services["anki_service"].create_cards_batch.call_args[0][0]
         assert len(card_data) == 1
         definition = card_data[0].definition
@@ -4266,7 +4262,7 @@ class TestGlossaryFetch:
         assert "ol[data-count]" in definition  # base sheet embedded
         assert '[data-dictionary="X"]{color:red}' in definition  # scoped dict CSS embedded
 
-    def test_both_mapped_fields_each_self_contained(self, test_config, mock_services, tmp_path, monkeypatch):
+    def test_both_mapped_fields_each_self_contained(self, test_config, mock_services, tmp_path):
         # Kiku-class regression (per-field delivery): with BOTH definition and
         # glossary mapped, EACH field carries its own trailing block — JS note
         # types render fields in isolation, so a block in one field never styles
@@ -4284,13 +4280,10 @@ class TestGlossaryFetch:
         )
         mock_services["definition_service"].get_definitions_batch.return_value = [definition_html]
         mock_services["definition_service"].get_glossaries_batch.return_value = [glossary_html]
-        entries = [
+        mock_services["definition_service"].css_entries.return_value = [
             ("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),
             ("y-id", "Y", '.yomitan-glossary [data-dictionary="Y"]{color:blue}'),
         ]
-        monkeypatch.setattr(
-            "anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", lambda cfg: entries
-        )
 
         processor.process_episode(video, sub)
 

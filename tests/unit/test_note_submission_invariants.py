@@ -32,12 +32,14 @@ def test_stop_after_first_confirmed_batch_preserves_only_committed_ids_and_forms
     cancel_event = threading.Event()
     progress = MagicMock()
     progress.on_progress.side_effect = lambda *_args: cancel_event.set()
+    definition_service = MagicMock()
+    definition_service.css_entries.return_value = []
     processor = EpisodeProcessor(
         test_config,
         MagicMock(),
         MagicMock(),
         MagicMock(),
-        MagicMock(),
+        definition_service,
         service,
         MagicMock(),
     )
@@ -65,7 +67,6 @@ def test_stop_after_first_confirmed_batch_preserves_only_committed_ids_and_forms
         patch.object(service, "_store_media_files_batch", return_value=set()),
         patch.object(service, "_upload_dict_media_batch"),
         patch("anki_miner.services.anki_service.post_action", side_effect=add_notes) as post,
-        patch("anki_miner.orchestration.episode_processor.collect_dictionary_css_entries", return_value=[]),
     ):
         cards_created, note_ids, mined_forms_for_undo = processor._phase5_create(
             ctx,
