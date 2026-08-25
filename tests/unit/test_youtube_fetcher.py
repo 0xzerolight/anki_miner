@@ -22,6 +22,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
+    DubAudioUnavailableError,
     FfmpegNotFoundError,
     NoJapaneseSubtitlesError,
     VideoTooLongError,
@@ -678,7 +679,7 @@ class TestHasJaAudioTrack:
 
     def test_muxed_ja_format_ignored(self) -> None:
         # A muxed format's language names the container audio, not a dub track;
-        # bestaudio[language^=ja] could never select it anyway.
+        # bestaudio[language~='^ja(-|$)'] could never select it anyway.
         data = {"formats": [{"vcodec": "avc1", "acodec": "mp4a", "language": "ja"}]}
         assert self._call(data) is False
 
@@ -1021,8 +1022,16 @@ class TestBuildFetchCmdAutoDub:
         assert "--write-auto-sub" in cmd
         assert "--write-sub" not in cmd
         fmt = cmd[cmd.index("--format") + 1]
-        assert fmt == "bestvideo[height<=720]+bestaudio[language^=ja]"
+        assert fmt == "bestvideo[height<=720]+bestaudio[language~='^ja(-|$)']"
         assert "/" not in fmt  # no fallback alternative may reintroduce non-JA audio
+
+    def test_auto_dub_selector_excludes_javanese(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """A bare [language^=ja] prefix test would also admit "jav" (Javanese);
+        the selector must be regex-anchored the same way the probe is."""
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "auto_dub")
+        fmt = cmd[cmd.index("--format") + 1]
+        assert "language^=ja" not in fmt
+        assert "bestaudio[language~=" in fmt
 
     def test_build_fetch_cmd_auto_only_format_unchanged(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         """The two existing modes keep the historical selector byte-identical."""
@@ -1032,11 +1041,14 @@ class TestBuildFetchCmdAutoDub:
             assert fmt == "bestvideo[height<=720]+bestaudio/best[height<=720]"
 
     def test_raise_for_error_names_missing_dub_track(self, service: YouTubeFetcherService) -> None:
-        """'Requested format is not available' on the dub route means the dub
-        vanished between probe and fetch — saying 'update yt-dlp' would mislead."""
+        """'Requested format is not available' on the dub route means either
+        side of the selector vanished between probe and fetch — saying 'update
+        yt-dlp' would mislead — and must be typed as a deterministic failure."""
         tail = collections.deque(["ERROR: Requested format is not available"])
-        with pytest.raises(YouTubeFetchError, match="dub"):
+        with pytest.raises(DubAudioUnavailableError, match="Japanese-audio") as excinfo:
             service._raise_for_error(tail, "auto_dub")
+        assert issubclass(DubAudioUnavailableError, YouTubeFetchError)
+        assert "Japanese-audio" in str(excinfo.value)
         with pytest.raises(YouTubeFetchError, match="yt-dlp is out of date"):
             service._raise_for_error(tail, "auto_only")
 

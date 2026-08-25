@@ -21,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
+    DubAudioUnavailableError,
     FfmpegNotFoundError,
     NoJapaneseSubtitlesError,
     VideoTooLongError,
@@ -466,10 +467,10 @@ class YouTubeFetcherService:
         """Detect a Japanese audio-only format among the probed formats.
 
         This is the fetch-side reachability check for the auto-dub route: the
-        ``auto_dub`` format selector asks for ``bestaudio[language^=ja]``, which
-        can only ever match an audio-only format, so that is what we require
-        here. A muxed format's ``language`` names its container audio (the
-        original), never a dub, and ``bestaudio`` cannot select it.
+        ``auto_dub`` format selector asks for ``bestaudio[language~='^ja(-|$)']``,
+        which can only ever match an audio-only format, so that is what we
+        require here. A muxed format's ``language`` names its container audio
+        (the original), never a dub, and ``bestaudio`` cannot select it.
 
         On a genuinely Japanese video the original audio-only track also
         matches ("ja audio track" is the semantic, dub or not) — harmless,
@@ -641,12 +642,16 @@ class YouTubeFetcherService:
         if sub_mode == "auto_dub":
             # Auto-dub route: the ja captions are machine-translated, matching
             # the Japanese auto-dub audio track — so that exact track must be
-            # fetched. [language^=ja] catches "ja" and regional "ja-JP"; the
-            # selector deliberately has NO "/bestaudio" fallback, because
-            # falling back to the original (non-JA) audio would silently mine
-            # MT subs against foreign audio. If the dub vanished since the
-            # probe, the fetch fails and _raise_for_error names the cause.
-            fmt = f"bestvideo[height<={max_height}]+bestaudio[language^=ja]"
+            # fetched. language~='^ja(-|$)' is a regex-anchored match, same as
+            # the probe's _has_ja_audio_track: it catches "ja" and regional
+            # "ja-JP" but not an unrelated code that merely starts with "ja"
+            # (e.g. "jav", Javanese) — a bare [language^=ja] prefix test would
+            # admit that. The selector deliberately has NO "/bestaudio"
+            # fallback, because falling back to the original (non-JA) audio
+            # would silently mine MT subs against foreign audio. If the dub
+            # vanished since the probe, the fetch fails and _raise_for_error
+            # names the cause.
+            fmt = f"bestvideo[height<={max_height}]+bestaudio[language~='^ja(-|$)']"
 
         cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
@@ -802,13 +807,18 @@ class YouTubeFetcherService:
         if any(marker in joined_lower for marker in stale_extractor_markers):
             if sub_mode == "auto_dub" and "requested format is not available" in joined_lower:
                 # On this route the format selector pins the JA dub track with
-                # no fallback, so "no format" almost always means the dub
-                # disappeared between probe and fetch — "update yt-dlp" would
-                # send the user to the wrong remedy.
-                raise YouTubeFetchError(
-                    "The Japanese auto-dub audio track listed at probe time is no "
-                    "longer available, so this video cannot be mined via the dub "
-                    f"route. yt-dlp said: {_tail(tail, 5)}"
+                # no fallback, so "no format" almost always means either side of
+                # the selector went missing between probe and fetch — the dub
+                # track, or the video stream it is paired with — and "update
+                # yt-dlp" would send the user to the wrong remedy. Deterministic:
+                # a retry re-fetches the same selector against the same missing
+                # format and fails identically, so this is typed to opt out of
+                # the queue worker's automatic retry (_DETERMINISTIC_FETCH_ERRORS).
+                raise DubAudioUnavailableError(
+                    "No format matched the pinned Japanese-audio selector — the "
+                    "auto-dub track listed at probe time is no longer available "
+                    "(or no separate video stream exists), so this video cannot "
+                    f"be mined via the dub route. yt-dlp said: {_tail(tail, 5)}"
                 )
             raise YouTubeFetchError(
                 "YouTube served no downloadable format for this video, which usually "
