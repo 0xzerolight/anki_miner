@@ -16,6 +16,7 @@ from __future__ import annotations
 import collections
 import logging
 import re
+import shutil
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ from anki_miner.exceptions.youtube import (
 )
 from anki_miner.services import ytdlp_invocation
 from anki_miner.services.audio_fetch_common import redact_url_for_log
+from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
 
@@ -114,9 +116,18 @@ class MediaDownloaderService:
             YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
                 failure modes detected in the output tail.
-            MediaDownloadError: timeout or any other non-zero exit.
+            MediaDownloadError: ffmpeg preflight failure (merge/audio-extract
+                presets only), timeout, or any other non-zero exit.
         """
         logger.info("media download starting: %s -> %s", redact_url_for_log(url), dest_dir)
+
+        needs_ffmpeg = "+" in options.format_selector or options.extract_audio_format is not None
+        if needs_ffmpeg and not self._ffmpeg_reachable():
+            raise MediaDownloadError(
+                "This preset needs ffmpeg (merging video+audio or extracting "
+                "audio), but no ffmpeg executable was found. Install ffmpeg or "
+                "set its location in Settings → YouTube."
+            )
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
         captured: dict[str, Path | None] = {"filepath": None}
@@ -185,6 +196,25 @@ class MediaDownloaderService:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _ffmpeg_reachable(self) -> bool:
+        """Mirror ``YouTubeFetcherService._preflight_ffmpeg``'s precedence, as a
+        predicate: config override, then the resolved absolute path, then PATH.
+
+        ``resolve_ffmpeg`` never signals "missing" via ``None`` in production —
+        it always returns a usable path or the bare ``"ffmpeg"`` PATH-fallback
+        literal (see ``ffmpeg_resolver.py``) — but ``None`` is still handled
+        defensively for robustness against a monkeypatched/misbehaving resolver.
+        """
+        loc = self._config.youtube_ffmpeg_location
+        if loc is not None:
+            return Path(loc).is_file()
+        resolved = resolve_ffmpeg(self._config)
+        if resolved is None:
+            return False
+        if resolved != "ffmpeg":
+            return Path(resolved).is_file()
+        return shutil.which("ffmpeg") is not None
 
     def _ytdlp(self) -> str:
         try:

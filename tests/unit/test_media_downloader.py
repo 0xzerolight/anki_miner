@@ -100,6 +100,11 @@ def _deterministic_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(ytdlp_invocation, "ytdlp_supports_js_runtimes", lambda _path: False)
     monkeypatch.setattr(ytdlp_invocation, "ytdlp_supports_remote_components", lambda _path: False)
     monkeypatch.setattr(ytdlp_invocation, "resolve_ffmpeg", lambda _config: "ffmpeg")
+    # ffmpeg preflight (Task 11): default presets in this file use "+" format
+    # selectors, so pin the resolver + PATH probe to "found" here; individual
+    # preflight tests below override one or both to simulate "missing".
+    monkeypatch.setattr(md, "resolve_ffmpeg", lambda _config: "ffmpeg")
+    monkeypatch.setattr(md.shutil, "which", lambda _name: "/usr/bin/ffmpeg")
 
 
 def _run_download(
@@ -449,3 +454,77 @@ class TestErrors:
         message = str(excinfo.value)
         assert "yt-dlp" in message
         assert "format" in message.lower()
+
+
+# ---------------------------------------------------------------------------
+# ffmpeg preflight (Task 11)
+# ---------------------------------------------------------------------------
+
+
+class TestFfmpegPreflight:
+    def test_merge_preset_preflights_ffmpeg(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        options = _opts(format_selector="bestvideo[height<=1080]+bestaudio")
+        with pytest.raises(MediaDownloadError, match="ffmpeg"):
+            service.download("https://example.com/v", tmp_path, options)
+
+    def test_audio_extract_preset_preflights_ffmpeg(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        options = _opts(format_selector="bestaudio/best", extract_audio_format="mp3")
+        with pytest.raises(MediaDownloadError, match="ffmpeg"):
+            service.download("https://example.com/v", tmp_path, options)
+
+    def test_plain_best_preset_skips_ffmpeg_check(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        recorder, fake_run = _scripted_run([])
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        options = _opts(format_selector="best")
+        service.download("https://example.com/v", tmp_path, options)  # must not raise
+        recorder.assert_called_once()
+
+    def test_preflight_runs_before_lock_and_spawn(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """No transfer cost on refusal: run_supervised must never be reached."""
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        spawned = MagicMock()
+        monkeypatch.setattr(md, "run_supervised", spawned)
+        options = _opts(format_selector="bestvideo*+bestaudio/best")
+        with pytest.raises(MediaDownloadError, match="ffmpeg"):
+            service.download("https://example.com/v", tmp_path, options)
+        spawned.assert_not_called()
+
+    def test_configured_ffmpeg_location_missing_raises(
+        self, monkeypatch: pytest.MonkeyPatch, dl_config: AnkiMinerConfig, tmp_path: Path
+    ) -> None:
+        from dataclasses import replace
+
+        config = replace(dl_config, youtube_ffmpeg_location=tmp_path / "nonexistent-ffmpeg")
+        service = MediaDownloaderService(config)
+        options = _opts(format_selector="bestvideo*+bestaudio/best")
+        with pytest.raises(MediaDownloadError, match="ffmpeg"):
+            service.download("https://example.com/v", tmp_path, options)
+
+    def test_configured_ffmpeg_location_existing_skips_resolver(
+        self, monkeypatch: pytest.MonkeyPatch, dl_config: AnkiMinerConfig, tmp_path: Path
+    ) -> None:
+        from dataclasses import replace
+
+        configured = tmp_path / "my-ffmpeg"
+        configured.write_bytes(b"x")
+        config = replace(dl_config, youtube_ffmpeg_location=configured)
+        service = MediaDownloaderService(config)
+        # Resolver would report "missing" if consulted; the override must win
+        # without ever calling it.
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        recorder, fake_run = _scripted_run([])
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        options = _opts(format_selector="bestvideo*+bestaudio/best")
+        service.download("https://example.com/v", tmp_path, options)  # must not raise
+        recorder.assert_called_once()
