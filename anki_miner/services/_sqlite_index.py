@@ -52,6 +52,24 @@ _T = TypeVar("_T")
 _META_SIDECAR = "meta.json"
 _OWNERSHIP_MARKER = ".anki-miner-owned.json"
 
+# Reserved sidecar key holding the physical column list, so a reader can settle
+# a schema question the meta rows alone cannot. Namespaced out of the meta key
+# space and stripped by :func:`read_meta_cached`: the sidecar caches meta ROWS,
+# and a caller that asked for meta must not be handed a key the meta table never
+# held. Additive — a sidecar written before this existed simply lacks it, and
+# every reader treats that as "cannot answer", not as "no columns".
+_SIDECAR_COLUMNS_KEY = "__index_columns__"
+
+# The tables :func:`validate_index_schema` queries, and the PRAGMA that reads
+# each. Spelled out rather than interpolated so no table name is ever built into
+# SQL at runtime. Both are recorded on every write, the empty list included: only
+# an always-present key distinguishes "this table does not exist" from "this
+# sidecar predates column recording".
+_SIDECAR_COLUMN_PRAGMAS = {
+    "entries": "PRAGMA table_info(entries)",
+    "tags": "PRAGMA table_info(tags)",
+}
+
 StoreFamily = Literal["dictionary", "frequency", "audio", "pitch"]
 
 _DICTIONARY_ENTRY_COLUMNS = frozenset(("term", "content", "tags", "rules", "sequence"))
@@ -291,6 +309,77 @@ def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
     return _validated_index_meta(db_path, family) is not None
 
 
+def validate_index_schema_cached(db_path: Path, family: StoreFamily) -> bool:
+    """Answer :func:`validate_index_schema` from ``meta.json`` where it can.
+
+    The full check costs one SQLite open plus a PRAGMA per store, and startup
+    recovery pays it per configured slot before the first window is composed.
+    A sidecar no older than its index already carries the meta rows; since
+    :func:`write_meta` also records the physical columns there, it carries the
+    whole verdict.
+
+    The sidecar is a cache of the answer, never a second policy: every branch in
+    :func:`_sidecar_schema_verdict` mirrors the SQLite one, and anything the
+    sidecar cannot answer — missing, older than ``index.sqlite``, unparseable, or
+    written before columns were recorded — falls through to the full check.
+    Slots imported before column recording therefore keep today's behaviour until
+    their next reimport republishes the sidecar.
+
+    This is the trust the registries already place in sidecar-derived meta for
+    their ``schema_ok`` policy: a sidecar no older than the database is taken as
+    that database's meta. It answers the schema question only — corruption that
+    leaves the file mtime untouched is as invisible here as it is to the registry
+    scan. The file check below stays nofollow and runs first, so a symlinked or
+    absent index is refused before the sidecar is read at all.
+    """
+    if family not in ("dictionary", "frequency", "audio", "pitch") or not _is_regular_file_nofollow(db_path):
+        return False
+    verdict = _sidecar_schema_verdict(db_path, family)
+    if verdict is not None:
+        return verdict
+    return validate_index_schema(db_path, family)
+
+
+def _sidecar_schema_verdict(db_path: Path, family: StoreFamily) -> bool | None:
+    """Return the verdict a fresh sidecar proves, or ``None`` if it cannot."""
+    payload = _read_fresh_sidecar(db_path)
+    if payload is None:
+        return None
+    recorded = payload.get(_SIDECAR_COLUMNS_KEY)
+    if recorded is None:
+        return None
+    try:
+        columns = json.loads(recorded)
+    except (json.JSONDecodeError, RecursionError):
+        return None
+    if not isinstance(columns, dict) or any(
+        table not in columns
+        or not isinstance(columns[table], list)
+        or not all(isinstance(name, str) for name in columns[table])
+        for table in _SIDECAR_COLUMN_PRAGMAS
+    ):
+        return None
+
+    # From here the sidecar has proven it can answer, so every exit is a verdict
+    # — mirroring _validated_index_meta_with_policy, for which an unreadable
+    # schema_version is invalid rather than a reason to look elsewhere.
+    try:
+        version = int(payload.get("schema_version", ""))
+    except ValueError:
+        return False
+    if not _supported_schema_version(family, version):
+        return False
+    entry_columns = frozenset(columns["entries"])
+    if family == "dictionary":
+        return entry_columns >= _DICTIONARY_ENTRY_COLUMNS and frozenset(columns["tags"]) >= _DICTIONARY_TAG_COLUMNS
+    if family == "frequency":
+        required = _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS
+        return required <= entry_columns
+    if family == "pitch":
+        return entry_columns >= _PITCH_ENTRY_COLUMNS
+    return entry_columns >= _AUDIO_ENTRY_COLUMNS
+
+
 def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -> bool:
     if directory.is_symlink() or not directory.is_dir():
         return False
@@ -371,7 +460,8 @@ def write_meta(
     ``value_transform`` (used by the dictionary layer to surrogate-scrub values,
     Issue #67) is applied to each value before it is bound; ``None`` stores the
     value verbatim. The sidecar lets the next :func:`read_meta_cached` call avoid
-    re-opening SQLite when nothing changed.
+    re-opening SQLite when nothing changed, and the physical columns recorded
+    alongside let :func:`validate_index_schema_cached` avoid it too.
     """
     conn = sqlite3.connect(db_path, timeout=5.0)
     try:
@@ -383,9 +473,13 @@ def write_meta(
             )
         conn.commit()
         full_meta = {row[0]: row[1] for row in conn.execute("SELECT key, value FROM meta")}
+        columns = {
+            table: [row[1] for row in conn.execute(pragma) if isinstance(row[1], str)]
+            for table, pragma in _SIDECAR_COLUMN_PRAGMAS.items()
+        }
     finally:
         conn.close()
-    write_meta_sidecar(db_path, full_meta, sidecar_name=sidecar_name)
+    write_meta_sidecar(db_path, full_meta, sidecar_name=sidecar_name, columns=columns)
 
 
 def read_meta(db_path: Path) -> dict[str, str]:
@@ -426,6 +520,20 @@ def read_meta_cached(
     """
     if not db_path.exists():
         return {}
+    payload = _read_fresh_sidecar(db_path, sidecar_name)
+    if payload is not None:
+        return {key: value for key, value in payload.items() if key != _SIDECAR_COLUMNS_KEY}
+    return read_meta_fn(db_path)
+
+
+def _read_fresh_sidecar(db_path: Path, sidecar_name: str = _META_SIDECAR) -> dict[str, str] | None:
+    """Return the sidecar payload when it is no older than *db_path*, else None.
+
+    The one freshness gate both sidecar readers share — the meta rows
+    (:func:`read_meta_cached`) and the schema verdict
+    (:func:`validate_index_schema_cached`) must never disagree about whether a
+    sidecar may be trusted. The payload is returned raw, reserved keys included.
+    """
     sidecar = db_path.parent / sidecar_name
     try:
         # Nanosecond mtimes (not float st_mtime, which truncates to microsecond-
@@ -434,17 +542,24 @@ def read_meta_cached(
         # in the same wall-clock second the DB itself was written would
         # otherwise look "not older than" the DB and be trusted as fresh even
         # when it is actually stale.
-        if sidecar.is_file() and sidecar.stat().st_mtime_ns >= db_path.stat().st_mtime_ns:
-            data = json.loads(sidecar.read_text(encoding="utf-8"))
-            if isinstance(data, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
-                return data
+        if not (sidecar.is_file() and sidecar.stat().st_mtime_ns >= db_path.stat().st_mtime_ns):
+            return None
+        data = json.loads(sidecar.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as e:
         logger.debug("meta sidecar miss for %s: %s", db_path, e)
+        return None
+    if isinstance(data, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in data.items()):
+        return data
+    return None
 
-    return read_meta_fn(db_path)
 
-
-def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str = _META_SIDECAR) -> None:
+def write_meta_sidecar(
+    db_path: Path,
+    meta: dict[str, str],
+    *,
+    sidecar_name: str = _META_SIDECAR,
+    columns: dict[str, list[str]] | None = None,
+) -> None:
     """Best-effort sidecar write. Publication failures are logged, not raised.
 
     Written via :func:`atomic_write_path` (write-to-temp-then-``os.replace``) so
@@ -453,11 +568,19 @@ def write_meta_sidecar(db_path: Path, meta: dict[str, str], *, sidecar_name: str
     hit the ``json.JSONDecodeError`` guard in :func:`read_meta_cached` and
     silently fall through to a full re-scan, or worse, briefly observe a
     half-written file that happens to parse as valid but incomplete JSON.
+
+    ``columns`` (the physical column list, keyed by table) is published under the
+    reserved ``_SIDECAR_COLUMNS_KEY`` as a JSON string, keeping the payload the
+    flat ``str -> str`` map every reader validates. Omitting it publishes a
+    sidecar that can serve meta rows but not a schema verdict.
     """
+    payload = dict(meta)
+    if columns is not None:
+        payload[_SIDECAR_COLUMNS_KEY] = json.dumps(columns, sort_keys=True)
     sidecar = db_path.parent / sidecar_name
     try:
         with atomic_write_path(sidecar) as tmp:
-            tmp.write_text(json.dumps(meta), encoding="utf-8")
+            tmp.write_text(json.dumps(payload), encoding="utf-8")
     except (OSError, TypeError, ValueError, RecursionError) as e:  # pragma: no cover - defensive
         logger.debug("Failed to write meta sidecar %s: %s", sidecar, e)
 

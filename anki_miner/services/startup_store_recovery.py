@@ -19,6 +19,7 @@ from anki_miner.services._sqlite_index import (
     prove_owned_slot,
     read_ownership_marker,
     validate_index_schema,
+    validate_index_schema_cached,
     validate_store_id,
 )
 from anki_miner.services.store_recovery import (
@@ -250,7 +251,14 @@ def _recover_slot(
     canonical = spec.root / slot_id
     if not os.path.lexists(canonical):
         canonical_state: CanonicalState = "absent"
-    elif validate_index_schema(canonical / "index.sqlite", spec.family) and prove_owned_slot(
+    # The one check that runs for every configured slot on a healthy boot, and
+    # the only one here worth serving from the meta sidecar: it runs before
+    # compose_main_window, so its SQLite opens are paid before the first paint.
+    # The sidecar returns the verdict validate_index_schema would, or defers to
+    # it — the recovery decision below is identical either way. The recovery
+    # artifacts scanned further down stay on the full check: they exist only on
+    # an already-unhealthy slot, where the boot cost is not what matters.
+    elif validate_index_schema_cached(canonical / "index.sqlite", spec.family) and prove_owned_slot(
         spec.root,
         slot_id,
         spec.family,

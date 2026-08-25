@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sqlite3
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from typing import cast
@@ -20,7 +22,7 @@ from anki_miner.config import (
 )
 from anki_miner.gui.app import _run_store_recovery_if_locked
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.services._sqlite_index import write_ownership_marker
+from anki_miner.services._sqlite_index import _SIDECAR_COLUMNS_KEY, write_ownership_marker
 from anki_miner.services.audio_packs import storage as audio_storage
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.dictionary import storage as dictionary_storage
@@ -732,3 +734,140 @@ def test_pitch_missing_canonical_restores_valid_backup(tmp_path: Path) -> None:
 
     assert (config.pitch_root / "src" / "index.sqlite").is_file()
     assert not backup.exists()
+
+
+# --- The meta-sidecar fast path -------------------------------------------
+#
+# Recovery runs per configured slot in ``app.main`` before ``compose_main_window``,
+# so every SQLite open it performs is paid before the first paint. A slot whose
+# sidecar is fresh and records its physical columns is answered from that
+# sidecar; anything the sidecar cannot answer keeps today's full validation, and
+# the decision the sidecar produces is the decision SQLite would have produced.
+
+
+def _sqlite_open_spy(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Record every SQLite open, whether spelled as a path or a ``file:`` URI."""
+    opened: list[str] = []
+    real_connect = sqlite3.connect
+
+    def spy(target, *args, **kwargs):  # type: ignore[no-untyped-def]
+        opened.append(str(target))
+        return real_connect(target, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", spy)
+    return opened
+
+
+def _healthy_install(tmp_path: Path) -> AnkiMinerConfig:
+    """One freshly imported, ownership-marked slot per family; no artifacts."""
+    config = _config(
+        tmp_path,
+        dictionary_ids=("dict",),
+        frequency_ids=("freq",),
+        audio_ids=("pack",),
+        pitch_ids=("pitch",),
+    )
+    _dictionary_generation(config.dicts_root / "dict", "dict")
+    write_ownership_marker(config.dicts_root / "dict", "dict", "dictionary")
+    frequency_storage.build_index(
+        config.freqs_root / "freq" / "index.sqlite",
+        [("ねこ", "ねこ", 1, None)],
+        {"schema_version": str(frequency_storage.SCHEMA_VERSION), "source_name": "freq"},
+    )
+    write_ownership_marker(config.freqs_root / "freq", "freq", "frequency")
+    _audio_generation(config.audio_packs_root / "pack", "pack")
+    write_ownership_marker(config.audio_packs_root / "pack", "pack", "audio")
+    _pitch_generation(config.pitch_root / "pitch", "pitch")
+    return config
+
+
+def _remove_sidecar(slot: Path) -> None:
+    (slot / "meta.json").unlink()
+
+
+def _drop_recorded_columns(slot: Path) -> None:
+    sidecar = slot / "meta.json"
+    payload = json.loads(sidecar.read_text(encoding="utf-8"))
+    payload.pop(_SIDECAR_COLUMNS_KEY, None)
+    sidecar.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _age_sidecar_behind_the_index(slot: Path) -> None:
+    older = (slot / "index.sqlite").stat().st_mtime_ns - 1_000_000
+    os.utime(slot / "meta.json", ns=(older, older))
+
+
+def test_healthy_slots_are_validated_without_opening_a_single_index(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The whole point: a healthy install costs no pre-paint SQLite open.
+
+    Every slot here is ownership-marked (so the ownership proof reads the marker
+    rather than the index) and freshly imported (so ``write_meta`` published a
+    sidecar recording the physical columns).
+    """
+    config = _healthy_install(tmp_path)
+
+    opened = _sqlite_open_spy(monkeypatch)
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert opened == []
+
+
+@pytest.mark.parametrize(
+    "break_sidecar",
+    [_remove_sidecar, _drop_recorded_columns, _age_sidecar_behind_the_index],
+    ids=["missing", "no-recorded-columns", "older-than-the-index"],
+)
+def test_a_sidecar_that_cannot_answer_falls_through_to_the_full_check(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    break_sidecar: Callable[[Path], None],
+) -> None:
+    """Slots imported before column recording keep today's validation exactly.
+
+    They repair themselves on the next reimport, when ``write_meta`` republishes
+    the sidecar with columns.
+    """
+    config = _healthy_install(tmp_path)
+    slot = config.audio_packs_root / "pack"
+    break_sidecar(slot)
+
+    opened = _sqlite_open_spy(monkeypatch)
+    run_startup_store_recovery(config, allow_collection=True)
+
+    assert any("pack" in target for target in opened), "the slot must still be validated against SQLite"
+    assert (slot / "index.sqlite").is_file(), "a fall-through validation must not change the decision"
+    assert list(config.audio_packs_root.glob("pack.corrupt-*")) == []
+
+
+def test_a_sidecar_recording_a_stale_schema_quarantines_exactly_as_sqlite_does(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The sidecar caches the answer; it never softens the destructive decision.
+
+    The same fixture as the SQLite-path quarantine test above, minus that test's
+    hand-written sidecar: here the sidecar honestly records the unsupported
+    version, and the canonical is quarantined and replaced from the backup
+    without its index ever being opened.
+    """
+    config = _config(tmp_path, audio_ids=("pack",))
+    canonical = config.audio_packs_root / "pack"
+    _audio_generation(canonical, "pack", schema_version=999)
+    write_ownership_marker(canonical, "pack", "audio")
+    backup = config.audio_packs_root / "pack.bak-200-valid"
+    _audio_generation(backup, "pack")
+    write_ownership_marker(backup, "pack", "audio")
+
+    opened = _sqlite_open_spy(monkeypatch)
+    run_startup_store_recovery(config, allow_collection=True)
+    opened_during_recovery = list(opened)
+
+    quarantines = list(config.audio_packs_root.glob("pack.corrupt-*"))
+    assert len(quarantines) == 1
+    assert audio_storage.read_meta(quarantines[0] / "index.sqlite")["schema_version"] == "999"
+    assert audio_storage.read_meta(canonical / "index.sqlite")["schema_version"] == str(audio_storage.SCHEMA_VERSION)
+    assert not backup.exists()
+    assert not any(str(canonical / "index.sqlite") in target for target in opened_during_recovery)

@@ -6,6 +6,7 @@ import json
 import sqlite3
 from pathlib import Path
 
+from anki_miner.services import _sqlite_index
 from anki_miner.services.frequency import storage
 
 
@@ -137,7 +138,11 @@ class TestMeta:
         storage.write_meta(db, meta)
         sidecar = tmp_path / "meta.json"
         assert sidecar.is_file()
-        assert json.loads(sidecar.read_text(encoding="utf-8")) == meta
+        # The payload also carries the reserved physical-column record that
+        # validate_index_schema_cached reads; the meta rows are the rest of it.
+        published = json.loads(sidecar.read_text(encoding="utf-8"))
+        published.pop(_sqlite_index._SIDECAR_COLUMNS_KEY)
+        assert published == meta
 
     def test_read_meta_cached_returns_written_meta(self, tmp_path: Path) -> None:
         db = tmp_path / "index.sqlite"

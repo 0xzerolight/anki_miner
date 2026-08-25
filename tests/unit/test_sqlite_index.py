@@ -63,10 +63,11 @@ class TestWriteMetaTimeout:
 
         assert _sqlite_index.read_meta(db_path) == {"schema_version": "2", "source_name": "jmdict"}
         sidecar = tmp_path / "meta.json"
-        assert json.loads(sidecar.read_text(encoding="utf-8")) == {
-            "schema_version": "2",
-            "source_name": "jmdict",
-        }
+        # The published payload is the meta rows plus the reserved column
+        # record; what a meta reader sees back is the rows alone.
+        published = json.loads(sidecar.read_text(encoding="utf-8"))
+        assert published.pop(_sqlite_index._SIDECAR_COLUMNS_KEY) == '{"entries": [], "tags": []}'
+        assert published == {"schema_version": "2", "source_name": "jmdict"}
 
 
 class TestWriteMetaSidecarAtomic:
@@ -187,3 +188,196 @@ class TestReadMetaCachedNanosecondFreshness:
         result = _sqlite_index.read_meta_cached(db_path, read_meta_fn)
 
         assert result == {"schema_version": "1"}
+
+
+# --- Sidecar-answered schema validation ------------------------------------
+#
+# ``validate_index_schema`` costs one SQLite open plus a PRAGMA per store, and
+# startup recovery pays it per configured slot before the first paint. The
+# sidecar already caches the meta rows; recording the physical columns beside
+# them lets it cache the whole verdict.
+
+_AUDIO_ENTRIES = "expression TEXT, file TEXT, source TEXT, speaker TEXT"
+_DICTIONARY_ENTRIES = "term TEXT, content TEXT, tags TEXT, rules TEXT, sequence INTEGER"
+_DICTIONARY_TAGS = "name TEXT, category TEXT, ord INTEGER, notes TEXT, score REAL"
+_FREQUENCY_ENTRIES = "term TEXT, reading TEXT, rank INTEGER, display_value TEXT"
+_PITCH_ENTRIES = "reading TEXT, kanji TEXT, pattern TEXT, nasal TEXT, devoice TEXT"
+
+
+def _current_schema_version(family: str) -> int:
+    from anki_miner.services.audio_packs.storage import SCHEMA_VERSION as AUDIO
+    from anki_miner.services.dictionary.storage import SCHEMA_VERSION as DICTIONARY
+    from anki_miner.services.frequency.storage import SCHEMA_VERSION as FREQUENCY
+    from anki_miner.services.pitch_accent.storage import SCHEMA_VERSION as PITCH
+
+    return {"audio": AUDIO, "dictionary": DICTIONARY, "frequency": FREQUENCY, "pitch": PITCH}[family]
+
+
+def _build_index(db_path: Path, *, entries: str, tags: str | None, meta: dict[str, str]) -> None:
+    """Create a family-shaped index and publish its sidecar through write_meta."""
+    conn = sqlite3.connect(db_path)
+    try:
+        conn.execute(f"CREATE TABLE entries ({entries})")
+        if tags is not None:
+            conn.execute(f"CREATE TABLE tags ({tags})")
+        conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+        conn.commit()
+    finally:
+        conn.close()
+    _sqlite_index.write_meta(db_path, meta)
+
+
+def _no_sqlite(monkeypatch: pytest.MonkeyPatch) -> None:
+    def boom(*args, **kwargs):
+        raise AssertionError(f"the sidecar had to answer without opening SQLite: {args!r}")
+
+    monkeypatch.setattr(_sqlite_index.sqlite3, "connect", boom)
+
+
+class TestWriteMetaRecordsPhysicalColumns:
+    def test_it_records_both_validated_tables_empty_list_included(self, tmp_path: Path):
+        """``entries`` and ``tags`` are always keyed, even when absent from the
+        database: only an always-present key lets a reader tell "this table does
+        not exist" from "this sidecar predates column recording"."""
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "2"})
+
+        payload = json.loads((tmp_path / "meta.json").read_text(encoding="utf-8"))
+
+        assert json.loads(payload[_sqlite_index._SIDECAR_COLUMNS_KEY]) == {
+            "entries": ["expression", "file", "source", "speaker"],
+            "tags": [],
+        }
+
+    def test_read_meta_cached_never_surfaces_the_recorded_columns(self, tmp_path: Path):
+        """The sidecar caches meta ROWS; a caller that asked for meta must not
+        see a key the meta table never held."""
+        db_path = tmp_path / "index.sqlite"
+        _build_index(
+            db_path,
+            entries=_AUDIO_ENTRIES,
+            tags=None,
+            meta={"schema_version": "2", "pack_id": "pack"},
+        )
+
+        def read_meta_fn(path: Path) -> dict[str, str]:
+            raise AssertionError("must not fall through when the sidecar is fresh")
+
+        assert _sqlite_index.read_meta_cached(db_path, read_meta_fn) == {
+            "schema_version": "2",
+            "pack_id": "pack",
+        }
+        assert _sqlite_index.read_meta(db_path) == {"schema_version": "2", "pack_id": "pack"}
+
+
+class TestValidateIndexSchemaCached:
+    @pytest.mark.parametrize(
+        ("family", "entries", "tags", "version", "expected"),
+        [
+            ("audio", _AUDIO_ENTRIES, None, None, True),
+            ("audio", "expression TEXT, file TEXT, source TEXT", None, None, False),
+            ("audio", _AUDIO_ENTRIES, None, 999, False),
+            ("dictionary", _DICTIONARY_ENTRIES, _DICTIONARY_TAGS, None, True),
+            ("dictionary", _DICTIONARY_ENTRIES, None, None, False),
+            ("dictionary", _DICTIONARY_ENTRIES, "name TEXT, category TEXT", None, False),
+            ("frequency", _FREQUENCY_ENTRIES, None, None, True),
+            ("frequency", "term TEXT, reading TEXT, rank INTEGER", None, None, False),
+            ("pitch", _PITCH_ENTRIES, None, None, True),
+            ("pitch", "reading TEXT, kanji TEXT, pattern TEXT", None, None, False),
+        ],
+    )
+    def test_it_returns_the_verdict_the_sqlite_path_returns(
+        self,
+        tmp_path: Path,
+        family: str,
+        entries: str,
+        tags: str | None,
+        version: int | None,
+        expected: bool,
+    ):
+        """The sidecar is a cache of the answer, never a second policy."""
+        db_path = tmp_path / "index.sqlite"
+        schema_version = _current_schema_version(family) if version is None else version
+        _build_index(db_path, entries=entries, tags=tags, meta={"schema_version": str(schema_version)})
+
+        assert _sqlite_index.validate_index_schema(db_path, family) is expected
+        assert _sqlite_index.validate_index_schema_cached(db_path, family) is expected
+
+    def test_a_recorded_sidecar_answers_without_opening_sqlite(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "2"})
+
+        _no_sqlite(monkeypatch)
+
+        assert _sqlite_index.validate_index_schema_cached(db_path, "audio") is True
+
+    @pytest.mark.parametrize("bad_version", ["", "two", "  "])
+    def test_an_unparseable_recorded_version_is_invalid_not_a_fall_through(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, bad_version: str
+    ):
+        """The SQLite path treats a non-integer schema_version as invalid; a
+        fresh sidecar holds that same row, so it must answer the same way."""
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": bad_version})
+
+        assert _sqlite_index.validate_index_schema(db_path, "audio") is False
+        _no_sqlite(monkeypatch)
+        assert _sqlite_index.validate_index_schema_cached(db_path, "audio") is False
+
+    def test_a_sidecar_without_recorded_columns_falls_through(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """Slots imported before column recording: the schema_version alone is
+        not enough to answer, so the full check still runs."""
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "2"})
+        sidecar = tmp_path / "meta.json"
+        payload = json.loads(sidecar.read_text(encoding="utf-8"))
+        del payload[_sqlite_index._SIDECAR_COLUMNS_KEY]
+        sidecar.write_text(json.dumps(payload), encoding="utf-8")
+
+        opened: list[str] = []
+        real_connect = sqlite3.connect
+        monkeypatch.setattr(
+            _sqlite_index.sqlite3,
+            "connect",
+            lambda target, *a, **kw: (opened.append(str(target)), real_connect(target, *a, **kw))[1],
+        )
+
+        assert _sqlite_index.validate_index_schema_cached(db_path, "audio") is True
+        assert opened, "the full check must still open the index"
+
+    def test_a_sidecar_older_than_the_index_falls_through(self, tmp_path: Path):
+        """A rewritten index and its unrefreshed sidecar: SQLite decides."""
+        import os
+
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "999"})
+        sidecar = tmp_path / "meta.json"
+        older = db_path.stat().st_mtime_ns - 1_000_000
+        os.utime(sidecar, ns=(older, older))
+
+        assert _sqlite_index.validate_index_schema_cached(db_path, "audio") is False
+
+        def read_meta_fn(path: Path) -> dict[str, str]:
+            return {"fell": "through"}
+
+        assert _sqlite_index.read_meta_cached(db_path, read_meta_fn) == {"fell": "through"}
+
+    def test_a_symlinked_index_is_invalid_whatever_the_sidecar_says(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """The regular-file check is nofollow and runs first, so a symlinked (or
+        absent) index is refused before the sidecar is consulted at all — a
+        live sidecar must not launder a link out of the slot."""
+        real = tmp_path / "real.sqlite"
+        _build_index(real, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "2"})
+        (tmp_path / "meta.json").replace(tmp_path / "linked-meta.json")
+
+        slot = tmp_path / "slot"
+        slot.mkdir()
+        (slot / "index.sqlite").symlink_to(real)
+        (slot / "meta.json").write_text((tmp_path / "linked-meta.json").read_text(encoding="utf-8"), encoding="utf-8")
+
+        _no_sqlite(monkeypatch)
+
+        assert _sqlite_index.validate_index_schema_cached(slot / "index.sqlite", "audio") is False
+        assert _sqlite_index.validate_index_schema_cached(tmp_path / "absent.sqlite", "audio") is False
