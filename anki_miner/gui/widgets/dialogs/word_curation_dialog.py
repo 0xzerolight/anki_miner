@@ -1061,6 +1061,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         word, idx = self._pending_word, self._pending_index
         prev_ok = next_ok = reset_ok = False
         if word is not None and idx is not None and self._media_context is not None:
+            reset_ok = self._line_expansions.get(idx, (0, 0)) != (0, 0)
             chosen = self._chosen.get(idx, word)
             resolved = self._expansion_entries(chosen)
             if resolved is not None:
@@ -1069,7 +1070,6 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 if cue is not None:
                     prev_count, next_count = self._line_expansions.get(idx, (0, 0))
                     padding = self._media_context.audio_padding
-                    reset_ok = (prev_count, next_count) != (0, 0)
                     if cue - (prev_count + 1) >= 0:
                         window = merge_cue_window(entries, cue, prev_count + 1, next_count)
                         prev_ok = (window.end - window.start) + 2 * padding <= MAX_CLIP_SECONDS

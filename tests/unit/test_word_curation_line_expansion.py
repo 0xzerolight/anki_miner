@@ -250,6 +250,18 @@ class TestGuardrails:
         assert not dlg.expand_next_button.isEnabled()
         assert not dlg.expand_reset_button.isEnabled()
 
+    def test_reset_enabled_when_cue_unresolvable(self, qtbot, words, existing_video):
+        """Stored expansion + unresolvable cue: prev/next disable, Reset stays."""
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        idx = dlg._pending_index
+        dlg._line_expansions[idx] = (1, 0)
+        dlg._expansion_entries = lambda chosen: None  # context still in flight
+        dlg._refresh_expansion_buttons()
+        assert not dlg.expand_prev_button.isEnabled()
+        assert not dlg.expand_next_button.isEnabled()
+        assert dlg.expand_reset_button.isEnabled()
+
 
 class TestSelection:
     def test_selected_word_carries_line_expansion(self, qtbot, words, existing_video):
