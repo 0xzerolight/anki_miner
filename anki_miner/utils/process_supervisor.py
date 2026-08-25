@@ -13,6 +13,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
@@ -27,6 +28,13 @@ _DRAIN_TIMEOUT_S = 0.5
 _REAP_TIMEOUT_S = 0.5
 _READ_SIZE = 64 * 1024
 _WINDOWS_RESCAN_INTERVAL_S = 0.02
+# Bound for parts[name] when retain_output=False: a multi-hour streaming
+# transfer (yt-dlp HLS fragments) emits a callback line per fragment, so
+# retaining every decoded chunk forever grows unboundedly. Callers that
+# already keep their own tail (youtube_fetcher fetch, media_downloader
+# download) don't read SupervisedResult.stdout/stderr, so this only needs to
+# cover the crash-diagnostics case, not full output fidelity.
+_RETAIN_TAIL_LINES = 200
 
 
 class SupervisedState(Enum):
@@ -259,6 +267,7 @@ def run_supervised(
     line_callback: Callable[[str], None] | None = None,
     combine_stderr: bool = False,
     encoding: str = "utf-8",
+    retain_output: bool = True,
 ) -> SupervisedResult:
     """Run *command* to one terminal state without unbounded pipe reads or waits."""
     started = time.monotonic()
@@ -307,7 +316,11 @@ def run_supervised(
         "stdout": codecs.getincrementaldecoder(encoding)(errors="replace"),
         "stderr": codecs.getincrementaldecoder(encoding)(errors="replace"),
     }
-    parts: dict[str, list[str]] = {"stdout": [], "stderr": []}
+    parts: dict[str, list[str] | deque[str]] = (
+        {"stdout": [], "stderr": []}
+        if retain_output
+        else {"stdout": deque(maxlen=_RETAIN_TAIL_LINES), "stderr": deque(maxlen=_RETAIN_TAIL_LINES)}
+    )
     pending: dict[str, str] = {"stdout": "", "stderr": ""}
     reader_error: BaseException | None = None
 

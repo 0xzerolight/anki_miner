@@ -196,6 +196,7 @@ class MediaDownloaderService:
                 cancel=cancel_event,
                 line_callback=handle_line,
                 combine_stderr=True,
+                retain_output=False,
             )
 
         if isinstance(result.error, FileNotFoundError):

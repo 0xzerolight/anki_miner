@@ -571,6 +571,7 @@ class YouTubeFetcherService:
                 cancel=cancel_event,
                 line_callback=handle_line,
                 combine_stderr=True,
+                retain_output=False,
             )
         if isinstance(process_result.error, FileNotFoundError):
             raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from process_result.error

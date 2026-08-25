@@ -16,7 +16,7 @@ from unittest.mock import ANY, MagicMock, patch
 import psutil
 import pytest
 
-from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
+from anki_miner.utils.process_supervisor import _RETAIN_TAIL_LINES, SupervisedState, run_supervised
 
 
 def _pid_is_live(pid: int) -> bool:
@@ -157,6 +157,40 @@ def test_supervised_raising_callback_contained(caplog: Any) -> None:
     assert result.state is SupervisedState.COMPLETED
     assert seen == ["first", "second"]
     assert "supervised process callback failed" in caplog.text
+
+
+def test_supervised_retain_output_false_bounds_tail() -> None:
+    line_count = 10_000
+    chunks = [f"{i}\n".encode() for i in range(line_count)]
+    proc = _FakeProcess([*chunks, b""], 0)
+    seen: list[str] = []
+    with patch("anki_miner.utils.process_supervisor.subprocess.Popen", return_value=proc):
+        result = run_supervised(
+            ["fake"],
+            timeout_s=5.0,
+            combine_stderr=True,
+            line_callback=seen.append,
+            retain_output=False,
+        )
+
+    assert result.state is SupervisedState.COMPLETED
+    # the callback still sees every line — only stored retention is bounded.
+    assert seen == [str(i) for i in range(line_count)]
+    retained_lines = result.stdout.splitlines()
+    assert len(retained_lines) <= _RETAIN_TAIL_LINES
+    assert retained_lines[-1] == str(line_count - 1)
+    assert "0" not in retained_lines
+
+
+def test_supervised_retain_output_default_keeps_everything() -> None:
+    line_count = 10_000
+    chunks = [f"{i}\n".encode() for i in range(line_count)]
+    proc = _FakeProcess([*chunks, b""], 0)
+    with patch("anki_miner.utils.process_supervisor.subprocess.Popen", return_value=proc):
+        result = run_supervised(["fake"], timeout_s=5.0, combine_stderr=True)
+
+    assert result.state is SupervisedState.COMPLETED
+    assert result.stdout.splitlines() == [str(i) for i in range(line_count)]
 
 
 def test_supervised_windows_job_terminates_tree() -> None:
