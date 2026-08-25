@@ -392,6 +392,41 @@ def test_promote_staged_dir_steals_stale_lockfile(tmp_path: Path) -> None:
     assert not lock_path.exists()
 
 
+def test_promotion_lock_release_removes_own_lockfile(tmp_path: Path) -> None:
+    root = tmp_path.resolve()
+    lock = staging_module._PromotionLock(root)
+
+    with lock:
+        assert lock._lock_path.exists()
+
+    assert not lock._lock_path.exists()
+
+
+def test_promotion_lock_release_after_steal_leaves_stolen_lockfile(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A holder that overran the stale budget and had its lockfile stolen must
+
+    not blind-unlink whatever now occupies that path -- a second racer's live
+    lock -- on release; it should warn and leave the file untouched.
+    """
+    root = tmp_path.resolve()
+    lock = staging_module._PromotionLock(root)
+    lock._acquire_file_lock()
+    assert lock._token is not None
+
+    # Simulate a steal: another process's token now occupies the path.
+    lock._lock_path.write_bytes(b"999999:stolen-by-another-process\n")
+
+    with caplog.at_level("WARNING", logger=staging_module.__name__):
+        lock._release_file_lock()
+
+    assert lock._lock_path.exists()
+    assert lock._lock_path.read_bytes() == b"999999:stolen-by-another-process\n"
+    assert any("promotion lock stolen" in record.message for record in caplog.records)
+
+
 def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:
     root = tmp_path.resolve()
     lock = staging_module._promotion_lock(root / "resource")

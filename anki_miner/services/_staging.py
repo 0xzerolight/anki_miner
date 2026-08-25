@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import contextlib
 import errno
+import logging
 import os
 import tempfile
 import threading
@@ -35,6 +36,8 @@ from anki_miner.services._sqlite_index import (
 )
 from anki_miner.utils.atomic_io import atomic_replace_dir
 from anki_miner.utils.robust_fs import robust_rmtree
+
+logger = logging.getLogger(__name__)
 
 # Lockfile name for the cross-process promotion guard, placed beside the
 # family root (e.g. dicts_root), not beside an individual slot -- matching
@@ -70,6 +73,7 @@ class _PromotionLock:
         self._rlock = threading.RLock()
         self._lock_path = root / _PROMOTION_LOCK_FILENAME
         self._depth = 0
+        self._token: bytes | None = None
 
     def __enter__(self) -> _PromotionLock:
         self._rlock.acquire()
@@ -91,7 +95,10 @@ class _PromotionLock:
 
     def _acquire_file_lock(self) -> None:
         self._root.mkdir(parents=True, exist_ok=True)
-        payload = f"{os.getpid()}\n".encode("ascii")
+        # PID + a random component: the PID alone is not a reliable owner
+        # check (PIDs recycle, and two holders across a steal could share
+        # one), so the random half is what release actually keys off.
+        token = f"{os.getpid()}:{uuid.uuid4().hex}\n".encode("ascii")
         stale_retries = 3
         while True:
             try:
@@ -106,9 +113,10 @@ class _PromotionLock:
                     str(self._root),
                 ) from None
             try:
-                os.write(fd, payload)
+                os.write(fd, token)
             finally:
                 os.close(fd)
+            self._token = token
             return
 
     def _steal_if_stale(self) -> bool:
@@ -129,6 +137,24 @@ class _PromotionLock:
         return True
 
     def _release_file_lock(self) -> None:
+        # Ownership-checked unlink: without this, a holder that outlived the
+        # stale budget and had its lockfile stolen would, on finishing,
+        # blind-unlink whatever is there now -- the *new* holder's live
+        # lockfile -- silently disarming the guard for a third racer. Reading
+        # the file back and comparing to our token before unlinking is not
+        # atomic with the unlink itself, but it shrinks the disarm window
+        # from "always" down to a microsecond TOCTOU race that additionally
+        # requires the 1h steal to already have happened.
+        try:
+            current = self._lock_path.read_bytes()
+        except FileNotFoundError:
+            return
+        if current != self._token:
+            logger.warning(
+                "promotion lock stolen — not removing current holder's lock: %s",
+                self._lock_path,
+            )
+            return
         with contextlib.suppress(FileNotFoundError):
             os.unlink(self._lock_path)
 
