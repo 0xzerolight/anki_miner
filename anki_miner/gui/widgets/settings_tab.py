@@ -1906,6 +1906,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._debounce_timer.stop()
         self._dict_import_flow.cancel_active_batch()
         self._audio_pack_import_flow.cancel_active_batch()
+        self._frequency_import_flow.cancel_active_batch()
+        self._pitch_import_flow.cancel_active_batch()
         self._anki_probe.shutdown()
 
     # === Dictionary chain persistence ===
