@@ -113,6 +113,19 @@ class TestPaintAndFree:
         assert kwargs["opengl_fbo"]["w"] == widget.width() * 2
         assert kwargs["opengl_fbo"]["h"] == widget.height() * 2
 
+    def test_paintgl_render_exception_is_swallowed_and_logged_once(self, qtbot, caplog):
+        widget = MpvVideoWidget()
+        qtbot.addWidget(widget)
+        ctx = MagicMock()
+        ctx.render.side_effect = RuntimeError("mpv_render_context_render failed")
+        widget._render_ctx = ctx
+        with caplog.at_level(logging.WARNING, logger=MODULE):
+            widget.paintGL()  # must not raise
+            widget.paintGL()  # second failure: must not log again
+        warnings = [r for r in caplog.records if r.name == MODULE and r.levelno >= logging.WARNING]
+        assert len(warnings) == 1, "render failure must be logged once per render context, not per frame"
+        assert ctx.render.call_count == 2
+
     def test_free_wraps_make_current(self, qtbot):
         widget = MpvVideoWidget()
         qtbot.addWidget(widget)

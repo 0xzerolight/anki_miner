@@ -157,6 +157,10 @@ class MpvVideoWidget(QOpenGLWidget):
         self._player: Any = None
         self._render_ctx: Any = None
         self._gl_ready = False
+        # Rate-limits the paintGL render-failure warning to once per render
+        # context, not once per dropped frame (60fps of the same fault would
+        # otherwise flood the log). Reset alongside context (re)creation.
+        self._render_error_logged = False
         # ctypes callback trampolines MUST stay referenced for the lifetime of
         # the render context — if Python GC collects them, mpv's C thread
         # calls into freed memory and the process segfaults.
@@ -212,19 +216,31 @@ class MpvVideoWidget(QOpenGLWidget):
         if self._render_ctx is None:
             return
         ratio = self.devicePixelRatioF()
-        self._render_ctx.render(
-            flip_y=True,
-            opengl_fbo={
-                "fbo": self.defaultFramebufferObject(),
-                "w": int(self.width() * ratio),
-                "h": int(self.height() * ratio),
-            },
-        )
+        try:
+            self._render_ctx.render(
+                flip_y=True,
+                opengl_fbo={
+                    "fbo": self.defaultFramebufferObject(),
+                    "w": int(self.width() * ratio),
+                    "h": int(self.height() * ratio),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001 - never raise inside GL callbacks
+            # python-mpv's errcheck raises builtins (RuntimeError/ValueError/
+            # SystemError/MemoryError) when the core returns a negative status
+            # from render(). An exception escaping this Qt virtual reaches the
+            # app excepthook, which pops a modal QMessageBox synchronously
+            # inside paint dispatch with the GL context current -- worse than
+            # the dropped frame this swallows.
+            if not self._render_error_logged:
+                self._render_error_logged = True
+                logger.warning("mpv render failed, skipping frame: %s", exc)
 
     # ------------------------------------------------------------- internals
 
     def _create_render_context(self) -> None:
         """Create the MpvRenderContext. GL context must be current."""
+        self._render_error_logged = False
         try:
             mpv_module = load_mpv()
         except MpvUnavailableError:
