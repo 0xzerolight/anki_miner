@@ -46,6 +46,7 @@ class _StuckWorker:
     def __init__(self) -> None:
         self.cancel_calls = 0
         self.wait_calls = 0
+        self.wait_timeouts: list[int | None] = []
         self.running = True
         self.finished = _SignalStub()
 
@@ -60,6 +61,7 @@ class _StuckWorker:
 
     def wait(self, timeout_ms: int | None = None) -> bool:  # noqa: N802 (Qt API)
         self.wait_calls += 1
+        self.wait_timeouts.append(timeout_ms)
         return not self.running
 
     def finish(self) -> None:
@@ -599,6 +601,28 @@ class TestPlaylistShutdownBoundedJoin:
         assert any("probe worker did not stop" in m for m in msgs)
         assert any("playlist probe worker did not stop" in m for m in msgs)
         assert any("playlist resolve worker did not stop" in m for m in msgs)
+
+    def test_probe_joins_use_the_close_grace_budget(self, qtbot):
+        """Every probe join is bounded by the window close-grace, not a longer wait.
+
+        Three probe joins at 30 s each meant a wedged yt-dlp subprocess could add
+        90 s to app close on the GUI thread; the laggards were already retained
+        for deferred close, so the long wait bought nothing.
+        """
+        from anki_miner.gui.controllers.background_tasks import _CLOSE_JOIN_GRACE_MS
+
+        ctrl = _make_playlist_controller(qtbot)
+        probe = _StuckWorker()
+        pl_probe = _StuckWorker()
+        pl_resolve = _StuckWorker()
+        ctrl._probe_workers = [probe]
+        ctrl._playlist_probe_worker = pl_probe
+        ctrl._playlist_resolve_worker = pl_resolve
+
+        ctrl.shutdown()
+
+        for worker in (probe, pl_probe, pl_resolve):
+            assert worker.wait_timeouts == [_CLOSE_JOIN_GRACE_MS]
 
     def test_clean_workers_no_warning(self, qtbot, caplog):
         ctrl = _make_playlist_controller(qtbot)

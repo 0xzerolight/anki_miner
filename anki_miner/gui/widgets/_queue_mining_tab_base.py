@@ -81,11 +81,14 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Upper bound for joining the queue worker at shutdown. Generous: covers a slow
-# per-item stage (ffmpeg extraction, an archive/epub load, a YouTube fetch)
-# finishing plus AnkiConnect timeouts. Converts a worst-case hang into a bounded
-# delay while retaining the laggard for deferred close.
-_SHUTDOWN_WAIT_MS = 30_000
+# Upper bound for joining the queue worker at shutdown. Deliberately the SAME
+# budget as ``background_tasks._CLOSE_JOIN_GRACE_MS``: this join runs on the GUI
+# thread inside closeEvent, and a worker still going after the grace is retained
+# on ``worker_thread`` — which ``background_tasks.shutdown`` re-joins and folds
+# into ``defer_close``, so nothing is lost by not waiting here. Waiting longer
+# only froze the window before the close could be deferred (the Reading
+# container fans out to four children, so it multiplied).
+_SHUTDOWN_WAIT_MS = 2000
 
 #: Rows a queue list shows before it scrolls. Enough to see a batch as a batch.
 _VISIBLE_QUEUE_ROWS = 8

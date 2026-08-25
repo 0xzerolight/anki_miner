@@ -17,7 +17,8 @@ Close contract:
   exception raised while stopping one child must not strand another child's
   still-running worker at app close (the same service-all principle as the
   release fan-out). Each child's ``shutdown`` bounded-joins its worker at
-  ``_SHUTDOWN_WAIT_MS`` (30s), so the container's worst-case close is ~4x30s.
+  ``_SHUTDOWN_WAIT_MS``, the window close-grace budget, so the container's
+  worst-case close is ~4x that rather than the ~4x30s it once was.
 - NO ``worker_thread`` attribute, but ``iter_close_workers()`` exposes workers
   retained by children whose bounded join timed out.
   :class:`~anki_miner.gui.controllers.background_tasks.BackgroundTaskController`
@@ -190,8 +191,10 @@ class ReadingTab(QWidget):
         An exception raised stopping one child must not strand another child's
         still-running worker at app close, so each child's ``shutdown`` runs in
         its own ``try``/``except`` (the failure is logged). Each child
-        bounded-joins its worker at ``_SHUTDOWN_WAIT_MS`` (30s), so the
-        container's worst-case close is ~4x30s.
+        bounded-joins its worker at ``_SHUTDOWN_WAIT_MS``, the window
+        close-grace budget, so the container's worst-case close is ~4x that;
+        children whose join times out are handed to the deferred-close reaper
+        via :meth:`iter_close_workers`.
         """
         for child in (self.manga_tab, self.novels_tab, self.subtitles_tab, self.text_tab):
             try:

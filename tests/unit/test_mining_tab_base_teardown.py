@@ -429,3 +429,80 @@ class TestLeakedRunReaper:
         # Must not raise even though there is no processor to close.
         tab._reap_leaked_runs()
         assert tab._leaked_runs == []
+
+
+# ---------------------------------------------------------------------------
+# Bounded join via join_or_retain (Task 18)
+# ---------------------------------------------------------------------------
+
+
+class _StuckThread(QThread):
+    """Real QThread that ignores cancellation until the test releases it."""
+
+    def __init__(self, processor) -> None:
+        super().__init__()
+        self.curation_processor = processor
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.cancel_calls = 0
+
+    def cancel(self) -> None:
+        self.cancel_calls += 1
+
+    def run(self) -> None:
+        self.entered.set()
+        self.release.wait()
+
+
+class TestTeardownBoundedJoin:
+    """The teardown join is ``join_or_retain``: bounded, and deleted-handle safe."""
+
+    def test_stuck_real_worker_defers_processor_close(self, qapp, qtbot, monkeypatch):
+        """A live worker's processor is NEVER closed inline — it goes to the reaper."""
+        monkeypatch.setattr("anki_miner.gui.widgets._mining_tab_base._WORKER_JOIN_TIMEOUT_MS", 10)
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = _processor_with_close_spy()
+        worker = _StuckThread(proc)
+        tab.worker_thread = worker
+        worker.start()
+        try:
+            assert worker.entered.wait(2.0), "worker never started"
+
+            tab._teardown_previous_run("test")  # must not raise
+
+            proc.close.assert_not_called()
+            assert (worker, proc) in tab._leaked_runs
+            assert worker.cancel_calls >= 1
+        finally:
+            worker.release.set()
+            assert worker.wait(2000)
+            tab.worker_thread = None
+            tab._leaked_runs = []
+
+    def test_deleted_worker_handle_does_not_abort_teardown(self, qapp, qtbot):
+        """A join on an already-deleted C++ worker must not escape as RuntimeError.
+
+        sip raises ``RuntimeError`` from a wrapper whose C++ object is gone. The
+        raw ``wait()`` let that propagate out of ``_teardown_previous_run``,
+        aborting the rerun that called it. The thread is gone either way, so the
+        processor is safe to close and nothing is leaked.
+        """
+        tab = _Bare()
+        qtbot.addWidget(tab)
+        tab._init_curation_bridge()
+
+        proc = _processor_with_close_spy()
+        worker = MagicMock(name="deleted_worker")
+        worker.isRunning.return_value = True
+        worker.finished = MagicMock()
+        worker.curation_processor = proc
+        worker.wait.side_effect = RuntimeError("wrapped C/C++ object has been deleted")
+        tab.worker_thread = worker
+
+        tab._teardown_previous_run("test")  # must not raise
+
+        proc.close.assert_called_once()
+        assert tab._leaked_runs == []

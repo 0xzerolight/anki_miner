@@ -462,7 +462,12 @@ class _FakeMiningChild:
 
 
 class _FakeYouTubeChild(_FakeMiningChild):
-    """YouTube-shaped child: shutdown() joins AND nulls its own worker."""
+    """YouTube-shaped child: shutdown() joins AND nulls its own worker.
+
+    The 30_000 join is an arbitrary sentinel, NOT the real tab's bound (which is
+    the close-grace budget): it only has to differ from the controller's 2000 so
+    a test can tell "joined by its own shutdown" from "re-joined by the sweep".
+    """
 
     def shutdown(self) -> None:
         self.shutdown_called = True
@@ -519,8 +524,8 @@ class TestCloseEventVideoContainer:
 
         event = _trigger_close(main_window)
 
-        # Joined exactly once, by the child's own shutdown (30s bound), then
-        # nulled — iter_close_workers skipped it (2000 would mean re-join).
+        # Joined exactly once, by the child's own shutdown (its sentinel bound),
+        # then nulled — iter_close_workers skipped it (2000 would mean re-join).
         assert tab.youtube_tab.shutdown_called
         assert yt_worker.cancel_called
         assert yt_worker.wait_called_with == 30_000

@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QDialog, QScrollArea, Q
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
-from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssueHost,
@@ -428,8 +428,8 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         ``requests.Session`` that were never released; on Windows those leak and
         collide with the next run's GUI-thread service construction, freezing the
         app on back-to-back mines. Closing the survivor here releases them — but
-        ONLY when the join actually succeeded. If ``wait`` times out the worker
-        is still running and may be mid-``process_episode`` using the processor's
+        ONLY when the join actually succeeded. If the bounded join times out the
+        worker is still running and may be mid-``process_episode`` using the processor's
         sqlite connection / audio Session; closing it from the GUI thread then is
         a concurrent-sqlite-close that can segfault or hard-freeze on Windows (the
         same class of bug this guards against, relocated to the timeout path).
@@ -460,10 +460,19 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         # bucket C: disconnecting an absent/deleted Qt signal is teardown-safe.
         with contextlib.suppress(TypeError, RuntimeError):
             self.worker_thread.finished.disconnect(self._restore_buttons)  # type: ignore[attr-defined]
-        self.worker_thread.cancel()  # type: ignore[attr-defined]
-        joined = self.worker_thread.wait(_WORKER_JOIN_TIMEOUT_MS)  # type: ignore[attr-defined]
+        # join_or_retain cancels, then bounded-joins, and returns the worker only
+        # while it is STILL live — so a worker that exits between the wait timing
+        # out and the check is correctly treated as joined (its processor closes
+        # here instead of being leaked). It also absorbs the sip RuntimeError
+        # raised by joining an already-deleted wrapper: the thread is gone, which
+        # is the joined case, and letting that escape would abort the rerun.
+        joined = join_or_retain(self.worker_thread, _WORKER_JOIN_TIMEOUT_MS) is None  # type: ignore[attr-defined]
         if not joined:
-            logger.warning("Lingering %s worker did not stop within 5 s; replacing it anyway", label)
+            logger.warning(
+                "Lingering %s worker did not stop within %d ms; replacing it anyway",
+                label,
+                _WORKER_JOIN_TIMEOUT_MS,
+            )
         old_processor = self.worker_thread.curation_processor  # type: ignore[attr-defined]
         if joined and old_processor is not None:
             # bucket C: processor close is best-effort teardown after its worker stopped.

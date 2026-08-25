@@ -55,9 +55,10 @@ class _LaggardWorker(QThread):
         super().__init__()
         self.entered = threading.Event()
         self.release = threading.Event()
+        self.cancel_calls = 0
 
     def cancel(self) -> None:
-        pass
+        self.cancel_calls += 1
 
     def run(self) -> None:
         self.entered.set()
@@ -296,6 +297,57 @@ class TestYouTubeAudiobookShutdownStillPoison:
         ReadingNovelsTab.shutdown(tab)
 
         assert poison_calls, "ReadingNovelsTab.shutdown must poison curation gate when worker_thread is set"
+
+
+# ---------------------------------------------------------------------------
+# Close-grace budget: a stuck queue worker must not hold the GUI thread
+# ---------------------------------------------------------------------------
+
+
+class TestQueueShutdownCloseBudget:
+    """``_QueueMiningTabBase.shutdown()`` is bounded by the close-grace budget.
+
+    The tab close join used to be a 30 s bound per queue tab (the Reading
+    container fans out to four children, so ~4x that at app close). It must now
+    return within the same grace the window close-join sweep uses, handing the
+    still-running worker to the deferred-close reaper instead of blocking.
+    """
+
+    def test_shutdown_wait_matches_close_join_grace(self):
+        """The tab's join bound is the window close-grace budget, not a longer one."""
+        from anki_miner.gui.controllers.background_tasks import _CLOSE_JOIN_GRACE_MS
+        from anki_miner.gui.widgets._queue_mining_tab_base import _SHUTDOWN_WAIT_MS
+
+        assert _SHUTDOWN_WAIT_MS == _CLOSE_JOIN_GRACE_MS
+
+    def test_stuck_worker_shutdown_returns_promptly_and_retains_laggard(self, qtbot, test_config):
+        """A worker that never finishes is cancelled, retained, and left discoverable.
+
+        Wall-clock ceiling is deliberately generous (10 s, an order of magnitude
+        under the 30 s it replaces) so a loaded xdist worker cannot flake it.
+        """
+        tab = _BareQueue(test_config)
+        qtbot.addWidget(tab)
+        worker = _LaggardWorker()
+        tab.worker_thread = worker
+        worker.start()
+        try:
+            assert worker.entered.wait(2.0), "worker never started"
+
+            started = time.monotonic()
+            tab.shutdown()
+            elapsed = time.monotonic() - started
+
+            assert elapsed < 10.0, f"shutdown() blocked the GUI thread for {elapsed:.1f}s"
+            assert worker.cancel_calls >= 1, "the stuck worker was never cancelled"
+            # Retained, and on the attribute background_tasks.shutdown enumerates,
+            # so the laggard reaches defer_close instead of being destroyed live.
+            assert tab.worker_thread is worker
+            assert worker.isRunning()
+        finally:
+            worker.release.set()
+            assert worker.wait(2000)
+            tab.worker_thread = None
 
 
 # ---------------------------------------------------------------------------
