@@ -15,6 +15,14 @@ _EARLY_EXCEPTHOOK_INSTALLED = False
 APP_MUTEX_NAME = r"Local\AnkiMiner-15B09250-AC39-4792-A15A-B73BD8E218A1"
 _APP_MUTEX_HANDLE: int | None = None
 
+# The supervised ffsubsync child re-enters this same entry script (ffsubsync
+# ships no __main__, and a frozen bundle has no interpreter to run one with),
+# so the flag is answered here rather than in __main__.py: this module is what
+# PyInstaller runs. Duplicated as a literal instead of imported, because
+# importing the child module would drag the whole services package — Qt
+# included — into every application boot; a test pins the two equal.
+FFSUBSYNC_CHILD_FLAG = "--ffsubsync-child"
+
 _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
 # Module + line number form an exact source coordinate against the version in
 # the later session header. Thread name is intentionally absent: bare Qt worker
@@ -164,6 +172,15 @@ def _inject_windows_truststore() -> None:
 
 def main() -> int:
     """Install early recovery, then hand control to the full GUI application."""
+    # First, before the crash sink, the Windows app mutex and the instance
+    # lock: the child is a headless one-shot worker for the application that
+    # spawned it and must neither boot a second GUI nor contend for the
+    # parent's single-instance guards.
+    if len(sys.argv) > 1 and sys.argv[1] == FFSUBSYNC_CHILD_FLAG:
+        from anki_miner.services.sync_engines._ffsubsync_child import main as ffsubsync_child_main
+
+        return ffsubsync_child_main(sys.argv[2:])
+
     _install_early_crash_sink()
     _create_windows_app_mutex()
     _inject_windows_truststore()

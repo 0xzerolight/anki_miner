@@ -277,8 +277,10 @@ a = Analysis(
         # find_library monkeypatch — belt-and-braces it into the graph.
         "mpv",
         # ffsubsync (primary subtitle-sync engine): imported function-locally in
-        # services/sync_engines/ffsubsync_engine.py. Bytecode analysis finds the
-        # IMPORT opcodes, but the engine is load-bearing for the Retime tool —
+        # services/sync_engines/_ffsubsync_child.py, which the bundled binary
+        # re-enters as its own supervised child (gui/launch.py's
+        # --ffsubsync-child dispatch). Bytecode analysis finds the IMPORT
+        # opcodes, but the engine is load-bearing for the Retime tool —
         # belt-and-braces it into the graph like mpv. Pure-Python package, no
         # data files; its VAD/chardet deps are ordinary static imports it pulls
         # in itself.

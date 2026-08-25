@@ -300,6 +300,29 @@ def test_main_creates_app_mutex_after_early_sink_before_heavy_imports(
     assert calls == ["sink", "mutex", "truststore", "app"]
 
 
+def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The supervised child re-enters this entry script; it must not boot the app."""
+    from anki_miner.gui import launch
+
+    calls = []
+    monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
+    monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
+    monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    fake_child = ModuleType("anki_miner.services.sync_engines._ffsubsync_child")
+    fake_child.main = lambda argv: calls.append(("child", argv)) or 3  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anki_miner.services.sync_engines._ffsubsync_child", fake_child)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["anki_miner", launch.FFSUBSYNC_CHILD_FLAG, "ref.srt", "-i", "in.srt", "-o", "out.srt"],
+    )
+
+    assert launch.main() == 3
+    assert calls == [("child", ["ref.srt", "-i", "in.srt", "-o", "out.srt"])]
+
+
 def test_installer_app_mutex_matches_launch_constant() -> None:
     from anki_miner.gui import launch
 
