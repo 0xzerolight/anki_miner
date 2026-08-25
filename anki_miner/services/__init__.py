@@ -2,25 +2,41 @@
 
 from typing import TYPE_CHECKING
 
-from .anki_service import AnkiService
 from .definition_service import DefinitionService
 from .dictionary.providers import IndexedDictProvider, JishoProvider
-from .export_service import ExportService
 from .media_extractor import MediaExtractorService
 from .shortcut_service import ShortcutResult, ShortcutService
 from .stats_service import StatsService
-from .validation_service import ValidationService
 from .word_filter import WordFilterService
 
 if TYPE_CHECKING:
+    from .anki_service import AnkiService
+    from .export_service import ExportService
     from .subtitle_parser import SubtitleParserService
+    from .validation_service import ValidationService
 
 
 def __getattr__(name: str) -> object:
+    # AnkiService and ValidationService each pull in `requests` at their own
+    # module top; ExportService is lazy alongside them for the same reason
+    # (nothing outside a boot-time services import needs it eagerly). Deferred
+    # so a bare `import anki_miner.services` does not carry that ~40-60ms cost.
+    if name == "AnkiService":
+        from .anki_service import AnkiService
+
+        return AnkiService
+    if name == "ExportService":
+        from .export_service import ExportService
+
+        return ExportService
     if name == "SubtitleParserService":
         from .subtitle_parser import SubtitleParserService
 
         return SubtitleParserService
+    if name == "ValidationService":
+        from .validation_service import ValidationService
+
+        return ValidationService
     raise AttributeError(name)
 
 

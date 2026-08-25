@@ -4,8 +4,6 @@ import logging
 import time
 from html import escape
 
-import requests
-
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
@@ -72,6 +70,10 @@ class JishoProvider:
         Returns:
             HTML-formatted definition, or None.
         """
+        # Module-local, not top-of-file: importing this class must not pull
+        # `requests` into a bare `import anki_miner.services` at boot.
+        import requests
+
         self._requests += 1
         if self._delay > 0:
             self._rate_limit_waits += 1

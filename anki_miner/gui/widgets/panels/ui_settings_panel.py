@@ -174,6 +174,13 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # reload triggered by some unrelated field must not re-point the revert
         # baseline at the previewed theme. ``None`` until the first load.
         self._last_seen_theme: str | None = None
+        # (theme key, favorites, themes_root) as of the state the gallery
+        # widgets currently, honestly show — updated by both a full _populate()
+        # rebuild and _on_theme_activated's surgical marker move. Boot
+        # constructs this panel then immediately calls load_from_config with
+        # the same boot config, and both used to rebuild the ~150-200-widget
+        # gallery for nothing — see _populate.
+        self._populated_state: tuple[str, tuple[str, ...], Path] | None = None
 
         self._setup_ui()
         # Seed the language combo after the widgets exist (set_language reads
@@ -384,8 +391,28 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # ---- Population ------------------------------------------------------
 
+    def _gallery_state(self) -> tuple[str, tuple[str, ...], Path]:
+        """The (theme key, favorites, themes_root) the gallery should show.
+
+        Shared by the ``_populate`` guard and by ``_on_theme_activated``'s
+        surgical update, which must keep ``_populated_state`` truthful without
+        a full rebuild — see the note there.
+        """
+        return (Theme.get_current_mode(), Theme.get_favorites(), self._themes_root)
+
     def _populate(self) -> None:
-        """Rebuild the gallery from the current Theme state."""
+        """Rebuild the gallery from the current Theme state.
+
+        Skipped when the active theme, favorites and themes_root all match the
+        last rebuild's — __init__ and the boot-time load_from_config call this
+        back to back with identical state, and without the guard the gallery
+        gets built twice for nothing. A real change to any of the three still
+        rebuilds.
+        """
+        state = self._gallery_state()
+        if state == self._populated_state:
+            return
+        self._populated_state = state
         self.gallery.refresh()
         # One call covers populate, Revert and load_from_config: the latter two
         # both rebuild through here.
@@ -417,7 +444,12 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             self._apply_to_app(key)
             # No full rebuild here: the only visible mutation is the Active
             # marker and the selection ring moving between two cards, and the
-            # gallery already moved both when it emitted.
+            # gallery already moved both when it emitted. _populated_state is
+            # still updated to match — skipping that would leave it pointing at
+            # the pre-click theme, so a later revert back to exactly that theme
+            # would find the _populate() guard's state unchanged and wrongly
+            # skip the rebuild that re-syncs the gallery's Active marker.
+            self._populated_state = self._gallery_state()
             self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
         # Outside the "already active" guard: re-selecting the live theme must
         # still restate its measured contrast rather than leave a stale line.

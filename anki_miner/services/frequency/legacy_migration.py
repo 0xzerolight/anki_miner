@@ -41,7 +41,7 @@ def repair_legacy_frequency_source_name(config: AnkiMinerConfig) -> None:
     if not legacy_db.exists():
         return
     try:
-        if storage.read_meta(legacy_db).get("source_name") == _COLLAPSED_LEGACY_NAME:
+        if storage.read_meta_cached(legacy_db).get("source_name") == _COLLAPSED_LEGACY_NAME:
             storage.write_meta(legacy_db, {"source_name": _FRIENDLY_LEGACY_NAME})
             logger.info("Repaired legacy frequency source name to %r", _FRIENDLY_LEGACY_NAME)
     except Exception:

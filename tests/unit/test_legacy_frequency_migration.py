@@ -57,6 +57,20 @@ class TestRepairLegacyFrequencySourceName:
         repair_legacy_frequency_source_name(base_config)
         assert storage.read_meta(db)["source_name"] == "Frequency"
 
+    def test_uses_read_meta_cached(self, base_config: AnkiMinerConfig):
+        """The startup repair reads via the sidecar-aware cache, not a raw
+        SQLite open on every launch — see storage.read_meta_cached."""
+        from unittest.mock import patch
+
+        from anki_miner.services.frequency import storage
+        from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
+
+        db = self._make_legacy_index(base_config, "source")
+        with patch.object(storage, "read_meta_cached", wraps=storage.read_meta_cached) as cached_spy:
+            repair_legacy_frequency_source_name(base_config)
+        cached_spy.assert_called_once_with(db)
+        assert storage.read_meta(db)["source_name"] == "Frequency"
+
     def test_missing_index_is_safe(self, base_config: AnkiMinerConfig):
         from anki_miner.services.frequency.legacy_migration import repair_legacy_frequency_source_name
 
