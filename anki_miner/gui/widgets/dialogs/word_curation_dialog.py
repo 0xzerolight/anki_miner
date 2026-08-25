@@ -1655,8 +1655,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         fetched: object,
     ) -> None:
         """GUI-thread landing point for a completed lookup."""
-        # Gen check FIRST: reads only a plain Python attribute before any Qt touch.
-        # Late results after teardown check here before modifying state.
+        # _closing is the teardown gate: reject before mutating state; gen staleness alone must still clear/drain below.
         is_gen_current = gen == self._lookup_gen
         if self._closing:
             return

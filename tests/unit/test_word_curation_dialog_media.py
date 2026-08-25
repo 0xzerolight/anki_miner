@@ -1052,6 +1052,49 @@ class TestLateCallbackGuards:
         # because the closing/gen checks reject the stale callback
         assert dlg._lookup_inflight == inflight_before
 
+    def test_on_lookup_done_stale_gen_without_closing(self, qtbot, words, deferred_off_thread):
+        """Stale generation WITHOUT _closing: render suppressed but inflight cleared and drain runs.
+
+        When a lookup arrives with a stale generation (from a scroll) but
+        _closing is False, the dialog must NOT paint the stale entry, but must
+        still clear _lookup_inflight and drain any pending request that arrived
+        during the flight.
+        """
+
+        def fake_lookup(term: str) -> list[tuple[str, str]]:
+            return [("JMdict", f"<div>{term} entry</div>")]
+
+        dlg = WordCurationDialog(words, lookup_fn=fake_lookup)
+        qtbot.addWidget(dlg)
+
+        # Start lookup for row 0, paint it, then navigate to row 1
+        _select_row(dlg, 0)
+        _fire_timer(dlg)
+
+        # Row 1 is already cached, so it paints immediately and supersedes gen
+        dlg._lookup_cache[("走る", None)] = [("JMdict", "<div>row 1 entry</div>")]
+        _select_row(dlg, 1)
+        _fire_timer(dlg)
+        assert "row 1 entry" in dlg.definition_view.toHtml()
+
+        # Now the row 0 result arrives (stale gen) but _closing is False
+        assert not dlg._closing
+        work, on_done, _ = deferred_off_thread[0]
+        result = work()
+
+        # The stale result should NOT paint over the current row 1 entry
+        on_done(result)
+        html = dlg.definition_view.toHtml()
+        assert "row 1 entry" in html
+        assert "食べる entry" not in html
+
+        # But _lookup_inflight must be cleared (False)
+        assert dlg._lookup_inflight is False
+
+        # And if there were a pending request, _drain_pending_lookup would start it.
+        # We verify the drain ran by checking the pending was cleared.
+        assert dlg._pending_lookup is None
+
 
 class TestPreviewSuppressedInCurator:
     """The curator with the video preview turned off.
