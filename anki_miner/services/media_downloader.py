@@ -116,12 +116,18 @@ class MediaDownloaderService:
             YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
                 failure modes detected in the output tail.
-            MediaDownloadError: ffmpeg preflight failure (merge/audio-extract
-                presets only), timeout, or any other non-zero exit.
+            MediaDownloadError: ffmpeg preflight failure (merge, audio-extract,
+                or thumbnail/metadata embedding), timeout, or any other
+                non-zero exit.
         """
         logger.info("media download starting: %s -> %s", redact_url_for_log(url), dest_dir)
 
-        needs_ffmpeg = "+" in options.format_selector or options.extract_audio_format is not None
+        needs_ffmpeg = (
+            "+" in options.format_selector
+            or options.extract_audio_format is not None
+            or options.embed_thumbnail
+            or options.embed_metadata
+        )
         if needs_ffmpeg and not self._ffmpeg_reachable():
             raise MediaDownloadError(
                 "This preset needs ffmpeg (merging video+audio or extracting "

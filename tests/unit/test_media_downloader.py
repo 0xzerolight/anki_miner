@@ -488,6 +488,27 @@ class TestFfmpegPreflight:
         service.download("https://example.com/v", tmp_path, options)  # must not raise
         recorder.assert_called_once()
 
+    def test_best_preset_with_embed_thumbnail_preflights_ffmpeg(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        spawned = MagicMock()
+        monkeypatch.setattr(md, "run_supervised", spawned)
+        options = _opts(format_selector="best", embed_thumbnail=True)
+        with pytest.raises(MediaDownloadError, match="ffmpeg"):
+            service.download("https://example.com/v", tmp_path, options)
+        spawned.assert_not_called()
+
+    def test_best_preset_without_embeds_skips_ffmpeg_check(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        recorder, fake_run = _scripted_run([])
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        options = _opts(format_selector="best", embed_thumbnail=False, embed_metadata=False)
+        service.download("https://example.com/v", tmp_path, options)  # must not raise
+        recorder.assert_called_once()
+
     def test_preflight_runs_before_lock_and_spawn(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
     ) -> None:
