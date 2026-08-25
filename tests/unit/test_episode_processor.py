@@ -6020,6 +6020,75 @@ class TestAnkiWriteProvenance:
         assert mock_services["anki_service"].anki_write_state is AnkiWriteState.NO_NOTE_WRITE
 
 
+class TestDefinitionServiceRunCacheClear:
+    """``_run_pipeline`` is the single per-item funnel (see
+    ``TestAnkiWriteProvenance``) — ``DefinitionService.clear_run_cache()``
+    rides that same funnel's ``finally`` so a processor built over a shared,
+    multi-item ``DefinitionService`` (``SharedLookupServices``) never
+    accumulates cache across items, whatever way each item ended."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        anki_service.last_created_note_ids = []
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    @pytest.fixture
+    def processor(self, test_config, mock_services):
+        return build_processor(config=test_config, **mock_services, presenter=NullPresenter())
+
+    def _wire_full_run(self, mock_services):
+        words = [_make_word("食べる")]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    def test_cleared_after_a_successful_run(self, processor, mock_services, tmp_path):
+        self._wire_full_run(mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        mock_services["definition_service"].clear_run_cache.assert_called_once_with()
+
+    def test_cleared_after_an_early_phase_return(self, processor, mock_services, tmp_path):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        mock_services["definition_service"].clear_run_cache.assert_called_once_with()
+
+    def test_cleared_after_a_cancelled_run(self, processor, mock_services, tmp_path):
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [_make_word("食べる")]
+        cancel_event = threading.Event()
+        cancel_event.set()
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", cancel_event=cancel_event)
+        mock_services["definition_service"].clear_run_cache.assert_called_once_with()
+
+    def test_cleared_after_an_unexpected_exception(self, processor, mock_services, tmp_path):
+        mock_services["subtitle_parser"].parse_subtitle_file.side_effect = RuntimeError("parse crash")
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        mock_services["definition_service"].clear_run_cache.assert_called_once_with()
+
+    def test_not_cleared_on_a_preflight_failure_nothing_was_probed_yet(self, processor, mock_services, tmp_path):
+        """A SetupError from preflight propagates raw before ``_run_pipeline``'s
+        body/finally ever run — no probe happened this item, so there is
+        nothing to clear."""
+        mock_services["anki_service"].verify_card_target.side_effect = SetupError("note type is missing a field")
+        with pytest.raises(SetupError):
+            processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        mock_services["definition_service"].clear_run_cache.assert_not_called()
+
+
 class TestCurationQuietMarker:
     """A callback carrying suppress_curation_messages=True (season pre-pass
     capture) silences _run_curation's two info lines; an unmarked callback

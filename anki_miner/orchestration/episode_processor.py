@@ -1731,7 +1731,8 @@ class EpisodeProcessor:
         temp allocation so no dir leaks on failure), the per-run temp folder, the
         partial-IDs reset, the per-run ``_external_cancel`` bridge, and the
         try/except/finally tail (partial-card harvest on failure; bridge drop +
-        temp cleanup in ``finally``). A narrower try wraps only the two pre-flight
+        definition-service run-cache clear + temp cleanup in ``finally``). A
+        narrower try wraps only the two pre-flight
         steps that touch the network/filesystem (card-target verify, temp-folder
         allocation): any ``AnkiMinerException`` they raise still propagates raw
         (unchanged contract), but a genuinely unexpected exception (e.g. an
@@ -1807,6 +1808,12 @@ class EpisodeProcessor:
         finally:
             if cancel_event is not None:
                 self._external_cancel = None
+            # Bound DefinitionService's per-run attest-quality cache to this
+            # item: a shared processor (SharedLookupServices) keeps one
+            # DefinitionService alive across a whole multi-item batch, so
+            # without this the cache would grow across every item instead of
+            # just the one that just finished.
+            self.definition_service.clear_run_cache()
             if keep_temp:
                 logger.info(
                     "ANKI_MINER_KEEP_TEMP set; leaving run temp folder at %s",

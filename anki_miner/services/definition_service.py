@@ -121,6 +121,12 @@ class DefinitionService:
         self._providers = providers
         self._registry = registry
         self._loaded = False
+        # Per-run cache for _provider_attest_quality, keyed on (id(provider),
+        # include_readings). See clear_run_cache() for scope/lifetime; plain
+        # dict is fine unlocked because a DefinitionService (like the rest of
+        # this class — ensure_loaded/_loaded above included) is only ever
+        # touched from the one worker thread processing a run.
+        self._attest_cache: dict[tuple[int, bool], dict[str, dict[str, frozenset[str]]]] = {}
 
     def ensure_loaded(self) -> bool:
         """Call load() on every provider exactly once. Returns True if at
@@ -728,22 +734,57 @@ class DefinitionService:
             logger.warning("Provider '%s' raised reading commonness_aware; treating as unaware: %s", provider.name, e)
             return False
 
-    @staticmethod
-    def _provider_attest_quality(
-        provider: DictionaryProvider, words: list[str], include_readings: bool
-    ) -> dict[str, dict[str, frozenset[str]]]:
-        """Call ``provider.attest_quality`` under the never-raises boundary.
+    def clear_run_cache(self) -> None:
+        """Drop the per-run ``_provider_attest_quality`` cache.
 
-        Providers without the optional method (or that raise) contribute nothing
-        (empty map), so a single buggy provider can never abort the probe."""
-        fn = getattr(provider, "attest_quality", None)
-        if not callable(fn):
-            return {}
-        try:
-            return fn(words, include_readings)  # type: ignore[no-any-return]
-        except Exception as e:
-            logger.warning("Provider '%s' raised during attest_quality; skipping: %s", provider.name, e)
-            return {}
+        Called by ``EpisodeProcessor._run_pipeline`` at the end of every
+        episode/reading item. A provider's dictionary content cannot change
+        mid-run, so nothing here is invalidated by clearing — this exists
+        purely to bound memory: ``SharedLookupServices`` keeps one
+        ``DefinitionService`` alive across an entire multi-item batch, so
+        without this the cache would accumulate every distinct surface ever
+        probed across the whole batch instead of just the current item's
+        vocabulary. That per-item ceiling is also why no size cap is needed
+        (contrast the clear-on-cap memos in ``SubtitleParserService``, which
+        bound a single corpus-wide instance): this cache clears out from under
+        itself before the next item has a chance to grow it back.
+        """
+        self._attest_cache.clear()
+
+    def _provider_attest_quality(
+        self, provider: DictionaryProvider, words: list[str], include_readings: bool
+    ) -> dict[str, dict[str, frozenset[str]]]:
+        """Cached, never-raises wrapper over ``provider.attest_quality``.
+
+        Cached per ``(provider, include_readings)`` for the run (see
+        ``clear_run_cache``): ``offline_deinflection_terms_exist``,
+        ``offline_term_commonness`` and ``offline_kana_attest_quality`` all
+        read the same per-word rule sets off the same providers, so a word
+        already probed by one is free to the others. Only words NOT already
+        cached for this ``(provider, include_readings)`` pair trigger a
+        provider call, and that call covers just the missing words — a later
+        call that introduces new words does an incremental batch for the
+        delta, never a re-probe of words already known.
+
+        Providers without the optional method (or that raise) contribute
+        nothing (empty entries for every requested word — and that miss is
+        itself cached, since a provider that can't answer now won't answer
+        later within the same run), so a single buggy provider can never
+        abort the probe."""
+        cached = self._attest_cache.setdefault((id(provider), include_readings), {})
+        missing = [w for w in dict.fromkeys(words) if w not in cached]
+        if missing:
+            fn = getattr(provider, "attest_quality", None)
+            fresh: dict[str, dict[str, frozenset[str]]] = {}
+            if callable(fn):
+                try:
+                    fresh = fn(missing, include_readings)
+                except Exception as e:
+                    logger.warning("Provider '%s' raised during attest_quality; skipping: %s", provider.name, e)
+            empty = {"term_rules": frozenset[str](), "common_rules": frozenset[str]()}
+            for w in missing:
+                cached[w] = fresh.get(w, empty)
+        return {w: cached[w] for w in words if w in cached}
 
     def offline_term_commonness(self, terms: list[str]) -> dict[str, bool] | None:
         """Whether each term is a COMMON headword in a commonness-aware offline dict.

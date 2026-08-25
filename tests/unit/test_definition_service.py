@@ -10,6 +10,7 @@ from anki_miner.services.definition_service import (
     collect_dictionary_css,
     collect_dictionary_css_entries,
 )
+from anki_miner.services.dictionary.providers import indexed_provider as indexed_provider_module
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.registry import DictionaryRegistry
 from anki_miner.services.dictionary.storage import (
@@ -2034,6 +2035,98 @@ class TestOfflineKanaAttestQuality:
         q = service.offline_kana_attest_quality(["有る"])
         assert q is not None
         assert q["有る"]["term_rules"] == frozenset({"v5"})
+
+
+class TestAttestQualityRunCache:
+    """``_provider_attest_quality`` caches per (provider, include_readings) for
+    the run: ``offline_deinflection_terms_exist``, ``offline_term_commonness``
+    and ``offline_kana_attest_quality`` all read the same per-word rule sets
+    off the same providers, so a word probed by one is free to the others."""
+
+    @staticmethod
+    def _spy_storage(monkeypatch) -> list[tuple[tuple[str, ...], bool]]:
+        """Wrap the real ``storage.attest_detail`` call, recording every
+        (words, include_readings) it's invoked with while still delegating —
+        results stay real, only the call count/args are observed."""
+        calls: list[tuple[tuple[str, ...], bool]] = []
+        original = indexed_provider_module.storage_attest_detail
+
+        def spy(conn, words, include_readings):
+            calls.append((tuple(words), include_readings))
+            return original(conn, words, include_readings)
+
+        monkeypatch.setattr(indexed_provider_module, "storage_attest_detail", spy)
+        return calls
+
+    @staticmethod
+    def _provider(root: Path) -> IndexedDictProvider:
+        return _seed_tagged_provider(
+            root,
+            "jit",
+            "Jitendex",
+            [
+                DictRow(term="有る", reading="ある", content="<div>be</div>", tags="popular", rules="v5", sequence=1),
+                DictRow(term="見る", reading="みる", content="<div>see</div>", tags="popular", rules="v1", sequence=2),
+                DictRow(
+                    term="新しい",
+                    reading="あたらしい",
+                    content="<div>new</div>",
+                    tags="popular",
+                    rules="adj-i",
+                    sequence=3,
+                ),
+            ],
+            _JITENDEX_TAGS,
+        )
+
+    def test_overlapping_probes_share_one_attest_detail_call(self, test_config, tmp_path: Path, monkeypatch):
+        calls = self._spy_storage(monkeypatch)
+        p = self._provider(tmp_path)
+        service = DefinitionService(test_config, providers=[p])
+
+        service.offline_deinflection_terms_exist([("有る", 0), ("見る", 0)])
+        service.offline_term_commonness(["有る", "見る"])
+
+        assert len(calls) == 1
+        words, include_readings = calls[0]
+        assert set(words) == {"有る", "見る"}
+        assert include_readings is False
+
+    def test_new_words_trigger_only_an_incremental_batch(self, test_config, tmp_path: Path, monkeypatch):
+        calls = self._spy_storage(monkeypatch)
+        p = self._provider(tmp_path)
+        service = DefinitionService(test_config, providers=[p])
+
+        service.offline_term_commonness(["有る"])
+        service.offline_term_commonness(["有る", "新しい"])
+
+        assert len(calls) == 2
+        assert set(calls[1][0]) == {"新しい"}
+
+    def test_clear_run_cache_forces_a_reprobe(self, test_config, tmp_path: Path, monkeypatch):
+        calls = self._spy_storage(monkeypatch)
+        p = self._provider(tmp_path)
+        service = DefinitionService(test_config, providers=[p])
+
+        service.offline_term_commonness(["有る"])
+        service.clear_run_cache()
+        service.offline_term_commonness(["有る"])
+
+        assert len(calls) == 2
+
+    def test_cache_is_transparent_to_results(self, test_config, tmp_path: Path):
+        """A service whose cache is pre-warmed by an overlapping probe returns
+        byte-identical results to a cold, freshly built service."""
+        warm = DefinitionService(test_config, providers=[self._provider(tmp_path / "warm")])
+        warm.offline_deinflection_terms_exist([("見る", 0)])
+
+        fresh = DefinitionService(test_config, providers=[self._provider(tmp_path / "fresh")])
+
+        candidates = [("有る", 0), ("見る", 0), ("新しい", 0)]
+        terms = ["有る", "見る", "新しい"]
+        assert warm.offline_deinflection_terms_exist(candidates) == fresh.offline_deinflection_terms_exist(candidates)
+        assert warm.offline_term_commonness(terms) == fresh.offline_term_commonness(terms)
+        assert warm.offline_kana_attest_quality(terms) == fresh.offline_kana_attest_quality(terms)
 
 
 class TestRedirectFallsThroughChain:
