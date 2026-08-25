@@ -195,7 +195,7 @@ def classify_error_tail(joined_lower: str) -> str | None:
     service-specific failure signatures (e.g. youtube_fetcher's extractor-
     freshness markers) layers its own extra checks around this result.
     """
-    if ("sign in" in joined_lower and "confirm" in joined_lower) or ("sign in to confirm" in joined_lower):
+    if "sign in" in joined_lower and "confirm" in joined_lower:
         return "bot"
     if "database is locked" in joined_lower or "database locked" in joined_lower:
         return "cookie_lock"

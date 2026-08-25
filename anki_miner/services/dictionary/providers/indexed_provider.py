@@ -162,10 +162,10 @@ class IndexedDictProvider:
             try:
                 self._conn = open_readonly(self._db_path)
             except sqlite3.DatabaseError as e:
-                # A backfill-induced lock (writer holds EXCLUSIVE, blocks readers
-                # too) must not make the dictionary unavailable for the whole
-                # session — pre-backfill behavior never failed load() over the
-                # missing index alone.
+                # This guard must not RAISE: service_factory.py calls p.load()
+                # unwrapped inside list comprehensions, so an exception here
+                # would kill the whole provider-chain build, not just this
+                # dictionary — degrade to unavailable instead.
                 logger.warning("Failed to reopen %s after backfill: %s", self._db_path, e)
                 return False
 
