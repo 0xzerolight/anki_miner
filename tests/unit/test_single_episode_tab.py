@@ -1145,6 +1145,42 @@ def test_tracks_probe_runs_off_gui_thread(tab, tmp_path, qtbot):
     assert tab.tracks_button.isEnabled()  # re-enabled after success
 
 
+def test_torn_down_tab_survives_a_late_track_probe_completion(tab, tmp_path, qtbot):
+    """The tab's own tracks_button can be destroyed while the probe is in flight.
+
+    ``_on_streams``'s first line re-enables ``tracks_button``; if the tab is
+    torn down (app close) before the queued result_ready delivers, that write
+    must not raise ``RuntimeError``.
+    """
+    import threading
+
+    from PyQt6 import sip
+
+    fake_video = tmp_path / "ep01.mkv"
+    fake_video.touch()
+    tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
+    tab.video_selector.is_valid = MagicMock(return_value=True)
+
+    entered = threading.Event()
+    release = threading.Event()
+
+    def _probe(*_args, **_kwargs):
+        entered.set()
+        assert release.wait(3)
+        return []
+
+    with patch("anki_miner.gui.widgets.single_episode_tab.list_audio_streams", side_effect=_probe):
+        before = set(getattr(tab, "_off_thread_workers", set()))
+        tab._on_tracks_clicked()
+        assert entered.wait(3)
+        worker = next(iter(set(tab._off_thread_workers) - before))
+
+        sip.delete(tab.tracks_button)
+        release.set()
+        assert worker.wait(3000)
+        qtbot.wait(50)  # let the queued result_ready delivery run; must not raise
+
+
 def test_tracks_empty_streams_shows_info_and_reenables(tab, tmp_path, qtbot):
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 from dataclasses import replace
@@ -120,6 +121,10 @@ class SingleEpisodeTab(MiningTabBase):
         self._cancel_requested = False
         self.recent_manager = RecentFilesManager()
         self._audio_track_override: int | None = None
+        # Bumped in shutdown() so a Tracks/Timing probe callback already queued
+        # for delivery when app close begins finds itself stale and never
+        # touches a button the close may be tearing down (M7).
+        self._teardown_generation = 0
 
         # Run snapshots — captured on the GUI thread at _start_processing so
         # completion and off-thread curation never read mutable QWidgets for run
@@ -442,53 +447,62 @@ class SingleEpisodeTab(MiningTabBase):
         # enough to freeze the UI. Disable the button so a second click can't
         # spawn a parallel probe; re-enabled in both callbacks.
         self.tracks_button.setEnabled(False)
+        generation = self._teardown_generation
 
         def _probe() -> object:
             # Each click probes fresh — cheap for typical anime files (<1s).
             return list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
 
         def _on_streams(result: object) -> None:
-            self.tracks_button.setEnabled(True)
-            if self.video_selector.path_or_none() != video_path:
+            if generation != self._teardown_generation:
                 return
-            streams = cast("list[AudioStream]", result)
-            if not streams:
-                QMessageBox.information(
-                    self,
-                    self.tr("No Audio Tracks"),
-                    self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
-                )
-                return
-
-            # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
-            auto_stream = next(
-                (s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
-                None,
-            )
-
-            dialog = AudioTracksDialog(
-                streams=streams,
-                current_override=self._audio_track_override,
-                auto_detected=auto_stream,
-                parent=self,
-            )
-            if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+            # Tab torn down while the probe was in flight (its C++ widgets are
+            # gone); the queued callback has nothing live to update.
+            with contextlib.suppress(RuntimeError):
+                self.tracks_button.setEnabled(True)
                 if self.video_selector.path_or_none() != video_path:
                     return
-                self._audio_track_override = dialog.selected_override()
+                streams = cast("list[AudioStream]", result)
+                if not streams:
+                    QMessageBox.information(
+                        self,
+                        self.tr("No Audio Tracks"),
+                        self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+                    )
+                    return
+
+                # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
+                auto_stream = next(
+                    (s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
+                    None,
+                )
+
+                dialog = AudioTracksDialog(
+                    streams=streams,
+                    current_override=self._audio_track_override,
+                    auto_detected=auto_stream,
+                    parent=self,
+                )
+                if dialog.exec() == AudioTracksDialog.DialogCode.Accepted:
+                    if self.video_selector.path_or_none() != video_path:
+                        return
+                    self._audio_track_override = dialog.selected_override()
 
         def _on_probe_error(msg: str) -> None:
-            self.tracks_button.setEnabled(True)
             logger.error("Failed to probe audio tracks: %s", msg)
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("Audio tracks could not be read."),
-                    details=msg,
-                    action_id="settings.media",
-                    action_text=self.tr("Open Media Settings"),
-                ),
-                action=self._open_media_settings,
-            )
+            if generation != self._teardown_generation:
+                return
+            with contextlib.suppress(RuntimeError):
+                self.tracks_button.setEnabled(True)
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr("Audio tracks could not be read."),
+                        details=msg,
+                        action_id="settings.media",
+                        action_text=self.tr("Open Media Settings"),
+                    ),
+                    action=self._open_media_settings,
+                )
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
 
@@ -529,49 +543,58 @@ class SingleEpisodeTab(MiningTabBase):
         # Parse with zero offset — SubtitleViewer handles offsetting itself.
         config_no_offset = replace(self.config, subtitle_offset=0.0)
         self.timing_button.setEnabled(False)
+        generation = self._teardown_generation
 
         def _parse() -> object:
             return SubtitleParserService(config_no_offset).parse_raw_entries(subtitle_file)
 
         def _on_parsed(result: object) -> None:
-            self.timing_button.setEnabled(True)
-            if (
-                self.video_selector.path_or_none() != video_path
-                or self.subtitle_selector.path_or_none() != subtitle_path
-            ):
+            if generation != self._teardown_generation:
                 return
-            entries = cast("list[tuple[float, float, str]]", result)
-            if not entries:
-                QMessageBox.information(
-                    self, self.tr("No Subtitles"), self.tr("No subtitle entries found in the file.")
+            # Tab torn down while the parse was in flight (its C++ widgets are
+            # gone); the queued callback has nothing live to update.
+            with contextlib.suppress(RuntimeError):
+                self.timing_button.setEnabled(True)
+                if (
+                    self.video_selector.path_or_none() != video_path
+                    or self.subtitle_selector.path_or_none() != subtitle_path
+                ):
+                    return
+                entries = cast("list[tuple[float, float, str]]", result)
+                if not entries:
+                    QMessageBox.information(
+                        self, self.tr("No Subtitles"), self.tr("No subtitle entries found in the file.")
+                    )
+                    return
+
+                # Open subtitle viewer
+                from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+                viewer = SubtitleViewer(
+                    video_file,
+                    entries,
+                    initial_offset=offset,
+                    parent=self,
+                    audio_track_override=self._audio_track_override,
                 )
-                return
-
-            # Open subtitle viewer
-            from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
-
-            viewer = SubtitleViewer(
-                video_file,
-                entries,
-                initial_offset=offset,
-                parent=self,
-                audio_track_override=self._audio_track_override,
-            )
-            # Nothing happens until exec() returns: the viewer holds a live mpv
-            # core and releases it on the way out, so navigating (or writing the
-            # offset) before then would race its teardown.
-            result = viewer.exec()
-            if result == SubtitleViewer.DialogCode.Accepted:
-                self.offset_spinbox.setValue(viewer.get_offset())
-            elif result == SubtitleViewer.ALIGN_REQUESTED:
-                self._hand_off_to_retime(video_file, subtitle_file)
+                # Nothing happens until exec() returns: the viewer holds a live mpv
+                # core and releases it on the way out, so navigating (or writing the
+                # offset) before then would race its teardown.
+                result = viewer.exec()
+                if result == SubtitleViewer.DialogCode.Accepted:
+                    self.offset_spinbox.setValue(viewer.get_offset())
+                elif result == SubtitleViewer.ALIGN_REQUESTED:
+                    self._hand_off_to_retime(video_file, subtitle_file)
 
         def _on_parse_error(msg: str) -> None:
-            self.timing_button.setEnabled(True)
             logger.error("Failed to parse subtitles: %s", msg)
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("The subtitles could not be read. Check the file format."), details=msg)
-            )
+            if generation != self._teardown_generation:
+                return
+            with contextlib.suppress(RuntimeError):
+                self.timing_button.setEnabled(True)
+                self.show_screen_issue(
+                    ScreenIssue(summary=self.tr("The subtitles could not be read. Check the file format."), details=msg)
+                )
 
         run_off_thread(self, _parse, _on_parsed, _on_parse_error)
 
@@ -919,6 +942,20 @@ class SingleEpisodeTab(MiningTabBase):
         if config.subtitle_offset != self.config.subtitle_offset:
             self.offset_spinbox.setValue(config.subtitle_offset)
         self.config = config
+
+    def shutdown(self) -> None:
+        """Invalidate in-flight Tracks/Timing probe callbacks before app close.
+
+        ``MiningTabBase.shutdown`` (called by ``BackgroundTaskController.shutdown``
+        for every mining tab) cancels the curation dialog and joins leaked runs;
+        bumping the generation first marks any Tracks/Timing probe callback
+        already queued for delivery as stale, so it never touches a button that
+        close may be tearing down (M7).
+        """
+        # getattr: test doubles that subclass this tab and skip its __init__
+        # (e.g. duck-typed shutdown-call tests) never set the attribute.
+        self._teardown_generation = getattr(self, "_teardown_generation", 0) + 1
+        super().shutdown()
 
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent worker run.

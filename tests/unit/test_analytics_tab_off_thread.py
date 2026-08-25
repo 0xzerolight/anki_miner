@@ -128,6 +128,42 @@ def test_error_path_clears_in_flight_and_logs(qtbot, caplog):
         tab.deleteLater()
 
 
+def test_refresh_completion_survives_widget_teardown(qtbot):
+    """A refresh dispatched from showEvent can still be in flight at teardown.
+
+    ``_on_refresh_done`` writes to ``reset_button``/dashboard/table widgets;
+    if the tab's own children are torn down before the queued result_ready
+    delivers (app close, or the tab's container swapping it out), none of
+    those writes should raise ``RuntimeError``.
+    """
+    from PyQt6 import sip
+
+    service = _make_service()
+    release = threading.Event()
+
+    def _slow_stats():
+        assert release.wait(3)
+        return _empty_stats()
+
+    service.get_overall_stats.side_effect = _slow_stats
+
+    tab = AnalyticsTab(service)
+    qtbot.addWidget(tab)
+    try:
+        tab.refresh_data(force=True)
+        assert tab._refresh_in_flight is True
+
+        # Tab torn down mid-refresh: the first widget _on_refresh_done touches
+        # is gone by the time the queued result_ready delivers.
+        sip.delete(tab.reset_button)
+
+        release.set()
+        # Must not raise RuntimeError when the guarded callback runs.
+        qtbot.waitUntil(lambda: tab._refresh_in_flight is False, timeout=3000)
+    finally:
+        tab.deleteLater()
+
+
 def test_unavailable_service_short_circuits(qtbot):
     """is_available() False keeps the old short-circuit (no dispatch)."""
     service = _make_service()

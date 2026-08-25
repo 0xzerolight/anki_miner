@@ -1,5 +1,6 @@
 """Analytics tab for mining statistics, difficulty ranking, and progress tracking."""
 
+import contextlib
 import logging
 import time
 from dataclasses import dataclass
@@ -137,8 +138,21 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         # runs, and this flag makes refresh_data a no-op while a reset runs, so the
         # two can never overlap in either direction.
         self._reset_in_flight: bool = False
+        # Bumped in shutdown() so a refresh/reset callback already queued for
+        # delivery when app close begins finds itself stale and never touches
+        # a table or button the close may be tearing down (M8). Analytics is
+        # added directly to the main QTabWidget, so
+        # BackgroundTaskController.shutdown calls this like every other
+        # top-level tab that exposes the hook.
+        self._teardown_generation = 0
         self._setup_ui()
         self._setup_accessibility()
+
+    def shutdown(self) -> None:
+        """Invalidate in-flight refresh/reset callbacks before app close."""
+        # getattr: test doubles that subclass this tab and skip its __init__
+        # never set the attribute.
+        self._teardown_generation = getattr(self, "_teardown_generation", 0) + 1
 
     def _setup_ui(self) -> None:
         scroll_area = QScrollArea()
@@ -390,12 +404,17 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     def _on_refresh_done(self, bundle: object) -> None:
         """GUI thread: render the pre-fetched bundle and tick the TTL clock."""
         self._refresh_in_flight = False
-        # Success is the only thing that clears a refresh issue (D24).
-        self.clear_screen_issue()
-        if not isinstance(bundle, _AnalyticsBundle):  # defensive; never expected
+        if self._teardown_generation:
             return
-        self._apply_bundle(bundle)
-        self._last_refresh = time.monotonic()
+        # Tab torn down while the fetch was in flight (its C++ widgets are
+        # gone); the queued callback has nothing live to render.
+        with contextlib.suppress(RuntimeError):
+            # Success is the only thing that clears a refresh issue (D24).
+            self.clear_screen_issue()
+            if not isinstance(bundle, _AnalyticsBundle):  # defensive; never expected
+                return
+            self._apply_bundle(bundle)
+            self._last_refresh = time.monotonic()
 
     def _on_refresh_error(self, msg: str) -> None:
         """GUI thread: clear the in-flight flag, log, and say so on screen.
@@ -407,15 +426,18 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         """
         self._refresh_in_flight = False
         logging.getLogger(__name__).error("Failed to refresh analytics data: %s", msg)
-        self.show_screen_issue(
-            ScreenIssue(
-                summary=self.tr("Analytics could not be refreshed."),
-                details=msg,
-                action_id="analytics.retry",
-                action_text=self.tr("Retry"),
-            ),
-            action=lambda: self.refresh_data(force=True),
-        )
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Analytics could not be refreshed."),
+                    details=msg,
+                    action_id="analytics.retry",
+                    action_text=self.tr("Retry"),
+                ),
+                action=lambda: self.refresh_data(force=True),
+            )
 
     def _on_reset_clicked(self) -> None:
         """Confirm, then wipe both stats tables off the GUI thread.
@@ -446,23 +468,29 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     def _on_reset_done(self, _removed: object) -> None:
         """GUI thread: re-read the now-empty tables so the tab shows the result."""
         self._reset_in_flight = False
-        self.refresh_button.setEnabled(True)
-        self.clear_screen_issue()
-        # force=True: the TTL would otherwise swallow the one refresh that matters.
-        self.refresh_data(force=True)
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.refresh_button.setEnabled(True)
+            self.clear_screen_issue()
+            # force=True: the TTL would otherwise swallow the one refresh that matters.
+            self.refresh_data(force=True)
 
     def _on_reset_error(self, msg: str) -> None:
         """GUI thread: re-arm both buttons and say so on screen (D24)."""
         self._reset_in_flight = False
-        self.refresh_button.setEnabled(True)
-        self.reset_button.setEnabled(True)
         logging.getLogger(__name__).error("Failed to reset analytics data: %s", msg)
-        self.show_screen_issue(
-            ScreenIssue(
-                summary=self.tr("Statistics could not be reset."),
-                details=msg,
+        if self._teardown_generation:
+            return
+        with contextlib.suppress(RuntimeError):
+            self.refresh_button.setEnabled(True)
+            self.reset_button.setEnabled(True)
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Statistics could not be reset."),
+                    details=msg,
+                )
             )
-        )
 
     def _apply_bundle(self, bundle: _AnalyticsBundle) -> None:
         """Render every section from a pre-fetched bundle (GUI thread)."""
