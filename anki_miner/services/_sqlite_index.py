@@ -341,7 +341,25 @@ def validate_index_schema_cached(db_path: Path, family: StoreFamily) -> bool:
 
 
 def _sidecar_schema_verdict(db_path: Path, family: StoreFamily) -> bool | None:
-    """Return the verdict a fresh sidecar proves, or ``None`` if it cannot."""
+    """Return the verdict a fresh sidecar proves, or ``None`` if it cannot.
+
+    Startup recovery quarantines a slot this returns ``False`` for, so a verdict
+    that under-records a healthy index destroys a good store. Freshness here is
+    mtime-only and proves no provenance; the false-broken direction is unreachable
+    only because of two things this module does not enforce:
+
+    1. Nothing mutates an index in place — no ``ALTER TABLE`` anywhere — so a
+       recorded column list can never describe a schema the database has since
+       grown out of. An in-place migration would break this the day it lands.
+    2. :func:`write_meta` closes its connection *before* publishing the sidecar,
+       so the sidecar's mtime is never older than the last byte written to the
+       database. Switching these indexes to WAL would break it: the ``-wal`` file
+       absorbs the commit and the main database's mtime stops moving with it.
+
+    Either change makes a stale verdict live and destructive. Whoever makes one
+    must gate this path on something stronger than an mtime — a content hash, or
+    a generation counter written into both files.
+    """
     payload = _read_fresh_sidecar(db_path)
     if payload is None:
         return None
