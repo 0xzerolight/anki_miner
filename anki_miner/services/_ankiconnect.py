@@ -7,6 +7,16 @@ services. White-box unit tests import it directly and patch
 ``tests/unit/test_anki_service.py``) to drive the HTTP layer without a live Anki. The
 underscore therefore stays and the module path is a deliberately stable test surface;
 do not rename it or reroute those patch targets.
+
+In production, ``post_action``/``post_multi`` send through one shared, lazily
+created ``requests.Session`` (see ``_post``) so the 20-200 calls a typical run
+makes reuse a keep-alive TCP connection instead of paying a fresh
+socket+TLS-free handshake per call. This is invisible to the patch seam above:
+``_post`` compares the live ``requests.post`` against the original captured at
+import time, and if a test has replaced it, routes the call through the patched
+callable instead of the session. Do not call ``requests.post`` directly from new
+code in this module - go through ``_post`` so both the keep-alive path and the
+patch seam keep working.
 """
 
 import logging
@@ -17,6 +27,34 @@ import requests
 from anki_miner.exceptions import AnkiConnectionError
 
 logger = logging.getLogger(__name__)
+
+# Stashed at import time so `_post` can detect a test having patched
+# `requests.post` on this module (see module docstring) and honour it instead
+# of the shared session below.
+_ORIGINAL_POST = requests.post
+
+# Lazily created, reused across calls to keep the AnkiConnect TCP connection
+# alive instead of opening a fresh one per action.
+_session: requests.Session | None = None
+
+
+def _get_session() -> requests.Session:
+    """Return the shared keep-alive session, creating it on first use."""
+    global _session
+    if _session is None:
+        _session = requests.Session()
+    return _session
+
+
+def _post(url: str, **kwargs: Any) -> requests.Response:
+    """POST to AnkiConnect, reusing one session - unless a test has patched ``requests.post``.
+
+    See the module docstring for the patch-seam contract this preserves.
+    """
+    if requests.post is not _ORIGINAL_POST:
+        return requests.post(url, **kwargs)
+    return _get_session().post(url, **kwargs)
+
 
 # Cap the fully-buffered response body before JSON-decoding it. AnkiConnect can
 # legitimately return a multi-hundred-MB payload (e.g. notesInfo over a large
@@ -82,7 +120,7 @@ def post_action(
         timeout,
     )
     try:
-        response = requests.post(
+        response = _post(
             ankiconnect_url,
             json={"action": action, "version": 6, "params": params or {}},
             timeout=timeout,
@@ -166,7 +204,7 @@ def post_multi(
         timeout,
     )
     try:
-        response = requests.post(
+        response = _post(
             ankiconnect_url,
             json={"action": "multi", "version": 6, "params": {"actions": actions}},
             timeout=timeout,
