@@ -29,6 +29,7 @@ from anki_miner.exceptions.youtube import (
     YtdlpNotFoundError,
 )
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils import ytdlp_resolver
 from anki_miner.utils.process_supervisor import SupervisedResult, SupervisedState
 
 _REAL_KILLPG = os.killpg if sys.platform != "win32" else None
@@ -2579,3 +2580,128 @@ class TestYtdlpNotFound:
 
     def test_ytdlp_not_found_is_youtube_fetch_error(self) -> None:
         assert issubclass(YtdlpNotFoundError, YouTubeFetchError)
+
+
+def _lock_acquirable_from_another_thread() -> bool:
+    """True when a foreign thread can take the generation lock right now.
+
+    The lock is an RLock, so probing it on the thread that may still hold it would
+    always succeed; the probe has to run somewhere else to mean anything.
+    """
+    seen: list[bool] = []
+
+    def probe() -> None:
+        with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            seen.append(bool(acquired))
+
+    thread = threading.Thread(target=probe)
+    thread.start()
+    thread.join(10)
+    assert not thread.is_alive()
+    return seen == [True]
+
+
+class TestGenerationLockScope:
+    """A running yt-dlp only holds the generation lock when it IS the managed binary.
+
+    The lock exists so the updater cannot swap the app-managed binary between argv
+    construction and exec (c963c8a1). A user-supplied / PATH / bundled yt-dlp carries
+    no such hazard, and holding the lock across a multi-hour download starved every
+    other resolver caller (System Health validation, diagnostics, availability probes).
+    """
+
+    @pytest.fixture(autouse=True)
+    def _isolated_managed_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+
+    @staticmethod
+    def _lock_free_during(call: Any, executable: str) -> bool:
+        """Run *call* with a yt-dlp spawn parked mid-flight; report lock availability."""
+        spawned = threading.Event()
+        finish = threading.Event()
+
+        def fake_run_supervised(cmd: list[str], **kwargs: Any) -> Any:
+            assert cmd[0] == executable
+            spawned.set()
+            assert finish.wait(10)
+            return _fake_run(1, "", "ERROR: stopped")
+
+        outcome: list[bool] = []
+
+        def worker() -> None:
+            # The parked run always ends non-zero; the failure is not what is under test.
+            with pytest.raises(YouTubeFetchError):
+                call()
+
+        with (
+            patch("anki_miner.services.youtube_fetcher.resolve_ytdlp", return_value=executable),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", side_effect=fake_run_supervised),
+        ):
+            thread = threading.Thread(target=worker)
+            thread.start()
+            try:
+                assert spawned.wait(10), "run_supervised was never reached"
+                with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+                    outcome.append(bool(acquired))
+            finally:
+                finish.set()
+                thread.join(10)
+        assert not thread.is_alive()
+        return outcome == [True]
+
+    def test_fetch_video_with_a_non_managed_binary_frees_the_lock(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        assert self._lock_free_during(
+            lambda: service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only"),
+            "/usr/bin/yt-dlp",
+        )
+
+    def test_fetch_video_with_the_managed_binary_holds_the_lock(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
+        assert not self._lock_free_during(
+            lambda: service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only"),
+            managed,
+        )
+
+    def test_probe_metadata_with_a_non_managed_binary_frees_the_lock(self, service: YouTubeFetcherService) -> None:
+        assert self._lock_free_during(
+            lambda: service.probe_metadata("https://youtu.be/abc123"),
+            "/usr/bin/yt-dlp",
+        )
+
+    def test_probe_metadata_with_the_managed_binary_holds_the_lock(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
+        assert not self._lock_free_during(lambda: service.probe_metadata("https://youtu.be/abc123"), managed)
+
+    def test_probe_playlist_with_a_non_managed_binary_frees_the_lock(self, service: YouTubeFetcherService) -> None:
+        assert self._lock_free_during(
+            lambda: service.probe_playlist("https://youtu.be/playlist", limit=5),
+            "/usr/bin/yt-dlp",
+        )
+
+    def test_probe_playlist_with_the_managed_binary_holds_the_lock(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
+        assert not self._lock_free_during(lambda: service.probe_playlist("https://youtu.be/playlist", limit=5), managed)
+
+    def test_the_lock_is_released_after_a_managed_run(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
+        with (
+            patch("anki_miner.services.youtube_fetcher.resolve_ytdlp", return_value=managed),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", "ERROR: stopped"),
+            ),
+            pytest.raises(YouTubeFetchError),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+        assert _lock_acquirable_from_another_thread()

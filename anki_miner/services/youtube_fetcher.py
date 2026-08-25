@@ -32,7 +32,7 @@ from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.subprocess_utils import no_window_kwargs
-from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
+from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp, ytdlp_generation_lock
 
 # Message appended to YtdlpNotFoundError so the user can self-serve the fix.
 _YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
@@ -158,7 +158,7 @@ class YouTubeFetcherService:
             VideoTooLongError: video duration exceeds configured maximum.
         """
         logger.info("youtube probe starting: %s", redact_url_for_log(url))
-        with managed_ytdlp_lock():
+        with ytdlp_generation_lock() as release_unless_managed:
             cmd: list[str] = [
                 self._ytdlp(),
                 "--ignore-config",
@@ -174,6 +174,9 @@ class YouTubeFetcherService:
             # probe alone, --config-location loads a planted --exec config). T-34.
             cmd.append("--")
             cmd.append(url)
+            # Only the managed slot keeps the lock across the run; see
+            # ytdlp_generation_lock. Must stay the last statement before the spawn.
+            release_unless_managed(cmd[0])
             proc = run_supervised(
                 cmd,
                 timeout_s=timeout_s,
@@ -300,7 +303,7 @@ class YouTubeFetcherService:
             redact_url_for_log(url),
             limit,
         )
-        with managed_ytdlp_lock():
+        with ytdlp_generation_lock() as release_unless_managed:
             cmd: list[str] = [
                 self._ytdlp(),
                 "--ignore-config",
@@ -316,6 +319,9 @@ class YouTubeFetcherService:
             # End-of-options separator before the user URL — see probe_metadata. T-34.
             cmd.append("--")
             cmd.append(url)
+            # Only the managed slot keeps the lock across the run; see
+            # ytdlp_generation_lock. Must stay the last statement before the spawn.
+            release_unless_managed(cmd[0])
             proc = run_supervised(
                 cmd,
                 timeout_s=timeout_s,
@@ -551,8 +557,12 @@ class YouTubeFetcherService:
                 if progress_cb is not None:
                     progress_cb(QCoreApplication.translate("YouTubeFetcher", "Merging audio and video"), None)
 
-        with managed_ytdlp_lock():
+        with ytdlp_generation_lock() as release_unless_managed:
             cmd = self._build_fetch_cmd(url, workspace, sub_mode, fallback_allowed=fallback_allowed)
+            # A fetch runs for as long as the video takes, so only the managed slot
+            # keeps the lock across it; see ytdlp_generation_lock. Must stay the
+            # last statement before the spawn.
+            release_unless_managed(cmd[0])
             process_result = run_supervised(
                 cmd,
                 timeout_s=_YTDLP_FETCH_TIMEOUT_S,

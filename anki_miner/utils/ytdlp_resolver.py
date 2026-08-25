@@ -56,7 +56,7 @@ import os
 import shutil
 import sys
 import threading
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +69,7 @@ __all__ = [
     "ytdlp_available",
     "ytdlp_binary_name",
     "ytdlp_download_dir",
+    "ytdlp_generation_lock",
     "ytdlp_verification_receipt_path",
 ]
 
@@ -159,6 +160,13 @@ def _is_within_directory(candidate: str | Path, directory: Path) -> bool:
     return True
 
 
+def _addresses_managed_slot(executable: str | Path) -> bool:
+    """True when *executable* is the managed slot or lives inside its directory."""
+    download_dir = ytdlp_download_dir()
+    managed = download_dir / ytdlp_binary_name()
+    return _is_managed_path(executable, managed) or _is_within_directory(executable, download_dir)
+
+
 @contextlib.contextmanager
 def managed_ytdlp_lock(
     executable: str | Path | None = None,
@@ -170,18 +178,54 @@ def managed_ytdlp_lock(
     ``executable=None`` always addresses the managed slot. Other executables do
     not share its Windows image lock and pass through without serialization.
     """
-    if executable is not None:
-        download_dir = ytdlp_download_dir()
-        managed = download_dir / ytdlp_binary_name()
-        if not (_is_managed_path(executable, managed) or _is_within_directory(executable, download_dir)):
-            yield True
-            return
+    if executable is not None and not _addresses_managed_slot(executable):
+        yield True
+        return
 
     acquired = _MANAGED_YTDLP_LOCK.acquire(blocking=blocking)
     try:
         yield acquired
     finally:
         if acquired:
+            _MANAGED_YTDLP_LOCK.release()
+
+
+@contextlib.contextmanager
+def ytdlp_generation_lock() -> Iterator[Callable[[str | Path], None]]:
+    """Hold the generation lock over argv construction, and over execution only for the managed slot.
+
+    Callers resolve yt-dlp and build their argv inside the block, then hand the
+    resolved executable to the yielded ``release_unless_managed`` immediately
+    before spawning:
+
+    - **Managed slot** — nothing is released, so the lock spans resolution ->
+      argv -> exec unbroken. That is the whole point of the lock (c963c8a1): the
+      updater must not be able to promote a new binary into the slot after a
+      caller has built argv naming it, and on Windows a running image cannot be
+      replaced. NEVER release and re-acquire around the spawn instead — that
+      reopens exactly the TOCTOU window this closes.
+    - **Anything else** (config override, PATH, bundle, interpreter sibling) —
+      the lock is dropped before the subprocess starts. Those binaries are not
+      the updater's to swap, and a transfer can run for hours; holding the lock
+      across one starved every other resolver caller in-session (System Health
+      validation, diagnostics export, availability probes).
+
+    Re-entrant by construction: an early release only drops this frame's
+    recursion count, so a caller that already holds the lock keeps holding it.
+    """
+    _MANAGED_YTDLP_LOCK.acquire()
+    held = True
+
+    def release_unless_managed(executable: str | Path) -> None:
+        nonlocal held
+        if held and not _addresses_managed_slot(executable):
+            _MANAGED_YTDLP_LOCK.release()
+            held = False
+
+    try:
+        yield release_unless_managed
+    finally:
+        if held:
             _MANAGED_YTDLP_LOCK.release()
 
 

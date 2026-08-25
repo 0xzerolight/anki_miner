@@ -29,6 +29,7 @@ from anki_miner.services.media_downloader import (
     MediaDownloadError,
     MediaDownloaderService,
 )
+from anki_miner.utils import ytdlp_resolver
 from anki_miner.utils.process_supervisor import SupervisedState
 
 # ---------------------------------------------------------------------------
@@ -448,3 +449,94 @@ class TestErrors:
         message = str(excinfo.value)
         assert "yt-dlp" in message
         assert "format" in message.lower()
+
+
+# ---------------------------------------------------------------------------
+# Generation-lock scope
+# ---------------------------------------------------------------------------
+
+
+def _lock_acquirable_from_another_thread() -> bool:
+    """True when a foreign thread can take the generation lock right now.
+
+    The lock is an RLock, so probing it on the thread that may still hold it would
+    always succeed; the probe has to run somewhere else to mean anything.
+    """
+    seen: list[bool] = []
+
+    def probe() -> None:
+        with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            seen.append(bool(acquired))
+
+    thread = threading.Thread(target=probe)
+    thread.start()
+    thread.join(10)
+    assert not thread.is_alive()
+    return seen == [True]
+
+
+class TestGenerationLockScope:
+    """A running download holds the generation lock only when it IS the managed binary.
+
+    Holding it across a multi-hour transfer starved every other resolver caller
+    (System Health validation, diagnostics, availability probes); the lock is only
+    needed so the updater cannot swap the app-managed binary under a built argv.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _isolated_managed_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+
+    @staticmethod
+    def _lock_free_during_download(
+        monkeypatch: pytest.MonkeyPatch,
+        service: MediaDownloaderService,
+        dest: Path,
+        executable: str,
+    ) -> bool:
+        monkeypatch.setattr(md, "resolve_ytdlp", lambda _config: executable)
+        spawned = threading.Event()
+        finish = threading.Event()
+
+        def fake_run(cmd: list[str], **kwargs: Any) -> Any:
+            assert cmd[0] == executable
+            spawned.set()
+            assert finish.wait(10)
+            return _fake_result(returncode=0)
+
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+
+        def worker() -> None:
+            service.download("https://example.com/v", dest, _opts())
+
+        outcome: list[bool] = []
+        thread = threading.Thread(target=worker)
+        thread.start()
+        try:
+            assert spawned.wait(10), "run_supervised was never reached"
+            with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+                outcome.append(bool(acquired))
+        finally:
+            finish.set()
+            thread.join(10)
+        assert not thread.is_alive()
+        return outcome == [True]
+
+    def test_non_managed_binary_frees_the_lock_mid_download(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        assert self._lock_free_during_download(monkeypatch, service, tmp_path, "/usr/bin/yt-dlp")
+
+    def test_managed_binary_holds_the_lock_mid_download(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
+        assert not self._lock_free_during_download(monkeypatch, service, tmp_path, managed)
+
+    def test_the_lock_is_released_after_a_managed_download(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        managed = str(tmp_path / "home" / "bin" / ytdlp_resolver.ytdlp_binary_name())
+        monkeypatch.setattr(md, "resolve_ytdlp", lambda _config: managed)
+        _run_download(monkeypatch, service, tmp_path, _opts())
+        assert _lock_acquirable_from_another_thread()

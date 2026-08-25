@@ -44,7 +44,7 @@ from anki_miner.services.youtube_fetcher import (
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
-from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
+from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 
 logger = logging.getLogger(__name__)
 
@@ -184,8 +184,12 @@ class MediaDownloaderService:
                 if progress_cb is not None:
                     progress_cb(QCoreApplication.translate("MediaDownloader", "Processing"), None)
 
-        with managed_ytdlp_lock():
+        with ytdlp_generation_lock() as release_unless_managed:
             cmd = self._build_cmd(url, dest_dir, options)
+            # A transfer runs for as long as the file takes, so only the managed slot
+            # keeps the lock across it; see ytdlp_generation_lock. Must stay the last
+            # statement before the spawn.
+            release_unless_managed(cmd[0])
             result = run_supervised(
                 cmd,
                 timeout_s=_DOWNLOAD_TIMEOUT_S,

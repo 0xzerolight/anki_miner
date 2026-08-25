@@ -3,6 +3,7 @@
 import dataclasses
 import hashlib
 import shutil
+import threading
 from pathlib import Path
 
 import pytest
@@ -13,6 +14,7 @@ from anki_miner.utils.ytdlp_resolver import (
     resolve_ytdlp,
     ytdlp_binary_name,
     ytdlp_download_dir,
+    ytdlp_generation_lock,
 )
 
 
@@ -408,3 +410,75 @@ class TestCaching:
         override.chmod(0o644)
 
         assert resolve_ytdlp(config) == str(fallback)
+
+
+def _acquirable_from_another_thread() -> bool:
+    """True when a foreign thread can take the generation lock right now.
+
+    The lock is an RLock, so a non-blocking acquire on the holding thread always
+    succeeds — the probe has to run somewhere else to mean anything.
+    """
+    seen: list[bool] = []
+
+    def probe() -> None:
+        with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
+            seen.append(acquired)
+
+    thread = threading.Thread(target=probe)
+    thread.start()
+    thread.join(10)
+    assert not thread.is_alive()
+    return seen == [True]
+
+
+class TestGenerationLock:
+    """``ytdlp_generation_lock`` covers argv construction always, exec only for the managed slot."""
+
+    @pytest.fixture(autouse=True)
+    def _isolated_home(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+
+    def test_lock_is_held_while_the_command_is_built(self):
+        with ytdlp_generation_lock():
+            assert not _acquirable_from_another_thread()
+        assert _acquirable_from_another_thread()
+
+    def test_non_managed_executable_releases_before_execution(self):
+        with ytdlp_generation_lock() as release_unless_managed:
+            assert not _acquirable_from_another_thread()
+            release_unless_managed("/usr/bin/yt-dlp")
+            assert _acquirable_from_another_thread()
+
+    def test_managed_executable_keeps_the_lock_through_execution(self, tmp_path):
+        managed = tmp_path / "home" / "bin" / ytdlp_binary_name()
+        with ytdlp_generation_lock() as release_unless_managed:
+            release_unless_managed(managed)
+            assert not _acquirable_from_another_thread()
+        assert _acquirable_from_another_thread()
+
+    def test_a_sibling_of_the_managed_slot_also_keeps_the_lock(self, tmp_path):
+        """Anything inside the managed directory shares its Windows image lock."""
+        staged = tmp_path / "home" / "bin" / "yt-dlp.new"
+        with ytdlp_generation_lock() as release_unless_managed:
+            release_unless_managed(staged)
+            assert not _acquirable_from_another_thread()
+
+    def test_repeated_release_does_not_over_release(self):
+        with ytdlp_generation_lock() as release_unless_managed:
+            release_unless_managed("/usr/bin/yt-dlp")
+            release_unless_managed("/usr/bin/yt-dlp")
+        assert _acquirable_from_another_thread()
+
+    def test_release_inside_an_outer_hold_leaves_the_outer_hold_intact(self):
+        """Re-entrant use only drops this frame's count, never the caller's."""
+        with ytdlp_resolver.managed_ytdlp_lock():
+            with ytdlp_generation_lock() as release_unless_managed:
+                release_unless_managed("/usr/bin/yt-dlp")
+                assert not _acquirable_from_another_thread()
+            assert not _acquirable_from_another_thread()
+        assert _acquirable_from_another_thread()
+
+    def test_exception_inside_the_block_releases(self):
+        with pytest.raises(RuntimeError), ytdlp_generation_lock():
+            raise RuntimeError("boom")
+        assert _acquirable_from_another_thread()

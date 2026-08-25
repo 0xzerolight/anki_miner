@@ -483,10 +483,21 @@ class ValidationService:
         documents itself as never raising. Resolving outside would take the whole
         startup validation down over an optional tool.
 
+        The generation lock is taken non-blocking: a run using the app-managed
+        binary holds it for the whole transfer (up to the supervisor's 3h
+        timeout), and waiting on that parked the validation worker — and every
+        surface built on it — behind a download. Report the busy state instead.
+
         Returns:
             Tuple of (success, message).
         """
-        with managed_ytdlp_lock():
+        with managed_ytdlp_lock(blocking=False) as acquired:
+            if not acquired:
+                return (
+                    False,
+                    "yt-dlp is busy — a yt-dlp task is running, so its version could not be checked. "
+                    "Re-run this check once that task finishes.",
+                )
             try:
                 resolved = resolve_ytdlp(self.config)
             except FileNotFoundError:

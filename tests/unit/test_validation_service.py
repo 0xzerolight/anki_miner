@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import threading
 from dataclasses import replace
 from datetime import date
 from unittest.mock import MagicMock, patch
@@ -9,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.services.validation_service import ValidationService
+from anki_miner.utils import ytdlp_resolver
 
 
 class TestValidationService:
@@ -1180,6 +1182,38 @@ class TestCheckYtdlp:
 
         assert ok is False
         assert "unverified" in message.lower()
+
+    def test_busy_lock_reports_instead_of_waiting(self, test_config):
+        """A running yt-dlp task must not park the validation worker for hours.
+
+        The generation lock is held for the whole managed-binary transfer (up to the
+        3h supervisor timeout); waiting on it froze System Health behind a download.
+        """
+        service = ValidationService(test_config)
+        released = threading.Event()
+        holding = threading.Event()
+
+        def hold() -> None:
+            with ytdlp_resolver.managed_ytdlp_lock():
+                holding.set()
+                released.wait(10)
+
+        holder = threading.Thread(target=hold)
+        holder.start()
+        try:
+            assert holding.wait(10)
+            with patch(
+                "anki_miner.services.validation_service.resolve_ytdlp",
+                side_effect=AssertionError("must not resolve while another task holds the lock"),
+            ):
+                ok, message = service._check_ytdlp()
+        finally:
+            released.set()
+            holder.join(10)
+        assert not holder.is_alive()
+
+        assert ok is False
+        assert "busy" in message.lower()
 
     def test_validate_setup_does_not_raise_on_unverified_binary(self, test_config):
         service = ValidationService(test_config)
