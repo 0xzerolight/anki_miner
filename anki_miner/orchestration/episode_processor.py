@@ -2358,6 +2358,13 @@ class EpisodeProcessor:
                 if isinstance(outcome, ProcessingResult):
                     return outcome
                 unknown_words = outcome
+                dropped = sum(1 for w in unknown_words if w.line_expansion != (0, 0))
+                if dropped:
+                    # Reading curation has no subtitle timeline to materialize
+                    # against; the dialog never builds expansion buttons here.
+                    # A nonzero count means a wiring change made them reachable
+                    # without adding materialization — fail loud, not silent.
+                    logger.warning("reading curation: dropping line expansion on %d word(s)", dropped)
 
             with timed_phase("reading-media", logger):
                 media_results = self._phase3_reading_media(
