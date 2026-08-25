@@ -871,6 +871,40 @@ class TestRunCache:
 
         assert hits_on_anki_vocab == [1]
 
+    def test_normalize_anki_vocabulary_different_object_equal_content(self, tmp_path, monkeypatch):
+        """A NEW object with the SAME content still gives the correct result.
+
+        The memo is single-slot, keyed by strict identity: an equal-content
+        object that is not the retained ref is a cache MISS, so it
+        renormalizes rather than risk serving stale data — accepted trade for
+        a batch loop that always passes the one AnkiService-cached object.
+        """
+        import anki_miner.services.known_word_db as known_word_db_mod
+
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+
+        first_vocab = {"食べる", "飲む"}
+        second_vocab = set(first_vocab)  # new object, equal content
+        assert second_vocab is not first_vocab
+
+        hits_on_second_vocab = []
+        real_normalize_all = known_word_db_mod._normalize_all
+
+        def spy(words):
+            if words is second_vocab:
+                hits_on_second_vocab.append(1)
+            return real_normalize_all(words)
+
+        monkeypatch.setattr(known_word_db_mod, "_normalize_all", spy)
+
+        db.sync_with_anki(first_vocab)
+        added, total = db.sync_with_anki(second_vocab)
+
+        assert added == 0  # correct result despite the identity miss
+        assert total == 2
+        assert hits_on_second_vocab == [1]  # identity miss re-normalizes
+
     def test_normalize_anki_vocabulary_different_object_different_content(self, tmp_path):
         """A genuinely different vocab object is never served the stale set.
 
