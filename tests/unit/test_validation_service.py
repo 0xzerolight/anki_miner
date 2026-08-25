@@ -3,12 +3,14 @@
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import replace
 from datetime import date
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner.services import validation_service
 from anki_miner.services.validation_service import ValidationService
 from anki_miner.utils import ytdlp_resolver
 
@@ -1183,12 +1185,13 @@ class TestCheckYtdlp:
         assert ok is False
         assert "unverified" in message.lower()
 
-    def test_busy_lock_reports_instead_of_waiting(self, test_config):
+    def test_busy_lock_reports_instead_of_waiting(self, test_config, monkeypatch):
         """A running yt-dlp task must not park the validation worker for hours.
 
         The generation lock is held for the whole managed-binary transfer (up to the
         3h supervisor timeout); waiting on it froze System Health behind a download.
         """
+        monkeypatch.setattr(validation_service, "_YTDLP_LOCK_WAIT_SECONDS", 0.2)
         service = ValidationService(test_config)
         released = threading.Event()
         holding = threading.Event()
@@ -1214,6 +1217,37 @@ class TestCheckYtdlp:
 
         assert ok is False
         assert "busy" in message.lower()
+
+    def test_transient_holder_is_waited_out_rather_than_reported_busy(self, test_config, monkeypatch):
+        """A sub-second holder must not cost a healthy install its version.
+
+        At startup the validation worker and the scheduled yt-dlp auto-update
+        overlap; a cold-cache SHA-256 of the managed binary or a ``--version``
+        probe holds the lock about a second. A non-blocking acquire turned that
+        into a WARNING and an empty tool version on a working install.
+        """
+        monkeypatch.setattr(validation_service, "_YTDLP_LOCK_WAIT_SECONDS", 10.0)
+        service = ValidationService(test_config)
+        holding = threading.Event()
+
+        def hold() -> None:
+            with ytdlp_resolver.managed_ytdlp_lock():
+                holding.set()
+                time.sleep(0.2)
+
+        holder = threading.Thread(target=hold)
+        holder.start()
+        try:
+            assert holding.wait(10)
+            mock_result = MagicMock(returncode=0, stdout="2026.06.09\n")
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+                ok, message = service._check_ytdlp()
+        finally:
+            holder.join(10)
+        assert not holder.is_alive()
+
+        assert ok is True
+        assert "2026.06.09" in message
 
     def test_validate_setup_does_not_raise_on_unverified_binary(self, test_config):
         service = ValidationService(test_config)

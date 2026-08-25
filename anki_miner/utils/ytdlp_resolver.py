@@ -172,17 +172,27 @@ def managed_ytdlp_lock(
     executable: str | Path | None = None,
     *,
     blocking: bool = True,
+    timeout: float | None = None,
 ) -> Iterator[bool]:
     """Lock a resolver transaction, managed process lifetime, or promotion.
 
     ``executable=None`` always addresses the managed slot. Other executables do
     not share its Windows image lock and pass through without serialization.
+
+    ``timeout`` bounds a blocking acquire, yielding ``False`` when it expires —
+    for callers that can neither park indefinitely behind a multi-hour download
+    nor afford to mistake a sub-second holder for a busy one. It is meaningless
+    with ``blocking=False`` (already an immediate answer) and rejected there
+    rather than silently ignored.
     """
+    if timeout is not None and not blocking:
+        raise ValueError("timeout requires blocking=True")
+
     if executable is not None and not _addresses_managed_slot(executable):
         yield True
         return
 
-    acquired = _MANAGED_YTDLP_LOCK.acquire(blocking=blocking)
+    acquired = _MANAGED_YTDLP_LOCK.acquire(blocking=blocking, timeout=-1 if timeout is None else timeout)
     try:
         yield acquired
     finally:

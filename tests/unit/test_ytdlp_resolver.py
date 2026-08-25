@@ -4,6 +4,7 @@ import dataclasses
 import hashlib
 import shutil
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -429,6 +430,57 @@ def _acquirable_from_another_thread() -> bool:
     thread.join(10)
     assert not thread.is_alive()
     return seen == [True]
+
+
+class TestManagedLockTimeout:
+    """``timeout`` bounds a blocking acquire for callers that can neither park nor give up instantly."""
+
+    def _acquired_from_another_thread(self, *, timeout: float) -> bool:
+        seen: list[bool] = []
+
+        def probe() -> None:
+            with ytdlp_resolver.managed_ytdlp_lock(timeout=timeout) as acquired:
+                seen.append(acquired)
+
+        thread = threading.Thread(target=probe)
+        thread.start()
+        thread.join(10)
+        assert not thread.is_alive()
+        return seen == [True]
+
+    def test_expires_to_false_while_a_holder_keeps_the_lock(self):
+        with ytdlp_resolver.managed_ytdlp_lock():
+            assert not self._acquired_from_another_thread(timeout=0.2)
+
+    def test_acquires_once_a_transient_holder_releases(self):
+        holding = threading.Event()
+
+        def hold() -> None:
+            with ytdlp_resolver.managed_ytdlp_lock():
+                holding.set()
+                time.sleep(0.2)
+
+        holder = threading.Thread(target=hold)
+        holder.start()
+        try:
+            assert holding.wait(10)
+            assert self._acquired_from_another_thread(timeout=10.0)
+        finally:
+            holder.join(10)
+        assert not holder.is_alive()
+
+    def test_rejects_a_timeout_on_a_non_blocking_acquire(self):
+        """Meaningless combination — raise rather than silently ignore one of the two."""
+        with pytest.raises(ValueError), ytdlp_resolver.managed_ytdlp_lock(blocking=False, timeout=1.0):
+            pass
+
+    def test_a_foreign_executable_still_passes_through(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        with (
+            ytdlp_resolver.managed_ytdlp_lock(),
+            ytdlp_resolver.managed_ytdlp_lock("/usr/bin/yt-dlp", timeout=0.2) as acquired,
+        ):
+            assert acquired is True
 
 
 class TestGenerationLock:

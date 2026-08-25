@@ -32,6 +32,14 @@ logger = logging.getLogger(__name__)
 #: and a recent manual download.
 _YTDLP_STALE_AFTER_DAYS = 120
 
+#: How long :meth:`ValidationService._check_ytdlp` waits for the yt-dlp lock before
+#: reporting it busy. Bounded, not zero: at startup the validation worker and the
+#: scheduled auto-update overlap, and a cold-cache SHA-256 of the managed binary or a
+#: ``--version`` probe holds the lock about a second — an instant give-up mislabelled
+#: a healthy install as busy. 10s rides over those and is still nothing against the
+#: 3h transfer this refuses to park behind.
+_YTDLP_LOCK_WAIT_SECONDS = 10.0
+
 
 @dataclass(frozen=True)
 class ResourceReadiness:
@@ -483,15 +491,17 @@ class ValidationService:
         documents itself as never raising. Resolving outside would take the whole
         startup validation down over an optional tool.
 
-        The generation lock is taken non-blocking: a run using the app-managed
-        binary holds it for the whole transfer (up to the supervisor's 3h
-        timeout), and waiting on that parked the validation worker — and every
-        surface built on it — behind a download. Report the busy state instead.
+        The generation lock is taken with a bounded wait
+        (``_YTDLP_LOCK_WAIT_SECONDS``): a run using the app-managed binary holds
+        it for the whole transfer (up to the supervisor's 3h timeout), and
+        waiting on that parked the validation worker — and every surface built
+        on it — behind a download. Past the bound, report the busy state instead
+        of waiting.
 
         Returns:
             Tuple of (success, message).
         """
-        with managed_ytdlp_lock(blocking=False) as acquired:
+        with managed_ytdlp_lock(timeout=_YTDLP_LOCK_WAIT_SECONDS) as acquired:
             if not acquired:
                 return (
                     False,
