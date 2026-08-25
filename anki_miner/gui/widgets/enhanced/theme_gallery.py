@@ -20,7 +20,7 @@ then its dialog closed in the same event-loop cadence before the timer got a
 turn -- the ``thumbnail`` label can already be gone by the time the timer
 fires, and ``_load_thumbnail`` raises ``RuntimeError: wrapped C/C++ object of
 type QLabel has been deleted``. ``_load_thumbnail`` guards against exactly
-that with ``sip.isdeleted``, the same idiom used for late worker-completion
+that with ``widget_alive``, the same idiom used for late worker-completion
 signals elsewhere in the GUI (see ``AnkiProbeController._alive``).
 """
 
@@ -29,7 +29,6 @@ from __future__ import annotations
 import logging
 from collections.abc import Sequence
 
-from PyQt6 import sip
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QCursor, QKeyEvent, QMouseEvent, QPaintEvent
 from PyQt6.QtWidgets import (
@@ -47,7 +46,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles._variables import SPACING
 from anki_miner.gui.resources.styles.theme import Theme, ThemeGroupEntry
-from anki_miner.gui.utils.qt_helpers import data_row_height
+from anki_miner.gui.utils.qt_helpers import data_row_height, widget_alive
 from anki_miner.utils.i18n import tr_format
 
 from .theme_preview import DEFAULT_THUMBNAIL_SIZE, render_theme_thumbnail
@@ -171,7 +170,7 @@ class ThemeCard(QFrame):
         # effect -- a deferred-delete for this very card can land during that
         # call. Checking liveness only right before the call, with nothing
         # Qt-side between the check and the use, closes that window.
-        if sip.isdeleted(self) or sip.isdeleted(self.thumbnail):
+        if not widget_alive(self) or not widget_alive(self.thumbnail):
             return
         self.thumbnail.setPixmap(pixmap)
 

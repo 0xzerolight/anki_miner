@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import QWidget
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.qt_helpers import widget_alive
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.gui.widgets.panels import AnkiSettingsPanel, FilteringSettingsPanel
 from anki_miner.gui.workers.base_worker import SingleCallWorker
@@ -94,8 +95,20 @@ class AnkiProbeController:
         idempotent, so the helper re-cancelling is harmless.
         """
         for worker in self.iter_close_workers():
-            if worker is not None and worker.isRunning():
+            if still_running(worker):
                 worker.cancel()
+
+    def _release_worker(self, attr: str, worker: SingleCallWorker) -> None:
+        """Free a finished probe worker (mirrors ``background_tasks._release_worker``).
+
+        Workers are parented to the settings tab (window lifetime), so without
+        this they accumulate as live QObjects across repeated probes. Clear the
+        handle only when it still points at *worker* — a fresh probe may have
+        already replaced it — and schedule the QThread for deletion.
+        """
+        if getattr(self, attr, None) is worker:
+            setattr(self, attr, None)
+        worker.deleteLater()
 
     @staticmethod
     def _alive(widget: QWidget) -> bool:
@@ -124,7 +137,7 @@ class AnkiProbeController:
         :meth:`_on_fetch_fields_finished`.
         """
         # Don't stack worker threads — first request wins until it completes.
-        if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
+        if still_running(self._fetch_fields_worker):
             return
 
         note_type = self._anki_panel.get_note_type().strip()
@@ -161,6 +174,7 @@ class AnkiProbeController:
 
         worker = FetchFieldsWorker(service, note_type, self._parent)
         self._fetch_fields_worker = worker
+        worker.finished.connect(lambda w=worker: self._release_worker("_fetch_fields_worker", w))
         worker.result_ready.connect(
             lambda names, stamp=(note_type, ankiconnect_url): self._on_fetch_fields_finished(stamp[0], names, stamp[1])
         )
@@ -218,8 +232,16 @@ class AnkiProbeController:
         very field that would fix it. ``report_screen_issue`` walks up from the
         panel to Settings' own banner, so the failure sits beside the
         AnkiConnect address rather than on top of it.
+
+        A worker's error signal is queued cross-thread, so it can arrive after
+        the settings tab (or the panel itself) is torn down — guard both
+        before handing either to ``report_screen_issue``, which would
+        otherwise walk into a dead C++ widget and raise.
         """
-        report_screen_issue(self._parent, ScreenIssue(summary=summary, details=details))
+        origin = self._anki_panel if widget_alive(self._anki_panel) else self._parent
+        if not widget_alive(origin):
+            return
+        report_screen_issue(origin, ScreenIssue(summary=summary, details=details))
 
     # === Excluded decks (Issue #38) ===
 
@@ -231,7 +253,7 @@ class AnkiProbeController:
         first. The picker opens when results arrive via
         :meth:`_on_fetch_decks_finished`.
         """
-        if self._fetch_decks_worker is not None and self._fetch_decks_worker.isRunning():
+        if still_running(self._fetch_decks_worker):
             return
 
         ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
@@ -255,6 +277,7 @@ class AnkiProbeController:
         self._filtering_panel.set_add_deck_button_enabled(False)
         worker = FetchDecksWorker(service, self._parent)
         self._fetch_decks_worker = worker
+        worker.finished.connect(lambda w=worker: self._release_worker("_fetch_decks_worker", w))
         worker.result_ready.connect(
             lambda names, endpoint=ankiconnect_url: self._on_fetch_decks_finished(names, endpoint)
         )
@@ -323,12 +346,13 @@ class AnkiProbeController:
             self._set_notetype_status(False, message)
             return
 
-        if self._name_decks_worker is None or not self._name_decks_worker.isRunning():
+        if not still_running(self._name_decks_worker):
             self._anki_panel.set_deck_status(
                 None, QCoreApplication.translate("AnkiProbeController", "Loading decks from Anki…")
             )
             decks_worker = FetchDecksWorker(service, self._parent)
             self._name_decks_worker = decks_worker
+            decks_worker.finished.connect(lambda w=decks_worker: self._release_worker("_name_decks_worker", w))
             decks_worker.result_ready.connect(
                 lambda names, endpoint=ankiconnect_url: self._on_name_decks_fetched(names, endpoint)
             )
@@ -337,12 +361,13 @@ class AnkiProbeController:
             )
             decks_worker.start()
 
-        if self._name_notetypes_worker is None or not self._name_notetypes_worker.isRunning():
+        if not still_running(self._name_notetypes_worker):
             self._set_notetype_status(
                 None, QCoreApplication.translate("AnkiProbeController", "Loading note types from Anki…")
             )
             types_worker = FetchNotetypesWorker(service, self._parent)
             self._name_notetypes_worker = types_worker
+            types_worker.finished.connect(lambda w=types_worker: self._release_worker("_name_notetypes_worker", w))
             types_worker.result_ready.connect(
                 lambda names, endpoint=ankiconnect_url: self._on_name_notetypes_fetched(names, endpoint)
             )
@@ -363,7 +388,7 @@ class AnkiProbeController:
         message always wins and the low-value count never overwrites a
         terminal Auto-Map result.
         """
-        if self._fetch_fields_worker is not None and self._fetch_fields_worker.isRunning():
+        if still_running(self._fetch_fields_worker):
             return
         self._anki_panel.set_notetype_status(exists, message)
 

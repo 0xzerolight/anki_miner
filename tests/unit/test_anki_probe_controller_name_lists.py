@@ -88,6 +88,38 @@ def test_list_refresh_reports_a_missing_note_type_when_nothing_is_in_flight(wire
     assert "Lapis" in panel.notetype_status.text()
 
 
+def test_probing_twice_releases_the_first_deck_worker(wired, monkeypatch):
+    """A second probe must not accumulate live QThreads (worker-release sweep).
+
+    Every probe worker here is parented to the settings tab (window lifetime),
+    so without an explicit ``deleteLater()`` on ``finished`` it is never
+    garbage collected -- each probe piles up one more live QObject for the
+    rest of the session. Simulates the first worker's native ``finished``
+    firing, then asserts the controller released it (deleteLater + cleared
+    attribute) before the second probe starts.
+    """
+    ctrl, panel = wired
+    worker_one = MagicMock()
+    worker_two = MagicMock()
+    factory = MagicMock(side_effect=[worker_one, worker_two])
+    monkeypatch.setattr(
+        "anki_miner.gui.controllers.anki_probe_controller.FetchDecksWorker",
+        factory,
+    )
+
+    ctrl.fetch_decks()
+    assert ctrl._fetch_decks_worker is worker_one
+    on_finished = worker_one.finished.connect.call_args.args[0]
+    on_finished()  # simulate the QThread actually exiting
+
+    worker_one.deleteLater.assert_called_once()
+    assert ctrl._fetch_decks_worker is None
+
+    ctrl.fetch_decks()
+    assert ctrl._fetch_decks_worker is worker_two
+    worker_two.deleteLater.assert_not_called()
+
+
 def test_close_workers_include_the_name_list_workers(wired, monkeypatch):
     ctrl, _ = wired
     started: list[object] = []

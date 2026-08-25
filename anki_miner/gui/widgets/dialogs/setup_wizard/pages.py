@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
@@ -304,7 +305,7 @@ class AnkiConnectPage(QWizardPage):
         return self._wizard.validation_service().check_ankiconnect()
 
     def _on_recheck_clicked(self) -> None:
-        if self._worker is not None and self._worker.isRunning():
+        if still_running(self._worker):
             return
         self._write_url_to_config()
         url = self._normalized_url()
@@ -405,7 +406,7 @@ class DeckPage(QWizardPage):
         return True
 
     def _on_refresh_clicked(self) -> None:
-        if self._worker is not None and self._worker.isRunning():
+        if still_running(self._worker):
             return
         self.refresh_button.setEnabled(False)
         worker = FetchDecksWorker(self._wizard.anki_service(), self)
@@ -558,7 +559,7 @@ class NoteTypePage(_LiveCheckPage):
     # --- note-type list fetch ---
 
     def _on_refresh_clicked(self) -> None:
-        if self._notetypes_worker is not None and self._notetypes_worker.isRunning():
+        if still_running(self._notetypes_worker):
             return
         self.refresh_button.setEnabled(False)
         worker = FetchNotetypesWorker(self._wizard.anki_service(), self)
@@ -1164,13 +1165,14 @@ class DonePage(_LiveCheckPage):
     def initializePage(self) -> None:
         """Run one fresh readiness sweep; render it when it lands."""
         previous_check = self._live_check
-        if previous_check is not None and previous_check.isRunning():
+        if still_running(previous_check):
+            assert previous_check is not None
             previous_check.cancel()
         self._live_check = None
         self._start_sweep()
 
     def _start_sweep(self) -> None:
-        if self._live_check is not None and self._live_check.isRunning():
+        if still_running(self._live_check):
             return
         self._results = {}
         self.summary_label.setText(self.tr("Checking your setup..."))

@@ -29,6 +29,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.condense_tab import CondenseTab
@@ -171,10 +172,10 @@ class SubtitlesTab(QWidget):
     def release_dictionary_resources(self) -> bool:
         """Refuse resource mutation while a backfill or deck-filter scan uses providers."""
         worker = self.backfill_tab.worker_thread
-        if isinstance(worker, BackfillScanWorker) and worker.isRunning():
+        if isinstance(worker, BackfillScanWorker) and still_running(worker):
             return False
         deck_filter_worker = self.deck_filter_tab.worker_thread
-        return not (isinstance(deck_filter_worker, DeckFilterScanWorker) and deck_filter_worker.isRunning())
+        return not (isinstance(deck_filter_worker, DeckFilterScanWorker) and still_running(deck_filter_worker))
 
     # ------------------------------------------------------------------
     # Close contract

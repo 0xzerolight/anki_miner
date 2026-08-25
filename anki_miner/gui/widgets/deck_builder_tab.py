@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import PageWidth, cap_row_field, configure_scrolled_page, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
@@ -418,11 +419,19 @@ class DeckBuilderTab(MiningTabBase):
         self.worker_thread.item_completed.connect(self._on_item_completed)
         self.worker_thread.build_finished.connect(self._on_build_finished)
         self.worker_thread.error.connect(self._on_error)
-        # Restore buttons only when the QThread truly finishes. The worker
-        # reference is NOT nulled in the terminal slots: dropping the only
-        # reference while the QThread is still unwinding risks
-        # "QThread: Destroyed while thread is still running". It is replaced on
-        # the next preview instead.
+        # Restore buttons only when the QThread truly finishes. Unlike the
+        # deleteLater()-on-finished release elsewhere in this sweep (see
+        # ``_tool_tab_base._on_worker_finished``), the worker reference is
+        # deliberately NOT released here: ``release_dictionary_resources()``
+        # and the next run's ``_teardown_previous_run()`` both read
+        # ``self.worker_thread.curation_processor`` after this fires, to close
+        # the finished run's survivor sqlite handles (Issue #30/#32 -- an open
+        # handle locks the dictionary folder on Windows). A released QThread
+        # wrapper raises RuntimeError on ANY attribute touch, not only
+        # Qt-backed ones, so deleteLater()-ing here would make both of those
+        # call sites silently stop closing the survivor. The reference is
+        # replaced (and the old worker becomes collectible) on the next
+        # preview instead.
         self.worker_thread.finished.connect(self._restore_buttons)
         self.worker_thread.start()
 
@@ -634,7 +643,7 @@ class DeckBuilderTab(MiningTabBase):
         message instead of silently dropping the dict. The facade resets the
         chain so the next build re-opens it cleanly.
         """
-        if self.worker_thread is not None and self.worker_thread.isRunning():
+        if still_running(self.worker_thread):
             return False
         if self.worker_thread is not None:
             proc = self.worker_thread.curation_processor

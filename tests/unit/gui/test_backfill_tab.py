@@ -575,3 +575,37 @@ class TestConfigAndLifecycle:
         tab._on_worker_error("Backfill scan failed: down")
         assert "down" in tab.status_label.text()
         assert tab.scan_button.isEnabled()
+
+
+class TestCloseWorkerHandles:
+    """``iter_close_workers`` runs inside MainWindow.closeEvent -- it may not raise.
+
+    Mirrors deck_filter_tab's close-crash fix (2aa584): a worker whose native
+    ``finished`` already deleteLater()'d it leaves the attribute pointing at a
+    dead C++ wrapper. A raw ``isRunning()`` on that wrapper raises RuntimeError
+    straight out of closeEvent, past the config save at the end of it.
+    """
+
+    def test_a_finished_worker_thread_is_skipped_not_raised_on(self, tab):
+        from anki_miner.gui.workers.base_worker import SingleCallWorker
+
+        worker = SingleCallWorker(lambda: None, parent=tab)
+        tab.worker_thread = worker
+        worker.deleteLater()
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        with pytest.raises(RuntimeError):  # precondition: the wrapper really is dead
+            worker.isRunning()
+
+        assert list(tab.iter_close_workers()) == []
+
+    def test_a_finished_deck_worker_is_skipped_not_raised_on(self, tab):
+        from anki_miner.gui.workers.base_worker import SingleCallWorker
+
+        worker = SingleCallWorker(lambda: None, parent=tab)
+        tab._deck_worker = worker
+        worker.deleteLater()
+        QApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        with pytest.raises(RuntimeError):  # precondition: the wrapper really is dead
+            worker.isRunning()
+
+        assert list(tab.iter_close_workers()) == []

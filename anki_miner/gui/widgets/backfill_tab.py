@@ -48,6 +48,7 @@ from anki_miner.gui.utils.qt_helpers import (
     make_table_item,
     urls_from_event,
 )
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.base import (
     PageWidth,
     TaskPublisherMixin,
@@ -378,12 +379,18 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self._refresh_checkbox_gates()
 
     def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker | SingleCallWorker]:
-        if self.worker_thread is not None and self.worker_thread.isRunning():
+        # ``still_running``, never a raw ``isRunning()``: once a worker finishes
+        # and its handle isn't cleared, the Python wrapper survives as a live
+        # reference to a destroyed C++ QThread and ``isRunning()`` raises
+        # RuntimeError out of closeEvent (see deck_filter_tab.iter_close_workers).
+        if still_running(self.worker_thread):
+            assert self.worker_thread is not None
             yield self.worker_thread
         # The lazy deck-fetch QThread runs a blocking get_deck_names (timeout 15s);
         # abandoning it to Qt teardown aborts with "QThread: Destroyed while
         # thread is still running", so surface it for the close-join policy too.
-        if self._deck_worker is not None and self._deck_worker.isRunning():
+        if still_running(self._deck_worker):
+            assert self._deck_worker is not None
             yield self._deck_worker
 
     # ------------------------------------------------------------------
