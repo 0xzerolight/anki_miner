@@ -123,6 +123,8 @@ def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
             # cannot shadow any same-named module already on the path.
             sys.path.append(root)
             importlib.invalidate_caches()
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "no speech mask" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001  (best-effort; a path problem must not abort)
         # Bucket B: an unusable optional VAD pack falls back to no speech mask.
         logger.debug("ASR VAD pack probe: available=false exc=%s", type(exc).__name__)
@@ -187,6 +189,8 @@ def _speech_mask(audio, onnx_pack_root: Path | None):
             sampling_rate=_ASR_SAMPLE_RATE,
         )
         return [(r["start"] / _ASR_SAMPLE_RATE, r["end"] / _ASR_SAMPLE_RATE) for r in regions]
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "no mask" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — a VAD failure degrades to "no mask", never aborts
         logger.warning("ASR: Silero VAD speech-mask failed (%s); non-speech overlap drop disabled.", exc)
         return None
@@ -309,6 +313,8 @@ def _cpp_ggml_present(model_name: str, models_root: Path) -> bool:
     """
     try:
         return ggml_model_installer.is_ggml_downloaded(model_name, models_root)
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "absent" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — unknown model / odd path → treat as absent
         # Bucket B: a missing optional ggml model falls back to CT2.
         logger.debug(
@@ -413,6 +419,8 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
                 ctypes.CDLL(path, mode=mode)
             else:
                 ctypes.CDLL(path)
+        except MemoryError:
+            raise  # never degrade a real allocation failure to "bypass this library" (service_factory.py policy)
         except Exception as exc:  # noqa: BLE001  (best-effort; a single bad lib must not abort)
             # Bucket B: one unusable optional CUDA library may be bypassed.
             logger.debug(
@@ -434,6 +442,8 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
             for pattern in patterns:
                 for match in glob.glob(pattern, recursive=True):
                     _load(match)
+        except MemoryError:
+            raise  # never degrade a real allocation failure to "fall back" (service_factory.py policy)
         except Exception as exc:  # noqa: BLE001
             # Bucket B: an unusable optional managed CUDA pack falls back to other sources.
             logger.debug("ASR CUDA pack probe: source=managed available=false exc=%s", type(exc).__name__)
@@ -454,6 +464,8 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
             for subdir, file_glob in (("lib", lib_glob), ("bin", dll_glob)):
                 for match in glob.glob(str(pkg_dir / subdir / file_glob)):
                     _load(match)
+        except MemoryError:
+            raise  # never degrade a real allocation failure to "fall back" (service_factory.py policy)
         except Exception as exc:  # noqa: BLE001
             # Bucket B: an absent optional pip CUDA package is a normal fallback.
             logger.debug(
@@ -469,6 +481,8 @@ def _cuda_device_count() -> int:
         import ctranslate2  # noqa: PLC0415  (function-local: stays importable without backend)
 
         return int(ctranslate2.get_cuda_device_count())
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "no GPU" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001  (no backend / driver error → treat as no GPU)
         # Bucket B: an absent optional CUDA accelerator is a normal fallback.
         logger.debug("ASR CUDA probe: devices=0 exc=%s", type(exc).__name__)
@@ -539,6 +553,8 @@ def _resolve_model(
             local_files_only=True,
         )
         return model, "cuda"
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "fall back to CPU" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001  (CUDA libs may be missing/incompatible)
         if raise_on_cuda_failure:
             raise _Ct2CudaUnavailable(str(exc)) from exc
@@ -831,6 +847,8 @@ def _transcribe_cpp(
             devices=_engine.vulkan_device_count(),
         )
         return results
+    except MemoryError:
+        raise  # never re-decode on CPU from a memory-starved interpreter (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — any cpp/GPU failure → full CT2 CPU re-decode
         logger.warning("ASR: whisper.cpp transcription failed (%s); falling back to CPU.", exc)
         return _transcribe_ct2(
@@ -939,6 +957,16 @@ def _transcribe_ct2(
     if device_used == "cuda":
         try:
             first = next(segments_iter, _PEEK_EMPTY)
+        except MemoryError:
+            # Drop the constructed-but-unusable CUDA model first (mirrors the
+            # raise_on_cuda_failure cleanup below): ct2_model_session is reused
+            # across a whole queue, and leaving it set would hand the next
+            # file a model that just failed mid-decode. Never rebuild+retry on
+            # CPU from a memory-starved interpreter (service_factory.py policy).
+            if ct2_model_session is not None:
+                ct2_model_session.model = None
+                ct2_model_session.device_used = None
+            raise
         except Exception as exc:  # noqa: BLE001  (deferred CUDA runtime failure)
             if raise_on_cuda_failure:
                 # Drop the constructed-but-unusable CUDA model so the caller's

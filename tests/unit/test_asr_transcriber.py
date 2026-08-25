@@ -747,6 +747,53 @@ def test_auto_deferred_cuda_failure_retries_vulkan(monkeypatch, tmp_path):
     assert session.device_used is None
 
 
+def test_auto_deferred_cuda_memory_error_propagates_and_clears_session(monkeypatch, tmp_path):
+    """A MemoryError during the deferred CUDA decode must escape transcribe()
+    outright — never rebuilt+retried on CPU or reconsidered via cpp — per the
+    service_factory.py MemoryError policy. The broken model is still dropped
+    from the queue-shared session so the next queued file cannot reuse it."""
+    import numpy as np
+
+    constructed: list[dict] = []
+
+    class DeferredMemoryErrorModel:
+        def __init__(self, model_name, **kwargs):
+            kwargs["model_name"] = model_name
+            constructed.append(kwargs)
+
+        def transcribe(self, audio, **kwargs):
+            def gen():
+                raise MemoryError("allocation failed")
+                yield  # pragma: no cover
+
+            return gen(), SimpleNamespace(language=kwargs.get("language"))
+
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: DeferredMemoryErrorModel)
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    monkeypatch.setattr(_engine, "cuda_device_count", lambda: 1)
+    _make_cpp_route_ready(monkeypatch, True)
+    cpp_calls = _spy_transcribe_cpp(monkeypatch)
+
+    session = transcriber.Ct2ModelSession()
+    audio = np.zeros(16000, dtype=np.float32)
+    with pytest.raises(MemoryError):
+        transcriber.transcribe(
+            audio,
+            model_name="large-v3",
+            models_root=tmp_path,
+            sample_rate=16000,
+            duration_s=1.0,
+            device="auto",
+            ct2_model_session=session,
+        )
+
+    assert cpp_calls == []  # never reconsidered via the cpp route
+    assert [c["device"] for c in constructed] == ["cuda"]
+    assert session.model is None
+    assert session.device_used is None
+
+
 def test_explicit_cuda_failure_never_retries_vulkan(monkeypatch, tmp_path):
     """device='cuda' is an explicit CT2 request: its failure path stays CT2 CPU
     even when the cpp route is fully available."""

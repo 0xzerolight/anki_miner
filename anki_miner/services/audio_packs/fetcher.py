@@ -143,19 +143,20 @@ class LocalAudioPackFetcher:
         if existing is not None:
             return existing
 
-        # 2. Query the SQLite index.
-        conn: sqlite3.Connection | None = None
+        # 2. Query the SQLite index, resolve the winning row, and cache it — all
+        #    inside one guarded scope so `rows` is only ever read where it was
+        #    just assigned: a failure anywhere (the connection, the lookup, the
+        #    kana-script helpers below, or row resolution) returns None instead
+        #    of falling through to code that reads `rows` past a point where it
+        #    might never have been bound.
         try:
-            # An android_db pack's managed index holds no rows: it is a
-            # metadata token, and the entries live in the registered source db.
-            lookup_db = self._blob_db_path or self._db_path
+            conn: sqlite3.Connection | None = None
             try:
+                # An android_db pack's managed index holds no rows: it is a
+                # metadata token, and the entries live in the registered source db.
+                lookup_db = self._blob_db_path or self._db_path
                 conn = storage.open_readonly(lookup_db)
-            except (sqlite3.Error, OSError) as exc:
-                logger.debug("LocalAudioPackFetcher: cannot open %s: %s", lookup_db, exc)
-                return None
 
-            try:
                 if is_kana_only(reading):
                     rows = storage.lookup(conn, mined_form, reading)
                     katakana_variant = hiragana_to_katakana(reading)
@@ -174,31 +175,36 @@ class LocalAudioPackFetcher:
                         # rows may serve, matching what the old exact path
                         # returned for a non-kana reading.
                         rows = [r for r in rows if r.reading is None]
-            except (sqlite3.Error, OSError) as exc:
-                logger.debug("LocalAudioPackFetcher: lookup failed for %r: %s", mined_form, exc)
-                return None
-        finally:
-            if conn is not None:
-                conn.close()
+            finally:
+                if conn is not None:
+                    conn.close()
 
-        # 3a. An android_db pack keeps its audio as blobs in the source db:
-        #     there is no file to resolve, so the containment guard is moot.
-        if self._blob_db_path is not None:
-            return self._serve_from_blobs(rows, stem)
+            # 3a. An android_db pack keeps its audio as blobs in the source db:
+            #     there is no file to resolve, so the containment guard is moot.
+            if self._blob_db_path is not None:
+                return self._serve_from_blobs(rows, stem)
 
-        # 3. Walk rows in id order; apply containment guard; copy first safe hit.
-        for row in rows:
-            candidate = self._resolve_safe(row.file)
-            if candidate is None:
-                continue
+            # 3. Walk rows in id order; apply containment guard; copy first safe hit.
+            for row in rows:
+                candidate = self._resolve_safe(row.file)
+                if candidate is None:
+                    continue
 
-            # 4. Copy winning file into cache atomically. Never return the
-            #    in-place pack path — Anki storeMediaFile uses path.name
-            #    verbatim and would silently overwrite other packs' files if
-            #    names collide.
-            return self._write_cached(stem, candidate.suffix, partial(shutil.copy2, candidate))
+                # 4. Copy winning file into cache atomically. Never return the
+                #    in-place pack path — Anki storeMediaFile uses path.name
+                #    verbatim and would silently overwrite other packs' files if
+                #    names collide.
+                return self._write_cached(stem, candidate.suffix, partial(shutil.copy2, candidate))
 
-        return None
+            return None
+        # Broad Exception is intentional and correct: sqlite3.Error/OSError
+        # cover the connection and query, but the kana-script helpers above
+        # (is_kana_only / hiragana_to_katakana / katakana_to_hiragana) can
+        # raise on pathological input too, and fetch() has no caller-side
+        # try/except — this method must own every failure mode.
+        except Exception as exc:  # noqa: BLE001 — never raise per the fetcher protocol contract
+            logger.debug("LocalAudioPackFetcher: fetch failed for %r (pack=%s): %s", mined_form, self._pack_id, exc)
+            return None
 
     def fetch_candidates(
         self,

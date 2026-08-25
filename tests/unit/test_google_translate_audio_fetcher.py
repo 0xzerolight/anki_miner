@@ -3,6 +3,8 @@
 import logging
 from unittest.mock import patch
 
+import pytest
+
 from anki_miner.services.expression_audio_fetcher import MAX_AUDIO_BYTES
 from anki_miner.services.google_translate_audio_fetcher import GoogleTranslateAudioFetcher
 
@@ -124,6 +126,17 @@ class TestGoogleTranslateAudioFetcher:
             assert fetcher.fetch("   ", "たべる") is None
 
         assert calls == []
+
+    def test_memory_error_propagates_never_swallowed(self, tmp_path):
+        """MemoryError must escape fetch(), never be classified as a transient
+        failure — swallowing it here would let the pipeline continue writing
+        cards from a memory-starved interpreter (service_factory.py policy)."""
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            patch(f"{MODULE}.gtts.gTTS", side_effect=MemoryError("allocation failed")),
+            pytest.raises(MemoryError),
+        ):
+            fetcher.fetch("食べる", "たべる")
 
     def test_gtts_raising_returns_none(self, tmp_path):
         """A gTTS error is swallowed: fetch returns None and never raises."""

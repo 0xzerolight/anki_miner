@@ -134,6 +134,13 @@ def _synthesize_gtts_to_cache(
             raise
         return mp3_path
 
+    # MemoryError is deliberately NOT part of the never-raises contract: an
+    # allocation failure here must abort the run rather than let the pipeline
+    # keep writing cards from a memory-starved interpreter (the same rule
+    # service_factory.py applies to optional-source loading — see its module
+    # docstring).
+    except MemoryError:
+        raise
     # Broad Exception is intentional and correct: gtts raises gTTSError and
     # assorted network/value exceptions, and the processor loops have no
     # try/except by design — the fetcher owns all error handling and must

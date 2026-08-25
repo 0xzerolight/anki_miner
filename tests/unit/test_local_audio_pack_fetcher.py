@@ -350,6 +350,29 @@ class TestTraversalGuard:
         assert result is None
 
 
+class TestKanaHelperException:
+    def test_kana_helper_exception_returns_none_no_unboundlocalerror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        """A kana-script helper raising an uncovered exception type (not
+        sqlite3.Error/OSError) must be swallowed like any other lookup
+        failure — not escape fetch(), and not surface an UnboundLocalError
+        from `rows` being read past a boundary where it was never assigned.
+        """
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+
+        def _boom(_reading: str) -> bool:
+            raise ValueError("malformed reading")
+
+        monkeypatch.setattr(audio_pack_fetcher, "is_kana_only", _boom)
+
+        result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+
+
 class TestPermissionErrorGuard:
     def test_is_file_permission_error_returns_none(self, tmp_path: Path, monkeypatch):
         """is_file() raising EACCES must not abort the never-raises fetch."""

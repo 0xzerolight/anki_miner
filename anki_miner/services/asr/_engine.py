@@ -84,6 +84,8 @@ def cuda_device_count() -> int:
         count = int(ctranslate2.get_cuda_device_count())
         logger.debug("ASR CUDA probe: devices=%d", count)
         return count
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "no GPU" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — any failure means "no usable GPU"
         # Bucket B: an absent optional CUDA accelerator is a normal fallback.
         logger.debug("ASR CUDA probe: devices=0 exc=%s", type(exc).__name__)
@@ -150,6 +152,8 @@ def _ggml_lib_search_dirs() -> list[Path]:
             if sibling.is_dir():
                 dirs.append(sibling)
         return dirs
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "no dirs" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — a missing/odd install means "no dirs"
         # Bucket B: an uninspectable optional install means no backend dirs.
         logger.debug("ASR backend library search: backend=ggml dirs=0 exc=%s", type(exc).__name__)
@@ -180,6 +184,8 @@ def _find_ggml_vulkan_lib() -> Path | None:
                     if hit.is_file():
                         return hit
         return None
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "absent" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — a missing/odd install means "no Vulkan lib"
         # Bucket B: an uninspectable optional install means Vulkan is absent.
         logger.debug(
@@ -268,6 +274,8 @@ def ensure_ggml_backends_loaded() -> None:
                 fn.restype = None
                 fn.argtypes = argtypes
                 fn(*args)
+            except MemoryError:
+                raise  # never degrade a real allocation failure to "try next loader" (service_factory.py policy)
             except Exception as exc:  # noqa: BLE001 — try the next backend loader
                 # Bucket A: loader failure silently degrades all later work to CPU.
                 logger.warning(
@@ -279,6 +287,8 @@ def ensure_ggml_backends_loaded() -> None:
                 continue
             _GGML_BACKEND_STATES[name] = _BackendState.SUCCEEDED
             return
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "fall back to CPU" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — a load failure must degrade to CPU/CT2, never abort
         # Bucket A: Vulkan backend setup failure silently degrades later work to CPU.
         for name, state in _GGML_BACKEND_STATES.items():
@@ -305,6 +315,8 @@ def whisper_cpp_available() -> bool:
         is_available = _find_ggml_vulkan_lib() is not None
         logger.debug("ASR backend probe: backend=whisper.cpp available=%s", is_available)
         return is_available
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "not available" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — any failure means "not available"
         # Bucket B: an absent optional whisper.cpp backend is a normal fallback.
         logger.debug(
@@ -378,6 +390,8 @@ def _probe_vulkan_device_count() -> int:
         count = int(proc.stdout.strip())
         logger.debug("ASR Vulkan probe: devices=%d", count)
         return count
+    except MemoryError:
+        raise  # never degrade a real allocation failure to "0 devices" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — timeout / spawn / parse failure all mean 0
         # Bucket B: an absent optional Vulkan accelerator is a normal fallback.
         logger.debug("ASR Vulkan probe: devices=0 exc=%s", type(exc).__name__)

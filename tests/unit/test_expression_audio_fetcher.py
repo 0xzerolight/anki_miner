@@ -107,6 +107,42 @@ class TestJPod101AudioFetcher:
         assert not list(tmp_path.glob("*.miss"))
         assert not list(tmp_path.glob("*.mp3"))
 
+    def test_value_error_from_request_returns_none_never_raises(self, tmp_path):
+        """A ValueError (e.g. pathological input tripping requests' URL-encoding)
+        must be swallowed like any other fetch failure, not escape fetch()."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch("requests.Session.get", side_effect=ValueError("bad url encoding")):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        assert not list(tmp_path.glob("*.miss"))
+        assert not list(tmp_path.glob("*.mp3"))
+
+    def test_unicode_encode_error_from_request_returns_none_never_raises(self, tmp_path):
+        """A UnicodeEncodeError from urlencoding pathological input must not escape."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with patch(
+            "requests.Session.get",
+            side_effect=UnicodeEncodeError("ascii", "\ud800", 0, 1, "surrogate"),
+        ):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        assert not list(tmp_path.glob("*.miss"))
+        assert not list(tmp_path.glob("*.mp3"))
+
+    def test_type_error_from_malformed_response_url_returns_none(self, tmp_path):
+        """A malformed response.url (e.g. None) raising TypeError must not escape fetch()."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        resp = _response()
+        resp.url = None  # response.url.startswith(...) raises TypeError
+        with patch("requests.Session.get", return_value=resp):
+            result = fetcher.fetch("食べる", "たべる")
+
+        assert result is None
+        assert not list(tmp_path.glob("*.miss"))
+        assert not list(tmp_path.glob("*.mp3"))
+
     def test_non_200_returns_none_without_miss_marker(self, tmp_path):
         """Transient server errors must not write a miss marker."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)

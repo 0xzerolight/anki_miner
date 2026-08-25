@@ -10,8 +10,6 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import requests
-
 from anki_miner.services.audio_fetch_common import (
     FAILURE_KEYS,
     MAX_AUDIO_BYTES,
@@ -310,7 +308,13 @@ class JPod101AudioFetcher:
             finally:
                 response.close()
 
-        except (requests.RequestException, OSError) as exc:
+        # Broad Exception is intentional and correct: pathological mined_form/
+        # reading input can raise ValueError/UnicodeEncodeError from requests'
+        # URL-encoding, and a malformed response.url can raise AttributeError/
+        # TypeError from the str.startswith check above — audio_stage.py's
+        # phase-3 loop calls fetch() with no try/except by design, so this
+        # fetcher must own every failure mode, not just network/OS ones.
+        except Exception as exc:  # noqa: BLE001 — never raise per the fetcher protocol contract
             self._failure_counts[_classify_request_exception(exc)] += 1
             identity = hashlib.sha256(f"{mined_form}\0{reading}".encode()).hexdigest()[:12]
             logger.debug(
