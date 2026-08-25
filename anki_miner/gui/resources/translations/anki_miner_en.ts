@@ -3810,7 +3810,11 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download folder is not writable: </source>
+        <source>Download folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check permissions for %1.</source>
         <translation type="unfinished" />
     </message>
     <message>

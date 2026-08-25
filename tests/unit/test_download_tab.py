@@ -10,6 +10,7 @@ No real yt-dlp runs: DownloadWorker and the availability probe are patched.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -246,18 +247,17 @@ class TestOptionPersistence:
         assert tab.preset_combo.currentData() == "1080p"
 
     def test_update_config_reseeds_only_when_idle(self, qtbot, tmp_path: Path) -> None:
+        # downloader_format_preset is itself a downloader_* field, so this
+        # change carries no availability probe (D5) — only the idle reseed
+        # path is under test here.
         tab = _make_tab(_make_config(tmp_path), qtbot)
-        with patch(_COMPUTE_AVAILABLE, return_value=True):
-            tab.update_config(replace(tab.config, downloader_format_preset="audio_m4a"))
-            assert tab._availability_worker.wait(3000)
-            qtbot.waitUntil(tab.download_button.isEnabled, timeout=3000)
+        tab.update_config(replace(tab.config, downloader_format_preset="audio_m4a"))
         assert tab.preset_combo.currentData() == "audio_m4a"
 
         tab.url_input.setPlainText("https://example.com/v")
         fake = _FakeWorker()
         _start_download(tab, fake)
-        with patch(_COMPUTE_AVAILABLE, return_value=True):
-            tab.update_config(replace(tab.config, downloader_format_preset="720p"))
+        tab.update_config(replace(tab.config, downloader_format_preset="720p"))
         assert tab.preset_combo.currentData() == "audio_m4a"
 
     def test_sub_langs_enabled_with_checkbox(self, qtbot, tmp_path: Path) -> None:
@@ -265,6 +265,62 @@ class TestOptionPersistence:
         assert not tab.sub_langs_edit.isEnabled()
         tab.write_subs_checkbox.setChecked(True)
         assert tab.sub_langs_edit.isEnabled()
+
+
+# ---------------------------------------------------------------------------
+# Config loop and refusal polish (D4, D5, D6, D7)
+# ---------------------------------------------------------------------------
+
+
+class TestConfigLoopAndRefusal:
+    def test_differ_ignores_whitespace_and_empty_langs(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.sub_langs_edit.setText(" ja ")
+        tab._on_option_changed()  # commits the normalized "ja"
+        tab.sub_langs_edit.setText(" ja ")  # uncommitted raw text again
+        assert tab._options_differ_from_widgets() is False
+
+    def test_downloader_only_config_change_skips_probe(self, qtbot, tmp_path: Path, monkeypatch) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        calls: list[int] = []
+        monkeypatch.setattr(tab, "_refresh_engine_state", lambda: calls.append(1))
+
+        downloader_only = dataclasses.replace(
+            tab.config, downloader_embed_thumbnail=not tab.config.downloader_embed_thumbnail
+        )
+        tab.update_config(downloader_only)
+        assert calls == []
+
+        changed_elsewhere = dataclasses.replace(tab.config, youtube_cookies_from_browser="firefox")
+        tab.update_config(changed_elsewhere)
+        assert calls == [1]
+
+    def test_probe_result_never_enables_button_mid_run(self, qtbot, tmp_path: Path, monkeypatch) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        monkeypatch.setattr("anki_miner.gui.widgets.download_tab.still_running", lambda w: True)
+        tab._apply_probe_result(True)
+        assert tab.download_button.isEnabled() is False
+
+    def test_probe_result_enables_button_when_idle(self, qtbot, tmp_path: Path, monkeypatch) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        monkeypatch.setattr("anki_miner.gui.widgets.download_tab.still_running", lambda w: False)
+        tab._apply_probe_result(True)
+        assert tab.download_button.isEnabled() is True
+
+    def test_unwritable_folder_raises_screen_issue(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/v")
+        issues: list[object] = []
+        with (
+            patch(_OS_ACCESS, return_value=False),
+            patch.object(tab, "show_screen_issue", side_effect=issues.append),
+        ):
+            tab._on_download()
+        assert issues, "refusal must raise a ScreenIssue, not a log line"
+        # Its own refusal, not the generic run-problem banner every other
+        # logged ERROR raises (_on_log_problem).
+        assert issues[0].summary != tab._strings.run_problem
+        assert "not writable" in issues[0].summary.lower()
 
 
 # ---------------------------------------------------------------------------

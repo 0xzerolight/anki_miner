@@ -3836,7 +3836,11 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download folder is not writable: </source>
+        <source>Download folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check permissions for %1.</source>
         <translation type="unfinished" />
     </message>
     <message>

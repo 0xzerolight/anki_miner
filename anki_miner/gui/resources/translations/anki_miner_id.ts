@@ -3834,7 +3834,11 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download folder is not writable: </source>
+        <source>Download folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check permissions for %1.</source>
         <translation type="unfinished" />
     </message>
     <message>

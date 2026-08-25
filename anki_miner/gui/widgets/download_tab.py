@@ -22,6 +22,7 @@ Worker contract:
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 from dataclasses import replace
@@ -45,6 +46,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -146,16 +148,20 @@ class DownloadTab(_ToolTabBase):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new application config (e.g. after the yt-dlp path changes).
 
-        A config change is exactly when yt-dlp can appear/disappear, so the
-        availability cache is recomputed here. Option-widget defaults are
-        re-seeded only when idle AND actually differing — a run in flight
+        Only a non-``downloader_*`` field can make yt-dlp appear/disappear, so
+        the availability probe (a managed-binary re-hash) is skipped when the
+        incoming config differs solely in those fields. Option-widget defaults
+        are re-seeded only when idle AND actually differing — a run in flight
         captured its own values, and a refresh must not stomp uncommitted edits.
         """
-        self.config = config
+        old_config, self.config = self.config, config
         idle = self.worker_thread is None or not self.worker_thread.isRunning()
         if idle and self._options_differ_from_widgets():
             self._apply_config_defaults()
-        self._refresh_engine_state()
+        downloader_fields = {f.name for f in dataclasses.fields(config) if f.name.startswith("downloader_")}
+        masked = dataclasses.replace(old_config, **{name: getattr(config, name) for name in downloader_fields})
+        if masked != config:
+            self._refresh_engine_state()
 
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults."""
@@ -173,12 +179,14 @@ class DownloadTab(_ToolTabBase):
             self._seeding = False
 
     def _options_differ_from_widgets(self) -> bool:
-        """Whether the config's downloader_* values differ from the live widgets."""
+        """Whether the config's downloader_* values differ from the live
+        widgets, compared post-normalization (the form `_on_option_changed`
+        writes), so uncommitted whitespace never counts as a difference."""
         return (
             self.config.downloader_format_preset != self.preset_combo.currentData()
-            or self.config.downloader_custom_format != self.custom_format_edit.text()
+            or self.config.downloader_custom_format != self.custom_format_edit.text().strip()
             or self.config.downloader_write_subtitles != self.write_subs_checkbox.isChecked()
-            or self.config.downloader_subtitle_langs != self.sub_langs_edit.text()
+            or self.config.downloader_subtitle_langs != (self.sub_langs_edit.text().strip() or "ja")
             or self.config.downloader_embed_thumbnail != self.embed_thumbnail_checkbox.isChecked()
             or self.config.downloader_embed_metadata != self.embed_metadata_checkbox.isChecked()
         )
@@ -381,16 +389,22 @@ class DownloadTab(_ToolTabBase):
         if self._suppress_optional_startup:
             return
 
-        def _apply(result: object) -> None:
-            self._ytdlp_is_available = bool(result)
-            self.engine_notice_label.setVisible(not self._ytdlp_is_available)
-            self.download_button.setEnabled(self._ytdlp_is_available)
-
         def _on_error(message: str) -> None:
             logger.warning("yt-dlp availability probe failed: %s", message)
-            _apply(False)
+            self._apply_probe_result(False)
 
-        self._run_availability_scan(lambda: self._compute_ytdlp_available(config), _apply, _on_error)
+        self._run_availability_scan(lambda: self._compute_ytdlp_available(config), self._apply_probe_result, _on_error)
+
+    def _apply_probe_result(self, result: object) -> None:
+        """Apply an availability-probe outcome, never enabling Download mid-run.
+
+        A probe scheduled before a download started can land after it did —
+        the button is pinned disabled for the run's duration regardless of
+        what this probe found.
+        """
+        self._ytdlp_is_available = bool(result)
+        self.engine_notice_label.setVisible(not self._ytdlp_is_available)
+        self.download_button.setEnabled(self._ytdlp_is_available and not still_running(self.worker_thread))
 
     def _ytdlp_ready(self) -> bool:
         """Return the cached yt-dlp availability (probed once per config)."""
@@ -435,7 +449,12 @@ class DownloadTab(_ToolTabBase):
         # worker mkdir-s the destination itself).
         check_dir = dest if dest.exists() else dest.parent
         if not os.access(check_dir, os.W_OK):
-            self.log_widget.append_error(self.tr("Download folder is not writable: ") + str(dest))
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Download folder is not writable."),
+                    details=tr_format(self.tr("Check permissions for %1."), str(dest)),
+                )
+            )
             return
 
         self._begin_tool_run(len(urls))
