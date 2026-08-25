@@ -7050,6 +7050,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>これらのリソースとは？</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation>推奨リソースをダウンロード</translation>
     </message>
@@ -7066,19 +7070,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>辞書の準備完了：%1</translation>
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished">頻度</translation>
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished">ピッチアクセント</translation>
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>

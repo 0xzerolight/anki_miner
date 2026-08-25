@@ -7050,6 +7050,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Apa saja sumber daya ini?</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation>Unduh sumber daya yang direkomendasikan</translation>
     </message>
@@ -7066,19 +7070,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Kamus siap: %1</translation>
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished">Frekuensi</translation>
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished">Aksen nada</translation>
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>

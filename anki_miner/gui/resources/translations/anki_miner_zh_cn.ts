@@ -7050,6 +7050,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>这些资源是什么？</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation>下载推荐资源</translation>
     </message>
@@ -7066,19 +7070,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>词典已就绪：%1</translation>
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished">词频</translation>
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished">音调</translation>
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>

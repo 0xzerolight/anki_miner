@@ -7063,6 +7063,10 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Cosa sono queste risorse?</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation>Scarica le risorse consigliate</translation>
     </message>
@@ -7079,19 +7083,7 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Dizionario pronto: %1</translation>
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished">Frequenza</translation>
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished">Accento tonale</translation>
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
