@@ -27,7 +27,6 @@ def _reset_shared_session():
     previous = _ankiconnect._session
     _ankiconnect._session = None
     yield
-    _ankiconnect._session = None
     _ankiconnect._session = previous
 
 

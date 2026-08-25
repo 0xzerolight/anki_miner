@@ -20,6 +20,7 @@ patch seam keep working.
 """
 
 import logging
+import threading
 from typing import Any
 
 import requests
@@ -34,15 +35,21 @@ logger = logging.getLogger(__name__)
 _ORIGINAL_POST = requests.post
 
 # Lazily created, reused across calls to keep the AnkiConnect TCP connection
-# alive instead of opening a fresh one per action.
+# alive instead of opening a fresh one per action. Guarded by _SESSION_LOCK
+# (double-checked lock, mirroring tagger.py's get_shared_tagger()) since
+# validation/episode/backfill/deck-filter/batch workers can all reach this
+# from their own QThreads concurrently.
+_SESSION_LOCK = threading.Lock()
 _session: requests.Session | None = None
 
 
 def _get_session() -> requests.Session:
-    """Return the shared keep-alive session, creating it on first use."""
+    """Return the shared keep-alive session, building it once (double-checked lock)."""
     global _session
     if _session is None:
-        _session = requests.Session()
+        with _SESSION_LOCK:
+            if _session is None:
+                _session = requests.Session()
     return _session
 
 
