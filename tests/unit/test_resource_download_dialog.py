@@ -217,6 +217,16 @@ def test_window_is_modeless_and_start_returns_while_the_worker_runs(parent, monk
     assert modality == Qt.WindowModality.NonModal
 
 
+def test_window_declines_wa_quit_on_close(parent, monkeypatch, tmp_path, qtbot):
+    """H3: a still-visible download window must not keep a closed app alive."""
+    worker = _FakeWorker(_successful_summary())
+    session, _dir = _start(monkeypatch, tmp_path, parent, worker)
+
+    assert session.window.testAttribute(Qt.WidgetAttribute.WA_QuitOnClose) is False
+
+    _drain(qtbot, worker)
+
+
 def test_hide_leaves_the_worker_and_the_staged_files_alive(parent, monkeypatch, tmp_path, qtbot):
     worker = _FakeWorker(_successful_summary())
     session, download_dir = _start(monkeypatch, tmp_path, parent, worker)

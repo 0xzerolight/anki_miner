@@ -1987,6 +1987,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self._mini_job_monitor is not None:
             self._mini_job_monitor.close()
 
+        # Same reasoning as the monitor above: the download window also
+        # declines WA_QuitOnClose, but left open it still reports on a run
+        # whose app is going away. Its own worker is cancelled+joined by
+        # background_tasks.shutdown below — closing here is Hide, not Cancel,
+        # for a live run, which is exactly what a torn-down app needs.
+        session = self._resource_download_session
+        if session is not None and session.window is not None:
+            session.window.close()
+
         # File pickers are non-blocking now (gui/utils/file_dialogs), so one can
         # still be on screen here. It declines WA_QuitOnClose like the monitor
         # above, but its continuation would land in an application whose panels

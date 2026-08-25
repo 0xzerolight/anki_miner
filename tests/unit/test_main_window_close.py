@@ -837,6 +837,37 @@ class TestCloseEventReleasesDictResources:
         assert quit_calls == [True]
 
 
+class TestCloseEventResourceDownloadWindow:
+    """closeEvent must close a visible resource-download window (H3): default
+    WA_QuitOnClose plus no closeEvent handling kept the app alive after the
+    main window closed. background_tasks.shutdown already cancels+joins the
+    adopted worker, so closing the window here needs no cancellation of its own.
+    """
+
+    def test_open_download_window_is_closed(self, main_window):
+        window = MagicMock()
+        main_window._resource_download_session = SimpleNamespace(window=window)
+
+        event = _trigger_close(main_window)
+
+        window.close.assert_called_once()
+        event.accept.assert_called_once()
+
+    def test_no_session_does_not_error(self, main_window):
+        main_window._resource_download_session = None
+
+        event = _trigger_close(main_window)
+
+        event.accept.assert_called_once()
+
+    def test_session_with_no_window_does_not_error(self, main_window):
+        main_window._resource_download_session = SimpleNamespace(window=None)
+
+        event = _trigger_close(main_window)
+
+        event.accept.assert_called_once()
+
+
 class TestCloseEventFlushesSettingsAutosave:
     """closeEvent must flush a pending Settings auto-save BEFORE the shutdown
     fan-out stops the debounce timer, on BOTH close paths (immediate and

@@ -261,6 +261,9 @@ class ResourceDownloadWindow(EnhancedDialog):
     def __init__(self, parent: QWidget | None, specs: Sequence[ResourceSpec]) -> None:
         super().__init__(parent, QCoreApplication.translate("ResourceDownloadDialog", "Recommended Resources"))
         self.setWindowModality(Qt.WindowModality.NonModal)
+        # A window that only reports on a download must never be the reason
+        # the application is still running (mirrors mini_job_monitor.py).
+        self.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
         self._running = True
 
         self.resource_label = QLabel("")
