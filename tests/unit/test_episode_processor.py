@@ -413,7 +413,7 @@ class TestProcessEpisode:
     def test_empty_parse_after_cancel_is_cancelled(self, processor, mock_services, tmp_path):
         cancel_event = threading.Event()
 
-        def _parse_then_cancel(_subtitle_file):
+        def _parse_then_cancel(_subtitle_file, _offset=None):
             cancel_event.set()
             return []
 
@@ -535,7 +535,7 @@ class TestProcessEpisode:
         processor.process_episode(video, sub)
 
         # Verify subtitle_parser gets the subtitle file
-        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(sub)
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(sub, None)
 
         # Verify word_filter gets all_words and existing vocab
         mock_services["word_filter"].filter_unknown.assert_called_once()
@@ -3156,7 +3156,7 @@ class TestProcessYoutubeUrl:
         sp = mock_services["subtitle_parser"]
         # Curation builds the line index; mirror the plain parse result through
         # the with-index path (no sentence candidates).
-        sp.parse_subtitle_file_with_index.side_effect = lambda f: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (sp.parse_subtitle_file.return_value, [])
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word]
@@ -3225,7 +3225,7 @@ class TestProcessYoutubeUrl:
         assert call.kwargs["cancel_event"] is cancel_event
 
         # Mining pipeline ran and produced a card
-        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(subtitle_file)
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(subtitle_file, None)
         assert result.cards_created == 1
         assert result.total_words_found == 1
 
@@ -3578,7 +3578,7 @@ class TestProcessYoutubeUrlCancelPropagation:
         sp = mock_services["subtitle_parser"]
         # Curation builds the line index; mirror the plain parse result through
         # the with-index path (no sentence candidates).
-        sp.parse_subtitle_file_with_index.side_effect = lambda f: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (sp.parse_subtitle_file.return_value, [])
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = [word]
@@ -3618,7 +3618,7 @@ class TestProcessYoutubeUrlCancelPropagation:
 
         word = _make_word("食べる")
 
-        def _parse_then_cancel(sub_file):
+        def _parse_then_cancel(sub_file, _offset=None):
             cancel_event.set()  # user pressed Stop All mid-parse
             return [word]
 
@@ -3740,7 +3740,7 @@ class TestProcessYoutubeUrlCancelPropagation:
 
         word = _make_word("食べる")
 
-        def _parse_then_cancel(sub_file):
+        def _parse_then_cancel(sub_file, _offset=None):
             run1_event.set()
             return [word]
 
@@ -3878,7 +3878,11 @@ class TestIPlusOneFilter:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_called_once_with(tmp_path / "s.ass")
+        # The offset is a per-call argument now; every non-batch caller passes
+        # None and the parser falls back to its own config value.
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_called_once_with(
+            tmp_path / "s.ass", None
+        )
         mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
 
     def test_calls_legacy_parse_when_flag_off(self, test_config, mock_services, tmp_path):
@@ -3897,7 +3901,7 @@ class TestIPlusOneFilter:
 
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
-        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(tmp_path / "s.ass")
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(tmp_path / "s.ass", None)
         mock_services["subtitle_parser"].parse_subtitle_file_with_index.assert_not_called()
 
     def test_skips_dedup_when_flag_on(self, test_config, mock_services, tmp_path):
@@ -5388,7 +5392,7 @@ class TestOfflineDefinitionPreFilter:
 
     def _prime(self, mock_services, words):
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f: (
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
             mock_services["subtitle_parser"].parse_subtitle_file.return_value,
             [],
         )
@@ -5543,7 +5547,7 @@ class TestWithinRunDuplicateCollapse:
 
     def _prime(self, mock_services, words):
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
-        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f: (
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
             mock_services["subtitle_parser"].parse_subtitle_file.return_value,
             [],
         )
@@ -6067,7 +6071,7 @@ class TestCurationLineExpansion:
         sp = mock_services["subtitle_parser"]
         # Curation builds the line index; mirror the plain parse result through
         # the with-index path (no sentence candidates).
-        sp.parse_subtitle_file_with_index.side_effect = lambda f: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (sp.parse_subtitle_file.return_value, [])
         sp.parse_subtitle_file.return_value = list(words)
         mock_services["anki_service"].get_existing_vocabulary.return_value = set()
         mock_services["word_filter"].filter_unknown.return_value = list(words)
@@ -6123,3 +6127,98 @@ class TestCurationLineExpansion:
 
         mock_services["word_filter"].expand_word_lines.assert_not_called()
         assert mock_services["subtitle_parser"].parse_raw_entries.call_count == 1
+
+
+class TestPerCallSubtitleOffset:
+    """``process_episode(subtitle_offset=...)`` overrides the config for one call.
+
+    A batch run drives ONE processor over queue items that each carry their own
+    offset, so the offset must reach every time-carrying parser entry point per
+    call instead of being baked into the processor's config.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _wire(self, mock_services, word):
+        sp = mock_services["subtitle_parser"]
+        sp.parse_subtitle_file.return_value = [word]
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: ([word], [])
+        sp.parse_raw_entries.return_value = [(1.0, 3.0, "文")]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. def"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    def test_offset_reaches_plain_parse_and_raw_entries(self, test_config, mock_services, tmp_path):
+        """The i+1-off path: parse_subtitle_file and the phase-1 raw-entry parse
+        both take this call's offset."""
+        word = _make_word("食べる")
+        self._wire(mock_services, word)
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", subtitle_offset=1.5)
+
+        sp = mock_services["subtitle_parser"]
+        assert sp.parse_subtitle_file.call_args[0][1] == 1.5
+        assert sp.parse_raw_entries.call_args[0][1] == 1.5
+
+    def test_offset_reaches_with_index_parse(self, test_config, mock_services, tmp_path):
+        """The i+1 phase-1 path (the one batch runs actually take) takes it too."""
+        config = replace(test_config, use_i_plus_one_filter=True)
+        word = _make_word("食べる")
+        self._wire(mock_services, word)
+        mock_services["word_filter"].filter_i_plus_one.return_value = [word]
+        proc = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", subtitle_offset=1.5)
+
+        sp = mock_services["subtitle_parser"]
+        assert sp.parse_subtitle_file_with_index.call_args[0][1] == 1.5
+        sp.parse_subtitle_file.assert_not_called()
+
+    def test_offset_reaches_line_expansion_reparse(self, test_config, mock_services, tmp_path):
+        """The curator's expansion re-parse must land on the same timeline as
+        the words it merges (Issue #120), so it takes the same offset."""
+        word = _make_word("食べる")
+        self._wire(mock_services, word)
+        intent = replace(word, line_expansion=(1, 0))
+        mock_services["word_filter"].expand_word_lines.return_value = word
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(
+            tmp_path / "v.mkv",
+            tmp_path / "s.ass",
+            curation_callback=lambda ws: [intent],
+            subtitle_offset=1.5,
+        )
+
+        offsets = {c.args[1] for c in mock_services["subtitle_parser"].parse_raw_entries.call_args_list}
+        assert offsets == {1.5}
+
+    def test_omitted_offset_passes_none_and_keeps_config_behaviour(self, test_config, mock_services, tmp_path):
+        """Every non-batch caller passes nothing: the parser then falls back to
+        its own config value, byte-identical to the pre-change behaviour."""
+        word = _make_word("食べる")
+        self._wire(mock_services, word)
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        sp = mock_services["subtitle_parser"]
+        assert sp.parse_subtitle_file.call_args[0][1] is None
+        assert sp.parse_raw_entries.call_args[0][1] is None

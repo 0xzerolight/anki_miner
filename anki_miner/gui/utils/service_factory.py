@@ -565,10 +565,14 @@ def create_services(
             constructing a fresh one. The Deck Builder injects its Phase-1
             parser here so Phase-2 mining hits the already-filled per-file
             tokenization cache. The caller owns ensuring the parser's
-            parse-relevant config matches ``config`` (offset / bold target /
-            allowed POS / excluded subtypes / excluded wordsets /
-            subtitle-filter fields); the parser reads only those, so reuse is
-            byte-identical for a matching config.
+            parse-relevant config matches ``config`` (bold target / allowed POS
+            / excluded subtypes / excluded wordsets / subtitle-filter fields —
+            ``PARSE_RELEVANT_CONFIG_FIELDS``); the parser reads only those, so
+            reuse is byte-identical for a matching config. The subtitle offset
+            is NOT among them: it is a per-call argument on the parse entry
+            points and the cached line state is offset-neutral, which is what
+            lets the batch queue run one processor over items with different
+            offsets.
         anki_service: Optional pre-built :class:`AnkiService` to reuse.
             When provided the existing instance (and its populated vocab cache)
             is reused rather than constructing a fresh one. The batch queue

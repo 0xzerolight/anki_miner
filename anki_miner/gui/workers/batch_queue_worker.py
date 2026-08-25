@@ -3,7 +3,6 @@
 import contextlib
 import logging
 from collections.abc import Callable
-from dataclasses import replace
 from functools import partial
 from pathlib import Path
 
@@ -70,7 +69,9 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
 
         Args:
             batch_queue: BatchQueue containing items to process
-            config: Application configuration (a per-item copy with adjusted subtitle_offset is created via dataclasses.replace; the original is not mutated)
+            config: Application configuration, used unmodified for the run's one
+                processor; each item's own subtitle_offset is passed per
+                process_episode call
             presenter: GUI presenter for output
             progress_callback: Optional progress callback for updates
             stats_service: Optional statistics recording service
@@ -107,10 +108,10 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
-        """The per-item processor for the current (or most recent) queue item.
+        """The run's processor (one for the whole queue).
 
-        Set before each item's pairs are processed, so it is always the live
-        processor by the time the curation bridge blocks the run loop.
+        Built before the first item's pairs are processed, so it is always the
+        live processor by the time the curation bridge blocks the run loop.
         """
         return self._current_processor
 
@@ -126,19 +127,17 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             self._current_processor.cancel()
 
     def _close_current_processor(self) -> None:
-        """Release the current per-item processor's sqlite handles + Session.
+        """Release the run processor's sqlite handles + Session at the run's end.
 
         Closing must never abort the queue, so any error is swallowed (the
-        processor is being discarded anyway). Between items this prevents run
-        N's leaked handles/sockets from accumulating into run N+1 — the Windows
+        processor is being discarded anyway). This is what stops run N's leaked
+        handles/sockets from accumulating into run N+1 — the Windows
         back-to-back-mining freeze.
         """
         if self._current_processor is None:
             return
         with contextlib.suppress(Exception):
             self._current_processor.close()
-        # Drop the reference so the finally-block close after the loop doesn't
-        # double-close a processor already released at the top of the next item.
         self._current_processor = None
 
     def run(self):
@@ -165,8 +164,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             logger.exception("BatchQueueWorker run failed before/around the item loop")
             self.error.emit(str(e))
         finally:
-            # Close the final item's processor on every exit (normal, cancel,
-            # or exception) so its sqlite handles / Session don't leak.
+            # Close the run's processor on every exit (normal, cancel, or
+            # exception) so its sqlite handles / Session don't leak.
             self._close_current_processor()
             self.queue_finished.emit(total_cards)
 
@@ -191,22 +190,20 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             return total_cards
 
         # Build ONE shared AnkiService for the whole run so its vocab cache
-        # (get_existing_vocabulary) survives across all queue items. Each item
-        # gets a fresh EpisodeProcessor (different subtitle_offset) but shares
-        # this instance. AnkiService has no close(); EpisodeProcessor.close()
-        # does NOT close it, so _close_current_processor() between items is safe.
-        # (ankiconnect_url / anki_fields / excluded_decks are identical for all
-        # items in a run — only subtitle_offset differs via config_with_offset.)
+        # (get_existing_vocabulary) survives across all queue items. It is wired
+        # into the run's single EpisodeProcessor; AnkiService has no close(),
+        # and EpisodeProcessor.close() does NOT close it, so the run-end
+        # _close_current_processor() is safe.
         shared_anki_service = AnkiService(self.config)
 
-        # Build the offset-independent lookup stack (dict registry + eager dict
-        # load + pitch CSV parse + frequency registry load) ONCE for the whole
-        # run instead of once per item — on this worker thread, same as the old
-        # per-item builds. Its load messages surface once per run here; the
-        # per-item create_episode_processor calls then skip those loads (and
-        # their messages) entirely. Processors built over the bundle do NOT
-        # close its sqlite handles (owns_lookup_services=False); the finally
-        # below is the run-level Issue #30 teardown on every exit path.
+        # Build the lookup stack (dict registry + eager dict load + pitch CSV
+        # parse + frequency registry load) ONCE for the whole run — on this
+        # worker thread, same as the old per-item builds. Its load messages
+        # surface once per run here; the run's create_episode_processor call
+        # then skips those loads (and their messages) entirely. Processors built
+        # over the bundle do NOT close its sqlite handles
+        # (owns_lookup_services=False); the finally below is the run-level
+        # Issue #30 teardown on every exit path.
         shared_lookup = create_shared_lookup_services(self.config)
         for msg in shared_lookup.load_result.info:
             self.presenter.show_info(msg)
@@ -247,9 +244,6 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             # episode or a SQLite/ffmpeg call (D29-A).
             if not self._wait_at_boundary():
                 break
-            # Close the previous item's processor before building the next
-            # item's, so handles never accumulate across items.
-            self._close_current_processor()
 
             # OWNERSHIP: during a run, this worker thread owns every QueueItem
             # status/result write, applied synchronously at pick/finish time so
@@ -269,21 +263,23 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
 
             cards_for_item = 0
             try:
-                # Create config with item's subtitle offset
-                config_with_offset = replace(self.config, subtitle_offset=item.subtitle_offset)
-
-                # Create processor for this item with its specific offset,
-                # injecting the shared AnkiService (vocab cache persists) and
-                # the shared lookup bundle (dict/pitch/frequency built once per
-                # run; the processor won't close them between items).
-                episode_processor = create_episode_processor(
-                    config_with_offset,
-                    self.presenter,
-                    self.stats_service,
-                    anki_service=shared_anki_service,
-                    shared_lookup=shared_lookup,
-                )
-                self._current_processor = episode_processor
+                # ONE processor for the whole queue. Only subtitle_offset used
+                # to differ per item, and that is a per-call argument on
+                # process_episode now, so a rebuild would only re-pay for a new
+                # fugashi Tagger, a discarded parser memo set and a re-probed
+                # media extractor. Built on first use so a run cancelled or
+                # stopped before its first item never pays for it at all; the
+                # shared AnkiService (vocab cache) and lookup bundle
+                # (dict/pitch/frequency, closed by this worker) are injected.
+                if self._current_processor is None:
+                    self._current_processor = create_episode_processor(
+                        self.config,
+                        self.presenter,
+                        self.stats_service,
+                        anki_service=shared_anki_service,
+                        shared_lookup=shared_lookup,
+                    )
+                episode_processor = self._current_processor
 
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
@@ -329,6 +325,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                                 pair.subtitle,
                                 progress_callback=self.progress_callback,
                                 curation_callback=self.curation_callback,
+                                subtitle_offset=item.subtitle_offset,
                             )
                         except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                             # Per-pair guard: process_episode now runs the card-target
@@ -441,6 +438,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     pair.subtitle,
                     progress_callback=self.progress_callback,
                     curation_callback=capture,
+                    subtitle_offset=item.subtitle_offset,
                 )
             except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                 logger.exception("BatchQueueWorker season pre-pass pair %s failed", pair.video.name)
@@ -512,6 +510,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         # chosen sentence, clip_override and times are already
                         # this episode's (same offset both passes).
                         curation_callback=fixed_selection(subset),
+                        subtitle_offset=item.subtitle_offset,
                     )
                 except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                     logger.exception("BatchQueueWorker season mine pair %s failed", pair.video.name)

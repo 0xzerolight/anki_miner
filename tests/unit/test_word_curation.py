@@ -54,7 +54,7 @@ class TestCurationCallback:
         subtitle_parser = MagicMock()
         # Curation builds the line index too, so mirror parse_subtitle_file's
         # configured return through the with-index path (no candidates).
-        subtitle_parser.parse_subtitle_file_with_index.side_effect = lambda f: (
+        subtitle_parser.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (
             subtitle_parser.parse_subtitle_file.return_value,
             [],
         )

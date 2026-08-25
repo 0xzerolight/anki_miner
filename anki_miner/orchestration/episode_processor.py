@@ -566,6 +566,7 @@ class EpisodeProcessor:
         subtitle_file: Path,
         progress_callback: ProgressCallback | None = None,
         want_line_index: bool = False,
+        subtitle_offset: float | None = None,
     ) -> tuple[list[TokenizedWord], list[LineLemmas] | None]:
         """Phase 1: parse subtitles into tokenized words (and optionally a line index).
 
@@ -573,6 +574,9 @@ class EpisodeProcessor:
         line index is built when the i+1 filter needs it OR when a caller asks
         via ``want_line_index`` (interactive curation uses it to offer
         alternative example sentences per word).
+
+        ``subtitle_offset`` is this run's offset; ``None`` leaves the parser on
+        its own ``config.subtitle_offset``.
         """
         self._announce_stage(
             progress_callback,
@@ -584,15 +588,15 @@ class EpisodeProcessor:
         )
         line_index: list[LineLemmas] | None = None
         if self.config.use_i_plus_one_filter or want_line_index:
-            all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file)
+            all_words, line_index = self.subtitle_parser.parse_subtitle_file_with_index(subtitle_file, subtitle_offset)
         else:
-            all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file)
+            all_words = self.subtitle_parser.parse_subtitle_file(subtitle_file, subtitle_offset)
         self._report_ambiguous_readings()
         self.presenter.show_success(
             QCoreApplication.translate("EpisodeProcessor", "Found %n unique word(s)", "", len(all_words))
         )
         ctx.total_words_found = len(all_words)
-        represented_lines = len(self.subtitle_parser.parse_raw_entries(subtitle_file))
+        represented_lines = len(self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset))
         produced_tokens = sum(self.subtitle_parser.count_lemmas(subtitle_file).values())
         log_summary(
             logger,
@@ -1852,19 +1856,25 @@ class EpisodeProcessor:
             )
         return curated
 
-    def _materialize_line_expansions(self, words: list[TokenizedWord], subtitle_file: Path) -> list[TokenizedWord]:
+    def _materialize_line_expansions(
+        self,
+        words: list[TokenizedWord],
+        subtitle_file: Path,
+        subtitle_offset: float | None = None,
+    ) -> list[TokenizedWord]:
         """Rebuild curator-expanded words against the episode's full cue list (Issue #120).
 
         Runs between curation and phase 3 so the merged sentence/timings feed
         media extraction, lookups and card creation alike. ``parse_raw_entries``
         is the neighbor source — it is the complete ordered list (``line_index``
-        drops zero-lemma lines) and applies the same ``subtitle_offset`` the
-        words carry, so both sides share one timeline. The all-zero fast path
-        skips the re-parse entirely (every run without an expansion).
+        drops zero-lemma lines) and must be re-parsed at the SAME
+        ``subtitle_offset`` the words carry, or the two sides land on different
+        timelines. The all-zero fast path skips the re-parse entirely (every run
+        without an expansion).
         """
         if all(word.line_expansion == (0, 0) for word in words):
             return words
-        entries = self.subtitle_parser.parse_raw_entries(subtitle_file)
+        entries = self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset)
         return [
             self.word_filter.expand_word_lines(word, entries) if word.line_expansion != (0, 0) else word
             for word in words
@@ -1882,6 +1892,7 @@ class EpisodeProcessor:
         source_label_override: str | None = None,
         audio_only: bool = False,
         cancel_event: threading.Event | None = None,
+        subtitle_offset: float | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -1925,6 +1936,12 @@ class EpisodeProcessor:
                 (via :attr:`cancelled`) for the duration of this call only —
                 workers must use this instead of the sticky :meth:`cancel`,
                 which poisons shared processors across runs (see __init__).
+            subtitle_offset: Seconds to shift subtitle timings by for THIS call
+                only. ``None`` (default) leaves the parser on its own
+                ``config.subtitle_offset``. The batch queue runs one processor
+                over items with different offsets and passes each item's here,
+                so a per-item config copy (and the per-item service rebuild it
+                forced) is no longer needed.
 
         Returns:
             ProcessingResult with statistics.
@@ -1959,7 +1976,11 @@ class EpisodeProcessor:
             want_line_index = curation_callback is not None
             with timed_phase("parse", logger):
                 all_words, line_index = self._phase1_parse(
-                    ctx, subtitle_file, progress_callback, want_line_index=want_line_index
+                    ctx,
+                    subtitle_file,
+                    progress_callback,
+                    want_line_index=want_line_index,
+                    subtitle_offset=subtitle_offset,
                 )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
@@ -1988,7 +2009,7 @@ class EpisodeProcessor:
                 )
                 if isinstance(outcome, ProcessingResult):
                     return outcome
-                unknown_words = self._materialize_line_expansions(outcome, subtitle_file)
+                unknown_words = self._materialize_line_expansions(outcome, subtitle_file, subtitle_offset)
 
             with timed_phase("extract", logger):
                 media_results = self._phase3_extract(

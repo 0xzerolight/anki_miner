@@ -4068,6 +4068,152 @@ class TestAbandonedGeneratorCacheNonCommit:
         assert counts["犬"] == 1
 
 
+class TestPerCallSubtitleOffset:
+    """The subtitle offset is a per-CALL argument, not a per-parser config value.
+
+    A batch run reuses ONE parser across queue items that each carry their own
+    offset, so ``_line_cache`` must store offset-NEUTRAL times and every parse
+    applies its own offset at yield. Two parses of the same unchanged file with
+    different offsets therefore share the tokenization (cache HIT) while
+    returning differently-shifted times.
+    """
+
+    @staticmethod
+    def _make_mock_subs(lines):
+        mock_lines = []
+        for text, start, end in lines:
+            ml = MagicMock()
+            ml.text = text
+            ml.start = start
+            ml.end = end
+            mock_lines.append(ml)
+        mock_subs = MagicMock()
+        mock_subs.__iter__ = MagicMock(side_effect=lambda: iter(mock_lines))
+        return mock_subs
+
+    def _fixture(self, tmp_path):
+        """A stable-mtime file plus mock subs whose single line is 1.0s → 3.0s."""
+        import os
+
+        sub_file = tmp_path / "test.srt"
+        sub_file.write_text("placeholder", encoding="utf-8")
+        os.utime(sub_file, (1000, 1000))
+        return sub_file, self._make_mock_subs([("食べる", 1000, 3000)])
+
+    @staticmethod
+    def _tagger():
+        tagger = MagicMock()
+        tagger.return_value = [_make_token("食べる", "動詞", lemma="食べる", kana="タベル")]
+        return tagger
+
+    def test_parse_subtitle_file_offset_then_zero_offset_hits_cache(self, test_config, tmp_path):
+        """A per-call offset shifts times; the same file at offset 0 replays the
+        cached tokenization unshifted."""
+        mock_tagger = self._tagger()
+        sub_file, mock_subs = self._fixture(tmp_path)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            shifted = service.parse_subtitle_file(sub_file, subtitle_offset=2.0)
+            calls_after_first = mock_tagger.call_count
+            unshifted = service.parse_subtitle_file(sub_file, subtitle_offset=0.0)
+
+        assert shifted[0].start_time == pytest.approx(3.0)
+        assert shifted[0].end_time == pytest.approx(5.0)
+        assert shifted[0].duration == pytest.approx(2.0)
+        # Same parser, same file, different offset: the stored line state is
+        # offset-neutral, so the second parse is a cache HIT.
+        assert mock_tagger.call_count == calls_after_first
+        assert unshifted[0].start_time == pytest.approx(1.0)
+        assert unshifted[0].end_time == pytest.approx(3.0)
+
+    def test_parse_subtitle_file_with_index_offset_then_zero_offset_hits_cache(self, test_config, tmp_path):
+        """Same contract through the i+1 phase-1 path (words AND line index)."""
+        mock_tagger = self._tagger()
+        sub_file, mock_subs = self._fixture(tmp_path)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            shifted, shifted_index = service.parse_subtitle_file_with_index(sub_file, subtitle_offset=2.0)
+            calls_after_first = mock_tagger.call_count
+            unshifted, unshifted_index = service.parse_subtitle_file_with_index(sub_file, subtitle_offset=0.0)
+
+        assert shifted[0].start_time == pytest.approx(3.0)
+        assert shifted[0].end_time == pytest.approx(5.0)
+        assert shifted_index[0].start_time == pytest.approx(3.0)
+        assert shifted_index[0].end_time == pytest.approx(5.0)
+        assert mock_tagger.call_count == calls_after_first
+        assert unshifted[0].start_time == pytest.approx(1.0)
+        assert unshifted[0].end_time == pytest.approx(3.0)
+        assert unshifted_index[0].start_time == pytest.approx(1.0)
+        assert unshifted_index[0].end_time == pytest.approx(3.0)
+
+    def test_parse_raw_entries_applies_per_call_offset(self, test_config, tmp_path):
+        """The display/expansion path takes the same per-call offset."""
+        mock_tagger = self._tagger()
+        sub_file, mock_subs = self._fixture(tmp_path)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            shifted = service.parse_raw_entries(sub_file, subtitle_offset=2.0)
+            unshifted = service.parse_raw_entries(sub_file, subtitle_offset=0.0)
+
+        assert shifted[0][0] == pytest.approx(3.0)
+        assert shifted[0][1] == pytest.approx(5.0)
+        assert unshifted[0][0] == pytest.approx(1.0)
+        assert unshifted[0][1] == pytest.approx(3.0)
+
+    def test_omitted_offset_falls_back_to_config(self, test_config, tmp_path):
+        """No argument = the parser's own config offset, on every entry point."""
+        import dataclasses
+
+        config = dataclasses.replace(test_config, subtitle_offset=5.0)
+        mock_tagger = self._tagger()
+        sub_file, mock_subs = self._fixture(tmp_path)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(config)
+            words = service.parse_subtitle_file(sub_file)
+            indexed, index = service.parse_subtitle_file_with_index(sub_file)
+            entries = service.parse_raw_entries(sub_file)
+
+        assert words[0].start_time == pytest.approx(6.0)
+        assert words[0].end_time == pytest.approx(8.0)
+        assert indexed[0].start_time == pytest.approx(6.0)
+        assert index[0].start_time == pytest.approx(6.0)
+        assert entries[0][0] == pytest.approx(6.0)
+        assert entries[0][1] == pytest.approx(8.0)
+
+    def test_negative_offset_clamps_at_zero_and_shrinks_duration(self, test_config, tmp_path):
+        """The clamp is applied AFTER the shift, not baked into the stored state:
+        a line pushed below zero keeps ``duration == end - start``."""
+        mock_tagger = self._tagger()
+        sub_file, mock_subs = self._fixture(tmp_path)
+
+        with (
+            patch("anki_miner.services.subtitle_parser.pysubs2.load", return_value=mock_subs),
+            patch("anki_miner.services.subtitle_parser.get_shared_tagger", return_value=mock_tagger),
+        ):
+            service = SubtitleParserService(test_config)
+            words = service.parse_subtitle_file(sub_file, subtitle_offset=-2.0)
+
+        assert words[0].start_time == pytest.approx(0.0)
+        assert words[0].end_time == pytest.approx(1.0)
+        assert words[0].duration == pytest.approx(1.0)
+
+
 # ---------------------------------------------------------------------------
 # OVH-006 — ASS/SSA Comment lines must be skipped
 # ---------------------------------------------------------------------------

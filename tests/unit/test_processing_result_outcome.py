@@ -85,7 +85,7 @@ def test_stopped_empty_phase_result_classifies_as_cancelled(test_config, tmp_pat
     )
     if empty_phase == "parse":
 
-        def _parse_then_cancel(_subtitle_file):
+        def _parse_then_cancel(_subtitle_file, _offset=None):
             cancel_event.set()
             return []
 

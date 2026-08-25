@@ -90,6 +90,54 @@ def test_curation_attrs_use_item_offset_at_curator_time(tmp_path):
     assert [w.surface for w in captured[0]["pool"]] == ["食べる"]
 
 
+def test_season_mode_passes_the_item_offset_on_every_call(tmp_path):
+    """Season mode drives the shared processor twice per pair (pre-pass, then
+    mine); both calls carry the item's own offset."""
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+
+    proc = MagicMock()
+    offsets: list = []
+
+    def fake_process(video, subtitle, progress_callback=None, curation_callback=None, **kwargs):
+        offsets.append(kwargs.get("subtitle_offset"))
+        curated = [] if curation_callback is None else curation_callback([_make_curation_word()])
+        return ProcessingResult(
+            total_words_found=1,
+            new_words_found=len(curated or []),
+            cards_created=len(curated or []),
+        )
+
+    proc.process_episode.side_effect = fake_process
+
+    item = QueueItem(
+        video_folder=tmp_path / "video",
+        subtitle_folder=tmp_path / "subs",
+        display_name="Show",
+        id="i1",
+        subtitle_offset=3.0,
+    )
+    queue = MagicMock()
+    queue.get_all_items.return_value = [item]
+
+    worker = BatchQueueWorkerThread(
+        queue, AnkiMinerConfig(), MagicMock(), None, curation_callback=lambda pool: list(pool)
+    )
+
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert offsets == [3.0, 3.0], offsets
+
+
 def _make_curation_word():
     from anki_miner.models.word import TokenizedWord
 
@@ -728,42 +776,46 @@ def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Per-item processor close() between sequential items (Windows freeze fix)
+# One processor for the whole queue, closed at the run's end (Windows freeze fix)
 # ---------------------------------------------------------------------------
 
 
-def test_each_item_processor_closed(tmp_path):
-    """A 2-item queue closes each item's processor; the prior one before the next is built."""
+def test_run_builds_one_processor_and_closes_it_once(tmp_path):
+    """A 2-item queue builds ONE processor and closes it after the last item.
+
+    Only ``subtitle_offset`` differed per item, and that is a per-call argument
+    now, so nothing is left to rebuild between items. The run-end close is still
+    the Windows back-to-back-mining handle release.
+    """
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
     queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
 
-    proc1 = MagicMock(name="proc1")
-    proc1.process_episode.return_value = _ok_result(cards=1)
-    proc2 = MagicMock(name="proc2")
-    proc2.process_episode.return_value = _ok_result(cards=1)
+    proc = MagicMock(name="proc")
 
     order: list[str] = []
-    proc1.close.side_effect = lambda: order.append("close1")
-    proc2.close.side_effect = lambda: order.append("close2")
+    proc.close.side_effect = lambda: order.append("close")
 
-    built: list[MagicMock] = [proc1, proc2]
+    def _process(*_args, **_kwargs):
+        order.append("process")
+        return _ok_result(cards=1)
 
-    def _build(*a, **k):
-        proc = built.pop(0)
-        order.append(f"build:{proc._mock_name}")
+    proc.process_episode.side_effect = _process
+
+    def _build(*_args, **_kwargs):
+        order.append("build")
         return proc
 
     worker = _make_worker_with_queue(queue)
-    _wire_status_slots(worker, queue)
+    results = _wire_status_slots(worker, queue)
 
     with (
         patch(
             "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
             side_effect=_build,
-        ),
+        ) as create_ep,
         patch(
             "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
             return_value=[pair],
@@ -771,10 +823,69 @@ def test_each_item_processor_closed(tmp_path):
     ):
         worker.run()
 
-    proc1.close.assert_called_once_with()
-    proc2.close.assert_called_once_with()
-    # proc1 is closed before proc2 is built; proc2 closed at the end.
-    assert order == ["build:proc1", "close1", "build:proc2", "close2"], order
+    create_ep.assert_called_once()
+    proc.close.assert_called_once_with()
+    assert order == ["build", "process", "process", "close"], order
+    assert results["finished"] == [2], results["finished"]
+
+
+def test_one_subtitle_parser_service_for_the_whole_queue(tmp_path):
+    """Three queue items, ONE SubtitleParserService.
+
+    The per-item processor rebuild constructed a fresh parser per item — a new
+    fugashi Tagger plus the loss of every cross-parse dictionary memo — purely
+    because the item's offset was baked into a config copy.
+    """
+    import dataclasses
+
+    from anki_miner.gui.utils import service_factory
+    from anki_miner.orchestration.episode_processor import EpisodeProcessor
+
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+
+    queue = BatchQueue()
+    for index in range(3):
+        queue.add_item(tmp_path / f"video{index}", tmp_path / f"subs{index}", f"Show{index}", float(index))
+
+    # Every on-disk path under tmp_path: the real service factory runs here.
+    config = dataclasses.replace(
+        AnkiMinerConfig(),
+        dicts_root=tmp_path / "dicts",
+        known_words_db_path=tmp_path / "known_words.db",
+        stats_db_path=tmp_path / "stats.db",
+        media_temp_folder=tmp_path / "media",
+    )
+
+    real_parser_cls = service_factory.SubtitleParserService
+    parsers: list = []
+
+    def _spy_parser(*args, **kwargs):
+        parser = real_parser_cls(*args, **kwargs)
+        parsers.append(parser)
+        return parser
+
+    offsets: list = []
+
+    def _fake_process(_self, *_args, **kwargs):
+        offsets.append(kwargs.get("subtitle_offset"))
+        return _ok_result(cards=1)
+
+    worker = BatchQueueWorkerThread(queue, config, MagicMock())
+    _wire_status_slots(worker, queue)
+
+    with (
+        patch.object(service_factory, "SubtitleParserService", side_effect=_spy_parser),
+        patch.object(EpisodeProcessor, "process_episode", autospec=True, side_effect=_fake_process),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+    ):
+        worker.run()
+
+    assert len(parsers) == 1, f"expected one parser for the run, built {len(parsers)}"
+    # Each item still mines on its own offset — passed per call, not per config.
+    assert offsets == [0.0, 1.0, 2.0]
 
 
 def test_processor_closed_on_exception_exit(tmp_path):
@@ -804,20 +915,16 @@ def test_processor_closed_on_exception_exit(tmp_path):
 
 
 def test_close_failure_does_not_abort_queue(tmp_path):
-    """A processor.close() that raises must not crash the queue loop."""
+    """A processor.close() that raises must not lose the run's result."""
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
     queue.add_item(tmp_path / "video2", tmp_path / "subs2", "Show2")
 
-    proc1 = MagicMock(name="proc1")
-    proc1.process_episode.return_value = _ok_result(cards=2)
-    proc1.close.side_effect = RuntimeError("close boom")
-    proc2 = MagicMock(name="proc2")
-    proc2.process_episode.return_value = _ok_result(cards=3)
-
-    built = [proc1, proc2]
+    proc = MagicMock(name="proc")
+    proc.process_episode.side_effect = [_ok_result(cards=2), _ok_result(cards=3)]
+    proc.close.side_effect = RuntimeError("close boom")
 
     worker = _make_worker_with_queue(queue)
     results = _wire_status_slots(worker, queue)
@@ -825,7 +932,7 @@ def test_close_failure_does_not_abort_queue(tmp_path):
     with (
         patch(
             "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
-            side_effect=lambda *a, **k: built.pop(0),
+            return_value=proc,
         ),
         patch(
             "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
@@ -834,7 +941,7 @@ def test_close_failure_does_not_abort_queue(tmp_path):
     ):
         worker.run()
 
-    # Second item still processed despite first close() raising.
+    # Both items processed and the total still reaches queue_finished.
     assert results["finished"] == [5], results["finished"]
 
 
@@ -843,10 +950,10 @@ def test_close_failure_does_not_abort_queue(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_shared_anki_service_passed_to_each_processor(tmp_path):
+def test_shared_anki_service_passed_to_the_run_processor(tmp_path):
     """A single AnkiService instance must be built once and passed via
-    anki_service= to every create_episode_processor call in the run, so the
-    vocab cache survives across all queue items."""
+    anki_service= to the run's create_episode_processor call, so the vocab
+    cache survives across all queue items."""
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
@@ -877,10 +984,8 @@ def test_shared_anki_service_passed_to_each_processor(tmp_path):
     ):
         worker.run()
 
-    # create_episode_processor called once per item (2 items)
-    assert len(captured_anki_services) == 2
-    # Both calls received the SAME AnkiService instance
-    assert captured_anki_services[0] is captured_anki_services[1]
+    # One processor for the whole run (2 items), over one shared AnkiService.
+    assert len(captured_anki_services) == 1
     assert captured_anki_services[0] is not None
 
 
@@ -1066,9 +1171,9 @@ def _bundle_mock():
     return bundle
 
 
-def test_shared_lookup_services_passed_to_each_processor(tmp_path):
+def test_shared_lookup_services_passed_to_the_run_processor(tmp_path):
     """One SharedLookupServices bundle per run: built once, passed via
-    shared_lookup= to every create_episode_processor call."""
+    shared_lookup= to the run's create_episode_processor call."""
     pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
 
     queue = BatchQueue()
@@ -1105,9 +1210,7 @@ def test_shared_lookup_services_passed_to_each_processor(tmp_path):
         worker.run()
 
     factory.assert_called_once()
-    assert len(captured) == 2
-    assert captured[0] is bundle
-    assert captured[1] is bundle
+    assert captured == [bundle]
 
 
 def test_shared_lookup_services_closed_once_on_normal_exit(tmp_path):
@@ -1363,17 +1466,20 @@ def test_finish_current_in_post_boundary_gap_leaves_next_series_pending(tmp_path
     worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None, items=[first, second])
     results = _wire_capture_only(worker)
 
-    real_close = worker._close_current_processor
-    close_calls = 0
+    # The stop lands after the second item clears the boundary check but before
+    # it claims the item — the only gap between the two.
+    real_wait = worker._wait_at_boundary
+    waits = 0
 
-    def _close_and_stop_in_gap() -> None:
-        nonlocal close_calls
-        close_calls += 1
-        real_close()
-        if close_calls == 2:
+    def _wait_then_stop_in_gap() -> bool:
+        nonlocal waits
+        waits += 1
+        cleared = real_wait()
+        if waits == 2:
             worker.request_stop_after_current()
+        return cleared
 
-    worker._close_current_processor = _close_and_stop_in_gap  # type: ignore[method-assign]
+    worker._wait_at_boundary = _wait_then_stop_in_gap  # type: ignore[method-assign]
 
     with (
         patch(

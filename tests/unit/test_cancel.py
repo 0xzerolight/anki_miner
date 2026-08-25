@@ -77,7 +77,7 @@ class TestEpisodeProcessorCancel:
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
 
         # Cancel after phase 1 — side_effect on subtitle_parser to trigger cancel
-        def parse_and_cancel(sub_file):
+        def parse_and_cancel(sub_file, _offset=None):
             result = words
             processor.cancel()  # Cancel after phase 1
             return result
@@ -276,7 +276,7 @@ class TestProcessEpisodeCancelEvent:
         words = [_make_word("食べる")]
         event = threading.Event()
 
-        def _parse_then_cancel(sub_file):
+        def _parse_then_cancel(sub_file, _offset=None):
             event.set()  # user pressed Stop mid-parse
             return words
 

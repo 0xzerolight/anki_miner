@@ -76,8 +76,10 @@ logger = logging.getLogger(__name__)
 # parser instance across configs (e.g. Deck Builder Phase 2 reusing Phase 1's
 # filled per-file tokenization cache) must assert every one of these is
 # untouched, or cached tokenization silently goes stale.
+# ``subtitle_offset`` is deliberately absent: it is a per-CALL argument on the
+# parse entry points, the cached line state is offset-neutral, and the config
+# value is only the fallback for calls that pass nothing.
 PARSE_RELEVANT_CONFIG_FIELDS = (
-    "subtitle_offset",
     "bold_target_in_sentence",
     "allowed_pos",
     "excluded_subtypes",
@@ -656,8 +658,26 @@ class SubtitleParserService:
         except Exception as e:
             raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
 
+    def _resolve_offset(self, subtitle_offset: float | None) -> float:
+        """Per-call offset, falling back to the config value when None."""
+        return self.config.subtitle_offset if subtitle_offset is None else subtitle_offset
+
+    @staticmethod
+    def _shifted_line_state(
+        line_state: tuple[str, list[Any], list[Any], float, float, float], offset: float
+    ) -> tuple[str, list[Any], list[Any], float, float, float]:
+        """Apply one parse's offset to an offset-NEUTRAL stored line state.
+
+        The clamp runs after the shift (never baked into the stored state), so
+        a line pushed below zero keeps ``duration == end - start``.
+        """
+        text, raw_tokens, merged_tokens, start, end, _duration = line_state
+        shifted_start = max(0.0, start + offset)
+        shifted_end = max(shifted_start, end + offset)
+        return (text, raw_tokens, merged_tokens, shifted_start, shifted_end, shifted_end - shifted_start)
+
     def _iter_parsed_lines(
-        self, subtitle_file: Path
+        self, subtitle_file: Path, subtitle_offset: float | None = None
     ) -> Iterator[tuple[str, list[Any], list[Any], float, float, float]]:
         """Yield post-tokenize per-line state for every non-empty subtitle line.
 
@@ -669,12 +689,18 @@ class SubtitleParserService:
         (callers apply ``_should_include_word`` themselves so the index path and
         mining path share identical token selection logic).
 
+        ``subtitle_offset`` shifts the yielded times; ``None`` (default) uses
+        ``config.subtitle_offset``. The stored line state is offset-NEUTRAL and
+        the shift is applied at yield, so one parser serves parses at different
+        offsets (a batch run's per-item offsets) off a single tokenization.
+
         Per-file cache: keyed by resolved path → (stat fingerprint, line-state
         list), where the fingerprint is ``(mtime_ns, ctime_ns, size)``;
         bounded to ``_LINE_CACHE_MAX_FILES`` entries via oldest-first eviction.
         On a cache HIT for the same path+fingerprint the subtitle file is neither
         reloaded nor re-tokenized — the stored line-state (the very tuples a
-        fresh parse would yield, including ``_SyntheticToken``s) is replayed.
+        fresh parse would yield, including ``_SyntheticToken``s) is replayed
+        with this call's offset applied.
         A fingerprint mismatch (file edited or replaced between passes)
         invalidates the entry and forces a fresh load + tokenize. The multi-entry
         cache supports the Deck Builder's Phase-1 (``count_lemmas``) → Phase-2
@@ -684,6 +710,7 @@ class SubtitleParserService:
         Consumers MUST NOT mutate the yielded ``merged_tokens`` lists/tokens, as
         they are shared across passes; current consumers only read them.
         """
+        offset = self._resolve_offset(subtitle_offset)
         key = subtitle_file.resolve()
         try:
             stat_result = subtitle_file.stat()
@@ -702,7 +729,8 @@ class SubtitleParserService:
             if cached is not None and cached[0] == fingerprint:
                 self._line_cache.pop(key)
                 self._line_cache[key] = cached
-                yield from cached[1]
+                for line_state in cached[1]:
+                    yield self._shifted_line_state(line_state, offset)
                 return
             if cached is not None:
                 self._line_cache.pop(key)
@@ -727,13 +755,12 @@ class SubtitleParserService:
             if not text:
                 continue
 
-            # Convert timing from milliseconds to seconds and apply offset
-            start_time = max(0.0, (line.start / 1000.0) + self.config.subtitle_offset)
-            end_time = max(start_time, (line.end / 1000.0) + self.config.subtitle_offset)
-
-            line_state = self._build_line_state(text, start_time, end_time)
+            # Convert timing from milliseconds to seconds. The offset is NOT
+            # applied here: what the cache stores must stay offset-neutral so a
+            # later parse at a different offset can replay it.
+            line_state = self._build_line_state(text, line.start / 1000.0, line.end / 1000.0)
             line_states.append(line_state)
-            yield line_state
+            yield self._shifted_line_state(line_state, offset)
 
         # fingerprint is None only when stat() failed, in which case _load_subs
         # above already raised, so this assignment is reachable only with a real
@@ -756,7 +783,9 @@ class SubtitleParserService:
         ``raw_tokens`` is the direct ``self.tagger(text)`` output,
         ``merged_tokens`` is that run through ``_merge_compound_suffixes``, the
         optional name matcher, and the optional compound matcher; ``duration``
-        is ``end - start``.
+        is ``end - start``. The times are whatever the caller passes: the
+        subtitle path passes offset-neutral ones and shifts at yield
+        (``_shifted_line_state``), the text-unit path passes final ones.
         Shared by the subtitle path (``_iter_parsed_lines``) and the future
         text-unit path so per-line tokenization stays in one place.
         """
@@ -1270,11 +1299,17 @@ class SubtitleParserService:
 
         return line_words, line_lemmas_entry
 
-    def parse_raw_entries(self, subtitle_file: Path) -> list[tuple[float, float, str]]:
+    def parse_raw_entries(
+        self, subtitle_file: Path, subtitle_offset: float | None = None
+    ) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
 
         Args:
             subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
+            subtitle_offset: Seconds to shift the returned times by. ``None``
+                (default) uses ``config.subtitle_offset``. Callers that pair
+                these entries with mined words (line expansion) must pass the
+                offset that parse used, or the two land on different timelines.
 
         Returns:
             List of (start_seconds, end_seconds, text) tuples
@@ -1282,6 +1317,7 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
+        offset = self._resolve_offset(subtitle_offset)
         subs = self._load_subs(subtitle_file)
 
         entries = []
@@ -1293,17 +1329,19 @@ class SubtitleParserService:
             if not text:
                 continue
 
-            start_time = max(0.0, (line.start / 1000.0) + self.config.subtitle_offset)
-            end_time = max(start_time, (line.end / 1000.0) + self.config.subtitle_offset)
+            start_time = max(0.0, (line.start / 1000.0) + offset)
+            end_time = max(start_time, (line.end / 1000.0) + offset)
             entries.append((start_time, end_time, text))
 
         return entries
 
-    def parse_subtitle_file(self, subtitle_file: Path) -> list[TokenizedWord]:
+    def parse_subtitle_file(self, subtitle_file: Path, subtitle_offset: float | None = None) -> list[TokenizedWord]:
         """Parse subtitle file and extract vocabulary words.
 
         Args:
             subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
+            subtitle_offset: Seconds to shift mined word times by. ``None``
+                (default) uses ``config.subtitle_offset``.
 
         Returns:
             List of TokenizedWord objects
@@ -1318,7 +1356,7 @@ class SubtitleParserService:
         all_words: list[TokenizedWord] = []
         seen_mined_forms: set[str] = set()  # Track unique words by card-front mined_form.
 
-        for line_state in self._iter_parsed_lines(subtitle_file):
+        for line_state in self._iter_parsed_lines(subtitle_file, subtitle_offset):
             line_words, _ = self._emit_line_words_and_index(
                 line_state,
                 seen_mined_forms,
@@ -1328,7 +1366,9 @@ class SubtitleParserService:
 
         return all_words
 
-    def parse_subtitle_file_with_index(self, subtitle_file: Path) -> tuple[list[TokenizedWord], list[LineLemmas]]:
+    def parse_subtitle_file_with_index(
+        self, subtitle_file: Path, subtitle_offset: float | None = None
+    ) -> tuple[list[TokenizedWord], list[LineLemmas]]:
         """Parse a subtitle file and produce both the deduped mining list and a per-line lemma index.
 
         ``all_words`` is identical to ``parse_subtitle_file(subtitle_file)`` —
@@ -1346,6 +1386,8 @@ class SubtitleParserService:
 
         Args:
             subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
+            subtitle_offset: Seconds to shift word and line-index times by.
+                ``None`` (default) uses ``config.subtitle_offset``.
 
         Returns:
             Tuple of (deduped word list, per-line lemma index).
@@ -1360,7 +1402,7 @@ class SubtitleParserService:
         line_index: list[LineLemmas] = []
         seen_mined_forms: set[str] = set()
 
-        for line_state in self._iter_parsed_lines(subtitle_file):
+        for line_state in self._iter_parsed_lines(subtitle_file, subtitle_offset):
             line_words, line_lemmas_entry = self._emit_line_words_and_index(
                 line_state, seen_mined_forms, collect_index=True
             )
@@ -1483,6 +1525,10 @@ class SubtitleParserService:
         lemma (including repeats within and across lines) without deduplication.
         The same word-inclusion rules as mining apply — only tokens that
         ``_should_include_word`` accepts are counted.
+
+        No offset argument: counting reads text and tokens only. It still fills
+        and serves the shared (offset-neutral) line cache, so a parse at any
+        offset reuses its tokenization.
 
         Args:
             subtitle_file: Path to subtitle file (.ass, .srt, .ssa)
