@@ -13,6 +13,7 @@ from anki_miner.services.dictionary.storage import (
     COMMON_TAG_CATEGORIES,
     SCHEMA_VERSION,
     TagMeta,
+    ensure_sequence_index,
     open_readonly,
     read_meta,
     read_tags,
@@ -143,6 +144,22 @@ class IndexedDictProvider:
         except sqlite3.DatabaseError as e:
             logger.warning("Failed to open %s: %s", self._db_path, e)
             return False
+
+        # Indexes imported before redirect resolution (F1) lack idx_sequence,
+        # so the redirect-batch query would table-scan on every run. Backfill
+        # it once via a separate writable connection (this one is read-only),
+        # then reopen. Best-effort: a failed backfill just keeps the scan path.
+        has_seq = self._conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_sequence'"
+        ).fetchone()
+        if has_seq is None:
+            self._conn.close()
+            self._conn = None
+            try:
+                ensure_sequence_index(self._db_path)
+            except Exception as e:  # noqa: BLE001 — backfill is best-effort; scan stays correct
+                logger.warning("idx_sequence backfill failed for %s: %s", self.dict_id, e)
+            self._conn = open_readonly(self._db_path)
 
         # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
         # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
