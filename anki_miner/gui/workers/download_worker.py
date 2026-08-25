@@ -20,6 +20,7 @@ from anki_miner.services.media_downloader import (
     DownloadStatus,
     MediaDownloaderService,
 )
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +63,11 @@ class DownloadWorker(FileQueueWorker):
         self._dest_dir.mkdir(parents=True, exist_ok=True)
 
         def _progress(message: str, frac: float | None) -> None:
-            pct = int(frac * 100) if frac is not None else 0
-            self.file_progress.emit(idx, pct, message)
+            if frac is not None:
+                pct = int(frac * 100)
+                self.file_progress.emit(idx, pct, tr_format(self.tr("%1: %2%"), message, pct))
+            else:
+                self.file_progress.emit(idx, 0, message)
 
         try:
             result = self._service.download(

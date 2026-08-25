@@ -3828,6 +3828,10 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>DownloadWorker</name>
     <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Done</source>
         <translation type="unfinished" />
     </message>

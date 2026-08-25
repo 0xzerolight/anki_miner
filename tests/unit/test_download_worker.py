@@ -187,8 +187,44 @@ def test_progress_fraction_mapping(tmp_path: Path) -> None:
     worker.run()
 
     progress = rec.of("progress")
-    assert (0, 25, "Downloading") in progress
+    assert (0, 25, "Downloading: 25%") in progress
     assert (0, 0, "Downloading") in progress
+
+
+def test_progress_message_carries_percent(tmp_path: Path) -> None:
+    service = MagicMock()
+
+    def _download(url: str, dest: Path, options: DownloadOptions, **kwargs: Any) -> DownloadResult:
+        kwargs["progress_cb"]("Downloading video", 0.42)
+        return DownloadResult(DownloadStatus.DONE, None)
+
+    service.download.side_effect = _download
+    worker = _make_worker(tmp_path, ["https://a"], service)
+    rec = _Recorder(worker)
+
+    worker.run()
+
+    idx, pct, message = rec.of("progress")[0]
+    assert idx == 0
+    assert pct == 42
+    assert "42" in message
+
+
+def test_progress_message_without_fraction_stays_bare(tmp_path: Path) -> None:
+    service = MagicMock()
+
+    def _download(url: str, dest: Path, options: DownloadOptions, **kwargs: Any) -> DownloadResult:
+        kwargs["progress_cb"]("Merging audio and video", None)
+        return DownloadResult(DownloadStatus.DONE, None)
+
+    service.download.side_effect = _download
+    worker = _make_worker(tmp_path, ["https://a"], service)
+    rec = _Recorder(worker)
+
+    worker.run()
+
+    _idx, _pct, message = rec.of("progress")[0]
+    assert "%" not in message
 
 
 def test_cancel_event_passed_to_service(tmp_path: Path) -> None:

@@ -3854,6 +3854,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
 </context><context>
     <name>DownloadWorker</name>
     <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Done</source>
         <translation type="unfinished">Completato</translation>
     </message>

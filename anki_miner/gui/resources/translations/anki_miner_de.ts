@@ -3854,6 +3854,10 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
 </context><context>
     <name>DownloadWorker</name>
     <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Done</source>
         <translation type="unfinished">Fertig</translation>
     </message>

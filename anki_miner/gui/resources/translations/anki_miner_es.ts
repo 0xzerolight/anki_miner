@@ -3854,6 +3854,10 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
 </context><context>
     <name>DownloadWorker</name>
     <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Done</source>
         <translation type="unfinished">Listo</translation>
     </message>
