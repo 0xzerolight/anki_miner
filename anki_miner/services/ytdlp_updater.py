@@ -247,6 +247,7 @@ class YtdlpUpdater:
             with ytdlp_resolver.managed_ytdlp_lock(executable):
                 proc = subprocess.run(
                     cmd,
+                    stdin=subprocess.DEVNULL,
                     capture_output=True,
                     text=True,
                     timeout=15,
@@ -501,6 +502,7 @@ class YtdlpUpdater:
                         with contextlib.suppress(OSError, subprocess.TimeoutExpired):
                             subprocess.run(
                                 ["xattr", "-d", "com.apple.quarantine", str(tmp)],
+                                stdin=subprocess.DEVNULL,
                                 capture_output=True,
                                 timeout=10,
                                 **no_window_kwargs(),

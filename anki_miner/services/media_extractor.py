@@ -960,6 +960,7 @@ class MediaExtractorService:
             try:
                 proc = subprocess.run(
                     [resolve_ffmpeg(self.config), "-hide_banner", "-encoders"],
+                    stdin=subprocess.DEVNULL,
                     capture_output=True,
                     timeout=15,
                     text=True,

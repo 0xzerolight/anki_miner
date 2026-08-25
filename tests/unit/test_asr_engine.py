@@ -231,6 +231,63 @@ def test_vulkan_device_count_parses_stdout(monkeypatch, _reset_vulkan_cache):
     assert _engine.vulkan_device_count() == 3
 
 
+def test_vulkan_probe_detaches_stdin_and_hides_window(monkeypatch, _reset_vulkan_cache):
+    """The probe subprocess must not inherit the controlling terminal's stdin
+    and must pass no_window_kwargs() (the only subprocess.run in the tree that
+    lacked it)."""
+    from anki_miner.services.asr import _engine
+
+    captured = {}
+
+    def _run(*a, **k):
+        captured.update(k)
+        return subprocess.CompletedProcess(args=a, returncode=0, stdout="0\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _run)
+    monkeypatch.setattr(_engine, "no_window_kwargs", lambda: {"creationflags": 0x08000000})
+
+    _engine.vulkan_device_count()
+
+    assert captured["stdin"] is subprocess.DEVNULL
+    assert captured["creationflags"] == 0x08000000
+
+
+def test_vulkan_device_count_concurrent_calls_probe_once(monkeypatch, _reset_vulkan_cache):
+    """Two threads racing the cold cache must trigger exactly one subprocess call."""
+    import threading
+
+    from anki_miner.services.asr import _engine
+
+    calls = {"n": 0}
+    start_probe = threading.Event()
+    release_probe = threading.Event()
+
+    def _run(*a, **k):
+        calls["n"] += 1
+        start_probe.set()
+        release_probe.wait(timeout=2)
+        return subprocess.CompletedProcess(args=a, returncode=0, stdout="1\n", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", _run)
+
+    results: list[int] = []
+
+    def _call():
+        results.append(_engine.vulkan_device_count())
+
+    t1 = threading.Thread(target=_call)
+    t2 = threading.Thread(target=_call)
+    t1.start()
+    start_probe.wait(timeout=2)
+    t2.start()
+    release_probe.set()
+    t1.join(timeout=2)
+    t2.join(timeout=2)
+
+    assert calls["n"] == 1
+    assert results == [1, 1]
+
+
 def test_vulkan_device_count_zero_on_nonzero_returncode(monkeypatch, _reset_vulkan_cache):
     """A nonzero exit => 0, regardless of stdout."""
     from anki_miner.services.asr import _engine

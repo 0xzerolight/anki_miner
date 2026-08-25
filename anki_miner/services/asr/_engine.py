@@ -26,8 +26,11 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from enum import Enum, auto
 from pathlib import Path
+
+from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
 
@@ -325,6 +328,9 @@ def get_whisper_cpp_model_cls():
 # Per-process memoization for vulkan_device_count: the subprocess probe is
 # computed once and cached. None means "not yet computed".
 _VULKAN_DEVICE_COUNT: int | None = None
+# Guards _VULKAN_DEVICE_COUNT against two threads racing the first probe (each
+# would otherwise spawn its own subprocess before either write lands).
+_VULKAN_DEVICE_COUNT_LOCK = threading.Lock()
 
 
 def vulkan_device_count() -> int:
@@ -340,8 +346,10 @@ def vulkan_device_count() -> int:
     if _VULKAN_DEVICE_COUNT is not None:
         return _VULKAN_DEVICE_COUNT
 
-    _VULKAN_DEVICE_COUNT = _probe_vulkan_device_count()
-    return _VULKAN_DEVICE_COUNT
+    with _VULKAN_DEVICE_COUNT_LOCK:
+        if _VULKAN_DEVICE_COUNT is None:
+            _VULKAN_DEVICE_COUNT = _probe_vulkan_device_count()
+        return _VULKAN_DEVICE_COUNT
 
 
 def _probe_vulkan_device_count() -> int:
@@ -357,10 +365,12 @@ def _probe_vulkan_device_count() -> int:
             env = None
         proc = subprocess.run(
             argv,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             timeout=15,
             env=env,
+            **no_window_kwargs(),
         )
         if proc.returncode != 0:
             logger.debug("ASR Vulkan probe: devices=0 returncode=%d", proc.returncode)

@@ -470,6 +470,17 @@ class TestUnicodeDecodeFallback:
         assert kwargs["encoding"] == "utf-8"
         assert kwargs["errors"] == "replace"
 
+    def test_list_audio_streams_detaches_stdin(self, video_file):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)) as mock_run:
+            list_audio_streams(video_file)
+        assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
+
+    def test_get_primary_video_codec_detaches_stdin(self, video_file):
+        with patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=_video_json("av1"))) as mock_run:
+            get_primary_video_codec(video_file)
+        assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
+
 
 def _subtitle_ffprobe_json(streams: list[dict]) -> str:
     """Build an ffprobe JSON payload of subtitle streams from descriptors.

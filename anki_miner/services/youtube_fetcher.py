@@ -78,6 +78,7 @@ def _ytdlp_supports_js_runtimes(ytdlp_path: str) -> bool:
         with managed_ytdlp_lock(ytdlp_path):
             proc = subprocess.run(
                 [ytdlp_path, "--ignore-config", "--help"],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=30,
@@ -101,6 +102,7 @@ def _ytdlp_supports_remote_components(ytdlp_path: str) -> bool:
         with managed_ytdlp_lock(ytdlp_path):
             proc = subprocess.run(
                 [ytdlp_path, "--ignore-config", "--help"],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=30,

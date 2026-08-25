@@ -443,7 +443,10 @@ class _FakePopen:
     """Minimal subprocess.Popen stand-in for the streaming runner.
 
     ``stdout`` is a concrete iterator (assigned once, like the real pipe). The
-    cancel test replaces it with a blocking generator.
+    cancel test replaces it with a blocking generator. Implements the context-manager
+    protocol like the real ``Popen`` so ``_run_streaming``'s ``with proc:`` works;
+    ``exit_calls`` is evidence that ``__exit__`` (which closes pipes on the real
+    object) ran on every path.
     """
 
     def __init__(self, lines: list[str], returncode: int = 0) -> None:
@@ -451,6 +454,7 @@ class _FakePopen:
         self._final_rc = returncode
         self.returncode: int | None = None
         self.kill_calls = 0
+        self.exit_calls = 0
 
     def wait(self) -> int:
         self.returncode = self._final_rc
@@ -459,6 +463,12 @@ class _FakePopen:
     def kill(self) -> None:
         self.kill_calls += 1
         self.returncode = -9
+
+    def __enter__(self) -> _FakePopen:
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.exit_calls += 1
 
 
 def _factory(captured: dict, lines: list[str], returncode: int = 0):
@@ -846,6 +856,7 @@ def test_condense_cancel_kills_process(tmp_path):
         def __init__(self) -> None:
             self.returncode: int | None = None
             self.kill_calls = 0
+            self.exit_calls = 0
             self.stdout = self._gen()
 
         def _gen(self):
@@ -862,6 +873,12 @@ def test_condense_cancel_kills_process(tmp_path):
             self.kill_calls += 1
             self.returncode = -9
             killed.set()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> None:
+            self.exit_calls += 1
 
     fake = _CancelFake()
 
@@ -912,6 +929,31 @@ def test_condense_graph_temp_cleaned_on_success(tmp_path):
         ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
     assert ok is True
     assert list(tmp_path.glob("condense_graph_*.txt")) == []
+
+
+def test_run_streaming_uses_proc_as_context_manager_on_success(tmp_path):
+    """``_run_streaming`` wraps the ffmpeg process in ``with proc:`` so pipes are
+    closed and the process is waited on every path (mirrors media_extractor's
+    ``_run_ffmpeg``)."""
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True), returncode=0)),
+    ):
+        ok, _failure = _service(tmp_path, global_index=0).condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+    assert ok is True
+    assert captured["proc"].exit_calls == 1
+
+
+def test_run_streaming_uses_proc_as_context_manager_on_failure(tmp_path):
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, ["Conversion failed!"], returncode=1)),
+    ):
+        ok, _failure = _service(tmp_path, global_index=0).condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+    assert ok is False
+    assert captured["proc"].exit_calls == 1
 
 
 def test_condense_graph_temp_cleaned_on_failure(tmp_path):

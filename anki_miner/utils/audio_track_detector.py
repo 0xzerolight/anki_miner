@@ -103,6 +103,7 @@ def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -
     try:
         proc = subprocess.run(
             cmd,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             timeout=30,
             text=True,
@@ -146,6 +147,7 @@ def get_media_duration_seconds(video_path: Path, ffprobe_cmd: str = "ffprobe") -
     try:
         proc = subprocess.run(
             cmd,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             timeout=30,
             text=True,

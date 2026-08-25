@@ -413,6 +413,7 @@ class ValidationService:
         try:
             result = subprocess.run(
                 [resolved_path, *prefix_args, version_flag],
+                stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
                 timeout=10,

@@ -90,11 +90,12 @@ class TestValidationService:
             mock_result.returncode = 0
             mock_result.stdout = "ffmpeg version 5.0"
 
-            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result):
+            with patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result) as mock_run:
                 success, message = service._check_ffmpeg()
 
             assert success is True
             assert "ffmpeg version" in message
+            assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
 
         def test_not_found(self, test_config):
             service = ValidationService(test_config)

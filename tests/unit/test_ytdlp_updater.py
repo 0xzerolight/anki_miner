@@ -162,6 +162,17 @@ class TestLocalVersion:
         updater = YtdlpUpdater(config)
         assert updater.local_version() == "2024.02.01"
 
+    def test_detaches_stdin(self, config, home, monkeypatch):
+        captured: dict = {}
+
+        def _run(*a, **k):
+            captured.update(k)
+            return subprocess.CompletedProcess(a, 0, "2024.02.01\n", "")
+
+        monkeypatch.setattr(ytdlp_updater.subprocess, "run", _run)
+        YtdlpUpdater(config).local_version()
+        assert captured["stdin"] is subprocess.DEVNULL
+
     def test_missing_binary_returns_none(self, config, home, monkeypatch):
         def _raise(*a, **k):
             raise FileNotFoundError()

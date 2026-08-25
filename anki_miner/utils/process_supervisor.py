@@ -264,6 +264,9 @@ def run_supervised(
     started = time.monotonic()
     deadline = started + max(timeout_s, 0.0)
     popen_kwargs: dict[str, Any] = {
+        # Detach stdin: a backgrounded child reading the controlling terminal gets
+        # SIGTTIN-stopped (see media_extractor.py's _run_ffmpeg for the full story).
+        "stdin": subprocess.DEVNULL,
         "stdout": subprocess.PIPE,
         "stderr": subprocess.STDOUT if combine_stderr else subprocess.PIPE,
         "bufsize": 0,

@@ -2129,6 +2129,7 @@ class TestFfmpegResolverWiring:
 
         cmd = mock_run.call_args[0][0]
         assert cmd[0] == str(fake_ffmpeg)
+        assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
 
     def test_list_audio_streams_cached_passes_resolved_ffprobe(self, test_config, video_file, tmp_path):
         """_list_audio_streams_cached forwards ffprobe_cmd=resolve_ffprobe(config)."""

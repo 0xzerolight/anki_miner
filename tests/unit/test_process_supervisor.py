@@ -98,6 +98,14 @@ def test_supervised_child_killed_on_deadline() -> None:
     assert kill.called
 
 
+def test_supervised_popen_detaches_stdin() -> None:
+    proc = _FakeProcess([b"line\n", b""], 0)
+    with patch("anki_miner.utils.process_supervisor.subprocess.Popen", return_value=proc) as popen:
+        run_supervised(["fake"], timeout_s=0.1, combine_stderr=True)
+
+    assert popen.call_args.kwargs["stdin"] is subprocess.DEVNULL
+
+
 def test_supervised_tree_killed_and_reaped() -> None:
     proc = _FakeProcess([], None)
     signals: list[int] = []

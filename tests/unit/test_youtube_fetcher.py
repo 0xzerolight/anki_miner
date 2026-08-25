@@ -7,6 +7,7 @@ import io
 import json
 import os
 import signal
+import subprocess
 import sys
 import threading
 import time
@@ -1961,8 +1962,9 @@ class TestJsRuntimeArgs:
 
         yf._ytdlp_supports_js_runtimes.cache_clear()
         help_text = "Usage: yt-dlp [OPTIONS] URL\n  --js-runtimes RUNTIME[:PATH]  ...\n"
-        with patch("subprocess.run", return_value=_fake_run(0, help_text)):
+        with patch("subprocess.run", return_value=_fake_run(0, help_text)) as mock_run:
             assert yf._ytdlp_supports_js_runtimes("yt-dlp") is True
+        assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_flag_absent(self) -> None:
@@ -2060,8 +2062,9 @@ class TestRemoteComponentArgs:
 
         yf._ytdlp_supports_remote_components.cache_clear()
         help_text = "Usage: yt-dlp [OPTIONS] URL\n  --remote-components COMPONENT  ...\n"
-        with patch("subprocess.run", return_value=_fake_run(0, help_text)):
+        with patch("subprocess.run", return_value=_fake_run(0, help_text)) as mock_run:
             assert yf._ytdlp_supports_remote_components("yt-dlp") is True
+        assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_flag_absent(self) -> None:

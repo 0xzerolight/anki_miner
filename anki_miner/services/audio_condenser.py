@@ -680,53 +680,54 @@ class AudioCondenserService:
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
 
-        if proc.stdout is None:  # pragma: no cover - stdout=PIPE always yields a pipe
-            done_event.set()
-            watcher.join()
-            return False, FfmpegStepFailure(proc.returncode, False, "ffmpeg produced no output pipe")
+        with proc:  # closes pipes and waits on every path — no zombies
+            if proc.stdout is None:  # pragma: no cover - stdout=PIPE always yields a pipe
+                done_event.set()
+                watcher.join()
+                return False, FfmpegStepFailure(proc.returncode, False, "ffmpeg produced no output pipe")
 
-        pending_us: int | None = None
-        last_pct = -1
-        try:
-            for raw_line in proc.stdout:
-                line = raw_line.rstrip("\n")
-                key, sep, value = line.partition("=")
-                if not sep or not _PROGRESS_KEY_RE.match(key):
-                    tail.append(line)
-                    continue
-                if key == "out_time_us":
-                    pending_us = _safe_int(value, pending_us)
-                elif key == "out_time_ms" and pending_us is None:
-                    # ffmpeg quirk: out_time_ms is ALSO microseconds (trac #7345).
-                    pending_us = _safe_int(value, pending_us)
-                elif key == "progress":
-                    last_pct = _emit_progress(progress_cb, pending_us, total_period_ms, last_pct)
-                    if value == "end" and progress_cb is not None and last_pct < 100:
-                        progress_cb(100)
-                        last_pct = 100
-                    pending_us = None
-                # Other progress keys (frame=, speed=, ...) are ignored.
-            proc.wait()
-        finally:
-            done_event.set()
-            watcher.join()
+            pending_us: int | None = None
+            last_pct = -1
+            try:
+                for raw_line in proc.stdout:
+                    line = raw_line.rstrip("\n")
+                    key, sep, value = line.partition("=")
+                    if not sep or not _PROGRESS_KEY_RE.match(key):
+                        tail.append(line)
+                        continue
+                    if key == "out_time_us":
+                        pending_us = _safe_int(value, pending_us)
+                    elif key == "out_time_ms" and pending_us is None:
+                        # ffmpeg quirk: out_time_ms is ALSO microseconds (trac #7345).
+                        pending_us = _safe_int(value, pending_us)
+                    elif key == "progress":
+                        last_pct = _emit_progress(progress_cb, pending_us, total_period_ms, last_pct)
+                        if value == "end" and progress_cb is not None and last_pct < 100:
+                            progress_cb(100)
+                            last_pct = 100
+                        pending_us = None
+                    # Other progress keys (frame=, speed=, ...) are ignored.
+                proc.wait()
+            finally:
+                done_event.set()
+                watcher.join()
 
-        cancelled = cancel_event is not None and cancel_event.is_set()
-        if not cancelled and proc.returncode == 0:
-            if progress_cb is not None and last_pct < 100:
-                progress_cb(100)
-            return True, None
+            cancelled = cancel_event is not None and cancel_event.is_set()
+            if not cancelled and proc.returncode == 0:
+                if progress_cb is not None and last_pct < 100:
+                    progress_cb(100)
+                return True, None
 
-        if cancelled:
-            return False, None
+            if cancelled:
+                return False, None
 
-        logger.warning(
-            "ffmpeg step failed (exit %s%s). Last output:\n%s",
-            proc.returncode,
-            ", timed out" if timed_out.is_set() else "",
-            "\n".join(tail),
-        )
-        return False, FfmpegStepFailure(proc.returncode, timed_out.is_set(), _failure_reason(tail))
+            logger.warning(
+                "ffmpeg step failed (exit %s%s). Last output:\n%s",
+                proc.returncode,
+                ", timed out" if timed_out.is_set() else "",
+                "\n".join(tail),
+            )
+            return False, FfmpegStepFailure(proc.returncode, timed_out.is_set(), _failure_reason(tail))
 
 
 def _emit_progress(
