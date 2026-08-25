@@ -18,6 +18,22 @@ from anki_miner.exceptions import AnkiConnectionError
 
 logger = logging.getLogger(__name__)
 
+# Cap the fully-buffered response body before JSON-decoding it. AnkiConnect can
+# legitimately return a multi-hundred-MB payload (e.g. notesInfo over a large
+# collection), so this stays generous - it exists only to fail closed on a
+# pathological or wrong-service body (Anki hung mid-response, a proxy error
+# page, another service answering on this port) instead of parsing one.
+_MAX_RESPONSE_BYTES = 256 * 1024 * 1024  # 256 MiB
+
+
+def _check_response_size(response: requests.Response, action: str) -> None:
+    """Raise :class:`AnkiConnectionError` before JSON-decoding an oversized body."""
+    size = len(response.content)
+    if size > _MAX_RESPONSE_BYTES:
+        raise AnkiConnectionError(
+            f"AnkiConnect '{action}' response is {size:,} bytes, exceeding the {_MAX_RESPONSE_BYTES:,}-byte cap"
+        )
+
 
 def _timeout_message(action: str, timeout: int) -> str:
     """User-facing copy for a read timeout: connected, but Anki never answered.
@@ -72,6 +88,7 @@ def post_action(
             timeout=timeout,
         )
         response.raise_for_status()
+        _check_response_size(response, action)
         result = response.json()
     except requests.exceptions.ConnectionError as e:
         logger.debug(
@@ -155,6 +172,7 @@ def post_multi(
             timeout=timeout,
         )
         response.raise_for_status()
+        _check_response_size(response, "multi")
         result = response.json()
     except requests.exceptions.ConnectionError as e:
         logger.debug(

@@ -322,6 +322,17 @@ class TestCheckForUpdate:
         assert UpdateChecker("2.0.4").check_for_update() is None
 
     @patch("anki_miner.services.update_checker.urllib.request.urlopen")
+    def test_oversized_response_is_clean_failure_not_buffered_parse(self, mock_urlopen, monkeypatch):
+        """A releases-API body over the cap fails cleanly, not via a buffered json.loads."""
+        body = self._make_response("v3.0.0", "https://github.com/0xzerolight/anki_miner/releases/tag/v3.0.0")
+        monkeypatch.setattr("anki_miner.services.update_checker._MAX_API_JSON_BYTES", len(body) - 1)
+        self._mock_urlopen(mock_urlopen, body)
+
+        checker = UpdateChecker("2.0.4")
+        assert checker.check_for_update() is None
+        assert isinstance(checker.last_error, ValueError)
+
+    @patch("anki_miner.services.update_checker.urllib.request.urlopen")
     def test_tag_without_v_prefix(self, mock_urlopen, monkeypatch):
         """Should handle tag names without 'v' prefix."""
         monkeypatch.delenv("APPIMAGE", raising=False)

@@ -9,6 +9,7 @@ import requests
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.models import AnkiWriteState, CardPayload, MediaData
+from anki_miner.services import _ankiconnect
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import _content_addressed_name
 from anki_miner.services.anki_service import AnkiService, is_transient_anki_transport_error
@@ -155,6 +156,44 @@ def test_http_error_is_not_ankiconnect_success(call):
         call()
 
     resp.json.assert_not_called()
+
+
+class TestAnkiConnectResponseSizeCap:
+    """A body over the cap fails closed before json() parses it."""
+
+    def test_post_action_oversized_body_raises_before_parsing(self, monkeypatch):
+        monkeypatch.setattr(_ankiconnect, "_MAX_RESPONSE_BYTES", 10)
+        resp = MagicMock()
+        resp.content = b"x" * 11
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="exceeding the 10-byte cap"),
+        ):
+            post_action("http://localhost:8765", "notesInfo")
+
+        resp.json.assert_not_called()
+
+    def test_post_action_body_at_cap_is_not_rejected(self, monkeypatch):
+        monkeypatch.setattr(_ankiconnect, "_MAX_RESPONSE_BYTES", 10)
+        resp = _mock_response(result=[1])
+        resp.content = b"x" * 10
+
+        with patch("anki_miner.services._ankiconnect.requests.post", return_value=resp):
+            assert post_action("http://localhost:8765", "findNotes") == [1]
+
+    def test_post_multi_oversized_body_raises_before_parsing(self, monkeypatch):
+        monkeypatch.setattr(_ankiconnect, "_MAX_RESPONSE_BYTES", 10)
+        resp = MagicMock()
+        resp.content = b"x" * 11
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
+            pytest.raises(AnkiConnectionError, match="exceeding the 10-byte cap"),
+        ):
+            post_multi("http://localhost:8765", [{"action": "findNotes"}])
+
+        resp.json.assert_not_called()
 
 
 class TestReadTimeoutCopy:

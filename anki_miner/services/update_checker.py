@@ -93,6 +93,10 @@ _GITHUB_URL_ALLOWLIST: frozenset[str] = frozenset(
     }
 )
 
+# The GitHub releases-API JSON is a few KiB; reject unreasonable responses
+# (mirrors ytdlp_updater's identical cap on the same API shape).
+_MAX_API_JSON_BYTES = 4 * 1024 * 1024  # 4 MB
+
 
 def _validate_github_url(url: str) -> bool:
     """Return True iff *url* is an https URL on the GitHub allowlist.
@@ -176,7 +180,10 @@ class UpdateChecker:
                 },
             )
             with urllib.request.urlopen(request, timeout=5) as response:
-                data = json.loads(response.read().decode("utf-8"))
+                body = response.read(_MAX_API_JSON_BYTES + 1)
+                if len(body) > _MAX_API_JSON_BYTES:
+                    raise ValueError(f"GitHub API response exceeds the {_MAX_API_JSON_BYTES:,}-byte cap")
+                data = json.loads(body.decode("utf-8"))
 
             tag_name = data.get("tag_name", "")
             # Validate html_url against the GitHub allowlist; fall back to ""

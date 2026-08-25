@@ -258,6 +258,15 @@ class TestLatestVersionAndAsset:
         updater = YtdlpUpdater(config)
         assert updater.latest_version_and_asset() == (None, None)
 
+    def test_oversized_api_response_returns_none_none(self, config, home, monkeypatch):
+        """A releases-API body over the cap is a clean (None, None), not a buffered parse."""
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        payload = json.dumps(_releases_json()).encode("utf-8")
+        monkeypatch.setattr(ytdlp_updater, "_MAX_API_JSON_BYTES", len(payload) - 1)
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(_releases_json()))
+        updater = YtdlpUpdater(config)
+        assert updater.latest_version_and_asset() == (None, None)
+
 
 _NIGHTLY_REPO = "yt-dlp/yt-dlp-nightly-builds"
 _NIGHTLY_TAG = "2026.08.18.122307"
@@ -592,6 +601,32 @@ class TestDownloadAndInstall:
         with pytest.raises(ValueError, match="non-release or mismatched"):
             updater._download_and_install(_asset_url("yt-dlp"), "2024.03.10")
         assert not (updater.download_dir() / "yt-dlp").exists()
+
+    def test_download_ceiling_rejects_endless_body(self, config, home, monkeypatch):
+        """An endless/runaway body must be aborted at the size ceiling, not fill the disk."""
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_updater, "_MAX_DOWNLOAD_BYTES", ytdlp_updater._CHUNK_BYTES * 3)
+
+        class _EndlessResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *a):
+                return False
+
+            def read(self, size=-1):
+                # Never returns empty: simulates a body with no end.
+                return b"x" * (size if size and size > 0 else 1024)
+
+            def geturl(self):
+                return _REDIRECT_HOST_URL
+
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", lambda *a, **k: _EndlessResponse())
+        updater = YtdlpUpdater(config)
+        with pytest.raises(ValueError, match="exceeds"):
+            updater._download_and_install(_asset_url(), "2024.03.10")
+        assert not (updater.download_dir() / "yt-dlp").exists()
+        assert list(updater.download_dir().glob("*.tmp")) == []
 
     def test_partial_download_cleanup_on_error(self, config, home, monkeypatch):
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")

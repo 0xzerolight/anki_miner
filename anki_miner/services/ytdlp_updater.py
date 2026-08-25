@@ -100,10 +100,16 @@ _GITHUB_URL_ALLOWLIST: frozenset[str] = frozenset(
 _THROTTLE_SECONDS = 24 * 60 * 60
 # Reject a download whose final size is below this floor (partial / garbage).
 _MIN_SIZE_BYTES = 1024 * 1024  # ~1 MB
+# Reject a download whose size exceeds this ceiling (endless/runaway body would
+# otherwise fill the disk). The real binary is ~35 MB; 200 MB is generous
+# headroom for future growth.
+_MAX_DOWNLOAD_BYTES = 200 * 1024 * 1024  # 200 MB
 # Streaming download chunk size.
 _CHUNK_BYTES = 64 * 1024
 # SHA2-256SUMS is currently tens of KiB; reject unreasonable responses.
 _MAX_SUMS_BYTES = 256 * 1024
+# The GitHub releases-API JSON is a few KiB; reject unreasonable responses.
+_MAX_API_JSON_BYTES = 4 * 1024 * 1024  # 4 MB
 
 # Backward-compatible module handle used by containment tests. Process users and
 # updater promotion share this exact lock through ytdlp_resolver.
@@ -283,7 +289,10 @@ class YtdlpUpdater:
             if not _validate_github_url(api_url):
                 return (None, None)
             with urllib.request.urlopen(request, timeout=10) as response:
-                data = json.loads(response.read().decode("utf-8"))
+                body = response.read(_MAX_API_JSON_BYTES + 1)
+                if len(body) > _MAX_API_JSON_BYTES:
+                    raise ValueError(f"GitHub API response exceeds the {_MAX_API_JSON_BYTES:,}-byte cap")
+                data = json.loads(body.decode("utf-8"))
 
             tag_name = data.get("tag_name", "")
             version = tag_name.lstrip("v") or None
@@ -461,6 +470,8 @@ class YtdlpUpdater:
                         break
                     out.write(chunk)
                     written += len(chunk)
+                    if written > _MAX_DOWNLOAD_BYTES:
+                        raise ValueError(f"Downloaded yt-dlp exceeds the {_MAX_DOWNLOAD_BYTES:,}-byte cap; aborting.")
 
             if written < _MIN_SIZE_BYTES:
                 raise ValueError(f"Downloaded yt-dlp is implausibly small ({written} bytes); rejecting.")
