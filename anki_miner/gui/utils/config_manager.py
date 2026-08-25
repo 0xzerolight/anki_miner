@@ -15,6 +15,7 @@ from typing import Any
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
 
 logger = logging.getLogger(__name__)
@@ -147,25 +148,31 @@ class GUIConfigManager:
         if cls.ACTIVE_PROFILE_ID is not None:
             config_dict["active_profile_id"] = cls.ACTIVE_PROFILE_ID
 
-        # Atomic write: stage to a sibling .tmp then os.replace. A truncating
-        # in-place write (open("w")) leaves invalid JSON if we crash or lose
-        # power mid-serialize, which load_config then swallows into factory
-        # defaults — wiping every user setting. Staging keeps the previous good
-        # file intact until the new one is fully written; os.replace is atomic
-        # on the same filesystem. The .tmp is unlinked if serialization raises
-        # so a partial temp doesn't accumulate.
+        # Atomic write: stage to a unique sibling temp file then os.replace. A
+        # truncating in-place write (open("w")) leaves invalid JSON if we
+        # crash or lose power mid-serialize, which load_config then swallows
+        # into factory defaults — wiping every user setting. Staging keeps the
+        # previous good file intact until the new one is fully written;
+        # os.replace is atomic on the same filesystem. The temp name must be
+        # unique (not a shared fixed ".tmp") because the single-instance guard
+        # is only advisory ("Continue anyway") — two racing instances writing
+        # the same fixed name could interleave and byte-splice a corrupt
+        # primary. atomic_write_path's finally unlinks the temp file if this
+        # block raises, so a partial temp doesn't accumulate.
         #
-        # Backup rotation: right before os.replace clobbers the existing file,
-        # copy the still-good current config to a sibling .bak (one-overwrite
-        # recovery — config isn't in git and os.replace keeps no backup, so a
-        # bad write once nuked a user's settings with no way back). The copy runs
-        # inside the try, so if it fails we unlink the .tmp and re-raise without
-        # touching CONFIG_FILE — the original survives intact.
-        tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
+        # Backup rotation: right before the context exit's os.replace clobbers
+        # the existing file, copy the still-good current config to a sibling
+        # .bak (one-overwrite recovery — config isn't in git and os.replace
+        # keeps no backup, so a bad write once nuked a user's settings with no
+        # way back). The copy runs inside the context, so if it fails the
+        # exception propagates, the temp file is unlinked, and CONFIG_FILE is
+        # never touched — the original survives intact.
         bak_path = cls.CONFIG_FILE.with_name(cls.CONFIG_FILE.name + ".bak")
-        try:
-            tmp_path.touch(mode=0o600, exist_ok=True)
+        with atomic_write_path(cls.CONFIG_FILE) as tmp_path:
             if os.name == "posix":
+                # atomic_write_path does not chmod. Do it on the temp file so
+                # the config is never group/world-readable, not even
+                # momentarily.
                 os.chmod(tmp_path, 0o600)
             with tmp_path.open("w", encoding="utf-8") as f:
                 json.dump(config_dict, f, indent=2, ensure_ascii=False)
@@ -190,10 +197,6 @@ class GUIConfigManager:
                     if os.name == "posix":
                         os.chmod(bak_path, 0o600)
                     shutil.copyfile(cls.CONFIG_FILE, bak_path)
-            os.replace(tmp_path, cls.CONFIG_FILE)
-        except BaseException:
-            tmp_path.unlink(missing_ok=True)
-            raise
 
     @classmethod
     def read_active_profile_id(cls) -> str | None:
@@ -495,15 +498,15 @@ class GUIConfigManager:
             except OSError as e:
                 logger.warning("Could not preserve corrupt gui_config.json at %s: %s", corrupt_path, e)
 
-        tmp_path = cls.CONFIG_FILE.with_suffix(cls.CONFIG_FILE.suffix + ".tmp")
         try:
-            tmp_path.touch(mode=0o600, exist_ok=True)
-            if os.name == "posix":
-                os.chmod(tmp_path, 0o600)
-            shutil.copyfile(bak_path, tmp_path)
-            os.replace(tmp_path, cls.CONFIG_FILE)
+            with atomic_write_path(cls.CONFIG_FILE) as tmp_path:
+                if os.name == "posix":
+                    # atomic_write_path does not chmod. Do it on the temp file
+                    # so the config is never group/world-readable, not even
+                    # momentarily.
+                    os.chmod(tmp_path, 0o600)
+                shutil.copyfile(bak_path, tmp_path)
         except OSError as e:
-            tmp_path.unlink(missing_ok=True)
             logger.warning("Could not repair gui_config.json from %s: %s", bak_path, e)
 
     # Envelope marker key for exported settings files (see export_config).
@@ -567,14 +570,8 @@ class GUIConfigManager:
             "settings": settings,
         }
 
-        tmp_path = path.with_suffix(path.suffix + ".tmp")
-        try:
-            with tmp_path.open("w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2, ensure_ascii=False)
-            os.replace(tmp_path, path)
-        except BaseException:
-            tmp_path.unlink(missing_ok=True)
-            raise
+        with atomic_write_path(path) as tmp_path, tmp_path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
 
     @classmethod
     def import_config(cls, path: Path, current_config: AnkiMinerConfig) -> ImportConfigResult:

@@ -1,13 +1,12 @@
 """Manager for recently processed file pairs."""
 
-import contextlib
 import json
 import logging
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
 
 logger = logging.getLogger(__name__)
@@ -105,20 +104,20 @@ class RecentFilesManager:
     def _save(self, entries: list[dict]) -> None:
         """Save entries to the JSON file.
 
-        Atomic: stage to a sibling ``.tmp`` then ``os.replace`` so a crash
-        mid-write can't truncate the existing list. OSErrors are logged rather
+        Atomic: stage to a unique sibling temp file then ``os.replace`` so a
+        crash mid-write can't truncate the existing list. The temp name must
+        be unique (not a shared fixed ``.tmp``) because nothing prevents two
+        processes from racing this save; a shared name lets their writes
+        interleave and byte-splice a corrupt file. OSErrors are logged rather
         than swallowed silently — a bare ``except: pass`` left the user with no
         signal that their recent list had stopped persisting.
         """
-        tmp_path = self._file_path.with_suffix(self._file_path.suffix + ".tmp")
         try:
             self._file_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp_path.write_text(
-                json.dumps(entries, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
-            os.replace(tmp_path, self._file_path)
+            with atomic_write_path(self._file_path) as tmp_path:
+                tmp_path.write_text(
+                    json.dumps(entries, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
         except OSError as e:
             logger.warning("Could not save recent files list: %s", e)
-            with contextlib.suppress(OSError):
-                tmp_path.unlink(missing_ok=True)

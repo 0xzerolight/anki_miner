@@ -523,6 +523,62 @@ class TestAtomicSave:
 
         chmod.assert_not_called()
 
+    def test_staging_file_name_is_unique_not_the_shared_fixed_tmp(self, tmp_config: Path, monkeypatch):
+        """The single-instance guard is advisory ("Continue anyway"), so two
+        processes can race a save. A shared, fixed-name ``.tmp`` staging file
+        lets their writes interleave and byte-splice a corrupt primary; a
+        unique name per save closes that race.
+        """
+        import anki_miner.gui.utils.config_manager as cm
+
+        captured: list[str] = []
+        real_dump = cm.json.dump
+
+        def spying_dump(obj, fp, *args, **kwargs):
+            captured.append(Path(fp.name).name)
+            return real_dump(obj, fp, *args, **kwargs)
+
+        monkeypatch.setattr(cm.json, "dump", spying_dump)
+
+        GUIConfigManager.save_config(create_default_config())
+        GUIConfigManager.save_config(create_default_config())
+
+        assert len(captured) == 2
+        fixed_name = tmp_config.name + ".tmp"
+        assert captured[0] != fixed_name
+        assert captured[1] != fixed_name
+        assert captured[0] != captured[1]
+
+    def test_no_leftover_sibling_of_any_name_after_successful_save(self, tmp_config: Path):
+        """Generalizes test_no_temp_left_after_successful_save: no stray
+        staging file of ANY name (not just the old fixed ``.tmp``) survives."""
+        GUIConfigManager.save_config(create_default_config())
+
+        assert tmp_config.exists()
+        json.loads(tmp_config.read_text(encoding="utf-8"))
+        leftovers = [p for p in tmp_config.parent.iterdir() if p != tmp_config]
+        assert leftovers == []
+
+    def test_dump_failure_leaves_previous_file_intact_no_litter_of_any_name(self, tmp_config: Path, monkeypatch):
+        """Generalizes test_failed_dump_leaves_previous_file_intact: checks for
+        ANY leftover staging file, not just the old fixed ``.tmp`` name."""
+        GUIConfigManager.save_config(replace(create_default_config(), theme="dark"))
+        original = tmp_config.read_bytes()
+
+        import anki_miner.gui.utils.config_manager as cm
+
+        def exploding_dump(*args, **kwargs):
+            raise ValueError("boom mid-serialize")
+
+        monkeypatch.setattr(cm.json, "dump", exploding_dump)
+
+        with pytest.raises(ValueError):
+            GUIConfigManager.save_config(replace(create_default_config(), theme="light"))
+
+        assert tmp_config.read_bytes() == original
+        leftovers = [p for p in tmp_config.parent.iterdir() if p != tmp_config]
+        assert leftovers == []
+
 
 class TestRoundTripImmutabilityAndPaths:
     """OVH-018 + OVH-031/OVH-072: save→load round-trip for all Path fields and

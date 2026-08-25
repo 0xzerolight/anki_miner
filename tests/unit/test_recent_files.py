@@ -201,12 +201,15 @@ class TestAtomicSave:
         manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
         original = manager._file_path.read_text(encoding="utf-8")
 
-        import anki_miner.gui.utils.recent_files as rf
+        # _save stages through atomic_write_path, which does the actual
+        # os.replace; patch it there rather than importing a now-unused `os`
+        # name into recent_files just to give this test something to patch.
+        import anki_miner.utils.atomic_io as atomic_io
 
         def boom(src, dst):
             raise OSError("disk full")
 
-        monkeypatch.setattr(rf.os, "replace", boom)
+        monkeypatch.setattr(atomic_io.os, "replace", boom)
 
         with caplog.at_level("WARNING"):
             # add_entry calls _save internally; must not raise.
@@ -217,3 +220,55 @@ class TestAtomicSave:
         tmp = manager._file_path.with_suffix(manager._file_path.suffix + ".tmp")
         assert not tmp.exists()
         assert any("recent" in r.message.lower() for r in caplog.records)
+
+    def test_staging_file_name_is_unique_not_the_shared_fixed_tmp(self, manager, monkeypatch):
+        """The single-instance guard is advisory, so two processes can race a
+        save. A shared, fixed-name ``.tmp`` staging file lets their writes
+        interleave and byte-splice a corrupt primary; a unique name per save
+        closes that race."""
+        import anki_miner.gui.utils.recent_files as rf
+
+        captured: list[str] = []
+        real_write_text = rf.Path.write_text
+
+        def spying_write_text(self, *args, **kwargs):
+            captured.append(self.name)
+            return real_write_text(self, *args, **kwargs)
+
+        monkeypatch.setattr(rf.Path, "write_text", spying_write_text)
+
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
+        manager.add_entry(Path("/video/ep02.mkv"), Path("/subs/ep02.ass"))
+
+        assert len(captured) == 2
+        fixed_name = manager._file_path.name + ".tmp"
+        assert captured[0] != fixed_name
+        assert captured[1] != fixed_name
+        assert captured[0] != captured[1]
+
+    def test_no_leftover_sibling_of_any_name_after_successful_save(self, manager):
+        """Generalizes test_no_temp_left_after_successful_save: no stray
+        staging file of ANY name (not just the old fixed ``.tmp``) survives."""
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
+
+        assert manager._file_path.exists()
+        leftovers = [p for p in manager._file_path.parent.iterdir() if p != manager._file_path]
+        assert leftovers == []
+
+    def test_dump_failure_leaves_previous_file_intact_no_litter_of_any_name(self, manager, monkeypatch):
+        manager.add_entry(Path("/video/ep01.mkv"), Path("/subs/ep01.ass"))
+        original = manager._file_path.read_bytes()
+
+        import anki_miner.gui.utils.recent_files as rf
+
+        def exploding_dumps(*args, **kwargs):
+            raise ValueError("boom mid-serialize")
+
+        monkeypatch.setattr(rf.json, "dumps", exploding_dumps)
+
+        with pytest.raises(ValueError):
+            manager.add_entry(Path("/video/ep02.mkv"), Path("/subs/ep02.ass"))
+
+        assert manager._file_path.read_bytes() == original
+        leftovers = [p for p in manager._file_path.parent.iterdir() if p != manager._file_path]
+        assert leftovers == []
