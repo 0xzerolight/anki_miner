@@ -509,10 +509,10 @@ class YtdlpUpdater:
                 self._raise_if_cancelled()
                 self._promote_verified_binary(tmp, final, actual_sha256)
                 ytdlp_resolver._clear_cache()
-                from anki_miner.services import youtube_fetcher
+                from anki_miner.services import ytdlp_invocation
 
-                youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
-                youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+                ytdlp_invocation.ytdlp_supports_js_runtimes.cache_clear()
+                ytdlp_invocation.ytdlp_supports_remote_components.cache_clear()
             logger.info("Installed yt-dlp %s to %s", version, final)
             return final
         except BaseException:

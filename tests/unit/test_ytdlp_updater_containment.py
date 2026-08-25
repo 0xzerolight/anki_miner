@@ -22,7 +22,7 @@ from PyQt6.QtCore import QTimer
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.main_window import MainWindow
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.services import youtube_fetcher, ytdlp_updater
+from anki_miner.services import youtube_fetcher, ytdlp_invocation, ytdlp_updater
 from anki_miner.services.validation_service import ValidationService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService, YtdlpNotFoundError
 from anki_miner.services.ytdlp_updater import YtdlpUpdater
@@ -350,7 +350,7 @@ def test_fetcher_translates_rejected_managed_path_before_subprocess(
     def unexpected_run(*args, **kwargs):
         raise AssertionError("unverified managed binary reached subprocess")
 
-    monkeypatch.setattr("anki_miner.services.youtube_fetcher.subprocess.run", unexpected_run)
+    monkeypatch.setattr("anki_miner.services.ytdlp_invocation.subprocess.run", unexpected_run)
 
     with pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"):
         YouTubeFetcherService(AnkiMinerConfig()).probe_metadata("https://youtu.be/abc123")
@@ -569,15 +569,15 @@ def test_promotion_and_cache_invalidation_block_probe_command_construction(
     monkeypatch.setattr(YtdlpUpdater, "latest_version_and_asset", lambda self: (_TAG, _ASSET_URL))
     monkeypatch.setattr(YtdlpUpdater, "local_version", lambda self: "2026.01.01")
 
-    youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
-    youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+    ytdlp_invocation.ytdlp_supports_js_runtimes.cache_clear()
+    ytdlp_invocation.ytdlp_supports_remote_components.cache_clear()
     monkeypatch.setattr(
-        youtube_fetcher.subprocess,
+        ytdlp_invocation.subprocess,
         "run",
         lambda command, **kwargs: subprocess.CompletedProcess(command, 0, "old help", ""),
     )
-    assert youtube_fetcher._ytdlp_supports_js_runtimes(str(managed)) is False
-    assert youtube_fetcher._ytdlp_supports_remote_components(str(managed)) is False
+    assert ytdlp_invocation.ytdlp_supports_js_runtimes(str(managed)) is False
+    assert ytdlp_invocation.ytdlp_supports_remote_components(str(managed)) is False
 
     invalidation_started = threading.Event()
     release_invalidation = threading.Event()
@@ -590,7 +590,7 @@ def test_promotion_and_cache_invalidation_block_probe_command_construction(
 
     monkeypatch.setattr(ytdlp_resolver, "_clear_cache", blocking_clear)
     monkeypatch.setattr(
-        youtube_fetcher.subprocess,
+        ytdlp_invocation.subprocess,
         "run",
         lambda command, **kwargs: subprocess.CompletedProcess(
             command,
@@ -649,8 +649,8 @@ def test_promotion_and_cache_invalidation_block_probe_command_construction(
         release_invalidation.set()
         updater_thread.join(3)
         probe_thread.join(3)
-        youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
-        youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+        ytdlp_invocation.ytdlp_supports_js_runtimes.cache_clear()
+        ytdlp_invocation.ytdlp_supports_remote_components.cache_clear()
 
     assert not updater_thread.is_alive()
     assert not probe_thread.is_alive()

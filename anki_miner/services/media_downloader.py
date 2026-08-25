@@ -7,8 +7,8 @@ service has no subtitle requirement and never deletes what it downloaded.
 
 Command-building idioms (``--ignore-config``, ``--paths home:`` + bare
 ``--output`` template, ``--`` end-of-options hardening, progress template,
-cookie/JS-runtime/ffmpeg flags) mirror ``youtube_fetcher.py`` — keep the two
-in sync when yt-dlp semantics change.
+cookie/JS-runtime/ffmpeg flags) are shared with ``youtube_fetcher.py`` via
+``ytdlp_invocation.py``.
 """
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from __future__ import annotations
 import collections
 import logging
 import re
-import shutil
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -32,23 +31,12 @@ from anki_miner.exceptions.youtube import (
     CookieDatabaseLockedError,
     YtdlpNotFoundError,
 )
+from anki_miner.services import ytdlp_invocation
 from anki_miner.services.audio_fetch_common import redact_url_for_log
-
-# Shared capability probes: module-level functools.cache keyed on the resolved
-# binary path, so importing them here means the 30s `--help` probe runs once
-# per binary across both services instead of twice.
-from anki_miner.services.youtube_fetcher import (
-    _JS_RUNTIMES,
-    _ytdlp_supports_js_runtimes,
-    _ytdlp_supports_remote_components,
-)
-from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
 
 logger = logging.getLogger(__name__)
-
-_YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
 
 _DOWNLOAD_TIMEOUT_S = 3 * 60 * 60
 
@@ -66,17 +54,6 @@ FORMAT_PRESETS: dict[str, tuple[str, str | None]] = {
     "audio_mp3": ("bestaudio/best", "mp3"),
     "audio_m4a": ("bestaudio/best", "m4a"),
 }
-
-_PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
-_POSTPROCESS_MARKERS = (
-    "[Merger]",
-    "[ExtractAudio]",
-    "[EmbedThumbnail]",
-    "[Metadata]",
-    "[SubtitleConvertor]",
-    "[ThumbnailsConvertor]",
-    "[FixupM3u8]",
-)
 
 # Final-filename discovery from yt-dlp's own output lines (version-stable
 # phrasings; --print would change quiet-mode semantics). Last match wins, so a
@@ -117,10 +94,6 @@ class DownloadResult:
     filepath: Path | None
 
 
-def _tail(buf: collections.deque[str], n: int = 20) -> str:
-    return "\n".join(list(buf)[-n:])
-
-
 class MediaDownloaderService:
     """Download one URL via yt-dlp into a destination folder. Stateless."""
 
@@ -153,7 +126,7 @@ class MediaDownloaderService:
         def handle_line(line: str) -> None:
             nonlocal postprocessing_seen
             tail.append(line)
-            m = _PROGRESS_RE.search(line)
+            m = ytdlp_invocation.PROGRESS_RE.search(line)
             if m is not None:
                 if progress_cb is not None:
                     downloaded_s, total_s = m.group(1), m.group(2)
@@ -179,7 +152,7 @@ class MediaDownloaderService:
                 if name_m is not None:
                     captured["filepath"] = Path(name_m.group(1))
                     break
-            if not postprocessing_seen and any(marker in line for marker in _POSTPROCESS_MARKERS):
+            if not postprocessing_seen and any(marker in line for marker in ytdlp_invocation.POSTPROCESS_MARKERS):
                 postprocessing_seen = True
                 if progress_cb is not None:
                     progress_cb(QCoreApplication.translate("MediaDownloader", "Processing"), None)
@@ -195,7 +168,7 @@ class MediaDownloaderService:
             )
 
         if isinstance(result.error, FileNotFoundError):
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from result.error
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from result.error
         if result.state is SupervisedState.CANCELLED:
             return DownloadResult(DownloadStatus.CANCELLED, None)
         if result.state is SupervisedState.TIMED_OUT:
@@ -217,7 +190,7 @@ class MediaDownloaderService:
         try:
             return resolve_ytdlp(self._config)
         except FileNotFoundError as exc:
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from exc
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from exc
 
     def _build_cmd(self, url: str, dest_dir: Path, options: DownloadOptions) -> list[str]:
         cmd: list[str] = [
@@ -257,10 +230,10 @@ class MediaDownloaderService:
                 "30",
             ]
         )
-        cmd.extend(self._cookie_args())
-        cmd.extend(self._js_runtime_args())
-        cmd.extend(self._remote_component_args())
-        ffmpeg_location = self._effective_ffmpeg_location()
+        cmd.extend(ytdlp_invocation.cookie_args(self._config))
+        cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
+        cmd.extend(ytdlp_invocation.remote_component_args(self._config, self._ytdlp()))
+        ffmpeg_location = ytdlp_invocation.effective_ffmpeg_location(self._config)
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
         # End-of-options separator: a '-'-leading URL must never be parsed as a
@@ -269,57 +242,29 @@ class MediaDownloaderService:
         cmd.append(url)
         return cmd
 
-    def _cookie_args(self) -> list[str]:
-        if self._config.youtube_cookies_file:
-            return ["--cookies", str(self._config.youtube_cookies_file)]
-        if self._config.youtube_cookies_from_browser:
-            return ["--cookies-from-browser", self._config.youtube_cookies_from_browser]
-        return []
-
-    def _js_runtime_args(self) -> list[str]:
-        if not _ytdlp_supports_js_runtimes(self._ytdlp()):
-            return []
-        for runtime in _JS_RUNTIMES:
-            if shutil.which(runtime):
-                return ["--js-runtimes", runtime]
-        return []
-
-    def _remote_component_args(self) -> list[str]:
-        if not _ytdlp_supports_remote_components(self._ytdlp()):
-            return []
-        return ["--remote-components", "ejs:github"]
-
-    def _effective_ffmpeg_location(self) -> str | None:
-        loc = self._config.youtube_ffmpeg_location
-        if loc is not None:
-            return str(loc)
-        resolved = resolve_ffmpeg(self._config)
-        if resolved != "ffmpeg" and Path(resolved).is_file():
-            return resolved
-        return None
-
     @staticmethod
     def _raise_for_error(tail: collections.deque[str]) -> None:
         joined_lower = "\n".join(tail).lower()
+        classification = ytdlp_invocation.classify_error_tail(joined_lower)
 
-        if ("sign in" in joined_lower and "confirm" in joined_lower) or ("sign in to confirm" in joined_lower):
+        if classification == "bot":
             raise BotDetectionError(
                 "The site requires login. In Settings → YouTube, set Cookies from "
                 "browser, or point Cookies file at an exported cookies.txt, then retry."
             )
 
-        if "database is locked" in joined_lower or "database locked" in joined_lower:
+        if classification == "cookie_lock":
             raise CookieDatabaseLockedError(
                 "Cookie database is locked. Close the browser and retry, or set Cookies → Browser to None."
             )
 
-        if "requested format is not available" in joined_lower:
+        if classification == "format_missing":
             # A generic downloader with a raw-format field cannot blame extractor
             # staleness alone — name both remedies.
             raise MediaDownloadError(
                 "The site served no matching format. Update yt-dlp (Settings → "
                 "YouTube → Update yt-dlp now) or, if you set a custom format "
-                f"string, fix it. yt-dlp said: {_tail(tail, 5)}"
+                f"string, fix it. yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
             )
 
-        raise MediaDownloadError(f"yt-dlp exited non-zero: {_tail(tail, 20)}")
+        raise MediaDownloadError(f"yt-dlp exited non-zero: {ytdlp_invocation.tail_lines(tail, 20)}")

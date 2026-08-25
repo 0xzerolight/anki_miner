@@ -390,7 +390,7 @@ class TestCheckAndUpdate:
     def test_successful_install_clears_capability_caches(self, config, home, monkeypatch):
         import hashlib
 
-        from anki_miner.services import youtube_fetcher
+        from anki_miner.services import ytdlp_invocation
 
         monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
         data = b"x" * (2 * 1024 * 1024)
@@ -414,22 +414,22 @@ class TestCheckAndUpdate:
         def fake_help(command, **kwargs):  # noqa: ARG001
             return subprocess.CompletedProcess(command, 0, next(help_outputs), "")
 
-        monkeypatch.setattr(youtube_fetcher.subprocess, "run", fake_help)
+        monkeypatch.setattr(ytdlp_invocation.subprocess, "run", fake_help)
         path = str(home / "bin" / "yt-dlp")
-        youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
-        youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+        ytdlp_invocation.ytdlp_supports_js_runtimes.cache_clear()
+        ytdlp_invocation.ytdlp_supports_remote_components.cache_clear()
         try:
-            assert youtube_fetcher._ytdlp_supports_js_runtimes(path) is False
-            assert youtube_fetcher._ytdlp_supports_remote_components(path) is False
+            assert ytdlp_invocation.ytdlp_supports_js_runtimes(path) is False
+            assert ytdlp_invocation.ytdlp_supports_remote_components(path) is False
 
             installed = YtdlpUpdater(config)._download_and_install(_asset_url(), "2024.03.10")
 
             assert installed == home / "bin" / "yt-dlp"
-            assert youtube_fetcher._ytdlp_supports_js_runtimes(path) is True
-            assert youtube_fetcher._ytdlp_supports_remote_components(path) is True
+            assert ytdlp_invocation.ytdlp_supports_js_runtimes(path) is True
+            assert ytdlp_invocation.ytdlp_supports_remote_components(path) is True
         finally:
-            youtube_fetcher._ytdlp_supports_js_runtimes.cache_clear()
-            youtube_fetcher._ytdlp_supports_remote_components.cache_clear()
+            ytdlp_invocation.ytdlp_supports_js_runtimes.cache_clear()
+            ytdlp_invocation.ytdlp_supports_remote_components.cache_clear()
 
     def test_installed_when_no_local_version(self, config, home, monkeypatch):
         # Fresh install: local_version None -> proceed to install.

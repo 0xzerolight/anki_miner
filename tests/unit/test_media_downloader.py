@@ -22,6 +22,7 @@ from anki_miner.exceptions.youtube import (
     YtdlpNotFoundError,
 )
 from anki_miner.services import media_downloader as md
+from anki_miner.services import ytdlp_invocation
 from anki_miner.services.media_downloader import (
     FORMAT_PRESETS,
     DownloadOptions,
@@ -96,9 +97,9 @@ def service(dl_config: AnkiMinerConfig) -> MediaDownloaderService:
 def _deterministic_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin resolver + capability probes so no test shells out."""
     monkeypatch.setattr(md, "resolve_ytdlp", lambda _config: "/fake/yt-dlp")
-    monkeypatch.setattr(md, "_ytdlp_supports_js_runtimes", lambda _path: False)
-    monkeypatch.setattr(md, "_ytdlp_supports_remote_components", lambda _path: False)
-    monkeypatch.setattr(md, "resolve_ffmpeg", lambda _config: "ffmpeg")
+    monkeypatch.setattr(ytdlp_invocation, "ytdlp_supports_js_runtimes", lambda _path: False)
+    monkeypatch.setattr(ytdlp_invocation, "ytdlp_supports_remote_components", lambda _path: False)
+    monkeypatch.setattr(ytdlp_invocation, "resolve_ffmpeg", lambda _config: "ffmpeg")
 
 
 def _run_download(
@@ -242,7 +243,7 @@ class TestCommandConstruction:
     ) -> None:
         bundled = tmp_path / "ffmpeg-bundled"
         bundled.write_bytes(b"x")
-        monkeypatch.setattr(md, "resolve_ffmpeg", lambda _config: str(bundled))
+        monkeypatch.setattr(ytdlp_invocation, "resolve_ffmpeg", lambda _config: str(bundled))
         recorder, _ = _run_download(monkeypatch, service, tmp_path, _opts())
         cmd = _cmd(recorder)
         assert cmd[cmd.index("--ffmpeg-location") + 1] == str(bundled)
