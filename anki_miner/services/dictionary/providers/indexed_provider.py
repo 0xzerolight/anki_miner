@@ -159,7 +159,15 @@ class IndexedDictProvider:
                 ensure_sequence_index(self._db_path)
             except Exception as e:  # noqa: BLE001 — backfill is best-effort; scan stays correct
                 logger.warning("idx_sequence backfill failed for %s: %s", self.dict_id, e)
-            self._conn = open_readonly(self._db_path)
+            try:
+                self._conn = open_readonly(self._db_path)
+            except sqlite3.DatabaseError as e:
+                # A backfill-induced lock (writer holds EXCLUSIVE, blocks readers
+                # too) must not make the dictionary unavailable for the whole
+                # session — pre-backfill behavior never failed load() over the
+                # missing index alone.
+                logger.warning("Failed to reopen %s after backfill: %s", self._db_path, e)
+                return False
 
         # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
         # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css

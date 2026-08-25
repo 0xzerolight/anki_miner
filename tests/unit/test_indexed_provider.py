@@ -1626,6 +1626,29 @@ class TestSequenceIndexBackfill:
         provider = IndexedDictProvider("test-dict", db)
         assert provider.load() is True  # failure is logged, never raised
 
+    def test_load_returns_false_when_reopen_after_backfill_fails(self, tmp_path: Path, monkeypatch):
+        """A backfill-induced lock (writer holds EXCLUSIVE, blocks readers too)
+        must not raise out of load() — it degrades to unavailable, same as any
+        other open failure, instead of taking the whole dictionary down."""
+        db = tmp_path / "test.sqlite"
+        self._seed_and_drop(db)
+
+        from anki_miner.services.dictionary.providers import indexed_provider as mod
+
+        real_open_readonly = mod.open_readonly
+        calls = {"n": 0}
+
+        def flaky_open_readonly(path):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return real_open_readonly(path)
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(mod, "open_readonly", flaky_open_readonly)
+        provider = IndexedDictProvider("test-dict", db)
+        assert provider.load() is False
+        assert calls["n"] == 2  # initial open, then the post-backfill reopen
+
     def test_sequence_index_refreshes_meta_sidecar(self, tmp_path: Path):
         """CREATE INDEX bumps the db mtime; the sidecar must stay >= it."""
         db = tmp_path / "test.sqlite"

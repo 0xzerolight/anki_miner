@@ -339,14 +339,17 @@ def create_lookup_indexes(db_path: Path) -> None:
         conn.close()
 
 
-def ensure_sequence_index(db_path: Path) -> bool:
+def ensure_sequence_index(db_path: Path) -> None:
     """Create any missing lookup index (notably ``idx_sequence``) on an
     existing index file. v6 indexes imported before redirect resolution lack
     ``idx_sequence`` and pay a full table scan per redirect batch; this
-    backfills it once, without a schema bump (the data is correct). Failures
-    (read-only filesystem, locked DB) are logged and swallowed — the scan
-    fallback stays correct. Refreshes the ``meta.json`` sidecar mtime so the
-    fast path is not invalidated by the write."""
+    backfills it once, without a schema bump (the data is correct). Refreshes
+    the ``meta.json`` sidecar mtime so the fast path is not invalidated by the
+    write.
+
+    Raises on failure (read-only filesystem, locked DB) — this function does
+    NOT swallow; the caller (``IndexedDictProvider.load()``) catches and logs
+    so the scan fallback stays correct instead of failing the whole load."""
     conn = sqlite3.connect(db_path)
     try:
         conn.executescript(_LOOKUP_INDEXES_SQL)
@@ -356,7 +359,6 @@ def ensure_sequence_index(db_path: Path) -> bool:
     sidecar = db_path.parent / "meta.json"
     if sidecar.is_file():
         sidecar.touch()
-    return True
 
 
 def bulk_insert(
