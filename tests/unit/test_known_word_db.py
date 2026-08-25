@@ -757,3 +757,146 @@ class TestNfcMigration:
         assert not writer.is_alive()
         assert errors == []
         assert KnownWordDB(db_path).get_known_words() == {self.NFC, "新規"}
+
+
+class TestRunCache:
+    """The known/source sets and the Anki-vocabulary normalization are
+    memoized for the object's lifetime (T24).
+
+    The batch worker keeps one KnownWordDB alive for the whole run (T20), so a
+    full-table scan + NFC-normalize on every ``get_known_words()`` /
+    ``get_words_by_source()`` call was pure repeat work within a run. Every
+    writer invalidates the memo so a run never serves cross-write-stale data.
+    """
+
+    @staticmethod
+    def _counting_connect(db, monkeypatch):
+        """Count how many connections a DB opens after this call."""
+        calls: list[int] = []
+        real_connect = db._connect
+
+        def counting():
+            calls.append(1)
+            return real_connect()
+
+        monkeypatch.setattr(db, "_connect", counting)
+        return calls
+
+    def test_get_known_words_scans_once_across_calls(self, tmp_path, monkeypatch):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる", "飲む"})
+
+        calls = self._counting_connect(db, monkeypatch)
+        first = db.get_known_words()
+        second = db.get_known_words()
+
+        assert len(calls) == 1  # one connection opened == one SELECT
+        assert first == second == {"食べる", "飲む"}
+        assert second is first  # same cached object, not a fresh scan
+
+    def test_get_words_by_source_scans_once_across_calls(self, tmp_path, monkeypatch):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"ラーメン"}, source="user")
+
+        calls = self._counting_connect(db, monkeypatch)
+        first = db.get_words_by_source("user")
+        second = db.get_words_by_source("user")
+
+        assert len(calls) == 1
+        assert first == second == {"ラーメン"}
+        assert second is first
+
+    @pytest.mark.parametrize(
+        "write",
+        [
+            lambda db: db.add_words({"新規"}, source="anki"),
+            lambda db: db.add_words_with_receipt({"新規2"}, source="anki"),
+            lambda db: db.remove_words({"食べる"}),
+            lambda db: db.clear(),
+            lambda db: db.clear(preserve_user=True),
+            lambda db: db.clear_user(),
+        ],
+        ids=[
+            "add_words",
+            "add_words_with_receipt",
+            "remove_words",
+            "clear",
+            "clear_preserve_user",
+            "clear_user",
+        ],
+    )
+    def test_every_writer_invalidates_the_memo(self, tmp_path, write):
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+        db.add_words({"食べる"}, source="user")
+
+        known_before = db.get_known_words()
+        user_before = db.get_words_by_source("user")
+
+        write(db)
+
+        known_after = db.get_known_words()
+        user_after = db.get_words_by_source("user")
+
+        assert known_after is not known_before
+        assert user_after is not user_before
+
+    def test_sync_with_anki_normalizes_same_vocab_object_once(self, tmp_path, monkeypatch):
+        """Passing the identical set object twice normalizes it only once.
+
+        The batch worker's AnkiService caches ``get_existing_vocabulary()``
+        for the run, so ``sync_with_anki`` sees the SAME set object on every
+        queue item — that identity is the memo key.
+        """
+        import anki_miner.services.known_word_db as known_word_db_mod
+
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+
+        anki_vocab = {"食べる", "飲む"}
+        hits_on_anki_vocab = []
+        real_normalize_all = known_word_db_mod._normalize_all
+
+        def spy(words):
+            if words is anki_vocab:
+                hits_on_anki_vocab.append(1)
+            return real_normalize_all(words)
+
+        monkeypatch.setattr(known_word_db_mod, "_normalize_all", spy)
+
+        db.sync_with_anki(anki_vocab)
+        db.sync_with_anki(anki_vocab)  # same object again
+
+        assert hits_on_anki_vocab == [1]
+
+    def test_normalize_anki_vocabulary_different_object_different_content(self, tmp_path):
+        """A genuinely different vocab object is never served the stale set.
+
+        Regression guard for keying the memo on a retained strong reference
+        rather than a bare ``id()`` — the failure mode a recycled id would
+        cause is exactly a different object silently getting the old result.
+        """
+        db = KnownWordDB(tmp_path / "known_words.db")
+
+        first = db._normalize_anki_vocabulary({"食べる"})
+        second = db._normalize_anki_vocabulary({"飲む"})
+
+        assert first == {"食べる"}
+        assert second == {"飲む"}
+
+    def test_sync_with_anki_normalizes_explicit_existing_argument(self, tmp_path):
+        """The ``existing`` fast path only skips normalizing this object's OWN
+        memo; an external caller-supplied set is still normalized correctly.
+        """
+        #: が written as か + U+3099 (combining voiced sound mark).
+        nfd = "がくせい"
+        db = KnownWordDB(tmp_path / "known_words.db")
+        db.initialize()
+
+        existing = {nfd}  # not this object's known-set memo
+        added, total = db.sync_with_anki({nfd}, existing=existing)
+
+        assert added == 0  # both sides fold to the same NFC lemma
+        assert total == 1

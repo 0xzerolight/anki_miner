@@ -49,6 +49,29 @@ class KnownWordDB:
             db_path: Path to the SQLite database file.
         """
         self._db_path = db_path
+        # Run-lifetime memo (T24): the batch worker keeps one processor — and
+        # one KnownWordDB — alive for every queue item (T20), so a full-table
+        # scan + NFC-normalize on every get_known_words()/get_words_by_source()
+        # call was pure repeat work within a run. Invalidated by every writer
+        # below. It does NOT see a write from another process sharing this DB
+        # file (Issue #100 double launch); that staleness window already
+        # existed on the underlying reads and matches what the other
+        # run-cached queue services tolerate.
+        self._known_cache: set[str] | None = None
+        self._source_cache: dict[str, set[str]] = {}
+        # Anki-vocabulary normalization memo for sync_with_anki: AnkiService
+        # caches get_existing_vocabulary() for the run too, so the same set
+        # object is passed here on every queue item. Keyed by identity against
+        # a retained strong reference (never a bare id() — an id can be
+        # reused by an unrelated object once the original is garbage
+        # collected, which would silently serve the wrong normalized set).
+        self._anki_vocab_ref: set[str] | None = None
+        self._anki_vocab_normalized: set[str] | None = None
+
+    def _invalidate_cache(self) -> None:
+        """Drop the run-cached known/source sets after a write."""
+        self._known_cache = None
+        self._source_cache = {}
 
     def _connect(self) -> sqlite3.Connection:
         """Open a connection with a 5 s busy timeout.
@@ -152,10 +175,13 @@ class KnownWordDB:
         Returns:
             Set of all lemma strings in the database.
         """
+        if self._known_cache is not None:
+            return self._known_cache
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words")
             words = _normalize_all({row[0] for row in cursor.fetchall()})
         log_summary(logger, "Known words load done", rows=len(words))
+        self._known_cache = words
         return words
 
     def get_words_by_source(self, source: str) -> set[str]:
@@ -173,6 +199,8 @@ class KnownWordDB:
         Returns:
             Set of lemma strings with the matching source.
         """
+        if source in self._source_cache:
+            return self._source_cache[source]
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words WHERE source = ?", (source,))
             words = _normalize_all({row[0] for row in cursor.fetchall()})
@@ -182,6 +210,7 @@ class KnownWordDB:
             source=source,
             rows=len(words),
         )
+        self._source_cache[source] = words
         return words
 
     def add_words(self, words: set[str], source: str = "anki") -> int:
@@ -224,6 +253,7 @@ class KnownWordDB:
                 )
             conn.commit()
             after = self._count(conn)
+            self._invalidate_cache()
             return after - before
 
     def add_words_with_receipt(self, words: set[str], source: str = "anki") -> set[str]:
@@ -249,6 +279,7 @@ class KnownWordDB:
                 elif source == "user":
                     conn.execute("UPDATE known_words SET source = ? WHERE lemma = ?", (source, word))
             conn.commit()
+            self._invalidate_cache()
             return inserted
 
     def sync_with_anki(
@@ -272,9 +303,29 @@ class KnownWordDB:
         """
         if existing is None:
             existing = self.get_known_words()
-        new_words = _normalize_all(anki_vocabulary) - _normalize_all(existing)
+        # ``existing`` is normally this object's own known-set memo (the
+        # get_known_words() return value), which is already NFC-normalized —
+        # re-normalizing it here was pure repeat work on top of the memo.
+        # A caller-supplied set that is NOT this memo is normalized as before.
+        normalized_existing = existing if existing is self._known_cache else _normalize_all(existing)
+        normalized_anki = self._normalize_anki_vocabulary(anki_vocabulary)
+        new_words = normalized_anki - normalized_existing
         added = self.add_words(new_words, source="anki")
         return (added, len(existing) + added)
+
+    def _normalize_anki_vocabulary(self, anki_vocabulary: set[str]) -> set[str]:
+        """Return the NFC-normalized Anki vocabulary, memoized by identity.
+
+        See the memo fields in ``__init__`` for why identity (with a retained
+        strong reference) is the correct cache key here.
+        """
+        if anki_vocabulary is self._anki_vocab_ref:
+            assert self._anki_vocab_normalized is not None
+            return self._anki_vocab_normalized
+        normalized = _normalize_all(anki_vocabulary)
+        self._anki_vocab_ref = anki_vocabulary
+        self._anki_vocab_normalized = normalized
+        return normalized
 
     def remove_words(self, words: set[str], source: str | None = None) -> int:
         """Delete specific words from the database (Issue #42).
@@ -310,6 +361,7 @@ class KnownWordDB:
                 )
             conn.commit()
             after = self._count(conn)
+            self._invalidate_cache()
             return before - after
 
     def clear(self, preserve_user: bool = False) -> int:
@@ -338,6 +390,7 @@ class KnownWordDB:
             conn.commit()
             after = self._count(conn)
             removed = before - after
+        self._invalidate_cache()
         if preserve_user:
             log_summary(
                 logger,
@@ -373,6 +426,7 @@ class KnownWordDB:
             conn.execute("DELETE FROM known_words WHERE source = 'user'")
             conn.commit()
             after = self._count(conn)
+            self._invalidate_cache()
             return before - after
 
     def word_count(self) -> int:
