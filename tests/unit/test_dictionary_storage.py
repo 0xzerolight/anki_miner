@@ -2026,3 +2026,23 @@ class TestRedirectRows:
             }
         finally:
             conn.close()
+
+    def test_redirect_skips_target_already_in_rows(self, tmp_path: Path):
+        """Result set holding both a redirect row and its target's own row must
+        not emit the canonical content twice (pool-slot burn)."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="遣る", reading="やる", content='["do (canonical)"]', sequence=100),
+                DictRow(term="遣る", reading="やる", content='["⟶ 遣る"]', score=-101, sequence=-100),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            rows = lookup(conn, "遣る")
+            contents = [content for content, _tags, _seq in rows]
+            assert contents.count('["do (canonical)"]') == 1
+        finally:
+            conn.close()

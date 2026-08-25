@@ -575,7 +575,9 @@ def _substitute_redirect_rows(
     if resolved_by_seq is None:
         resolved_by_seq = _fetch_rows_for_sequences(conn, targets)
     out: list[tuple[str, str, int | None]] | list[tuple[str, str, int | None, str]] = []
-    spliced: set[int] = set()
+    spliced: set[int] = {
+        row[2] for row in rows if row[2] is not None and row[2] > 0 and not _is_redirect_row(row[0], row[2])
+    }
     for row in rows:
         if row[2] is None or not _is_redirect_row(row[0], row[2]):
             out.append(row)  # type: ignore[arg-type]
