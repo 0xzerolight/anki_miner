@@ -397,7 +397,7 @@ def _engine_argv(tmp_path: Path) -> list[str]:
 
 
 class TestChildRunner:
-    def test_prints_exactly_one_verdict_line(self, tmp_path, capsys):
+    def test_prints_exactly_one_verdict_line(self, tmp_path, capfd):
         def _run(args: Any, progress_handler: Any = None) -> dict[str, Any]:
             return {
                 "retval": 0,
@@ -409,7 +409,7 @@ class TestChildRunner:
         with patch(_LIB_RUN, side_effect=_run):
             assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 0
 
-        lines = capsys.readouterr().out.splitlines()
+        lines = capfd.readouterr().out.splitlines()
         assert len(lines) == 1
         assert json.loads(lines[0]) == {
             "retval": 0,
@@ -418,7 +418,7 @@ class TestChildRunner:
             "framerate_scale_factor": 1.001,
         }
 
-    def test_library_stdout_noise_stays_off_the_verdict_stream(self, tmp_path, capsys):
+    def test_library_stdout_noise_stays_off_the_verdict_stream(self, tmp_path, capfd):
         def _run(args: Any, progress_handler: Any = None) -> dict[str, Any]:
             print("50")  # ffsubsync's vlc-mode progress goes to stdout
             return {"retval": 0, "sync_was_successful": True, "offset_seconds": 0.0, "framerate_scale_factor": 1.0}
@@ -426,11 +426,11 @@ class TestChildRunner:
         with patch(_LIB_RUN, side_effect=_run):
             assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 0
 
-        captured = capsys.readouterr()
+        captured = capfd.readouterr()
         assert len(captured.out.splitlines()) == 1
         assert "50" in captured.err
 
-    def test_non_native_numbers_are_coerced_for_json(self, tmp_path, capsys):
+    def test_non_native_numbers_are_coerced_for_json(self, tmp_path, capfd):
         class _NumpyLike:
             def __float__(self) -> float:
                 return -0.5
@@ -446,11 +446,11 @@ class TestChildRunner:
         with patch(_LIB_RUN, side_effect=_run):
             assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 0
 
-        verdict = json.loads(capsys.readouterr().out)
+        verdict = json.loads(capfd.readouterr().out)
         assert verdict["sync_was_successful"] is True
         assert verdict["offset_seconds"] == -0.5
 
-    def test_absent_verdict_keys_come_back_null(self, tmp_path, capsys):
+    def test_absent_verdict_keys_come_back_null(self, tmp_path, capfd):
         """ffsubsync's early-validation return carries no sync_was_successful key."""
 
         def _run(args: Any, progress_handler: Any = None) -> dict[str, Any]:
@@ -459,20 +459,43 @@ class TestChildRunner:
         with patch(_LIB_RUN, side_effect=_run):
             assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 0
 
-        assert json.loads(capsys.readouterr().out)["sync_was_successful"] is None
+        assert json.loads(capfd.readouterr().out)["sync_was_successful"] is None
 
-    def test_library_exception_exits_nonzero_without_a_verdict(self, tmp_path, capsys):
+    def test_uncoercible_value_costs_its_key_not_the_verdict(self, tmp_path, capfd):
+        """A sync that ran writes its output — a verdict-less exit 1 would unlink it."""
+
+        class _Hostile:
+            def __float__(self) -> float:
+                raise ValueError("not a number")
+
+        def _run(args: Any, progress_handler: Any = None) -> dict[str, Any]:
+            return {
+                "retval": 0,
+                "sync_was_successful": True,
+                "offset_seconds": _Hostile(),
+                "framerate_scale_factor": 1.0,
+            }
+
+        with patch(_LIB_RUN, side_effect=_run):
+            assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 0
+
+        verdict = json.loads(capfd.readouterr().out)
+        assert verdict["offset_seconds"] is None
+        assert verdict["sync_was_successful"] is True
+        assert verdict["framerate_scale_factor"] == 1.0
+
+    def test_library_exception_exits_nonzero_without_a_verdict(self, tmp_path, capfd):
         with patch(_LIB_RUN, side_effect=RuntimeError("boom")):
             assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 1
-        assert capsys.readouterr().out == ""
+        assert capfd.readouterr().out == ""
 
-    def test_rejected_argv_systemexit_exits_nonzero(self, tmp_path, capsys):
+    def test_rejected_argv_systemexit_exits_nonzero(self, tmp_path, capfd):
         """argparse's parser.error() raises SystemExit (a BaseException) — must not escape."""
         parser = MagicMock()
         parser.parse_args.side_effect = SystemExit(2)
         with patch(_LIB_MAKE_PARSER, return_value=parser):
             assert _ffsubsync_child.main(_engine_argv(tmp_path)) == 1
-        assert capsys.readouterr().out == ""
+        assert capfd.readouterr().out == ""
 
 
 _STUB_FFSUBSYNC = '''\

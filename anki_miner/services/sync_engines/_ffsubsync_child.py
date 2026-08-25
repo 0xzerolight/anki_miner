@@ -9,13 +9,18 @@ Contract with the parent (:mod:`.ffsubsync_engine`):
 * **stdout carries exactly one thing**: the verdict line. ffsubsync's own
   logging already goes to stderr (its package ``__init__`` says so), but its
   VLC/GUI progress modes ``print()`` and any dependency is free to as well, so
-  the whole run happens under ``redirect_stdout(sys.stderr)``.
+  the whole run happens under ``redirect_stdout(sys.stderr)``. The verdict goes
+  out with ``os.write(1, ...)``, not ``sys.stdout``: a ``console=False`` frozen
+  Windows/macOS build leaves ``sys.stdout`` as ``None``, while fd 1 is the pipe
+  the parent's ``subprocess.PIPE`` opened whatever the subsystem.
 * **The exit code says whether there is a verdict, not what it is.** ffsubsync's
   ``retval`` rides in the JSON: a low-quality reject writes the *original*
   subtitles and returns 0, so an exit code alone cannot tell the parent's
   quality gate a rejected sync from a good one.
 * Values are coerced to JSON-native types — ffsubsync's offset can arrive as a
-  numpy scalar, which :mod:`json` will not serialize.
+  numpy scalar, which :mod:`json` will not serialize. A value that resists
+  coercion costs its own key (``None``, which the parent already tolerates), not
+  the whole verdict: a verdict-less exit makes the parent discard a good output.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import os
 import sys
 from collections.abc import Callable, Sequence
 from typing import Any
@@ -50,7 +56,18 @@ def _sync(argv: Sequence[str]) -> dict[str, Any]:
     from ffsubsync.ffsubsync import run as ffsubsync_run
 
     result = ffsubsync_run(make_parser().parse_args(list(argv)))
-    return {key: None if (value := result.get(key)) is None else coerce(value) for key, coerce in _VERDICT_KEYS.items()}
+    return {key: _coerced(key, result.get(key), coerce) for key, coerce in _VERDICT_KEYS.items()}
+
+
+def _coerced(key: str, value: Any, coerce: Callable[[Any], Any]) -> Any:
+    """JSON-safe *value*, or ``None`` if it resists coercion — never raises."""
+    if value is None:
+        return None
+    try:
+        return coerce(value)
+    except Exception:  # noqa: BLE001 — one exotic value must not cost the verdict for a sync that ran
+        logging.getLogger(__name__).warning("ffsubsync verdict key %r is not coercible: %r", key, value)
+        return None
 
 
 def main(argv: Sequence[str]) -> int:
@@ -58,11 +75,11 @@ def main(argv: Sequence[str]) -> int:
     try:
         with contextlib.redirect_stdout(sys.stderr):
             verdict = _sync(argv)
-    # noqa: BLE001 — a crash (incl. argparse's SystemExit on a rejected argv) is a verdict-less exit, never a traceback the parent has to interpret
-    except (Exception, SystemExit):
+    # SystemExit too: argparse's parser.error() raises it on a rejected argv.
+    except (Exception, SystemExit):  # noqa: BLE001 — a crash is a verdict-less exit, never a traceback for the parent
         logging.getLogger(__name__).warning("ffsubsync child failed", exc_info=True)
         return 1
 
-    sys.stdout.write(json.dumps(verdict) + "\n")
-    sys.stdout.flush()
+    # fd 1, not sys.stdout: see the stdout contract in the module docstring.
+    os.write(1, (json.dumps(verdict) + "\n").encode("utf-8"))
     return 0
