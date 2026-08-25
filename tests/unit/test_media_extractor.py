@@ -2728,12 +2728,19 @@ class TestWavToFloat32DurationCeiling:
         assert str(_MAX_ASR_DURATION_S) in msg, msg
 
     def test_duration_at_cap_is_accepted(self, monkeypatch, tmp_path):
-        """The cap itself is inclusive — only durations strictly past it refuse."""
+        """The cap itself is inclusive — only durations strictly past it refuse.
+
+        Shrinks ``_MAX_ASR_DURATION_S`` to a couple of seconds so the boundary
+        is exercised with a tiny allocation — the real cap (6h @ 16kHz) would
+        mean a ~1.3 GiB ``np.empty`` plus ~346 chunked ``readframes`` calls on
+        every default-suite CI leg under xdist.
+        """
         from anki_miner.services import media_extractor
-        from anki_miner.services.media_extractor import _MAX_ASR_DURATION_S
 
         framerate = 16000
-        at_cap_frames = framerate * _MAX_ASR_DURATION_S
+        small_cap_s = 2
+        monkeypatch.setattr(media_extractor, "_MAX_ASR_DURATION_S", small_cap_s)
+        at_cap_frames = framerate * small_cap_s
 
         class _AtCapWave:
             def __enter__(self):
@@ -2771,7 +2778,7 @@ class TestWavToFloat32DurationCeiling:
         samples, sr, duration = media_extractor.wav_to_float32(tmp_path / "at_cap.wav")
 
         assert sr == framerate
-        assert duration == pytest.approx(_MAX_ASR_DURATION_S)
+        assert duration == pytest.approx(small_cap_s)
         assert samples.shape[0] == at_cap_frames
 
 

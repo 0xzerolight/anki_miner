@@ -64,9 +64,11 @@ _FILTER_PROBE_GRAPH = "aselect='between(t,1000,1001)',asetpts=N/SR/TB"
 MIN_CLIP_SECONDS = 0.2
 
 #: Longest track ``wav_to_float32`` will decode. Deliberately generous — this
-#: stops the 20h-audiobook OOM-kill (whole-track float32 ≈ 115 MB/hour, so a
-#: 20h input peaks around 7 GB resident), not policing any normal episode or
-#: film length. Checked against the WAV header before any frame data is read.
+#: stops the 20h-audiobook OOM-kill (float32 output ≈ 230 MB/hour; the ~7 GB
+#: peak at 20h was the OLD int16-buffer-plus-float32-buffer combined resident
+#: size, before the chunked fill below made only the float32 output resident),
+#: not policing any normal episode or film length. Checked against the WAV
+#: header before any frame data is read.
 _MAX_ASR_DURATION_S = 6 * 60 * 60  # 6 hours
 
 #: Frames per ``readframes`` call while filling the preallocated float32
@@ -111,7 +113,7 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     Memory note: a track whose HEADER duration (``nframes / framerate``)
     exceeds :data:`_MAX_ASR_DURATION_S` is refused before any frame data is
     read — the 20h-audiobook OOM-kill this guards against. Within the cap,
-    the float32 output (~115 MB/hour at 16 kHz) is preallocated and filled
+    the float32 output (~230 MB/hour at 16 kHz) is preallocated and filled
     from chunked ``readframes`` reads, so the whole int16 byte buffer is
     never resident alongside it.
 
