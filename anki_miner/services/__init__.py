@@ -18,9 +18,11 @@ if TYPE_CHECKING:
 
 def __getattr__(name: str) -> object:
     # AnkiService and ValidationService each pull in `requests` at their own
-    # module top; ExportService is lazy alongside them for the same reason
-    # (nothing outside a boot-time services import needs it eagerly). Deferred
-    # so a bare `import anki_miner.services` does not carry that ~40-60ms cost.
+    # module top; ExportService is lazy alongside them for the same reason.
+    # main_window.py still imports both directly at real GUI boot (unchanged
+    # by this), so the win here is narrower: a bare `import anki_miner.services`
+    # from a lightweight, non-GUI consumer (e.g. the ffsubsync child process)
+    # no longer carries that ~40-60ms `requests` cost.
     if name == "AnkiService":
         from .anki_service import AnkiService
 

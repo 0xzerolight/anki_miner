@@ -508,6 +508,12 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         else:
             Theme.add_favorite(key)
         self.gallery.refresh_favorite(key)
+        # No full rebuild — surgical star update. _populated_state still moves
+        # to match (see _on_theme_activated): otherwise it points at the
+        # pre-toggle favorites, and a later _populate() call that lands back on
+        # that same stale tuple (e.g. a profile switch reseeding matching
+        # favorites) wrongly skips the rebuild that would clear this star.
+        self._populated_state = self._gallery_state()
         self.favorites_changed.emit()
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
 
@@ -531,6 +537,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         Theme.set_favorites(new_favorites)
         for key in keys:
             self.gallery.refresh_favorite(key)
+        # See _toggle_favorite: surgical update, so _populated_state must move
+        # too or it goes stale against the new favorites.
+        self._populated_state = self._gallery_state()
         self.state_changed.emit(Theme.get_current_mode(), Theme.get_favorites())
         self.favorites_changed.emit()
 

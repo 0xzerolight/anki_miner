@@ -235,6 +235,32 @@ def test_populate_rebuilds_when_themes_root_changes(themes_panel: UISettingsPane
         assert refresh_spy.call_count == 1
 
 
+def test_favorite_toggle_then_matching_reseed_still_repopulates(themes_panel: UISettingsPanel, test_config):
+    """A star toggle's surgical update must keep _populated_state truthful.
+
+    Repro: boot favorites=() (stale cached state). Star "dark" — surgical
+    update, live favorites now ("dark",). A profile switch re-seeds Theme to
+    the new profile's favorites, which happen to be () again — matching the
+    STALE cached tuple, not the current live one — then calls
+    load_from_config. The guard must still repopulate, or the gallery keeps
+    showing "dark" starred against a profile that never favorited it.
+    """
+    from dataclasses import replace
+
+    themes_panel._toggle_favorite("dark")
+    assert Theme.get_favorites() == ("dark",)
+
+    Theme.set_favorites(())
+    boot_config = replace(
+        test_config,
+        themes_root=themes_panel._themes_root,
+        theme=Theme.get_current_mode(),
+    )
+    themes_panel.load_from_config(boot_config)
+
+    assert themes_panel.gallery.star("dark").text() == STAR_OUTLINE
+
+
 # ---------------------------------------------------------------------------
 # Fix 4: DictionarySettingsPanel._rebuild_list wraps in setUpdatesEnabled
 # ---------------------------------------------------------------------------
