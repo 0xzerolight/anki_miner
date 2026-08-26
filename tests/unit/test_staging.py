@@ -451,11 +451,13 @@ def test_promotion_lock_exit_releases_rlock_when_file_release_raises(
         pass
 
     assert lock._depth == 0
-    assert not lock._rlock.locked()
 
     monkeypatch.undo()
 
     # Not wedged: a later acquire succeeds, including from another thread --
+    # this is also what proves the RLock itself was released: ``_thread.RLock``
+    # grew a ``locked()`` predicate only in 3.14, and a same-thread re-acquire
+    # would succeed on a still-held reentrant lock anyway.
     # the old bug held the RLock forever, which would deadlock any other
     # thread's acquire rather than merely re-entering on the same thread.
     errors: list[BaseException] = []
