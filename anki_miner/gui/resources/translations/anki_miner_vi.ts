@@ -2061,11 +2061,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Download videos or audio</source>
-        <translation type="unfinished" />
+        <translation>Tải video hoặc âm thanh</translation>
     </message>
     <message>
         <source>Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. Works with any site yt-dlp supports.</source>
-        <translation type="unfinished" />
+        <translation>Lưu video, âm thanh hoặc phụ đề từ một URL vào thư mục bằng yt-dlp, không khai thác. Hoạt động với mọi trang mà yt-dlp hỗ trợ.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2700,6 +2700,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>No media files were found in that folder.</source>
         <translation>Không tìm thấy tệp phương tiện nào trong thư mục đó.</translation>
+    </message>
+    <message>
+        <source>That media folder could not be read.</source>
+        <translation>Không đọc được thư mục media đó.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
@@ -3675,201 +3679,201 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <name>DownloadTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến trình</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Xong: </translation>
+        <translation>Xong: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Đã bỏ qua</translation>
+        <translation>Đã bỏ qua</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Đã bỏ qua: </translation>
+        <translation>Đã bỏ qua: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Some URLs could not be downloaded.</source>
-        <translation type="unfinished" />
+        <translation>Một số URL không tải được.</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã tải %1</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded, %2 already present</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã tải %1, %2 đã có sẵn</translation>
     </message>
     <message>
         <source>Nothing downloaded — all %1 already present in the download folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tải gì — cả %1 mục đều đã có trong thư mục tải về.</translation>
     </message>
     <message>
         <source>Select Download Folder</source>
-        <translation type="unfinished" />
+        <translation>Chọn thư mục tải về</translation>
     </message>
     <message>
         <source>Media download</source>
-        <translation type="unfinished" />
+        <translation>Tải media</translation>
     </message>
     <message>
         <source>URLs</source>
-        <translation type="unfinished" />
+        <translation>URL</translation>
     </message>
     <message>
         <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy yt-dlp. Hãy cài đặt hoặc cập nhật trong Cài đặt → YouTube để bật tính năng tải về.</translation>
     </message>
     <message>
         <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
-        <translation type="unfinished" />
+        <translation>Tải video hoặc âm thanh từ mọi trang mà yt-dlp hỗ trợ, không khai thác.</translation>
     </message>
     <message>
         <source>One URL per line</source>
-        <translation type="unfinished" />
+        <translation>Mỗi dòng một URL</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">Tùy chọn</translation>
+        <translation>Tùy chọn</translation>
     </message>
     <message>
         <source>Quality:</source>
-        <translation type="unfinished" />
+        <translation>Chất lượng:</translation>
     </message>
     <message>
         <source>Best available</source>
-        <translation type="unfinished" />
+        <translation>Tốt nhất hiện có</translation>
     </message>
     <message>
         <source>Up to 1080p</source>
-        <translation type="unfinished" />
+        <translation>Tối đa 1080p</translation>
     </message>
     <message>
         <source>Up to 720p</source>
-        <translation type="unfinished" />
+        <translation>Tối đa 720p</translation>
     </message>
     <message>
         <source>Audio only (MP3)</source>
-        <translation type="unfinished" />
+        <translation>Chỉ âm thanh (MP3)</translation>
     </message>
     <message>
         <source>Audio only (M4A)</source>
-        <translation type="unfinished" />
+        <translation>Chỉ âm thanh (M4A)</translation>
     </message>
     <message>
         <source>Custom format:</source>
-        <translation type="unfinished" />
+        <translation>Định dạng tùy chỉnh:</translation>
     </message>
     <message>
         <source>Optional yt-dlp format string</source>
-        <translation type="unfinished" />
+        <translation>Chuỗi định dạng yt-dlp (tùy chọn)</translation>
     </message>
     <message>
         <source>When set, the quality preset above is ignored.</source>
-        <translation type="unfinished" />
+        <translation>Khi được đặt, thiết lập chất lượng ở trên sẽ bị bỏ qua.</translation>
     </message>
     <message>
         <source>Download subtitles</source>
-        <translation type="unfinished" />
+        <translation>Tải phụ đề</translation>
     </message>
     <message>
         <source>Save subtitles next to the media file. Prefers manual subtitles, falls back to automatic.</source>
-        <translation type="unfinished" />
+        <translation>Lưu phụ đề cạnh tệp media. Ưu tiên phụ đề thủ công, nếu không có thì dùng phụ đề tự động.</translation>
     </message>
     <message>
         <source>Languages:</source>
-        <translation type="unfinished" />
+        <translation>Ngôn ngữ:</translation>
     </message>
     <message>
         <source>Comma-separated language codes, e.g. ja,en</source>
-        <translation type="unfinished" />
+        <translation>Mã ngôn ngữ cách nhau bằng dấu phẩy, ví dụ ja,en</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
-        <translation type="unfinished" />
+        <translation>Nhúng ảnh thu nhỏ</translation>
     </message>
     <message>
         <source>Embed title and metadata</source>
-        <translation type="unfinished" />
+        <translation>Nhúng tiêu đề và siêu dữ liệu</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Đầu ra</translation>
+        <translation>Đầu ra</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Đầu ra:</translation>
+        <translation>Đầu ra:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Chọn thư mục…</translation>
+        <translation>Chọn thư mục…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Đặt lại</translation>
+        <translation>Đặt lại</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>Tải về</translation>
     </message>
     <message>
         <source>Download folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>Không ghi được vào thư mục tải về.</translation>
     </message>
     <message>
         <source>Check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>Hãy kiểm tra quyền truy cập của %1.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
-        <translation type="unfinished" />
+        <translation>Một số dòng không phải URL hợp lệ.</translation>
     </message>
     <message>
         <source>Paste at least one URL to download.</source>
-        <translation type="unfinished" />
+        <translation>Hãy dán ít nhất một URL để tải về.</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Đang tải %1 trên %2</translation>
     </message>
 </context><context>
     <name>DownloadWorker</name>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished" />
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Already downloaded</source>
-        <translation type="unfinished" />
+        <translation>Đã tải trước đó</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -4092,10 +4096,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Lỗi: %1</translation>
     </message>
     <message>
-        <source>Unexpected error: %1</source>
-        <translation>Lỗi không mong đợi: %1</translation>
-    </message>
-    <message>
         <source>No words selected for card creation</source>
         <translation>Chưa chọn từ nào để tạo thẻ</translation>
     </message>
@@ -4118,6 +4118,10 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>
             <numerusform>Đã trích xuất media cho %n từ</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Lỗi không mong đợi: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -5473,7 +5477,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>Tải về</translation>
     </message>
     <message>
         <source>Single</source>
@@ -5495,11 +5499,11 @@ Tiếp tục?</translation>
     <name>MediaDownloader</name>
     <message>
         <source>Downloading</source>
-        <translation type="unfinished" />
+        <translation>Đang tải</translation>
     </message>
     <message>
         <source>Processing</source>
-        <translation type="unfinished">Đang xử lý</translation>
+        <translation>Đang xử lý</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -7051,7 +7055,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>%1 — %2</source>
-        <translation type="unfinished" />
+        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -7063,7 +7067,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Could not check the installed resources: </source>
-        <translation type="unfinished" />
+        <translation>Không kiểm tra được các tài nguyên đã cài: </translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -7071,11 +7075,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 đã sẵn sàng: %2</translation>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation type="unfinished" />
+        <translation>%1: chưa thiết lập (tùy chọn)</translation>
     </message>
     <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
@@ -7651,15 +7655,15 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Dictionary</source>
-        <translation type="unfinished" />
+        <translation>Từ điển</translation>
     </message>
     <message>
         <source>Frequency</source>
-        <translation type="unfinished">Tần suất</translation>
+        <translation>Tần suất</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">Trọng âm cao độ</translation>
+        <translation>Trọng âm cao độ</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -8072,12 +8076,12 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
-        <source>That folder could not be read.</source>
-        <translation>Không thể đọc thư mục đó.</translation>
-    </message>
-    <message>
         <source>No video or audio files were found in that folder.</source>
         <translation>Không tìm thấy tệp video hoặc âm thanh nào trong thư mục đó.</translation>
+    </message>
+    <message>
+        <source>That folder could not be read.</source>
+        <translation>Không thể đọc thư mục đó.</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -8394,10 +8398,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Thư mục phụ đề đó không còn tồn tại.</translation>
     </message>
     <message>
-        <source>That video folder could not be read.</source>
-        <translation>Không thể đọc thư mục video đó.</translation>
-    </message>
-    <message>
         <source>Matched %1 of %2 video files.</source>
         <translation>Đã khớp %1 trên %2 tệp video.</translation>
     </message>
@@ -8408,6 +8408,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation>Không thể khớp tệp phụ đề nào với bất kỳ tệp video nào trong các thư mục đó.</translation>
+    </message>
+    <message>
+        <source>That video folder could not be read.</source>
+        <translation>Không thể đọc thư mục video đó.</translation>
     </message>
     <message>
         <source>Retiming file %1 of %2</source>
@@ -9101,27 +9105,27 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
     </message>
     <message>
         <source>+ Previous line</source>
-        <translation type="unfinished" />
+        <translation>+ Dòng trước</translation>
     </message>
     <message>
         <source>+ Next line</source>
-        <translation type="unfinished" />
+        <translation>+ Dòng sau</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished" />
+        <translation>Đặt lại các dòng</translation>
     </message>
     <message>
         <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>Gộp dòng phụ đề trước vào câu và đoạn media của từ này. Bị tắt khi không có dòng trước hoặc đoạn gộp lại vượt quá %1 giây.</translation>
     </message>
     <message>
         <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>Gộp dòng phụ đề sau vào câu và đoạn media của từ này. Bị tắt khi không có dòng sau hoặc đoạn gộp lại vượt quá %1 giây.</translation>
     </message>
     <message>
         <source>Restore this word's original single-line sentence and clip window.</source>
-        <translation type="unfinished" />
+        <translation>Khôi phục câu một dòng và khoảng đoạn gốc của từ này.</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9243,7 +9247,7 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
     </message>
     <message>
         <source>Auto JA subs (dub audio)</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề JA tự động (âm thanh lồng tiếng)</translation>
     </message>
     <message>
         <source>Checking</source>
