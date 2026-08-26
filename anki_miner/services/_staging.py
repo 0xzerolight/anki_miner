@@ -89,9 +89,14 @@ class _PromotionLock:
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
         if self._depth == 1:
-            self._release_file_lock()
-        self._depth -= 1
-        self._rlock.release()
+            try:
+                self._release_file_lock()
+            finally:
+                self._depth -= 1
+                self._rlock.release()
+        else:
+            self._depth -= 1
+            self._rlock.release()
 
     def _acquire_file_lock(self) -> None:
         self._root.mkdir(parents=True, exist_ok=True)

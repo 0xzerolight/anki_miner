@@ -427,6 +427,53 @@ def test_promotion_lock_release_after_steal_leaves_stolen_lockfile(
     assert any("promotion lock stolen" in record.message for record in caplog.records)
 
 
+def test_promotion_lock_exit_releases_rlock_when_file_release_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A ``_release_file_lock`` failure (Windows PermissionError from a racer
+
+    holding the lockfile open, EIO on a network store) must still decrement
+    ``_depth`` and release the RLock -- otherwise every later promotion on
+    this family root blocks forever behind a lock nobody can ever re-acquire.
+    """
+    root = tmp_path.resolve()
+    lock = staging_module._PromotionLock(root)
+    real_release = staging_module._PromotionLock._release_file_lock
+
+    def flaky_release(self: staging_module._PromotionLock) -> None:
+        real_release(self)  # the OS-level lock genuinely clears...
+        raise PermissionError("lockfile release failed")  # ...but the call still errors
+
+    monkeypatch.setattr(staging_module._PromotionLock, "_release_file_lock", flaky_release)
+
+    with pytest.raises(PermissionError), lock:
+        pass
+
+    assert lock._depth == 0
+    assert not lock._rlock.locked()
+
+    monkeypatch.undo()
+
+    # Not wedged: a later acquire succeeds, including from another thread --
+    # the old bug held the RLock forever, which would deadlock any other
+    # thread's acquire rather than merely re-entering on the same thread.
+    errors: list[BaseException] = []
+
+    def acquire_from_other_thread() -> None:
+        try:
+            with lock:
+                pass
+        except BaseException as exc:  # pragma: no cover - failure path only
+            errors.append(exc)
+
+    thread = threading.Thread(target=acquire_from_other_thread)
+    thread.start()
+    thread.join(timeout=2)
+    assert not thread.is_alive(), "promotion lock is wedged: later acquire never completed"
+    assert errors == []
+
+
 def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:
     root = tmp_path.resolve()
     lock = staging_module._promotion_lock(root / "resource")
