@@ -104,9 +104,19 @@ _SCHEMA_SQL = _TABLES_SQL + _LOOKUP_INDEXES_SQL
 #
 # The pool cap is applied in PYTHON (``[:_LOOKUP_LIMIT]``) AFTER the render-path
 # homograph scope (Rule A/B, U2) filters rows, in both ``lookup`` and
-# ``lookup_many``. Capping in SQL (``LIMIT``) would truncate before scoping and
-# could hide a survivor ranked past the cap — breaking the lookup↔lookup_many
-# parity property (both fetch the full ordered candidate set, scope, THEN cap).
+# ``lookup_many``. ``lookup``'s own SQL fetch stays unbounded — capping there
+# would truncate before scoping and could hide a survivor ranked past the cap.
+#
+# ``lookup_many`` cannot afford that same unbounded fetch (a hyper-common kana
+# reading can attest thousands of full-content rows across a merged index), so
+# its per-word SQL fetch IS capped, at ``_LOOKUP_MANY_ROW_CAP`` — see that
+# constant. With ``scope_homographs=False`` (the existence/attestation
+# probes — no scoping filter runs) the two are exactly equal whenever a word's
+# candidate count stays under that cap, true of everything but a handful of
+# hyper-common readings. With scoping on, exact parity additionally requires
+# homograph scoping not remove more than ``_LOOKUP_MANY_ROW_CAP - _LOOKUP_LIMIT``
+# leading candidates before finding the top ``_LOOKUP_LIMIT`` survivors — true
+# of any realistic dictionary, not provably true of adversarial data.
 _LOOKUP_LIMIT = 20
 
 # Reading-boost ranking. Ported from Yomitan
@@ -595,7 +605,10 @@ def lookup(
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
     # rows: (content, tags, sequence, term). Scope homographs (Rule A/A′/B) over
     # the ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
-    # filter-before-cap order ``lookup_many`` uses so both stay row-for-row equal.
+    # filter-before-cap order ``lookup_many`` uses. Row-for-row equal to
+    # ``lookup_many`` whenever the word's candidate count stays under
+    # ``_LOOKUP_MANY_ROW_CAP`` (see the ``_LOOKUP_LIMIT`` comment above) — this
+    # fetch itself stays unbounded, unlike ``lookup_many``'s per-word SQL cap.
     keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows], normalized_lemma)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
@@ -629,10 +642,12 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
-# sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. attest_detail's term-only
-# arm binds each word twice (term IN + reading IN worst case), so a single
-# chunk may use at most 2 * _BIND_CHUNK variables. Keep the product
-# comfortably under the cap.
+# sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. attest_detail's
+# term-only arm (include_readings=False) binds each word ONCE (a single
+# ``term IN (...)`` clause), so a chunk of _BIND_CHUNK words stays
+# comfortably under the cap even with room to spare. The reading-inclusive
+# arm binds each word twice (term IN + reading IN) and uses the smaller
+# _ATTEST_READING_CHUNK instead — see that constant.
 _BIND_CHUNK = 450
 
 # lookup_many binds 6 placeholders per word (req_idx, term, folded term, term,
