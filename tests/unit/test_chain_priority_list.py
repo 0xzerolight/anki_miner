@@ -180,6 +180,47 @@ class TestReorder:
         assert rows[-1].up_button.isEnabled()
         assert not rows[-1].down_button.isEnabled()
 
+    def test_the_arrows_wake_up_when_a_row_leaves_the_end(self, kind, qtbot, tmp_path):
+        """The ends of the list move when the rows do.
+
+        Boundary state used to be derived once per render and never again, so a
+        row that moved off the top kept a greyed-out ``↑`` and the row that
+        arrived kept a live one that ``_move_row`` then refused.
+        """
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+
+        widget._row_widget(0).down_button.click()
+
+        rows = widget._rows()
+        assert _ids(widget.get_chain()) == ["b", "a", "c"]
+        assert not rows[0].up_button.isEnabled()
+        assert rows[1].up_button.isEnabled()
+        assert rows[1].down_button.isEnabled()
+        assert not rows[-1].down_button.isEnabled()
+
+    def test_a_drag_resyncs_the_arrows_too(self, kind, qtbot, tmp_path):
+        """A drag ends at the same place an arrow does, so it gets the same fix."""
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+
+        widget._list.move_row(0, 2)
+
+        rows = widget._rows()
+        assert _ids(widget.get_chain()) == ["b", "c", "a"]
+        assert not rows[0].up_button.isEnabled()
+        assert rows[0].down_button.isEnabled()
+        assert rows[-1].up_button.isEnabled()
+        assert not rows[-1].down_button.isEnabled()
+
+    def test_a_held_mutation_still_owns_the_arrows(self, kind, qtbot, tmp_path):
+        """Re-deriving the ends must not talk over the mutation gate."""
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))
+        widget.hold_mutation("scan")
+
+        widget.move_down(0)
+
+        assert _ids(widget.get_chain()) == ["a", "b", "c"]
+        assert all(not row.up_button.isEnabled() and not row.down_button.isEnabled() for row in widget._rows())
+
     def test_a_mutation_switches_every_rows_arrows_off(self, kind, qtbot, tmp_path):
         """Moving the controls onto the rows must not escape the mutation gate."""
         widget = _make_panel(kind, qtbot, tmp_path, ("a", True), ("b", True), ("c", True))

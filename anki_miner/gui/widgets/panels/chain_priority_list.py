@@ -234,6 +234,21 @@ class ChainSourceRow(QWidget):
         self.up_button.setEnabled(up)
         self.down_button.setEnabled(down)
 
+    def other_arrow(self, button: QWidget | None) -> ModernButton | None:
+        """This row's *other* move control, or ``None`` if it owns neither.
+
+        Where focus goes when the arrow the user just pressed disables itself:
+        the row reached an end, so the arrow pointing back the way it came is
+        both still enabled and the one control that undoes the move. ``None``
+        doubles as "not one of mine", which is how the panel finds the row that
+        owns a widget without asking every row what type it is.
+        """
+        if button is self.up_button:
+            return self.down_button
+        if button is self.down_button:
+            return self.up_button
+        return None
+
     def get_enabled(self) -> bool:
         """Whether this row's source is currently switched on."""
         return self.checkbox.isChecked()

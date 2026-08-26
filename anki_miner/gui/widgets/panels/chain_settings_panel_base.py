@@ -51,6 +51,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
+from anki_miner.gui.utils.focus_ring import KEYBOARD_FOCUS_PROPERTY
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel, ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant, ModernButton
@@ -515,6 +516,43 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         # Dragging is a reorder like any other, so it answers to the same gate.
         self._list.setDragEnabled(enabled)
 
+    def _resync_move_boundaries(self) -> None:
+        """Re-derive which arrows are offered, after the rows have moved.
+
+        The ends of the list are a property of the current order, and a move
+        changes it: without this the row that left index 0 keeps a greyed-out
+        ``↑`` and the row that arrived keeps a live one that :meth:`_move_row`
+        then refuses. Nothing else re-derives it —
+        :meth:`_set_reorder_controls_enabled` otherwise runs only on a rebuild
+        or a mutation-token cycle, so the stale state survived until the panel
+        happened to re-render.
+
+        Deliberately not :meth:`_sync_mutation_controls`: that also drives
+        ``_set_mutation_controls_enabled``, a subclass hook owning Add and root
+        controls for reasons a reorder has no opinion about.
+
+        Disabling the arrow the user just pressed is its own way to throw focus
+        out of the panel, so the press is handed to that row's other arrow: same
+        row, still enabled, and it undoes the move that disabled the first one.
+        It arrives with the focus reason the pressed arrow had earned, so a
+        keyboard user keeps the ring and a mouse user still does not get one.
+        ``_keep_focus_in_list`` is the net for every other way focus can leave.
+        """
+        pressed = QApplication.focusWidget()
+        pressed_by_keyboard = bool(pressed is not None and pressed.property(KEYBOARD_FOCUS_PROPERTY))
+        with self._keep_focus_in_list():
+            self._set_reorder_controls_enabled(not self.has_active_mutation())
+        if pressed is None or pressed.isEnabled():
+            return
+        for row in self._rows():
+            sibling = row.other_arrow(pressed)
+            if sibling is None:
+                continue
+            if sibling.isEnabled():
+                reason = Qt.FocusReason.TabFocusReason if pressed_by_keyboard else Qt.FocusReason.OtherFocusReason
+                sibling.setFocus(reason)
+            return
+
     def _rows(self) -> list[ChainSourceRow]:
         """Every rendered row, in visual order. Empty during a placeholder."""
         found = []
@@ -696,6 +734,9 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
             # rather than persisting whatever happens to be on screen.
             self._rebuild_list()
             return
+        # Before the no-op check below: the arrows answer to the *visual* order,
+        # which a drop can shuffle without changing the chain it persists.
+        self._resync_move_boundaries()
         reordered = [self._entry_with_enabled(row.entry, row.get_enabled()) for row in rows if row is not None]
         if reordered == self._chain:
             return  # a no-op drop is not an edit

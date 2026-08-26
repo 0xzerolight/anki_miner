@@ -184,6 +184,56 @@ class TestFocusStaysInThePanel:
         assert QApplication.focusWidget() is decoy
 
 
+class TestFocusFollowsADisabledArrow:
+    """The other half: a *move* disables the very control that ordered it.
+
+    Pressing ``↓`` until the row reaches the bottom greys that ``↓`` out, which
+    is the same focus-wrap trap one widget along — except here there is a
+    better answer than the row's toggle. The arrow pointing back the way the
+    row came is still enabled and undoes the move, so the press lands there.
+    Landing on the toggle instead would hand the next Space press to *switch
+    this source off*, which is not what the user was doing.
+    """
+
+    def _focus_first_row_down_arrow(self, panel, reason: Qt.FocusReason):
+        row = panel._row_widget(0)
+        assert row is not None, "the panel rendered no rows to focus"
+        row.down_button.clearFocus()
+        QApplication.processEvents()
+        row.down_button.setFocus(reason)
+        QApplication.processEvents()
+        assert row.down_button.hasFocus()
+        return row
+
+    def test_the_press_lands_on_the_rows_other_arrow(self, host):
+        _container, panel, decoy = host
+        row = self._focus_first_row_down_arrow(panel, Qt.FocusReason.MouseFocusReason)
+
+        row.down_button.click()
+        QApplication.processEvents()
+
+        assert panel._row_widget(1) is row, "the row did not reach the end of the list"
+        assert not row.down_button.isEnabled()
+        assert QApplication.focusWidget() is not decoy
+        assert QApplication.focusWidget() is row.up_button
+
+    def test_the_landing_keeps_the_reason_the_press_had(self, host):
+        """A mouse press must not light the keyboard ring, and Tab must keep it."""
+        _container, panel, _decoy = host
+        clicked = self._focus_first_row_down_arrow(panel, Qt.FocusReason.MouseFocusReason)
+        clicked.down_button.click()
+        QApplication.processEvents()
+
+        assert not clicked.up_button.property(KEYBOARD_FOCUS_PROPERTY)
+
+        panel.set_chain(CHAIN)
+        tabbed = self._focus_first_row_down_arrow(panel, Qt.FocusReason.TabFocusReason)
+        tabbed.down_button.click()
+        QApplication.processEvents()
+
+        assert tabbed.up_button.property(KEYBOARD_FOCUS_PROPERTY)
+
+
 @pytest.mark.parametrize(
     ("factory", "chain"),
     [
