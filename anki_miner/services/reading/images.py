@@ -61,7 +61,11 @@ class ReadingImageMemberError(OSError):
     """One optional image member cannot be read or decoded."""
 
 
-def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
+def prepare_card_image(
+    ref: ImageRef,
+    dest_dir: Path,
+    archive_handles: dict[Path, zipfile.ZipFile] | None = None,
+) -> Path:
     """Materialize ``ref`` as a downscaled RGB JPEG under ``dest_dir``.
 
     Dir/file refs (``entry is None``) open ``ref.source`` directly. Archive refs
@@ -70,6 +74,13 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
     per-archive skip/warn bookkeeping. Returns the path to the written JPEG; if
     it already exists (same ref materialized before) it is returned as-is with no
     re-encode.
+
+    ``archive_handles``, if given, is a caller-owned ``{source: ZipFile}`` map:
+    a hit is reused as-is, a miss is opened and cached for the caller's later
+    refs against the same archive (a 200-page volume then parses the central
+    directory once instead of per page). The caller closes every handle when
+    done — this function only closes an archive it opened itself, i.e. when no
+    map is given.
     """
     dest_dir.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha1(repr((str(ref.source), ref.entry)).encode("utf-8")).hexdigest()[:12]
@@ -85,6 +96,33 @@ def prepare_card_image(ref: ImageRef, dest_dir: Path) -> Path:
             logger.debug(
                 "Reading image decode failed: source=%s error=%s detail=%s",
                 ref.source,
+                type(exc).__name__,
+                exc,
+            )
+            raise ReadingImageMemberError(str(exc)) from exc
+    elif archive_handles is not None:
+        zf = archive_handles.get(ref.source)
+        if zf is None:
+            try:
+                zf = zipfile.ZipFile(ref.source)
+            except (OSError, zipfile.BadZipFile) as exc:
+                logger.debug(
+                    "Reading image archive failed: source=%s error=%s detail=%s",
+                    ref.source,
+                    type(exc).__name__,
+                    exc,
+                )
+                raise ReadingImageArchiveError(str(exc)) from exc
+            archive_handles[ref.source] = zf
+        _validate_archive_once(zf, ref.source, dest_dir)
+        try:
+            with zf.open(ref.entry) as member, Image.open(member) as img:
+                _encode_jpeg(img, out_path)
+        except _MEMBER_ERRORS as exc:
+            logger.debug(
+                "Reading image member failed: source=%s entry=%s error=%s detail=%s",
+                ref.source,
+                ref.entry,
                 type(exc).__name__,
                 exc,
             )

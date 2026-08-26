@@ -171,6 +171,32 @@ def test_cbz_page_access_does_not_rescan_archive(tmp_path: Path, monkeypatch: py
     assert calls == 1
 
 
+def test_archive_handle_reused_across_calls(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A shared ``archive_handles`` map opens the archive once for many pages."""
+    page = _make_image(tmp_path / "page.png", (50, 50))
+    archive = _zip_with(tmp_path / "vol.cbz", {"page01.png": page, "page02.png": page, "page03.png": page})
+
+    opens = 0
+    real_init = zipfile.ZipFile.__init__
+
+    def _counting_init(self, *args, **kwargs):
+        nonlocal opens
+        opens += 1
+        return real_init(self, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "__init__", _counting_init)
+
+    handles: dict[Path, zipfile.ZipFile] = {}
+    dest = tmp_path / "out"
+    prepare_card_image(ImageRef(archive, "page01.png"), dest, handles)
+    prepare_card_image(ImageRef(archive, "page02.png"), dest, handles)
+    prepare_card_image(ImageRef(archive, "page03.png"), dest, handles)
+
+    assert opens == 1
+    assert list(handles) == [archive]
+    handles[archive].close()
+
+
 def test_validate_zip_safe_raise_propagates(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     page = _make_image(tmp_path / "page.png", (50, 50))
     archive = _zip_with(tmp_path / "vol.cbz", {"page01.png": page})

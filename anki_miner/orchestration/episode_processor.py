@@ -2192,6 +2192,10 @@ class EpisodeProcessor:
         ref_cache: dict[ImageRef, Path] = {}
         failed_archives: set[Path] = set()
         failed_refs: set[ImageRef] = set()
+        # One open ZipFile per archive for the whole phase (a manga volume's
+        # refs share a handful of archives across hundreds of pages) instead of
+        # re-parsing the central directory on every prepare_card_image call.
+        archive_handles: dict[Path, zipfile.ZipFile] = {}
 
         media_results: list[tuple[TokenizedWord, MediaData]] = []
 
@@ -2203,67 +2207,39 @@ class EpisodeProcessor:
                 len(unknown_words),
                 image_stage_desc,
             )
-        for i, word in enumerate(unknown_words):
-            # Honor cancel WITHIN the loop (mirrors AudioStage._run_stage): a
-            # large mokuro volume can hold hundreds of pages, and without this a
-            # cancel would only take effect after every page is materialized. Break
-            # and return the partial results — the audio fetchers below and the
-            # phase-boundary check in process_reading each re-check cancelled.
-            if self.cancelled:
-                break
-            media = MediaData()
-            unit = units_by_index.get(int(word.start_time))
-            ref = unit.image_ref if unit is not None else None
-            if picture_mapped and ref is not None and ref.source not in failed_archives and ref not in failed_refs:
-                image_path = ref_cache.get(ref)
-                if image_path is None:
-                    try:
-                        image_path = prepare_card_image(ref, images_dir)
-                    except SetupError:
-                        # Appending to document.warnings here would be lost (the
-                        # up-front drain already ran) — surface directly, once
-                        # per archive.
-                        failed_archives.add(ref.source)
-                        self.presenter.show_warning(
-                            tr_format(
-                                QCoreApplication.translate(
-                                    "EpisodeProcessor",
-                                    "Skipped unsafe image archive %1 — its cards have no page image",
-                                ),
-                                ref.source.name,
+        try:
+            for i, word in enumerate(unknown_words):
+                # Honor cancel WITHIN the loop (mirrors AudioStage._run_stage): a
+                # large mokuro volume can hold hundreds of pages, and without this a
+                # cancel would only take effect after every page is materialized. Break
+                # and return the partial results — the audio fetchers below and the
+                # phase-boundary check in process_reading each re-check cancelled.
+                if self.cancelled:
+                    break
+                media = MediaData()
+                unit = units_by_index.get(int(word.start_time))
+                ref = unit.image_ref if unit is not None else None
+                if picture_mapped and ref is not None and ref.source not in failed_archives and ref not in failed_refs:
+                    image_path = ref_cache.get(ref)
+                    if image_path is None:
+                        try:
+                            image_path = prepare_card_image(ref, images_dir, archive_handles)
+                        except SetupError:
+                            # Appending to document.warnings here would be lost (the
+                            # up-front drain already ran) — surface directly, once
+                            # per archive.
+                            failed_archives.add(ref.source)
+                            self.presenter.show_warning(
+                                tr_format(
+                                    QCoreApplication.translate(
+                                        "EpisodeProcessor",
+                                        "Skipped unsafe image archive %1 — its cards have no page image",
+                                    ),
+                                    ref.source.name,
+                                )
                             )
-                        )
-                        image_path = None
-                    except ReadingImageArchiveError:
-                        failed_archives.add(ref.source)
-                        self.presenter.show_warning(
-                            tr_format(
-                                QCoreApplication.translate(
-                                    "EpisodeProcessor",
-                                    "Skipped corrupt image archive %1 — its cards have no page image",
-                                ),
-                                ref.source.name,
-                            )
-                        )
-                        image_path = None
-                    except (
-                        ReadingImageMemberError,
-                        OSError,
-                        ValueError,
-                        zipfile.BadZipFile,
-                        RuntimeError,
-                        NotImplementedError,
-                        EOFError,
-                    ) as exc:
-                        # An image failure must never abort the volume (the plan's
-                        # degradation policy: keep mining imageless). A BadZipFile
-                        # (NOT an OSError subclass) means the whole archive is
-                        # corrupt → skip its remaining refs, warn once, like the
-                        # unsafe-archive gate. A PIL UnidentifiedImageError / bare
-                        # OSError (undecodable page, missing codec in a frozen
-                        # bundle) is per-ref → warn once naming the page, drop this
-                        # word's image, leave the rest of the archive readable.
-                        if ref.entry is not None and isinstance(exc, zipfile.BadZipFile):
+                            image_path = None
+                        except ReadingImageArchiveError:
                             failed_archives.add(ref.source)
                             self.presenter.show_warning(
                                 tr_format(
@@ -2274,29 +2250,61 @@ class EpisodeProcessor:
                                     ref.source.name,
                                 )
                             )
-                        else:
-                            failed_refs.add(ref)
-                            self.presenter.show_warning(
-                                tr_format(
-                                    QCoreApplication.translate(
-                                        "EpisodeProcessor",
-                                        "Skipped unreadable page image %1 — its card has no picture",
-                                    ),
-                                    ref.entry if ref.entry is not None else ref.source.name,
+                            image_path = None
+                        except (
+                            ReadingImageMemberError,
+                            OSError,
+                            ValueError,
+                            zipfile.BadZipFile,
+                            RuntimeError,
+                            NotImplementedError,
+                            EOFError,
+                        ) as exc:
+                            # An image failure must never abort the volume (the plan's
+                            # degradation policy: keep mining imageless). A BadZipFile
+                            # (NOT an OSError subclass) means the whole archive is
+                            # corrupt → skip its remaining refs, warn once, like the
+                            # unsafe-archive gate. A PIL UnidentifiedImageError / bare
+                            # OSError (undecodable page, missing codec in a frozen
+                            # bundle) is per-ref → warn once naming the page, drop this
+                            # word's image, leave the rest of the archive readable.
+                            if ref.entry is not None and isinstance(exc, zipfile.BadZipFile):
+                                failed_archives.add(ref.source)
+                                self.presenter.show_warning(
+                                    tr_format(
+                                        QCoreApplication.translate(
+                                            "EpisodeProcessor",
+                                            "Skipped corrupt image archive %1 — its cards have no page image",
+                                        ),
+                                        ref.source.name,
+                                    )
                                 )
-                            )
-                        image_path = None
-                    else:
-                        ref_cache[ref] = image_path
-                if image_path is not None:
-                    media.screenshot_path = image_path
-                    media.screenshot_filename = image_path.name
-            media_results.append((word, media))
-            if progress_callback is not None:
-                progress_callback.on_progress(
-                    i + 1,
-                    tr_format(image_item_template, word.mined_form),
-                )
+                            else:
+                                failed_refs.add(ref)
+                                self.presenter.show_warning(
+                                    tr_format(
+                                        QCoreApplication.translate(
+                                            "EpisodeProcessor",
+                                            "Skipped unreadable page image %1 — its card has no picture",
+                                        ),
+                                        ref.entry if ref.entry is not None else ref.source.name,
+                                    )
+                                )
+                            image_path = None
+                        else:
+                            ref_cache[ref] = image_path
+                    if image_path is not None:
+                        media.screenshot_path = image_path
+                        media.screenshot_filename = image_path.name
+                media_results.append((word, media))
+                if progress_callback is not None:
+                    progress_callback.on_progress(
+                        i + 1,
+                        tr_format(image_item_template, word.mined_form),
+                    )
+        finally:
+            for zf in archive_handles.values():
+                zf.close()
         if progress_callback is not None:
             progress_callback.on_complete()
 

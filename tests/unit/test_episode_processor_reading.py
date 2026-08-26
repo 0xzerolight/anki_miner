@@ -661,7 +661,7 @@ def test_undecodable_page_warns_once_imageless(test_config):
     presenter = MagicMock(name="Presenter")
     proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, presenter=presenter)
 
-    def _prep(ref, dest):
+    def _prep(ref, dest, *_args):
         if ref == bad:
             raise UnidentifiedImageError("boom")
         return Path("/tmp/reading_good.jpg")
@@ -688,7 +688,7 @@ def test_damaged_reading_image_skipped_rest_still_usable(test_config):
     presenter = MagicMock(name="Presenter")
     proc = _make_processor(test_config, subtitle_parser=sp, anki_service=anki, presenter=presenter)
 
-    def _prep(ref, _dest):
+    def _prep(ref, _dest, *_args):
         if ref == bad:
             raise NotImplementedError("unsupported compression")
         return Path("/tmp/reading_good.jpg")
@@ -771,7 +771,7 @@ def test_expression_audio_after_images(test_config):
     proc = _make_processor(cfg, subtitle_parser=sp, expression_audio_fetcher=fetcher)
     assert proc._expression_audio_active is True
 
-    def _prep(ref, dest):
+    def _prep(ref, dest, *_args):
         order.append("prep")
         return Path("/tmp/reading_x.jpg")
 
@@ -1130,7 +1130,7 @@ class TestReadingSentenceTts:
         proc = _make_processor(cfg, subtitle_parser=sp, expression_audio_fetcher=expr, sentence_audio_fetcher=tts)
 
         rec = _RecordingProgress()
-        with patch(_IMG, side_effect=lambda ref, dest: order.append("prep") or Path("/tmp/reading_x.jpg")):
+        with patch(_IMG, side_effect=lambda ref, dest, *_args: order.append("prep") or Path("/tmp/reading_x.jpg")):
             proc.process_reading(_document(units), progress_callback=rec)
 
         assert order == ["prep", "prep", "expr", "expr", "tts", "tts"]
