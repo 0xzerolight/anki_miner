@@ -10,8 +10,11 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.dictionary.storage import (
+    _ATTEST_READING_CHUNK,
     _BIND_CHUNK,
     _LOOKUP_LIMIT,
+    _LOOKUP_MANY_CHUNK,
+    _LOOKUP_MANY_ROW_CAP,
     COMMON_TAG_CATEGORIES,
     SCHEMA_VERSION,
     AttestRow,
@@ -941,7 +944,7 @@ class TestPerfGuards:
     def test_lookup_many_one_roundtrip_per_chunk_when_spanning_chunks(self, tmp_path: Path):
         db_path = tmp_path / "t.sqlite"
         create_index(db_path)
-        n = _BIND_CHUNK + 10  # forces exactly 2 bind chunks
+        n = _LOOKUP_MANY_CHUNK + 10  # forces exactly 2 bind chunks
         bulk_insert(
             db_path,
             [DictRow(term=f"w{i}", reading=None, content=f"<div>{i}</div>", sequence=i) for i in range(n)],
@@ -950,7 +953,7 @@ class TestPerfGuards:
         try:
             spy = _ExecSpy(conn)
             lookup_many(spy, [(f"w{i}", None) for i in range(n)])
-            # ceil(n / _BIND_CHUNK) == 2 queries: one round-trip per chunk.
+            # ceil(n / _LOOKUP_MANY_CHUNK) == 2 queries: one round-trip per chunk.
             assert spy.calls == 2
         finally:
             conn.close()
@@ -968,6 +971,47 @@ class TestPerfGuards:
         try:
             assert len(lookup(conn, "同")) <= _LOOKUP_LIMIT
             assert len(lookup_many(conn, [("同", None)])["同"]) <= _LOOKUP_LIMIT
+        finally:
+            conn.close()
+
+    def test_common_reading_batch_fetch_bounded(self, tmp_path: Path):
+        """A common kana reading shared by hundreds of rows must not pull them
+        all into one fetchall() — each word's own SQL fetch is row-capped
+        (_LOOKUP_MANY_ROW_CAP), well above _LOOKUP_LIMIT so homograph scoping
+        still finds its top _LOOKUP_LIMIT survivors, but nowhere near "every
+        row that shares the reading"."""
+        db_path = tmp_path / "t.sqlite"
+        create_index(db_path)
+        n = _LOOKUP_MANY_ROW_CAP * 2
+        rows = [DictRow(term=f"漢字{i}", reading="する", content=f"<div>c{i}</div>", sequence=i) for i in range(n)]
+        rows.append(DictRow(term="食べる", reading="たべる", content="<div>eat</div>", sequence=n))
+        bulk_insert(db_path, rows)
+        conn = open_readonly(db_path)
+        try:
+            fetch_sizes: list[int] = []
+
+            class _FetchSpyCursor:
+                def __init__(self, cursor):
+                    self._cursor = cursor
+
+                def fetchall(self):
+                    rows = self._cursor.fetchall()
+                    fetch_sizes.append(len(rows))
+                    return rows
+
+            class _FetchSpyConn:
+                def __init__(self, conn):
+                    self._conn = conn
+
+                def execute(self, *args, **kwargs):
+                    return _FetchSpyCursor(self._conn.execute(*args, **kwargs))
+
+            result = lookup_many(_FetchSpyConn(conn), [("する", None), ("食べる", None)])
+
+            assert len(fetch_sizes) == 1  # still one round trip
+            assert fetch_sizes[0] < n  # bounded, not the whole 1000-row pool
+            assert len(result["する"]) == _LOOKUP_LIMIT
+            assert len(result["食べる"]) == 1
         finally:
             conn.close()
 
@@ -1843,6 +1887,29 @@ class TestAttestDetail:
         finally:
             conn.close()
         assert all(res[f"w{i}"] == [AttestRow("term", "", "")] for i in range(n))
+
+    def test_reading_arm_uses_a_smaller_chunk(self, tmp_path: Path):
+        """A common kana reading can attest thousands of rows; the reading arm
+        batches fewer words per round trip than the term-only arm so those
+        rows can't compound across many words in one fetchall()."""
+        db = tmp_path / "t.sqlite"
+        create_index(db)
+        n = _ATTEST_READING_CHUNK + 10  # forces exactly 2 reading-arm chunks
+        bulk_insert(
+            db,
+            [
+                DictRow(term=f"w{i}", reading=f"r{i}", content=f"<div>{i}</div>", tags="", rules="", sequence=i)
+                for i in range(n)
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            spy = _ExecSpy(conn)
+            words = [f"w{i}" for i in range(n)]
+            attest_detail(spy, words, include_readings=True)
+            assert spy.calls == 2
+        finally:
+            conn.close()
 
 
 class TestRedirectRows:

@@ -6,6 +6,7 @@ import contextlib
 import html
 import logging
 import sqlite3
+import threading
 from pathlib import Path
 
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
@@ -78,12 +79,21 @@ class IndexedDictProvider:
         self._db_path = db_path
         self._display_name = display_name or dict_id
         self._conn: sqlite3.Connection | None = None
+        # Guards load()'s check-then-set on ``_conn``: PrewarmWorker and the
+        # first mining run can both call load() on a never-loaded provider,
+        # and without this a losing thread's own open connection is silently
+        # discarded (never closed) once the other thread's assignment wins.
+        self._load_lock = threading.Lock()
         # Lazy per-provider tag-metadata cache (Yomitan _tagCache analog):
         # ``{tag_name: TagMeta}`` from the schema-v3 ``tags`` table, populated on
         # first render. ``None`` until then; ``{}`` for a dict that shipped no
         # tag_bank / legacy tagMeta (every tag then renders in the italic
         # fallback line, preserving pre-v3 output).
         self._tag_cache: dict[str, TagMeta] | None = None
+        # Same check-then-set shape as _load_lock, for the same reason: two
+        # renders racing the first _tag_meta() call would otherwise both hit
+        # the tags table.
+        self._tag_cache_lock = threading.Lock()
         # This dictionary's own styles.css, scoped to its glossary markup
         # (Issue #87), as a bare CSS string (no <style> wrapper). Empty unless
         # the dict shipped a styles.css that survived scoping; computed in
@@ -116,40 +126,43 @@ class IndexedDictProvider:
     def load(self) -> bool:
         if self._conn is not None:
             return True
-        if not self._db_path.exists():
-            logger.warning("Dictionary index missing: %s", self._db_path)
-            return False
-        try:
-            meta = read_meta(self._db_path)
-        except sqlite3.DatabaseError as e:
-            logger.warning("Dictionary index unreadable (%s): %s", self._db_path, e)
-            return False
+        with self._load_lock:
+            if self._conn is not None:  # a racing thread already finished
+                return True
+            if not self._db_path.exists():
+                logger.warning("Dictionary index missing: %s", self._db_path)
+                return False
+            try:
+                meta = read_meta(self._db_path)
+            except sqlite3.DatabaseError as e:
+                logger.warning("Dictionary index unreadable (%s): %s", self._db_path, e)
+                return False
 
-        try:
-            version = int(meta.get("schema_version", "0"))
-        except ValueError:
-            version = 0
-        if version != SCHEMA_VERSION:
-            logger.warning(
-                "Dictionary %s has schema_version=%s, expected %s — needs reimport",
-                self.dict_id,
-                version,
-                SCHEMA_VERSION,
-            )
-            return False
+            try:
+                version = int(meta.get("schema_version", "0"))
+            except ValueError:
+                version = 0
+            if version != SCHEMA_VERSION:
+                logger.warning(
+                    "Dictionary %s has schema_version=%s, expected %s — needs reimport",
+                    self.dict_id,
+                    version,
+                    SCHEMA_VERSION,
+                )
+                return False
 
-        try:
-            self._conn = open_readonly(self._db_path)
-        except sqlite3.DatabaseError as e:
-            logger.warning("Failed to open %s: %s", self._db_path, e)
-            return False
+            try:
+                self._conn = open_readonly(self._db_path)
+            except sqlite3.DatabaseError as e:
+                logger.warning("Failed to open %s: %s", self._db_path, e)
+                return False
 
-        # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
-        # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
-        # concatenates it into each card's per-card <style> block. Absent for
-        # JMdict and for dicts imported before styles.css capture.
-        self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id, self._display_name)
-        return True
+            # Scope the dict's own styles.css (Issue #87) once. Stored bare (no
+            # <style> wrapper) and exposed via `dictionary_css`; collect_dictionary_css
+            # concatenates it into each card's per-card <style> block. Absent for
+            # JMdict and for dicts imported before styles.css capture.
+            self._scoped_css = scope_dict_css(meta.get("styles_css", ""), self.dict_id, self._display_name)
+            return True
 
     def lookup(self, word: str) -> str | None:
         if self._conn is None:
@@ -374,17 +387,20 @@ class IndexedDictProvider:
             return self._tag_cache
         if self._conn is None:
             return {}
-        try:
-            self._tag_cache = read_tags(self._conn)
-        except sqlite3.DatabaseError as e:
-            logger.warning(
-                "Dictionary '%s' (%s) raised DatabaseError reading tags; italic fallback: %s",
-                self.dict_id,
-                self._db_path,
-                e,
-            )
-            self._tag_cache = {}
-        return self._tag_cache
+        with self._tag_cache_lock:
+            if self._tag_cache is not None:  # a racing thread already finished
+                return self._tag_cache
+            try:
+                self._tag_cache = read_tags(self._conn)
+            except sqlite3.DatabaseError as e:
+                logger.warning(
+                    "Dictionary '%s' (%s) raised DatabaseError reading tags; italic fallback: %s",
+                    self.dict_id,
+                    self._db_path,
+                    e,
+                )
+                self._tag_cache = {}
+            return self._tag_cache
 
     def _render(self, rows: list[tuple[str, str, int | None]]) -> str | None:
         """Assemble Lapis-shape HTML from (content, tags, sequence) rows. Returns

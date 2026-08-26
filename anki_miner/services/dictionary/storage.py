@@ -629,10 +629,34 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
-# sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. lookup_many binds each
-# word twice (term IN + reading IN), so a single chunk may use at most
-# 2 * _BIND_CHUNK variables. Keep the product comfortably under the cap.
+# sqlite's default SQLITE_MAX_VARIABLE_NUMBER is 999. attest_detail's term-only
+# arm binds each word twice (term IN + reading IN worst case), so a single
+# chunk may use at most 2 * _BIND_CHUNK variables. Keep the product
+# comfortably under the cap.
 _BIND_CHUNK = 450
+
+# lookup_many binds 6 placeholders per word (req_idx, term, folded term, term,
+# folded boost, row cap) into ONE UNION ALL statement; keep 6 * _LOOKUP_MANY_CHUNK
+# comfortably under the same 999-variable cap.
+_LOOKUP_MANY_CHUNK = 150
+
+# Per-word SQL row cap for lookup_many's batched fetch — distinct from
+# _LOOKUP_LIMIT, the pool size returned to the caller after homograph scoping.
+# A common kana reading can attest thousands of rows across a large merged
+# dictionary index; fetching that unbounded for every word sharing a chunk
+# spikes memory on full-content rows. Each word's own subquery is capped here
+# instead, with generous headroom over _LOOKUP_LIMIT so the homograph scope
+# (which runs AFTER this fetch and can remove leading candidates) still finds
+# its top _LOOKUP_LIMIT survivors inside the cap on any real dictionary.
+_LOOKUP_MANY_ROW_CAP = 500
+
+# attest_detail must see EVERY attesting row per word (commonness/quality
+# verdicts need completeness, unlike lookup_many's already-lossy display
+# pool), so its reading arm cannot cap rows-per-word. Batching fewer words per
+# round trip instead bounds how many separate common-reading collisions can
+# compound into one fetchall() — the term-only arm keeps _BIND_CHUNK since an
+# exact headword repeating at that scale is far rarer.
+_ATTEST_READING_CHUNK = 100
 
 
 def lookup_many(
@@ -645,10 +669,15 @@ def lookup_many(
 
     ``pairs`` is a list of ``(word, reading | None)`` — each word's contextual
     reading boosts *that word's own bucket* (``None`` = wildcard, no boost).
-    Runs ONE query per chunk (``WHERE term IN (...) OR reading IN (...)``)
-    instead of one query per word, then reproduces ``_LOOKUP_SQL``'s reading
-    boost, ordering, and pool cap in Python so each per-word result is
-    byte-identical, row-for-row, to ``lookup(conn, word, reading)``.
+    Runs ONE query per chunk — a ``UNION ALL`` of one ``_LOOKUP_SQL``-shaped
+    subquery per word, each row-capped at ``_LOOKUP_MANY_ROW_CAP`` — instead
+    of one query per word, then reproduces the pool cap in Python so each
+    per-word result is byte-identical, row-for-row, to
+    ``lookup(conn, word, reading)`` (for any dictionary where a word's own
+    candidate count, before homograph scoping, stays under the row cap —
+    true of everything but a handful of hyper-common kana readings, where the
+    generous headroom over ``_LOOKUP_LIMIT`` keeps the visible result the same
+    in practice).
 
     ``lemmas`` optionally maps a requested word to its token's UniDic lemma,
     threaded into the Rule A′ homograph scope per word (see
@@ -686,22 +715,39 @@ def lookup_many(
     boost_by_word: dict[str, str | None] = {w: _fold_reading(r) for w, r in unique_pairs}
     unique_words = [w for w, _ in unique_pairs]
 
-    for start in range(0, len(unique_words), _BIND_CHUNK):
-        chunk = unique_words[start : start + _BIND_CHUNK]
-        normalized_chunk = [normalized_by_word[w] for w in chunk]
-        # Readings are stored hiragana-folded, so the ``reading IN`` clause must
-        # bind the folded query words (touch point b) — a katakana requested
-        # word still fetches the row whose folded reading it matches.
-        folded_chunk = [katakana_to_hiragana(w) for w in normalized_chunk]
-        placeholders = ", ".join("?" for _ in chunk)
-        sql = (
-            "SELECT id, term, reading, content, tags, score, sequence FROM entries "
-            f"WHERE term IN ({placeholders}) OR reading IN ({placeholders})"
-        )
-        rows = conn.execute(sql, (*normalized_chunk, *folded_chunk)).fetchall()
+    for start in range(0, len(unique_words), _LOOKUP_MANY_CHUNK):
+        chunk = unique_words[start : start + _LOOKUP_MANY_CHUNK]
 
-        # Bucket each fetched row to every requested word it can satisfy. A row
-        # may match one word by term and a different word by reading. Each entry
+        # One _LOOKUP_SQL-shaped, row-capped subquery per word, tagged with its
+        # position in ``chunk`` (req_idx) so each fetched row can be routed
+        # back to its own word without any reverse-mapping: a row satisfies
+        # exactly the subquery that fetched it, term match or reading match,
+        # collapsed to one row per word by SQL's own ``OR`` (matching
+        # _LOOKUP_SQL's "term=? OR reading=?" semantics — a dual-match row
+        # still appears once). Capping per word (not the whole chunk) is what
+        # keeps one hyper-common kana reading from pulling every matching
+        # full-content row into this fetchall().
+        subqueries: list[str] = []
+        params: list[object] = []
+        for idx, w in enumerate(chunk):
+            normalized = normalized_by_word[w]
+            # Readings are stored hiragana-folded, so the reading-match bind
+            # must be the folded query word (touch point b) — a katakana
+            # requested word still fetches the row whose folded reading it
+            # matches.
+            folded_term = katakana_to_hiragana(normalized)
+            subqueries.append(
+                "SELECT * FROM ("
+                "SELECT ? AS req_idx, id, term, reading, content, tags, score, sequence FROM entries "
+                "WHERE term = ? OR reading = ? "
+                "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id "
+                "LIMIT ?)"
+            )
+            params.extend([idx, normalized, folded_term, normalized, boost_by_word[w], _LOOKUP_MANY_ROW_CAP])
+        sql = " UNION ALL ".join(subqueries)
+        rows = conn.execute(sql, params).fetchall()
+
+        # Bucket each fetched row under its own req_idx-tagged word. Each entry
         # carries the sort keys that reproduce _LOOKUP_SQL's
         # "ORDER BY (term=?) DESC, (reading=?) DESC, score DESC, sequence", plus a
         # final ``id`` tiebreak:
@@ -715,44 +761,20 @@ def lookup_many(
         #   * row_id: SQLite resolves equal (priority, score, sequence) ties by
         #     rowid ascending under the single-word query's MULTI-INDEX OR plan;
         #     replaying it here keeps lookup_many byte-identical to lookup.
-        term_reverse: dict[str, list[str]] = {}
-        for requested, normalized in zip(chunk, normalized_chunk, strict=True):
-            term_reverse.setdefault(normalized, []).append(requested)
-        # Hiragana-keyed reverse map (touch point c): folded requested word →
-        # the requested word(s) that fold to it. A reading-only hit is assigned
-        # back through this map so a katakana requested word (whose raw form no
-        # longer equals the folded stored reading) is not silently dropped —
-        # the divergence that would break the lookup_many == lookup invariant.
-        reading_reverse: dict[str, list[str]] = {}
-        for w, wf in zip(chunk, folded_chunk, strict=True):
-            reading_reverse.setdefault(wf, []).append(w)
-        # ``term`` (index 5) is carried on each entry so the U2 homograph scope
-        # can classify term-exact vs reading-only per word before the cap; the
-        # sort key stays the first five fields and the result unpack still takes
-        # the trailing (content, tags, sequence).
         buckets: dict[str, list[tuple[int, int, tuple[int, int], tuple[int, int], int, str, str, str, int | None]]] = {
             w: [] for w in chunk
         }
-        for row_id, term, reading, content, tags, score, sequence in rows:
+        for req_idx, row_id, term, reading, content, tags, score, sequence in rows:
+            w = chunk[req_idx]
             tags_val = tags if tags is not None else ""
             folded_reading = katakana_to_hiragana(reading) if reading is not None else None
             seq_key = _seq_key(sequence)
             score_key = _score_key(score)
-            # A row satisfies a word via term OR reading. _LOOKUP_SQL's
-            # ``term=? OR reading=?`` returns each row ONCE per word even when
-            # both columns match, so collapse to one entry per requested word,
-            # letting the term match (priority 0) win over a reading-only one.
-            matched: dict[str, int] = {}
-            for w in term_reverse.get(term, ()):
-                matched[w] = 0
-            if folded_reading is not None:
-                for w in reading_reverse.get(folded_reading, ()):
-                    matched.setdefault(w, 1)
-            for w, term_priority in matched.items():
-                reading_priority = _reading_priority(folded_reading, boost_by_word[w])
-                buckets[w].append(
-                    (term_priority, reading_priority, score_key, seq_key, row_id, term, content, tags_val, sequence)
-                )
+            term_priority = 0 if term == normalized_by_word[w] else 1
+            reading_priority = _reading_priority(folded_reading, boost_by_word[w])
+            buckets[w].append(
+                (term_priority, reading_priority, score_key, seq_key, row_id, term, content, tags_val, sequence)
+            )
 
         pending: dict[str, list[tuple[str, str, int | None]]] = {}
         for w, entries in buckets.items():
@@ -788,7 +810,7 @@ def lookup_many(
 
 
 # terms_exist binds each term ONCE (single-column IN), so the chunk can be
-# larger than lookup_many's _BIND_CHUNK while staying under sqlite's default
+# larger than _BIND_CHUNK while staying under sqlite's default
 # SQLITE_MAX_VARIABLE_NUMBER of 999.
 _EXIST_CHUNK = 900
 
@@ -930,8 +952,12 @@ def attest_detail(conn: sqlite3.Connection, words: list[str], include_readings: 
 
     normalized_by_word = {word: unicodedata.normalize("NFC", word) for word in unique}
 
-    for start in range(0, len(unique), _BIND_CHUNK):
-        chunk = unique[start : start + _BIND_CHUNK]
+    # The reading arm batches fewer words per round trip (see _ATTEST_READING_CHUNK):
+    # a common kana reading can attest thousands of rows, and every word sharing
+    # a chunk adds its own attesting rows to the SAME fetchall().
+    chunk_size = _ATTEST_READING_CHUNK if include_readings else _BIND_CHUNK
+    for start in range(0, len(unique), chunk_size):
+        chunk = unique[start : start + chunk_size]
         normalized_chunk = [normalized_by_word[word] for word in chunk]
         term_reverse: dict[str, list[str]] = {}
         for requested, normalized in zip(chunk, normalized_chunk, strict=True):
