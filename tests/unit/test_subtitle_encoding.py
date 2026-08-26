@@ -82,6 +82,46 @@ def test_missing_file_is_unnameable(tmp_path):
     assert detect_subtitle_encoding(tmp_path / "nope.srt") is None
 
 
+def test_euc_jp_probe_reads_only_the_bounded_head(tmp_path, monkeypatch):
+    """The euc-jp check inside load_with_fallback_encoding must not read the
+    whole file to decide — it reuses the same bounded head the cp932/detector
+    legs use, never a fresh path.read_bytes()."""
+    monkeypatch.setattr(encoding_mod, "_MAX_SNIFF_BYTES", 64)
+    text = "1\r\n00:00:01,000 --> 00:00:03,000\r\n猫が走る\r\n\r\n"
+    data = text.encode("euc_jp")
+    path = tmp_path / "big-euc-jp.srt"
+    path.write_bytes(data)
+    with pytest.raises(UnicodeDecodeError) as exc_info:
+        data.decode("utf-8")
+
+    read_sizes: list[int] = []
+    real_open = Path.open
+
+    def _spy_open(self, *args, **kwargs):
+        fh = real_open(self, *args, **kwargs)
+        real_read = fh.read
+
+        def _read(n=-1):
+            read_sizes.append(n)
+            return real_read(n)
+
+        fh.read = _read
+        return fh
+
+    monkeypatch.setattr(Path, "open", _spy_open)
+
+    subs = load_with_fallback_encoding(path, exc_info.value)
+
+    assert subs[0].text == "猫が走る"
+    # pysubs2's own file access (the cp932 attempt, then the winning euc_jp
+    # parse) reads the whole file unbounded (n=-1) — that's pysubs2 actually
+    # parsing the subtitle, not sniffing, and out of scope here. What matters
+    # is that the euc-jp CHECK itself used the bounded head, not its own
+    # fresh whole-file read.
+    assert 64 in read_sizes
+    assert read_sizes.count(-1) <= 2  # the two pysubs2.load attempts only
+
+
 def test_sniff_bound_caps_the_read(tmp_path, monkeypatch):
     """A user-picked huge file only ever gets a bounded head read, not a whole-file
     slurp — the sniff heuristics run on ``_MAX_SNIFF_BYTES`` bytes, never more."""

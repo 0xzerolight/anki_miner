@@ -94,13 +94,13 @@ def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeE
         return pysubs2.load(str(path), encoding="cp932")
     except UnicodeDecodeError:
         pass
-    if _is_japanese_euc_jp(path):
-        return pysubs2.load(str(path), encoding="euc_jp")
     try:
         with path.open("rb") as f:
             head = f.read(_MAX_SNIFF_BYTES)
     except OSError:
         head = b""
+    if _is_japanese_euc_jp_bytes(head):
+        return pysubs2.load(str(path), encoding="euc_jp")
     encoding = _detect_encoding(head)
     if encoding:
         try:
@@ -166,19 +166,23 @@ def detect_subtitle_encoding(path: str | Path) -> str | None:
     return _WHATWG_LABELS.get(detected.lower().replace(" ", ""))
 
 
-def _is_japanese_euc_jp(path: Path) -> bool:
-    try:
-        data = path.read_bytes()
-    except OSError:
-        return False
-    return _is_japanese_euc_jp_bytes(data)
-
-
 def _is_japanese_euc_jp_bytes(data: bytes) -> bool:
+    """True iff *data* decodes as EUC-JP and contains real Japanese script.
+
+    *data* is a caller-owned, already-bounded head (never a full file read —
+    both callers hold one already). EUC-JP is mostly double-byte, so a
+    bounded head can cut mid-character right at the tail; same truncation
+    tolerance as the utf-8/cp932 checks in :func:`detect_subtitle_encoding`.
+    """
     try:
         text = data.decode("euc_jp")
-    except UnicodeDecodeError:
-        return False
+    except UnicodeDecodeError as exc:
+        if exc.end != len(data):
+            return False  # a genuine invalid byte, not a truncation artifact
+        try:
+            text = data[: exc.start].decode("euc_jp")
+        except UnicodeDecodeError:
+            return False
     return any(
         0x3040 <= ord(char) <= 0x30FF
         or 0xFF66 <= ord(char) <= 0xFF9F
