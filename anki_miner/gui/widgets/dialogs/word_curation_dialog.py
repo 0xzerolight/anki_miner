@@ -289,7 +289,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # exception the caller has to see.
             release = getattr(getattr(self, "player_widget", None), "release", None)
             if release is not None:
-                release()
+                try:
+                    release()
+                except Exception:
+                    logger.warning("player_widget.release() failed during __init__ cleanup", exc_info=True)
             raise
 
     def _configure_as_owned_window(self) -> None:

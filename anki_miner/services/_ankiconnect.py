@@ -72,7 +72,12 @@ _MAX_RESPONSE_BYTES = 256 * 1024 * 1024  # 256 MiB
 
 
 def _check_response_size(response: requests.Response, action: str) -> None:
-    """Raise :class:`AnkiConnectionError` before JSON-decoding an oversized body."""
+    """Raise :class:`AnkiConnectionError` before an oversized body is parsed or acted on.
+
+    ``requests`` has already buffered the full body into ``response.content``
+    by the time this runs -- the check gates what happens next (JSON-decoding
+    and using the result), not the buffering itself.
+    """
     size = len(response.content)
     if size > _MAX_RESPONSE_BYTES:
         raise AnkiConnectionError(

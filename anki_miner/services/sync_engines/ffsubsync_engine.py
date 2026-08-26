@@ -132,6 +132,7 @@ def sync_with_ffsubsync(
         _child_command(argv),
         timeout_s=_FFSUBSYNC_TIMEOUT_S,
         cancel=cancel_event,
+        retain_output=False,
     )
 
     if supervised.state in {SupervisedState.CANCELLED, SupervisedState.TIMED_OUT}:
