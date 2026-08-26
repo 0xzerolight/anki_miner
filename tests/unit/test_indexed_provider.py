@@ -1664,3 +1664,73 @@ class TestRedirectResolution:
         assert provider.lookup("孤児") is None
         assert provider.lookup_many([("孤児", None)])["孤児"] is None
         provider.close()
+
+
+def _drop_sequence_index(db_path: Path) -> None:
+    conn = sqlite3.connect(db_path)
+    conn.execute("DROP INDEX IF EXISTS idx_sequence")
+    conn.commit()
+    conn.close()
+
+
+class TestSequenceIndexBackfill:
+    """A pre-existing v6 index built before redirect resolution lacks
+    ``idx_sequence`` (Task 1 / F1); ``load()`` backfills it in place."""
+
+    def _seed_and_drop(self, db: Path) -> None:
+        _seed_db(db, [DictRow(term="猫", reading="ねこ", content="cat", sequence=1)])
+        _drop_sequence_index(db)
+
+    def test_load_creates_missing_sequence_index(self, tmp_path: Path):
+        db = tmp_path / "test.sqlite"
+        self._seed_and_drop(db)
+        provider = IndexedDictProvider("test-dict", db)
+        assert provider.load() is True
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        names = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='index'")}
+        conn.close()
+        assert "idx_sequence" in names
+
+    def test_load_survives_index_creation_failure(self, tmp_path: Path, monkeypatch):
+        db = tmp_path / "test.sqlite"
+        self._seed_and_drop(db)
+
+        # Patched where indexed_provider looked it up (module-level import
+        # binding), matching how storage_attest_detail etc. are patched above.
+        monkeypatch.setattr(
+            "anki_miner.services.dictionary.providers.indexed_provider.ensure_sequence_index",
+            lambda p: (_ for _ in ()).throw(sqlite3.OperationalError("readonly")),
+        )
+        provider = IndexedDictProvider("test-dict", db)
+        assert provider.load() is True  # failure is logged, never raised
+
+    def test_load_returns_false_when_reopen_after_backfill_fails(self, tmp_path: Path, monkeypatch):
+        """A backfill-induced lock (writer holds EXCLUSIVE, blocks readers too)
+        must not raise out of load() — it degrades to unavailable, same as any
+        other open failure, instead of taking the whole dictionary down."""
+        db = tmp_path / "test.sqlite"
+        self._seed_and_drop(db)
+
+        from anki_miner.services.dictionary.providers import indexed_provider as mod
+
+        real_open_readonly = mod.open_readonly
+        calls = {"n": 0}
+
+        def flaky_open_readonly(path):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                return real_open_readonly(path)
+            raise sqlite3.OperationalError("database is locked")
+
+        monkeypatch.setattr(mod, "open_readonly", flaky_open_readonly)
+        provider = IndexedDictProvider("test-dict", db)
+        assert provider.load() is False
+        assert calls["n"] == 2  # initial open, then the post-backfill reopen
+
+    def test_sequence_index_refreshes_meta_sidecar(self, tmp_path: Path):
+        """CREATE INDEX bumps the db mtime; the sidecar must stay >= it."""
+        db = tmp_path / "test.sqlite"
+        self._seed_and_drop(db)
+        sidecar = db.parent / "meta.json"
+        IndexedDictProvider("test-dict", db).load()
+        assert sidecar.stat().st_mtime >= db.stat().st_mtime

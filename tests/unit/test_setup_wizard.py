@@ -1544,6 +1544,41 @@ def test_resources_page_reports_frequency_and_pitch_alongside_the_dictionary(qtb
     assert "pitch ok" in page.pitch_label.text()
 
 
+def test_readiness_nouns_come_from_the_shared_table(qtbot, wiz_config, monkeypatch):
+    """The readiness line must render the ``SetupWizard``-context noun the
+    checkbox label already uses, not a second ``ResourcesPage``-context copy
+    that a translator could translate differently and let the two drift.
+    """
+    from PyQt6.QtCore import QCoreApplication, QTranslator  # noqa: PLC0415
+    from PyQt6.QtWidgets import QApplication  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard.pages import _RESOURCE_KIND_NOUNS  # noqa: PLC0415
+
+    class _ContextAwareTranslator(QTranslator):
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            if source == "Frequency":
+                return f"{context}-noun"
+            return source
+
+    app = QApplication.instance()
+    assert app is not None
+    translator = _ContextAwareTranslator()
+    app.installTranslator(translator)
+    try:
+        fake = _FakeValidation(frequency=True, pitch=True)
+        wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, fake)
+        page = wiz.resources_page
+
+        _run_page_check(qtbot, page, page.dictionary_label)
+
+        expected = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["freq"])
+        assert expected == "SetupWizard-noun"
+        assert expected in page.frequency_label.text()
+        assert "ResourcesPage-noun" not in page.frequency_label.text()
+    finally:
+        app.removeTranslator(translator)
+
+
 def test_resources_page_calls_unconfigured_optional_resources_optional_not_broken(qtbot, wiz_config, monkeypatch):
     """None means nothing configured — a resting state, never a problem."""
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())

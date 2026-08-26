@@ -892,7 +892,7 @@ class ResourcesPage(_LiveCheckPage):
         for spec in self._specs:
             noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
             label = (
-                tr_format("%1 — %2", QCoreApplication.translate("SetupWizard", noun), spec.display_name)
+                tr_format(self.tr("%1 — %2"), QCoreApplication.translate("SetupWizard", noun), spec.display_name)
                 if noun
                 else spec.display_name
             )
@@ -989,11 +989,19 @@ class ResourcesPage(_LiveCheckPage):
         self._dictionary_ready = bool(ok)
         self.dictionary_label.setText(tr_format(self.tr("Dictionary ready: %1"), message) if ok else message)
 
+        # Nouns come from the same "SetupWizard"-context table the checkbox
+        # labels use (:892) -- a second, ResourcesPage-context "Frequency" /
+        # "Pitch accent" copy here let the two drift and doubled translator
+        # work. One shared "X ready: Y" template stands in for the two
+        # per-noun copies this used to carry.
+        freq_noun = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["freq"])
+        pitch_noun = QCoreApplication.translate("SetupWizard", _RESOURCE_KIND_NOUNS["pitch"])
+        ready_template = self.tr("%1 ready: %2")
         self.frequency_label.setText(
-            self._optional_line(result.frequency, self.tr("Frequency"), self.tr("Frequency ready: %1"))
+            self._optional_line(result.frequency, freq_noun, tr_format(ready_template, freq_noun, "%1"))
         )
         self.pitch_label.setText(
-            self._optional_line(result.pitch, self.tr("Pitch accent"), self.tr("Pitch accent ready: %1"))
+            self._optional_line(result.pitch, pitch_noun, tr_format(ready_template, pitch_noun, "%1"))
         )
         self.completeChanged.emit()
 

@@ -3,12 +3,10 @@
 from __future__ import annotations
 
 import collections
-import functools
 import json
 import logging
 import re
 import shutil
-import subprocess
 import sys
 import threading
 from collections.abc import Callable
@@ -21,6 +19,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
+    DubAudioUnavailableError,
     FfmpegNotFoundError,
     NoJapaneseSubtitlesError,
     VideoTooLongError,
@@ -28,14 +27,10 @@ from anki_miner.exceptions.youtube import (
     YtdlpNotFoundError,
 )
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
+from anki_miner.services import ytdlp_invocation
 from anki_miner.services.audio_fetch_common import redact_url_for_log
-from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
-from anki_miner.utils.subprocess_utils import no_window_kwargs
-from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp, ytdlp_generation_lock
-
-# Message appended to YtdlpNotFoundError so the user can self-serve the fix.
-_YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
+from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 
 logger = logging.getLogger(__name__)
 
@@ -47,76 +42,13 @@ logger = logging.getLogger(__name__)
 _VIDEO_EXTS = {".mp4", ".webm", ".mkv"}
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 _PLAYLIST_UNAVAILABLE_TITLES = {"[Private video]", "[Deleted video]"}
-_PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
-_POSTPROCESS_MARKERS = ("[Merger]", "[FixupM3u8]", "[SubtitleConvertor]", "[ExtractAudio]")
 
 _YTDLP_FETCH_TIMEOUT_S = 3 * 60 * 60
-
-# JS runtimes yt-dlp can solve YouTube's n-challenge with. "deno" is omitted: it is
-# yt-dlp's built-in default, so when the user has deno nothing needs doing. Ordered
-# by preference for the failing case (node is the common Windows setup). Issue #64.
-_JS_RUNTIMES = ("node", "bun", "quickjs")
 
 # Max video height (px) fetched from YouTube; the format selector caps both the
 # video and best-fallback streams. Was the hidden `config.youtube_max_height`
 # knob (ARC-004: inlined, never surfaced in any panel).
 YOUTUBE_MAX_HEIGHT = 720
-
-
-# Keyed on the resolved yt-dlp path (unbounded cache), NOT a 1-entry cache: the
-# resolved path changes after a self-update download, and a 1-entry cache keyed
-# on nothing would then report the OLD binary's capabilities for the NEW one.
-@functools.cache
-def _ytdlp_supports_js_runtimes(ytdlp_path: str) -> bool:
-    """True if the yt-dlp at *ytdlp_path* recognizes ``--js-runtimes``.
-
-    Cached per resolved path. Guards against older yt-dlp that lacks the flag —
-    passing an unknown option would break all YouTube mining. Any failure (yt-dlp
-    missing, timeout) returns False -> behave as before.
-    """
-    try:
-        with managed_ytdlp_lock(ytdlp_path):
-            proc = subprocess.run(
-                [ytdlp_path, "--ignore-config", "--help"],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-            )
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-        return False
-    return "--js-runtimes" in (proc.stdout or "")
-
-
-@functools.cache
-def _ytdlp_supports_remote_components(ytdlp_path: str) -> bool:
-    """True if the yt-dlp at *ytdlp_path* recognizes ``--remote-components``.
-
-    Cached per resolved path (see ``_ytdlp_supports_js_runtimes`` for why the
-    path is the cache key). Probed separately from ``--js-runtimes`` so an older
-    yt-dlp that knows one flag but not the other still degrades safely. Any
-    failure (yt-dlp missing, timeout) returns False -> behave as before. Issue #64.
-    """
-    try:
-        with managed_ytdlp_lock(ytdlp_path):
-            proc = subprocess.run(
-                [ytdlp_path, "--ignore-config", "--help"],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-            )
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-        return False
-    return "--remote-components" in (proc.stdout or "")
-
-
-def _tail(buf: collections.deque[str], n: int = 20) -> str:
-    """Return the last *n* lines of *buf* joined by newlines."""
-    lines = list(buf)[-n:]
-    return "\n".join(lines)
 
 
 class YouTubeFetcherService:
@@ -140,7 +72,7 @@ class YouTubeFetcherService:
         try:
             return resolve_ytdlp(self._config)
         except FileNotFoundError as exc:
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from exc
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from exc
 
     # ------------------------------------------------------------------
     # probe_metadata
@@ -168,9 +100,9 @@ class YouTubeFetcherService:
                 "--dump-single-json",
                 "--no-playlist",
             ]
-            cmd.extend(self._cookie_args())
-            cmd.extend(self._js_runtime_args())
-            cmd.extend(self._remote_component_args())
+            cmd.extend(ytdlp_invocation.cookie_args(self._config))
+            cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
+            cmd.extend(ytdlp_invocation.remote_component_args(self._config, self._ytdlp()))
             # End-of-options separator: a '-'/'--'-leading URL must not be parsed
             # as a yt-dlp option (e.g. --update-to self-replaces the binary on the
             # probe alone, --config-location loads a planted --exec config). T-34.
@@ -185,7 +117,7 @@ class YouTubeFetcherService:
             )
 
         if isinstance(proc.error, FileNotFoundError):
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from proc.error
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
         if proc.state is SupervisedState.TIMED_OUT:
             raise YouTubeFetchError(f"yt-dlp metadata probe timed out after {timeout_s}s")
 
@@ -315,9 +247,9 @@ class YouTubeFetcherService:
                 "--playlist-items",
                 f"1:{limit + 1}",
             ]
-            cmd.extend(self._cookie_args())
-            cmd.extend(self._js_runtime_args())
-            cmd.extend(self._remote_component_args())
+            cmd.extend(ytdlp_invocation.cookie_args(self._config))
+            cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
+            cmd.extend(ytdlp_invocation.remote_component_args(self._config, self._ytdlp()))
             # End-of-options separator before the user URL — see probe_metadata. T-34.
             cmd.append("--")
             cmd.append(url)
@@ -330,7 +262,7 @@ class YouTubeFetcherService:
             )
 
         if isinstance(proc.error, FileNotFoundError):
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from proc.error
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
         if proc.state is SupervisedState.TIMED_OUT:
             raise YouTubeFetchError(f"yt-dlp playlist probe timed out after {timeout_s}s")
 
@@ -474,10 +406,10 @@ class YouTubeFetcherService:
         """Detect a Japanese audio-only format among the probed formats.
 
         This is the fetch-side reachability check for the auto-dub route: the
-        ``auto_dub`` format selector asks for ``bestaudio[language^=ja]``, which
-        can only ever match an audio-only format, so that is what we require
-        here. A muxed format's ``language`` names its container audio (the
-        original), never a dub, and ``bestaudio`` cannot select it.
+        ``auto_dub`` format selector asks for ``bestaudio[language~='^ja(-|$)']``,
+        which can only ever match an audio-only format, so that is what we
+        require here. A muxed format's ``language`` names its container audio
+        (the original), never a dub, and ``bestaudio`` cannot select it.
 
         On a genuinely Japanese video the original audio-only track also
         matches ("ja audio track" is the semantic, dub or not) — harmless,
@@ -539,7 +471,7 @@ class YouTubeFetcherService:
         def handle_line(line: str) -> None:
             nonlocal postprocessing_seen
             tail.append(line)
-            m = _PROGRESS_RE.search(line)
+            m = ytdlp_invocation.PROGRESS_RE.search(line)
             if m is not None:
                 if progress_cb is not None:
                     downloaded_s, total_s = m.group(1), m.group(2)
@@ -574,7 +506,7 @@ class YouTubeFetcherService:
                 retain_output=False,
             )
         if isinstance(process_result.error, FileNotFoundError):
-            raise YtdlpNotFoundError(_YTDLP_MISSING_HINT) from process_result.error
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from process_result.error
         if process_result.state is SupervisedState.CANCELLED:
             raise YouTubeFetchError("Cancelled by user")
         if process_result.state is SupervisedState.TIMED_OUT:
@@ -597,28 +529,6 @@ class YouTubeFetcherService:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _effective_ffmpeg_location(self) -> str | None:
-        """Resolve the ffmpeg path to hand yt-dlp, or None to rely on PATH.
-
-        Precedence:
-        1. ``youtube_ffmpeg_location`` explicit override (existence is validated
-           separately in :meth:`_preflight_ffmpeg`).
-        2. ``resolve_ffmpeg(config)`` — picks up the bundled binary in frozen
-           builds (or a ``ffmpeg_location`` override). Returned only when it is a
-           real absolute file; the bare literal ``"ffmpeg"`` means "use PATH".
-
-        Returns:
-            An absolute file path string, or ``None`` to let yt-dlp do its own
-            PATH lookup.
-        """
-        loc = self._config.youtube_ffmpeg_location
-        if loc is not None:
-            return str(loc)
-        resolved = resolve_ffmpeg(self._config)
-        if resolved != "ffmpeg" and Path(resolved).is_file():
-            return resolved
-        return None
-
     def _preflight_ffmpeg(self) -> None:
         loc = self._config.youtube_ffmpeg_location
         if loc is not None:
@@ -628,7 +538,7 @@ class YouTubeFetcherService:
             return
         # No explicit override: a bundled/resolved absolute binary satisfies the
         # preflight; otherwise fall back to the historical PATH check.
-        if self._effective_ffmpeg_location() is not None:
+        if ytdlp_invocation.effective_ffmpeg_location(self._config) is not None:
             return
         if shutil.which("ffmpeg") is None:
             raise FfmpegNotFoundError(
@@ -654,12 +564,16 @@ class YouTubeFetcherService:
         if sub_mode == "auto_dub":
             # Auto-dub route: the ja captions are machine-translated, matching
             # the Japanese auto-dub audio track — so that exact track must be
-            # fetched. [language^=ja] catches "ja" and regional "ja-JP"; the
-            # selector deliberately has NO "/bestaudio" fallback, because
-            # falling back to the original (non-JA) audio would silently mine
-            # MT subs against foreign audio. If the dub vanished since the
-            # probe, the fetch fails and _raise_for_error names the cause.
-            fmt = f"bestvideo[height<={max_height}]+bestaudio[language^=ja]"
+            # fetched. language~='^ja(-|$)' is a regex-anchored match, same as
+            # the probe's _has_ja_audio_track: it catches "ja" and regional
+            # "ja-JP" but not an unrelated code that merely starts with "ja"
+            # (e.g. "jav", Javanese) — a bare [language^=ja] prefix test would
+            # admit that. The selector deliberately has NO "/bestaudio"
+            # fallback, because falling back to the original (non-JA) audio
+            # would silently mine MT subs against foreign audio. If the dub
+            # vanished since the probe, the fetch fails and _raise_for_error
+            # names the cause.
+            fmt = f"bestvideo[height<={max_height}]+bestaudio[language~='^ja(-|$)']"
 
         cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
@@ -713,10 +627,10 @@ class YouTubeFetcherService:
             ]
         )
 
-        cmd.extend(self._cookie_args())
-        cmd.extend(self._js_runtime_args())
-        cmd.extend(self._remote_component_args())
-        ffmpeg_location = self._effective_ffmpeg_location()
+        cmd.extend(ytdlp_invocation.cookie_args(self._config))
+        cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
+        cmd.extend(ytdlp_invocation.remote_component_args(self._config, self._ytdlp()))
+        ffmpeg_location = ytdlp_invocation.effective_ffmpeg_location(self._config)
         if ffmpeg_location is not None:
             cmd.extend(["--ffmpeg-location", ffmpeg_location])
 
@@ -725,73 +639,23 @@ class YouTubeFetcherService:
         cmd.append(url)
         return cmd
 
-    def _cookie_args(self) -> list[str]:
-        """yt-dlp cookie flags.
-
-        A cookies file (``--cookies``) takes precedence over the browser
-        dropdown (``--cookies-from-browser``); the two flags are mutually
-        exclusive — yt-dlp errors if both are passed.
-        """
-        if self._config.youtube_cookies_file:
-            return ["--cookies", str(self._config.youtube_cookies_file)]
-        if self._config.youtube_cookies_from_browser:
-            return ["--cookies-from-browser", self._config.youtube_cookies_from_browser]
-        return []
-
-    def _js_runtime_args(self) -> list[str]:
-        """Enable an available JS runtime so yt-dlp can solve the n-challenge.
-
-        YouTube extraction needs a JavaScript runtime, but yt-dlp's
-        ``--js-runtimes`` defaults to deno only. When the user has node (or bun /
-        quickjs) but not deno, extraction fails with "n challenge solving failed".
-        Auto-pass the first available runtime. No-op when the installed yt-dlp
-        lacks the flag or no supported runtime is on PATH (deno, yt-dlp's default,
-        needs no flag). Issue #64.
-        """
-        if not _ytdlp_supports_js_runtimes(self._ytdlp()):
-            return []
-        for runtime in _JS_RUNTIMES:
-            if shutil.which(runtime):
-                return ["--js-runtimes", runtime]
-        return []
-
-    def _remote_component_args(self) -> list[str]:
-        """Allow yt-dlp to fetch the EJS challenge-solver script when needed.
-
-        A JS runtime alone is not enough: yt-dlp (>= ~2026.03) split YouTube
-        challenge solving into a runtime *plus* the EJS solver script (the
-        ``yt-dlp-ejs`` component), which it no longer auto-downloads. Without it,
-        signature / n-sig solving fails ("Remote component challenge solver
-        script ... was skipped"). ``ejs:github`` enables fetching it on first use
-        (then yt-dlp caches it); ``ejs:npm`` is Deno/Bun-only, so github is the
-        node-safe choice.
-
-        Not gated on a runtime being found: deno-only users (whom
-        ``_js_runtime_args`` deliberately skips, deno being yt-dlp's default) need
-        the solver script too. Harmless when EJS is already bundled or pip-installed
-        — yt-dlp prefers a local copy and the flag only *allows* a fetch when one is
-        missing. No-op when the installed yt-dlp lacks the flag. Issue #64.
-        """
-        if not _ytdlp_supports_remote_components(self._ytdlp()):
-            return []
-        return ["--remote-components", "ejs:github"]
-
     @staticmethod
     def _is_postprocess_line(line: str) -> bool:
-        if any(marker in line for marker in _POSTPROCESS_MARKERS):
+        if any(marker in line for marker in ytdlp_invocation.POSTPROCESS_MARKERS):
             return True
         return "[download] 100%" in line and "Deleting original file" in line
 
     def _raise_for_error(self, tail: collections.deque[str], sub_mode: SubMode) -> None:
         joined_lower = "\n".join(tail).lower()
+        classification = ytdlp_invocation.classify_error_tail(joined_lower)
 
-        if ("sign in" in joined_lower and "confirm" in joined_lower) or ("sign in to confirm" in joined_lower):
+        if classification == "bot":
             raise BotDetectionError(
                 "YouTube requires login. In Settings → YouTube, set Cookies from "
                 "browser, or point Cookies file at an exported cookies.txt, then retry."
             )
 
-        if "database is locked" in joined_lower or "database locked" in joined_lower:
+        if classification == "cookie_lock":
             browser = self._config.youtube_cookies_from_browser or "the browser"
             msg = f"Cookie database is locked. Close {browser} and retry, or set Cookies → Browser to None."
             if sys.platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
@@ -806,32 +670,38 @@ class YouTubeFetcherService:
         # streaming experiments per client, and an older yt-dlp then finds no usable
         # format at all. The raw stderr for this is "Requested format is not
         # available", which reads like a bad --format string rather than "your yt-dlp
-        # is too old" — so name the actual remedy.
+        # is too old" — so name the actual remedy. (classify_error_tail's shared
+        # "format_missing" covers the "requested format" marker; the two extra
+        # markers below are YouTube-specific and stay local.)
         stale_extractor_markers = (
-            "requested format is not available",
             "only images are available",
             "drm protected",
         )
-        if any(marker in joined_lower for marker in stale_extractor_markers):
+        if classification == "format_missing" or any(marker in joined_lower for marker in stale_extractor_markers):
             if sub_mode == "auto_dub" and "requested format is not available" in joined_lower:
                 # On this route the format selector pins the JA dub track with
-                # no fallback, so "no format" almost always means the dub
-                # disappeared between probe and fetch — "update yt-dlp" would
-                # send the user to the wrong remedy.
-                raise YouTubeFetchError(
-                    "The Japanese auto-dub audio track listed at probe time is no "
-                    "longer available, so this video cannot be mined via the dub "
-                    f"route. yt-dlp said: {_tail(tail, 5)}"
+                # no fallback, so "no format" almost always means either side of
+                # the selector went missing between probe and fetch — the dub
+                # track, or the video stream it is paired with — and "update
+                # yt-dlp" would send the user to the wrong remedy. Deterministic:
+                # a retry re-fetches the same selector against the same missing
+                # format and fails identically, so this is typed to opt out of
+                # the queue worker's automatic retry (_DETERMINISTIC_FETCH_ERRORS).
+                raise DubAudioUnavailableError(
+                    "No format matched the pinned Japanese-audio selector — the "
+                    "auto-dub track listed at probe time is no longer available "
+                    "(or no separate video stream exists), so this video cannot "
+                    f"be mined via the dub route. yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
                 )
             raise YouTubeFetchError(
                 "YouTube served no downloadable format for this video, which usually "
                 "means yt-dlp is out of date (YouTube's DRM/SABR experiments break "
                 "older versions). Use Settings → YouTube → Update yt-dlp now, or "
                 "enable 'Keep yt-dlp up to date automatically', then retry. "
-                f"yt-dlp said: {_tail(tail, 5)}"
+                f"yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
             )
 
-        raise YouTubeFetchError(f"yt-dlp exited non-zero: {_tail(tail, 20)}")
+        raise YouTubeFetchError(f"yt-dlp exited non-zero: {ytdlp_invocation.tail_lines(tail, 20)}")
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
         candidates = list(workspace.glob(f"{video_id}*"))

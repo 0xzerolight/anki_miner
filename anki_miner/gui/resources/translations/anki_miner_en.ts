@@ -3810,7 +3810,11 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download folder is not writable: </source>
+        <source>Download folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check permissions for %1.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3827,6 +3831,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
 </context><context>
     <name>DownloadWorker</name>
+    <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Done</source>
         <translation type="unfinished" />
@@ -6996,6 +7004,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation type="unfinished" />
     </message>
@@ -7012,19 +7024,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9054,11 +9054,11 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>

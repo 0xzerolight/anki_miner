@@ -513,6 +513,27 @@ def test_occurrence_counts_attached_for_curation(test_config):
     assert seen == {"犬": 5, "猫": 2}
 
 
+def test_reading_curation_warns_on_dropped_line_expansion(test_config, caplog):
+    """A curated word carrying a line_expansion must warn — the reading path
+    has no subtitle timeline to materialize it against (Issue #120 C4)."""
+    import logging
+
+    words = [_word("犬", 0)]
+    counts = collections.Counter({"犬": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    proc = _make_processor(test_config, subtitle_parser=sp)
+
+    def curate(curated_words):
+        return [replace(curated_words[0], line_expansion=(1, 0))]
+
+    with caplog.at_level(logging.WARNING, logger="anki_miner.orchestration.episode_processor"):
+        proc.process_reading(_document([_unit(0)]), curation_callback=curate)
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("line expansion" in m for m in messages)
+
+
 def test_image_materialized_once_per_ref(test_config):
     """5. Shared page → one prepare_card_image call; each word gets the picture."""
     ref = ImageRef(Path("/pages/page01.png"))

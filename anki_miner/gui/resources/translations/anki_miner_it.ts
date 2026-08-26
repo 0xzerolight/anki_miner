@@ -3836,7 +3836,11 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download folder is not writable: </source>
+        <source>Download folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check permissions for %1.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3853,6 +3857,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     </message>
 </context><context>
     <name>DownloadWorker</name>
+    <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Done</source>
         <translation type="unfinished">Completato</translation>
@@ -7055,6 +7063,10 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Cosa sono queste risorse?</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download recommended resources</source>
         <translation>Scarica le risorse consigliate</translation>
     </message>
@@ -7071,19 +7083,7 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Dizionario pronto: %1</translation>
     </message>
     <message>
-        <source>Frequency</source>
-        <translation type="unfinished">Frequenza</translation>
-    </message>
-    <message>
-        <source>Frequency ready: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pitch accent</source>
-        <translation type="unfinished">Accento tonale</translation>
-    </message>
-    <message>
-        <source>Pitch accent ready: %1</source>
+        <source>%1 ready: %2</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9127,11 +9127,11 @@ Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi d
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed 30 seconds.</source>
+        <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
         <translation type="unfinished" />
     </message>
     <message>

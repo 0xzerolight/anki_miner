@@ -63,3 +63,18 @@ class NoJapaneseSubtitlesError(YouTubeFetchError):
     """
 
     pass
+
+
+class DubAudioUnavailableError(YouTubeFetchError):
+    """Raised on the ``auto_dub`` route when no format matches the pinned JA-audio selector.
+
+    Deterministic — a retry re-downloads the video and fails identically, since the
+    dub track (or, if the selector's video side is at fault, the video itself) is
+    simply gone from what yt-dlp reports, not a transient server hiccup.
+
+    Deliberately a *subclass* of :class:`YouTubeFetchError` for the same reason as
+    :class:`NoJapaneseSubtitlesError`: it must still satisfy every caller's
+    catch-all while opting out of the queue worker's retry ahead of it.
+    """
+
+    pass

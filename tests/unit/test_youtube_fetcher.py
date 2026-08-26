@@ -23,6 +23,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
+    DubAudioUnavailableError,
     FfmpegNotFoundError,
     NoJapaneseSubtitlesError,
     VideoTooLongError,
@@ -159,12 +160,12 @@ def _js_runtime_capability(request: pytest.FixtureRequest, monkeypatch: pytest.M
     shelling out to a real ``yt-dlp --help``. Tests marked ``real_ytdlp`` opt out
     to exercise the real function and manage the cache themselves. Issue #64.
     """
-    from anki_miner.services import youtube_fetcher as yf
+    from anki_miner.services import ytdlp_invocation as yf
 
-    real = yf._ytdlp_supports_js_runtimes  # the lru_cache-wrapped function
+    real = yf.ytdlp_supports_js_runtimes  # the lru_cache-wrapped function
     real.cache_clear()
     if "real_ytdlp" not in request.keywords:
-        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda _path: False)
+        monkeypatch.setattr(yf, "ytdlp_supports_js_runtimes", lambda _path: False)
     yield
     real.cache_clear()
 
@@ -177,12 +178,12 @@ def _remote_component_capability(request: pytest.FixtureRequest, monkeypatch: py
     deterministic and off a real ``yt-dlp --help``. ``real_ytdlp``-marked tests
     opt out and manage the cache themselves. Issue #64.
     """
-    from anki_miner.services import youtube_fetcher as yf
+    from anki_miner.services import ytdlp_invocation as yf
 
-    real = yf._ytdlp_supports_remote_components  # the lru_cache-wrapped function
+    real = yf.ytdlp_supports_remote_components  # the lru_cache-wrapped function
     real.cache_clear()
     if "real_ytdlp" not in request.keywords:
-        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda _path: False)
+        monkeypatch.setattr(yf, "ytdlp_supports_remote_components", lambda _path: False)
     yield
     real.cache_clear()
 
@@ -513,13 +514,13 @@ class TestAppOwnedCommandIsolation:
 
     @pytest.mark.real_ytdlp
     def test_capability_probes_ignore_user_config(self) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_js_runtimes.cache_clear()
-        yf._ytdlp_supports_remote_components.cache_clear()
+        yf.ytdlp_supports_js_runtimes.cache_clear()
+        yf.ytdlp_supports_remote_components.cache_clear()
         with patch("subprocess.run", return_value=_fake_run(0, "old help")) as mrun:
-            yf._ytdlp_supports_js_runtimes("yt-dlp")
-            yf._ytdlp_supports_remote_components("yt-dlp")
+            yf.ytdlp_supports_js_runtimes("yt-dlp")
+            yf.ytdlp_supports_remote_components("yt-dlp")
         assert [call.args[0][1] for call in mrun.call_args_list] == ["--ignore-config", "--ignore-config"]
 
 
@@ -680,7 +681,7 @@ class TestHasJaAudioTrack:
 
     def test_muxed_ja_format_ignored(self) -> None:
         # A muxed format's language names the container audio, not a dub track;
-        # bestaudio[language^=ja] could never select it anyway.
+        # bestaudio[language~='^ja(-|$)'] could never select it anyway.
         data = {"formats": [{"vcodec": "avc1", "acodec": "mp4a", "language": "ja"}]}
         assert self._call(data) is False
 
@@ -1023,8 +1024,16 @@ class TestBuildFetchCmdAutoDub:
         assert "--write-auto-sub" in cmd
         assert "--write-sub" not in cmd
         fmt = cmd[cmd.index("--format") + 1]
-        assert fmt == "bestvideo[height<=720]+bestaudio[language^=ja]"
+        assert fmt == "bestvideo[height<=720]+bestaudio[language~='^ja(-|$)']"
         assert "/" not in fmt  # no fallback alternative may reintroduce non-JA audio
+
+    def test_auto_dub_selector_excludes_javanese(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        """A bare [language^=ja] prefix test would also admit "jav" (Javanese);
+        the selector must be regex-anchored the same way the probe is."""
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "auto_dub")
+        fmt = cmd[cmd.index("--format") + 1]
+        assert "language^=ja" not in fmt
+        assert "bestaudio[language~=" in fmt
 
     def test_build_fetch_cmd_auto_only_format_unchanged(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         """The two existing modes keep the historical selector byte-identical."""
@@ -1034,11 +1043,14 @@ class TestBuildFetchCmdAutoDub:
             assert fmt == "bestvideo[height<=720]+bestaudio/best[height<=720]"
 
     def test_raise_for_error_names_missing_dub_track(self, service: YouTubeFetcherService) -> None:
-        """'Requested format is not available' on the dub route means the dub
-        vanished between probe and fetch — saying 'update yt-dlp' would mislead."""
+        """'Requested format is not available' on the dub route means either
+        side of the selector vanished between probe and fetch — saying 'update
+        yt-dlp' would mislead — and must be typed as a deterministic failure."""
         tail = collections.deque(["ERROR: Requested format is not available"])
-        with pytest.raises(YouTubeFetchError, match="dub"):
+        with pytest.raises(DubAudioUnavailableError, match="Japanese-audio") as excinfo:
             service._raise_for_error(tail, "auto_dub")
+        assert issubclass(DubAudioUnavailableError, YouTubeFetchError)
+        assert "Japanese-audio" in str(excinfo.value)
         with pytest.raises(YouTubeFetchError, match="yt-dlp is out of date"):
             service._raise_for_error(tail, "auto_only")
 
@@ -1875,9 +1887,9 @@ class TestJsRuntimeArgs:
     since yt-dlp's --js-runtimes defaults to deno)."""
 
     def _enable_capability(self, monkeypatch: pytest.MonkeyPatch, supported: bool) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        monkeypatch.setattr(yf, "_ytdlp_supports_js_runtimes", lambda _path: supported)
+        monkeypatch.setattr(yf, "ytdlp_supports_js_runtimes", lambda _path: supported)
 
     def test_probe_adds_js_runtime_node(self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch) -> None:
         self._enable_capability(monkeypatch, True)
@@ -1958,29 +1970,29 @@ class TestJsRuntimeArgs:
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_true_when_help_lists_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_js_runtimes.cache_clear()
+        yf.ytdlp_supports_js_runtimes.cache_clear()
         help_text = "Usage: yt-dlp [OPTIONS] URL\n  --js-runtimes RUNTIME[:PATH]  ...\n"
         with patch("subprocess.run", return_value=_fake_run(0, help_text)) as mock_run:
-            assert yf._ytdlp_supports_js_runtimes("yt-dlp") is True
+            assert yf.ytdlp_supports_js_runtimes("yt-dlp") is True
         assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_flag_absent(self) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_js_runtimes.cache_clear()
+        yf.ytdlp_supports_js_runtimes.cache_clear()
         with patch("subprocess.run", return_value=_fake_run(0, "Usage: yt-dlp [OPTIONS] URL\n  --version\n")):
-            assert yf._ytdlp_supports_js_runtimes("yt-dlp") is False
+            assert yf.ytdlp_supports_js_runtimes("yt-dlp") is False
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_ytdlp_missing(self) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_js_runtimes.cache_clear()
+        yf.ytdlp_supports_js_runtimes.cache_clear()
         with patch("subprocess.run", side_effect=FileNotFoundError):
-            assert yf._ytdlp_supports_js_runtimes("yt-dlp") is False
+            assert yf.ytdlp_supports_js_runtimes("yt-dlp") is False
 
 
 class TestRemoteComponentArgs:
@@ -1990,9 +2002,9 @@ class TestRemoteComponentArgs:
     longer auto-downloads."""
 
     def _enable_capability(self, monkeypatch: pytest.MonkeyPatch, supported: bool) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        monkeypatch.setattr(yf, "_ytdlp_supports_remote_components", lambda _path: supported)
+        monkeypatch.setattr(yf, "ytdlp_supports_remote_components", lambda _path: supported)
 
     def test_probe_adds_remote_components(
         self, service: YouTubeFetcherService, monkeypatch: pytest.MonkeyPatch
@@ -2058,29 +2070,29 @@ class TestRemoteComponentArgs:
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_true_when_help_lists_flag(self) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_remote_components.cache_clear()
+        yf.ytdlp_supports_remote_components.cache_clear()
         help_text = "Usage: yt-dlp [OPTIONS] URL\n  --remote-components COMPONENT  ...\n"
         with patch("subprocess.run", return_value=_fake_run(0, help_text)) as mock_run:
-            assert yf._ytdlp_supports_remote_components("yt-dlp") is True
+            assert yf.ytdlp_supports_remote_components("yt-dlp") is True
         assert mock_run.call_args.kwargs["stdin"] is subprocess.DEVNULL
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_flag_absent(self) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_remote_components.cache_clear()
+        yf.ytdlp_supports_remote_components.cache_clear()
         with patch("subprocess.run", return_value=_fake_run(0, "Usage: yt-dlp [OPTIONS] URL\n  --version\n")):
-            assert yf._ytdlp_supports_remote_components("yt-dlp") is False
+            assert yf.ytdlp_supports_remote_components("yt-dlp") is False
 
     @pytest.mark.real_ytdlp
     def test_capability_probe_false_when_ytdlp_missing(self) -> None:
-        from anki_miner.services import youtube_fetcher as yf
+        from anki_miner.services import ytdlp_invocation as yf
 
-        yf._ytdlp_supports_remote_components.cache_clear()
+        yf.ytdlp_supports_remote_components.cache_clear()
         with patch("subprocess.run", side_effect=FileNotFoundError):
-            assert yf._ytdlp_supports_remote_components("yt-dlp") is False
+            assert yf.ytdlp_supports_remote_components("yt-dlp") is False
 
 
 # ---------------------------------------------------------------------------

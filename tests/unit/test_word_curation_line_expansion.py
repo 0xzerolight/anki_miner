@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt
 
-from anki_miner.gui.widgets.audio_clip_editor import to_ticks
+from anki_miner.gui.widgets.audio_clip_editor import MAX_CLIP_SECONDS, to_ticks
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
     WordCurationDialog,
@@ -121,6 +121,15 @@ class TestAvailability:
         """The row lives inside the player pane; saved split blobs stay valid."""
         dlg, _ = _dialog(qtbot, words, existing_video)
         assert dlg._side_key == "player"
+
+    def test_expansion_tooltips_carry_the_real_ceiling(self, qtbot, words, existing_video):
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        prev_tip = dlg.expand_prev_button.toolTip()
+        next_tip = dlg.expand_next_button.toolTip()
+        assert str(int(MAX_CLIP_SECONDS)) in prev_tip
+        assert str(int(MAX_CLIP_SECONDS)) in next_tip
+        assert "30 seconds" not in prev_tip or int(MAX_CLIP_SECONDS) == 30
+        assert "30 seconds" not in next_tip or int(MAX_CLIP_SECONDS) == 30
 
 
 class TestWiring:
@@ -249,6 +258,18 @@ class TestGuardrails:
         assert not dlg.expand_prev_button.isEnabled()
         assert not dlg.expand_next_button.isEnabled()
         assert not dlg.expand_reset_button.isEnabled()
+
+    def test_reset_enabled_when_cue_unresolvable(self, qtbot, words, existing_video):
+        """Stored expansion + unresolvable cue: prev/next disable, Reset stays."""
+        dlg, _ = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        idx = dlg._pending_index
+        dlg._line_expansions[idx] = (1, 0)
+        dlg._expansion_entries = lambda chosen: None  # context still in flight
+        dlg._refresh_expansion_buttons()
+        assert not dlg.expand_prev_button.isEnabled()
+        assert not dlg.expand_next_button.isEnabled()
+        assert dlg.expand_reset_button.isEnabled()
 
 
 class TestSelection:
