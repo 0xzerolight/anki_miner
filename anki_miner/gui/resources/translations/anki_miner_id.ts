@@ -2061,11 +2061,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Download videos or audio</source>
-        <translation type="unfinished" />
+        <translation>Unduh video atau audio</translation>
     </message>
     <message>
         <source>Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. Works with any site yt-dlp supports.</source>
-        <translation type="unfinished" />
+        <translation>Simpan video, audio, atau subtitel dari sebuah URL ke folder menggunakan yt-dlp, tanpa mining. Berfungsi dengan semua situs yang didukung yt-dlp.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2700,6 +2700,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>No media files were found in that folder.</source>
         <translation>Tidak ada berkas media yang ditemukan di folder tersebut.</translation>
+    </message>
+    <message>
+        <source>That media folder could not be read.</source>
+        <translation>Folder media itu tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
@@ -3675,201 +3679,201 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <name>DownloadTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Kemajuan</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Selesai: </translation>
+        <translation>Selesai: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Dilewati</translation>
+        <translation>Dilewati</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Dilewati: </translation>
+        <translation>Dilewati: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Gagal — lihat log</translation>
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Some URLs could not be downloaded.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa URL tidak dapat diunduh.</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 diunduh</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded, %2 already present</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 diunduh, %2 sudah ada</translation>
     </message>
     <message>
         <source>Nothing downloaded — all %1 already present in the download folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada yang diunduh — semua %1 sudah ada di folder unduhan.</translation>
     </message>
     <message>
         <source>Select Download Folder</source>
-        <translation type="unfinished" />
+        <translation>Pilih Folder Unduhan</translation>
     </message>
     <message>
         <source>Media download</source>
-        <translation type="unfinished" />
+        <translation>Unduhan media</translation>
     </message>
     <message>
         <source>URLs</source>
-        <translation type="unfinished" />
+        <translation>URL</translation>
     </message>
     <message>
         <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp tidak ditemukan. Pasang atau perbarui di Pengaturan → YouTube untuk mengaktifkan unduhan.</translation>
     </message>
     <message>
         <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
-        <translation type="unfinished" />
+        <translation>Unduh video atau audio dari situs mana pun yang didukung yt-dlp, tanpa mining.</translation>
     </message>
     <message>
         <source>One URL per line</source>
-        <translation type="unfinished" />
+        <translation>Satu URL per baris</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">Opsi</translation>
+        <translation>Opsi</translation>
     </message>
     <message>
         <source>Quality:</source>
-        <translation type="unfinished" />
+        <translation>Kualitas:</translation>
     </message>
     <message>
         <source>Best available</source>
-        <translation type="unfinished" />
+        <translation>Terbaik yang tersedia</translation>
     </message>
     <message>
         <source>Up to 1080p</source>
-        <translation type="unfinished" />
+        <translation>Hingga 1080p</translation>
     </message>
     <message>
         <source>Up to 720p</source>
-        <translation type="unfinished" />
+        <translation>Hingga 720p</translation>
     </message>
     <message>
         <source>Audio only (MP3)</source>
-        <translation type="unfinished" />
+        <translation>Hanya audio (MP3)</translation>
     </message>
     <message>
         <source>Audio only (M4A)</source>
-        <translation type="unfinished" />
+        <translation>Hanya audio (M4A)</translation>
     </message>
     <message>
         <source>Custom format:</source>
-        <translation type="unfinished" />
+        <translation>Format khusus:</translation>
     </message>
     <message>
         <source>Optional yt-dlp format string</source>
-        <translation type="unfinished" />
+        <translation>String format yt-dlp (opsional)</translation>
     </message>
     <message>
         <source>When set, the quality preset above is ignored.</source>
-        <translation type="unfinished" />
+        <translation>Jika diisi, prasetel kualitas di atas diabaikan.</translation>
     </message>
     <message>
         <source>Download subtitles</source>
-        <translation type="unfinished" />
+        <translation>Unduh subtitel</translation>
     </message>
     <message>
         <source>Save subtitles next to the media file. Prefers manual subtitles, falls back to automatic.</source>
-        <translation type="unfinished" />
+        <translation>Simpan subtitel di samping berkas media. Mengutamakan subtitel manual, jika tidak ada memakai yang otomatis.</translation>
     </message>
     <message>
         <source>Languages:</source>
-        <translation type="unfinished" />
+        <translation>Bahasa:</translation>
     </message>
     <message>
         <source>Comma-separated language codes, e.g. ja,en</source>
-        <translation type="unfinished" />
+        <translation>Kode bahasa dipisahkan koma, mis. ja,en</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
-        <translation type="unfinished" />
+        <translation>Sematkan thumbnail</translation>
     </message>
     <message>
         <source>Embed title and metadata</source>
-        <translation type="unfinished" />
+        <translation>Sematkan judul dan metadata</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Keluaran</translation>
+        <translation>Keluaran</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Keluaran:</translation>
+        <translation>Keluaran:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Pilih Folder…</translation>
+        <translation>Pilih Folder…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Setel Ulang</translation>
+        <translation>Setel Ulang</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>Unduh</translation>
     </message>
     <message>
         <source>Download folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>Folder unduhan tidak dapat ditulisi.</translation>
     </message>
     <message>
         <source>Check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>Periksa izin untuk %1.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa baris bukan URL yang valid.</translation>
     </message>
     <message>
         <source>Paste at least one URL to download.</source>
-        <translation type="unfinished" />
+        <translation>Tempelkan setidaknya satu URL untuk diunduh.</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh %1 dari %2</translation>
     </message>
 </context><context>
     <name>DownloadWorker</name>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished" />
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Already downloaded</source>
-        <translation type="unfinished" />
+        <translation>Sudah diunduh</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -4092,10 +4096,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Kesalahan: %1</translation>
     </message>
     <message>
-        <source>Unexpected error: %1</source>
-        <translation>Kesalahan tak terduga: %1</translation>
-    </message>
-    <message>
         <source>No words selected for card creation</source>
         <translation>Tidak ada kata yang dipilih untuk pembuatan kartu</translation>
     </message>
@@ -4118,6 +4118,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>
             <numerusform>Mengekstrak media untuk %n kata</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Kesalahan tak terduga: %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -5473,7 +5477,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>Unduhan</translation>
     </message>
     <message>
         <source>Single</source>
@@ -5495,11 +5499,11 @@ Lanjutkan?</translation>
     <name>MediaDownloader</name>
     <message>
         <source>Downloading</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh</translation>
     </message>
     <message>
         <source>Processing</source>
-        <translation type="unfinished">Memproses</translation>
+        <translation>Memproses</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -7051,7 +7055,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>%1 — %2</source>
-        <translation type="unfinished" />
+        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -7063,7 +7067,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Could not check the installed resources: </source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat memeriksa sumber daya yang terpasang: </translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -7071,11 +7075,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 siap: %2</translation>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation type="unfinished" />
+        <translation>%1: belum disiapkan (opsional)</translation>
     </message>
     <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
@@ -7651,15 +7655,15 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Dictionary</source>
-        <translation type="unfinished" />
+        <translation>Kamus</translation>
     </message>
     <message>
         <source>Frequency</source>
-        <translation type="unfinished">Frekuensi</translation>
+        <translation>Frekuensi</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">Aksen nada</translation>
+        <translation>Aksen nada</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -8072,12 +8076,12 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
-        <source>That folder could not be read.</source>
-        <translation>Folder tersebut tidak dapat dibaca.</translation>
-    </message>
-    <message>
         <source>No video or audio files were found in that folder.</source>
         <translation>Tidak ada berkas video atau audio yang ditemukan di folder tersebut.</translation>
+    </message>
+    <message>
+        <source>That folder could not be read.</source>
+        <translation>Folder tersebut tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -8394,10 +8398,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Folder subtitel tersebut sudah tidak ada.</translation>
     </message>
     <message>
-        <source>That video folder could not be read.</source>
-        <translation>Folder video tersebut tidak dapat dibaca.</translation>
-    </message>
-    <message>
         <source>Matched %1 of %2 video files.</source>
         <translation>Mencocokkan %1 dari %2 berkas video.</translation>
     </message>
@@ -8408,6 +8408,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation>Tidak ada berkas subtitel yang dapat dicocokkan dengan berkas video mana pun di folder tersebut.</translation>
+    </message>
+    <message>
+        <source>That video folder could not be read.</source>
+        <translation>Folder video tersebut tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Retiming file %1 of %2</source>
@@ -9101,27 +9105,27 @@ Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya da
     </message>
     <message>
         <source>+ Previous line</source>
-        <translation type="unfinished" />
+        <translation>+ Baris sebelumnya</translation>
     </message>
     <message>
         <source>+ Next line</source>
-        <translation type="unfinished" />
+        <translation>+ Baris berikutnya</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished" />
+        <translation>Setel ulang baris</translation>
     </message>
     <message>
         <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>Gabungkan baris subtitel sebelumnya ke kalimat dan klip media kata ini. Nonaktif jika tidak ada baris sebelumnya atau klip gabungan akan melebihi %1 detik.</translation>
     </message>
     <message>
         <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>Gabungkan baris subtitel berikutnya ke kalimat dan klip media kata ini. Nonaktif jika tidak ada baris berikutnya atau klip gabungan akan melebihi %1 detik.</translation>
     </message>
     <message>
         <source>Restore this word's original single-line sentence and clip window.</source>
-        <translation type="unfinished" />
+        <translation>Kembalikan kalimat satu baris dan rentang klip asli kata ini.</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9243,7 +9247,7 @@ Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya da
     </message>
     <message>
         <source>Auto JA subs (dub audio)</source>
-        <translation type="unfinished" />
+        <translation>Subtitel JA otomatis (audio sulih suara)</translation>
     </message>
     <message>
         <source>Checking</source>

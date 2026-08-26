@@ -2061,11 +2061,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Download videos or audio</source>
-        <translation type="unfinished" />
+        <translation>下载视频或音频</translation>
     </message>
     <message>
         <source>Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. Works with any site yt-dlp supports.</source>
-        <translation type="unfinished" />
+        <translation>使用 yt-dlp 将链接中的视频、音频或字幕保存到文件夹，不进行挖词。支持 yt-dlp 支持的所有网站。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2700,6 +2700,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>No media files were found in that folder.</source>
         <translation>该文件夹中未找到媒体文件。</translation>
+    </message>
+    <message>
+        <source>That media folder could not be read.</source>
+        <translation>无法读取该媒体文件夹。</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
@@ -3675,201 +3679,201 @@ Files on disk will be left untouched because the folder could not be proven to b
     <name>DownloadTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完成：</translation>
+        <translation>完成：</translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">已跳过</translation>
+        <translation>已跳过</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">已跳过：</translation>
+        <translation>已跳过：</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失败——请查看日志</translation>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Some URLs could not be downloaded.</source>
-        <translation type="unfinished" />
+        <translation>部分链接下载失败。</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded</source>
-        <translation type="unfinished" />
+        <translation>完成——已下载 %1 个</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded, %2 already present</source>
-        <translation type="unfinished" />
+        <translation>完成——已下载 %1 个，%2 个已存在</translation>
     </message>
     <message>
         <source>Nothing downloaded — all %1 already present in the download folder.</source>
-        <translation type="unfinished" />
+        <translation>未下载任何内容——这 %1 个在下载文件夹中都已存在。</translation>
     </message>
     <message>
         <source>Select Download Folder</source>
-        <translation type="unfinished" />
+        <translation>选择下载文件夹</translation>
     </message>
     <message>
         <source>Media download</source>
-        <translation type="unfinished" />
+        <translation>媒体下载</translation>
     </message>
     <message>
         <source>URLs</source>
-        <translation type="unfinished" />
+        <translation>链接</translation>
     </message>
     <message>
         <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
-        <translation type="unfinished" />
+        <translation>未找到 yt-dlp。请在“设置 → YouTube”中安装或更新，以启用下载。</translation>
     </message>
     <message>
         <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
-        <translation type="unfinished" />
+        <translation>从 yt-dlp 支持的任意网站下载视频或音频，不进行挖词。</translation>
     </message>
     <message>
         <source>One URL per line</source>
-        <translation type="unfinished" />
+        <translation>每行一个链接</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">选项</translation>
+        <translation>选项</translation>
     </message>
     <message>
         <source>Quality:</source>
-        <translation type="unfinished" />
+        <translation>画质：</translation>
     </message>
     <message>
         <source>Best available</source>
-        <translation type="unfinished" />
+        <translation>最佳画质</translation>
     </message>
     <message>
         <source>Up to 1080p</source>
-        <translation type="unfinished" />
+        <translation>最高 1080p</translation>
     </message>
     <message>
         <source>Up to 720p</source>
-        <translation type="unfinished" />
+        <translation>最高 720p</translation>
     </message>
     <message>
         <source>Audio only (MP3)</source>
-        <translation type="unfinished" />
+        <translation>仅音频 (MP3)</translation>
     </message>
     <message>
         <source>Audio only (M4A)</source>
-        <translation type="unfinished" />
+        <translation>仅音频 (M4A)</translation>
     </message>
     <message>
         <source>Custom format:</source>
-        <translation type="unfinished" />
+        <translation>自定义格式：</translation>
     </message>
     <message>
         <source>Optional yt-dlp format string</source>
-        <translation type="unfinished" />
+        <translation>可选的 yt-dlp 格式字符串</translation>
     </message>
     <message>
         <source>When set, the quality preset above is ignored.</source>
-        <translation type="unfinished" />
+        <translation>设置后将忽略上面的画质预设。</translation>
     </message>
     <message>
         <source>Download subtitles</source>
-        <translation type="unfinished" />
+        <translation>下载字幕</translation>
     </message>
     <message>
         <source>Save subtitles next to the media file. Prefers manual subtitles, falls back to automatic.</source>
-        <translation type="unfinished" />
+        <translation>将字幕保存在媒体文件旁边。优先使用人工字幕，没有时使用自动字幕。</translation>
     </message>
     <message>
         <source>Languages:</source>
-        <translation type="unfinished" />
+        <translation>语言：</translation>
     </message>
     <message>
         <source>Comma-separated language codes, e.g. ja,en</source>
-        <translation type="unfinished" />
+        <translation>以逗号分隔的语言代码，例如 ja,en</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
-        <translation type="unfinished" />
+        <translation>嵌入缩略图</translation>
     </message>
     <message>
         <source>Embed title and metadata</source>
-        <translation type="unfinished" />
+        <translation>嵌入标题和元数据</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">输出</translation>
+        <translation>输出</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">输出：</translation>
+        <translation>输出：</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">选择文件夹…</translation>
+        <translation>选择文件夹…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">重置</translation>
+        <translation>重置</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>下载</translation>
     </message>
     <message>
         <source>Download folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>下载文件夹不可写入。</translation>
     </message>
     <message>
         <source>Check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>请检查 %1 的权限。</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
-        <translation type="unfinished" />
+        <translation>有些行不是有效的链接。</translation>
     </message>
     <message>
         <source>Paste at least one URL to download.</source>
-        <translation type="unfinished" />
+        <translation>请至少粘贴一个要下载的链接。</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>正在下载第 %1 个，共 %2 个</translation>
     </message>
 </context><context>
     <name>DownloadWorker</name>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished" />
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Already downloaded</source>
-        <translation type="unfinished" />
+        <translation>已下载</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -4092,10 +4096,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>错误：%1</translation>
     </message>
     <message>
-        <source>Unexpected error: %1</source>
-        <translation>意外错误：%1</translation>
-    </message>
-    <message>
         <source>No words selected for card creation</source>
         <translation>未选择用于创建卡片的单词</translation>
     </message>
@@ -4118,6 +4118,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>
             <numerusform>已为 %n 个单词提取媒体</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>意外错误：%1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -5473,7 +5477,7 @@ Continue?</source>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>下载</translation>
     </message>
     <message>
         <source>Single</source>
@@ -5495,11 +5499,11 @@ Continue?</source>
     <name>MediaDownloader</name>
     <message>
         <source>Downloading</source>
-        <translation type="unfinished" />
+        <translation>正在下载</translation>
     </message>
     <message>
         <source>Processing</source>
-        <translation type="unfinished">处理中</translation>
+        <translation>处理中</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -7051,7 +7055,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>%1 — %2</source>
-        <translation type="unfinished" />
+        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -7063,7 +7067,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Could not check the installed resources: </source>
-        <translation type="unfinished" />
+        <translation>无法检查已安装的资源：</translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -7071,11 +7075,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 已就绪：%2</translation>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation type="unfinished" />
+        <translation>%1：未设置（可选）</translation>
     </message>
     <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
@@ -7651,15 +7655,15 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Dictionary</source>
-        <translation type="unfinished" />
+        <translation>词典</translation>
     </message>
     <message>
         <source>Frequency</source>
-        <translation type="unfinished">词频</translation>
+        <translation>词频</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">音调</translation>
+        <translation>音调</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -8072,12 +8076,12 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>该文件夹已不存在。</translation>
     </message>
     <message>
-        <source>That folder could not be read.</source>
-        <translation>该文件夹无法读取。</translation>
-    </message>
-    <message>
         <source>No video or audio files were found in that folder.</source>
         <translation>该文件夹中未找到任何视频或音频文件。</translation>
+    </message>
+    <message>
+        <source>That folder could not be read.</source>
+        <translation>该文件夹无法读取。</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -8394,10 +8398,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>该字幕文件夹已不存在。</translation>
     </message>
     <message>
-        <source>That video folder could not be read.</source>
-        <translation>该视频文件夹无法读取。</translation>
-    </message>
-    <message>
         <source>Matched %1 of %2 video files.</source>
         <translation>已匹配 %2 个视频文件中的 %1 个。</translation>
     </message>
@@ -8408,6 +8408,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation>无法将这些文件夹中的任何字幕文件与视频文件匹配。</translation>
+    </message>
+    <message>
+        <source>That video folder could not be read.</source>
+        <translation>该视频文件夹无法读取。</translation>
     </message>
     <message>
         <source>Retiming file %1 of %2</source>
@@ -9101,27 +9105,27 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
     <message>
         <source>+ Previous line</source>
-        <translation type="unfinished" />
+        <translation>+ 上一行</translation>
     </message>
     <message>
         <source>+ Next line</source>
-        <translation type="unfinished" />
+        <translation>+ 下一行</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished" />
+        <translation>重置行</translation>
     </message>
     <message>
         <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>将上一条字幕合并到该单词的例句和媒体片段中。没有上一行，或合并后的片段超过 %1 秒时不可用。</translation>
     </message>
     <message>
         <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>将下一条字幕合并到该单词的例句和媒体片段中。没有下一行，或合并后的片段超过 %1 秒时不可用。</translation>
     </message>
     <message>
         <source>Restore this word's original single-line sentence and clip window.</source>
-        <translation type="unfinished" />
+        <translation>恢复该单词原本的单行例句和片段范围。</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9243,7 +9247,7 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
     <message>
         <source>Auto JA subs (dub audio)</source>
-        <translation type="unfinished" />
+        <translation>自动 JA 字幕（配音音轨）</translation>
     </message>
     <message>
         <source>Checking</source>

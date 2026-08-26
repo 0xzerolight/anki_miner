@@ -2687,6 +2687,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>That media folder could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Matched %1 of %2 media files.</source>
         <translation type="unfinished" />
     </message>
@@ -4068,10 +4072,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Unexpected error: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>No words selected for card creation</source>
         <translation type="unfinished" />
     </message>
@@ -4094,6 +4094,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished">
             <numerusform />
         </translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation type="unfinished" />
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -8016,11 +8020,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>That folder could not be read.</source>
+        <source>No video or audio files were found in that folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No video or audio files were found in that folder.</source>
+        <source>That folder could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8338,10 +8342,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>That video folder could not be read.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Matched %1 of %2 video files.</source>
         <translation type="unfinished" />
     </message>
@@ -8351,6 +8351,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>No subtitle file could be matched to any video file in those folders.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That video folder could not be read.</source>
         <translation type="unfinished" />
     </message>
     <message>

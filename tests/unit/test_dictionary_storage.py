@@ -14,7 +14,6 @@ from anki_miner.services.dictionary.storage import (
     _BIND_CHUNK,
     _LOOKUP_LIMIT,
     _LOOKUP_MANY_CHUNK,
-    _LOOKUP_MANY_ROW_CAP,
     COMMON_TAG_CATEGORIES,
     SCHEMA_VERSION,
     AttestRow,
@@ -974,42 +973,29 @@ class TestPerfGuards:
         finally:
             conn.close()
 
-    def test_common_reading_batch_fetch_bounded(self, tmp_path: Path):
-        """A common kana reading shared by hundreds of rows must not pull them
-        all into one fetchall() — each word's own SQL fetch is row-capped
-        (_LOOKUP_MANY_ROW_CAP), well above _LOOKUP_LIMIT so homograph scoping
-        still finds its top _LOOKUP_LIMIT survivors, but nowhere near "every
-        row that shares the reading"."""
+    def test_common_reading_batch_matches_single_lookup(self, tmp_path: Path):
+        """A kana reading shared by a thousand rows still resolves identically
+        through ``lookup_many`` and ``lookup``.
+
+        A SQL row cap on the batched fetch would truncate BEFORE homograph
+        scoping and could hide a survivor ranked past it, so there is none —
+        the whole candidate pool is fetched, in one round trip, and the pool
+        cap is applied in Python afterwards.
+        """
         db_path = tmp_path / "t.sqlite"
         create_index(db_path)
-        n = _LOOKUP_MANY_ROW_CAP * 2
+        n = 1000
         rows = [DictRow(term=f"漢字{i}", reading="する", content=f"<div>c{i}</div>", sequence=i) for i in range(n)]
         rows.append(DictRow(term="食べる", reading="たべる", content="<div>eat</div>", sequence=n))
         bulk_insert(db_path, rows)
         conn = open_readonly(db_path)
         try:
-            fetch_sizes: list[int] = []
+            spy = _ExecSpy(conn)
+            result = lookup_many(spy, [("する", None), ("食べる", None)])
 
-            class _FetchSpyCursor:
-                def __init__(self, cursor):
-                    self._cursor = cursor
-
-                def fetchall(self):
-                    rows = self._cursor.fetchall()
-                    fetch_sizes.append(len(rows))
-                    return rows
-
-            class _FetchSpyConn:
-                def __init__(self, conn):
-                    self._conn = conn
-
-                def execute(self, *args, **kwargs):
-                    return _FetchSpyCursor(self._conn.execute(*args, **kwargs))
-
-            result = lookup_many(_FetchSpyConn(conn), [("する", None), ("食べる", None)])
-
-            assert len(fetch_sizes) == 1  # still one round trip
-            assert fetch_sizes[0] < n  # bounded, not the whole 1000-row pool
+            assert spy.calls == 1  # one round trip for the whole chunk
+            assert result["する"] == lookup(conn, "する")
+            assert result["食べる"] == lookup(conn, "食べる")
             assert len(result["する"]) == _LOOKUP_LIMIT
             assert len(result["食べる"]) == 1
         finally:

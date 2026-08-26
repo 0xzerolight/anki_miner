@@ -104,19 +104,13 @@ _SCHEMA_SQL = _TABLES_SQL + _LOOKUP_INDEXES_SQL
 #
 # The pool cap is applied in PYTHON (``[:_LOOKUP_LIMIT]``) AFTER the render-path
 # homograph scope (Rule A/B, U2) filters rows, in both ``lookup`` and
-# ``lookup_many``. ``lookup``'s own SQL fetch stays unbounded — capping there
-# would truncate before scoping and could hide a survivor ranked past the cap.
-#
-# ``lookup_many`` cannot afford that same unbounded fetch (a hyper-common kana
-# reading can attest thousands of full-content rows across a merged index), so
-# its per-word SQL fetch IS capped, at ``_LOOKUP_MANY_ROW_CAP`` — see that
-# constant. With ``scope_homographs=False`` (the existence/attestation
-# probes — no scoping filter runs) the two are exactly equal whenever a word's
-# candidate count stays under that cap, true of everything but a handful of
-# hyper-common readings. With scoping on, exact parity additionally requires
-# homograph scoping not remove more than ``_LOOKUP_MANY_ROW_CAP - _LOOKUP_LIMIT``
-# leading candidates before finding the top ``_LOOKUP_LIMIT`` survivors — true
-# of any realistic dictionary, not provably true of adversarial data.
+# ``lookup_many``. Neither one caps rows in SQL: capping there would truncate
+# before scoping and could hide a survivor ranked past the cap, so
+# ``lookup_many`` is row-for-row identical to ``lookup`` on every input, not
+# merely on inputs below some threshold. A hyper-common kana reading attesting
+# thousands of full-content rows is paid for in memory instead; the chunk size
+# (``_LOOKUP_MANY_CHUNK``) is what bounds how many such words can land in one
+# fetchall().
 _LOOKUP_LIMIT = 20
 
 # Reading-boost ranking. Ported from Yomitan
@@ -630,9 +624,8 @@ def lookup(
     # rows: (content, tags, sequence, term). Scope homographs (Rule A/A′/B) over
     # the ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
     # filter-before-cap order ``lookup_many`` uses. Row-for-row equal to
-    # ``lookup_many`` whenever the word's candidate count stays under
-    # ``_LOOKUP_MANY_ROW_CAP`` (see the ``_LOOKUP_LIMIT`` comment above) — this
-    # fetch itself stays unbounded, unlike ``lookup_many``'s per-word SQL cap.
+    # ``lookup_many`` on every input: neither fetch caps rows in SQL (see the
+    # ``_LOOKUP_LIMIT`` comment above).
     keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows], normalized_lemma)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
@@ -674,27 +667,20 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
 # _ATTEST_READING_CHUNK instead — see that constant.
 _BIND_CHUNK = 450
 
-# lookup_many binds 6 placeholders per word (req_idx, term, folded term, term,
-# folded boost, row cap) into ONE UNION ALL statement; keep 6 * _LOOKUP_MANY_CHUNK
-# comfortably under the same 999-variable cap.
+# lookup_many binds 3 placeholders per word (req_idx, term, folded term) into
+# ONE UNION ALL statement, so the 999-variable cap is not the binding
+# constraint here. The chunk stays deliberately small because each word's
+# subquery is UNBOUNDED (see lookup_many): fewer words per round trip is what
+# bounds how many hyper-common-reading collisions can compound into one
+# fetchall() of full-content rows.
 _LOOKUP_MANY_CHUNK = 150
 
-# Per-word SQL row cap for lookup_many's batched fetch — distinct from
-# _LOOKUP_LIMIT, the pool size returned to the caller after homograph scoping.
-# A common kana reading can attest thousands of rows across a large merged
-# dictionary index; fetching that unbounded for every word sharing a chunk
-# spikes memory on full-content rows. Each word's own subquery is capped here
-# instead, with generous headroom over _LOOKUP_LIMIT so the homograph scope
-# (which runs AFTER this fetch and can remove leading candidates) still finds
-# its top _LOOKUP_LIMIT survivors inside the cap on any real dictionary.
-_LOOKUP_MANY_ROW_CAP = 500
-
 # attest_detail must see EVERY attesting row per word (commonness/quality
-# verdicts need completeness, unlike lookup_many's already-lossy display
-# pool), so its reading arm cannot cap rows-per-word. Batching fewer words per
-# round trip instead bounds how many separate common-reading collisions can
-# compound into one fetchall() — the term-only arm keeps _BIND_CHUNK since an
-# exact headword repeating at that scale is far rarer.
+# verdicts need completeness, unlike lookup_many's _LOOKUP_LIMIT display
+# pool). Batching fewer words per round trip bounds how many separate
+# common-reading collisions can compound into one fetchall() — the term-only
+# arm keeps _BIND_CHUNK since an exact headword repeating at that scale is far
+# rarer.
 _ATTEST_READING_CHUNK = 100
 
 
@@ -709,14 +695,12 @@ def lookup_many(
     ``pairs`` is a list of ``(word, reading | None)`` — each word's contextual
     reading boosts *that word's own bucket* (``None`` = wildcard, no boost).
     Runs ONE query per chunk — a ``UNION ALL`` of one ``_LOOKUP_SQL``-shaped
-    subquery per word, each row-capped at ``_LOOKUP_MANY_ROW_CAP`` — instead
-    of one query per word, then reproduces the pool cap in Python so each
-    per-word result is byte-identical, row-for-row, to
-    ``lookup(conn, word, reading)`` (for any dictionary where a word's own
-    candidate count, before homograph scoping, stays under the row cap —
-    true of everything but a handful of hyper-common kana readings, where the
-    generous headroom over ``_LOOKUP_LIMIT`` keeps the visible result the same
-    in practice).
+    subquery per word — instead of one query per word, then reproduces
+    ``_LOOKUP_SQL``'s ordering and the pool cap in Python so each per-word
+    result is byte-identical, row-for-row, to ``lookup(conn, word, reading)``
+    on every input. The per-word fetch is unbounded on purpose: see the
+    ``_LOOKUP_LIMIT`` comment for why a SQL row cap cannot preserve that
+    parity.
 
     ``lemmas`` optionally maps a requested word to its token's UniDic lemma,
     threaded into the Rule A′ homograph scope per word (see
@@ -757,15 +741,16 @@ def lookup_many(
     for start in range(0, len(unique_words), _LOOKUP_MANY_CHUNK):
         chunk = unique_words[start : start + _LOOKUP_MANY_CHUNK]
 
-        # One _LOOKUP_SQL-shaped, row-capped subquery per word, tagged with its
-        # position in ``chunk`` (req_idx) so each fetched row can be routed
-        # back to its own word without any reverse-mapping: a row satisfies
-        # exactly the subquery that fetched it, term match or reading match,
-        # collapsed to one row per word by SQL's own ``OR`` (matching
-        # _LOOKUP_SQL's "term=? OR reading=?" semantics — a dual-match row
-        # still appears once). Capping per word (not the whole chunk) is what
-        # keeps one hyper-common kana reading from pulling every matching
-        # full-content row into this fetchall().
+        # One _LOOKUP_SQL-shaped subquery per word, tagged with its position in
+        # ``chunk`` (req_idx) so each fetched row can be routed back to its own
+        # word without any reverse-mapping: a row satisfies exactly the
+        # subquery that fetched it, term match or reading match, collapsed to
+        # one row per word by SQL's own ``OR`` (matching _LOOKUP_SQL's
+        # "term=? OR reading=?" semantics — a dual-match row still appears
+        # once). The fetch is deliberately unbounded, exactly as ``lookup``'s
+        # is: a SQL row cap would truncate BEFORE homograph scoping and could
+        # hide a survivor ranked past it. Ordering is reproduced in Python
+        # below, so no ORDER BY is needed here either.
         subqueries: list[str] = []
         params: list[object] = []
         for idx, w in enumerate(chunk):
@@ -776,13 +761,10 @@ def lookup_many(
             # matches.
             folded_term = katakana_to_hiragana(normalized)
             subqueries.append(
-                "SELECT * FROM ("
                 "SELECT ? AS req_idx, id, term, reading, content, tags, score, sequence FROM entries "
-                "WHERE term = ? OR reading = ? "
-                "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id "
-                "LIMIT ?)"
+                "WHERE term = ? OR reading = ?"
             )
-            params.extend([idx, normalized, folded_term, normalized, boost_by_word[w], _LOOKUP_MANY_ROW_CAP])
+            params.extend([idx, normalized, folded_term])
         sql = " UNION ALL ".join(subqueries)
         rows = conn.execute(sql, params).fetchall()
 

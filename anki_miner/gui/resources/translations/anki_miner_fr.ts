@@ -2063,11 +2063,11 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>Download videos or audio</source>
-        <translation type="unfinished" />
+        <translation>Télécharger des vidéos ou de l’audio</translation>
     </message>
     <message>
         <source>Save videos, audio or subtitles from a URL to a folder using yt-dlp, without mining. Works with any site yt-dlp supports.</source>
-        <translation type="unfinished" />
+        <translation>Enregistrez des vidéos, de l’audio ou des sous-titres depuis une URL vers un dossier avec yt-dlp, sans extraction. Fonctionne avec tous les sites pris en charge par yt-dlp.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2702,6 +2702,10 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     <message>
         <source>No media files were found in that folder.</source>
         <translation>Aucun fichier multimédia n’a été trouvé dans ce dossier.</translation>
+    </message>
+    <message>
+        <source>That media folder could not be read.</source>
+        <translation>Ce dossier de médias n’a pas pu être lu.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
@@ -3677,201 +3681,201 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <name>DownloadTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progression</translation>
+        <translation>Progression</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Terminé</translation>
+        <translation>Terminé</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Terminé : </translation>
+        <translation>Terminé : </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Ignoré</translation>
+        <translation>Ignoré</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Ignoré : </translation>
+        <translation>Ignorés : </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Annuler</translation>
+        <translation>Annuler</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Annulation…</translation>
+        <translation>Annulation…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Annulé</translation>
+        <translation>Annulé</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Échec — voir le journal</translation>
+        <translation>Échec — voir le journal</translation>
     </message>
     <message>
         <source>Some URLs could not be downloaded.</source>
-        <translation type="unfinished" />
+        <translation>Certaines URL n’ont pas pu être téléchargées.</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded</source>
-        <translation type="unfinished" />
+        <translation>Terminé — %1 téléchargés</translation>
     </message>
     <message>
         <source>Complete — %1 downloaded, %2 already present</source>
-        <translation type="unfinished" />
+        <translation>Terminé — %1 téléchargés, %2 déjà présents</translation>
     </message>
     <message>
         <source>Nothing downloaded — all %1 already present in the download folder.</source>
-        <translation type="unfinished" />
+        <translation>Rien de téléchargé — les %1 sont déjà présents dans le dossier de téléchargement.</translation>
     </message>
     <message>
         <source>Select Download Folder</source>
-        <translation type="unfinished" />
+        <translation>Choisir le dossier de téléchargement</translation>
     </message>
     <message>
         <source>Media download</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement de médias</translation>
     </message>
     <message>
         <source>URLs</source>
-        <translation type="unfinished" />
+        <translation>URL</translation>
     </message>
     <message>
         <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp est introuvable. Installez-le ou mettez-le à jour dans Paramètres → YouTube pour activer les téléchargements.</translation>
     </message>
     <message>
         <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
-        <translation type="unfinished" />
+        <translation>Téléchargez des vidéos ou de l’audio depuis tous les sites pris en charge par yt-dlp, sans extraction.</translation>
     </message>
     <message>
         <source>One URL per line</source>
-        <translation type="unfinished" />
+        <translation>Une URL par ligne</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">Options</translation>
+        <translation>Options</translation>
     </message>
     <message>
         <source>Quality:</source>
-        <translation type="unfinished" />
+        <translation>Qualité :</translation>
     </message>
     <message>
         <source>Best available</source>
-        <translation type="unfinished" />
+        <translation>Meilleure disponible</translation>
     </message>
     <message>
         <source>Up to 1080p</source>
-        <translation type="unfinished" />
+        <translation>Jusqu’à 1080p</translation>
     </message>
     <message>
         <source>Up to 720p</source>
-        <translation type="unfinished" />
+        <translation>Jusqu’à 720p</translation>
     </message>
     <message>
         <source>Audio only (MP3)</source>
-        <translation type="unfinished" />
+        <translation>Audio seul (MP3)</translation>
     </message>
     <message>
         <source>Audio only (M4A)</source>
-        <translation type="unfinished" />
+        <translation>Audio seul (M4A)</translation>
     </message>
     <message>
         <source>Custom format:</source>
-        <translation type="unfinished" />
+        <translation>Format personnalisé :</translation>
     </message>
     <message>
         <source>Optional yt-dlp format string</source>
-        <translation type="unfinished" />
+        <translation>Chaîne de format yt-dlp (facultatif)</translation>
     </message>
     <message>
         <source>When set, the quality preset above is ignored.</source>
-        <translation type="unfinished" />
+        <translation>Si elle est renseignée, le préréglage de qualité ci-dessus est ignoré.</translation>
     </message>
     <message>
         <source>Download subtitles</source>
-        <translation type="unfinished" />
+        <translation>Télécharger les sous-titres</translation>
     </message>
     <message>
         <source>Save subtitles next to the media file. Prefers manual subtitles, falls back to automatic.</source>
-        <translation type="unfinished" />
+        <translation>Enregistrer les sous-titres à côté du fichier média. Préfère les sous-titres manuels et se rabat sur les automatiques.</translation>
     </message>
     <message>
         <source>Languages:</source>
-        <translation type="unfinished" />
+        <translation>Langues :</translation>
     </message>
     <message>
         <source>Comma-separated language codes, e.g. ja,en</source>
-        <translation type="unfinished" />
+        <translation>Codes de langue séparés par des virgules, par ex. ja,en</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
-        <translation type="unfinished" />
+        <translation>Intégrer la miniature</translation>
     </message>
     <message>
         <source>Embed title and metadata</source>
-        <translation type="unfinished" />
+        <translation>Intégrer le titre et les métadonnées</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Sortie</translation>
+        <translation>Sortie</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Sortie :</translation>
+        <translation>Sortie :</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Choisir un dossier…</translation>
+        <translation>Choisir un dossier…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Réinitialiser</translation>
+        <translation>Réinitialiser</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>Télécharger</translation>
     </message>
     <message>
         <source>Download folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>Le dossier de téléchargement n’est pas accessible en écriture.</translation>
     </message>
     <message>
         <source>Check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>Vérifiez les permissions de %1.</translation>
     </message>
     <message>
         <source>Some lines are not valid URLs.</source>
-        <translation type="unfinished" />
+        <translation>Certaines lignes ne sont pas des URL valides.</translation>
     </message>
     <message>
         <source>Paste at least one URL to download.</source>
-        <translation type="unfinished" />
+        <translation>Collez au moins une URL à télécharger.</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement de %1 sur %2</translation>
     </message>
 </context><context>
     <name>DownloadWorker</name>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished" />
+        <translation>%1 : %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Terminé</translation>
+        <translation>Terminé</translation>
     </message>
     <message>
         <source>Already downloaded</source>
-        <translation type="unfinished" />
+        <translation>Déjà téléchargé</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Annulé</translation>
+        <translation>Annulé</translation>
     </message>
 </context><context>
     <name>EnhancedDialog</name>
@@ -4102,10 +4106,6 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Erreur : %1</translation>
     </message>
     <message>
-        <source>Unexpected error: %1</source>
-        <translation>Erreur inattendue : %1</translation>
-    </message>
-    <message>
         <source>No words selected for card creation</source>
         <translation>Aucun mot sélectionné pour la création de cartes</translation>
     </message>
@@ -4130,6 +4130,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
             <numerusform>Média extrait pour %n mot</numerusform>
             <numerusform>Média extrait pour %n mots</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Unexpected error: %1</source>
+        <translation>Erreur inattendue : %1</translation>
     </message>
     <message numerus="yes">
         <source>Run failed after creating %n card(s); they remain in Anki and can be undone.</source>
@@ -5486,7 +5490,7 @@ Continuer ?</translation>
     </message>
     <message>
         <source>Download</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement</translation>
     </message>
     <message>
         <source>Single</source>
@@ -5508,11 +5512,11 @@ Continuer ?</translation>
     <name>MediaDownloader</name>
     <message>
         <source>Downloading</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement en cours</translation>
     </message>
     <message>
         <source>Processing</source>
-        <translation type="unfinished">Traitement en cours</translation>
+        <translation>Traitement en cours</translation>
     </message>
 </context><context>
     <name>MediaExtractorService</name>
@@ -7064,7 +7068,7 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>%1 — %2</source>
-        <translation type="unfinished" />
+        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
@@ -7076,7 +7080,7 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>Could not check the installed resources: </source>
-        <translation type="unfinished" />
+        <translation>Impossible de vérifier les ressources installées : </translation>
     </message>
     <message>
         <source>Dictionary ready: %1</source>
@@ -7084,11 +7088,11 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>%1 ready: %2</source>
-        <translation type="unfinished" />
+        <translation>%1 prêt : %2</translation>
     </message>
     <message>
         <source>%1: not set up (optional)</source>
-        <translation type="unfinished" />
+        <translation>%1 : non configuré (facultatif)</translation>
     </message>
     <message>
         <source>Download cancelled. Some resources were installed before cancellation.</source>
@@ -7664,15 +7668,15 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>Dictionary</source>
-        <translation type="unfinished" />
+        <translation>Dictionnaire</translation>
     </message>
     <message>
         <source>Frequency</source>
-        <translation type="unfinished">Fréquence</translation>
+        <translation>Fréquence</translation>
     </message>
     <message>
         <source>Pitch accent</source>
-        <translation type="unfinished">Accent de hauteur</translation>
+        <translation>Accent de hauteur</translation>
     </message>
     <message>
         <source>Anki Miner Setup</source>
@@ -8087,12 +8091,12 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ce dossier n'existe plus.</translation>
     </message>
     <message>
-        <source>That folder could not be read.</source>
-        <translation>Ce dossier n'a pas pu être lu.</translation>
-    </message>
-    <message>
         <source>No video or audio files were found in that folder.</source>
         <translation>Aucun fichier vidéo ou audio n'a été trouvé dans ce dossier.</translation>
+    </message>
+    <message>
+        <source>That folder could not be read.</source>
+        <translation>Ce dossier n'a pas pu être lu.</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -8409,10 +8413,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ce dossier de sous-titres n'existe plus.</translation>
     </message>
     <message>
-        <source>That video folder could not be read.</source>
-        <translation>Ce dossier vidéo n'a pas pu être lu.</translation>
-    </message>
-    <message>
         <source>Matched %1 of %2 video files.</source>
         <translation>%1 sur %2 fichiers vidéo appariés.</translation>
     </message>
@@ -8423,6 +8423,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation>Aucun fichier de sous-titres n'a pu être associé à un fichier vidéo dans ces dossiers.</translation>
+    </message>
+    <message>
+        <source>That video folder could not be read.</source>
+        <translation>Ce dossier vidéo n'a pas pu être lu.</translation>
     </message>
     <message>
         <source>Retiming file %1 of %2</source>
@@ -9116,27 +9120,27 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
     </message>
     <message>
         <source>+ Previous line</source>
-        <translation type="unfinished" />
+        <translation>+ Ligne précédente</translation>
     </message>
     <message>
         <source>+ Next line</source>
-        <translation type="unfinished" />
+        <translation>+ Ligne suivante</translation>
     </message>
     <message>
         <source>Reset lines</source>
-        <translation type="unfinished" />
+        <translation>Réinitialiser les lignes</translation>
     </message>
     <message>
         <source>Merge the previous subtitle line into this word's sentence and media clip. Disabled when there is no earlier line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>Fusionne la ligne de sous-titre précédente dans la phrase et le clip de ce mot. Désactivé s’il n’y a pas de ligne antérieure ou si le clip combiné dépasserait %1 secondes.</translation>
     </message>
     <message>
         <source>Merge the next subtitle line into this word's sentence and media clip. Disabled when there is no later line or the combined clip would exceed %1 seconds.</source>
-        <translation type="unfinished" />
+        <translation>Fusionne la ligne de sous-titre suivante dans la phrase et le clip de ce mot. Désactivé s’il n’y a pas de ligne postérieure ou si le clip combiné dépasserait %1 secondes.</translation>
     </message>
     <message>
         <source>Restore this word's original single-line sentence and clip window.</source>
-        <translation type="unfinished" />
+        <translation>Restaure la phrase d’origine sur une seule ligne et la plage du clip de ce mot.</translation>
     </message>
     <message>
         <source>Sentences</source>
@@ -9258,7 +9262,7 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
     </message>
     <message>
         <source>Auto JA subs (dub audio)</source>
-        <translation type="unfinished" />
+        <translation>Sous-titres JA automatiques (audio doublé)</translation>
     </message>
     <message>
         <source>Checking</source>

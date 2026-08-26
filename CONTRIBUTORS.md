@@ -24,13 +24,15 @@ This list is generated automatically — see [.github/workflows/contributors.yml
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/namidanokisetsu"><img src="https://avatars.githubusercontent.com/u/178838775?s=80&v=4" width="80" height="80" alt="@namidanokisetsu"/><br/><sub><b>namidanokisetsu</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/sdobrau"><img src="https://avatars.githubusercontent.com/u/229150011?s=80&v=4" width="80" height="80" alt="@sdobrau"/><br/><sub><b>sdobrau</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/sman68634"><img src="https://avatars.githubusercontent.com/u/68220894?s=80&v=4" width="80" height="80" alt="@sman68634"/><br/><sub><b>sman68634</b></sub></a></td>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/sommepo"><img src="https://avatars.githubusercontent.com/u/130929826?s=80&u=76523f356a40bb065498a98d2d36a691f2bfa3d6&v=4" width="80" height="80" alt="@sommepo"/><br/><sub><b>sommepo</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/StyraxBenzoin"><img src="https://avatars.githubusercontent.com/u/66492803?s=80&u=be73ed24296a0d599a7d947876ef73c91115eaf5&v=4" width="80" height="80" alt="@StyraxBenzoin"/><br/><sub><b>StyraxBenzoin</b></sub></a></td>
-    <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnfree"><img src="https://avatars.githubusercontent.com/u/291092965?s=80&u=fc8863d8d20883cbc4ca5671141e1ae0affa841f&v=4" width="80" height="80" alt="@trnfree"/><br/><sub><b>trnfree</b></sub></a></td>
   </tr>
   <tr>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnfree"><img src="https://avatars.githubusercontent.com/u/291092965?s=80&u=fc8863d8d20883cbc4ca5671141e1ae0affa841f&v=4" width="80" height="80" alt="@trnfree"/><br/><sub><b>trnfree</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/trnkobayashi"><img src="https://avatars.githubusercontent.com/u/117138163?s=80&v=4" width="80" height="80" alt="@trnkobayashi"/><br/><sub><b>trnkobayashi</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/ViniciusTaborda"><img src="https://avatars.githubusercontent.com/u/72284753?s=80&u=121f2d4302b1be7c9116a29d86df5b2a3282e0cb&v=4" width="80" height="80" alt="@ViniciusTaborda"/><br/><sub><b>ViniciusTaborda</b></sub></a></td>
     <td align="center" valign="top" width="12.50%"><a href="https://github.com/webbrain-one"><img src="https://avatars.githubusercontent.com/u/295484252?s=80&u=163e3395cf011ac83c93078607f73a359ee155a3&v=4" width="80" height="80" alt="@webbrain-one"/><br/><sub><b>webbrain-one</b></sub></a></td>
+    <td align="center" valign="top" width="12.50%"><a href="https://github.com/WhoMI7"><img src="https://avatars.githubusercontent.com/u/93109835?s=80&v=4" width="80" height="80" alt="@WhoMI7"/><br/><sub><b>WhoMI7</b></sub></a></td>
   </tr>
 </table>
 <!-- contributors:end -->
