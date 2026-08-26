@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Manual re-trigger. release.yml and publish.yml both refuse to act until a
+  # ci.yml run exists for the exact tagged SHA, and a push event that GitHub
+  # drops (an Actions incident shedding inbound traffic, 2026-08-26) cannot be
+  # redelivered -- leaving an empty commit as the only way to attach CI to a
+  # commit. Dispatch runs against the ref's current HEAD, so the ref being
+  # tagged can be attested without changing it.
+  workflow_dispatch:
 
 # Cancel superseded CI runs on the same ref (a new push to a PR obsoletes the
 # prior run). Safe to cancel: CI has no irreversible side effects.
