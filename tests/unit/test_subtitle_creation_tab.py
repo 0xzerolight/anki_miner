@@ -230,7 +230,10 @@ def test_audio_files_are_collected_from_folder(qtbot, tmp_path):
     tab.folder_mode_button.click()
     tab.folder_selector.set_path(str(tmp_path))
 
-    assert tab._collect_video_files() == [mp3, wav]
+    result: list[list[Path]] = []
+    tab._collect_folder_video_files_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+    assert result[0] == [mp3, wav]
 
 
 def test_unreadable_folder_reports_issue_without_raising(qtbot, tmp_path):
@@ -239,10 +242,12 @@ def test_unreadable_folder_reports_issue_without_raising(qtbot, tmp_path):
     tab.folder_mode_button.click()
     tab.folder_selector.set_path(str(tmp_path))
 
+    result: list[list[Path]] = []
     with patch.object(Path, "iterdir", side_effect=PermissionError("denied")):
-        files = tab._collect_video_files()
+        tab._collect_folder_video_files_async(result.append)
+        qtbot.waitUntil(lambda: bool(result), timeout=3000)
 
-    assert files == []
+    assert result == [[]]
     assert tab.issue_banner().current_issue() is not None
 
 
@@ -653,6 +658,7 @@ def test_file_finished_advances_progress_bar(qtbot, tmp_path):
         patch(_WORKER_CLS, return_value=fake_worker),
     ):
         tab.generate_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     # Bar starts at 0.
     assert tab.progress_widget.progress_bar.value() == 0
@@ -1005,6 +1011,7 @@ def test_file_skipped_advances_progress(qtbot, tmp_path):
         patch(_WORKER_CLS, return_value=fake_worker),
     ):
         tab.generate_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     assert tab.progress_widget.progress_bar.value() == 0
 

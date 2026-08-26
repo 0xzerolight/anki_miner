@@ -251,7 +251,7 @@ def test_single_mode_collects_pair(qtbot, tmp_path):
     tab.video_file_selector.set_path(str(video))
     tab.subtitle_file_selector.set_path(str(sub))
 
-    pairs = tab._collect_pairs()
+    pairs = tab._collect_single_pair()
     assert pairs == [(video, sub)]
 
 
@@ -264,7 +264,7 @@ def test_single_mode_missing_subtitle_warns(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.video_file_selector.set_path(str(video))
 
-    pairs = tab._collect_pairs()
+    pairs = tab._collect_single_pair()
 
     assert tab.issue_banner().current_issue() is not None
     assert pairs == []
@@ -279,7 +279,7 @@ def test_single_mode_missing_video_warns(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.subtitle_file_selector.set_path(str(sub))
 
-    pairs = tab._collect_pairs()
+    pairs = tab._collect_single_pair()
 
     assert tab.issue_banner().current_issue() is not None
     assert pairs == []
@@ -313,10 +313,12 @@ def test_folder_mode_collects_pairs_and_logs_matched(qtbot, tmp_path):
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
     fake_pairs = [FilePair(v1, s1), FilePair(v2, s2)]
+    result: list[list[tuple[Path, Path]]] = []
     with patch(_FIND_PAIRS, return_value=fake_pairs):
-        pairs = tab._collect_pairs()
+        tab._collect_folder_pairs_async(result.append)
+        qtbot.waitUntil(lambda: bool(result), timeout=3000)
 
-    assert pairs == [(v1, s1), (v2, s2)]
+    assert result[0] == [(v1, s1), (v2, s2)]
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Matched 2 of 2" in log_text
 
@@ -353,6 +355,7 @@ def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
         patch(_WORKER_CLS, return_value=fake_worker),
     ):
         tab.retime_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     assert fake_worker._started
     assert "Matched 2 of 2" in tab.log_widget.text_edit.toPlainText()
@@ -379,10 +382,12 @@ def test_folder_mode_unmatched_logs_warning(qtbot, tmp_path):
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
     fake_pairs = [FilePair(v1, s1)]
+    result: list[list[tuple[Path, Path]]] = []
     with patch(_FIND_PAIRS, return_value=fake_pairs):
-        pairs = tab._collect_pairs()
+        tab._collect_folder_pairs_async(result.append)
+        qtbot.waitUntil(lambda: bool(result), timeout=3000)
 
-    assert pairs == [(v1, s1)]
+    assert result[0] == [(v1, s1)]
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Matched 1 of 2" in log_text
     # Independent assertion against the unmatched-warning message text.
@@ -403,23 +408,26 @@ def test_folder_mode_no_pairs_warns(qtbot, tmp_path):
     tab.video_folder_selector.set_path(str(video_folder))
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
+    result: list[list[tuple[Path, Path]]] = []
     with patch(_FIND_PAIRS, return_value=[]):
-        pairs = tab._collect_pairs()
+        tab._collect_folder_pairs_async(result.append)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    assert tab.issue_banner().current_issue() is not None
-    assert pairs == []
+    assert result == [[]]
 
 
 def test_folder_mode_missing_video_folder_warns(qtbot, tmp_path):
-    """No video folder selected → warning, returns []."""
+    """No video folder selected → warning, returns [] — synchronously, before
+    any scan is dispatched (no folder picked yet to scan)."""
     config = _make_config(tmp_path)
     tab = _make_tab(config, qtbot)
     tab.folder_mode_button.click()
 
-    pairs = tab._collect_pairs()
+    result: list[list[tuple[Path, Path]]] = []
+    tab._collect_folder_pairs_async(result.append)
 
     assert tab.issue_banner().current_issue() is not None
-    assert pairs == []
+    assert result == []  # on_pairs never called: bailed before dispatch
 
 
 def test_unreadable_video_folder_reports_issue_without_raising(qtbot, tmp_path):
@@ -433,10 +441,12 @@ def test_unreadable_video_folder_reports_issue_without_raising(qtbot, tmp_path):
     tab.video_folder_selector.set_path(str(video_folder))
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
+    result: list[list[tuple[Path, Path]]] = []
     with patch.object(Path, "iterdir", side_effect=PermissionError("denied")):
-        pairs = tab._collect_pairs()
+        tab._collect_folder_pairs_async(result.append)
+        qtbot.waitUntil(lambda: bool(result), timeout=3000)
 
-    assert pairs == []
+    assert result == [[]]
     assert tab.issue_banner().current_issue() is not None
 
 
@@ -530,6 +540,7 @@ def test_pair_preview_lists_matches_and_unmatched(qtbot, tmp_path):
     tab._on_folder_mode()
     tab.video_folder_selector.set_path(str(video_dir))
     tab.subtitle_folder_selector.set_path(str(sub_dir))
+    qtbot.waitUntil(lambda: tab.pair_preview.count() == 3, timeout=3000)
 
     assert not tab.pair_preview.isHidden()
     items = [tab.pair_preview.item(i).text() for i in range(tab.pair_preview.count())]
@@ -545,7 +556,7 @@ def test_pair_preview_hidden_in_single_file_mode(qtbot, tmp_path):
     tab._on_folder_mode()
     tab.video_folder_selector.set_path(str(video_dir))
     tab.subtitle_folder_selector.set_path(str(sub_dir))
-    assert not tab.pair_preview.isHidden()
+    qtbot.waitUntil(lambda: not tab.pair_preview.isHidden(), timeout=3000)
 
     tab._on_file_mode()
     assert tab.pair_preview.isHidden()
@@ -876,6 +887,7 @@ def test_file_skipped_advances_progress(qtbot, tmp_path):
         patch(_FIND_PAIRS, return_value=fake_pairs),
     ):
         tab.retime_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     assert tab.progress_widget.progress_bar.value() == 0
 
@@ -917,6 +929,7 @@ def test_all_skipped_run_names_the_remedy(qtbot, tmp_path):
         patch(_FIND_PAIRS, return_value=fake_pairs),
     ):
         tab.retime_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in skipped_slots:
         slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
@@ -962,6 +975,7 @@ def test_all_skipped_run_publishes_failed_outcome(qtbot, tmp_path):
         patch(_FIND_PAIRS, return_value=fake_pairs),
     ):
         tab.retime_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in skipped_slots:
         slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
@@ -1005,6 +1019,7 @@ def test_cancelled_all_skipped_run_publishes_cancelled_outcome(qtbot, tmp_path):
         patch(_FIND_PAIRS, return_value=fake_pairs),
     ):
         tab.retime_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in skipped_slots:
         slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
@@ -1047,6 +1062,7 @@ def test_partially_skipped_run_reports_both_counts(qtbot, tmp_path):
         patch(_FIND_PAIRS, return_value=fake_pairs),
     ):
         tab.retime_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in done_slots:
         slot(0, sub1, None)

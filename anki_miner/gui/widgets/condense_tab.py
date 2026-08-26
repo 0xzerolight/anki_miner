@@ -30,7 +30,7 @@ import os
 import shutil
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Collection, cast
+from typing import TYPE_CHECKING, Callable, Collection, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -71,6 +71,7 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.utils.audio_track_detector import AudioStream, SubtitleStream
+    from anki_miner.utils.file_pairing import FilePair
 
 logger = logging.getLogger(__name__)
 
@@ -799,15 +800,36 @@ class CondenseTab(_ToolTabBase):
         # cleared. After the reentrancy guard, before anything that re-raises.
         self.clear_screen_issue()
 
-        # Clear the log before collecting: _collect_items logs the pairing
+        # Clear the log before collecting: pair collection logs the pairing
         # summary ("Matched N of M") we must not wipe afterwards.
         self.log_widget.clear_log()
         self.progress_widget.reset()
 
-        items = self._collect_items()
-        if not items:
+        if not self.media_file_selector.isHidden():
+            # Single-file mode: no directory scan, stays synchronous.
+            items = self._collect_single_item()
+            if not items:
+                return
+            self._continue_condense(items)
             return
 
+        # Folder mode: episode-number pairing scans two directories, which can
+        # stall on a network share — run it off the GUI thread and continue
+        # from its completion callback. Disabled here (not just at
+        # worker-start) so a second click during the scan can't fire a second
+        # concurrent scan.
+        self.condense_button.setEnabled(False)
+
+        def _on_items(items: list[CondenseItem]) -> None:
+            if not items:
+                self.condense_button.setEnabled(True)
+                return
+            self._continue_condense(items)
+
+        self._collect_folder_items_async(_on_items)
+
+    def _continue_condense(self, items: list[CondenseItem]) -> None:
+        """Plan outputs, validate, optionally collect metadata, then start the worker."""
         out_dir = self._custom_output_dir
         output_format = str(self.format_combo.currentData())
         try:
@@ -823,6 +845,7 @@ class CondenseTab(_ToolTabBase):
                     details=details,
                 )
             )
+            self.condense_button.setEnabled(True)
             return
 
         # Pre-run writable check. When out_dir is None every output lands next to
@@ -830,6 +853,7 @@ class CondenseTab(_ToolTabBase):
         check_dir = out_dir if out_dir is not None else items[0].media.parent
         if not os.access(check_dir, os.W_OK):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
+            self.condense_button.setEnabled(True)
             return
 
         # Metadata editor (Issue #113): after every validation so the user
@@ -838,6 +862,7 @@ class CondenseTab(_ToolTabBase):
             prefill = prefill_track_metadata([item.media for item in items])
             dialog = CondenseMetadataDialog([item.media.name for item in items], prefill, parent=self)
             if dialog.exec() != QDialog.DialogCode.Accepted:
+                self.condense_button.setEnabled(True)
                 return
             items = [replace(item, metadata=meta) for item, meta in zip(items, dialog.metadata(), strict=True)]
 
@@ -882,12 +907,6 @@ class CondenseTab(_ToolTabBase):
 
         worker.start()
 
-    def _collect_items(self) -> list[CondenseItem]:
-        """Return the ordered list of items to condense, or [] on validation failure."""
-        if not self.media_file_selector.isHidden():
-            return self._collect_single_item()
-        return self._collect_folder_items()
-
     def _collect_single_item(self) -> list[CondenseItem]:
         media_str = self.media_file_selector.path_or_none()
         sub_str = self.subtitle_file_selector.path_or_none()
@@ -913,20 +932,28 @@ class CondenseTab(_ToolTabBase):
 
         return [CondenseItem(media, external_sub)]
 
-    def _collect_folder_items(self) -> list[CondenseItem]:
+    def _collect_folder_items_async(self, on_items: Callable[[list[CondenseItem]], None]) -> None:
+        """Folder mode: resolve+scan off the GUI thread, then call ``on_items``
+        on the GUI thread with the collected items (``[]`` on failure —
+        screen-issue/log feedback already shown).
+
+        The directory listing(s) can stall on a network share, so only the
+        cheap ``is_dir()`` validation below runs synchronously; the scan
+        itself is dispatched via :func:`run_off_thread`.
+        """
         media_folder_str = self.media_folder_selector.path_or_none()
         sub_folder_str = self.subtitle_folder_selector.path_or_none()
 
         if media_folder_str is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media folder before condensing.")))
-            return []
+            return
 
         media_folder = Path(media_folder_str)
         if not media_folder.is_dir():
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("That media folder no longer exists."), details=media_folder_str)
             )
-            return []
+            return
 
         # Optional subtitle folder → episode-number pairing (condenser extension
         # sets, incl. audio inputs and .vtt).
@@ -936,50 +963,81 @@ class CondenseTab(_ToolTabBase):
                 self.show_screen_issue(
                     ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
                 )
-                return []
-            return self._pair_folder_items(media_folder, sub_folder)
+                return
+            self._pair_folder_items_async(media_folder, sub_folder, on_items)
+            return
 
         # No subtitle folder → per-file auto-detection over the media folder.
-        media_files = sorted(
-            f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
-        )
-        if not media_files:
-            self.show_screen_issue(ScreenIssue(summary=self.tr("No media files were found in that folder.")))
-            return []
-        return [CondenseItem(m, None) for m in media_files]
-
-    def _pair_folder_items(self, media_folder: Path, sub_folder: Path) -> list[CondenseItem]:
-        all_media = sorted(
-            f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
-        )
-        total_media = len(all_media)
-
-        file_pairs = FilePairMatcher.find_pairs_by_episode_number(
-            media_folder,
-            sub_folder,
-            video_extensions=CONDENSE_MEDIA_EXTENSIONS,
-            subtitle_extensions=CONDENSE_SUBTITLE_EXTENSIONS,
-        )
-        n_matched = len(file_pairs)
-
-        self.log_widget.append_success(
-            tr_format(self.tr("Matched %1 of %2 media files."), str(n_matched), str(total_media))
-        )
-
-        if n_matched < total_media:
-            matched_media = {fp.video for fp in file_pairs}
-            n_unmatched = sum(1 for m in all_media if m not in matched_media)
-            self.log_widget.append_error(
-                tr_format(self.tr("Warning: %1 media file(s) could not be matched."), str(n_unmatched))
+        def _scan() -> object:
+            return sorted(
+                f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
             )
 
-        if not file_pairs:
+        def _apply(result: object) -> None:
+            media_files = cast("list[Path]", result)
+            if not media_files:
+                self.show_screen_issue(ScreenIssue(summary=self.tr("No media files were found in that folder.")))
+                on_items([])
+                return
+            on_items([CondenseItem(m, None) for m in media_files])
+
+        def _on_error(_msg: str) -> None:
             self.show_screen_issue(
-                ScreenIssue(summary=self.tr("No subtitle file could be matched to any media file in those folders."))
+                ScreenIssue(summary=self.tr("That media folder could not be read."), details=media_folder_str)
             )
-            return []
+            on_items([])
 
-        return [CondenseItem(fp.video, fp.subtitle) for fp in file_pairs]
+        run_off_thread(self, _scan, _apply, _on_error)
+
+    def _pair_folder_items_async(
+        self, media_folder: Path, sub_folder: Path, on_items: Callable[[list[CondenseItem]], None]
+    ) -> None:
+        def _scan() -> object:
+            all_media = sorted(
+                f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
+            )
+            file_pairs = FilePairMatcher.find_pairs_by_episode_number(
+                media_folder,
+                sub_folder,
+                video_extensions=CONDENSE_MEDIA_EXTENSIONS,
+                subtitle_extensions=CONDENSE_SUBTITLE_EXTENSIONS,
+            )
+            return all_media, file_pairs
+
+        def _apply(result: object) -> None:
+            all_media, file_pairs = cast("tuple[list[Path], list[FilePair]]", result)
+            total_media = len(all_media)
+            n_matched = len(file_pairs)
+
+            self.log_widget.append_success(
+                tr_format(self.tr("Matched %1 of %2 media files."), str(n_matched), str(total_media))
+            )
+
+            if n_matched < total_media:
+                matched_media = {fp.video for fp in file_pairs}
+                n_unmatched = sum(1 for m in all_media if m not in matched_media)
+                self.log_widget.append_error(
+                    tr_format(self.tr("Warning: %1 media file(s) could not be matched."), str(n_unmatched))
+                )
+
+            if not file_pairs:
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr("No subtitle file could be matched to any media file in those folders.")
+                    )
+                )
+                on_items([])
+                return
+
+            on_items([CondenseItem(fp.video, fp.subtitle) for fp in file_pairs])
+
+        def _on_error(_msg: str) -> None:
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That media folder could not be read."), details=str(media_folder))
+            )
+            on_items([])
+
+        run_off_thread(self, _scan, _apply, _on_error)
 
     # ------------------------------------------------------------------
     # Worker signal slots

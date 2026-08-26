@@ -22,6 +22,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import Callable, cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -37,6 +38,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.qt_helpers import reveal_settings
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
@@ -377,11 +379,30 @@ class SubtitleCreationTab(_ToolTabBase):
         # that re-raises.
         self.clear_screen_issue()
 
-        # Collect media file list
-        video_files = self._collect_video_files()
-        if not video_files:
+        if not self.file_selector.isHidden():
+            # Single-file mode: no directory scan, stays synchronous.
+            video_files = self._collect_single_video_file()
+            if not video_files:
+                return
+            self._continue_generate(video_files)
             return
 
+        # Folder mode: the directory listing can stall on a network share —
+        # run it off the GUI thread and continue from its completion
+        # callback. Disabled here (not just at worker-start) so a second
+        # click during the scan can't fire a second concurrent scan.
+        self.generate_button.setEnabled(False)
+
+        def _on_files(video_files: list[Path]) -> None:
+            if not video_files:
+                self.generate_button.setEnabled(True)
+                return
+            self._continue_generate(video_files)
+
+        self._collect_folder_video_files_async(_on_files)
+
+    def _continue_generate(self, video_files: list[Path]) -> None:
+        """Resolve the output dir, check the model + writability, then start the worker."""
         # Resolve output directory
         if self._custom_output_dir is not None:
             out_dir: Path | None = self._custom_output_dir
@@ -395,6 +416,7 @@ class SubtitleCreationTab(_ToolTabBase):
         check_dir = out_dir if out_dir is not None else video_files[0].parent
         if not os.access(check_dir, os.W_OK):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
+            self.generate_button.setEnabled(True)
             return
 
         # Model-downloaded guard — mirrors the runtime engine cascade
@@ -421,6 +443,7 @@ class SubtitleCreationTab(_ToolTabBase):
                 ),
                 action=lambda: reveal_settings(self, "subtitles"),
             )
+            self.generate_button.setEnabled(True)
             return
 
         # Build and start worker
@@ -454,42 +477,56 @@ class SubtitleCreationTab(_ToolTabBase):
 
         worker.start()
 
-    def _collect_video_files(self) -> list[Path]:
-        """Return supported media files to process, or [] on validation failure."""
-        if not self.file_selector.isHidden():
-            path_str = self.file_selector.path_or_none()
-            if path_str is None:
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("Choose a video or audio file before generating subtitles."))
-                )
-                return []
-            p = Path(path_str)
-            if not p.is_file():
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That media file no longer exists."), details=path_str)
-                )
-                return []
-            return [p]
-        else:
-            path_str = self.folder_selector.path_or_none()
-            if path_str is None:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a folder before generating subtitles.")))
-                return []
-            folder = Path(path_str)
-            if not folder.is_dir():
-                self.show_screen_issue(ScreenIssue(summary=self.tr("That folder no longer exists."), details=path_str))
-                return []
-            try:
-                files = sorted(f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in _MEDIA_EXTENSIONS)
-            except OSError:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be read."), details=path_str))
-                return []
+    def _collect_single_video_file(self) -> list[Path]:
+        """Single-file mode: return [media], or [] on validation failure."""
+        path_str = self.file_selector.path_or_none()
+        if path_str is None:
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Choose a video or audio file before generating subtitles."))
+            )
+            return []
+        p = Path(path_str)
+        if not p.is_file():
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That media file no longer exists."), details=path_str))
+            return []
+        return [p]
+
+    def _collect_folder_video_files_async(self, on_files: Callable[[list[Path]], None]) -> None:
+        """Folder mode: scan the folder off the GUI thread, then call ``on_files``
+        on the GUI thread with the matched media files (``[]`` on failure —
+        screen-issue feedback already shown).
+
+        The directory listing can stall on a network share, so only the cheap
+        ``is_dir()`` validation below runs synchronously; the scan itself is
+        dispatched via :func:`run_off_thread`.
+        """
+        path_str = self.folder_selector.path_or_none()
+        if path_str is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a folder before generating subtitles.")))
+            return
+        folder = Path(path_str)
+        if not folder.is_dir():
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder no longer exists."), details=path_str))
+            return
+
+        def _scan() -> object:
+            return sorted(f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in _MEDIA_EXTENSIONS)
+
+        def _apply(result: object) -> None:
+            files = cast("list[Path]", result)
             if not files:
                 self.show_screen_issue(
                     ScreenIssue(summary=self.tr("No video or audio files were found in that folder."))
                 )
-                return []
-            return files
+                on_files([])
+                return
+            on_files(files)
+
+        def _on_error(_msg: str) -> None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be read."), details=path_str))
+            on_files([])
+
+        run_off_thread(self, _scan, _apply, _on_error)
 
     # ------------------------------------------------------------------
     # Worker signal slots

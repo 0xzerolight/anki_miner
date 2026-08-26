@@ -105,14 +105,23 @@ def _make_tab(config, qtbot):
     return tab
 
 
-def _start_condense(tab, fake_worker):
-    """Click Condense with availability + writability patched; return the worker mock."""
+def _start_condense(tab, qtbot, fake_worker, *, folder_mode=False):
+    """Click Condense with availability + writability patched; return the worker mock.
+
+    Folder mode's item collection runs off the GUI thread; ``folder_mode=True``
+    waits for the worker to actually start instead of asserting right after
+    the click. Single-file mode stays fully synchronous — no wait needed, and
+    a test asserting the worker never started (a rejected metadata dialog)
+    would hang waiting for a start that's never coming.
+    """
     with (
         patch(_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=True),
         patch(_WORKER_CLS, return_value=fake_worker) as worker_cls,
     ):
         tab.condense_button.click()
+        if folder_mode:
+            qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
     return worker_cls
 
 
@@ -281,7 +290,7 @@ def test_single_mode_collects_item_without_sub(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.media_file_selector.set_path(str(media))
 
-    items = tab._collect_items()
+    items = tab._collect_single_item()
     assert items == [CondenseItem(media, None)]
 
 
@@ -297,7 +306,7 @@ def test_single_mode_collects_item_with_sub(qtbot, tmp_path):
     tab.media_file_selector.set_path(str(media))
     tab.subtitle_file_selector.set_path(str(sub))
 
-    items = tab._collect_items()
+    items = tab._collect_single_item()
     assert items == [CondenseItem(media, sub)]
 
 
@@ -310,14 +319,14 @@ def test_single_mode_accepts_audio_only_file(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.media_file_selector.set_path(str(media))
 
-    items = tab._collect_items()
+    items = tab._collect_single_item()
     assert items == [CondenseItem(media, None)]
 
 
 def test_single_mode_missing_media_warns(qtbot, tmp_path):
     """No media selected → warning, returns []."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    items = tab._collect_items()
+    items = tab._collect_single_item()
     assert tab.issue_banner().current_issue() is not None
     assert items == []
 
@@ -326,7 +335,7 @@ def test_single_mode_nonexistent_media_warns(qtbot, tmp_path):
     """Media path that is not a file → warning, returns []."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.media_file_selector.set_path(str(tmp_path / "nope.mkv"))
-    items = tab._collect_items()
+    items = tab._collect_single_item()
     assert tab.issue_banner().current_issue() is not None
     assert items == []
 
@@ -341,7 +350,7 @@ def test_single_mode_nonexistent_sub_warns(qtbot, tmp_path):
     tab.media_file_selector.set_path(str(media))
     tab.subtitle_file_selector.set_path(str(tmp_path / "nope.srt"))
 
-    items = tab._collect_items()
+    items = tab._collect_single_item()
     assert tab.issue_banner().current_issue() is not None
     assert items == []
 
@@ -366,8 +375,10 @@ def test_folder_mode_auto_scans_media(qtbot, tmp_path):
     tab.folder_mode_button.click()
     tab.media_folder_selector.set_path(str(media_folder))
 
-    items = tab._collect_items()
-    assert items == [CondenseItem(m1, None), CondenseItem(m2, None)]
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+    assert result[0] == [CondenseItem(m1, None), CondenseItem(m2, None)]
 
 
 def test_folder_mode_empty_folder_warns(qtbot, tmp_path):
@@ -381,18 +392,21 @@ def test_folder_mode_empty_folder_warns(qtbot, tmp_path):
     tab.folder_mode_button.click()
     tab.media_folder_selector.set_path(str(media_folder))
 
-    items = tab._collect_items()
-    assert tab.issue_banner().current_issue() is not None
-    assert items == []
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
+    qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
+    assert result == [[]]
 
 
 def test_folder_mode_missing_media_folder_warns(qtbot, tmp_path):
-    """No media folder selected → warning, returns []."""
+    """No media folder selected → warning, returns [] — synchronously, before
+    any scan is dispatched (no folder picked yet to scan)."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.folder_mode_button.click()
-    items = tab._collect_items()
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
     assert tab.issue_banner().current_issue() is not None
-    assert items == []
+    assert result == []  # on_items never called: bailed before dispatch
 
 
 def test_folder_mode_with_subfolder_pairs_and_logs(qtbot, tmp_path):
@@ -417,10 +431,12 @@ def test_folder_mode_with_subfolder_pairs_and_logs(qtbot, tmp_path):
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
     fake_pairs = [FilePair(m1, s1), FilePair(m2, s2)]
+    result: list[list[CondenseItem]] = []
     with patch(_FIND_PAIRS, return_value=fake_pairs) as find_pairs:
-        items = tab._collect_items()
+        tab._collect_folder_items_async(result.append)
+        qtbot.waitUntil(lambda: bool(result), timeout=3000)
 
-    assert items == [CondenseItem(m1, s1), CondenseItem(m2, s2)]
+    assert result[0] == [CondenseItem(m1, s1), CondenseItem(m2, s2)]
     # Condenser extension sets are forwarded to the matcher.
     assert find_pairs.call_args.kwargs["video_extensions"] is CONDENSE_MEDIA_EXTENSIONS
     log_text = tab.log_widget.text_edit.toPlainText()
@@ -446,10 +462,12 @@ def test_folder_mode_subfolder_unmatched_logs_warning(qtbot, tmp_path):
     tab.media_folder_selector.set_path(str(media_folder))
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
+    result: list[list[CondenseItem]] = []
     with patch(_FIND_PAIRS, return_value=[FilePair(m1, s1)]):
-        items = tab._collect_items()
+        tab._collect_folder_items_async(result.append)
+        qtbot.waitUntil(lambda: bool(result), timeout=3000)
 
-    assert items == [CondenseItem(m1, s1)]
+    assert result[0] == [CondenseItem(m1, s1)]
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Matched 1 of 2" in log_text
     assert "could not be matched" in log_text
@@ -469,16 +487,17 @@ def test_folder_mode_subfolder_no_pairs_warns(qtbot, tmp_path):
     tab.media_folder_selector.set_path(str(media_folder))
     tab.subtitle_folder_selector.set_path(str(sub_folder))
 
+    result: list[list[CondenseItem]] = []
     with patch(_FIND_PAIRS, return_value=[]):
-        items = tab._collect_items()
+        tab._collect_folder_items_async(result.append)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    assert tab.issue_banner().current_issue() is not None
-    assert items == []
+    assert result == [[]]
 
 
 def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
     """The 'Matched N of M' line logged during collection survives the pre-run
-    log clear (clear happens before _collect_items, not after)."""
+    log clear (clear happens before item collection, not after)."""
     config = _make_config(tmp_path)
     media_folder = tmp_path / "media"
     sub_folder = tmp_path / "subs"
@@ -507,6 +526,7 @@ def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
         patch(_WORKER_CLS, return_value=fake_worker),
     ):
         tab.condense_button.click()
+        qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     assert fake_worker._started
     assert "Matched 2 of 2" in tab.log_widget.text_edit.toPlainText()
@@ -529,6 +549,7 @@ def test_folder_same_stem_outputs_are_rejected_before_worker_start(qtbot, tmp_pa
         patch(_WORKER_CLS) as worker_cls,
     ):
         tab._on_condense()
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
     worker_cls.assert_not_called()
     issue = tab.issue_banner().current_issue()
@@ -562,7 +583,7 @@ def test_worker_kwargs_from_widget_state_single(qtbot, tmp_path):
     tab.overwrite_checkbox.setChecked(True)
 
     fake_worker = _FakeWorker()
-    worker_cls = _start_condense(tab, fake_worker)
+    worker_cls = _start_condense(tab, qtbot, fake_worker)
 
     assert worker_cls.call_count == 1
     args, kwargs = worker_cls.call_args
@@ -598,7 +619,7 @@ def test_worker_kwargs_single_track_overrides_forwarded(qtbot, tmp_path):
     tab._subtitle_track_override = 1
 
     fake_worker = _FakeWorker()
-    worker_cls = _start_condense(tab, fake_worker)
+    worker_cls = _start_condense(tab, qtbot, fake_worker)
 
     kwargs = worker_cls.call_args.kwargs
     assert kwargs["audio_track_override"] == 2
@@ -621,7 +642,7 @@ def test_worker_track_overrides_none_in_folder_mode(qtbot, tmp_path):
     tab.media_folder_selector.set_path(str(media_folder))
 
     fake_worker = _FakeWorker()
-    worker_cls = _start_condense(tab, fake_worker)
+    worker_cls = _start_condense(tab, qtbot, fake_worker, folder_mode=True)
 
     args, kwargs = worker_cls.call_args
     assert args[1] == [CondenseItem(m1, None)]
@@ -642,7 +663,7 @@ def test_custom_output_dir_forwarded(qtbot, tmp_path):
     tab._custom_output_dir = out
 
     fake_worker = _FakeWorker()
-    worker_cls = _start_condense(tab, fake_worker)
+    worker_cls = _start_condense(tab, qtbot, fake_worker)
 
     assert worker_cls.call_args.kwargs["output_dir"] == out
 
@@ -739,7 +760,7 @@ def test_cancel_flips_buttons_and_calls_worker_cancel(qtbot, tmp_path):
     tab.media_file_selector.set_path(str(media))
 
     fake_worker = _FakeWorker()
-    _start_condense(tab, fake_worker)
+    _start_condense(tab, qtbot, fake_worker)
     assert not tab.cancel_button.isHidden()
 
     tab._on_cancel()
@@ -759,7 +780,7 @@ def test_queue_finished_re_enables_condense(qtbot, tmp_path):
 
     fake_worker = _FakeWorker()
     slots = _capture_signal_slots(fake_worker.queue_finished)
-    _start_condense(tab, fake_worker)
+    _start_condense(tab, qtbot, fake_worker)
 
     for slot in slots:
         slot()
@@ -779,7 +800,7 @@ def test_worker_released_on_thread_finished(qtbot, tmp_path):
 
     fake_worker = _FakeWorker()
     slots = _capture_signal_slots(fake_worker.finished)
-    _start_condense(tab, fake_worker)
+    _start_condense(tab, qtbot, fake_worker)
 
     assert tab.worker_thread is fake_worker
     for slot in slots:
@@ -810,7 +831,7 @@ def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
     tab.media_file_selector.set_path(str(media))
 
     fake_worker = _FakeWorker()
-    _start_condense(tab, fake_worker)
+    _start_condense(tab, qtbot, fake_worker)
 
     assert fake_worker in list(tab.iter_close_workers())
 
@@ -831,7 +852,7 @@ def test_file_finished_error_logs_error(qtbot, tmp_path):
 
     fake_worker = _FakeWorker()
     slots = _capture_signal_slots(fake_worker.file_finished)
-    _start_condense(tab, fake_worker)
+    _start_condense(tab, qtbot, fake_worker)
 
     for slot in slots:
         slot(0, None, "boom")
@@ -851,7 +872,7 @@ def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
 
     fake_worker = _FakeWorker()
     slots = _capture_signal_slots(fake_worker.file_skipped)
-    _start_condense(tab, fake_worker)
+    _start_condense(tab, qtbot, fake_worker)
 
     for slot in slots:
         slot(0, out_audio, "Skipped, exists")
@@ -1132,7 +1153,7 @@ def test_unchecked_never_instantiates_dialog(qtbot, tmp_path):
     assert not tab.tag_outputs_checkbox.isChecked()
 
     with patch(_META_DIALOG) as dialog_cls:
-        _start_condense(tab, _FakeWorker())
+        _start_condense(tab, qtbot, _FakeWorker())
 
     dialog_cls.assert_not_called()
 
@@ -1151,7 +1172,7 @@ def test_accepted_dialog_attaches_metadata(qtbot, tmp_path):
     dialog.metadata.return_value = [meta]
 
     with patch(_META_DIALOG, return_value=dialog) as dialog_cls:
-        worker_cls = _start_condense(tab, _FakeWorker())
+        worker_cls = _start_condense(tab, qtbot, _FakeWorker())
 
     dialog_cls.assert_called_once()
     # Dialog received the filenames and a prefill list of equal length.
@@ -1173,7 +1194,7 @@ def test_rejected_dialog_aborts_run(qtbot, tmp_path):
     dialog.exec.return_value = QDialog.DialogCode.Rejected
 
     with patch(_META_DIALOG, return_value=dialog):
-        worker_cls = _start_condense(tab, _FakeWorker())
+        worker_cls = _start_condense(tab, qtbot, _FakeWorker())
 
     worker_cls.assert_not_called()
     # The run never started, so the button stays available.

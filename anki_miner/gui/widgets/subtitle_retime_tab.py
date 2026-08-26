@@ -28,6 +28,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -65,6 +66,7 @@ from anki_miner.utils.i18n import tr_format
 if TYPE_CHECKING:
     from anki_miner.gui.widgets.dialogs import ReferenceChoice
     from anki_miner.services.retime_reference import ReferenceOverride
+    from anki_miner.utils.file_pairing import FilePair
 
 logger = logging.getLogger(__name__)
 
@@ -313,7 +315,12 @@ class SubtitleRetimeTab(_ToolTabBase):
         return group
 
     def _refresh_pair_preview(self) -> None:
-        """Recompute and show the folder-mode video↔subtitle pairing preview."""
+        """Recompute and show the folder-mode video↔subtitle pairing preview.
+
+        The scan (FilePairMatcher + a directory listing) runs off the GUI
+        thread — it can stall on a network share — and its result is dropped
+        if the folder selection changed while it was in flight.
+        """
         if self.video_folder_selector.isHidden():
             self.pair_preview.hide()
             self.pair_preview_label.hide()
@@ -327,27 +334,39 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         video_folder = Path(video_folder_str)
         sub_folder = Path(sub_folder_str)
-        pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)
 
-        self.pair_preview.clear()
-        for pair in pairs:
-            self.pair_preview.addItem(f"{pair.video.name}  ←  {pair.subtitle.name}")
-        try:
-            unmatched = sorted(
-                f.name
-                for f in video_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-            )
-        except OSError:
-            unmatched = []
-        matched_names = {pair.video.name for pair in pairs}
-        for name in unmatched:
-            if name not in matched_names:
-                self.pair_preview.addItem(tr_format(self.tr("%1  —  no matching subtitle"), name))
+        def _scan() -> object:
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)
+            try:
+                unmatched = sorted(
+                    f.name
+                    for f in video_folder.iterdir()
+                    if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+                )
+            except OSError:
+                unmatched = []
+            return pairs, unmatched
 
-        self.pair_preview_label.setText(tr_format(self.tr("Matched pairs (%1):"), str(len(pairs))))
-        self.pair_preview_label.show()
-        self.pair_preview.show()
+        def _apply(result: object) -> None:
+            # Stale guard: the folder selection may have changed mid-scan.
+            if self.video_folder_selector.path_or_none() != video_folder_str:
+                return
+            if self.subtitle_folder_selector.path_or_none() != sub_folder_str:
+                return
+            pairs, unmatched = cast("tuple[list, list[str]]", result)
+            self.pair_preview.clear()
+            for pair in pairs:
+                self.pair_preview.addItem(f"{pair.video.name}  ←  {pair.subtitle.name}")
+            matched_names = {pair.video.name for pair in pairs}
+            for name in unmatched:
+                if name not in matched_names:
+                    self.pair_preview.addItem(tr_format(self.tr("%1  —  no matching subtitle"), name))
+
+            self.pair_preview_label.setText(tr_format(self.tr("Matched pairs (%1):"), str(len(pairs))))
+            self.pair_preview_label.show()
+            self.pair_preview.show()
+
+        run_off_thread(self, _scan, _apply)
 
     def _create_output_section(self) -> QFrame:
         group = QFrame()
@@ -636,16 +655,36 @@ class SubtitleRetimeTab(_ToolTabBase):
         # cleared. After the reentrancy guard, before anything that re-raises.
         self.clear_screen_issue()
 
-        # Clear the log before collecting: _collect_pairs logs the pairing
+        # Clear the log before collecting: pair collection logs the pairing
         # summary ("Matched N of M") we must not wipe afterwards.
         self.log_widget.clear_log()
         self.progress_widget.reset()
 
-        # Collect pairs
-        pairs = self._collect_pairs()
-        if not pairs:
+        if not self.video_file_selector.isHidden():
+            # Single-file mode: no directory scan, stays synchronous.
+            pairs = self._collect_single_pair()
+            if not pairs:
+                return
+            self._start_retime_worker(pairs)
             return
 
+        # Folder mode: episode-number pairing scans two directories, which can
+        # stall on a network share — run it off the GUI thread and start the
+        # worker from its completion callback. Disabled here (not just at
+        # worker-start) so a second click during the scan can't fire a second
+        # concurrent scan.
+        self.retime_button.setEnabled(False)
+
+        def _on_pairs(pairs: list[tuple[Path, Path]]) -> None:
+            if not pairs:
+                self.retime_button.setEnabled(True)
+                return
+            self._start_retime_worker(pairs)
+
+        self._collect_folder_pairs_async(_on_pairs)
+
+    def _start_retime_worker(self, pairs: list[tuple[Path, Path]]) -> None:
+        """Resolve the output dir, check it's writable, then build+start the worker."""
         # Resolve output directory
         if self._custom_output_dir is not None:
             out_dir: Path | None = self._custom_output_dir
@@ -657,6 +696,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         check_dir = out_dir if out_dir is not None else pairs[0][0].parent
         if not os.access(check_dir, os.W_OK):
             self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
+            self.retime_button.setEnabled(True)
             return
 
         # Build and start worker
@@ -694,81 +734,78 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         worker.start()
 
-    def _collect_pairs(self) -> list[tuple[Path, Path]]:
-        """Return the ordered list of (video, subtitle) pairs to process, or [] on failure."""
-        if not self.video_file_selector.isHidden():
-            # Single-file mode
-            video_str = self.video_file_selector.path_or_none()
-            sub_str = self.subtitle_file_selector.path_or_none()
+    def _collect_single_pair(self) -> list[tuple[Path, Path]]:
+        """Single-file mode: return [(video, subtitle)], or [] on failure."""
+        video_str = self.video_file_selector.path_or_none()
+        sub_str = self.subtitle_file_selector.path_or_none()
 
-            if video_str is None:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file before retiming subtitles.")))
-                return []
-            if sub_str is None:
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("Choose a subtitle file before retiming subtitles."))
-                )
-                return []
+        if video_str is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video file before retiming subtitles.")))
+            return []
+        if sub_str is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a subtitle file before retiming subtitles.")))
+            return []
 
-            video = Path(video_str)
-            sub = Path(sub_str)
+        video = Path(video_str)
+        sub = Path(sub_str)
 
-            if not video.is_file():
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_str)
-                )
-                return []
-            if not sub.is_file():
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=sub_str)
-                )
-                return []
+        if not video.is_file():
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That video file no longer exists."), details=video_str))
+            return []
+        if not sub.is_file():
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle file no longer exists."), details=sub_str)
+            )
+            return []
 
-            return [(video, sub)]
+        return [(video, sub)]
 
-        else:
-            # Folder mode
-            video_folder_str = self.video_folder_selector.path_or_none()
-            sub_folder_str = self.subtitle_folder_selector.path_or_none()
+    def _collect_folder_pairs_async(self, on_pairs: Callable[[list[tuple[Path, Path]]], None]) -> None:
+        """Folder mode: resolve+scan both folders off the GUI thread, then call
+        ``on_pairs`` on the GUI thread with the matched (video, subtitle) pairs
+        (``[]`` when collection fails — screen-issue/log feedback already shown).
 
-            if video_folder_str is None:
-                self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video folder before retiming subtitles.")))
-                return []
-            if sub_folder_str is None:
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("Choose a subtitle folder before retiming subtitles."))
-                )
-                return []
+        The two directory listings (episode-number pairing plus the raw video
+        count for the log message) can stall on a network share, so only the
+        cheap ``is_dir()`` validation above runs synchronously; the scan itself
+        is dispatched via :func:`run_off_thread`.
+        """
+        video_folder_str = self.video_folder_selector.path_or_none()
+        sub_folder_str = self.subtitle_folder_selector.path_or_none()
 
-            video_folder = Path(video_folder_str)
-            sub_folder = Path(sub_folder_str)
+        if video_folder_str is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video folder before retiming subtitles.")))
+            return
+        if sub_folder_str is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a subtitle folder before retiming subtitles.")))
+            return
 
-            if not video_folder.is_dir():
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That video folder no longer exists."), details=video_folder_str)
-                )
-                return []
-            if not sub_folder.is_dir():
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
-                )
-                return []
+        video_folder = Path(video_folder_str)
+        sub_folder = Path(sub_folder_str)
 
-            # Count total video files for the log message
-            try:
-                all_videos = sorted(
-                    f
-                    for f in video_folder.iterdir()
-                    if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
-                )
-            except OSError:
-                self.show_screen_issue(
-                    ScreenIssue(summary=self.tr("That video folder could not be read."), details=video_folder_str)
-                )
-                return []
-            total_videos = len(all_videos)
+        if not video_folder.is_dir():
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video folder no longer exists."), details=video_folder_str)
+            )
+            return
+        if not sub_folder.is_dir():
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
+            )
+            return
 
+        def _scan() -> object:
+            all_videos = sorted(
+                f
+                for f in video_folder.iterdir()
+                if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+            )
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)
+            return all_videos, file_pairs
+
+        def _apply(result: object) -> None:
+            all_videos, file_pairs = cast("tuple[list[Path], list[FilePair]]", result)
+            total_videos = len(all_videos)
             n_matched = len(file_pairs)
 
             self.log_widget.append_success(
@@ -789,9 +826,18 @@ class SubtitleRetimeTab(_ToolTabBase):
                         summary=self.tr("No subtitle file could be matched to any video file in those folders.")
                     )
                 )
-                return []
+                on_pairs([])
+                return
 
-            return [(fp.video, fp.subtitle) for fp in file_pairs]
+            on_pairs([(fp.video, fp.subtitle) for fp in file_pairs])
+
+        def _on_error(_msg: str) -> None:
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That video folder could not be read."), details=video_folder_str)
+            )
+            on_pairs([])
+
+        run_off_thread(self, _scan, _apply, _on_error)
 
     # ------------------------------------------------------------------
     # Worker signal slots
