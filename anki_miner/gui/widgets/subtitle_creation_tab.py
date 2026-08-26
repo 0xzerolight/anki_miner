@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, cast
+from typing import cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -503,10 +504,12 @@ class SubtitleCreationTab(_ToolTabBase):
         path_str = self.folder_selector.path_or_none()
         if path_str is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a folder before generating subtitles.")))
+            on_files([])
             return
         folder = Path(path_str)
         if not folder.is_dir():
             self.show_screen_issue(ScreenIssue(summary=self.tr("That folder no longer exists."), details=path_str))
+            on_files([])
             return
 
         def _scan() -> object:

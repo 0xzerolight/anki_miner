@@ -28,9 +28,10 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+from collections.abc import Callable, Collection
 from dataclasses import replace
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Collection, cast
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
@@ -946,6 +947,7 @@ class CondenseTab(_ToolTabBase):
 
         if media_folder_str is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a media folder before condensing.")))
+            on_items([])
             return
 
         media_folder = Path(media_folder_str)
@@ -953,6 +955,7 @@ class CondenseTab(_ToolTabBase):
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("That media folder no longer exists."), details=media_folder_str)
             )
+            on_items([])
             return
 
         # Optional subtitle folder → episode-number pairing (condenser extension
@@ -963,6 +966,7 @@ class CondenseTab(_ToolTabBase):
                 self.show_screen_issue(
                     ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
                 )
+                on_items([])
                 return
             self._pair_folder_items_async(media_folder, sub_folder, on_items)
             return

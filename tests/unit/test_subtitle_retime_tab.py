@@ -418,7 +418,8 @@ def test_folder_mode_no_pairs_warns(qtbot, tmp_path):
 
 def test_folder_mode_missing_video_folder_warns(qtbot, tmp_path):
     """No video folder selected → warning, returns [] — synchronously, before
-    any scan is dispatched (no folder picked yet to scan)."""
+    any scan is dispatched (no folder picked yet to scan). on_pairs is still
+    called with [] so the caller (_on_retime) re-enables the run button."""
     config = _make_config(tmp_path)
     tab = _make_tab(config, qtbot)
     tab.folder_mode_button.click()
@@ -427,7 +428,19 @@ def test_folder_mode_missing_video_folder_warns(qtbot, tmp_path):
     tab._collect_folder_pairs_async(result.append)
 
     assert tab.issue_banner().current_issue() is not None
-    assert result == []  # on_pairs never called: bailed before dispatch
+    assert result == [[]]
+
+
+def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
+    """A synchronous bail (no folder picked) must not leave Retime dead:
+    _on_retime disables it before dispatch, so the collector must always
+    call on_pairs — even on an early return — for the caller to re-enable it."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+
+    tab.retime_button.click()
+
+    assert tab.retime_button.isEnabled()
 
 
 def test_unreadable_video_folder_reports_issue_without_raising(qtbot, tmp_path):
@@ -548,6 +561,26 @@ def test_pair_preview_lists_matches_and_unmatched(qtbot, tmp_path):
     assert any("Show - 02.mkv" in t and "jp 02.srt" in t for t in items)
     assert any("Show - 03.mkv" in t and "no matching subtitle" in t for t in items)
     assert "2" in tab.pair_preview_label.text()
+
+
+def test_pair_preview_clears_on_scan_error(qtbot, tmp_path):
+    """A failed background scan must not leave a previous successful scan's
+    pairs on screen looking current — the preview clears and hides."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+    qtbot.waitUntil(lambda: tab.pair_preview.count() == 3, timeout=3000)
+    assert not tab.pair_preview.isHidden()
+
+    with patch(_FIND_PAIRS, side_effect=OSError("boom")):
+        tab._refresh_pair_preview()
+        qtbot.waitUntil(lambda: tab.pair_preview.isHidden(), timeout=3000)
+
+    assert tab.pair_preview.count() == 0
+    assert tab.pair_preview_label.isHidden()
 
 
 def test_pair_preview_hidden_in_single_file_mode(qtbot, tmp_path):

@@ -236,6 +236,18 @@ def test_audio_files_are_collected_from_folder(qtbot, tmp_path):
     assert result[0] == [mp3, wav]
 
 
+def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
+    """A synchronous bail (no folder picked) must not leave Generate dead:
+    _on_generate disables it before dispatch, so the collector must always
+    call on_files — even on an early return — for the caller to re-enable it."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+
+    tab.generate_button.click()
+
+    assert tab.generate_button.isEnabled()
+
+
 def test_unreadable_folder_reports_issue_without_raising(qtbot, tmp_path):
     """Folder enumeration errors stay contained in the Generate screen."""
     tab = _make_tab(_make_config(tmp_path), qtbot)

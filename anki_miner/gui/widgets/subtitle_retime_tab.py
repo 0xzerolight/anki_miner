@@ -366,7 +366,18 @@ class SubtitleRetimeTab(_ToolTabBase):
             self.pair_preview_label.show()
             self.pair_preview.show()
 
-        run_off_thread(self, _scan, _apply)
+        def _on_error(_msg: str) -> None:
+            # Stale guard, same as _apply. A failed scan must not leave a
+            # PREVIOUS successful scan's pairs on screen looking current.
+            if self.video_folder_selector.path_or_none() != video_folder_str:
+                return
+            if self.subtitle_folder_selector.path_or_none() != sub_folder_str:
+                return
+            self.pair_preview.clear()
+            self.pair_preview.hide()
+            self.pair_preview_label.hide()
+
+        run_off_thread(self, _scan, _apply, _on_error)
 
     def _create_output_section(self) -> QFrame:
         group = QFrame()
@@ -775,9 +786,11 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         if video_folder_str is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a video folder before retiming subtitles.")))
+            on_pairs([])
             return
         if sub_folder_str is None:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose a subtitle folder before retiming subtitles.")))
+            on_pairs([])
             return
 
         video_folder = Path(video_folder_str)
@@ -787,11 +800,13 @@ class SubtitleRetimeTab(_ToolTabBase):
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("That video folder no longer exists."), details=video_folder_str)
             )
+            on_pairs([])
             return
         if not sub_folder.is_dir():
             self.show_screen_issue(
                 ScreenIssue(summary=self.tr("That subtitle folder no longer exists."), details=sub_folder_str)
             )
+            on_pairs([])
             return
 
         def _scan() -> object:

@@ -400,13 +400,26 @@ def test_folder_mode_empty_folder_warns(qtbot, tmp_path):
 
 def test_folder_mode_missing_media_folder_warns(qtbot, tmp_path):
     """No media folder selected → warning, returns [] — synchronously, before
-    any scan is dispatched (no folder picked yet to scan)."""
+    any scan is dispatched (no folder picked yet to scan). on_items is still
+    called with [] so the caller (_on_condense) re-enables the run button."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
     tab.folder_mode_button.click()
     result: list[list[CondenseItem]] = []
     tab._collect_folder_items_async(result.append)
     assert tab.issue_banner().current_issue() is not None
-    assert result == []  # on_items never called: bailed before dispatch
+    assert result == [[]]
+
+
+def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
+    """A synchronous bail (no folder picked) must not leave Condense dead:
+    _on_condense disables it before dispatch, so the collector must always
+    call on_items — even on an early return — for the caller to re-enable it."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+
+    tab.condense_button.click()
+
+    assert tab.condense_button.isEnabled()
 
 
 def test_folder_mode_with_subfolder_pairs_and_logs(qtbot, tmp_path):
