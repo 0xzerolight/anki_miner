@@ -2304,7 +2304,10 @@ class EpisodeProcessor:
                     )
         finally:
             for zf in archive_handles.values():
-                zf.close()
+                # Isolate each close(): one archive's OSError must not skip
+                # closing the rest of the still-open handles.
+                with contextlib.suppress(OSError):
+                    zf.close()
         if progress_callback is not None:
             progress_callback.on_complete()
 

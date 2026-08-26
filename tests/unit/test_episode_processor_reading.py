@@ -575,7 +575,7 @@ def test_cancel_during_image_loop_stops_further_prep(test_config):
     sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
     proc = _make_processor(test_config, subtitle_parser=sp)
 
-    def _prep_then_cancel(ref, images_dir):
+    def _prep_then_cancel(ref, images_dir, *_args):
         proc.cancel()
         return Path("/tmp/reading_x.jpg")
 
