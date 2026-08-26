@@ -132,7 +132,7 @@ RUN_ENTRY_POINTS = [
     ("single: mine", "single_tab", "_start_processing", lambda t: t.video_selector, "path_or_none", None),
     ("condense: condense", "condense_tab", "_on_condense", lambda t: t.log_widget, "clear_log", None),
     ("retime: retime", "retime_tab", "_on_retime", lambda t: t.log_widget, "clear_log", None),
-    ("creation: generate", "creation_tab", "_on_generate", lambda t: t, "_collect_video_files", []),
+    ("creation: generate", "creation_tab", "_on_generate", lambda t: t, "_collect_single_video_file", []),
     ("download: download", "download_tab", "_on_download", lambda t: t.log_widget, "clear_log", None),
 ]
 
