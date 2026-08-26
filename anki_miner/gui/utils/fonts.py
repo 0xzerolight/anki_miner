@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import QWidget
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles._variables import FONT_SIZES, TYPOGRAPHY
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.utils.timing import timed_phase
 
 logger = logging.getLogger(__name__)
 
@@ -87,8 +88,15 @@ def _japanese_families() -> list[str]:
     Qt lists every CJK family twice on some platforms: ``Meiryo`` and
     ``@Meiryo``, the second being the rotated vertical-writing variant. Picking
     one of those would render the interface sideways.
+
+    Timed (Task 28, perf audit): this is Qt's font-DB population cost, paid
+    once at boot by ``resolved_families()`` — the PA2 lazy-resolve rewrite is
+    gated on whether this call is actually slow enough (>50ms) to matter.
     """
-    return [name for name in QFontDatabase.families(QFontDatabase.WritingSystem.Japanese) if not name.startswith("@")]
+    with timed_phase("font-db-japanese-families", logger, level=logging.DEBUG):
+        return [
+            name for name in QFontDatabase.families(QFontDatabase.WritingSystem.Japanese) if not name.startswith("@")
+        ]
 
 
 def _resolve_japanese(interface_family: str) -> str:

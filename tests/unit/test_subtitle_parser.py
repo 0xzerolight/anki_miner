@@ -1,6 +1,7 @@
 """Tests for subtitle_parser module."""
 
 import re
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
@@ -421,6 +422,79 @@ class TestParseSubtitleFile:
         # text (the _iter_parsed_lines tokenize call).
         full_line_calls = [c for c in mock_tagger.call_args_list if c.args and c.args[0] == "猫と犬と鳥"]
         assert len(full_line_calls) == 1, f"Expected exactly 1 full-sentence tagger call; got {len(full_line_calls)}"
+
+
+class TestPerfProbeTimers:
+    """Task 28 perf-audit counters: cumulative probe/tokenize time per parse.
+
+    Gate data for the PB2 (staged-batching parser) and PB7 (threading.local
+    tagger) rewrite decisions — see docs/perf_audit_2026-08/measurements.md.
+    """
+
+    def test_tokenize_time_accumulates_and_probes_stay_untouched(self, test_config):
+        """``_tokenize_time_s`` grows with each tagger call; no dict wired ⇒ no probing."""
+
+        def slow_tagger(text):
+            time.sleep(0.001)
+            return [_make_token(text, "名詞", lemma=text, kana=text)]
+
+        with patch(
+            "anki_miner.services.subtitle_parser.get_shared_tagger",
+            return_value=MagicMock(side_effect=slow_tagger),
+        ):
+            service = SubtitleParserService(test_config)  # no term_lookup ⇒ self._attest is None
+
+        assert service._tokenize_time_s == 0.0
+        service._build_line_state("猫", 0.0, 0.0)
+        after_one = service._tokenize_time_s
+        assert after_one > 0.0
+
+        service._build_line_state("犬", 1.0, 1.0)
+        assert service._tokenize_time_s > after_one, "a second tagger call must ADD, not overwrite"
+        assert service._probe_time_s == 0.0, "no offline dictionary wired ⇒ no probe calls"
+
+    def test_probe_time_accumulates_and_tokenize_stays_untouched(self, test_config):
+        """``_probe_time_s`` grows with each dictionary probe; the tagger is never called."""
+
+        def slow_term_lookup(surfaces):
+            time.sleep(0.001)
+            return set(surfaces)
+
+        service = SubtitleParserService(test_config, term_lookup=slow_term_lookup)
+
+        assert service._probe_time_s == 0.0
+        service._memoized_attest(["猫"])
+        after_one = service._probe_time_s
+        assert after_one > 0.0
+
+        service._memoized_attest(["犬"])  # distinct surface ⇒ guaranteed cache miss
+        assert service._probe_time_s > after_one, "a second probe call must ADD, not overwrite"
+        assert service._tokenize_time_s == 0.0, "no tagger call was ever made"
+
+    def test_perf_counters_reset_per_parse(self, test_config):
+        """``_reset_caches()`` — run at the start of every public ``parse_*``
+        entry point — zeroes both counters, so a second parse never inherits
+        the first call's cumulative totals."""
+
+        def slow_tagger(text):
+            time.sleep(0.001)
+            return [_make_token(text, "名詞", lemma=text, kana=text)]
+
+        with patch(
+            "anki_miner.services.subtitle_parser.get_shared_tagger",
+            return_value=MagicMock(side_effect=slow_tagger),
+        ):
+            service = SubtitleParserService(test_config, term_lookup=lambda surfaces: set(surfaces))
+
+        service._build_line_state("猫", 0.0, 0.0)
+        service._memoized_attest(["猫"])
+        assert service._tokenize_time_s > 0.0
+        assert service._probe_time_s > 0.0
+
+        service._reset_caches()
+
+        assert service._tokenize_time_s == 0.0
+        assert service._probe_time_s == 0.0
 
 
 class TestExpressionFuriganaSource:

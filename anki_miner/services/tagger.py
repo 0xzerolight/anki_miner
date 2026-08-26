@@ -19,8 +19,12 @@ a separate ``threading.Lock`` (double-checked lock), so concurrent first calls
 from multiple threads do not double-build.
 """
 
+import logging
 import threading
+import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _tagger_lock = threading.Lock()
 _tagger: Any | None = None
@@ -50,9 +54,18 @@ class LockedTagger:
     # (there is only ever one, but the class-level placement makes the scope clear).
     _parse_lock: threading.RLock = threading.RLock()
 
+    # Perf-audit counter (Task 28): log a cumulative lock-wait DEBUG summary
+    # every this-many calls rather than per-call — a per-call log line would
+    # be per-subtitle-line noise (see utils/timing.py's hot-loop warning).
+    # Gates the PB7 threading.local() rewrite: only worth it if concurrent-tab
+    # contention is material.
+    _LOCK_WAIT_LOG_INTERVAL = 200
+
     def __init__(self, inner: Any) -> None:
         # Store as a name that will NOT be caught by __getattr__.
         object.__setattr__(self, "_inner", inner)
+        object.__setattr__(self, "_lock_wait_time_s", 0.0)
+        object.__setattr__(self, "_lock_wait_call_count", 0)
 
     # ------------------------------------------------------------------
     # Locked interface
@@ -60,13 +73,35 @@ class LockedTagger:
 
     def __call__(self, text: str, *args: Any, **kwargs: Any) -> Any:
         """Acquire the parse lock, tokenise ``text``, return the node iterable."""
-        with self._parse_lock:
-            return self._inner(text, *args, **kwargs)
+        return self._locked_call(self._inner, text, *args, **kwargs)
 
     def parse(self, *args: Any, **kwargs: Any) -> Any:
         """Acquire the parse lock and delegate to the wrapped tagger's ``parse``."""
-        with self._parse_lock:
-            return self._inner.parse(*args, **kwargs)
+        return self._locked_call(self._inner.parse, *args, **kwargs)
+
+    def _locked_call(self, fn: Any, *args: Any, **kwargs: Any) -> Any:
+        """Acquire ``_parse_lock``, call ``fn``, release, and record wait time.
+
+        Timing covers ONLY the ``acquire()`` — the contention a concurrent tab
+        would see — not the tokenize work done while holding the lock.
+        Exception-transparent: a failure in ``fn`` still releases the lock and
+        propagates untouched; only the periodic DEBUG summary is incidental.
+        """
+        wait_start = time.perf_counter()
+        self._parse_lock.acquire()
+        object.__setattr__(self, "_lock_wait_time_s", self._lock_wait_time_s + (time.perf_counter() - wait_start))
+        try:
+            return fn(*args, **kwargs)
+        finally:
+            self._parse_lock.release()
+            count = self._lock_wait_call_count + 1
+            object.__setattr__(self, "_lock_wait_call_count", count)
+            if count % self._LOCK_WAIT_LOG_INTERVAL == 0:
+                logger.debug(
+                    "[timing] tagger lock-wait: calls=%d cumulative=%.4fs",
+                    count,
+                    self._lock_wait_time_s,
+                )
 
     # ------------------------------------------------------------------
     # Transparent delegation

@@ -3,6 +3,7 @@
 import collections
 import logging
 import re
+import time
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
 from typing import Any
@@ -61,6 +62,7 @@ from anki_miner.utils.ja_normalize import (
     normalize_for_tokenization,
     standardize_kanji_variants,
 )
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
     _format_furigana,
@@ -382,6 +384,14 @@ class SubtitleParserService:
                 ``None`` keeps parsing byte-identical.
         """
         self.config = config
+        # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
+        # dictionary probe calls vs in tagger tokenization for the CURRENT
+        # parse_* call. Reset at the start of each public entry point
+        # (_reset_perf_counters) and logged at DEBUG at that call's end
+        # (_log_parse_probe_timing) — gate data for the PB2 (staged-batching
+        # parser) and PB7 (threading.local tagger) rewrite decisions.
+        self._probe_time_s: float = 0.0
+        self._tokenize_time_s: float = 0.0
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -523,6 +533,28 @@ class SubtitleParserService:
         self._unique_reading_cache: dict[str, str | None] = {}
         self._attested_readings_cache: dict[str, list[str]] = {}
         self._ambiguous_readings: set[str] = set()
+        self._reset_perf_counters()
+
+    def _reset_perf_counters(self) -> None:
+        """Zero the per-parse probe/tokenize cumulative counters (Task 28)."""
+        self._probe_time_s = 0.0
+        self._tokenize_time_s = 0.0
+
+    def _log_parse_probe_timing(self, subtitle_file: Path | None = None) -> None:
+        """DEBUG receipt of this parse's probe-vs-tokenize cost breakdown.
+
+        Gate data for the PB2 (staged-batching parser) and PB7
+        (``threading.local`` tagger) rewrites, both deferred pending these
+        numbers — see docs/perf_audit_2026-08/measurements.md.
+        """
+        log_summary(
+            logger,
+            "Subtitle parse probe timing",
+            level=logging.DEBUG,
+            file=subtitle_file,
+            tokenize_s=f"{self._tokenize_time_s:.4f}",
+            probe_s=f"{self._probe_time_s:.4f}",
+        )
 
     @property
     def ambiguous_reading_count(self) -> int:
@@ -538,7 +570,9 @@ class SubtitleParserService:
             return
         if len(self._attested_readings_cache) + len(missing) > _FRONT_CACHE_CAP:
             self._attested_readings_cache.clear()
+        probe_start = time.perf_counter()
         found = self._reading_lookup(missing)
+        self._probe_time_s += time.perf_counter() - probe_start
         for headword in missing:
             self._attested_readings_cache[headword] = found.get(headword) or []
 
@@ -795,7 +829,9 @@ class SubtitleParserService:
         Shared by the subtitle path (``_iter_parsed_lines``) and the future
         text-unit path so per-line tokenization stays in one place.
         """
+        tokenize_start = time.perf_counter()
         raw_tokens = list(self.tagger(text))
+        self._tokenize_time_s += time.perf_counter() - tokenize_start
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         if self._name_matcher is not None:
             merged_tokens = self._name_matcher.merge_line(text, merged_tokens)
@@ -1370,6 +1406,7 @@ class SubtitleParserService:
             )
             all_words.extend(line_words)
 
+        self._log_parse_probe_timing(subtitle_file)
         return all_words
 
     def parse_subtitle_file_with_index(
@@ -1416,6 +1453,7 @@ class SubtitleParserService:
                 line_index.append(line_lemmas_entry)
             all_words.extend(line_words)
 
+        self._log_parse_probe_timing(subtitle_file)
         return all_words, line_index
 
     def parse_text_units(
@@ -1522,6 +1560,7 @@ class SubtitleParserService:
             if line_lemmas_entry is not None:
                 line_index.append(line_lemmas_entry)
 
+        self._log_parse_probe_timing()
         return all_words, (line_index if want_line_index else None), counts
 
     def count_lemmas(self, subtitle_file: Path) -> collections.Counter[str]:
@@ -1545,6 +1584,10 @@ class SubtitleParserService:
         Raises:
             SubtitleParseError: If subtitle file cannot be parsed
         """
+        # Unlike the parse_* entry points above, count_lemmas does not call
+        # _reset_caches() (it never touches the reading/furigana memos) — but
+        # it does tokenize and probe, so it resets the perf counters directly.
+        self._reset_perf_counters()
         counts: collections.Counter[str] = collections.Counter()
         for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
             # Spans come from the SAME locator as the mining loops in
@@ -1556,6 +1599,7 @@ class SubtitleParserService:
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens):
                     counts[self._extract_lemma(token)] += 1
+        self._log_parse_probe_timing(subtitle_file)
         return counts
 
     # ------------------------------------------------------------------
@@ -1587,7 +1631,9 @@ class SubtitleParserService:
         if unknown:
             if len(self._exist_memo) + len(unknown) > _FRONT_CACHE_CAP:
                 self._exist_memo.clear()
+            probe_start = time.perf_counter()
             hits = self._term_lookup(unknown)
+            self._probe_time_s += time.perf_counter() - probe_start
             for s in unknown:
                 verdicts[s] = self._exist_memo[s] = s in hits
         return {s for s in surfaces if verdicts[s]}
@@ -1614,7 +1660,9 @@ class SubtitleParserService:
         uncached = [s for s in deduped if s not in self._common_memo]
         verdicts = {s: self._common_memo[s] for s in deduped if s not in uncached}
         if uncached:
+            probe_start = time.perf_counter()
             result = self._term_common_lookup(uncached)
+            self._probe_time_s += time.perf_counter() - probe_start
             if result is None:
                 self._common_aware = False
                 return None
@@ -1910,7 +1958,9 @@ class SubtitleParserService:
         if uncached:
             if len(self._kana_window_cache) + len(uncached) > _FRONT_CACHE_CAP:
                 self._kana_window_cache.clear()
+            probe_start = time.perf_counter()
             hits = lookup(uncached)
+            self._probe_time_s += time.perf_counter() - probe_start
             for w in uncached:
                 verdicts[w] = self._kana_window_cache[w] = bool(hits.get(w))
         return any(verdicts[w] for w in windows)
@@ -2118,4 +2168,7 @@ class SubtitleParserService:
         form = select_mined_form(pos1, resolved_front, lemma, surface)
         if not form:
             return False
-        return bool(lookup([form]).get(form))
+        probe_start = time.perf_counter()
+        result = bool(lookup([form]).get(form))
+        self._probe_time_s += time.perf_counter() - probe_start
+        return result

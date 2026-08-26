@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 @contextlib.contextmanager
-def timed_phase(name: str, log: logging.Logger | None = None) -> Iterator[None]:
-    """Log the wall-clock duration of one pipeline phase at INFO.
+def timed_phase(name: str, log: logging.Logger | None = None, level: int = logging.INFO) -> Iterator[None]:
+    """Log the wall-clock duration of one pipeline phase.
 
     Logs in a ``finally`` so early returns, cancels, and exceptions still
     record the elapsed time. ``perf_counter`` (monotonic), not ``time.time``.
@@ -32,9 +32,11 @@ def timed_phase(name: str, log: logging.Logger | None = None) -> Iterator[None]:
         log: Logger to emit on; defaults to this module's logger. Passing the
             caller's module logger keeps the log line attributed to the phase's
             own module.
+        level: Log level, default INFO. Pass ``logging.DEBUG`` for boot/startup
+            phases that fire on every run and aren't a normal-INFO-volume event.
     """
     start = time.perf_counter()
     try:
         yield
     finally:
-        (log or logger).info("[timing] %s: %.2fs", name, time.perf_counter() - start)
+        (log or logger).log(level, "[timing] %s: %.2fs", name, time.perf_counter() - start)
