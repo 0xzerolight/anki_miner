@@ -5545,6 +5545,41 @@ class TestVerbFrontCommonnessResolver:
         assert "呼ぶ" not in forms
 
 
+class TestPerParseCacheCaps:
+    """_fg_cache / _rd_cache / _attested_readings_cache are per-parse memos, but a
+    single huge parse (whole-corpus Deck Builder run) can still fill them without
+    limit within that one pass. They get the same clear-on-cap treatment as the
+    sibling caches (_front_cache et al.) so memory stays bounded.
+    """
+
+    def _service(self, reading_lookup=None):
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            return SubtitleParserService(AnkiMinerConfig(), reading_lookup=reading_lookup)
+
+    def test_furigana_cache_honours_cap(self, monkeypatch):
+        service = self._service()
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        with patch("anki_miner.services.subtitle_parser.generate_furigana", side_effect=lambda s, _t: f"fg:{s}"):
+            service._furigana("犬")
+            service._furigana("猫")
+        assert len(service._fg_cache) <= 1
+
+    def test_reading_cache_honours_cap(self, monkeypatch):
+        service = self._service()
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        with patch("anki_miner.services.subtitle_parser.generate_reading", side_effect=lambda s, _t: f"rd:{s}"):
+            service._reading("犬")
+            service._reading("猫")
+        assert len(service._rd_cache) <= 1
+
+    def test_attested_readings_cache_honours_cap(self, monkeypatch):
+        service = self._service(reading_lookup=lambda words: {w: [f"r:{w}"] for w in words})
+        monkeypatch.setattr("anki_miner.services.subtitle_parser._FRONT_CACHE_CAP", 1)
+        service._attested_readings("犬")
+        service._attested_readings("猫")
+        assert len(service._attested_readings_cache) <= 1
+
+
 class TestMemoizedAttest:
     def _service(self, term_lookup):
         with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):

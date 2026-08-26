@@ -536,6 +536,8 @@ class SubtitleParserService:
         missing = [headword for headword in dict.fromkeys(headwords) if headword not in self._attested_readings_cache]
         if not missing:
             return
+        if len(self._attested_readings_cache) + len(missing) > _FRONT_CACHE_CAP:
+            self._attested_readings_cache.clear()
         found = self._reading_lookup(missing)
         for headword in missing:
             self._attested_readings_cache[headword] = found.get(headword) or []
@@ -548,12 +550,16 @@ class SubtitleParserService:
     def _furigana(self, s: str) -> str:
         """Return generate_furigana(s, tagger), memoized within the current parse pass."""
         if s not in self._fg_cache:
+            if len(self._fg_cache) >= _FRONT_CACHE_CAP:
+                self._fg_cache.clear()
             self._fg_cache[s] = generate_furigana(s, self.tagger)
         return self._fg_cache[s]
 
     def _reading(self, s: str) -> str:
         """Return generate_reading(s, tagger), memoized within the current parse pass."""
         if s not in self._rd_cache:
+            if len(self._rd_cache) >= _FRONT_CACHE_CAP:
+                self._rd_cache.clear()
             self._rd_cache[s] = generate_reading(s, self.tagger)
         return self._rd_cache[s]
 
