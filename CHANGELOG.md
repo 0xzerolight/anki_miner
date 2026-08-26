@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
 ## [2.13.0] - 2026-08-26
 
 A release about the two ends of a mining session. At the front: a standalone downloader that saves anything yt-dlp can reach without mining it, YouTube videos whose Japanese exists only as an auto-dub, and a curator that can grow a word's sentence across subtitle cues instead of leaving it cut in half. At the back: a crash-hardening and performance sweep over the whole app, which is why closing a tab after a run no longer takes the window with it, why a 20-hour audiobook is refused rather than killing the process, and why a batch queue stopped rebuilding its entire tokenizer once per item. The bundled yt-dlp moves to 2026.08.19 — the version it shipped with 403s on every YouTube video data request since 2026-08-17.
