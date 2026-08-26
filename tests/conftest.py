@@ -385,6 +385,57 @@ def _drain_qt_deletes():
         app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
 
 
+# Strong references to every widget handed to ``qtbot.addWidget``, released only
+# in ``_pin_qtbot_widgets``' teardown. See that fixture for the WHY.
+_PINNED_QT_WIDGETS: list[object] = []
+
+
+def pytest_configure(config):
+    """Make ``qtbot.addWidget`` hold a STRONG reference until teardown.
+
+    ``pytest-qt`` tracks registered widgets by ``weakref``, so a screen built as
+    a plain local in the test body (``tab = SettingsTab(config)``) is freed the
+    moment the test function's frame dies — inside ``pytest_pyfunc_call``, still
+    in the CALL phase, before any teardown hook runs. With a reference cycle
+    (every real screen has some) it is freed later still, by an arbitrary
+    cyclic-GC pass during some *other* test. Freeing it destroys the whole C++
+    subtree, including any ``run_off_thread`` ``QThread`` parented to a panel
+    inside it; if that thread is still running Qt answers with ``qFatal`` ->
+    ``Fatal Python error: Aborted``, which kills the ``--dist loadfile`` xdist
+    worker and, under ``--max-worker-restart=0``, the whole CI job. The crash is
+    then blamed on whatever test the worker had in flight, so it lands on
+    innocent files — most recently ``test_settings_tab_asr_wiring``, whose two
+    Vulkan cases only ever ``pytest.skip``.
+
+    The ``pytest_runtest_teardown`` reaper below is the designed defence and it
+    works, but only for widgets that survive to teardown. Pinning restores that
+    precondition, so the reap always precedes destruction. Patching
+    ``pytestqt.qtbot._add_widget`` rather than ``QtBot.addWidget`` also covers
+    the ``add_widget`` pep-8 alias, which is bound at class creation.
+    """
+    from pytestqt import qtbot as _qtbot_mod
+
+    _orig_add_widget = _qtbot_mod._add_widget
+
+    def _add_widget(item, widget, **kwargs):
+        _PINNED_QT_WIDGETS.append(widget)
+        return _orig_add_widget(item, widget, **kwargs)
+
+    _qtbot_mod._add_widget = _add_widget
+
+
+@pytest.fixture(autouse=True)
+def _pin_qtbot_widgets():
+    """Drop the strong widget references taken by the ``pytest_configure`` patch.
+
+    A plain fixture finalizer, so it is ordered after the off-thread reaper (a
+    ``pytest_runtest_teardown`` hookwrapper, whose pre-``yield`` body precedes
+    every finalizer) and after ``qtbot``'s own close pass.
+    """
+    yield
+    _PINNED_QT_WIDGETS.clear()
+
+
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_teardown(item):
     """Reap every live ``run_off_thread`` worker at the very START of teardown.
