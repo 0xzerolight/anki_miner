@@ -487,6 +487,134 @@ class TestProbeMetadata:
             service.probe_metadata("https://youtu.be/abc123")
 
 
+class TestProbeClassifiesLikeFetch:
+    """A probe must recognize the same failures a fetch does (Issue #119).
+
+    The probe paths used to raise the raw stderr tail unconditionally, so a user
+    whose cookie source was unreadable got yt-dlp's own text and a link to
+    yt-dlp's issue tracker in a queue-row tooltip — while this app's remedy for
+    that exact failure sat unused on the fetch path. Both probes now run the
+    shared classifier; the raw tail stays only as the unrecognized fallback.
+
+    Stderr strings here are verbatim yt-dlp output — see
+    ``tests/unit/test_ytdlp_invocation.py`` for why that matters.
+    """
+
+    #: cookies.py:363 — the failure in Issue #119's screenshot, doubled the way
+    #: yt-dlp really emits it (logger.error, then YoutubeDL re-reports the cause).
+    CHROME_COPY_FAILED = (
+        "ERROR: Could not copy Chrome cookie database. See  "
+        "https://github.com/yt-dlp/yt-dlp/issues/7271  for more info\n"
+        "ERROR: Could not copy Chrome cookie database. See  "
+        "https://github.com/yt-dlp/yt-dlp/issues/7271  for more info"
+    )
+
+    @staticmethod
+    def _service_with_chrome_cookies(yt_config: AnkiMinerConfig) -> YouTubeFetcherService:
+        return YouTubeFetcherService(replace(yt_config, youtube_cookies_from_browser="chrome"))
+
+    def test_metadata_probe_maps_cookie_copy_failure(self, yt_config: AnkiMinerConfig) -> None:
+        service = self._service_with_chrome_cookies(yt_config)
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=self.CHROME_COPY_FAILED),
+            ),
+            pytest.raises(CookieDatabaseLockedError) as exc,
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+        assert "Close chrome" in str(exc.value)
+        # The whole point: yt-dlp's text and issue link stop here.
+        assert "Could not copy" not in str(exc.value)
+        assert "github.com" not in str(exc.value)
+
+    def test_playlist_probe_maps_cookie_copy_failure(self, yt_config: AnkiMinerConfig) -> None:
+        service = self._service_with_chrome_cookies(yt_config)
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=self.CHROME_COPY_FAILED),
+            ),
+            pytest.raises(CookieDatabaseLockedError) as exc,
+        ):
+            service.probe_playlist("https://youtube.com/playlist?list=PL1", limit=10)
+        assert "Close chrome" in str(exc.value)
+
+    def test_metadata_probe_maps_missing_cookie_db(self, yt_config: AnkiMinerConfig) -> None:
+        """cookies.py:318 — reproducible locally on a box with no Chrome installed."""
+        service = self._service_with_chrome_cookies(yt_config)
+        stderr = 'ERROR: could not find chrome cookies database in "/home/u/.config/google-chrome"'
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=stderr),
+            ),
+            pytest.raises(CookieDatabaseLockedError) as exc,
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+        assert "No cookie database found for chrome" in str(exc.value)
+        # Closing a browser that was never there cannot help.
+        assert "Close chrome" not in str(exc.value)
+
+    def test_metadata_probe_maps_bot_wall(self, service: YouTubeFetcherService) -> None:
+        stderr = "ERROR: [youtube] abc123: Sign in to confirm you're not a bot."
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=stderr),
+            ),
+            pytest.raises(BotDetectionError),
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+
+    def test_metadata_probe_maps_stale_extractor(self, service: YouTubeFetcherService) -> None:
+        """An images-only listing at probe time means the same stale yt-dlp it
+        means at fetch time, and wants the same "update yt-dlp" remedy."""
+        stderr = "ERROR: Only images are available for download, use --list-formats to see them"
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=stderr),
+            ),
+            pytest.raises(YouTubeFetchError, match="Update yt-dlp now"),
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+
+    def test_probe_never_raises_the_dub_route_error(self, service: YouTubeFetcherService) -> None:
+        """The auto_dub branch is gated on sub_mode, which a probe never sets.
+
+        A probe requests no format at all, so "no format" from a probe means a
+        stale extractor, not a vanished dub track.
+        """
+        stderr = "ERROR: Requested format is not available"
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=stderr),
+            ),
+            pytest.raises(YouTubeFetchError) as exc,
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+        assert not isinstance(exc.value, DubAudioUnavailableError)
+
+    def test_unrecognized_probe_failure_keeps_the_verbatim_tail(self, service: YouTubeFetcherService) -> None:
+        """The raw-tail fallback is deliberate — an unknown yt-dlp error is more
+        use on screen in full than paraphrased."""
+        stderr = "ERROR: unable to download video data: HTTP Error 403: Forbidden (attempts=3)."
+        with (
+            patch(
+                "anki_miner.services.youtube_fetcher.run_supervised",
+                return_value=_fake_run(1, "", stderr=stderr),
+            ),
+            pytest.raises(YouTubeFetchError) as exc,
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+        message = str(exc.value)
+        assert "metadata probe failed (exit 1)" in message
+        assert "HTTP Error 403: Forbidden" in message
+        assert not isinstance(exc.value, (BotDetectionError, CookieDatabaseLockedError))
+
+
 class TestAppOwnedCommandIsolation:
     def test_metadata_probe_ignores_user_config(self, service: YouTubeFetcherService) -> None:
         payload = _make_metadata()

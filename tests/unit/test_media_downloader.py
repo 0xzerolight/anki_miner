@@ -440,6 +440,57 @@ class TestErrors:
                 returncode=1,
             )
 
+    @pytest.mark.parametrize(
+        ("stderr_line", "expected_phrase"),
+        [
+            # cookies.py:363 — the Issue #119 failure, Windows chromium.
+            (
+                "ERROR: Could not copy Chrome cookie database. See  "
+                "https://github.com/yt-dlp/yt-dlp/issues/7271  for more info",
+                "Close chrome",
+            ),
+            # cookies.py:1099 — DPAPI; a browser restart cannot fix it.
+            (
+                "ERROR: Failed to decrypt with DPAPI. See  "
+                "https://github.com/yt-dlp/yt-dlp/issues/10927  for more info",
+                "could not decrypt",
+            ),
+            # cookies.py:318 — no cookie DB under the browser's search root.
+            (
+                'ERROR: could not find chrome cookies database in "/home/u/.config/google-chrome"',
+                "No cookie database found for chrome",
+            ),
+        ],
+    )
+    def test_real_cookie_failures_get_their_own_remedy(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        dl_config: AnkiMinerConfig,
+        tmp_path: Path,
+        stderr_line: str,
+        expected_phrase: str,
+    ) -> None:
+        """Verbatim yt-dlp cookie errors, each mapped to the remedy that fits it.
+
+        Download reads the same cookie source the YouTube path does, so it must
+        say the same thing — which is why it shares ``cookie_failure_message``
+        with ``youtube_fetcher`` rather than keeping its own copy.
+        """
+        from dataclasses import replace
+
+        service = MediaDownloaderService(replace(dl_config, youtube_cookies_from_browser="chrome"))
+        with pytest.raises(CookieDatabaseLockedError) as excinfo:
+            _run_download(
+                monkeypatch,
+                service,
+                tmp_path,
+                _opts(),
+                lines=[stderr_line],
+                returncode=1,
+            )
+        assert expected_phrase in str(excinfo.value)
+        assert "github.com" not in str(excinfo.value)
+
     def test_format_unavailable_names_both_remedies(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
     ) -> None:

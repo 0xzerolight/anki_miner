@@ -17,6 +17,7 @@ import collections
 import logging
 import re
 import shutil
+import sys
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -283,8 +284,7 @@ class MediaDownloaderService:
         cmd.append(url)
         return cmd
 
-    @staticmethod
-    def _raise_for_error(tail: collections.deque[str]) -> None:
+    def _raise_for_error(self, tail: collections.deque[str]) -> None:
         joined_lower = "\n".join(tail).lower()
         classification = ytdlp_invocation.classify_error_tail(joined_lower)
 
@@ -294,9 +294,17 @@ class MediaDownloaderService:
                 "browser, or point Cookies file at an exported cookies.txt, then retry."
             )
 
-        if classification == "cookie_lock":
+        if classification in ytdlp_invocation.COOKIE_TAGS:
+            # Shares the YouTube path's wording (and its per-tag remedies) —
+            # both services read the same cookie source, so a user who hits this
+            # in Download must not be told something different than in YouTube.
             raise CookieDatabaseLockedError(
-                "Cookie database is locked. Close the browser and retry, or set Cookies → Browser to None."
+                ytdlp_invocation.cookie_failure_message(
+                    str(classification),
+                    self._config.youtube_cookies_from_browser,
+                    joined_lower,
+                    platform=sys.platform,
+                )
             )
 
         if classification == "format_missing":

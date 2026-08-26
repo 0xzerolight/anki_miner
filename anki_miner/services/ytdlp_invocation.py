@@ -187,20 +187,106 @@ def effective_ffmpeg_location(config: AnkiMinerConfig) -> str | None:
     return None
 
 
+#: Cookie-source classifications, in match order. Every marker here is a literal
+#: substring of a message yt-dlp really emits — cited by ``yt_dlp/cookies.py``
+#: line so the next yt-dlp bump has one place to re-check.
+#:
+#: DO NOT invent a signature for this table. A marker matching nothing is
+#: indistinguishable from a marker matching everything until a user hits it:
+#: the pre-2026-08 table matched only ``"database is locked"``, which no yt-dlp
+#: release emits (chromium *and* firefox copy the DB first — ``cookies.py``
+#: ``_open_database_copy`` — so sqlite never reports a lock), and the branch sat
+#: dead on every platform because the tests fed it a hand-written string. The
+#: tests in ``tests/unit/test_ytdlp_invocation.py`` now paste yt-dlp's own text.
+_COOKIE_MARKERS: tuple[tuple[tuple[str, ...], str], ...] = (
+    # cookies.py:363 — Windows-only PermissionError(errno 13) while shutil.copy'ing
+    # a chromium cookie DB the running browser holds open. yt-dlp issue #7271.
+    (("could not copy", "cookie database"), "cookie_locked"),
+    # cookies.py:1099 — DPAPI/app-bound-encryption decrypt failure. Closing the
+    # browser does NOT clear this one. yt-dlp issue #10927.
+    (("failed to decrypt with dpapi",), "cookie_decrypt"),
+    # cookies.py:146 and :318 — FileNotFoundError, no cookie DB under the browser's
+    # search root: browser not installed, or its profile lives somewhere else
+    # (Flatpak/Snap Firefox is the common Linux case).
+    (("cookies database in",), "cookie_missing"),
+    # Legacy sqlite wording. No current yt-dlp emits it, but a user may have
+    # pinned an old build, and keeping it costs one tuple.
+    (("database is locked",), "cookie_locked"),
+    (("database locked",), "cookie_locked"),
+)
+
+#: The tags :func:`cookie_failure_message` accepts. Callers branch on membership
+#: rather than listing the tags themselves, so adding a fourth cookie signature
+#: stays a one-line change to ``_COOKIE_MARKERS``.
+COOKIE_TAGS: frozenset[str] = frozenset(tag for _markers, tag in _COOKIE_MARKERS)
+
+
 def classify_error_tail(joined_lower: str) -> str | None:
     """Classify a well-known yt-dlp failure signature from lower-cased stderr tail.
 
-    Returns ``"bot"`` (login/bot-check wall), ``"cookie_lock"`` (browser cookie
-    database busy), ``"format_missing"`` (no matching format), or ``None`` when
-    nothing recognizable matched. Each caller maps the classification to its
-    own exception type and user-facing wording; a caller with additional,
-    service-specific failure signatures (e.g. youtube_fetcher's extractor-
-    freshness markers) layers its own extra checks around this result.
+    Returns ``"bot"`` (login/bot-check wall), one of the three cookie-source
+    tags in :data:`_COOKIE_MARKERS` (``"cookie_locked"`` / ``"cookie_decrypt"`` /
+    ``"cookie_missing"`` — pass any of them to :func:`cookie_failure_message`),
+    ``"format_missing"`` (no matching format), or ``None`` when nothing
+    recognizable matched. Each caller maps the classification to its own
+    exception type; a caller with additional, service-specific failure
+    signatures (e.g. youtube_fetcher's extractor-freshness markers) layers its
+    own extra checks around this result.
     """
     if "sign in" in joined_lower and "confirm" in joined_lower:
         return "bot"
-    if "database is locked" in joined_lower or "database locked" in joined_lower:
-        return "cookie_lock"
+    for markers, tag in _COOKIE_MARKERS:
+        if all(marker in joined_lower for marker in markers):
+            return tag
     if "requested format is not available" in joined_lower:
         return "format_missing"
     return None
+
+
+def cookie_failure_message(tag: str, browser: str | None, joined_lower: str, *, platform: str) -> str:
+    """Build the user-facing remedy for a cookie-source classification.
+
+    The three tags fail for different reasons and want different remedies, so
+    "close the browser" is wrong for two of them: a DPAPI failure survives every
+    browser restart, and a missing database means the browser or profile was
+    never there to lock.
+
+    Args:
+        tag: a cookie tag from :func:`classify_error_tail`.
+        browser: the configured ``--cookies-from-browser`` value, or None.
+        joined_lower: the lower-cased stderr tail, for sub-case guidance.
+        platform: ``sys.platform`` of the caller, for platform-specific hints.
+
+    Returns:
+        One sentence naming the remedy, phrased against Settings → YouTube.
+    """
+    named = browser or "the browser"
+    if tag == "cookie_decrypt":
+        return (
+            f"Windows could not decrypt {named}'s cookies. Export a cookies.txt and set it as "
+            "Cookies file in Settings → YouTube, or set Cookies → Browser to None. Restarting "
+            "the browser does not help."
+        )
+    if tag == "cookie_missing":
+        msg = (
+            f"No cookie database found for {named}. Pick a browser you actually use in "
+            "Settings → YouTube, set Cookies → Browser to None, or point Cookies file at an "
+            "exported cookies.txt."
+        )
+        # Flatpak/Snap Firefox keeps its profile outside ~/.mozilla, so yt-dlp
+        # searches the right path and finds nothing. Only tell a Firefox user
+        # this: on a Chrome miss it is noise pointing at the wrong browser.
+        if platform.startswith("linux") and browser is not None and "firefox" in browser.lower():
+            msg += (
+                " If you installed Firefox via Flatpak or Snap, use the "
+                "system-package Firefox instead, or use the cookies.txt route."
+            )
+        return msg
+    msg = f"Cookie database is locked. Close {named} and retry, or set Cookies → Browser to None."
+    if platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
+        msg += (
+            " If you installed Firefox via Flatpak or Snap, use the "
+            "system-package Firefox instead, or set Cookies file in "
+            "Settings → YouTube to an exported cookies.txt."
+        )
+    return msg

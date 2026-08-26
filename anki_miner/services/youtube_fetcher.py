@@ -11,7 +11,7 @@ import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
-from typing import Literal
+from typing import Literal, NoReturn
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -87,6 +87,10 @@ class YouTubeFetcherService:
                 killed and YouTubeFetchError is raised.
 
         Raises:
+            BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
+                failure modes detected in the tail of stderr. A probe passes the
+                configured cookie flags, so it fails on an unreadable cookie
+                source exactly as a fetch does — see :meth:`_classified_error`.
             YouTubeFetchError: yt-dlp crashed, returned non-JSON, or omitted
                 required keys.
             VideoTooLongError: video duration exceeds configured maximum.
@@ -124,10 +128,7 @@ class YouTubeFetcherService:
         if proc.state is SupervisedState.FAILED:
             if proc.returncode is None and proc.error is not None:
                 raise YouTubeFetchError(f"yt-dlp metadata probe failed: {proc.error}") from proc.error
-            stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
-            raise YouTubeFetchError(
-                f"yt-dlp metadata probe failed (exit {proc.returncode}): {chr(10).join(stderr_tail)}"
-            )
+            self._raise_for_probe_error("metadata", proc.returncode, proc.stderr)
 
         try:
             data = json.loads(proc.stdout)
@@ -228,6 +229,9 @@ class YouTubeFetcherService:
                 killed and YouTubeFetchError is raised.
 
         Raises:
+            BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
+                failure modes detected in the tail of stderr — see
+                :meth:`probe_metadata`.
             YouTubeFetchError: yt-dlp crashed, returned non-JSON, the URL is
                 not a playlist (missing / non-list ``entries`` key), or all
                 entries were unusable (private / deleted / bad id).
@@ -269,10 +273,7 @@ class YouTubeFetcherService:
         if proc.state is SupervisedState.FAILED:
             if proc.returncode is None and proc.error is not None:
                 raise YouTubeFetchError(f"yt-dlp playlist probe failed: {proc.error}") from proc.error
-            stderr_tail = (proc.stderr or "").strip().splitlines()[-20:]
-            raise YouTubeFetchError(
-                f"yt-dlp playlist probe failed (exit {proc.returncode}): {chr(10).join(stderr_tail)}"
-            )
+            self._raise_for_probe_error("playlist", proc.returncode, proc.stderr)
 
         try:
             data = json.loads(proc.stdout)
@@ -645,26 +646,41 @@ class YouTubeFetcherService:
             return True
         return "[download] 100%" in line and "Deleting original file" in line
 
-    def _raise_for_error(self, tail: collections.deque[str], sub_mode: SubMode) -> None:
+    def _classified_error(
+        self,
+        tail: collections.deque[str],
+        sub_mode: SubMode | None,
+    ) -> YouTubeFetchError | None:
+        """Return a typed error for a recognized yt-dlp failure, else None.
+
+        Shared by every yt-dlp call site in this service — the two probes and
+        the fetch — so a login wall, a cookie-source failure or a stale
+        extractor reads the same whether it surfaces while checking a URL or
+        while downloading it. Probes pass ``sub_mode=None``; the one branch that
+        needs a mode guards on it explicitly.
+
+        Returning (rather than raising) lets each caller keep its own wording
+        for the unrecognized case, which differs: a probe says "probe failed",
+        the fetch says "exited non-zero".
+        """
         joined_lower = "\n".join(tail).lower()
         classification = ytdlp_invocation.classify_error_tail(joined_lower)
 
         if classification == "bot":
-            raise BotDetectionError(
+            return BotDetectionError(
                 "YouTube requires login. In Settings → YouTube, set Cookies from "
                 "browser, or point Cookies file at an exported cookies.txt, then retry."
             )
 
-        if classification == "cookie_lock":
-            browser = self._config.youtube_cookies_from_browser or "the browser"
-            msg = f"Cookie database is locked. Close {browser} and retry, or set Cookies → Browser to None."
-            if sys.platform.startswith("linux") and ("profile" in joined_lower and "not found" in joined_lower):
-                msg += (
-                    " If you installed Firefox via Flatpak or Snap, use the "
-                    "system-package Firefox instead, or set Cookies file in "
-                    "Settings → YouTube to an exported cookies.txt."
+        if classification in ytdlp_invocation.COOKIE_TAGS:
+            return CookieDatabaseLockedError(
+                ytdlp_invocation.cookie_failure_message(
+                    str(classification),
+                    self._config.youtube_cookies_from_browser,
+                    joined_lower,
+                    platform=sys.platform,
                 )
-            raise CookieDatabaseLockedError(msg)
+            )
 
         # Extractor-freshness failures. YouTube keeps rolling out DRM and SABR-only
         # streaming experiments per client, and an older yt-dlp then finds no usable
@@ -687,13 +703,16 @@ class YouTubeFetcherService:
                 # a retry re-fetches the same selector against the same missing
                 # format and fails identically, so this is typed to opt out of
                 # the queue worker's automatic retry (_DETERMINISTIC_FETCH_ERRORS).
-                raise DubAudioUnavailableError(
+                #
+                # Unreachable from a probe: probes pass sub_mode=None, and a probe
+                # requests no format at all, so it cannot fail to match one.
+                return DubAudioUnavailableError(
                     "No format matched the pinned Japanese-audio selector — the "
                     "auto-dub track listed at probe time is no longer available "
                     "(or no separate video stream exists), so this video cannot "
                     f"be mined via the dub route. yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
                 )
-            raise YouTubeFetchError(
+            return YouTubeFetchError(
                 "YouTube served no downloadable format for this video, which usually "
                 "means yt-dlp is out of date (YouTube's DRM/SABR experiments break "
                 "older versions). Use Settings → YouTube → Update yt-dlp now, or "
@@ -701,7 +720,30 @@ class YouTubeFetcherService:
                 f"yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
             )
 
+        return None
+
+    def _raise_for_error(self, tail: collections.deque[str], sub_mode: SubMode) -> None:
+        """Raise the fetch-side failure for a non-zero yt-dlp exit."""
+        error = self._classified_error(tail, sub_mode)
+        if error is not None:
+            raise error
         raise YouTubeFetchError(f"yt-dlp exited non-zero: {ytdlp_invocation.tail_lines(tail, 20)}")
+
+    def _raise_for_probe_error(self, label: str, returncode: int | None, stderr: str | None) -> NoReturn:
+        """Raise the probe-side failure for a non-zero yt-dlp exit.
+
+        A probe fails for most of the same reasons a fetch does — the cookie
+        source is unreadable, YouTube wants a login, the extractor is stale —
+        so it runs the same classifier and only falls back to the verbatim tail
+        when nothing matches. The verbatim fallback is deliberate: an
+        unrecognized yt-dlp error is more useful on screen in full than
+        paraphrased (pinned by test_long_multiline_probe_error_stays_off_the_row).
+        """
+        lines = (stderr or "").strip().splitlines()[-20:]
+        error = self._classified_error(collections.deque(lines), None)
+        if error is not None:
+            raise error
+        raise YouTubeFetchError(f"yt-dlp {label} probe failed (exit {returncode}): {chr(10).join(lines)}")
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
         candidates = list(workspace.glob(f"{video_id}*"))
