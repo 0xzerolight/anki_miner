@@ -30,6 +30,10 @@ __all__ = ["alass_available", "resolve_alass"]
 # Cache keyed by (name, override-as-str, bin-root-as-str, frozen-state, meipass)
 # so that a changed override, bin_root, or frozen state is never masked by a
 # stale entry.
+# NOTE: the cache does not re-verify the resolved path on hit — if the override
+# or managed binary is deleted after the first call, a second call with the same
+# inputs returns the stale cached path. Revisit if an in-app installer ever
+# appears (asymmetry vs. ytdlp_resolver's re-verification).
 _CACHE: dict[tuple, str] = {}
 
 

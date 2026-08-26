@@ -77,6 +77,11 @@ def run_off_thread(
     Returns:
         The started :class:`SingleCallWorker` (callers may keep it to
         ``cancel()``).
+
+        **Dispatch-closed contract:** if the parent's application tree is
+        closing (set via :func:`close_off_thread_dispatch`), returns an already-
+        cancelled worker that never started. ``on_done`` will never fire.
+        Callers must treat this return value as a no-op.
     """
     worker = SingleCallWorker(
         work,

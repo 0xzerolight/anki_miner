@@ -26,6 +26,10 @@ __all__ = ["resolve_ffmpeg", "resolve_ffprobe"]
 
 # Cache keyed by (name, override-as-str, frozen-state, meipass) so that a changed
 # override or a change in frozen state is never masked by a stale entry.
+# NOTE: the cache does not re-verify the resolved path on hit — if the override
+# is deleted after the first call, a second call with the same inputs returns
+# the stale cached path. Revisit if an in-app installer ever appears (asymmetry
+# vs. ytdlp_resolver's re-verification).
 _CACHE: dict[tuple, str] = {}
 
 

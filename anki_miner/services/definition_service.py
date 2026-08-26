@@ -122,10 +122,12 @@ class DefinitionService:
         self._registry = registry
         self._loaded = False
         # Per-run cache for _provider_attest_quality, keyed on (id(provider),
-        # include_readings). See clear_run_cache() for scope/lifetime; plain
-        # dict is fine unlocked because a DefinitionService (like the rest of
-        # this class — ensure_loaded/_loaded above included) is only ever
-        # touched from the one worker thread processing a run.
+        # include_readings). See clear_run_cache() for scope/lifetime. Using
+        # id(provider) is safe because self._providers strong-holds all provider
+        # objects for this instance's lifetime. Plain dict is fine unlocked
+        # because a DefinitionService (like the rest of this class —
+        # ensure_loaded/_loaded above included) is only ever touched from the
+        # one worker thread processing a run.
         self._attest_cache: dict[tuple[int, bool], dict[str, dict[str, frozenset[str]]]] = {}
 
     def ensure_loaded(self) -> bool:
@@ -781,6 +783,10 @@ class DefinitionService:
                     fresh = fn(missing, include_readings)
                 except Exception as e:
                     logger.warning("Provider '%s' raised during attest_quality; skipping: %s", provider.name, e)
+            # A provider that raises is cached as an empty verdict for the rest
+            # of the episode (sticky): fresh remains {} so .get(w, empty) fills
+            # with empty entries. A future provider that raises transiently should
+            # know this — one raise poisons the cache for the full run.
             empty = {"term_rules": frozenset[str](), "common_rules": frozenset[str]()}
             for w in missing:
                 cached[w] = fresh.get(w, empty)

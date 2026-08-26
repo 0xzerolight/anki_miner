@@ -631,6 +631,10 @@ class BackgroundTaskController(QObject):
             shutdown_fn = getattr(tab, "shutdown", None)
             if callable(shutdown_fn):
                 shutdown_fn()
+            # DISCOVERY CONTRACT: `worker_thread` and `iter_close_workers` are
+            # the ONLY two ways unparented tab workers are discovered at close.
+            # A new tab that forgets this contract silently leaves its workers
+            # unjoined — they are destroyed mid-run by Qt, aborting the process.
             # All mining tabs expose their worker on `worker_thread`.
             # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
             # blocked awaiting Build unblocks and exits.
