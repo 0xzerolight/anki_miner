@@ -63,6 +63,13 @@ _WHATWG_LABELS = {
     "utf-16": "utf-16le",
 }
 
+#: Bound on the head sniffed by :func:`detect_subtitle_encoding`. Real subtitle
+#: files (even a heavily-styled multi-hour .ass) run tens to a few hundred KB;
+#: 1 MiB comfortably covers those whole, so detection is unaffected. It only
+#: matters for a mis-picked huge file (a video, an archive) — this caps that
+#: case to one bounded read instead of decoding the whole thing twice over.
+_MAX_SNIFF_BYTES = 1024 * 1024
+
 
 def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
     """Retry loading *path* from its BOM, cp932, EUC-JP, then detection (D10).
@@ -110,10 +117,15 @@ def detect_subtitle_encoding(path: str | Path) -> str | None:
     declaration rather than guess, because naming the wrong encoding is worse
     than letting the consumer detect. A detected encoding outside
     :data:`_WHATWG_LABELS` also yields None for the same reason.
+
+    Only sniffs the first ``_MAX_SNIFF_BYTES`` of *path* — every real subtitle
+    file fits inside that whole, so detection is unaffected; it just stops a
+    mis-picked huge file from being read (and decoded, twice over) in full.
     """
     path = Path(path)
     try:
-        head = path.read_bytes()
+        with path.open("rb") as f:
+            head = f.read(_MAX_SNIFF_BYTES)
     except OSError:
         return None
 

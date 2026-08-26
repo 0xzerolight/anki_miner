@@ -14,6 +14,7 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
+from anki_miner.services.audio_fetch_common import MAX_AUDIO_BYTES
 from anki_miner.services.audio_fetch_common import (
     find_cached_by_stem as _find_cached_by_stem,
 )
@@ -254,6 +255,26 @@ class LocalAudioPackFetcher:
         """
         assert self._blob_db_path is not None
         for row in rows:
+            try:
+                # length(data) first: an android_db pack's blob table can hold a
+                # corrupt or mismatched multi-hundred-MB row, and checking the
+                # stored size before touching the column avoids materializing
+                # that whole blob into memory just to discard it (matches the
+                # HTTP fetchers' MAX_AUDIO_BYTES abort in audio_fetch_common).
+                size = conn.execute(
+                    "SELECT length(data) FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
+                    (row.file, row.source),
+                ).fetchone()
+            except sqlite3.Error as exc:
+                logger.debug("LocalAudioPackFetcher: blob size read failed for %s: %s", row.file, exc)
+                continue
+            if size is None or size[0] is None:
+                continue
+            if size[0] > MAX_AUDIO_BYTES:
+                logger.debug(
+                    "LocalAudioPackFetcher: skipping oversized android blob for %s (%d bytes)", row.file, size[0]
+                )
+                continue
             try:
                 found = conn.execute(
                     "SELECT data FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",

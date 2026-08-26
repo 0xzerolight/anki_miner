@@ -1,7 +1,10 @@
 """Tests for shared subtitle encoding fallback."""
 
+from pathlib import Path
+
 import pytest
 
+from anki_miner.utils import subtitle_encoding as encoding_mod
 from anki_miner.utils.subtitle_encoding import detect_subtitle_encoding, load_with_fallback_encoding
 
 
@@ -77,3 +80,38 @@ def test_utf32_is_unnameable(tmp_path):
 
 def test_missing_file_is_unnameable(tmp_path):
     assert detect_subtitle_encoding(tmp_path / "nope.srt") is None
+
+
+def test_sniff_bound_caps_the_read(tmp_path, monkeypatch):
+    """A user-picked huge file only ever gets a bounded head read, not a whole-file
+    slurp — the sniff heuristics run on ``_MAX_SNIFF_BYTES`` bytes, never more."""
+    monkeypatch.setattr(encoding_mod, "_MAX_SNIFF_BYTES", 1024)
+    path = tmp_path / "big.srt"
+    path.write_bytes(_SRT.encode("utf-8") + b"a" * (5 * 1024 * 1024))
+
+    read_sizes: list[int] = []
+    real_open = Path.open
+
+    def _spy_open(self, *args, **kwargs):
+        fh = real_open(self, *args, **kwargs)
+        real_read = fh.read
+
+        def _read(n=-1):
+            read_sizes.append(n)
+            return real_read(n)
+
+        fh.read = _read
+        return fh
+
+    monkeypatch.setattr(Path, "open", _spy_open)
+
+    assert detect_subtitle_encoding(path) == "utf-8"
+    assert read_sizes == [1024]
+
+
+def test_sniff_bound_large_enough_for_normal_files(tmp_path):
+    """A real subtitle file — far smaller than the sniff bound — detects unchanged."""
+    text = "1\r\n00:00:01,000 --> 00:00:03,000\r\n猫が走る\r\n\r\n" * 500
+    path = tmp_path / "normal.srt"
+    path.write_bytes(text.encode("cp932"))
+    assert detect_subtitle_encoding(path) == "shift_jis"

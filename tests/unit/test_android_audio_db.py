@@ -151,6 +151,50 @@ def test_blob_serving_opens_the_source_db_once_and_skips_rowless_entries(tmp_pat
     assert len(opens) == 1
 
 
+def test_oversized_android_blob_is_skipped(tmp_path: Path, monkeypatch):
+    """A row whose blob exceeds MAX_AUDIO_BYTES is skipped in favor of the
+    next candidate — the same size guard the HTTP fetchers apply, so a
+    corrupt/mismatched multi-hundred-MB android_db row can't spike memory."""
+    from anki_miner.services.audio_packs import fetcher as fetcher_mod
+
+    monkeypatch.setattr(fetcher_mod, "MAX_AUDIO_BYTES", 16)  # small cap keeps the fixture tiny
+
+    source = _make_android_db(tmp_path / "android.db")
+    conn = sqlite3.connect(source)
+    try:
+        # Two candidate rows for the same word: the first-ranked blob is
+        # oversized, the second is a normal small hit.
+        conn.execute(
+            "INSERT INTO entries VALUES (2, ?, ?, ?, NULL, ?, ?)", ("猫", "ねこ", "nhk16", "ネコ", "audio/big.mp3")
+        )
+        conn.execute(
+            "INSERT INTO entries VALUES (3, ?, ?, ?, NULL, ?, ?)", ("猫", "ねこ", "nhk16", "ネコ", "audio/hit.mp3")
+        )
+        conn.execute("INSERT INTO android VALUES (2, ?, ?, ?)", ("audio/big.mp3", "nhk16", b"x" * 32))
+        conn.execute("INSERT INTO android VALUES (3, ?, ?, ?)", ("audio/hit.mp3", "nhk16", b"ID3-hit"))
+        conn.commit()
+    finally:
+        conn.close()
+
+    packs_root = tmp_path / "packs"
+    import_android_audio_db(source, packs_root)
+    registry = AudioPackRegistry(packs_root)
+    registry.load()
+    installed = registry.packs["android"]
+
+    fetcher = LocalAudioPackFetcher(
+        db_path=installed.db_path,
+        pack_dir=installed.pack_dir,
+        pack_id=installed.pack_id,
+        cache_dir=tmp_path / "cache",
+        blob_db_path=installed.source_db,
+    )
+    fetched = fetcher.fetch("猫", "ねこ")
+
+    assert fetched is not None
+    assert fetched.read_bytes() == b"ID3-hit"
+
+
 def test_overwrite_reimport_purges_stale_pack_cache(tmp_path: Path, monkeypatch):
     home = tmp_path / "home"
     monkeypatch.setattr(config_paths, "ANKI_MINER_HOME", home)
