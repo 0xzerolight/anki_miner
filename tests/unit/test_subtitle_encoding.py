@@ -109,6 +109,40 @@ def test_sniff_bound_caps_the_read(tmp_path, monkeypatch):
     assert read_sizes == [1024]
 
 
+def test_sniff_bound_trims_truncated_multibyte_tail(tmp_path, monkeypatch):
+    """A bounded read that lands mid multi-byte UTF-8 character must not be
+    misreported as undetectable — the truncated tail is trimmed before the
+    decode attempt, so this never falls through to charset-normalizer's
+    unbounded from_path/from_bytes call on the rest of a huge file."""
+    monkeypatch.setattr(encoding_mod, "_MAX_SNIFF_BYTES", 99)
+    path = tmp_path / "big.srt"
+    data = ("1\r\n00:00:01,000 --> 00:00:03,000\r\n" + "猫" * 1000 + "\r\n\r\n").encode("utf-8")
+    path.write_bytes(data)
+    # Sanity: byte 99 really does land inside a 3-byte character — otherwise
+    # this test wouldn't exercise the trim at all.
+    with pytest.raises(UnicodeDecodeError):
+        data[:99].decode("utf-8")
+
+    read_sizes: list[int] = []
+    real_open = Path.open
+
+    def _spy_open(self, *args, **kwargs):
+        fh = real_open(self, *args, **kwargs)
+        real_read = fh.read
+
+        def _read(n=-1):
+            read_sizes.append(n)
+            return real_read(n)
+
+        fh.read = _read
+        return fh
+
+    monkeypatch.setattr(Path, "open", _spy_open)
+
+    assert detect_subtitle_encoding(path) == "utf-8"
+    assert read_sizes == [99]  # one bounded read only — no whole-file fallback
+
+
 def test_sniff_bound_large_enough_for_normal_files(tmp_path):
     """A real subtitle file — far smaller than the sniff bound — detects unchanged."""
     text = "1\r\n00:00:01,000 --> 00:00:03,000\r\n猫が走る\r\n\r\n" * 500
