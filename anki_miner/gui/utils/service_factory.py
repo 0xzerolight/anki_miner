@@ -529,6 +529,24 @@ def _build_expression_audio_fetcher(
     return ChainedExpressionAudioFetcher(fetchers)
 
 
+def create_expression_audio_fetcher(
+    config: AnkiMinerConfig,
+    load_result: ServiceLoadResult | None = None,
+    *,
+    pack_registry: AudioPackRegistry | None = None,
+) -> ExpressionAudioFetcher:
+    """Public entry point for :func:`_build_expression_audio_fetcher`.
+
+    :func:`create_shared_lookup_services` deliberately does NOT build a
+    word-audio fetcher: only a caller that actually fetches needs one, and the
+    chain's online members hold a live ``requests.Session``, so the bundle stays
+    free of an object with a lifetime to manage. Card Backfill's scan worker
+    builds one for the duration of a scan and closes it in a ``finally`` — the
+    caller owns the lifetime.
+    """
+    return _build_expression_audio_fetcher(config, load_result, pack_registry=pack_registry)
+
+
 def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetcher:
     """Build the sentence-TTS chain for reading sources.
 

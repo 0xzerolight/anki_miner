@@ -315,6 +315,7 @@ def scan_backfill(
     services: Any,
     options: BackfillOptions,
     *,
+    expression_audio_fetcher: Any = None,
     progress: Callable[[int, int], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> BackfillPlan:
@@ -338,6 +339,7 @@ def scan_backfill(
             config,
             services,
             options,
+            expression_audio_fetcher=expression_audio_fetcher,
             progress=progress,
             is_cancelled=is_cancelled,
         )
@@ -349,6 +351,7 @@ def _scan_backfill_impl(
     services: Any,
     options: BackfillOptions,
     *,
+    expression_audio_fetcher: Any = None,
     progress: Callable[[int, int], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> BackfillPlan:
@@ -375,10 +378,9 @@ def _scan_backfill_impl(
         selected -= _FREQ_KEYS
     definition_service = services.definition_service
     # Word audio has no is_available(): the chain is legal-but-empty when every
-    # entry is disabled, and the caller only builds a fetcher when the group is
-    # selected. getattr keeps a bundle built by a call site that predates the
-    # field working (it degrades to "unavailable", never to a crash).
-    expression_audio_fetcher = getattr(services, "expression_audio_fetcher", None)
+    # entry is disabled, so "did the caller build one" is the whole test. It is
+    # an explicit parameter rather than a bundle attribute because the caller
+    # owns its lifetime (it holds a live HTTP session and must be closed).
     if selected & _MEDIA_KEYS and expression_audio_fetcher is None:
         unavailable.extend(sorted(selected & _MEDIA_KEYS))
         selected -= _MEDIA_KEYS

@@ -161,12 +161,11 @@ class FakeAudioFetcher:
         return None
 
 
-def _services(pitch=None, freq=None, defs=None, audio=None):
+def _services(pitch=None, freq=None, defs=None):
     return SimpleNamespace(
         pitch_accent_service=pitch,
         frequency_service=freq,
         definition_service=defs or FakeDefinitionService(),
-        expression_audio_fetcher=audio,
     )
 
 
@@ -1259,8 +1258,9 @@ class TestScanWordAudio:
         plan = scan_backfill(
             anki,
             backfill_config,
-            _services(audio=FakeAudioFetcher({"猫": mp3})),
+            _services(),
             _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
         )
         (change,) = plan.notes[0].changes
         assert change.field_key == "expression_audio"
@@ -1271,7 +1271,11 @@ class TestScanWordAudio:
     def test_miss_proposes_nothing(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
         plan = scan_backfill(
-            anki, backfill_config, _services(audio=FakeAudioFetcher({})), _options({"expression_audio"})
+            anki,
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({}),
         )
         assert plan.notes == ()
 
@@ -1280,7 +1284,9 @@ class TestScanWordAudio:
         mp3.write_bytes(b"ID3")
         fetcher = FakeAudioFetcher({"猫": mp3})
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="[sound:old.mp3]")})
-        plan = scan_backfill(anki, backfill_config, _services(audio=fetcher), _options({"expression_audio"}))
+        plan = scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_audio"}), expression_audio_fetcher=fetcher
+        )
         assert plan.notes == ()
         # Gated BEFORE the fetch, so a voiced card costs no network at all.
         assert fetcher.calls == []
@@ -1292,8 +1298,9 @@ class TestScanWordAudio:
         plan = scan_backfill(
             anki,
             backfill_config,
-            _services(audio=FakeAudioFetcher({"猫": mp3})),
+            _services(),
             _options({"expression_audio"}, overwrite=True),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
         )
         assert _changes_by_key(plan, 1)["expression_audio"] == "[sound:new.mp3]"
 
@@ -1304,8 +1311,9 @@ class TestScanWordAudio:
         plan = scan_backfill(
             anki,
             backfill_config,
-            _services(audio=FakeAudioFetcher({"猫": mp3})),
+            _services(),
             _options({"expression_audio"}, overwrite=True),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
         )
         assert plan.notes == ()
         assert plan.identical_skips == 1
@@ -1319,15 +1327,18 @@ class TestScanWordAudio:
         plan = scan_backfill(
             anki,
             backfill_config,
-            _services(audio=FakeAudioFetcher({"猫": mp3})),
+            _services(),
             _options({"expression_audio"}, overwrite=True),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
         )
         assert _changes_by_key(plan, 1)["expression_audio"] == "[sound:g.mp3]"
         assert plan.guessed_reading_skips == 0
 
     def test_no_fetcher_reports_the_field_unavailable(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
-        plan = scan_backfill(anki, backfill_config, _services(audio=None), _options({"expression_audio"}))
+        plan = scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_audio"}), expression_audio_fetcher=None
+        )
         assert plan.notes == ()
         assert plan.unavailable_fields == ("expression_audio",)
 
@@ -1337,7 +1348,11 @@ class TestScanWordAudio:
         config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "expression_audio": ""})
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
         plan = scan_backfill(
-            anki, config, _services(audio=FakeAudioFetcher({"猫": mp3})), _options({"expression_audio"})
+            anki,
+            config,
+            _services(),
+            _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
         )
         assert plan.notes == ()
 
@@ -1346,7 +1361,9 @@ class TestScanWordAudio:
         mp3.write_bytes(b"ID3")
         fetcher = FakeAudioFetcher({"猫": mp3})
         anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
-        scan_backfill(anki, backfill_config, _services(audio=fetcher), _options({"expression_audio"}))
+        scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_audio"}), expression_audio_fetcher=fetcher
+        )
         assert fetcher.calls == [[("猫", "ねこ")]]
 
     def test_progress_ticks_once_per_note(self, backfill_config):
@@ -1357,8 +1374,9 @@ class TestScanWordAudio:
         scan_backfill(
             FakeAnkiService(notes),
             backfill_config,
-            _services(audio=FakeAudioFetcher({})),
+            _services(),
             _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({}),
             progress=lambda done, total: seen.append((done, total)),
         )
         assert seen == [(1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]

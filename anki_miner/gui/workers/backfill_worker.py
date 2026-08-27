@@ -1,12 +1,17 @@
 """Worker threads for the Card Backfill tool (Utilities → Card Backfill)."""
 
+import contextlib
 import logging
 
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
-from anki_miner.gui.utils.service_factory import SharedLookupServices, create_shared_lookup_services
+from anki_miner.gui.utils.service_factory import (
+    SharedLookupServices,
+    create_expression_audio_fetcher,
+    create_shared_lookup_services,
+)
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.card_backfiller import (
@@ -31,6 +36,7 @@ _BACKFILL_FIELD_FAMILIES: dict[str, frozenset[str]] = {
     "dictionary": frozenset(FIELD_GROUPS["definition"] + FIELD_GROUPS["glossary"]),
     "frequency": frozenset(FIELD_GROUPS["frequency"]),
     "pitch": frozenset(FIELD_GROUPS["pitch"]),
+    "audio": frozenset(FIELD_GROUPS["word_audio"]),
 }
 
 
@@ -67,6 +73,7 @@ class BackfillScanWorker(CancellableWorker):
             dictionary_registry=shared_lookup.dictionary_registry,
             frequency_registry=shared_lookup.frequency_registry,
             pitch_registry=shared_lookup.pitch_registry,
+            audio_registry=shared_lookup.audio_pack_registry,
         )
         if message is not None:
             raise SetupError(message)
@@ -84,15 +91,26 @@ class BackfillScanWorker(CancellableWorker):
                 return
             anki_service = AnkiService(self.config)
             shared_lookup = create_shared_lookup_services(self.config)
+            audio_fetcher = None
             try:
                 if self.check_cancelled():
                     return
                 self._check_resource_staleness(shared_lookup)
+                if FIELD_GROUPS["word_audio"][0] in self.options.field_keys:
+                    # Built here rather than in the bundle: only a run that
+                    # actually fetches needs one, and the chain's online members
+                    # hold a live HTTP session this worker must close.
+                    audio_fetcher = create_expression_audio_fetcher(
+                        self.config,
+                        shared_lookup.load_result,
+                        pack_registry=shared_lookup.audio_pack_registry,
+                    )
                 plan = scan_backfill(
                     anki_service,
                     self.config,
                     shared_lookup,
                     self.options,
+                    expression_audio_fetcher=audio_fetcher,
                     progress=self.progress.emit,
                     is_cancelled=self.check_cancelled,
                 )
@@ -105,6 +123,16 @@ class BackfillScanWorker(CancellableWorker):
                     )
                     self.result_ready.emit(plan, tuple(shared_lookup.load_result.warnings))
             finally:
+                if audio_fetcher is not None:
+                    # Duck-typed and suppressed for the same reason
+                    # EpisodeProcessor's teardown is: close() is not on the
+                    # ExpressionAudioFetcher Protocol (the local-pack fetcher
+                    # has none), and a fetcher that cannot close must not sink
+                    # an otherwise completed scan.
+                    close = getattr(audio_fetcher, "close", None)
+                    if callable(close):
+                        with contextlib.suppress(Exception):
+                            close()
                 shared_lookup.close()
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
             self.report_failure(
