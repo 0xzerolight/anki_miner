@@ -1826,8 +1826,8 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Fehlende Felder vorhandener Notizen füllen</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
-        <translation>Fehlende Felder für Tonhöhe, Häufigkeit, Definition und Lesung bereits gesammelter Notizen füllen.</translation>
+        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2192,8 +2192,16 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Lesung + Furigana</translation>
     </message>
     <message>
+        <source>Word audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
         <translation>Füllt Furigana anhand einer vorhandenen Lesung und umgekehrt aus; erzeugt keine neuen Lesungen.</translation>
+    </message>
+    <message>
+        <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2346,6 +2354,10 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     <message>
         <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
         <translation>{count} Notizaktualisierung(en) wurden von Anki nicht bestätigt; erneut scannen, um es noch einmal zu versuchen.</translation>
+    </message>
+    <message>
+        <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>

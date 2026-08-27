@@ -37,7 +37,7 @@ def _lookup_bundle() -> MagicMock:
     ``scan_backfill`` is ever reached. Tests about anything else start clean.
     """
     bundle = MagicMock()
-    for name in ("dictionary_registry", "frequency_registry", "pitch_registry"):
+    for name in ("dictionary_registry", "frequency_registry", "pitch_registry", "audio_pack_registry"):
         getattr(bundle, name).stale_enabled.return_value = []
     return bundle
 
@@ -425,3 +425,68 @@ class TestBackfillApplyWorker:
                 worker.start()
             worker.wait(5000)
         assert (1, 2) in seen
+
+
+def _stub_scan_worker(monkeypatch, *, gate_message: str | None = None) -> SimpleNamespace:
+    """Patch every collaborator ``BackfillScanWorker.run()`` reaches.
+
+    ``gate_message`` is what the staleness gate returns; None means nothing is
+    stale. Returns the mocks the assertions need.
+    """
+    fetcher = MagicMock()
+    build = MagicMock(return_value=fetcher)
+    scan = MagicMock(return_value=_PLAN)
+    gate = MagicMock(return_value=gate_message)
+    monkeypatch.setattr(backfill_worker_module, "AnkiService", MagicMock())
+    monkeypatch.setattr(
+        backfill_worker_module, "create_shared_lookup_services", MagicMock(return_value=_lookup_bundle())
+    )
+    monkeypatch.setattr(backfill_worker_module, "create_expression_audio_fetcher", build)
+    monkeypatch.setattr(backfill_worker_module, "scan_backfill", scan)
+    monkeypatch.setattr(backfill_worker_module, "stale_resource_reimport_error", gate)
+    return SimpleNamespace(fetcher=fetcher, build=build, scan=scan, gate=gate)
+
+
+def _audio_options(*keys: str) -> BackfillOptions:
+    return BackfillOptions(field_keys=frozenset(keys))
+
+
+class TestBackfillScanWorkerWordAudio:
+    def test_fetcher_is_built_and_closed_when_the_group_is_selected(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch)
+        BackfillScanWorker(test_config, _audio_options("expression_audio")).run()
+        assert stubs.build.call_count == 1
+        assert stubs.scan.call_args.kwargs["expression_audio_fetcher"] is stubs.fetcher
+        stubs.fetcher.close.assert_called_once()
+
+    def test_the_scanned_pack_registry_is_reused_not_rescanned(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch)
+        BackfillScanWorker(test_config, _audio_options("expression_audio")).run()
+        assert "pack_registry" in stubs.build.call_args.kwargs
+
+    def test_no_fetcher_is_built_for_a_text_only_run(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch)
+        BackfillScanWorker(test_config, _audio_options("frequency")).run()
+        stubs.build.assert_not_called()
+        assert stubs.scan.call_args.kwargs["expression_audio_fetcher"] is None
+
+    def test_the_fetcher_is_closed_even_when_the_scan_raises(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch)
+        stubs.scan.side_effect = RuntimeError("boom")
+        BackfillScanWorker(test_config, _audio_options("expression_audio")).run()
+        stubs.fetcher.close.assert_called_once()
+
+    def test_a_stale_audio_pack_aborts_an_audio_run(self, test_config, monkeypatch, qtbot):
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Audio pack out of date")
+        worker = BackfillScanWorker(test_config, _audio_options("expression_audio"))
+        with qtbot.waitSignal(worker.error):
+            worker.run()
+        assert stubs.gate.call_args.kwargs["families"] == frozenset({"audio"})
+        assert "audio_registry" in stubs.gate.call_args.kwargs
+        stubs.scan.assert_not_called()
+
+    def test_a_stale_audio_pack_does_not_abort_a_text_only_run(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Audio pack out of date")
+        BackfillScanWorker(test_config, _audio_options("frequency")).run()
+        assert stubs.gate.call_args.kwargs["families"] == frozenset({"frequency"})
+        stubs.scan.assert_not_called()

@@ -162,13 +162,24 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             "definition": self.tr("Definitions"),
             "glossary": self.tr("Glossary"),
             "reading": self.tr("Reading + furigana"),
+            "word_audio": self.tr("Word audio"),
+        }
+        # A group's own tooltip has to be remembered, not just set: the gate
+        # below replaces the tooltip with "Map this field…" whenever the group
+        # is disabled, so without a copy to restore from, one pass through an
+        # unmapped state destroys the explanation permanently.
+        self._group_tooltips = {
+            "reading": self.tr(
+                "Fills furigana from an existing reading and vice versa; does not generate new readings."
+            ),
+            "word_audio": self.tr(
+                "Fetches pronunciation audio through your configured word-audio sources. "
+                "Scanning a large deck can take a while the first time."
+            ),
         }
         for group in FIELD_GROUPS:
             checkbox = QCheckBox(labels[group])
-            if group == "reading":
-                checkbox.setToolTip(
-                    self.tr("Fills furigana from an existing reading and vice versa; does not generate new readings.")
-                )
+            checkbox.setToolTip(self._group_tooltips.get(group, ""))
             self.field_checkboxes[group] = checkbox
             layout.addWidget(checkbox)
 
@@ -362,6 +373,11 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             if not enabled:
                 checkbox.setChecked(False)
                 checkbox.setToolTip(self.tr("Map this field in Settings → Anki"))
+            else:
+                # Restore the group's own tooltip; without this branch the
+                # "Map this field…" text set above outlives the condition that
+                # produced it and the group's explanation is gone for good.
+                checkbox.setToolTip(self._group_tooltips.get(group, ""))
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new config: re-gate checkboxes and drop any held plan.
@@ -688,6 +704,13 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             parts.append(
                 self.tr("{count} note update(s) were not confirmed by Anki; scan again to retry.").format(
                     count=result.failed
+                )
+            )
+            self._run_failed = True
+        if result.media_failed:
+            parts.append(
+                self.tr("{count} audio file(s) could not be added to Anki; scan again to retry.").format(
+                    count=result.media_failed
                 )
             )
             self._run_failed = True

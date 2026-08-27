@@ -21,10 +21,60 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 
 import requests
 
+from anki_miner.models import TokenizedWord
+from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
+from anki_miner.utils import has_katakana, hiragana_to_katakana
+
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 
 logger = logging.getLogger(__name__)
+
+
+def expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
+    """Ordered ``(kanji, kana)`` query pairs for the JPod101 audio retry ladder.
+
+    Two failure modes the single-shot query missed:
+
+    * **Katakana loanwords.** JPod101 indexes loanword audio under the katakana
+      reading, but ``expression_reading`` is folded to hiragana for card
+      display (チップ→ちっぷ → miss).  Each query whose kanji form contains
+      katakana gets a katakana-reading variant (チップ→チップ → hit).
+    * **Surface-mined fallback.** A same-kanji, okurigana-only UniDic lemma is a
+      safe canonical alternate. Surface-mined words fall back to that lemma with
+      the lemma's OWN reading (探す/さがす, not the surface 探し/さがし).
+
+    hiragana↔katakana is lossless and loanwords are unambiguous, so the katakana
+    variant carries no homograph risk (Issue #73). Different-kanji lemmas are
+    excluded because UniDic canonicalization can name another homograph. Empty
+    readings are dropped and duplicates are collapsed, so a verb whose
+    ``mined_form == lemma`` issues no redundant request.
+
+    Lives here rather than beside its mining caller (``AudioStage``) because
+    Card Backfill builds the same ladder for an existing note, and ``services/``
+    must not import ``orchestration/``.
+    """
+    pairs: list[tuple[str, str]] = [(word.mined_form, word.expression_reading)]
+    if word.lemma and word.lemma != word.mined_form and _differs_by_okurigana_only(word.mined_form, word.lemma):
+        pairs.append((word.lemma, word.lemma_reading))
+
+    candidates: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add(kanji: str, kana: str) -> None:
+        if not kanji or not kana:
+            return
+        pair = (kanji, kana)
+        if pair not in seen:
+            seen.add(pair)
+            candidates.append(pair)
+
+    for kanji, kana in pairs:
+        _add(kanji, kana)
+        if has_katakana(kanji):
+            _add(kanji, hiragana_to_katakana(kana))
+    return candidates
+
 
 # Valid words 301-redirect to the CloudFront CDN (cdn.innovativelanguage.com),
 # which returns HTTP 403 + an HTML error page to the default

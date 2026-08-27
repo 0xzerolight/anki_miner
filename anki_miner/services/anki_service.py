@@ -4,6 +4,7 @@ import logging
 import re
 import time
 from collections.abc import Callable, Iterator
+from pathlib import Path
 
 import requests
 from PyQt6.QtCore import QCoreApplication
@@ -1231,6 +1232,20 @@ class AnkiService:
         is_duplicate = [w != wo for w, wo in zip(with_dup, without_dup, strict=True)]
         logger.debug("Anki duplicate fallback probe done: duplicates=%d", sum(is_duplicate))
         return is_duplicate
+
+    def store_media_files(self, paths_by_filename: dict[str, Path]) -> dict[str, str]:
+        """Upload loose media files; return ``{sent name: confirmed name}``.
+
+        Path-oriented sibling of the ``CardPayload``-oriented
+        :meth:`_store_media_files_batch`, for callers that hold files rather
+        than cards (Card Backfill). Names are content-addressed, so a file
+        mining already uploaded resolves to the same media entry rather than a
+        duplicate. A name absent from the result was not stored.
+        """
+        logger.debug("Anki store media files: files=%d", len(paths_by_filename))
+        stored = self._media_store.store_files(paths_by_filename)
+        logger.debug("Anki store media files done: stored=%d", len(stored))
+        return stored
 
     def _store_media_files_batch(
         self,

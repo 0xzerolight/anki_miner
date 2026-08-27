@@ -19,6 +19,7 @@ from anki_miner.services.card_backfiller import (
     FieldChange,
     NotePlan,
     _is_empty,
+    _is_fillable,
     _reading_from_furigana,
     apply_backfill,
     scan_backfill,
@@ -52,6 +53,7 @@ _DEFAULT_NOTE_FIELDS = [
     "FrequencySort",
     "definition",
     "Glossary",
+    "WordAudio",
 ]
 
 
@@ -144,6 +146,21 @@ class FakeDefinitionService:
         return [self.glossaries.get(word) for word, _reading in pairs]
 
 
+class FakeAudioFetcher:
+    """Duck-typed ExpressionAudioFetcher: canned path per candidate kanji form."""
+
+    def __init__(self, hits: dict[str, Path] | None = None):
+        self.hits = hits or {}
+        self.calls: list[list[tuple[str, str]]] = []
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        self.calls.append(list(candidates))
+        for kanji, _kana in candidates:
+            if kanji in self.hits:
+                return self.hits[kanji]
+        return None
+
+
 def _services(pitch=None, freq=None, defs=None):
     return SimpleNamespace(
         pitch_accent_service=pitch,
@@ -174,6 +191,7 @@ def backfill_config(test_config):
             "frequency_sort": "FrequencySort",
             "definition": "definition",
             "glossary": "Glossary",
+            "expression_audio": "WordAudio",
         },
     )
 
@@ -1001,11 +1019,18 @@ class TestScanProgressCancel:
 class RecordingAnkiService(FakeAnkiService):
     """FakeAnkiService that also records writes and tag calls."""
 
-    def __init__(self, notes=None, fail_tags: bool = False):
+    def __init__(self, notes=None, fail_tags: bool = False, stored_media=None):
         super().__init__(notes)
         self.updates: list[list[tuple[int, dict[str, str]]]] = []
         self.tag_calls: list[tuple[list[int], str]] = []
         self.fail_tags = fail_tags
+        # pre-hash filename -> name AnkiConnect confirms; absent == not stored.
+        self.stored_media: dict[str, str] = stored_media or {}
+        self.media_calls: list[dict[str, Path]] = []
+
+    def store_media_files(self, paths_by_filename):
+        self.media_calls.append(dict(paths_by_filename))
+        return {name: self.stored_media[name] for name in paths_by_filename if name in self.stored_media}
 
     def update_notes_fields(self, updates):
         self.updates.append(list(updates))
@@ -1197,3 +1222,243 @@ class TestApplyBackfill:
         seen = []
         apply_backfill(anki, plan, progress=lambda done, total: seen.append((done, total)))
         assert seen[-1] == (1, 1)
+
+
+# ---------------------------------------------------------------------------
+# Word audio
+# ---------------------------------------------------------------------------
+
+
+class TestIsFillableMedia:
+    def test_sound_ref_only_field_is_not_fillable(self):
+        # _is_empty() strips [sound:] refs (it mirrors Anki's dedup key), so it
+        # reports a fully-voiced field as empty. This is the case that must not
+        # regress: fill-only mode would otherwise re-fetch every voiced card.
+        assert _is_empty("[sound:x.mp3]") is True
+        assert _is_fillable("expression_audio", "[sound:x.mp3]") is False
+
+    @pytest.mark.parametrize("value", ["", "   ", "&nbsp;"])
+    def test_blank_audio_field_is_fillable(self, value):
+        assert _is_fillable("expression_audio", value) is True
+
+    def test_markup_only_audio_field_stays_filled(self):
+        # Markup counts as content for every key (the pitch-SVG rule); the media
+        # branch narrows _is_empty, it does not widen it.
+        assert _is_fillable("expression_audio", "<br>") is False
+
+    def test_non_media_key_semantics_are_unchanged(self):
+        assert _is_fillable("definition", "[sound:x.mp3]") is True
+
+
+class TestScanWordAudio:
+    def test_hit_becomes_a_change_carrying_the_path(self, backfill_config, tmp_path):
+        mp3 = tmp_path / "jpod101_猫_ねこ.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
+        )
+        (change,) = plan.notes[0].changes
+        assert change.field_key == "expression_audio"
+        assert change.field_name == "WordAudio"
+        assert change.new_value == f"[sound:{mp3.name}]"
+        assert change.media_path == mp3
+
+    def test_miss_proposes_nothing(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({}),
+        )
+        assert plan.notes == ()
+
+    def test_existing_sound_ref_is_not_refetched_in_fill_mode(self, backfill_config, tmp_path):
+        mp3 = tmp_path / "new.mp3"
+        mp3.write_bytes(b"ID3")
+        fetcher = FakeAudioFetcher({"猫": mp3})
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="[sound:old.mp3]")})
+        plan = scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_audio"}), expression_audio_fetcher=fetcher
+        )
+        assert plan.notes == ()
+        # Gated BEFORE the fetch, so a voiced card costs no network at all.
+        assert fetcher.calls == []
+
+    def test_overwrite_replaces_an_existing_ref(self, backfill_config, tmp_path):
+        mp3 = tmp_path / "new.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="[sound:old.mp3]")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}, overwrite=True),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
+        )
+        assert _changes_by_key(plan, 1)["expression_audio"] == "[sound:new.mp3]"
+
+    def test_overwrite_skips_an_identical_ref(self, backfill_config, tmp_path):
+        mp3 = tmp_path / "same.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="[sound:same.mp3]")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}, overwrite=True),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
+        )
+        assert plan.notes == ()
+        assert plan.identical_skips == 1
+
+    def test_guessed_reading_is_used_without_a_guard(self, backfill_config, tmp_path):
+        # Decision: no reading-provenance guard for audio, unlike pitch. The
+        # reading here comes from the stubbed tagger (猫 -> ネコ -> ねこ).
+        mp3 = tmp_path / "g.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="", WordAudio="[sound:old.mp3]")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}, overwrite=True),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
+        )
+        assert _changes_by_key(plan, 1)["expression_audio"] == "[sound:g.mp3]"
+        assert plan.guessed_reading_skips == 0
+
+    def test_no_fetcher_reports_the_field_unavailable(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
+        plan = scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_audio"}), expression_audio_fetcher=None
+        )
+        assert plan.notes == ()
+        assert plan.unavailable_fields == ("expression_audio",)
+
+    def test_unmapped_audio_field_proposes_nothing(self, backfill_config, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        config = replace(backfill_config, anki_fields={**backfill_config.anki_fields, "expression_audio": ""})
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
+        plan = scan_backfill(
+            anki,
+            config,
+            _services(),
+            _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({"猫": mp3}),
+        )
+        assert plan.notes == ()
+
+    def test_the_candidate_ladder_reaches_the_fetcher(self, backfill_config, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        fetcher = FakeAudioFetcher({"猫": mp3})
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", WordAudio="")})
+        scan_backfill(
+            anki, backfill_config, _services(), _options({"expression_audio"}), expression_audio_fetcher=fetcher
+        )
+        assert fetcher.calls == [[("猫", "ねこ")]]
+
+    def test_progress_ticks_once_per_note(self, backfill_config):
+        # Per note, not per 500-note chunk: a per-note network fetch makes the
+        # old chunk-boundary tick read as a hang.
+        notes = {i: _note(i, word=f"語{i}", ExpressionReading="ご", WordAudio="") for i in range(1, 6)}
+        seen: list[tuple[int, int]] = []
+        scan_backfill(
+            FakeAnkiService(notes),
+            backfill_config,
+            _services(),
+            _options({"expression_audio"}),
+            expression_audio_fetcher=FakeAudioFetcher({}),
+            progress=lambda done, total: seen.append((done, total)),
+        )
+        assert seen == [(1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]
+
+
+class TestApplyWordAudio:
+    def _audio_note(self, note_id=1, current=""):
+        return {note_id: _note(note_id, word=f"word{note_id}", WordAudio=current)}
+
+    def test_uploads_then_writes_the_confirmed_name(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = RecordingAnkiService(self._audio_note(), stored_media={"a.mp3": "a_deadbeef1234.mp3"})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        result = apply_backfill(anki, plan)
+        assert anki.media_calls == [{"a.mp3": mp3}]
+        assert anki.updates == [[(1, {"WordAudio": "[sound:a_deadbeef1234.mp3]"})]]
+        assert result.fields_filled == 1
+        assert result.media_failed == 0
+
+    def test_an_unconfirmed_upload_drops_the_field_and_counts_it(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = RecordingAnkiService(self._audio_note(), stored_media={})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        result = apply_backfill(anki, plan)
+        # An unconfirmed file must never be referenced: that is how a card ends
+        # up pointing at missing media.
+        assert anki.updates == []
+        assert result.media_failed == 1
+        assert result.fields_filled == 0
+
+    def test_a_vanished_cache_file_counts_once(self, tmp_path):
+        missing = tmp_path / "gone.mp3"  # never created
+        anki = RecordingAnkiService(self._audio_note())
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:gone.mp3]", missing)])])
+        result = apply_backfill(anki, plan)
+        assert result.media_failed == 1
+        assert anki.media_calls == []
+        assert anki.updates == []
+
+    def test_text_only_plan_uploads_nothing(self):
+        anki = RecordingAnkiService({1: _note(1, word="word1", Frequency="")})
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "<ul><li>x</li></ul>")])])
+        apply_backfill(anki, plan)
+        assert anki.media_calls == []
+
+    def test_a_stale_note_does_not_leave_an_orphan_upload(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        # Note deleted between scan and apply: notesInfo returns {} for it.
+        anki = RecordingAnkiService({}, stored_media={"a.mp3": "a_hash.mp3"})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        apply_backfill(anki, plan)
+        assert anki.media_calls == []
+
+    def test_two_notes_sharing_a_file_upload_it_once(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = RecordingAnkiService(
+            {
+                1: _note(1, word="word1", WordAudio=""),
+                2: _note(2, word="word2", WordAudio=""),
+            },
+            stored_media={"a.mp3": "a_hash.mp3"},
+        )
+        plan = _plan(
+            [
+                _note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)]),
+                _note_plan(2, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)]),
+            ]
+        )
+        apply_backfill(anki, plan)
+        assert anki.media_calls == [{"a.mp3": mp3}]
+        assert anki.updates == [[(1, {"WordAudio": "[sound:a_hash.mp3]"}), (2, {"WordAudio": "[sound:a_hash.mp3]"})]]
+
+    def test_a_voiced_note_is_skipped_stale_in_fill_mode(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        # Audio arrived between scan and apply; fill-only must not clobber it.
+        anki = RecordingAnkiService(self._audio_note(current="[sound:other.mp3]"), stored_media={"a.mp3": "a_hash.mp3"})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        result = apply_backfill(anki, plan)
+        assert anki.updates == []
+        assert result.skipped_stale == 1

@@ -1826,8 +1826,8 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
         <translation>Compila i campi mancanti nelle note esistenti</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
-        <translation>Compila i campi di accento tonale, frequenza, definizione e lettura mancanti nelle note già estratte.</translation>
+        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2192,8 +2192,16 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
         <translation>Lettura + furigana</translation>
     </message>
     <message>
+        <source>Word audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
         <translation>Compila il furigana da una lettura esistente e viceversa; non genera nuove letture.</translation>
+    </message>
+    <message>
+        <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2346,6 +2354,10 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
     <message>
         <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
         <translation>Anki non ha confermato {count} aggiornamento/i di nota; esegui una nuova scansione per riprovare.</translation>
+    </message>
+    <message>
+        <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>

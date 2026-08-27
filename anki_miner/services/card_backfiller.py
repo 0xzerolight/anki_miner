@@ -3,9 +3,16 @@
 The Card Backfill tool (Utilities → Card Backfill) generalizes the card restyler's
 enumerate → chunk → ``notesInfo`` → compute → ``updateNoteFields`` loop
 (``card_restyler.restyle_mined_cards``): after the user installs a pitch CSV,
-frequency sources, or dictionaries, it proposes values for pitch graph/text,
-frequency display/sort, definition, glossary, and reading/furigana fields that
-old cards are missing.
+frequency sources, dictionaries, or an audio pack, it proposes values for pitch
+graph/text, frequency display/sort, definition, glossary, reading/furigana and
+word-audio fields that old cards are missing.
+
+Word audio is the one proposal that is not a pure local lookup: it fetches
+through ``config.expression_audio_chain`` during the scan, so the preview keeps
+its promise that apply writes exactly what was previewed (a word no enabled
+source has never becomes a row), and it is the only field whose value is
+rewritten at apply time — Anki media names are content-addressed, so the
+``[sound:...]`` ref can only be built once ``storeMediaFile`` confirms a name.
 
 Two phases, both GUI-free and cancellable:
 
@@ -30,6 +37,7 @@ import logging
 import re
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from anki_miner.exceptions import SetupError
@@ -41,6 +49,7 @@ from anki_miner.services.anki_note_builder import (
     field_target_collision_message,
     missing_note_type_message,
 )
+from anki_miner.services.backfill_audio import word_audio_candidates
 
 # Generic Anki-search escaper (backslash/quote/``*``/``_``); the historical name
 # says "note type" but deck names need the identical escaping (see
@@ -86,10 +95,16 @@ FIELD_GROUPS: dict[str, tuple[str, ...]] = {
     "definition": ("definition",),
     "glossary": ("glossary",),
     "reading": ("expression_reading", "expression_furigana"),
+    "word_audio": ("expression_audio",),
 }
 
 _PITCH_KEYS = frozenset(FIELD_GROUPS["pitch"])
 _FREQ_KEYS = frozenset(FIELD_GROUPS["frequency"])
+# Keys whose stored value is a media reference rather than text. _is_empty
+# mirrors Anki's HTML/media-stripped dedup key and therefore strips
+# ``[sound:...]``, so for these keys it reports a fully-populated field as
+# empty — see _is_fillable, which is the only place that difference matters.
+_MEDIA_KEYS = frozenset(FIELD_GROUPS["word_audio"])
 # v2.7.8-v2.11.0 wrote this into the sort field for a word no source ranked.
 # READ-ONLY now: nothing writes it, and `_is_fillable` treats a stored one as
 # empty so a normal fill-only scan can replace it with a real rank.
@@ -118,6 +133,12 @@ class FieldChange:
     field_name: str
     old_display: str
     new_value: str
+    #: Local file backing a media field, carried from scan to apply. The final
+    #: ``[sound:...]`` value cannot be built at scan time: Anki media names are
+    #: content-addressed and only confirmed by ``storeMediaFile``, so
+    #: ``new_value`` holds the pre-upload name for the preview row and apply
+    #: substitutes the confirmed one. None for every text field.
+    media_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -166,6 +187,9 @@ class BackfillResult:
     ``notes_updated``, ``fields_filled``, and ``tagged`` count only note IDs
     confirmed by AnkiConnect. ``failed`` counts attempted note updates that
     were not confirmed. ``skipped_stale`` remains a field-change count.
+    ``media_failed`` counts media-backed field changes dropped because their
+    file could not be put into Anki's collection — the field is left alone
+    rather than pointed at media that is not there.
     """
 
     notes_updated: int
@@ -173,6 +197,7 @@ class BackfillResult:
     tagged: int
     skipped_stale: int
     failed: int = 0
+    media_failed: int = 0
 
 
 def _is_empty(value: str) -> bool:
@@ -199,7 +224,16 @@ def _is_fillable(field_key: str, value: str) -> bool:
     word — otherwise those cards would be stuck at 9999999 forever, since
     ``_is_empty`` reads it as real content. Scoped to the one field that ever
     held it: every other field keeps plain ``_is_empty`` semantics.
+
+    Media keys invert that adjustment. For them the ``[sound:...]`` ref IS the
+    content, but ``_is_empty`` strips refs, so a fully-voiced field reads as
+    empty there and fill-only mode would re-fetch and rewrite every card that
+    already has audio. Any surviving ref means filled; whitespace and
+    markup-only keep ``_is_empty`` semantics, so the branch narrows the
+    predicate without widening it.
     """
+    if field_key in _MEDIA_KEYS:
+        return _is_empty(value) and not _SOUND_REF_RE.search(value or "")
     if _is_empty(value):
         return True
     return field_key == "frequency_sort" and (value or "").strip() == _LEGACY_FREQ_MISS_SENTINEL
@@ -281,6 +315,7 @@ def scan_backfill(
     services: Any,
     options: BackfillOptions,
     *,
+    expression_audio_fetcher: Any = None,
     progress: Callable[[int, int], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> BackfillPlan:
@@ -304,6 +339,7 @@ def scan_backfill(
             config,
             services,
             options,
+            expression_audio_fetcher=expression_audio_fetcher,
             progress=progress,
             is_cancelled=is_cancelled,
         )
@@ -315,6 +351,7 @@ def _scan_backfill_impl(
     services: Any,
     options: BackfillOptions,
     *,
+    expression_audio_fetcher: Any = None,
     progress: Callable[[int, int], None] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> BackfillPlan:
@@ -340,6 +377,13 @@ def _scan_backfill_impl(
         unavailable.extend(sorted(selected & _FREQ_KEYS))
         selected -= _FREQ_KEYS
     definition_service = services.definition_service
+    # Word audio has no is_available(): the chain is legal-but-empty when every
+    # entry is disabled, so "did the caller build one" is the whole test. It is
+    # an explicit parameter rather than a bundle attribute because the caller
+    # owns its lifetime (it holds a live HTTP session and must be closed).
+    if selected & _MEDIA_KEYS and expression_audio_fetcher is None:
+        unavailable.extend(sorted(selected & _MEDIA_KEYS))
+        selected -= _MEDIA_KEYS
 
     absent_fields = _preflight(anki_service, config, selected, word_field)
     selected -= {key for key in selected if anki_fields[key] in absent_fields}
@@ -395,7 +439,17 @@ def _scan_backfill_impl(
             is_cancelled=is_cancelled,
         )
 
+        # Progress and cancellation are per NOTE, not per chunk. Every other
+        # proposal is a local lookup, so a chunk-boundary tick was invisible;
+        # word audio is a network round trip per note, which turns a 500-note
+        # chunk into minutes of frozen bar and a Cancel that does nothing until
+        # the chunk ends.
+        base = scanned - len(contexts)
+        cancelled = False
         for idx, ctx in enumerate(contexts):
+            if is_cancelled and is_cancelled():
+                cancelled = True
+                break
             changes, note_identicals, note_guessed = _compute_note_changes(
                 ctx,
                 config,
@@ -406,14 +460,19 @@ def _scan_backfill_impl(
                 definition=definitions[idx],
                 glossary=glossaries[idx],
                 dict_css_entries=dict_css_entries,
+                expression_audio_fetcher=expression_audio_fetcher,
+                tagger=tagger,
+                is_cancelled=is_cancelled,
             )
             identical_skips += note_identicals
             guessed_reading_skips += note_guessed
             if changes:
                 note_plans.append(NotePlan(ctx.note_id, ctx.mined_form, tuple(changes)))
+            if progress:
+                progress(base + idx + 1, len(note_ids))
 
-        if progress:
-            progress(scanned, len(note_ids))
+        if cancelled:
+            break
 
     if reading_failures or lemma_failures:
         log_summary(
@@ -449,6 +508,7 @@ def _scan_backfill_impl(
         scanned=scanned,
         notes=len(plan.notes),
         fields=plan.total_field_changes,
+        word_audio=sum(1 for note in plan.notes for change in note.changes if change.media_path is not None),
         overwrite=options.overwrite,
         absent=absent_fields,
         unavailable=unavailable,
@@ -657,6 +717,9 @@ def _compute_note_changes(
     definition: str | None,
     glossary: str | None,
     dict_css_entries: list[tuple[str, str, str]],
+    expression_audio_fetcher: Any = None,
+    tagger: Any = None,
+    is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[FieldChange], int, int]:
     """Emit FieldChanges for one note under the fill/overwrite policy.
 
@@ -667,6 +730,7 @@ def _compute_note_changes(
     """
     anki_fields = config.anki_fields
     proposals: dict[str, str] = {}
+    media_paths: dict[str, Path] = {}
 
     if selected & _PITCH_KEYS:
         proposals.update(_pitch_proposals(ctx, config, selected, pitch_service))
@@ -701,6 +765,21 @@ def _compute_note_changes(
         if key in proposals:
             proposals[key] = attach_card_style_block(proposals[key], dict_css_entries=dict_css_entries)
 
+    # Word audio, after the style-block loop (it carries no markup to stamp).
+    # Fillability is checked HERE, before the fetch, rather than left to the
+    # policy loop below: this is the only proposal that costs a network round
+    # trip, so a card that already has audio must not pay for one in fill-only
+    # mode. The policy loop still re-checks, so the gate is not load-bearing
+    # for correctness — only for cost.
+    if "expression_audio" in selected and expression_audio_fetcher is not None:
+        audio_field = anki_fields.get("expression_audio")
+        current_audio = _field_value(ctx.fields, audio_field) if audio_field else None
+        if current_audio is not None and (options.overwrite or _is_fillable("expression_audio", current_audio)):
+            audio_path = _audio_proposal(ctx, expression_audio_fetcher, tagger, is_cancelled)
+            if audio_path is not None:
+                proposals["expression_audio"] = f"[sound:{audio_path.name}]"
+                media_paths["expression_audio"] = audio_path
+
     changes: list[FieldChange] = []
     identical_skips = 0
     guessed_reading_skips = 0
@@ -733,7 +812,7 @@ def _compute_note_changes(
                 continue
         elif not _is_fillable(key, current):
             continue
-        changes.append(FieldChange(key, field_name, _display(current), new_value))
+        changes.append(FieldChange(key, field_name, _display(current), new_value, media_paths.get(key)))
     return changes, identical_skips, guessed_reading_skips
 
 
@@ -813,6 +892,31 @@ def _frequency_proposals(
     return proposals
 
 
+def _audio_proposal(
+    ctx: _NoteContext,
+    fetcher: Any,
+    tagger: Any,
+    is_cancelled: Callable[[], bool] | None,
+) -> Path | None:
+    """Resolve word audio for one note through the configured chain.
+
+    Returns the local cached file, or None when no enabled source has this
+    word. The fetcher protocol forbids raising, so there is no try/except here
+    — the same contract the mining loop relies on (``AudioStage._per_item``).
+
+    Deliberately no reading-provenance guard, unlike pitch: a tokenizer-guessed
+    reading is allowed to fetch and to overwrite. JPod101 refuses a non-kana
+    reading outright and a wrong kana reading misses rather than fetching a
+    homograph; a synthetic source will voice the guess, which is the accepted
+    cost of the feature.
+    """
+    candidates = word_audio_candidates(ctx.mined_form, ctx.reading, ctx.lemma, tagger)
+    if not candidates:
+        return None
+    path: Path | None = fetcher.fetch_candidates(candidates, cancelled_check=is_cancelled)
+    return path
+
+
 def apply_backfill(
     anki_service: AnkiService,
     plan: BackfillPlan,
@@ -862,7 +966,7 @@ def _apply_backfill_impl(
 ) -> BackfillResult:
     overwrite = plan.options.overwrite
     total_notes = len(plan.notes)
-    notes_updated = fields_filled = tagged = skipped_stale = failed = 0
+    notes_updated = fields_filled = tagged = skipped_stale = failed = media_failed = 0
     written_so_far = 0
 
     for chunk in _chunks(plan.notes, _CHUNK):
@@ -873,6 +977,23 @@ def _apply_backfill_impl(
             for info in anki_service.notes_info([note.note_id for note in chunk])
             if isinstance(info, dict) and isinstance(info.get("noteId"), int)
         }
+        # Upload this chunk's media once, before any note is written. Restricted
+        # to notes that survived the notesInfo recheck so a note deleted between
+        # scan and apply cannot leave an unreferenced file in the collection.
+        media_sources: dict[str, Path] = {}
+        for note in chunk:
+            if note.note_id not in infos:
+                continue
+            for change in note.changes:
+                if change.media_path is None:
+                    continue
+                if not change.media_path.exists():
+                    # Cached file deleted between scan and apply.
+                    media_failed += 1
+                    continue
+                media_sources.setdefault(change.media_path.name, change.media_path)
+        stored_names = anki_service.store_media_files(media_sources) if media_sources else {}
+
         updates: list[tuple[int, dict[str, str]]] = []
         for note in chunk:
             fields = infos.get(note.note_id)
@@ -893,7 +1014,22 @@ def _apply_backfill_impl(
                 if not overwrite and not _is_fillable(change.field_key, current):
                     skipped_stale += 1
                     continue
-                payload[change.field_name] = change.new_value
+                value = change.new_value
+                if change.media_path is not None:
+                    if not change.media_path.exists():
+                        # Already counted by the pre-pass above; counting it
+                        # again here would double-report the same file.
+                        continue
+                    # The [sound:...] name is only knowable after the upload
+                    # confirms it (media names are content-addressed). An
+                    # unconfirmed file must never be referenced — that is how a
+                    # card ends up pointing at missing media.
+                    confirmed = stored_names.get(change.media_path.name)
+                    if confirmed is None:
+                        media_failed += 1
+                        continue
+                    value = f"[sound:{confirmed}]"
+                payload[change.field_name] = value
             if payload:
                 updates.append((note.note_id, payload))
         written_so_far += len(chunk)
@@ -930,4 +1066,5 @@ def _apply_backfill_impl(
         tagged=tagged,
         skipped_stale=skipped_stale,
         failed=failed,
+        media_failed=media_failed,
     )

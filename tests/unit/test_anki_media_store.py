@@ -587,3 +587,61 @@ class TestDictionaryMediaConfirmedNames:
         final_note = build_note(items[0], config, set()).note
         definition_field = config.anki_fields["definition"]
         assert 'src="d__icon_1.svg"' in final_note["fields"][definition_field]
+
+
+class TestStoreFiles:
+    """store_files: the path-oriented engine Card Backfill uploads through."""
+
+    def test_returns_the_confirmed_content_hashed_name(self, test_config, tmp_path):
+        src = tmp_path / "jpod101_猫_ねこ.mp3"
+        src.write_bytes(b"ID3" + b"\x00" * 64)
+        store = AnkiMediaStore(test_config)
+        with patch.object(store, "_store_media_chunk", lambda chunk: {sent: sent for sent, _a in chunk}):
+            result = store.store_files({src.name: src})
+        assert list(result) == [src.name]
+        # Content-addressed: the stored name is NOT the name we were handed.
+        assert result[src.name] != src.name
+        assert result[src.name].startswith("jpod101_猫_ねこ_")
+        assert result[src.name].endswith(".mp3")
+
+    def test_adopts_a_name_ankiconnect_renamed(self, test_config, tmp_path):
+        src = tmp_path / "a.mp3"
+        src.write_bytes(b"ID3")
+        store = AnkiMediaStore(test_config)
+        with patch.object(
+            store, "_store_media_chunk", lambda chunk: {sent: "anki-chose-this.mp3" for sent, _a in chunk}
+        ):
+            assert store.store_files({"a.mp3": src}) == {"a.mp3": "anki-chose-this.mp3"}
+
+    def test_a_rejected_file_is_absent_from_the_result(self, test_config, tmp_path):
+        src = tmp_path / "a.mp3"
+        src.write_bytes(b"ID3")
+        store = AnkiMediaStore(test_config)
+        with patch.object(store, "_store_media_chunk", lambda chunk: {}):
+            assert store.store_files({"a.mp3": src}) == {}
+
+    def test_an_unreadable_file_is_skipped_not_raised_on(self, test_config, tmp_path):
+        missing = tmp_path / "gone.mp3"  # never created
+        store = AnkiMediaStore(test_config)
+        with patch.object(store, "_store_media_chunk", lambda chunk: {sent: sent for sent, _a in chunk}):
+            assert store.store_files({"gone.mp3": missing}) == {}
+
+    def test_empty_input_makes_no_request(self, test_config):
+        store = AnkiMediaStore(test_config)
+        with patch("anki_miner.services._ankiconnect.requests.post") as post:
+            assert store.store_files({}) == {}
+        post.assert_not_called()
+
+    def test_store_batch_still_propagates_the_confirmed_name(self, test_config, make_tokenized_word, tmp_path):
+        # Regression guard on the extraction: the CardPayload caller keeps its
+        # behaviour and now delegates instead of running its own upload loop.
+        src = tmp_path / "b.mp3"
+        src.write_bytes(b"ID3")
+        config = replace(test_config, anki_fields={"expression_audio": "WordAudio"})
+        store = AnkiMediaStore(config)
+        media = MediaData(expression_audio_path=src, expression_audio_filename="b.mp3")
+        payload = CardPayload(word=make_tokenized_word(lemma="w"), media=media, definition="d")
+        with patch.object(store, "store_files", lambda paths: {"b.mp3": "b_abc123def456.mp3"}):
+            assert store.store_batch([payload]) == {"b_abc123def456.mp3"}
+        assert media.expression_audio_filename == "b_abc123def456.mp3"
+        assert store.last_store_failures == 0

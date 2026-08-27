@@ -1826,8 +1826,8 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Preencher campos ausentes em notas existentes</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
-        <translation>Preencher campos ausentes de acento tonal, frequência, definição e leitura em notas já mineradas.</translation>
+        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2192,8 +2192,16 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Leitura + furigana</translation>
     </message>
     <message>
+        <source>Word audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
         <translation>Preenche o furigana com base em uma leitura existente e vice-versa; não gera novas leituras.</translation>
+    </message>
+    <message>
+        <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2346,6 +2354,10 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     <message>
         <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
         <translation>{count} atualização(ões) de nota não foram confirmadas pelo Anki; verifique novamente para tentar de novo.</translation>
+    </message>
+    <message>
+        <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancelling…</source>

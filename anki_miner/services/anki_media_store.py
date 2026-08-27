@@ -305,6 +305,31 @@ class AnkiMediaStore:
         # reuse that exact answer instead of the logical src.
         self._dict_media_names: dict[str, str] = {}
 
+    def store_files(self, paths_by_filename: dict[str, Path]) -> dict[str, str]:
+        """Upload files to Anki's media collection; return the confirmed names.
+
+        ``{pre-hash filename: content-addressed name AnkiConnect confirmed}``. A
+        file absent from the returned mapping was not stored — unreadable, over
+        the size cap, or rejected by its sub-action — and the caller must not
+        reference it from a note.
+
+        Encoding is streamed per chunk, so only one chunk's base64 (~4 MB) is
+        resident at a time; the caller discards each chunk after its POST.
+
+        The engine behind :meth:`store_batch`, exposed directly for callers that
+        hold file paths rather than ``CardPayload`` objects (Card Backfill).
+        Owns no failure accounting: ``store_batch`` keeps its own, and a
+        path-holding caller counts requested-minus-returned.
+        """
+        rename: dict[str, str] = {}
+        for chunk in _stream_encode_chunks(paths_by_filename.items()):
+            result_map = self._store_media_chunk([(sent, action) for _, sent, action in chunk])
+            for orig, sent, _ in chunk:
+                actual = result_map.get(sent)
+                if actual is not None:
+                    rename[orig] = actual
+        return rename
+
     def store_batch(self, word_data_list: list[CardPayload]) -> set[str]:
         """Store all media files in Anki collection via batched ``multi`` POSTs.
 
@@ -378,20 +403,10 @@ class AnkiMediaStore:
             self.last_store_failures = len(vanished)
             return set()
 
-        # Stream: encode lazily per chunk; only one chunk's base64 is in RAM
-        # at a time.  Files that fail to encode are skipped (logged inside
-        # _stream_encode_chunks) and excluded from the attempt count below.
-        stored_finals: set[str] = set()
         # pre-hash name -> final stored name (content hash, or AnkiConnect's own
         # rename if it differs from what we sent).
-        rename: dict[str, str] = {}
-        for chunk in _stream_encode_chunks(paths_by_filename.items()):
-            result_map = self._store_media_chunk([(sent, action) for _, sent, action in chunk])
-            for orig, sent, _ in chunk:
-                actual = result_map.get(sent)
-                if actual is not None:
-                    rename[orig] = actual
-                    stored_finals.add(actual)
+        rename = self.store_files(paths_by_filename)
+        stored_finals = set(rename.values())
 
         # Propagate the final Anki-side name onto every payload that referenced
         # the pre-hash name so build_note points cards at the stored file.
