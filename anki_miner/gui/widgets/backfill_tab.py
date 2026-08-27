@@ -162,12 +162,20 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             "definition": self.tr("Definitions"),
             "glossary": self.tr("Glossary"),
             "reading": self.tr("Reading + furigana"),
+            "word_audio": self.tr("Word audio"),
         }
         for group in FIELD_GROUPS:
             checkbox = QCheckBox(labels[group])
             if group == "reading":
                 checkbox.setToolTip(
                     self.tr("Fills furigana from an existing reading and vice versa; does not generate new readings.")
+                )
+            if group == "word_audio":
+                checkbox.setToolTip(
+                    self.tr(
+                        "Fetches pronunciation audio through your configured word-audio sources. "
+                        "Scanning a large deck can take a while the first time."
+                    )
                 )
             self.field_checkboxes[group] = checkbox
             layout.addWidget(checkbox)
