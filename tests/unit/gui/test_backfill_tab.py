@@ -609,3 +609,55 @@ class TestCloseWorkerHandles:
             worker.isRunning()
 
         assert list(tab.iter_close_workers()) == []
+
+
+class TestWordAudioGroup:
+    def test_checkbox_exists_and_is_disabled_while_unmapped(self, tab):
+        # The shared backfill_config leaves expression_audio unmapped.
+        assert "word_audio" in tab.field_checkboxes
+        checkbox = tab.field_checkboxes["word_audio"]
+        assert checkbox.isEnabled() is False
+        assert checkbox.isChecked() is False
+
+    def test_checkbox_enables_once_the_field_is_mapped(self, qtbot, backfill_config):
+        config = replace(
+            backfill_config,
+            anki_fields={**backfill_config.anki_fields, "expression_audio": "WordAudio"},
+        )
+        widget = CardBackfillTab(config)
+        qtbot.addWidget(widget)
+        checkbox = widget.field_checkboxes["word_audio"]
+        assert checkbox.isEnabled() is True
+        checkbox.setChecked(True)
+        assert "expression_audio" in widget._selected_field_keys()
+
+    def test_it_carries_a_tooltip_naming_the_scan_cost(self, tab):
+        # The only group that goes to the network per note; the user should be
+        # told before starting a scan over a large deck.
+        assert tab.field_checkboxes["word_audio"].toolTip()
+
+    def test_unmapping_the_field_re_disables_and_unchecks_it(self, qtbot, backfill_config):
+        config = replace(
+            backfill_config,
+            anki_fields={**backfill_config.anki_fields, "expression_audio": "WordAudio"},
+        )
+        widget = CardBackfillTab(config)
+        qtbot.addWidget(widget)
+        widget.field_checkboxes["word_audio"].setChecked(True)
+        widget.update_config(replace(config, anki_fields={**config.anki_fields, "expression_audio": ""}))
+        checkbox = widget.field_checkboxes["word_audio"]
+        assert checkbox.isEnabled() is False
+        assert checkbox.isChecked() is False
+
+
+class TestMediaFailureReporting:
+    def test_media_failures_are_named_and_degrade_the_run(self, tab):
+        tab._on_apply_finished(
+            BackfillResult(notes_updated=1, fields_filled=1, tagged=1, skipped_stale=0, media_failed=2)
+        )
+        assert "2" in tab.status_label.text()
+        assert tab._run_failed is True
+
+    def test_a_clean_run_reports_no_media_failure(self, tab):
+        tab._on_apply_finished(BackfillResult(notes_updated=1, fields_filled=1, tagged=1, skipped_stale=0))
+        assert tab._run_failed is False

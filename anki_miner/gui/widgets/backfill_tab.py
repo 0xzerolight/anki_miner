@@ -699,6 +699,13 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
                 )
             )
             self._run_failed = True
+        if result.media_failed:
+            parts.append(
+                self.tr("{count} audio file(s) could not be added to Anki; scan again to retry.").format(
+                    count=result.media_failed
+                )
+            )
+            self._run_failed = True
         self.status_label.setText(" ".join(parts))
 
     def _on_apply_cancelled(self) -> None:

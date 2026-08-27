@@ -548,7 +548,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Fill missing pitch, frequency, definition and reading fields on already-mined notes.",
+            "Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("subtitles", "backfill"),
@@ -562,6 +562,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "fill fields",
             "pitch",
             "frequency",
+            "word audio",
+            "pronunciation",
             "existing notes",
             "existing cards",
             "bulk update",
