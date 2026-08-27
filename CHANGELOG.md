@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Card Backfill's scan progress advances per note, not per 500-note chunk.** Every other proposal is a local lookup, so the old chunk-boundary tick was invisible; word audio is a network round trip per note, which would have left the bar frozen for minutes at a time and made Cancel appear dead until the chunk ended. Cancellation moved to the same granularity.
 
 ### Fixed
+- **A Card Backfill checkbox keeps its own tooltip after being greyed out.** `_refresh_checkbox_gates` replaced a disabled group's tooltip with "Map this field in Settings → Anki" and had no branch to put the original back, so the first time a group went unmapped its explanation was destroyed for the rest of the session — the reading group's "does not generate new readings" note was the existing casualty, and the new word-audio group's scan-cost warning would have been the second. The group tooltips are held separately and restored when the gate reopens.
 
 ### Removed
 
