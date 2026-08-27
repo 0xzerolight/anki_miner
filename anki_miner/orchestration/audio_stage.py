@@ -25,8 +25,9 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.models import MediaData, TokenizedWord
-from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
-from anki_miner.utils import has_katakana, hiragana_to_katakana
+from anki_miner.services.audio_fetch_common import (
+    expression_audio_candidates as _expression_audio_candidates,
+)
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.timing import timed_phase
@@ -36,47 +37,6 @@ if TYPE_CHECKING:
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
 
 logger = logging.getLogger(__name__)
-
-
-def _expression_audio_candidates(word: TokenizedWord) -> list[tuple[str, str]]:
-    """Ordered ``(kanji, kana)`` query pairs for the JPod101 audio retry ladder.
-
-    Two failure modes the single-shot query missed:
-
-    * **Katakana loanwords.** JPod101 indexes loanword audio under the katakana
-      reading, but ``expression_reading`` is folded to hiragana for card
-      display (チップ→ちっぷ → miss).  Each query whose kanji form contains
-      katakana gets a katakana-reading variant (チップ→チップ → hit).
-    * **Surface-mined fallback.** A same-kanji, okurigana-only UniDic lemma is a
-      safe canonical alternate. Surface-mined words fall back to that lemma with
-      the lemma's OWN reading (探す/さがす, not the surface 探し/さがし).
-
-    hiragana↔katakana is lossless and loanwords are unambiguous, so the katakana
-    variant carries no homograph risk (Issue #73). Different-kanji lemmas are
-    excluded because UniDic canonicalization can name another homograph. Empty
-    readings are dropped and duplicates are collapsed, so a verb whose
-    ``mined_form == lemma`` issues no redundant request.
-    """
-    pairs: list[tuple[str, str]] = [(word.mined_form, word.expression_reading)]
-    if word.lemma and word.lemma != word.mined_form and _differs_by_okurigana_only(word.mined_form, word.lemma):
-        pairs.append((word.lemma, word.lemma_reading))
-
-    candidates: list[tuple[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-
-    def _add(kanji: str, kana: str) -> None:
-        if not kanji or not kana:
-            return
-        pair = (kanji, kana)
-        if pair not in seen:
-            seen.add(pair)
-            candidates.append(pair)
-
-    for kanji, kana in pairs:
-        _add(kanji, kana)
-        if has_katakana(kanji):
-            _add(kanji, hiragana_to_katakana(kana))
-    return candidates
 
 
 def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | None:
