@@ -3,9 +3,16 @@
 The Card Backfill tool (Utilities → Card Backfill) generalizes the card restyler's
 enumerate → chunk → ``notesInfo`` → compute → ``updateNoteFields`` loop
 (``card_restyler.restyle_mined_cards``): after the user installs a pitch CSV,
-frequency sources, or dictionaries, it proposes values for pitch graph/text,
-frequency display/sort, definition, glossary, and reading/furigana fields that
-old cards are missing.
+frequency sources, dictionaries, or an audio pack, it proposes values for pitch
+graph/text, frequency display/sort, definition, glossary, reading/furigana and
+word-audio fields that old cards are missing.
+
+Word audio is the one proposal that is not a pure local lookup: it fetches
+through ``config.expression_audio_chain`` during the scan, so the preview keeps
+its promise that apply writes exactly what was previewed (a word no enabled
+source has never becomes a row), and it is the only field whose value is
+rewritten at apply time — Anki media names are content-addressed, so the
+``[sound:...]`` ref can only be built once ``storeMediaFile`` confirms a name.
 
 Two phases, both GUI-free and cancellable:
 
@@ -42,11 +49,11 @@ from anki_miner.services.anki_note_builder import (
     field_target_collision_message,
     missing_note_type_message,
 )
+from anki_miner.services.backfill_audio import word_audio_candidates
 
 # Generic Anki-search escaper (backslash/quote/``*``/``_``); the historical name
 # says "note type" but deck names need the identical escaping (see
 # AnkiService._build_vocab_query — ``Core_2k`` would otherwise glob-match).
-from anki_miner.services.backfill_audio import word_audio_candidates
 from anki_miner.services.card_restyler import _escape_note_type as _escape_anki_search
 from anki_miner.services.definition_service import collect_dictionary_css_entries
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
@@ -180,6 +187,9 @@ class BackfillResult:
     ``notes_updated``, ``fields_filled``, and ``tagged`` count only note IDs
     confirmed by AnkiConnect. ``failed`` counts attempted note updates that
     were not confirmed. ``skipped_stale`` remains a field-change count.
+    ``media_failed`` counts media-backed field changes dropped because their
+    file could not be put into Anki's collection — the field is left alone
+    rather than pointed at media that is not there.
     """
 
     notes_updated: int
@@ -187,6 +197,7 @@ class BackfillResult:
     tagged: int
     skipped_stale: int
     failed: int = 0
+    media_failed: int = 0
 
 
 def _is_empty(value: str) -> bool:
@@ -953,7 +964,7 @@ def _apply_backfill_impl(
 ) -> BackfillResult:
     overwrite = plan.options.overwrite
     total_notes = len(plan.notes)
-    notes_updated = fields_filled = tagged = skipped_stale = failed = 0
+    notes_updated = fields_filled = tagged = skipped_stale = failed = media_failed = 0
     written_so_far = 0
 
     for chunk in _chunks(plan.notes, _CHUNK):
@@ -964,6 +975,23 @@ def _apply_backfill_impl(
             for info in anki_service.notes_info([note.note_id for note in chunk])
             if isinstance(info, dict) and isinstance(info.get("noteId"), int)
         }
+        # Upload this chunk's media once, before any note is written. Restricted
+        # to notes that survived the notesInfo recheck so a note deleted between
+        # scan and apply cannot leave an unreferenced file in the collection.
+        media_sources: dict[str, Path] = {}
+        for note in chunk:
+            if note.note_id not in infos:
+                continue
+            for change in note.changes:
+                if change.media_path is None:
+                    continue
+                if not change.media_path.exists():
+                    # Cached file deleted between scan and apply.
+                    media_failed += 1
+                    continue
+                media_sources.setdefault(change.media_path.name, change.media_path)
+        stored_names = anki_service.store_media_files(media_sources) if media_sources else {}
+
         updates: list[tuple[int, dict[str, str]]] = []
         for note in chunk:
             fields = infos.get(note.note_id)
@@ -984,7 +1012,22 @@ def _apply_backfill_impl(
                 if not overwrite and not _is_fillable(change.field_key, current):
                     skipped_stale += 1
                     continue
-                payload[change.field_name] = change.new_value
+                value = change.new_value
+                if change.media_path is not None:
+                    if not change.media_path.exists():
+                        # Already counted by the pre-pass above; counting it
+                        # again here would double-report the same file.
+                        continue
+                    # The [sound:...] name is only knowable after the upload
+                    # confirms it (media names are content-addressed). An
+                    # unconfirmed file must never be referenced — that is how a
+                    # card ends up pointing at missing media.
+                    confirmed = stored_names.get(change.media_path.name)
+                    if confirmed is None:
+                        media_failed += 1
+                        continue
+                    value = f"[sound:{confirmed}]"
+                payload[change.field_name] = value
             if payload:
                 updates.append((note.note_id, payload))
         written_so_far += len(chunk)
@@ -1021,4 +1064,5 @@ def _apply_backfill_impl(
         tagged=tagged,
         skipped_stale=skipped_stale,
         failed=failed,
+        media_failed=media_failed,
     )

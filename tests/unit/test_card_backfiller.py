@@ -1020,11 +1020,18 @@ class TestScanProgressCancel:
 class RecordingAnkiService(FakeAnkiService):
     """FakeAnkiService that also records writes and tag calls."""
 
-    def __init__(self, notes=None, fail_tags: bool = False):
+    def __init__(self, notes=None, fail_tags: bool = False, stored_media=None):
         super().__init__(notes)
         self.updates: list[list[tuple[int, dict[str, str]]]] = []
         self.tag_calls: list[tuple[list[int], str]] = []
         self.fail_tags = fail_tags
+        # pre-hash filename -> name AnkiConnect confirms; absent == not stored.
+        self.stored_media: dict[str, str] = stored_media or {}
+        self.media_calls: list[dict[str, Path]] = []
+
+    def store_media_files(self, paths_by_filename):
+        self.media_calls.append(dict(paths_by_filename))
+        return {name: self.stored_media[name] for name in paths_by_filename if name in self.stored_media}
 
     def update_notes_fields(self, updates):
         self.updates.append(list(updates))
@@ -1355,3 +1362,85 @@ class TestScanWordAudio:
             progress=lambda done, total: seen.append((done, total)),
         )
         assert seen == [(1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]
+
+
+class TestApplyWordAudio:
+    def _audio_note(self, note_id=1, current=""):
+        return {note_id: _note(note_id, word=f"word{note_id}", WordAudio=current)}
+
+    def test_uploads_then_writes_the_confirmed_name(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = RecordingAnkiService(self._audio_note(), stored_media={"a.mp3": "a_deadbeef1234.mp3"})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        result = apply_backfill(anki, plan)
+        assert anki.media_calls == [{"a.mp3": mp3}]
+        assert anki.updates == [[(1, {"WordAudio": "[sound:a_deadbeef1234.mp3]"})]]
+        assert result.fields_filled == 1
+        assert result.media_failed == 0
+
+    def test_an_unconfirmed_upload_drops_the_field_and_counts_it(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = RecordingAnkiService(self._audio_note(), stored_media={})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        result = apply_backfill(anki, plan)
+        # An unconfirmed file must never be referenced: that is how a card ends
+        # up pointing at missing media.
+        assert anki.updates == []
+        assert result.media_failed == 1
+        assert result.fields_filled == 0
+
+    def test_a_vanished_cache_file_counts_once(self, tmp_path):
+        missing = tmp_path / "gone.mp3"  # never created
+        anki = RecordingAnkiService(self._audio_note())
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:gone.mp3]", missing)])])
+        result = apply_backfill(anki, plan)
+        assert result.media_failed == 1
+        assert anki.media_calls == []
+        assert anki.updates == []
+
+    def test_text_only_plan_uploads_nothing(self):
+        anki = RecordingAnkiService({1: _note(1, word="word1", Frequency="")})
+        plan = _plan([_note_plan(1, [("frequency", "Frequency", "", "<ul><li>x</li></ul>")])])
+        apply_backfill(anki, plan)
+        assert anki.media_calls == []
+
+    def test_a_stale_note_does_not_leave_an_orphan_upload(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        # Note deleted between scan and apply: notesInfo returns {} for it.
+        anki = RecordingAnkiService({}, stored_media={"a.mp3": "a_hash.mp3"})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        apply_backfill(anki, plan)
+        assert anki.media_calls == []
+
+    def test_two_notes_sharing_a_file_upload_it_once(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        anki = RecordingAnkiService(
+            {
+                1: _note(1, word="word1", WordAudio=""),
+                2: _note(2, word="word2", WordAudio=""),
+            },
+            stored_media={"a.mp3": "a_hash.mp3"},
+        )
+        plan = _plan(
+            [
+                _note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)]),
+                _note_plan(2, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)]),
+            ]
+        )
+        apply_backfill(anki, plan)
+        assert anki.media_calls == [{"a.mp3": mp3}]
+        assert anki.updates == [[(1, {"WordAudio": "[sound:a_hash.mp3]"}), (2, {"WordAudio": "[sound:a_hash.mp3]"})]]
+
+    def test_a_voiced_note_is_skipped_stale_in_fill_mode(self, tmp_path):
+        mp3 = tmp_path / "a.mp3"
+        mp3.write_bytes(b"ID3")
+        # Audio arrived between scan and apply; fill-only must not clobber it.
+        anki = RecordingAnkiService(self._audio_note(current="[sound:other.mp3]"), stored_media={"a.mp3": "a_hash.mp3"})
+        plan = _plan([_note_plan(1, [("expression_audio", "WordAudio", "", "[sound:a.mp3]", mp3)])])
+        result = apply_backfill(anki, plan)
+        assert anki.updates == []
+        assert result.skipped_stale == 1
