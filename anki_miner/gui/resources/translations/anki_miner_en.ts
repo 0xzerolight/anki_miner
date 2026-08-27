@@ -1811,7 +1811,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition and reading fields on already-mined notes.</source>
+        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2177,7 +2177,15 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Word audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2328,6 +2336,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>{count} note update(s) were not confirmed by Anki; scan again to retry.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
         <translation type="unfinished" />
     </message>
     <message>
