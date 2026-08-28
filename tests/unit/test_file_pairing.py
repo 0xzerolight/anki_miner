@@ -431,3 +431,71 @@ class TestFindPairsMissingFolder:
         subs = tmp_path / "subs"
         subs.mkdir()
         assert FilePairMatcher.find_pairs_by_episode_number(a_file, subs) == []
+
+
+class TestRetimedPreference:
+    """Utilities → Retime writes ``<stem>_retimed.<ext>`` beside the original, so
+    both files live in one folder. Discovery must reach for the retimed one —
+    mining the off-timed original would silently undo the retime — while Retime
+    itself opts out (``prefer_retimed=False``) so a rerun never retimes its own
+    output.
+    """
+
+    @staticmethod
+    def _folder(tmp_path: Path, *names: str) -> Path:
+        for name in names:
+            (tmp_path / name).touch()
+        return tmp_path
+
+    def test_retimed_subtitle_wins_the_pairing(self, tmp_path):
+        folder = self._folder(tmp_path, "ep01.mkv", "ep01.srt", "ep01_retimed.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(folder, folder)
+        assert [p.subtitle.name for p in pairs] == ["ep01_retimed.srt"]
+
+    def test_retimed_wins_over_a_higher_priority_extension(self, tmp_path):
+        """A retimed .srt beats the .ass it was made from: format priority is
+        the tiebreak between equals, not a reason to use the off-timed file."""
+        folder = self._folder(tmp_path, "ep01.mkv", "ep01.ass", "ep01_retimed.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(folder, folder)
+        assert [p.subtitle.name for p in pairs] == ["ep01_retimed.srt"]
+
+    def test_prefer_retimed_false_keeps_the_original(self, tmp_path):
+        folder = self._folder(tmp_path, "ep01.mkv", "ep01.srt", "ep01_retimed.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(folder, folder, prefer_retimed=False)
+        assert [p.subtitle.name for p in pairs] == ["ep01.srt"]
+
+    def test_no_retimed_file_changes_nothing(self, tmp_path):
+        folder = self._folder(tmp_path, "ep01.mkv", "ep01.ass", "ep01.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(folder, folder)
+        assert [p.subtitle.name for p in pairs] == ["ep01.ass"]  # format priority still decides
+
+    def test_sibling_lookup_prefers_the_retimed_file(self, tmp_path):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        self._folder(tmp_path, "ep01.mkv", "ep01.srt", "ep01_retimed.srt")
+        assert find_sibling_subtitle(tmp_path / "ep01.mkv") == tmp_path / "ep01_retimed.srt"
+
+    def test_sibling_lookup_prefers_retimed_across_extensions(self, tmp_path):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        self._folder(tmp_path, "ep01.mkv", "ep01.ass", "ep01_retimed.srt")
+        assert find_sibling_subtitle(tmp_path / "ep01.mkv") == tmp_path / "ep01_retimed.srt"
+
+    def test_sibling_lookup_falls_back_to_the_original(self, tmp_path):
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        self._folder(tmp_path, "ep01.mkv", "ep01.srt")
+        assert find_sibling_subtitle(tmp_path / "ep01.mkv") == tmp_path / "ep01.srt"
+
+    def test_ambiguous_retimed_case_twins_return_none(self, monkeypatch):
+        """Two retimed candidates matching only after casefolding are ambiguous;
+        the read path refuses to let directory order decide (unchanged contract,
+        now applied inside the retimed group too)."""
+        from anki_miner.utils.file_pairing import find_sibling_subtitle
+
+        video = Path("/d/EP01.mkv")
+        entries = [Path("/d/ep01_retimed.ass"), Path("/d/Ep01_retimed.ass")]
+        monkeypatch.setattr(Path, "iterdir", lambda _path: iter(entries))
+        monkeypatch.setattr(Path, "is_file", lambda _path: True)
+
+        assert find_sibling_subtitle(video) is None

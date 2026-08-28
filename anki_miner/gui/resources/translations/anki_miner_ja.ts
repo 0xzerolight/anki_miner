@@ -8218,8 +8218,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完了 — %1 個を処理、%2 個をスキップしました</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>再タイミングなし — %1 個すべてをスキップしました。その場で再タイミングするには「上書き」を有効にするか、別の出力フォルダーを選択してください。</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>再タイミングなし — %1 個すべてをスキップしました。既存の再タイミング済みファイルを置き換えるには「上書き」を有効にするか、別の出力フォルダーを選択してください。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8436,10 +8436,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>出力が入力と同じです。その場で再タイミングするには「上書き」を有効にしてください</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>スキップしました（既に存在）</translation>
     </message>
@@ -8450,10 +8446,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Retimed with %1</source>
         <translation>%1 で再タイミング</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>オリジナルは %1 にバックアップされました</translation>
     </message>
     <message>
         <source>Cancelled</source>

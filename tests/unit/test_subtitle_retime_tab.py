@@ -882,13 +882,13 @@ def test_file_skipped_logs_skipped_not_done(qtbot, tmp_path):
         tab.retime_button.click()
 
     for slot in skipped_slots:
-        slot(0, out_srt, "Output equals input; enable Overwrite to retime in place")
+        slot(0, out_srt, "Skipped, exists")
 
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Skipped" in log_text
     assert "episode.srt" in log_text
     # The worker's reason reaches the Activity log, not just a transient label.
-    assert "enable Overwrite" in log_text
+    assert "Skipped, exists" in log_text
     assert "Done" not in log_text
 
 
@@ -965,8 +965,8 @@ def test_all_skipped_run_names_the_remedy(qtbot, tmp_path):
         qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in skipped_slots:
-        slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
-        slot(1, sub2, "Output equals input; enable Overwrite to retime in place")
+        slot(0, sub1, "Skipped, exists")
+        slot(1, sub2, "Skipped, exists")
     for slot in finished_slots:
         slot(TerminalOutcome.SUCCESS)
 
@@ -1011,8 +1011,8 @@ def test_all_skipped_run_publishes_failed_outcome(qtbot, tmp_path):
         qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in skipped_slots:
-        slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
-        slot(1, sub2, "Output equals input; enable Overwrite to retime in place")
+        slot(0, sub1, "Skipped, exists")
+        slot(1, sub2, "Skipped, exists")
     for slot in finished_slots:
         slot(TerminalOutcome.SUCCESS)
 
@@ -1055,8 +1055,8 @@ def test_cancelled_all_skipped_run_publishes_cancelled_outcome(qtbot, tmp_path):
         qtbot.waitUntil(lambda: fake_worker._started, timeout=3000)
 
     for slot in skipped_slots:
-        slot(0, sub1, "Output equals input; enable Overwrite to retime in place")
-        slot(1, sub2, "Output equals input; enable Overwrite to retime in place")
+        slot(0, sub1, "Skipped, exists")
+        slot(1, sub2, "Skipped, exists")
     tab._on_cancel()
     for slot in finished_slots:
         slot(TerminalOutcome.CANCELLED)
@@ -1173,10 +1173,10 @@ def test_file_finished_still_logs_done_for_success(qtbot, tmp_path):
     assert "episode.srt" in log_text
 
 
-def test_file_note_durably_logs_engine_and_backup(qtbot, tmp_path):
-    """file_note(idx, line) — the engine used and the .pre-retime.bak sibling —
-    lands in the Activity log and survives past the transient status label
-    the next file_progress/file_finished overwrites (C-7/C-10)."""
+def test_file_note_durably_logs_engine(qtbot, tmp_path):
+    """file_note(idx, line) — the engine used — lands in the Activity log and
+    survives past the transient status label the next file_progress /
+    file_finished overwrites (C-7/C-10)."""
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     sub = tmp_path / "episode.srt"
@@ -1204,7 +1204,6 @@ def test_file_note_durably_logs_engine_and_backup(qtbot, tmp_path):
     # "Done" progress flash, then file_finished.
     for slot in note_slots:
         slot(0, "Retimed with ffsubsync")
-        slot(0, "Original backed up as episode.srt.pre-retime.bak")
     for slot in progress_slots:
         slot(0, 100, "Done")
     for slot in finished_slots:
@@ -1214,7 +1213,6 @@ def test_file_note_durably_logs_engine_and_backup(qtbot, tmp_path):
     # widget is append-only — the durable content must still be there.
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Retimed with ffsubsync" in log_text
-    assert "episode.srt.pre-retime.bak" in log_text
     assert "Done" in log_text
 
 

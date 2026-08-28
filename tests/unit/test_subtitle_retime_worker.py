@@ -15,7 +15,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.gui.workers.subtitle_retime_worker import SubtitleRetimeWorker
 from anki_miner.services.retime_reference import ReferenceOverride
-from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, RetimeOutcome
+from anki_miner.services.subtitle_retimer import RetimeOutcome
 
 # A dakuten kana stem that genuinely decomposes under NFD (common kana like ねこ
 # are byte-identical NFC/NFD and would be a false-green for the dedup tests).
@@ -175,7 +175,7 @@ def test_queue_finished_on_empty_list(qapp, tmp_path):
 
 
 def test_output_path_next_to_video(qapp, tmp_path):
-    """Default: output uses video.stem + sub.suffix, placed next to video."""
+    """Default: output uses in_sub.stem + _retimed + sub.suffix, next to video."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "whatever.srt"
     v.write_bytes(b"")
@@ -185,12 +185,12 @@ def test_output_path_next_to_video(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    expected = tmp_path / "ep01.srt"
+    expected = tmp_path / "whatever_retimed.srt"
     assert cap["finished"][0][1] == expected
 
 
 def test_output_path_in_output_dir(qapp, tmp_path):
-    """output_dir set: output placed in that directory with video.stem + sub.suffix."""
+    """output_dir set: the _retimed output is placed in that directory."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "whatever.srt"
     v.write_bytes(b"")
@@ -201,7 +201,7 @@ def test_output_path_in_output_dir(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    expected = out_dir / "ep01.srt"
+    expected = out_dir / "whatever_retimed.srt"
     assert cap["finished"][0][1] == expected
 
 
@@ -253,7 +253,7 @@ def test_output_path_preserves_subtitle_extension(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    expected = tmp_path / "ep01.ass"
+    expected = tmp_path / "ep01_orig_retimed.ass"
     assert cap["finished"][0][1] == expected
 
 
@@ -266,7 +266,7 @@ def test_skip_if_exists_no_overwrite(qapp, tmp_path):
     """Existing output → file_skipped emitted, file_finished NOT emitted, retimer NOT called."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
-    out = tmp_path / "ep01.srt"
+    out = tmp_path / "ep01_orig_retimed.srt"
     v.write_bytes(b"")
     s.write_bytes(b"")
     out.write_text("OLD SRT")
@@ -296,7 +296,7 @@ def test_overwrite_calls_retimer_on_existing(qapp, tmp_path):
     """overwrite=True → retimer is called even when output already exists."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
-    out = tmp_path / "ep01.srt"
+    out = tmp_path / "ep01_orig_retimed.srt"
     v.write_bytes(b"")
     s.write_bytes(b"")
     out.write_text("OLD SRT")
@@ -317,36 +317,24 @@ def test_overwrite_calls_retimer_on_existing(qapp, tmp_path):
     assert out_path == out
 
 
-def test_aliased_output_reports_distinct_message(qapp, tmp_path):
-    """When the resolved output IS the input subtitle (sub named <video stem><suffix>
-    next to the video), overwrite off yields the distinct in-place message, not the
-    generic 'Skipped, exists' — and the retimer is still not called."""
+def test_sub_named_after_video_is_not_overwritten(qapp, tmp_path):
+    """A subtitle already named ``<video stem><suffix>`` used to resolve onto
+    itself, so a run overwrote the user's own file. The _retimed suffix makes
+    that impossible: the run proceeds (no skip) and writes a sibling."""
     v = tmp_path / "ep01.mkv"
-    in_sub = tmp_path / "ep01.srt"  # video.stem + suffix == in_sub.name → out aliases input
+    in_sub = tmp_path / "ep01.srt"
     v.write_bytes(b"")
     in_sub.write_text("SUB")
 
-    retimer_calls: list = []
-
-    def _recording_retimer(*args, cancel_event=None, log_cb=None, **kwargs):
-        retimer_calls.append(1)
-        return True
-
-    worker = _make_worker([(v, in_sub)], overwrite=False, retimer=_recording_retimer)
+    captured: list[Path] = []
+    worker = _make_worker([(v, in_sub)], overwrite=False, retimer=_make_writing_retimer(captured))
     cap = _capture(worker)
     worker.run()
 
-    assert retimer_calls == []
-    # The reason must ride the file_skipped signal itself — the payload the tab
-    # logs — not only the transient file_progress status message.
-    assert len(cap["skipped"]) == 1
-    idx, out_path, reason = cap["skipped"][0]
-    assert (idx, out_path) == (0, in_sub)
-    assert "Overwrite" in reason
-    assert reason != "Skipped, exists"
-    progress_msgs = [p[2] for p in cap["progress"] if p[0] == 0 and p[1] == 100]
-    assert any("Overwrite" in m for m in progress_msgs)
-    assert not any(m == "Skipped, exists" for m in progress_msgs)
+    assert captured == [tmp_path / "ep01_retimed.srt"]
+    assert cap["skipped"] == []
+    assert cap["finished"][0][1] == tmp_path / "ep01_retimed.srt"
+    assert in_sub.read_text() == "SUB"  # the input is never the target
 
 
 # ---------------------------------------------------------------------------
@@ -366,7 +354,7 @@ def test_success_emits_out_path_no_error(qapp, tmp_path):
     worker.run()
 
     idx, out_path, err = cap["finished"][0]
-    assert out_path == tmp_path / "ep01.srt"
+    assert out_path == tmp_path / "ep01_orig_retimed.srt"
     assert err is None
 
 
@@ -444,12 +432,13 @@ def test_success_without_engine_emits_no_engine_note(qapp, tmp_path):
     assert cap["notes"] == []
 
 
-def test_overwrite_emits_backup_file_note(qapp, tmp_path):
-    """Overwriting an existing output emits a durable note naming the
-    .pre-retime.bak sibling the service's own _commit() actually wrote."""
+def test_overwrite_writes_no_backup_and_notes_none(qapp, tmp_path):
+    """Overwriting a previous _retimed output leaves no .bak sibling behind and
+    reports no backup: the file being replaced is regenerable, and the user's
+    own subtitle was never the target."""
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
-    out = tmp_path / "ep01.srt"
+    out = tmp_path / "ep01_orig_retimed.srt"
     v.write_bytes(b"")
     s.write_bytes(b"")
     out.write_text("OLD SRT")
@@ -462,25 +451,8 @@ def test_overwrite_emits_backup_file_note(qapp, tmp_path):
     worker.run()
 
     notes = [note for idx, note in cap["notes"] if idx == 0]
-    assert any(out.name + BACKUP_SUFFIX in note for note in notes)
-
-
-def test_no_backup_note_when_output_is_new(qapp, tmp_path):
-    """No pre-existing output → no backup was written → no backup note."""
-    v = tmp_path / "ep01.mkv"
-    s = tmp_path / "ep01_orig.srt"
-    v.write_bytes(b"")
-    s.write_bytes(b"")
-
-    def _retimer(*args, cancel_event=None, log_cb=None, **kwargs):
-        return RetimeOutcome(ok=True, engine="ffsubsync")
-
-    worker = _make_worker([(v, s)], retimer=_retimer)
-    cap = _capture(worker)
-    worker.run()
-
-    notes = [note for idx, note in cap["notes"] if idx == 0]
-    assert not any(BACKUP_SUFFIX in note for note in notes)
+    assert not any("backed up" in note for note in notes)
+    assert list(tmp_path.glob("*.bak")) == []
 
 
 # ---------------------------------------------------------------------------
@@ -724,15 +696,15 @@ def _make_writing_retimer(captured: list[Path]):
 
 
 def test_overwrite_replaces_nfd_twin_in_place(qapp, tmp_path):
-    """overwrite=True with an existing NFD-named output and an NFC video stem:
+    """overwrite=True with an existing NFD-named output and an NFC-named input:
     the retimer must receive the EXISTING NFD path (not a fresh NFC one), so
     exactly one stem-matching .srt remains instead of a duplicate (fails pre-fix)."""
-    video = tmp_path / (_NFC + ".mkv")
-    in_sub = tmp_path / "offtimed.srt"
-    existing = tmp_path / (_NFD + ".srt")  # the pre-existing subtitle on disk
+    video = tmp_path / "ep01.mkv"
+    in_sub = tmp_path / (_NFC + ".srt")
+    existing = tmp_path / (_NFD + "_retimed.srt")  # the pre-existing output on disk
     video.write_bytes(b"")
     in_sub.write_text("offtimed")
-    existing.write_text("orig")
+    existing.write_text("previous retime")
 
     captured: list[Path] = []
     worker = _make_worker([(video, in_sub)], overwrite=True, retimer=_make_writing_retimer(captured))
@@ -740,21 +712,21 @@ def test_overwrite_replaces_nfd_twin_in_place(qapp, tmp_path):
 
     # Retimer targeted the existing NFD file byte-for-byte, not a new NFC name.
     assert captured == [existing]
-    assert captured[0].name.encode("utf-8") == (_NFD + ".srt").encode("utf-8")
-    # Exactly one subtitle with this stem (no NFC/NFD twin).
-    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
+    assert captured[0].name.encode("utf-8") == (_NFD + "_retimed.srt").encode("utf-8")
+    # Exactly one retimed subtitle with this stem (no NFC/NFD twin).
+    assert _nfc_stem_srt_count(tmp_path, _NFC + "_retimed") == 1
 
 
 def test_overwrite_off_skips_nfd_twin(qapp, tmp_path):
-    """overwrite=False with an existing NFD-named output and NFC video stem:
+    """overwrite=False with an existing NFD-named output and NFC-named input:
     must skip (resolver makes .exists() see the file) and NOT spawn a duplicate.
     Pre-fix this path silently created a twin even with overwrite unchecked."""
-    video = tmp_path / (_NFC + ".mkv")
-    in_sub = tmp_path / "offtimed.srt"
-    existing = tmp_path / (_NFD + ".srt")
+    video = tmp_path / "ep01.mkv"
+    in_sub = tmp_path / (_NFC + ".srt")
+    existing = tmp_path / (_NFD + "_retimed.srt")
     video.write_bytes(b"")
     in_sub.write_text("offtimed")
-    existing.write_text("orig")
+    existing.write_text("previous retime")
 
     calls: list[Path] = []
     worker = _make_worker([(video, in_sub)], overwrite=False, retimer=_make_writing_retimer(calls))
@@ -764,13 +736,13 @@ def test_overwrite_off_skips_nfd_twin(qapp, tmp_path):
     assert calls == []  # retimer not called
     assert len(cap["skipped"]) == 1
     assert cap["skipped"][0][1] == existing
-    assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
+    assert _nfc_stem_srt_count(tmp_path, _NFC + "_retimed") == 1
 
 
-def test_aliasing_source_sub_resynced_in_place(qapp, tmp_path):
-    """When the resolved out_sub IS the source subtitle (in_sub itself, under a
-    byte-variant name), the run produces exactly one file. Mode-agnostic at the
-    worker level (covers single-file and folder-same-folder)."""
+def test_source_sub_is_never_the_target(qapp, tmp_path):
+    """The source subtitle keeps its own name and content: the output is a
+    _retimed sibling even when the sub is the only subtitle in the folder and
+    shares the video's stem. Mode-agnostic (single-file and folder-same-folder)."""
     video = tmp_path / (_NFC + ".mkv")
     in_sub = tmp_path / (_NFD + ".srt")  # source sub == the only on-disk subtitle
     video.write_bytes(b"")
@@ -780,5 +752,7 @@ def test_aliasing_source_sub_resynced_in_place(qapp, tmp_path):
     worker = _make_worker([(video, in_sub)], overwrite=True, retimer=_make_writing_retimer(captured))
     worker.run()
 
-    assert captured == [in_sub]  # out_sub resolved to the source's exact path
+    assert captured == [tmp_path / (_NFD + "_retimed.srt")]
+    assert in_sub.read_text() == "orig"
     assert _nfc_stem_srt_count(tmp_path, _NFC) == 1
+    assert _nfc_stem_srt_count(tmp_path, _NFC + "_retimed") == 1

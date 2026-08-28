@@ -130,8 +130,8 @@ class SubtitleRetimeTab(_ToolTabBase):
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
             all_skipped_template=self.tr(
-                "No files retimed — all %1 skipped. Enable Overwrite to retime in place, "
-                "or choose a different output folder."
+                "No files retimed — all %1 skipped. Enable Overwrite to replace the existing "
+                "retimed files, or choose a different output folder."
             ),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
@@ -336,7 +336,10 @@ class SubtitleRetimeTab(_ToolTabBase):
         sub_folder = Path(sub_folder_str)
 
         def _scan() -> object:
-            pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)
+            # prefer_retimed=False: mining wants the retimed subtitle, this tab
+            # wants the one it was made from. Without it a second run over the
+            # same folder would retime its own output.
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder, prefer_retimed=False)
             try:
                 unmatched = sorted(
                     f.name
@@ -815,7 +818,8 @@ class SubtitleRetimeTab(_ToolTabBase):
                 for f in video_folder.iterdir()
                 if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
             )
-            file_pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder)
+            # Same pairing as the preview above, including prefer_retimed=False.
+            file_pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder, prefer_retimed=False)
             return all_videos, file_pairs
 
         def _apply(result: object) -> None:
@@ -864,10 +868,8 @@ class SubtitleRetimeTab(_ToolTabBase):
         )
 
     def _on_file_note(self, idx: int, note: str) -> None:
-        """Durable per-file detail (C-7/C-10): the engine that won, and — when
-        an existing output was overwritten — the ``.pre-retime.bak`` sibling's
-        name. Unlike ``file_progress``, this always lands in the Activity log,
-        so it survives past the moment the next status update overwrites the
-        transient label.
+        """Durable per-file detail (C-7/C-10): the engine that won. Unlike
+        ``file_progress``, this always lands in the Activity log, so it survives
+        past the moment the next status update overwrites the transient label.
         """
         self.log_widget.append_info(note)

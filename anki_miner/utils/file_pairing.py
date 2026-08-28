@@ -8,6 +8,12 @@ from pathlib import Path
 
 DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
 
+#: Stem suffix Utilities → Retime appends to its output, so a retimed subtitle
+#: sits beside the original instead of replacing it. Discovery prefers a file
+#: carrying it: with ``EP01.srt`` and ``EP01_retimed.srt`` in one folder, mining
+#: the off-timed original would silently undo the retime.
+RETIMED_SUFFIX = "_retimed"
+
 # Explicit case folding is needed only on Windows. On macOS, preserving the
 # requested spelling lets the mounted volume decide whether case variants alias
 # or name distinct files, avoiding destructive matches on case-sensitive volumes.
@@ -17,6 +23,11 @@ _CASE_INSENSITIVE_FS = sys.platform == "win32"
 def _nfc(name: str) -> str:
     """NFC-normalize a filename string for robust comparison across sources."""
     return unicodedata.normalize("NFC", name)
+
+
+def _is_retimed(path: Path) -> bool:
+    """Return whether *path* is a Retime output (``<stem>_retimed.<ext>``)."""
+    return _nfc(path.stem).casefold().endswith(RETIMED_SUFFIX)
 
 
 def _name_match_key(name: str) -> str:
@@ -98,9 +109,10 @@ def resolve_output_paths(out_dir: Path, names: Sequence[str]) -> list[Path]:
 def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = None) -> Path | None:
     """Return the highest-priority sibling subtitle for *video_path*, or None.
 
-    Looks in the same folder for a file whose stem matches *video_path*'s stem
-    and whose extension is one of *priority*.  Returns the best match in priority
-    order, preferring an exact stem, or None when no unambiguous sibling exists.
+    Looks in the same folder for a file whose stem matches *video_path*'s stem —
+    or that stem plus :data:`RETIMED_SUFFIX` — and whose extension is one of
+    *priority*.  Returns the best match in priority order, preferring a retimed
+    sibling and then an exact stem, or None when no unambiguous sibling exists.
 
     Args:
         video_path: Video (or media) file whose sibling subtitle is sought.
@@ -113,30 +125,40 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     on the stem, so a ``.SRT`` (a differing-case stem, or an NFD-encoded stem) is
     still found on case-sensitive filesystems. Reads are non-destructive, so the
     casefold here is unconditional (unlike the write-side resolver). Within one
-    extension, an exact stem wins; multiple normalization-only matches are
-    ambiguous and return ``None`` rather than depending on directory order.
+    extension the retimed group is tried first and an exact stem wins inside a
+    group; multiple normalization-only matches are ambiguous and return ``None``
+    rather than depending on directory order. The retimed group is preferred
+    ahead of the extension priority, so ``EP01_retimed.srt`` beats ``EP01.ass``.
     """
     exts = DEFAULT_SUBTITLE_PRIORITY if priority is None else tuple(priority)
     folder = video_path.parent
     stem_cf = _nfc(video_path.stem).casefold()
+    retimed_cf = stem_cf + RETIMED_SUFFIX
     try:
         entries = [p for p in folder.iterdir() if p.is_file()]
     except OSError:
         return None
-    by_ext: dict[str, list[Path]] = {}
+    by_group: dict[tuple[bool, str], list[Path]] = {}
     for p in entries:
         ext = p.suffix.lower()
-        if ext in exts and _nfc(p.stem).casefold() == stem_cf:
-            by_ext.setdefault(ext, []).append(p)
-    for ext in exts:
-        candidates = by_ext.get(ext, [])
-        exact = next((p for p in candidates if p.stem == video_path.stem), None)
-        if exact is not None:
-            return exact
-        if len(candidates) == 1:
-            return candidates[0]
-        if candidates:
-            return None
+        if ext not in exts:
+            continue
+        p_stem_cf = _nfc(p.stem).casefold()
+        if p_stem_cf == retimed_cf:
+            by_group.setdefault((True, ext), []).append(p)
+        elif p_stem_cf == stem_cf:
+            by_group.setdefault((False, ext), []).append(p)
+    for retimed in (True, False):
+        wanted_stem = video_path.stem + RETIMED_SUFFIX if retimed else video_path.stem
+        for ext in exts:
+            candidates = by_group.get((retimed, ext), [])
+            exact = next((p for p in candidates if p.stem == wanted_stem), None)
+            if exact is not None:
+                return exact
+            if len(candidates) == 1:
+                return candidates[0]
+            if candidates:
+                return None
     return None
 
 
@@ -162,6 +184,7 @@ class FilePairMatcher:
         subtitle_folder: Path,
         video_extensions: Collection[str] | None = None,
         subtitle_extensions: Collection[str] | None = None,
+        prefer_retimed: bool = True,
     ) -> list[FilePair]:
         """Find matching pairs by episode number instead of exact name.
 
@@ -180,6 +203,11 @@ class FilePairMatcher:
             subtitle_extensions: Lowercase subtitle extensions to accept.
                 Defaults to :data:`SUBTITLE_EXTENSIONS`, preserving mining
                 behavior.  Callers may pass a wider set (e.g. including ``.vtt``).
+            prefer_retimed: When True (the default) a ``<stem>_retimed`` subtitle
+                outranks every other candidate for the same episode, so mining a
+                folder that also holds the off-timed original uses the retime.
+                Utilities → Retime passes False: its own input must be the
+                original, not the output of its previous run.
 
         Returns:
             List of FilePair objects matched by episode number
@@ -210,6 +238,9 @@ class FilePairMatcher:
         subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
         subtitles.sort(
             key=lambda subtitle: (
+                # Ahead of the format priority: a retimed .srt is a better match
+                # for its video than the original .ass it was made from.
+                not (prefer_retimed and _is_retimed(subtitle)),
                 subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
                 subtitle.suffix.lower(),
                 _nfc(subtitle.name),

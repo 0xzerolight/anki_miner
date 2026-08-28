@@ -18,7 +18,7 @@ import pytest
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import RetimeReference
-from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX, TMP_SUBDIR_NAME, retime_subtitle
+from anki_miner.services.subtitle_retimer import TMP_SUBDIR_NAME, retime_subtitle
 from anki_miner.services.sync_engines import SyncResult
 from anki_miner.utils.file_pairing import FilePairMatcher
 
@@ -200,10 +200,10 @@ class TestEngineChain:
         assert all("max cue shift" in a for a in outcome.attempts)
 
     def test_all_candidates_rejected_by_validator_in_place_leaves_input_untouched(self, cfg, video, in_sub):
-        """In-place variant: ``out_sub`` aliases ``in_sub``, so a wrongly
-        "successful" candidate on every engine must never reach ``os.replace``
-        -- the input has to come out byte-identical, with no backup written
-        (nothing was ever committed to overwrite)."""
+        """Degenerate variant: a caller that hands the input in as *out_sub*
+        (the GUI worker never does -- it appends ``_retimed``). A wrongly
+        "successful" candidate on every engine must still never reach
+        ``os.replace``, so the input comes out byte-identical."""
         before = in_sub.read_bytes()
         huge_shift = _fake_engine(30 * 60 * 1000, ok=True, engine="huge-shift")
         with patch(_FFS, side_effect=huge_shift), patch(_ALASS, side_effect=huge_shift):
@@ -211,7 +211,6 @@ class TestEngineChain:
 
         assert not outcome
         assert in_sub.read_bytes() == before
-        assert not in_sub.with_name(in_sub.name + BACKUP_SUFFIX).exists()
 
     def test_missing_alass_skips_remaining_alass_attempts(self, cfg, video, in_sub, out_sub):
         alass_calls: list[Any] = []
@@ -280,30 +279,29 @@ class TestCleaningRoundTrip:
 
 
 class TestCommit:
-    def test_existing_output_backed_up(self, cfg, video, in_sub, out_sub):
+    def test_existing_output_replaced_without_a_backup(self, cfg, video, in_sub, out_sub):
+        """The file at *out_sub* is a previous retime of the same pair, so it is
+        replaced outright: no ``.bak`` sibling is left behind anywhere."""
         out_sub.write_text("old content", encoding="utf-8")
         with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
             outcome = retime_subtitle(cfg, video, in_sub, out_sub)
 
         assert outcome
-        backup = out_sub.with_name(out_sub.name + BACKUP_SUFFIX)
-        assert backup.read_text(encoding="utf-8") == "old content"
         assert _cue_starts(out_sub) == [s + 1500 for s in _starts()]
+        assert list(out_sub.parent.glob("*.bak")) == []
 
-    def test_in_place_retime_backs_up_the_input(self, cfg, video, in_sub):
+    def test_input_untouched_by_a_successful_commit(self, cfg, video, in_sub, out_sub):
+        """The input keeps its bytes: the pipeline reads it and writes elsewhere."""
         original = in_sub.read_bytes()
         with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
-            outcome = retime_subtitle(cfg, video, in_sub, in_sub)
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
 
-        assert outcome
-        backup = in_sub.with_name(in_sub.name + BACKUP_SUFFIX)
-        assert backup.read_bytes() == original
-        assert _cue_starts(in_sub) == [s + 1500 for s in _starts()]
+        assert in_sub.read_bytes() == original
 
     def test_no_backup_when_output_is_new(self, cfg, video, in_sub, out_sub):
         with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
             assert retime_subtitle(cfg, video, in_sub, out_sub)
-        assert not out_sub.with_name(out_sub.name + BACKUP_SUFFIX).exists()
+        assert list(out_sub.parent.glob("*.bak")) == []
 
     @pytest.mark.parametrize("succeed", [True, False])
     def test_temps_cleaned_up(self, cfg, video, in_sub, out_sub, tmp_path, succeed):
