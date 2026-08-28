@@ -1827,7 +1827,7 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>Fehlende Felder für Tonhöhe, Häufigkeit, Definition, Lesung und Wort-Audio auf bereits gesammelten Notizen ergänzen.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2193,7 +2193,7 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>Wort-Audio</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2201,7 +2201,7 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>Ruft Aussprache-Audio über Ihre konfigurierten Wort-Audio-Quellen ab. Das Scannen eines großen Decks kann beim ersten Mal eine Weile dauern.</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2262,6 +2262,10 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     <message>
         <source>(formatted content)</source>
         <translation>(formatierter Inhalt)</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>(geleert)</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2357,7 +2361,7 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>{count} Audiodatei(en) konnten nicht zu Anki hinzugefügt werden; erneut scannen, um es nochmals zu versuchen.</translation>
     </message>
     <message>
         <source>Cancelling…</source>

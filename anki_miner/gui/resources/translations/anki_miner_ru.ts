@@ -1829,7 +1829,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>Заполняет пустые поля тонального ударения, частотности, определения, чтения и аудио слова в уже собранных заметках.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2195,7 +2195,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>Аудио слова</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2203,7 +2203,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>Получает аудио произношения через настроенные источники аудио слов. Сканирование большой колоды в первый раз может занять время.</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2264,6 +2264,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>(formatted content)</source>
         <translation>(форматированное содержимое)</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>(очищено)</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2359,7 +2363,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось добавить в Anki аудиофайлов: {count}; выполните сканирование ещё раз, чтобы повторить.</translation>
     </message>
     <message>
         <source>Cancelling…</source>

@@ -1825,7 +1825,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>既に作成済みのノートに、ピッチ・頻度・定義・読み・単語音声の未入力フィールドを補完します。</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2191,7 +2191,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>単語音声</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2199,7 +2199,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>設定した単語音声ソースから発音音声を取得します。大きなデッキのスキャンは初回に時間がかかることがあります。</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2260,6 +2260,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>(formatted content)</source>
         <translation>（書式付きコンテンツ）</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>（消去）</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2355,7 +2359,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>{count} 件の音声ファイルを Anki に追加できませんでした。再スキャンして再試行してください。</translation>
     </message>
     <message>
         <source>Cancelling…</source>

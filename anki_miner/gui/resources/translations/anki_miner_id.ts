@@ -1825,7 +1825,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>Mengisi bidang aksen nada, frekuensi, definisi, cara baca, dan audio kata yang kosong pada catatan yang sudah ditambang.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2191,7 +2191,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>Audio kata</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2199,7 +2199,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>Mengambil audio pelafalan melalui sumber audio kata yang Anda konfigurasikan. Memindai dek besar bisa memakan waktu pada kali pertama.</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2260,6 +2260,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>(formatted content)</source>
         <translation>(konten terformat)</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>(dikosongkan)</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2355,7 +2359,7 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>{count} berkas audio tidak dapat ditambahkan ke Anki; pindai lagi untuk mencoba ulang.</translation>
     </message>
     <message>
         <source>Cancelling…</source>

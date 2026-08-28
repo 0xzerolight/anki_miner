@@ -215,6 +215,15 @@ def _is_empty(value: str) -> bool:
     return _strip_for_dedup(value or "") == ""
 
 
+def _is_legacy_freq_sentinel(field_key: str, value: str) -> bool:
+    """True for a stored v2.7.8-v2.11.0 ``9999999`` placeholder in the sort field.
+
+    Scoped to the one field that ever held it — the digits alone mean nothing
+    anywhere else, and ``frequency`` stores rendered HTML, never a bare rank.
+    """
+    return field_key == "frequency_sort" and (value or "").strip() == _LEGACY_FREQ_MISS_SENTINEL
+
+
 def _is_fillable(field_key: str, value: str) -> bool:
     """True when fill-only-empty mode may write ``field_key`` over ``value``.
 
@@ -236,7 +245,7 @@ def _is_fillable(field_key: str, value: str) -> bool:
         return _is_empty(value) and not _SOUND_REF_RE.search(value or "")
     if _is_empty(value):
         return True
-    return field_key == "frequency_sort" and (value or "").strip() == _LEGACY_FREQ_MISS_SENTINEL
+    return _is_legacy_freq_sentinel(field_key, value)
 
 
 def _display(value: str) -> str:
@@ -813,6 +822,25 @@ def _compute_note_changes(
         elif not _is_fillable(key, current):
             continue
         changes.append(FieldChange(key, field_name, _display(current), new_value, media_paths.get(key)))
+
+    # Erase a legacy 9999999 the lookup could not replace. Every other write
+    # here is a value the code computed, so a word no source ranks proposes
+    # nothing and the stored placeholder survives — in BOTH modes, since
+    # _is_fillable only decides whether a write is *permitted*, never that one
+    # happens. That left the sentinel unreachable: ranked words got a real rank,
+    # unranked ones kept 9999999 forever. The empty new_value is a real write,
+    # not a no-op to be filtered out (apply_backfill relies on that).
+    #
+    # Deliberately narrow. A genuine rank on a now-unranked word is left alone,
+    # and so is the display field — Backfill does not wipe values the user has
+    # just because the current chain no longer produces them. The scan's
+    # is_available() gate above means an unloaded chain never reaches here.
+    if "frequency_sort" in selected and "frequency_sort" not in proposals:
+        sort_field = anki_fields.get("frequency_sort")
+        current = _field_value(ctx.fields, sort_field) if sort_field else None
+        if sort_field and current is not None and _is_legacy_freq_sentinel("frequency_sort", current):
+            changes.append(FieldChange("frequency_sort", sort_field, _display(current), ""))
+
     return changes, identical_skips, guessed_reading_skips
 
 
