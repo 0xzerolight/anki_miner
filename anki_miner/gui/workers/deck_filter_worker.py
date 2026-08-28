@@ -73,7 +73,14 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
         logger.warning("Tagger unavailable for deck filter scan (%s); readings/lemmas degrade.", e)
 
     return SimpleNamespace(
-        word_filter=WordFilterService(config, mined_form=get_profile(config.language).mined_form),
+        # ``script=`` is load-bearing for non-ja: this object IS the bundle's
+        # word_filter, and without it ko/zh option ids would reach the JA
+        # predicate table and match nothing.
+        word_filter=WordFilterService(
+            config,
+            mined_form=get_profile(config.language).mined_form,
+            script=get_profile(config.language).script,
+        ),
         frequency_service=frequency_service,
         word_list_service=word_list_service,
         wordset_service=wordset_service,

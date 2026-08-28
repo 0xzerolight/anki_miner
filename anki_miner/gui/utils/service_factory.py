@@ -741,7 +741,10 @@ def create_services(
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
     word_filter = WordFilterService(
-        config, tagger=subtitle_parser.tagger, mined_form=get_profile(config.language).mined_form
+        config,
+        tagger=subtitle_parser.tagger,
+        mined_form=get_profile(config.language).mined_form,
+        script=get_profile(config.language).script,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:

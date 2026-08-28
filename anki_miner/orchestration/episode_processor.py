@@ -23,6 +23,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import (
     CANCELLED_ERROR,
     AnkiWriteState,
@@ -51,6 +52,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
+from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -992,15 +994,21 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Script-type filter (hiragana-only / katakana-only). Issue #57.
-        if (
-            self.config.exclude_hiragana_only_words or self.config.exclude_katakana_only_words
-        ) and not self.config.bypass_optional_filters:
+        # Script-type filter (for ja: hiragana-only / katakana-only). Issue #57.
+        # For ja the guard is equivalent to the old two-boolean `or` — neither
+        # box ticked derives an empty set, so the block is skipped exactly as
+        # before — and the derived ids are the same three the old body applied.
+        # The keyword is SPLATTED, not spelled out: ja omits it (the filter's
+        # own None path re-derives the identical set from the two booleans), so
+        # the ja call shape stays byte-identical down to the test doubles.
+        script_options = enabled_script_options(get_profile(self.config.language).script, self.config)
+        if script_options and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_script_type(
                 unknown_words,
                 exclude_hiragana_only=self.config.exclude_hiragana_only_words,
                 exclude_katakana_only=self.config.exclude_katakana_only_words,
+                **script_options_kwarg(script_options, self.config.language),
             )
             removed = before - len(unknown_words)
             script_rejects = removed
