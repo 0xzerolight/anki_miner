@@ -869,6 +869,10 @@ class EpisodeProcessor:
                 }
             )
             has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
+            # Probe terms route through the processor's profile from task 1A.9 —
+            # see plan; do not route through definition_service (pre-existing
+            # tests stub it). The static is the JA ladder and stays the JA ladder
+            # until the processor owns a LanguageProfile of its own.
             fallback_candidates = [
                 (
                     []

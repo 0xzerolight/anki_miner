@@ -16,6 +16,13 @@ from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.interfaces import DictionaryProvider
+
+    # TYPE_CHECKING-only on purpose: languages/profile.py imports
+    # services.resource_catalog at module level and languages/ja/support.py
+    # imports THIS module inside its method body, so a runtime import here
+    # would close that cycle. `from __future__ import annotations` keeps the
+    # annotation a string.
+    from anki_miner.languages.profile import LookupStrategy
     from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 logger = logging.getLogger(__name__)
@@ -116,10 +123,12 @@ class DefinitionService:
         providers: list[DictionaryProvider],
         *,
         registry: DictionaryRegistry | None = None,
+        lookup: LookupStrategy | None = None,
     ):
         self.config = config
         self._providers = providers
         self._registry = registry
+        self._lookup = lookup
         self._loaded = False
         # Per-run cache for _provider_attest_quality, keyed on (id(provider),
         # include_readings). See clear_run_cache() for scope/lifetime. Using
@@ -262,6 +271,16 @@ class DefinitionService:
                 _add(result.text, result.conditions)
         return candidates
 
+    def fallback_candidates(self, word: str, orth_base: str, ctype: str | None) -> list[tuple[str, int]]:
+        """Instance dispatch for the lookup-miss fan-out.
+
+        ``None`` strategy keeps the JA static verbatim, so an unconfigured
+        service (tests, scripts/engine_golden_contract_v2.py) is unchanged.
+        """
+        if self._lookup is None:
+            return self._fallback_candidates(word, orth_base, ctype)
+        return self._lookup.candidates(word, orth_base, ctype)
+
     def _fallback_lookup_offline(
         self,
         word: str,
@@ -277,7 +296,7 @@ class DefinitionService:
         Online providers and providers lacking ``lookup_fallback`` are skipped.
         Never raises: a provider that throws degrades to "skip + continue".
         """
-        candidates = self._fallback_candidates(word, orth_base, ctype)
+        candidates = self.fallback_candidates(word, orth_base, ctype)
         if not candidates:
             return None
         for cand_text, cand_conditions in candidates:
@@ -1054,7 +1073,7 @@ class DefinitionService:
             list if no offline provider returns any (exact or fallback) hit.
         """
         self.ensure_loaded()
-        candidates = self._fallback_candidates(word, "", None)
+        candidates = self.fallback_candidates(word, "", None)
         out: list[tuple[str, str]] = []
         for p in self._providers:
             if p.is_online or not p.is_available():
