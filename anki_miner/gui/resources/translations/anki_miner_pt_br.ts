@@ -1827,7 +1827,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>Preenche os campos ausentes de acento tonal, frequência, definição, leitura e áudio da palavra em notas já mineradas.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2193,7 +2193,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>Áudio da palavra</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2201,7 +2201,7 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>Busca o áudio de pronúncia pelas fontes de áudio de palavra configuradas. Analisar um baralho grande pode demorar na primeira vez.</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2262,6 +2262,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>(formatted content)</source>
         <translation>(conteúdo formatado)</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>(limpo)</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2357,7 +2361,7 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>Não foi possível adicionar {count} arquivo(s) de áudio ao Anki; analise novamente para tentar de novo.</translation>
     </message>
     <message>
         <source>Cancelling…</source>

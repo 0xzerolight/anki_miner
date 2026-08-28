@@ -2249,6 +2249,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>(cleared)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
         <translation type="unfinished" />
     </message>

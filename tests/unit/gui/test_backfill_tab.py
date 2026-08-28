@@ -238,6 +238,14 @@ class TestPreviewTable:
         tab._on_scan_finished(plan)
         assert tab.preview_table.item(0, 3).text() == "(formatted content)"
 
+    def test_a_clearing_change_says_so_instead_of_showing_a_blank_cell(self, tab):
+        # An empty new_value erases the field; a blank New cell would read as a
+        # rendering bug rather than as the write it is.
+        plan = _plan([NotePlan(1, "w", (FieldChange("frequency_sort", "FreqSort", "9999999", ""),))])
+        tab._on_scan_finished(plan)
+        assert tab.preview_table.item(0, 2).text() == "9999999"
+        assert tab.preview_table.item(0, 3).text() == "(cleared)"
+
     def test_row_cap(self, tab):
         plan = _plan([_note_plan(i) for i in range(1, _PREVIEW_ROW_CAP + 50)])
         tab._on_scan_finished(plan)

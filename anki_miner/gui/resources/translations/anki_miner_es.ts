@@ -1827,7 +1827,7 @@ Los archivos de índice en el disco quedarán sin modificar porque no se pudo co
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>Rellena los campos de acento tonal, frecuencia, definición, lectura y audio de palabra que falten en notas ya minadas.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2193,7 +2193,7 @@ Los archivos de índice en el disco quedarán sin modificar porque no se pudo co
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>Audio de palabra</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2201,7 +2201,7 @@ Los archivos de índice en el disco quedarán sin modificar porque no se pudo co
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>Obtiene el audio de pronunciación a través de las fuentes de audio de palabra configuradas. Analizar un mazo grande puede tardar un rato la primera vez.</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2262,6 +2262,10 @@ Los archivos de índice en el disco quedarán sin modificar porque no se pudo co
     <message>
         <source>(formatted content)</source>
         <translation>(contenido con formato)</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>(vaciado)</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2357,7 +2361,7 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>No se pudieron añadir {count} archivo(s) de audio a Anki; vuelve a analizar para reintentarlo.</translation>
     </message>
     <message>
         <source>Cancelling…</source>

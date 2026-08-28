@@ -519,9 +519,14 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
                 # and field_name are plain text, and old_display was _display()-
                 # stripped when the plan was built, so re-stripping it here would
                 # double-truncate.
+                #
+                # An empty new_value is a change too — the scan erases a legacy
+                # 9999999 the lookup could not replace. Without its own marker the
+                # row would show a blank New cell, which reads as a rendering bug
+                # rather than as the write it is.
                 new_display = self._strip_cell(change.new_value)
-                if not new_display and change.new_value:
-                    new_display = self.tr("(formatted content)")
+                if not new_display:
+                    new_display = self.tr("(formatted content)") if change.new_value else self.tr("(cleared)")
                 for col, text in enumerate((expression, change.field_name, change.old_display, new_display)):
                     shown = text[:_CELL_ELIDE] + "…" if len(text) > _CELL_ELIDE else text
                     # The cell prints a truncated value; the copy and the sort

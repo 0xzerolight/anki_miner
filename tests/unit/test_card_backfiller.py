@@ -649,6 +649,79 @@ class TestScanFrequency:
         plan = scan_backfill(anki, backfill_config, _services(freq=freq), _options({"frequency"}))
         assert plan.notes == ()
 
+    @pytest.mark.parametrize("overwrite", [False, True])
+    def test_unranked_word_clears_the_legacy_sentinel(self, backfill_config, overwrite):
+        """No source ranks the word, so the placeholder is erased rather than left.
+
+        Without the clear pass a miss proposes nothing, nothing is written, and
+        the 9999999 survives every scan in both modes.
+        """
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="9999999")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=FakeFrequencyService({})),
+            _options({"frequency_sort"}, overwrite=overwrite),
+        )
+        assert _changes_by_key(plan, 1) == {"frequency_sort": ""}
+        assert plan.notes[0].changes[0].old_display == "9999999"
+
+    @pytest.mark.parametrize("overwrite", [False, True])
+    def test_unranked_word_leaves_a_real_stored_rank_alone(self, backfill_config, overwrite):
+        """Only the placeholder is erased; a rank the user has is never wiped."""
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="4321")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=FakeFrequencyService({})),
+            _options({"frequency_sort"}, overwrite=overwrite),
+        )
+        assert plan.notes == ()
+
+    def test_sentinel_in_the_display_field_is_not_cleared(self, backfill_config):
+        """The clear is scoped to the sort key, matching _is_fillable."""
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="9999999", FrequencySort="")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=FakeFrequencyService({})),
+            _options({"frequency", "frequency_sort"}),
+        )
+        assert plan.notes == ()
+
+    def test_sentinel_not_cleared_when_the_sort_field_is_not_selected(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="9999999")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=FakeFrequencyService({})),
+            _options({"frequency"}),
+        )
+        assert plan.notes == ()
+
+    def test_ranked_word_replaces_the_sentinel_rather_than_clearing_it(self, backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="9999999")})
+        freq = FakeFrequencyService({("猫", "ねこ"): [("JPDB", 42, None)]})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=freq),
+            _options({"frequency_sort"}, overwrite=True),
+        )
+        assert _changes_by_key(plan, 1) == {"frequency_sort": "42"}
+
+    def test_sentinel_not_cleared_when_the_service_is_unavailable(self, backfill_config):
+        """An unloaded chain drops the group, so it can never erase a card."""
+        anki = FakeAnkiService({1: _note(1, word="猫", Frequency="", FrequencySort="9999999")})
+        plan = scan_backfill(
+            anki,
+            backfill_config,
+            _services(freq=FakeFrequencyService(available=False)),
+            _options({"frequency_sort"}, overwrite=True),
+        )
+        assert "frequency_sort" in plan.unavailable_fields
+        assert plan.notes == ()
+
     def test_service_unavailable_reported_not_raised(self, backfill_config):
         anki = FakeAnkiService({1: _note(1, word="猫", Frequency="")})
         plan = scan_backfill(
@@ -1091,6 +1164,17 @@ class TestApplyBackfill:
 
         assert result.fields_filled == 1
         assert anki.updates == [[(1, {"FrequencySort": "42"})]]
+
+    def test_legacy_sort_sentinel_cleared_at_apply(self):
+        """An empty new_value is a real write, not a no-op the payload drops."""
+        anki = RecordingAnkiService({1: _note(1, word="word1", FrequencySort="9999999")})
+        plan = _plan([_note_plan(1, [("frequency_sort", "FrequencySort", "9999999", "")])])
+
+        result = apply_backfill(anki, plan)
+
+        assert result.fields_filled == 1
+        assert anki.updates == [[(1, {"FrequencySort": ""})]]
+        assert anki.tag_calls == [([1], BACKFILL_TAG)]
 
     def test_real_stored_rank_skipped_at_apply(self):
         anki = RecordingAnkiService({1: _note(1, word="word1", FrequencySort="9999")})

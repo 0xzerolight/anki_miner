@@ -1825,7 +1825,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>Điền các trường trọng âm cao độ, tần suất, định nghĩa, cách đọc và âm thanh từ còn trống trên các ghi chú đã khai thác.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2191,7 +2191,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>Âm thanh từ</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2199,7 +2199,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>Lấy âm thanh phát âm qua các nguồn âm thanh từ đã cấu hình. Quét một bộ thẻ lớn có thể mất một lúc trong lần đầu tiên.</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2260,6 +2260,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>(formatted content)</source>
         <translation>(nội dung đã định dạng)</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>(đã xóa)</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2355,7 +2359,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>Không thể thêm {count} tệp âm thanh vào Anki; hãy quét lại để thử lại.</translation>
     </message>
     <message>
         <source>Cancelling…</source>

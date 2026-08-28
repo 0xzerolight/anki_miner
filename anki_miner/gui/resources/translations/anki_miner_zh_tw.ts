@@ -1825,7 +1825,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation type="unfinished" />
+        <translation>為已挖掘的筆記補齊缺少的高低音調、頻率、釋義、讀音與單字發音欄位。</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2191,7 +2191,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Word audio</source>
-        <translation type="unfinished" />
+        <translation>單字發音</translation>
     </message>
     <message>
         <source>Fills furigana from an existing reading and vice versa; does not generate new readings.</source>
@@ -2199,7 +2199,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Fetches pronunciation audio through your configured word-audio sources. Scanning a large deck can take a while the first time.</source>
-        <translation type="unfinished" />
+        <translation>透過你設定的單字發音來源取得發音音訊。首次掃描大型牌組可能需要一些時間。</translation>
     </message>
     <message>
         <source>Overwrite existing values</source>
@@ -2260,6 +2260,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>(formatted content)</source>
         <translation>（已格式化內容）</translation>
+    </message>
+    <message>
+        <source>(cleared)</source>
+        <translation>（已清空）</translation>
     </message>
     <message>
         <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
@@ -2355,7 +2359,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>{count} audio file(s) could not be added to Anki; scan again to retry.</source>
-        <translation type="unfinished" />
+        <translation>有 {count} 個音訊檔無法加入 Anki；請重新掃描以重試。</translation>
     </message>
     <message>
         <source>Cancelling…</source>
