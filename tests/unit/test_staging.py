@@ -4,14 +4,19 @@ import errno
 import gc
 import os
 import shutil
+import subprocess
+import sys
 import threading
 import time
+import uuid
 import weakref
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import psutil
 import pytest
 
+from anki_miner.exceptions import SetupError
 from anki_miner.services import _staging as staging_module
 from anki_miner.services._sqlite_index import read_ownership_marker, write_ownership_marker
 from anki_miner.services._staging import promote_staged_dir, repair_managed_slot
@@ -349,24 +354,110 @@ def test_promote_staged_dir_removes_lockfile_on_failure(tmp_path: Path, monkeypa
     assert not (tmp_path / staging_module._PROMOTION_LOCK_FILENAME).exists()
 
 
-def test_promote_staged_dir_raises_when_another_process_holds_the_lock(tmp_path: Path) -> None:
-    """Process A holds the lockfile directly (bypassing the in-process RLock,
-
-    like a second OS process would); process B's ``promote_staged_dir`` must
-    see the contention as the same staging-failure type callers already
-    catch for a same-process "already exists" race.
-    """
+def _stage_payload(tmp_path: Path) -> tuple[Path, Path, Path]:
     final = tmp_path / "resource"
     staging = tmp_path / ".staging-resource"
     staging.mkdir()
     (staging / "payload").write_bytes(b"new")
+    return final, staging, tmp_path / staging_module._PROMOTION_LOCK_FILENAME
 
-    lock_path = tmp_path / staging_module._PROMOTION_LOCK_FILENAME
+
+def _write_lock_token(lock_path: Path, pid: int, create_time: str) -> bytes:
+    token = f"{pid}:{create_time}:{uuid.uuid4().hex}\n".encode("ascii")
+    lock_path.write_bytes(token)
+    return token
+
+
+def test_promote_staged_dir_refuses_while_a_live_foreign_process_holds_the_lock(tmp_path: Path) -> None:
+    """A real second OS process is mid-promotion: refuse, touch nothing, and
+
+    say something the user can act on -- not a ``FileExistsError``, which the
+    importers turn into "already exists", which contention is not.
+    """
+    final, staging, lock_path = _stage_payload(tmp_path)
+
+    holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        create_time = staging_module._format_create_time(psutil.Process(holder.pid).create_time())
+        token = _write_lock_token(lock_path, holder.pid, create_time)
+
+        with pytest.raises(SetupError, match="Another Anki Miner window"):
+            promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+        assert not final.exists()
+        assert staging.exists()
+        assert lock_path.read_bytes() == token
+    finally:
+        holder.terminate()
+        holder.wait(timeout=10)
+
+
+def test_promote_staged_dir_steals_the_lock_from_a_dead_holder(tmp_path: Path) -> None:
+    """The reported failure: a holder that died mid-promotion left the lockfile
+
+    behind, and every later import into that family failed for a full hour.
+    """
+    final, staging, lock_path = _stage_payload(tmp_path)
+
+    holder = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    create_time = staging_module._format_create_time(psutil.Process(holder.pid).create_time())
+    holder.terminate()
+    holder.wait(timeout=10)
+    _write_lock_token(lock_path, holder.pid, create_time)
+
+    promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+    assert (final / "payload").read_bytes() == b"new"
+    assert not lock_path.exists()
+
+
+def test_promote_staged_dir_reclaims_this_processs_own_leaked_lock(
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A release that could not remove the lockfile (Windows AV/indexer handle)
+
+    leaves our own token on disk. We hold the in-process RLock here, so no
+    thread of ours can be mid-promotion: the leftover is ours to reclaim.
+    """
+    final, staging, lock_path = _stage_payload(tmp_path)
+    own_create_time = staging_module._own_create_time()
+    assert own_create_time is not None
+    _write_lock_token(lock_path, os.getpid(), own_create_time)
+
+    with caplog.at_level("WARNING", logger=staging_module.__name__):
+        promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+    assert (final / "payload").read_bytes() == b"new"
+    assert not lock_path.exists()
+    assert any("leaked promotion lock" in record.message for record in caplog.records)
+
+
+def test_promote_staged_dir_treats_a_recycled_pid_as_a_dead_holder(tmp_path: Path) -> None:
+    """Our own PID with someone else's start time is a recycled PID, not us --
+
+    which is what the start-time half of the token exists to tell apart.
+    """
+    final, staging, lock_path = _stage_payload(tmp_path)
+    _write_lock_token(lock_path, os.getpid(), "1.000000")
+
+    promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
+
+    assert (final / "payload").read_bytes() == b"new"
+    assert not lock_path.exists()
+
+
+def test_promote_staged_dir_keeps_an_unidentifiable_lockfile_until_the_mtime_budget(tmp_path: Path) -> None:
+    """A lockfile written by an older build carries no start time, so no holder
+
+    can be checked for liveness; the mtime budget stays its only escape.
+    """
+    final, staging, lock_path = _stage_payload(tmp_path)
     held_fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
     os.write(held_fd, b"999999\n")
     os.close(held_fd)
 
-    with pytest.raises(FileExistsError):
+    with pytest.raises(SetupError, match="Another Anki Miner window"):
         promote_staged_dir(staging, final, mover=os.replace, overwrite=False)
 
     assert not final.exists()
@@ -474,6 +565,44 @@ def test_promotion_lock_exit_releases_rlock_when_file_release_raises(
     thread.join(timeout=2)
     assert not thread.is_alive(), "promotion lock is wedged: later acquire never completed"
     assert errors == []
+
+
+def test_promotion_lock_release_survives_an_unremovable_lockfile(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """On Windows an AV or indexer handle can deny the release unlink. The
+
+    promotion has already succeeded by then, so raising would report a
+    completed import as failed -- and the next acquisition must reclaim the
+    leftover rather than leave it to the hour-long mtime budget.
+    """
+    root = tmp_path.resolve()
+    lock = staging_module._PromotionLock(root)
+    real_unlink = os.unlink
+
+    def denied(path: object, *args: object, **kwargs: object) -> None:
+        if Path(str(path)) == lock._lock_path:
+            raise PermissionError("lockfile is held open by another handle")
+        real_unlink(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(os, "unlink", denied)
+    with caplog.at_level("WARNING", logger=staging_module.__name__), lock:
+        pass
+
+    assert lock._depth == 0
+    assert lock._lock_path.exists()
+    assert any("Could not remove the promotion lock" in record.message for record in caplog.records)
+
+    monkeypatch.undo()
+    caplog.clear()
+
+    with caplog.at_level("WARNING", logger=staging_module.__name__), lock:
+        assert lock._lock_path.exists()
+
+    assert not lock._lock_path.exists()
+    assert any("leaked promotion lock" in record.message for record in caplog.records)
 
 
 def test_promotion_lock_registry_reclaims_unused_roots(tmp_path: Path) -> None:

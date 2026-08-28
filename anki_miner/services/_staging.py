@@ -14,8 +14,8 @@ caller keeps its own pre-checks (e.g. the "already exists and not overwrite"
 
 from __future__ import annotations
 
-import contextlib
 import errno
+import functools
 import logging
 import os
 import tempfile
@@ -26,6 +26,9 @@ import weakref
 from pathlib import Path
 from typing import Callable, TypeVar
 
+import psutil
+
+from anki_miner.exceptions import SetupError
 from anki_miner.services._sqlite_index import (
     StoreFamily,
     prove_owned_slot,
@@ -46,13 +49,57 @@ logger = logging.getLogger(__name__)
 # it is infrastructure, never a slot's recovery candidate.
 _PROMOTION_LOCK_FILENAME = ".anki-miner-promotion.lock"
 
-# How long a cross-process promotion lockfile may sit before a later
-# promotion is allowed to steal it. A real promotion is a fast rename/
-# replace, so this budget exists only to recover from a lockfile a process
-# left behind after crashing mid-promotion (kill -9, OOM kill, host power
-# loss) -- a crashed holder must never permanently brick imports for that
-# slot family.
+# Last-resort budget for a lockfile whose holder cannot be identified at all
+# -- one written by an older build (no start-time field), or one we cannot
+# read back. Everything else is reclaimed the moment the recorded holder is
+# proven gone, so this only bounds the unclassifiable case.
 _PROMOTION_LOCK_STALE_SECONDS = 60 * 60
+
+
+def _format_create_time(create_time: float) -> str:
+    """Render a process start time so the lockfile round-trip is byte-stable."""
+    return f"{create_time:.6f}"
+
+
+@functools.lru_cache(maxsize=1)
+def _own_create_time() -> str | None:
+    """This process's start time, or None when psutil cannot report it.
+
+    None makes ``_process_token`` fall back to the older two-field token,
+    which ``_read_holder`` refuses to classify -- degrading to the mtime
+    budget rather than risking a mis-identified holder.
+    """
+    try:
+        return _format_create_time(psutil.Process().create_time())
+    except Exception:  # noqa: BLE001 -- never let lock bookkeeping fail an import.
+        logger.warning("Could not read this process's start time for the promotion lock", exc_info=True)
+        return None
+
+
+def _process_token() -> bytes:
+    """PID + start time + a random component.
+
+    The PID alone is not a reliable owner check (PIDs recycle, and two holders
+    across a steal could share one). The start time pins a PID to one specific
+    process, and the random half is what release keys off.
+    """
+    create_time = _own_create_time()
+    pid = os.getpid()
+    if create_time is None:
+        return f"{pid}:{uuid.uuid4().hex}\n".encode("ascii")
+    return f"{pid}:{create_time}:{uuid.uuid4().hex}\n".encode("ascii")
+
+
+def _holder_is_running(pid: int, create_time: str) -> bool:
+    """Whether the process that wrote a lockfile can still be running."""
+    try:
+        return _format_create_time(psutil.Process(pid).create_time()) == create_time
+    except psutil.NoSuchProcess:
+        return False
+    except Exception:  # noqa: BLE001 -- AccessDenied, or any psutil/OS quirk.
+        # We cannot prove the holder is gone, so we must not steal from it.
+        # The mtime budget still bounds this case.
+        return True
 
 
 class _PromotionLock:
@@ -66,6 +113,14 @@ class _PromotionLock:
     (``repair_managed_slot`` holds the lock across a call into an importer
     that itself calls ``promote_staged_dir`` on the same root) only touches
     the lockfile at the outermost acquisition, mirroring the RLock.
+
+    A sentinel file carries no liveness of its own, and the lock is held for
+    the whole of a repair import -- minutes for a large dictionary -- so a
+    holder dying inside that window is a real case, not a theoretical one.
+    Acquisition therefore records PID + process start time and reclaims the
+    lockfile as soon as that holder is proven gone (see
+    ``_steal_if_holder_gone``); the mtime budget is only the fallback for a
+    lockfile no holder can be read out of.
     """
 
     def __init__(self, root: Path) -> None:
@@ -100,22 +155,18 @@ class _PromotionLock:
 
     def _acquire_file_lock(self) -> None:
         self._root.mkdir(parents=True, exist_ok=True)
-        # PID + a random component: the PID alone is not a reliable owner
-        # check (PIDs recycle, and two holders across a steal could share
-        # one), so the random half is what release actually keys off.
-        token = f"{os.getpid()}:{uuid.uuid4().hex}\n".encode("ascii")
+        token = _process_token()
         stale_retries = 3
         while True:
             try:
                 fd = os.open(self._lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
             except FileExistsError:
-                if stale_retries > 0 and self._steal_if_stale():
+                if stale_retries > 0 and self._steal_if_holder_gone():
                     stale_retries -= 1
                     continue
-                raise FileExistsError(
-                    errno.EEXIST,
-                    "Slot is being promoted by another Anki Miner process",
-                    str(self._root),
+                raise SetupError(
+                    f"Another Anki Miner window is importing into {self._root}. "
+                    "Wait for that import to finish, or close the other window."
                 ) from None
             try:
                 os.write(fd, token)
@@ -123,6 +174,52 @@ class _PromotionLock:
                 os.close(fd)
             self._token = token
             return
+
+    def _read_holder(self) -> tuple[int, str] | None:
+        """Parse ``pid:create_time`` out of the lockfile, None when unreadable.
+
+        None covers an unreadable file, an empty one (a crash between the
+        O_EXCL create and the token write), and the older two-field token --
+        none of which identify a holder we can check for liveness.
+        """
+        try:
+            raw = self._lock_path.read_bytes()
+        except OSError:
+            return None
+        fields = raw.decode("ascii", "replace").strip().split(":")
+        if len(fields) != 3:
+            return None
+        try:
+            return int(fields[0]), fields[1]
+        except ValueError:
+            return None
+
+    def _steal_if_holder_gone(self) -> bool:
+        """Reclaim a lockfile whose recorded holder cannot still be promoting.
+
+        An O_EXCL sentinel carries no liveness of its own, so without this a
+        holder that died mid-promotion (crash, kill, power loss) or one whose
+        release could not remove the file would block every import into this
+        family until the mtime budget expired an hour later.
+        """
+        holder = self._read_holder()
+        if holder is not None:
+            pid, create_time = holder
+            if pid == os.getpid() and create_time == _own_create_time():
+                # Our own lockfile, left behind by a release that could not
+                # remove it (on Windows an AV or indexer handle makes the
+                # unlink raise). It cannot be live: we hold the in-process
+                # RLock right now, so no other thread here is mid-promotion.
+                logger.warning("Reclaiming this process's leaked promotion lock: %s", self._lock_path)
+                return self._unlink_lock()
+            if not _holder_is_running(pid, create_time):
+                logger.warning(
+                    "Stealing promotion lock from dead holder pid=%s: %s",
+                    pid,
+                    self._lock_path,
+                )
+                return self._unlink_lock()
+        return self._steal_if_stale()
 
     def _steal_if_stale(self) -> bool:
         try:
@@ -133,6 +230,9 @@ class _PromotionLock:
             return False
         if age < _PROMOTION_LOCK_STALE_SECONDS:
             return False
+        return self._unlink_lock()
+
+    def _unlink_lock(self) -> bool:
         try:
             os.unlink(self._lock_path)
         except FileNotFoundError:
@@ -154,14 +254,22 @@ class _PromotionLock:
             current = self._lock_path.read_bytes()
         except FileNotFoundError:
             return
+        except OSError:
+            # Never propagate: the promotion itself has already succeeded by
+            # the time release runs, so raising here reports a completed
+            # import as failed. On Windows an AV or indexer handle denies both
+            # the read and the unlink. The leftover file is survivable --
+            # it records this process, so the next acquisition reclaims it.
+            logger.warning("Could not read the promotion lock to release it: %s", self._lock_path, exc_info=True)
+            return
         if current != self._token:
             logger.warning(
                 "promotion lock stolen — not removing current holder's lock: %s",
                 self._lock_path,
             )
             return
-        with contextlib.suppress(FileNotFoundError):
-            os.unlink(self._lock_path)
+        if not self._unlink_lock():
+            logger.warning("Could not remove the promotion lock: %s", self._lock_path)
 
 
 _promotion_locks_guard = threading.Lock()
@@ -279,9 +387,10 @@ def promote_staged_dir(
         FileExistsError: When ``overwrite`` is false and ``final`` exists.
         Whatever the placement primitive raises. On replacement failure, the
         backup is restored before the exception propagates.
-        FileExistsError: Also raised (same errno) when another OS process
-            currently holds the cross-process promotion lock for this slot's
-            family root.
+        SetupError: When another *live* OS process holds the cross-process
+            promotion lock for this slot's family root. Deliberately not a
+            ``FileExistsError``: callers turn that one into "already exists",
+            which contention is not.
 
     The no-clobber lock covers writers across processes too, via an O_EXCL
     lockfile beside the family root (see ``_PromotionLock``); it stays scoped
