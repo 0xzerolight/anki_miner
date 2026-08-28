@@ -23,6 +23,7 @@ from anki_miner.utils import (
 )
 
 if TYPE_CHECKING:
+    from anki_miner.languages.profile import MinedFormPolicy
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
 
@@ -107,7 +108,13 @@ def _normalize_sentence(text: str) -> str:
 class WordFilterService:
     """Filter vocabulary words based on various criteria (stateless service)."""
 
-    def __init__(self, config: AnkiMinerConfig, tagger: Any | None = None):
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        tagger: Any | None = None,
+        *,
+        mined_form: MinedFormPolicy | None = None,
+    ):
         """Initialize the word filter service.
 
         Args:
@@ -117,9 +124,17 @@ class WordFilterService:
                 line. Required only when ``config.bold_target_in_sentence``
                 is True AND ``filter_i_plus_one`` is called; otherwise the
                 bolded-field recompute is skipped and the tagger is unused.
+            mined_form: The SAME card-front policy the parser emitted these
+                words with (``languages.profile.MinedFormPolicy``). Read only
+                by ``_line_preserves_mined_form``, which must recompute a
+                candidate line's front with the policy that produced
+                ``word.mined_form``. ``None`` runs the JA static verbatim.
+                Duck-typed: ``services`` keeps no runtime import of
+                ``languages``.
         """
         self.config = config
         self.tagger = tagger
+        self._mined_form = mined_form
 
     def filter_unknown(
         self,
@@ -506,8 +521,7 @@ class WordFilterService:
             result.append(self._swap_word_to_line(word, match))
         return result
 
-    @staticmethod
-    def _line_preserves_mined_form(word: TokenizedWord, line: LineLemmas) -> bool:
+    def _line_preserves_mined_form(self, word: TokenizedWord, line: LineLemmas) -> bool:
         """Whether swapping to ``line`` keeps a surface-mined card front."""
         if word.pos in ("動詞", "形容詞"):
             return True
@@ -522,7 +536,17 @@ class WordFilterService:
         # Thread the word's own pronunciation evidence (S4-01): omitting it takes
         # the no-evidence compatibility path, which folds lexical vowel-tail
         # nouns (舞い → 舞) and wrongly rejects every line for such words.
-        return select_mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation) == word.mined_form
+        #
+        # Compare like with like: the candidate line's form must be recomputed by
+        # the SAME policy that produced word.mined_form. Recomputing with the JA
+        # table while the word carries a profile override rejects EVERY line for a
+        # non-ja word — a Korean VV falls through to `return surface`, which is
+        # never the override — emptying the curator's sentence picker silently.
+        if self._mined_form is None:
+            recomputed = select_mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation)
+        else:
+            recomputed = self._mined_form.mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation)
+        return recomputed == word.mined_form
 
     def _swap_word_to_line(self, word: TokenizedWord, match: LineLemmas) -> TokenizedWord:
         """Rebuild ``word`` as if it had been mined from the ``match`` line.

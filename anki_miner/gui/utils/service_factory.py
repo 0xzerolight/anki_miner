@@ -22,6 +22,7 @@ from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
+from anki_miner.languages.registry import get_profile
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
@@ -709,7 +710,9 @@ def create_services(
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
-    word_filter = WordFilterService(config, tagger=subtitle_parser.tagger)
+    word_filter = WordFilterService(
+        config, tagger=subtitle_parser.tagger, mined_form=get_profile(config.language).mined_form
+    )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
         anki_service = AnkiService(config)

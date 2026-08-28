@@ -6,7 +6,7 @@ import re
 import time
 from collections.abc import Callable, Iterator, Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pysubs2
 
@@ -71,6 +71,9 @@ from anki_miner.utils.text_utils import (
     is_kana_only,
     wrap_target_furigana_from_tokens,
 )
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import MinedFormPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -338,6 +341,8 @@ class SubtitleParserService:
         kana_attest_lookup: KanaAttestLookup | None = None,
         term_common_lookup: TermCommonLookup | None = None,
         term_rules_lookup: TermRulesLookup | None = None,
+        *,
+        mined_form_policy: "MinedFormPolicy | None" = None,
     ):
         """Initialize the subtitle parser.
 
@@ -382,6 +387,12 @@ class SubtitleParserService:
                 compound matcher: the morphology merges it serves
                 (noun-suffix/prefix/nominalizer) run regardless.
                 ``None`` keeps parsing byte-identical.
+            mined_form_policy: Optional card-front policy
+                (``languages.profile.MinedFormPolicy``) consulted at the emit
+                site instead of ``models.word.select_mined_form``. ``None`` runs
+                that JA function verbatim, which is what the drift canary pins.
+                Duck-typed: ``services`` keeps no runtime import of
+                ``languages``.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -392,6 +403,10 @@ class SubtitleParserService:
         # parser) and PB7 (threading.local tagger) rewrite decisions.
         self._probe_time_s: float = 0.0
         self._tokenize_time_s: float = 0.0
+        # Card-front policy for the emit site. None ⇒ the JA static runs
+        # verbatim (see _resolve_word_identity); the kana-recovery probe stays
+        # on the static either way.
+        self._mined_form_policy = mined_form_policy
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -892,13 +907,22 @@ class SubtitleParserService:
         pronunciation = getattr(word_token.feature, "pron", "")
         if not isinstance(pronunciation, str):
             pronunciation = ""
-        mined = select_mined_form(
-            word_token.feature.pos1,
-            resolved_front,
-            lemma,
-            word_token.surface,
-            pronunciation=pronunciation,
-        )
+        if self._mined_form_policy is None:
+            mined = select_mined_form(
+                word_token.feature.pos1,
+                resolved_front,
+                lemma,
+                word_token.surface,
+                pronunciation=pronunciation,
+            )
+        else:
+            mined = self._mined_form_policy.mined_form(
+                word_token.feature.pos1,
+                resolved_front,
+                lemma,
+                word_token.surface,
+                pronunciation,
+            )
         return lemma, resolved_front, mined, front_overridden
 
     def _apply_single_token_sentence_attestation(
@@ -1202,6 +1226,7 @@ class SubtitleParserService:
             highlight_end=highlight_end,
             sentence_bolded=sentence_bolded,
             sentence_furigana_bolded=sentence_furigana_bolded,
+            mined_form_override=mined,
         )
 
     def _emit_line_words_and_index(
