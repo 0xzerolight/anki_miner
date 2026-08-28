@@ -553,6 +553,13 @@ class AnkiMinerConfig:
     # machine_specific_fields): the language a user mines is a preference, the
     # resources backing it are the machine-local part.
     language: str = "ja"
+    # Parked snapshots of the language-scoped settings for every language that is
+    # NOT active; the active language's values always live in the normal fields.
+    # Written and read only by languages/switching.py (Stage 1), so this stays
+    # {} for single-language users. Deep-wrapped read-only below like anki_fields:
+    # the config is shared across worker threads and a parked snapshot must not be
+    # mutable in place.
+    language_stash: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
 
     def __post_init__(self):
         """Convert string paths to Path objects if needed.
@@ -668,6 +675,19 @@ class AnkiMinerConfig:
         if not isinstance(self.card_type_marker_fields, types.MappingProxyType):
             object.__setattr__(
                 self, "card_type_marker_fields", types.MappingProxyType(dict(self.card_type_marker_fields))
+            )
+        if not isinstance(self.language_stash, types.MappingProxyType) or any(
+            not isinstance(value, types.MappingProxyType) for value in self.language_stash.values()
+        ):
+            object.__setattr__(
+                self,
+                "language_stash",
+                types.MappingProxyType(
+                    {
+                        str(code): types.MappingProxyType(dict(values))
+                        for code, values in dict(self.language_stash).items()
+                    }
+                ),
             )
 
         # Clamp ui_font_scale to [0.5, 2.0]
