@@ -10,6 +10,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    meta_language,
     read_ownership_marker,
     scan_index_root,
 )
@@ -32,6 +33,9 @@ class AudioPackMeta:
     pack_dir_exists: bool
     db_path: Path
     source_db: Path | None = None
+    #: Mining language this pack was imported for. Absent from every
+    #: pre-transition meta.json, hence the tolerant "ja" default.
+    language: str = "ja"
 
     @property
     def source_available(self) -> bool:
@@ -125,6 +129,7 @@ class AudioPackRegistry:
             pack_dir_exists=pack_dir.is_dir(),
             db_path=db,
             source_db=source_db,
+            language=meta_language(meta),
         )
 
     @property

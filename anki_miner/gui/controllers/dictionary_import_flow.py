@@ -32,7 +32,7 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot
+from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot, slot_language_kwarg
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     derive_dict_id_from_zip,
     read_yomitan_title,
@@ -653,14 +653,21 @@ class DictionaryImportFlow(ModalImportFlowMixin):
 
         def make_worker(job: tuple[str, str, str, Path]) -> ImportWorker:
             kind, dict_id, _display, source_path = job
+            dicts_root = self._get_config().dicts_root
             if kind == "jmdict":
-                return ImportWorker.for_jmdict(source_path, self._get_config().dicts_root)
+                return ImportWorker.for_jmdict(source_path, dicts_root)
             # Pin the existing slot id so a saved source whose title embeds a
             # changing release date (e.g. Jitendex) rebuilds the index in the
             # SAME folder instead of forking a new date-named dir — which would
             # orphan the chained slot and permanently wedge the stale-schema
             # pre-run gate (it could never clear the old slot).
-            return ImportWorker.for_yomitan(source_path, self._get_config().dicts_root, overwrite=True, dict_id=dict_id)
+            return ImportWorker.for_yomitan(
+                source_path,
+                dicts_root,
+                overwrite=True,
+                dict_id=dict_id,
+                **slot_language_kwarg(dicts_root / dict_id),
+            )
 
         def format_label(
             index: int,

@@ -8,6 +8,10 @@ from typing import Literal, Mapping
 
 from .paths import ANKI_MINER_HOME
 
+# Deliberate duplicate of anki_miner.languages.AVAILABLE_LANGUAGES: config must
+# not import that package. A sync-assertion test pins the two identical.
+_LANGUAGE_CODES: tuple[str, ...] = ("ja", "ko", "zh")
+
 
 @dataclass(frozen=True)
 class ChainEntry:
@@ -542,6 +546,21 @@ class AnkiMinerConfig:
     # Monotonic identity for committed GUI settings. Not user-editable.
     config_version: int = 0
 
+    # Active MINING language (distinct from `ui_language`, the interface
+    # language). "ja" is the pre-transition behaviour and the value every
+    # existing config produces (absent key -> this default), so no
+    # CONFIG_SCHEMA_VERSION bump is needed. Portable in settings exports (NOT in
+    # machine_specific_fields): the language a user mines is a preference, the
+    # resources backing it are the machine-local part.
+    language: str = "ja"
+    # Parked snapshots of the language-scoped settings for every language that is
+    # NOT active; the active language's values always live in the normal fields.
+    # Written and read only by languages/switching.py (Stage 1), so this stays
+    # {} for single-language users. Deep-wrapped read-only below like anki_fields:
+    # the config is shared across worker threads and a parked snapshot must not be
+    # mutable in place.
+    language_stash: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+
     def __post_init__(self):
         """Convert string paths to Path objects if needed.
 
@@ -657,6 +676,21 @@ class AnkiMinerConfig:
             object.__setattr__(
                 self, "card_type_marker_fields", types.MappingProxyType(dict(self.card_type_marker_fields))
             )
+        if not isinstance(self.language_stash, types.MappingProxyType) or any(
+            not isinstance(value, types.MappingProxyType) for value in self.language_stash.values()
+        ):
+            object.__setattr__(
+                self,
+                "language_stash",
+                types.MappingProxyType(
+                    {
+                        # Keyed the same way `language` is normalized below, so a
+                        # hand-edited " ZH" can still be matched against it.
+                        str(code).strip().lower(): types.MappingProxyType(dict(values))
+                        for code, values in dict(self.language_stash).items()
+                    }
+                ),
+            )
 
         # Clamp ui_font_scale to [0.5, 2.0]
         object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
@@ -681,6 +715,12 @@ class AnkiMinerConfig:
         # pass an unsupported backend name through to the transcriber.
         if self.asr_device not in {"auto", "cuda", "cpu", "vulkan"}:
             object.__setattr__(self, "asr_device", "auto")
+
+        # Normalize and validate the mining language. An unknown or hand-edited
+        # value resets to "ja" rather than raising, matching asr_model/asr_device:
+        # a config written by a newer build must still load on an older one.
+        code = str(self.language).strip().lower()
+        object.__setattr__(self, "language", code if code in _LANGUAGE_CODES else "ja")
 
     @property
     def frequency_active(self) -> bool:

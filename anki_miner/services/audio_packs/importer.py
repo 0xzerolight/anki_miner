@@ -14,6 +14,7 @@ from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     open_readonly,
     prove_owned_slot,
+    read_slot_language,
     resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
@@ -100,6 +101,7 @@ def import_android_audio_db(
     progress: Callable[[str], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
+    language: str = "ja",
 ) -> AudioPackImportResult:
     """Register an external ``android.db`` without copying its multi-gigabyte blobs."""
     db_path = db_path.resolve()
@@ -149,6 +151,7 @@ def import_android_audio_db(
                 "entry_count": str(entry_count),
                 "audio_count": str(audio_count),
                 "schema_version": str(SCHEMA_VERSION),
+                "language": language,
                 "pack_dir": str(db_path.parent),
                 "source_db": str(db_path),
             },
@@ -183,6 +186,7 @@ def import_audio_pack(
     progress: Callable[[str], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
+    language: str = "ja",
 ) -> AudioPackImportResult:
     """Import an audio pack directory into ``dest_root/<pack_id>/index.sqlite``.
 
@@ -197,6 +201,8 @@ def import_audio_pack(
                       is aborted and any staging directory is cleaned up.
         overwrite: If True and the destination already exists it is replaced
                    atomically.  If False raises :exc:`SetupError`.
+        language: Mining language stamped into the index meta. Defaults to
+                  ``"ja"``, the pre-transition value for every existing caller.
 
     Returns:
         :class:`AudioPackImportResult` describing the completed import.
@@ -311,6 +317,7 @@ def import_audio_pack(
                 "format": fmt,
                 "entry_count": str(total_entries),
                 "schema_version": str(SCHEMA_VERSION),
+                "language": language,
                 "pack_dir": str(pack_dir),
             },
         )
@@ -349,6 +356,9 @@ def repair_audio_pack(
     cancel_check: Callable[[], bool] | None = None,
 ) -> AudioPackImportResult:
     """Explicitly repair ``pack_id``, retaining an invalid prior slot as quarantine."""
+    # Read the stamp before the rebuild: repair_managed_slot may quarantine the
+    # slot, and a re-import would otherwise fall back to the "ja" default.
+    language = read_slot_language(dest_root / pack_id)
     result = repair_managed_slot(
         pack_dir,
         dest_root,
@@ -361,6 +371,7 @@ def repair_audio_pack(
             progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            language=language,
         ),
     )
     purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)

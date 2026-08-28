@@ -10,6 +10,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    meta_language,
     read_ownership_marker,
     scan_index_root,
 )
@@ -28,6 +29,9 @@ class DictMeta:
     entry_count: int
     schema_ok: bool
     db_path: Path
+    #: Mining language this dictionary was imported for. Absent from every
+    #: pre-transition meta.json, hence the tolerant "ja" default.
+    language: str = "ja"
 
 
 class DictionaryRegistry:
@@ -70,6 +74,7 @@ class DictionaryRegistry:
             entry_count=count,
             schema_ok=(version == SCHEMA_VERSION),
             db_path=db,
+            language=meta_language(meta),
         )
 
     def get(self, dict_id: str) -> DictMeta | None:

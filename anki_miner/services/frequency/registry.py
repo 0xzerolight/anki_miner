@@ -20,6 +20,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    meta_language,
     read_ownership_marker,
     scan_index_root,
 )
@@ -48,6 +49,9 @@ class FreqSourceMeta:
     # settings-panel badge / import message — the runtime exclusion is driven by
     # the sentinel rank, not this flag, so build_sources ignores it.
     is_categorical: bool = False
+    #: Mining language this source was imported for. Absent from every
+    #: pre-transition meta.json, hence the tolerant "ja" default.
+    language: str = "ja"
 
 
 class FrequencySourceRegistry:
@@ -91,6 +95,7 @@ class FrequencySourceRegistry:
             # Explicit == "1" — meta values are strings, so bool("0") would be
             # truthy; only the literal "1" (or absent -> False) means categorical.
             is_categorical=(meta.get("is_categorical") == "1"),
+            language=meta_language(meta),
         )
 
     def get(self, source_id: str) -> FreqSourceMeta | None:

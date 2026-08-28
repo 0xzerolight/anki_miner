@@ -20,6 +20,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    meta_language,
     read_ownership_marker,
     scan_index_root,
 )
@@ -41,6 +42,9 @@ class PitchSourceMeta:
     schema_ok: bool
     version: int
     db_path: Path
+    #: Mining language this source was imported for. Absent from every
+    #: pre-transition meta.json, hence the tolerant "ja" default.
+    language: str = "ja"
 
 
 class PitchSourceRegistry:
@@ -81,6 +85,7 @@ class PitchSourceRegistry:
             schema_ok=(version == SCHEMA_VERSION),
             version=version,
             db_path=db,
+            language=meta_language(meta),
         )
 
     def get(self, source_id: str) -> PitchSourceMeta | None:

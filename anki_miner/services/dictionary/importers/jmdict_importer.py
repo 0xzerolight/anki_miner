@@ -242,6 +242,9 @@ def import_jmdict_xml(
                 "source_revision": "",
                 "import_date": datetime.now(UTC).isoformat(),
                 "entry_count": str(row_count),
+                # JMdict is a Japanese-to-English dictionary by construction, so
+                # this is a literal, not a parameter.
+                "language": "ja",
             },
         )
 

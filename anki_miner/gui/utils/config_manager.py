@@ -379,6 +379,9 @@ class GUIConfigManager:
         # Migrate pitch_chain JSON dicts → PitchSourceEntry
         config_dict = cls._migrate_pitch_chain(config_dict)
 
+        # Rebuild chain entries parked for inactive languages.
+        config_dict = cls._rebuild_language_stash(config_dict)
+
         # Default-ON seed for name wordsets (junk-reduction r3). A config
         # written under schema < 2 that carries no enabled wordsets predates
         # the default-ON rollout, so seed the full bundled set. This is the
@@ -541,6 +544,10 @@ class GUIConfigManager:
             "expression_audio_chain",
             "frequency_chain",
             "pitch_chain",
+            # Parked copies of those same four chains plus the inactive
+            # languages' absolute word-list paths — machine-local for exactly
+            # the reasons the live chains are. `language` itself is portable.
+            "language_stash",
             "youtube_cookies_from_browser",
             "asr_device",
             "config_version",
@@ -825,6 +832,38 @@ class GUIConfigManager:
                         )
                     )
         data["pitch_chain"] = tuple(chain)
+        return data
+
+    @classmethod
+    def _rebuild_language_stash(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Rebuild chain entries parked inside ``language_stash``.
+
+        JSON gives the stashed chains back as list[dict]; the four chain
+        rebuilders above key off field names, so each per-language snapshot is
+        run through them verbatim. Paths need nothing here — ``_strings_to_paths``
+        already recurses into nested dicts and converts by field name. A
+        malformed stash is dropped so ``AnkiMinerConfig(**...)`` cannot raise.
+        Permanent deserializer, not a version shim (same status as the four
+        chain rebuilds).
+        """
+        raw = data.get("language_stash")
+        if raw is None:
+            return data
+        if not isinstance(raw, dict):
+            data.pop("language_stash")
+            return data
+
+        rebuilt: dict[str, dict[str, Any]] = {}
+        for code, values in raw.items():
+            if not isinstance(code, str) or not isinstance(values, dict):
+                continue
+            entry: dict[str, Any] = dict(values)
+            entry = cls._migrate_dictionary_chain(entry)
+            entry = cls._migrate_expression_audio_chain(entry)
+            entry = cls._migrate_frequency_chain(entry)
+            entry = cls._migrate_pitch_chain(entry)
+            rebuilt[code] = entry
+        data["language_stash"] = rebuilt
         return data
 
     @staticmethod

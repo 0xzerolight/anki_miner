@@ -36,6 +36,7 @@ from pathlib import Path
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
+    read_slot_language,
     resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
@@ -86,6 +87,7 @@ def import_pitch_source(
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
     before_promote: Callable[[], None] | None = None,
+    language: str = "ja",
 ) -> PitchSourceImportResult:
     """Import ``input_path`` into ``dest_root/<source_id>/index.sqlite``.
 
@@ -107,6 +109,8 @@ def import_pitch_source(
         overwrite: If true, replace an existing same-id source atomically.
         before_promote: Optional last-moment guard run immediately before the
             staged directory replaces the managed slot.
+        language: Mining language stamped into the index meta. Defaults to
+            ``"ja"``, the pre-transition value for every existing caller.
 
     Raises:
         SetupError: On a missing/unsupported input, or a source that yields zero
@@ -125,6 +129,7 @@ def import_pitch_source(
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
+            language=language,
         )
     if suffix in _CSV_SUFFIXES:
         return _import_csv(
@@ -135,6 +140,7 @@ def import_pitch_source(
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
+            language=language,
         )
     raise SetupError(
         f"Unsupported pitch source '{input_path.name}'. "
@@ -152,6 +158,9 @@ def repair_pitch_source(
     cancel_check: Callable[[], bool] | None = None,
 ) -> PitchSourceImportResult:
     """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine."""
+    # Read the stamp before the rebuild: repair_managed_slot may quarantine the
+    # slot, and a re-import would otherwise fall back to the "ja" default.
+    language = read_slot_language(dest_root / source_id)
     return repair_managed_slot(
         input_path,
         dest_root,
@@ -165,6 +174,7 @@ def repair_pitch_source(
             progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            language=language,
         ),
     )
 
@@ -178,6 +188,7 @@ def _import_zip(
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
+    language: str,
 ) -> PitchSourceImportResult:
     with open_yomitan_meta_banks(zip_path, kind="pitch") as banks:
         entries_out, skipped_display_only = extract_pitch_rows(banks, progress=progress, cancel_check=cancel_check)
@@ -219,6 +230,7 @@ def _import_zip(
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
+            language=language,
         )
 
     logger.info(
@@ -242,6 +254,7 @@ def _import_csv(
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
+    language: str,
 ) -> PitchSourceImportResult:
     stem = csv_path.stem
     # Honor an explicit display name (reimport passes the existing meta name);
@@ -293,6 +306,7 @@ def _import_csv(
         cancel_check=cancel_check,
         overwrite=overwrite,
         before_promote=before_promote,
+        language=language,
     )
     logger.info(
         "Imported %d pitch entries from CSV '%s' as source '%s'",
@@ -318,6 +332,7 @@ def _finalize(
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
+    language: str,
 ) -> PitchSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -349,6 +364,7 @@ def _finalize(
             "source_revision": source_revision,
             "import_date": datetime.now(UTC).isoformat(),
             "entry_count": str(entry_count),
+            "language": language,
         }
         storage.build_index(db_path, rows, meta)
 

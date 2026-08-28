@@ -26,6 +26,11 @@ SESSION_MILESTONES = [5, 10, 25, 50, 100]
 
 SERIES_MILESTONES = [3, 5, 10, 25]
 
+#: Schema revision stored in ``PRAGMA user_version``. Bumped when a migration
+#: must run once per database rather than on every ``load()``. Precedent:
+#: ``KnownWordDB._migrate_to_nfc``.
+_SCHEMA_VERSION = 1
+
 
 class StatsService:
     """Record and query mining statistics using SQLite.
@@ -40,10 +45,25 @@ class StatsService:
         for use from both the main GUI thread and worker threads.
     """
 
-    def __init__(self, db_path: Path):
+    def __init__(self, db_path: Path, *, language: str = "ja"):
         self._db_path = db_path
+        self._language = language or "ja"
         self._initialized = False
         self._load_lock = threading.Lock()
+
+    @property
+    def language(self) -> str:
+        """The mining language every read filters on and every write stamps.
+
+        Read at call time, never captured: the service is constructed once at
+        boot and never rebuilt, while the language switch is restart-free
+        (``gui.app._bind_stats_language`` re-stamps it on ``config_refreshed``).
+        """
+        return self._language
+
+    @language.setter
+    def language(self, value: str) -> None:
+        self._language = value or "ja"
 
     def load(self) -> bool:
         """Initialize the database, creating tables if needed."""
@@ -95,7 +115,8 @@ class StatsService:
                 unknown_words INTEGER NOT NULL DEFAULT 0,
                 cards_created INTEGER NOT NULL DEFAULT 0,
                 elapsed_time REAL NOT NULL DEFAULT 0.0,
-                mined_at TEXT NOT NULL DEFAULT (datetime('now'))
+                mined_at TEXT NOT NULL DEFAULT (datetime('now')),
+                language TEXT NOT NULL DEFAULT 'ja'
             )
         """)
         # ``unique_words`` is a legacy schema column. New writes use its
@@ -109,7 +130,8 @@ class StatsService:
                 unknown_words INTEGER NOT NULL DEFAULT 0,
                 unique_words INTEGER NOT NULL DEFAULT 0,
                 difficulty_score REAL NOT NULL DEFAULT 0.0,
-                recorded_at TEXT NOT NULL DEFAULT (datetime('now'))
+                recorded_at TEXT NOT NULL DEFAULT (datetime('now')),
+                language TEXT NOT NULL DEFAULT 'ja'
             )
         """)
         conn.execute("""
@@ -120,6 +142,37 @@ class StatsService:
             CREATE INDEX IF NOT EXISTS idx_difficulty_series
             ON series_difficulty(series_name)
         """)
+        self._migrate_language_column(conn)
+
+    @staticmethod
+    def _migrate_language_column(conn: sqlite3.Connection) -> None:
+        """Add ``language`` to pre-existing tables, once per database.
+
+        Existing rows are backfilled 'ja' by the column DEFAULT -- no rewrite, no
+        VACUUM. The per-table column probe is required as well as the
+        user_version gate: a database that held only ``series_difficulty`` gets a
+        fresh ``mining_sessions`` from the CREATE above, which already has the
+        column, and a blind ALTER would raise "duplicate column name".
+
+        Neither gate serializes two *connections*: the probe result is held in
+        Python, not in a database snapshot, so a second connection that passed
+        the same probe -- MinePassStats wraps a second StatsService on the same
+        file, and a second app instance is reachable past the advisory
+        single-instance guard -- can ALTER and commit in between. The loser
+        therefore treats "duplicate column name" as the migration having already
+        happened; every other OperationalError still propagates.
+        """
+        if int(conn.execute("PRAGMA user_version").fetchone()[0]) >= _SCHEMA_VERSION:
+            return
+        for table in ("mining_sessions", "series_difficulty"):
+            columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            if columns and "language" not in columns:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN language TEXT NOT NULL DEFAULT 'ja'")
+                except sqlite3.OperationalError as exc:
+                    if "duplicate column name" not in str(exc):
+                        raise
+        conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
 
     # === Feature 1: Mining Session Recording ===
 
@@ -131,8 +184,8 @@ class StatsService:
             cursor = conn.execute(
                 """INSERT INTO mining_sessions
                    (series_name, episode_name, total_words, unknown_words,
-                    cards_created, elapsed_time, mined_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    cards_created, elapsed_time, mined_at, language)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     session.series_name,
                     session.episode_name,
@@ -141,6 +194,7 @@ class StatsService:
                     session.cards_created,
                     session.elapsed_time,
                     session.mined_at.isoformat(),
+                    self._language,
                 ),
             )
             return cursor.lastrowid or -1
@@ -150,7 +204,8 @@ class StatsService:
         if not self._initialized:
             return OverallStats()
         with self._connect() as conn:
-            row = conn.execute("""
+            row = conn.execute(
+                """
                 SELECT
                     COUNT(*) as total_sessions,
                     COALESCE(SUM(cards_created), 0) as total_cards,
@@ -158,8 +213,10 @@ class StatsService:
                     COALESCE(SUM(unknown_words), 0) as total_unknown,
                     COALESCE(SUM(elapsed_time), 0.0) as total_time,
                     COUNT(DISTINCT series_name) as series_count
-                FROM mining_sessions
-            """).fetchone()
+                FROM mining_sessions WHERE language = ?
+            """,
+                (self._language,),
+            ).fetchone()
             return OverallStats(
                 total_sessions=row["total_sessions"],
                 total_cards_created=row["total_cards"],
@@ -175,9 +232,9 @@ class StatsService:
             return []
         with self._connect() as conn:
             rows = conn.execute(
-                """SELECT * FROM mining_sessions
+                """SELECT * FROM mining_sessions WHERE language = ?
                    ORDER BY mined_at DESC LIMIT ?""",
-                (limit,),
+                (self._language, limit),
             ).fetchall()
             return [self._row_to_session(row) for row in rows]
 
@@ -202,8 +259,8 @@ class StatsService:
             conn.execute(
                 """INSERT INTO series_difficulty
                    (series_name, episode_name, total_words, unknown_words,
-                    difficulty_score, recorded_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                    difficulty_score, recorded_at, language)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     series_name,
                     episode_name,
@@ -211,6 +268,7 @@ class StatsService:
                     unknown_words,
                     difficulty_score,
                     datetime.now().isoformat(),
+                    self._language,
                 ),
             )
 
@@ -219,17 +277,20 @@ class StatsService:
         if not self._initialized:
             return []
         with self._connect() as conn:
-            rows = conn.execute("""
+            rows = conn.execute(
+                """
                 SELECT
                     series_name,
                     CAST(AVG(total_words) AS INTEGER) as total_words,
                     CAST(AVG(unknown_words) AS INTEGER) as unknown_words,
                     AVG(difficulty_score) as difficulty_score,
                     MAX(recorded_at) as recorded_at
-                FROM series_difficulty
+                FROM series_difficulty WHERE language = ?
                 GROUP BY series_name
                 ORDER BY difficulty_score ASC
-            """).fetchall()
+            """,
+                (self._language,),
+            ).fetchall()
             return [
                 DifficultyEntry(
                     series_name=row["series_name"],
