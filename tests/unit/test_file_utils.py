@@ -5,7 +5,12 @@ import sys
 
 import pytest
 
-from anki_miner.utils.file_utils import ensure_directory, safe_filename
+from anki_miner.utils.file_utils import (
+    bounded_output_name,
+    component_byte_limit,
+    ensure_directory,
+    safe_filename,
+)
 
 
 class TestEnsureDirectory:
@@ -136,3 +141,30 @@ class TestSafeFilename:
         )
 
         assert 0 < int(completed.stdout) <= 255
+
+
+class TestBoundedOutputName:
+    """Derived output names (`_condensed`, `_retimed`) must fit NAME_MAX."""
+
+    def test_short_stem_is_untouched(self, tmp_path):
+        assert bounded_output_name("ep01", "_retimed.srt", tmp_path) == "ep01_retimed.srt"
+
+    def test_long_stem_is_truncated_within_the_limit(self, tmp_path):
+        name = bounded_output_name("v" * 300, "_retimed.srt", tmp_path)
+        assert len(name.encode("utf-8")) <= component_byte_limit(tmp_path)
+        assert name.endswith("_retimed.srt")
+
+    def test_truncated_names_stay_distinct(self, tmp_path):
+        """Two long stems sharing a prefix must not collapse onto one output."""
+        a = bounded_output_name("v" * 300 + "a", "_retimed.srt", tmp_path)
+        b = bounded_output_name("v" * 300 + "b", "_retimed.srt", tmp_path)
+        assert a != b
+
+    def test_multibyte_stem_is_cut_on_a_codepoint_boundary(self, tmp_path):
+        name = bounded_output_name("界" * 200, "_retimed.srt", tmp_path)
+        assert len(name.encode("utf-8")) <= component_byte_limit(tmp_path)
+        name.encode("utf-8").decode("utf-8")  # no split codepoint
+
+    def test_suffix_longer_than_the_limit_raises(self, tmp_path):
+        with pytest.raises(ValueError, match="component limit"):
+            bounded_output_name("ep01", "_" + "x" * 300 + ".srt", tmp_path)
