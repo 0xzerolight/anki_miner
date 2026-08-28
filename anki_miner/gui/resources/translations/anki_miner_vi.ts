@@ -8218,8 +8218,8 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Hoàn tất — đã xử lý %1, đã bỏ qua %2</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>Không có tệp nào được định thời lại — tất cả %1 đã bỏ qua. Bật Ghi đè để định thời lại tại chỗ, hoặc chọn thư mục đầu ra khác.</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>Không có tệp nào được định thời lại — tất cả %1 đã bỏ qua. Bật Ghi đè để thay thế các tệp đã định thời lại hiện có, hoặc chọn thư mục đầu ra khác.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8436,10 +8436,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>Đầu ra trùng với đầu vào; bật Ghi đè để định thời lại tại chỗ</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>Đã bỏ qua, đã tồn tại</translation>
     </message>
@@ -8450,10 +8446,6 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>Retimed with %1</source>
         <translation>Đã căn chỉnh lại thời gian với %1</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>Bản gốc được sao lưu dưới dạng %1</translation>
     </message>
     <message>
         <source>Cancelled</source>

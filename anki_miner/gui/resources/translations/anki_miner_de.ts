@@ -8233,8 +8233,8 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Abgeschlossen — %1 Dateien verarbeitet, %2 übersprungen</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>Keine Dateien neu getaktet — alle %1 übersprungen. Aktivieren Sie Überschreiben, um an Ort und Stelle neu zu takten, oder wählen Sie einen anderen Ausgabeordner.</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>Keine Dateien neu getaktet — alle %1 übersprungen. Aktivieren Sie Überschreiben, um die vorhandenen neu getakteten Dateien zu ersetzen, oder wählen Sie einen anderen Ausgabeordner.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8451,10 +8451,6 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>Ausgabe entspricht Eingabe; aktivieren Sie Überschreiben, um an Ort und Stelle neu zu takten</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>Übersprungen, existiert bereits</translation>
     </message>
@@ -8465,10 +8461,6 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>Retimed with %1</source>
         <translation>Neu zeitlich abgestimmt mit %1</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>Original gesichert als %1</translation>
     </message>
     <message>
         <source>Cancelled</source>

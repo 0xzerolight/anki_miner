@@ -8248,8 +8248,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Завершено — обработано файлов: %1, пропущено файлов: %2</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>Файлы не пересинхронизированы — пропущено файлов: %1. Включите «Перезаписывать», чтобы пересинхронизировать на месте, или выберите другую папку для вывода.</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>Файлы не пересинхронизированы — пропущено файлов: %1. Включите «Перезаписывать», чтобы заменить существующие пересинхронизированные файлы, или выберите другую папку для вывода.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8466,10 +8466,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>Вывод совпадает с вводом; включите «Перезаписывать», чтобы пересинхронизировать на месте</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>Пропущено, уже существует</translation>
     </message>
@@ -8480,10 +8476,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Retimed with %1</source>
         <translation>Синхронизировано с помощью %1</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>Резервная копия оригинала сохранена как %1</translation>
     </message>
     <message>
         <source>Cancelled</source>

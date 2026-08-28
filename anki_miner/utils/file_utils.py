@@ -1,6 +1,14 @@
 """File system utilities."""
 
+import hashlib
+import os
 from pathlib import Path
+
+#: Component-length fallback when the filesystem will not report ``PC_NAME_MAX``.
+_DEFAULT_COMPONENT_BYTES = 255
+
+#: Digest characters kept when a truncated stem needs a collision marker.
+_TRUNCATED_HASH_CHARS = 12
 
 
 def _truncate_utf8(value: str, byte_budget: int) -> str:
@@ -12,6 +20,40 @@ def _truncate_utf8(value: str, byte_budget: int) -> str:
             return value[:index]
         used += char_bytes
     return value
+
+
+def component_byte_limit(directory: Path) -> int:
+    """Return the maximum filename length in bytes for *directory*."""
+    try:
+        limit = os.pathconf(directory, "PC_NAME_MAX")
+    except (AttributeError, OSError, ValueError):
+        return _DEFAULT_COMPONENT_BYTES
+    return limit if limit > 0 else _DEFAULT_COMPONENT_BYTES
+
+
+def bounded_output_name(stem: str, fixed: str, directory: Path) -> str:
+    """Return ``stem + fixed`` shortened to fit *directory*'s component limit.
+
+    *fixed* is the trailing part the caller must keep intact — a tool's suffix
+    plus its extension (``"_condensed.mp3"``, ``"_retimed.srt"``). Long source
+    names would otherwise push the derived name past ``NAME_MAX`` and the write
+    would fail; the truncated stem carries a hash of the full one so two long
+    names that share a prefix cannot collapse onto one output.
+
+    Raises:
+        ValueError: *fixed* alone does not fit the component limit.
+    """
+    byte_limit = component_byte_limit(directory)
+    candidate = stem + fixed
+    if len(candidate.encode("utf-8")) <= byte_limit:
+        return candidate
+
+    digest = hashlib.sha256(stem.encode("utf-8")).hexdigest()[:_TRUNCATED_HASH_CHARS]
+    marker = f"-{digest}"
+    stem_budget = byte_limit - len((marker + fixed).encode("utf-8"))
+    if stem_budget < 0:
+        raise ValueError("Output name suffix exceeds the filesystem component limit")
+    return _truncate_utf8(stem, stem_budget) + marker + fixed
 
 
 def ensure_directory(path: Path) -> Path:

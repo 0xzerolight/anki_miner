@@ -8218,8 +8218,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>完成——已处理 %1 个，已跳过 %2 个</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>未重新校准任何文件——全部 %1 个已跳过。启用“覆盖”以就地重新校准，或选择其他输出文件夹。</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>未重新校准任何文件——全部 %1 个已跳过。启用“覆盖”以替换现有的重新校准文件，或选择其他输出文件夹。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8436,10 +8436,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>输出与输入相同；启用“覆盖”以就地重新校准</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>已跳过，已存在</translation>
     </message>
@@ -8450,10 +8446,6 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Retimed with %1</source>
         <translation>用%1重新同步</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>原文件已备份为%1</translation>
     </message>
     <message>
         <source>Cancelled</source>

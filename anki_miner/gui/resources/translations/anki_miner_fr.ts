@@ -8233,8 +8233,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Terminé — %1 traités, %2 ignorés</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>Aucun fichier resynchronisé — tous les %1 fichiers ont été ignorés. Activez Écraser pour resynchroniser sur place, ou choisissez un autre dossier de sortie.</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>Aucun fichier resynchronisé — tous les %1 fichiers ont été ignorés. Activez Écraser pour remplacer les fichiers resynchronisés existants, ou choisissez un autre dossier de sortie.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8451,10 +8451,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>La sortie est identique à l'entrée ; activez Écraser pour resynchroniser sur place</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>Ignoré, existe déjà</translation>
     </message>
@@ -8465,10 +8461,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>Retimed with %1</source>
         <translation>Réajusté avec %1</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>Original sauvegardé sous %1</translation>
     </message>
     <message>
         <source>Cancelled</source>

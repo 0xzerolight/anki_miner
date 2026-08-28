@@ -19,8 +19,9 @@ One episode's retime is a pipeline, not a single tool call:
 5. **Validate** — :mod:`anki_miner.services.sync_validator` rejects the failure
    signatures aligners produce when they lock onto a wrong optimum. A rejected
    candidate is discarded; the chain moves on.
-6. **Commit** — only a validated candidate replaces *out_sub*, atomically, and
-   an existing file is first copied to ``<name>.pre-retime.bak``.
+6. **Commit** — only a validated candidate replaces *out_sub*, atomically.
+   *out_sub* must be a path of its own (callers derive it from the input's name
+   with a ``_retimed`` suffix), so committing never touches the input.
 
 The guarantee callers build UX on: **a bad sync never overwrites a usable
 subtitle** — when every engine fails validation the original files are left
@@ -32,7 +33,6 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
-import shutil
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -54,9 +54,6 @@ from anki_miner.utils.i18n import tr_format
 logger = logging.getLogger(__name__)
 
 __all__ = ["RetimeOutcome", "retime_subtitle"]
-
-#: Sibling suffix for the pre-overwrite copy of an existing output subtitle.
-BACKUP_SUFFIX = ".pre-retime.bak"
 
 #: Subdirectory of ``out_sub.parent`` where working files are written. Keeping
 #: them out of the pairing folder itself means a crash-orphaned temp can never
@@ -109,9 +106,9 @@ def retime_subtitle(
         config: Application config (used to resolve tool paths and temp dirs).
         video:  The video the subtitle should be matched against.
         in_sub: The off-timed subtitle file to correct.
-        out_sub: Destination path. May alias *in_sub* (in-place retime): the
-            pipeline writes temps beside it and replaces atomically, and the
-            pre-replace backup keeps the original recoverable.
+        out_sub: Destination path, distinct from *in_sub* — the caller owns that
+            guarantee (the GUI worker derives the name with a ``_retimed``
+            suffix). Passing *in_sub* here overwrites it with no copy kept.
         reference_override: Explicit user pick of the reference track; None
             auto-selects (embedded subtitle preferred, audio fallback).
         cancel_event: Checked between pipeline steps; alass runs are killed
@@ -289,18 +286,13 @@ def _engine_chain(config, *, sub_reference: bool, cancel_event: threading.Event 
 
 
 def _commit(candidate: Path, out_sub: Path) -> None:
-    """Atomically place *candidate* at *out_sub*, backing up any existing file.
+    """Atomically place *candidate* at *out_sub*.
 
-    The backup is a copy (not a rename): with in-place retiming the existing
-    output *is* the input subtitle, which must stay readable until the final
-    ``os.replace``. One backup per output name; a rerun overwrites it.
+    No copy is kept aside: callers write to a name derived from the input
+    (``<stem>_retimed<ext>``), so anything already at *out_sub* is a previous
+    retime of the same pair — reproducible by running again. The user's own
+    subtitle is never the file being replaced.
     """
-    if out_sub.exists():
-        backup = out_sub.with_name(out_sub.name + BACKUP_SUFFIX)
-        try:
-            shutil.copy2(out_sub, backup)
-        except OSError:
-            logger.warning("retime: could not write backup %s", backup, exc_info=True)
     os.replace(candidate, out_sub)
 
 

@@ -8218,8 +8218,8 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Selesai — %1 diproses, %2 dilewati</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to retime in place, or choose a different output folder.</source>
-        <translation>Tidak ada berkas diatur ulang waktunya — semua %1 dilewati. Aktifkan Timpa untuk mengatur ulang waktu di tempat, atau pilih folder keluaran lain.</translation>
+        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
+        <translation>Tidak ada berkas diatur ulang waktunya — semua %1 dilewati. Aktifkan Timpa untuk mengganti berkas hasil pengaturan ulang yang sudah ada, atau pilih folder keluaran lain.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8436,10 +8436,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
 </context><context>
     <name>SubtitleRetimeWorker</name>
     <message>
-        <source>Output equals input; enable Overwrite to retime in place</source>
-        <translation>Keluaran sama dengan masukan; aktifkan Timpa untuk mengatur ulang waktu di tempat</translation>
-    </message>
-    <message>
         <source>Skipped, exists</source>
         <translation>Dilewati, sudah ada</translation>
     </message>
@@ -8450,10 +8446,6 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Retimed with %1</source>
         <translation>Waktu diselaraskan dengan %1</translation>
-    </message>
-    <message>
-        <source>Original backed up as %1</source>
-        <translation>Asli dicadangkan sebagai %1</translation>
     </message>
     <message>
         <source>Cancelled</source>

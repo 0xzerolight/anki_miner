@@ -16,7 +16,8 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.retime_reference import ReferenceOverride
-from anki_miner.utils.file_pairing import resolve_output_path
+from anki_miner.utils.file_pairing import RETIMED_SUFFIX, resolve_output_path
+from anki_miner.utils.file_utils import bounded_output_name
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,10 @@ class SubtitleRetimeWorker(FileQueueWorker):
 
     Per pair:
     1. Emits ``file_started(idx)``.
-    2. Determines output path: ``video.stem + in_sub.suffix``, in *output_dir* if
-       given, else next to the video.
+    2. Determines output path: ``in_sub.stem + "_retimed" + in_sub.suffix``, in
+       *output_dir* if given, else next to the video. The suffix is why the
+       input subtitle survives a run untouched — no path this worker builds can
+       collide with the file it read.
     3. If the output already exists and *overwrite* is False — emits
        ``file_skipped(idx, out_sub, reason)`` and continues.
     4. Calls the retimer; forwards pipeline decision/progress lines via
@@ -38,11 +41,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
        that kept the original (every engine's result failed validation) is a
        per-pair failure whose message says the original was left untouched;
        the queue continues. On success, ``file_note(idx, line)`` also fires
-       once per fact worth keeping around after the run — which engine won,
-       and whether a ``.pre-retime.bak`` sibling was written (C-7/C-10).
-       Deliberately separate from ``file_progress``: the base tab renders that
-       one as transient status text, overwritten by the next update, so it
-       cannot carry information the user needs to find after the run ends.
+       with the winning engine — a fact worth keeping around after the run
+       (C-7/C-10). Deliberately separate from ``file_progress``: the base tab
+       renders that one as transient status text, overwritten by the next
+       update, so it cannot carry information the user needs to find after the
+       run ends.
 
     Cancel is honoured between pairs and propagated into the retimer via
     ``self._cancel_event``.
@@ -101,26 +104,21 @@ class SubtitleRetimeWorker(FileQueueWorker):
     def _process_item(self, idx: int, item: tuple[Path, Path]) -> None:
         video, in_sub = item
 
-        # Determine output path: video stem + subtitle extension, resolved
-        # against existing on-disk files so an overwrite replaces a
-        # visually-identical (NFC/NFD- or case-variant) subtitle in place
-        # instead of spawning a Windows duplicate. See resolve_output_path.
-        name = video.stem + in_sub.suffix
+        # Determine output path: the input subtitle's own stem plus _retimed,
+        # keeping its extension. The suffix is what keeps the user's original
+        # subtitle on disk — the output can never be the input, so nothing has
+        # to be copied aside before the commit. bounded_output_name keeps a long
+        # source name from pushing the derived one past NAME_MAX, and
+        # resolve_output_path aims an overwrite at an existing
+        # visually-identical (NFC/NFD- or case-variant) file instead of spawning
+        # a Windows duplicate.
         out_dir = self._output_dir if self._output_dir is not None else video.parent
+        name = bounded_output_name(in_sub.stem, RETIMED_SUFFIX + in_sub.suffix, out_dir)
         out_sub = resolve_output_path(out_dir, name)
 
-        # Skip-if-exists logic. When the resolved output is the INPUT subtitle
-        # itself (a sub already named ``<video stem><suffix>`` next to the
-        # video), the generic "exists" skip misleadingly reports the input as a
-        # pre-existing output. The retimer supports safe in-place aliasing, so
-        # tell the user to enable Overwrite rather than implying a stale twin.
         if out_sub.exists() and not self._overwrite:
-            if self._aliases_input(out_sub, in_sub):
-                logger.debug("subtitle_retime_worker: skipped %s (output equals input)", out_sub)
-                msg = self.tr("Output equals input; enable Overwrite to retime in place")
-            else:
-                logger.debug("subtitle_retime_worker: skipped %s (exists)", out_sub)
-                msg = self.tr("Skipped, exists")
+            logger.debug("subtitle_retime_worker: skipped %s (exists)", out_sub)
+            msg = self.tr("Skipped, exists")
             self.file_progress.emit(idx, 100, msg)
             self.file_skipped.emit(idx, out_sub, msg)
             return
@@ -130,22 +128,6 @@ class SubtitleRetimeWorker(FileQueueWorker):
             self._output_dir.mkdir(parents=True, exist_ok=True)
 
         self._process_pair(idx, video, in_sub, out_sub)
-
-    @staticmethod
-    def _aliases_input(out_sub: Path, in_sub: Path) -> bool:
-        """Return True when the resolved output path is the input subtitle itself.
-
-        Uses ``samefile`` to catch on-disk aliases (symlink / NFC-NFD or
-        case-variant names that ``resolve_output_path`` may have collapsed onto
-        the input) and falls back to path equality; ``samefile`` needs both paths
-        to exist, so a missing input degrades to the equality check.
-        """
-        if out_sub == in_sub:
-            return True
-        try:
-            return out_sub.samefile(in_sub)
-        except OSError:
-            return False
 
     def _process_pair(self, idx: int, video: Path, in_sub: Path, out_sub: Path) -> None:
         """Process a single (video, subtitle) pair.
@@ -161,11 +143,6 @@ class SubtitleRetimeWorker(FileQueueWorker):
             # file_progress. There is no percentage — emit pct=0.
             def _log_cb(line: str) -> None:
                 self.file_progress.emit(idx, 0, line)
-
-            # Captured before the run: a successful commit always leaves
-            # out_sub in place, so this is the only point that can tell
-            # whether _commit() found something there to back up.
-            existed_before = out_sub.exists()
 
             outcome = self._retimer(
                 self._config,
@@ -185,13 +162,6 @@ class SubtitleRetimeWorker(FileQueueWorker):
                 engine = getattr(outcome, "engine", None)
                 if engine:
                     self.file_note.emit(idx, tr_format(self.tr("Retimed with %1"), engine))
-                if existed_before:
-                    from anki_miner.services.subtitle_retimer import BACKUP_SUFFIX
-
-                    self.file_note.emit(
-                        idx,
-                        tr_format(self.tr("Original backed up as %1"), out_sub.name + BACKUP_SUFFIX),
-                    )
                 self.file_finished.emit(idx, out_sub, None)
             elif self.is_cancelled or getattr(outcome, "cancelled", False):
                 self.file_finished.emit(idx, None, self.tr("Cancelled"))

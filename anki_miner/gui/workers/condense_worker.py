@@ -13,9 +13,7 @@ back to translated messages. ``EncoderUnavailableError`` and
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,13 +27,12 @@ from anki_miner.services.audio_condenser import (
 )
 from anki_miner.services.audio_tagger import TrackMetadata
 from anki_miner.utils.file_pairing import output_path_identity, resolve_output_paths
+from anki_miner.utils.file_utils import bounded_output_name
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_COMPONENT_BYTES = 255
 _CONDENSED_SUFFIX = "_condensed"
-_TRUNCATED_HASH_CHARS = 12
 
 
 @dataclass
@@ -71,7 +68,7 @@ def plan_condense_outputs(
     requests_by_dir: dict[Path, list[tuple[int, str]]] = {}
     for index, item in enumerate(items):
         out_dir = (output_dir if output_dir is not None else item.media.parent).resolve()
-        name = _bounded_condense_name(item.media.stem, extension, _component_byte_limit(out_dir))
+        name = bounded_output_name(item.media.stem, _CONDENSED_SUFFIX + extension, out_dir)
         requests_by_dir.setdefault(out_dir, []).append((index, name))
 
     outputs_by_index: dict[int, Path] = {}
@@ -100,38 +97,6 @@ def validate_condense_outputs(items: list[CondenseItem], output_paths: list[Path
     if collisions:
         raise CondenseOutputCollisionError(collisions)
     return paths
-
-
-def _bounded_condense_name(stem: str, extension: str, byte_limit: int) -> str:
-    fixed = _CONDENSED_SUFFIX + extension
-    candidate = stem + fixed
-    if len(candidate.encode("utf-8")) <= byte_limit:
-        return candidate
-
-    digest = hashlib.sha256(stem.encode("utf-8")).hexdigest()[:_TRUNCATED_HASH_CHARS]
-    marker = f"-{digest}"
-    stem_budget = byte_limit - len((marker + fixed).encode("utf-8"))
-    if stem_budget < 0:
-        raise ValueError("Condense output suffix exceeds the filesystem component limit")
-    return _truncate_utf8(stem, stem_budget) + marker + fixed
-
-
-def _truncate_utf8(value: str, byte_budget: int) -> str:
-    used = 0
-    for index, char in enumerate(value):
-        char_bytes = len(char.encode("utf-8"))
-        if used + char_bytes > byte_budget:
-            return value[:index]
-        used += char_bytes
-    return value
-
-
-def _component_byte_limit(directory: Path) -> int:
-    try:
-        limit = os.pathconf(directory, "PC_NAME_MAX")
-    except (AttributeError, OSError, ValueError):
-        return _DEFAULT_COMPONENT_BYTES
-    return limit if limit > 0 else _DEFAULT_COMPONENT_BYTES
 
 
 class CondenseWorker(FileQueueWorker):
