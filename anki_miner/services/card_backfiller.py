@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from anki_miner.exceptions import SetupError
+from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
     _SOUND_REF_RE,
@@ -410,7 +411,9 @@ def _scan_backfill_impl(
     want_styling = bool(selected & {"definition", "glossary"})
     dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
 
-    tagger = get_shared_tagger()
+    # get_shared_tagger stays a module attribute: the pre-existing tests patch
+    # THIS name, so the ja branch must keep calling it here.
+    tagger = get_shared_tagger() if config.language == "ja" else get_tagger(config.language)
 
     scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = reading_failures = lemma_failures = 0

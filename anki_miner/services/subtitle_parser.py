@@ -12,6 +12,7 @@ import pysubs2
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SubtitleParseError
+from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.models import LineLemmas, TokenizedWord
 from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import resolve_pronoun_fold_reading, select_mined_form
@@ -415,7 +416,10 @@ class SubtitleParserService:
         # impact. GUI-thread call sites that only call parse_raw_entries never
         # tokenize, so they don't race the worker thread's .parse() calls on this
         # shared tagger.
-        self.tagger = get_shared_tagger()
+        # get_shared_tagger stays a module attribute: the pre-existing tests patch
+        # THIS name. Non-ja parsers never construct SubtitleParserService, so
+        # the language branch only ever falls through for a future ja variant.
+        self.tagger = get_shared_tagger() if config.language == "ja" else get_tagger(config.language)
         # POS/subtype inclusion gate, snapshotted from the (frozen) config.
         self._inclusion_rule = TokenInclusionRule(
             allowed_pos=frozenset(config.allowed_pos),

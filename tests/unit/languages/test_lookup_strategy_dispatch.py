@@ -27,6 +27,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import service_factory
+from anki_miner.languages import tagger_provider
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.definition_service import DefinitionService
 
@@ -84,6 +85,13 @@ def _use_stub_profile(monkeypatch, code: str, lookup: _StubStrategy):
     Built with ``dataclasses.replace`` off the real ja profile so every other
     field stays a working one — ``create_services`` reads ``mined_form`` off the
     same profile and must not trip over a half-built stub.
+
+    Task 1A.6 added a second non-ja dependency the profile cannot carry:
+    ``SubtitleParserService`` takes a non-ja tagger from
+    ``languages.tagger_provider``, which raises for a code no tokenizer is
+    registered for. Seed the provider cache with the ja tagger for the same
+    reason the profile is a real one — ``monkeypatch.setitem`` drops the entry
+    again at teardown, so the process-wide cache is left as it was found.
     """
     stub_profile = dataclasses.replace(get_profile("ja"), code=code, lookup=lookup)
     real_get_profile = service_factory.get_profile
@@ -92,6 +100,7 @@ def _use_stub_profile(monkeypatch, code: str, lookup: _StubStrategy):
         return stub_profile if requested == code else real_get_profile(requested)
 
     monkeypatch.setattr(service_factory, "get_profile", fake_get_profile)
+    monkeypatch.setitem(tagger_provider._TAGGERS, code, tagger_provider.get_tagger("ja"))
     return stub_profile
 
 

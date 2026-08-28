@@ -74,16 +74,20 @@ class PrewarmWorker(QThread):
         definition_service: DefinitionService | None = None
         try:
             try:
-                from anki_miner.services.tagger import get_shared_tagger
+                from anki_miner.languages.tagger_provider import get_tagger
 
-                # Build the SHARED tagger singleton (the one mining reuses); this
-                # loads unidic-lite, the dominant first-use cost. Do NOT discard it.
-                # We deliberately do NOT run a warm `.parse()` here — only the
-                # construction cost is paid.  Post-construction, the LockedTagger
-                # wrapper in services/tagger.py serialises concurrent parses, so
-                # any `.parse()` here would just add unnecessary work without
-                # benefiting from a warmer tagger (the lattice state is not cached).
-                get_shared_tagger()
+                # Build/warm the tokenizer the CONFIGURED language mines with.
+                # "ja" delegates to services.tagger.get_shared_tagger(), so the
+                # ja path builds the same shared LockedTagger singleton it
+                # always did; this loads unidic-lite, the dominant first-use
+                # cost. Do NOT discard it. We deliberately do NOT run a warm
+                # `.parse()` here — only the construction cost is paid.
+                # Post-construction, the LockedTagger wrapper in
+                # services/tagger.py serialises concurrent parses, so any
+                # `.parse()` here would just add unnecessary work without
+                # benefiting from a warmer tagger (the lattice state is not
+                # cached).
+                get_tagger(self._config.language)
 
                 # Warm the sqlite page cache / meta sidecars for the configured
                 # dictionary chain, then discard everything (no shared connections).
