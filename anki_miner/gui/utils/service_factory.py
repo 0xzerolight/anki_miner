@@ -13,6 +13,7 @@ first.
 import contextlib
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -569,6 +570,23 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     return ChainedSentenceAudioFetcher(fetchers)
 
 
+def resolve_known_words_db_path(config: AnkiMinerConfig) -> Path:
+    """The known-words database for the active mining language.
+
+    Japanese keeps ``config.known_words_db_path`` verbatim — same file, same
+    bytes, no migration. Every other language gets a sibling
+    ``<stem>.<lang><suffix>``, so 学生 being known in Japanese never marks it
+    known in Chinese and no WHERE-audit of Card Backfill / Deck Filter is
+    needed: each receives the right database by construction.
+
+    Sole derivation site. Never inline this rule at a call site.
+    """
+    base = config.known_words_db_path
+    if config.language == "ja":
+        return base
+    return base.with_name(f"{base.stem}.{config.language}{base.suffix}")
+
+
 def create_services(
     config: AnkiMinerConfig,
     subtitle_parser: SubtitleParserService | None = None,
@@ -731,7 +749,7 @@ def create_services(
     # users who never touch the feature get no empty file.
     known_word_db: KnownWordDB | None = None
     try:
-        known_word_db = KnownWordDB(config.known_words_db_path)
+        known_word_db = KnownWordDB(resolve_known_words_db_path(config))
         if config.use_known_words_db:
             known_word_db.initialize()
     except MemoryError:
