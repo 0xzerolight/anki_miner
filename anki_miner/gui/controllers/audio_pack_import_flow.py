@@ -33,7 +33,7 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.services._sqlite_index import resolve_managed_slot
+from anki_miner.services._sqlite_index import resolve_managed_slot, slot_language_kwarg
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
@@ -434,12 +434,14 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             )
             self._set_import_buttons_enabled(True)
             return
+        packs_root = self._get_config().audio_packs_root
         try:
             worker = ImportWorker.for_android_audio_db(
                 Path(chosen),
-                self._get_config().audio_packs_root,
+                packs_root,
                 pack_id=pack_id,
                 overwrite=True,
+                **slot_language_kwarg(packs_root / pack_id),
             )
         except Exception:
             self._set_import_buttons_enabled(True)
@@ -694,19 +696,21 @@ class AudioPackImportFlow(ModalImportFlowMixin):
 
         def make_worker(job: _PackJob) -> ImportWorker:
             kind, pack_id, _display, source_path = job
+            packs_root = self._get_config().audio_packs_root
             if kind == "android_db":
                 # Pin the slot id and overwrite: import_android_audio_db proves
                 # ownership before replacing, which is the repair contract. It
                 # re-registers the same external database — nothing is copied.
                 return ImportWorker.for_android_audio_db(
                     source_path,
-                    self._get_config().audio_packs_root,
+                    packs_root,
                     pack_id=pack_id,
                     overwrite=True,
+                    **slot_language_kwarg(packs_root / pack_id),
                 )
             return ImportWorker.for_pack_repair(
                 source_path,
-                self._get_config().audio_packs_root,
+                packs_root,
                 pack_id=pack_id,
             )
 

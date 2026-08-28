@@ -37,7 +37,7 @@ import os
 import sqlite3
 import stat
 from pathlib import Path, PureWindowsPath
-from typing import Callable, Literal, TypeVar
+from typing import Callable, Literal, TypedDict, TypeVar
 
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.slug import is_windows_device_basename
@@ -543,6 +543,37 @@ def read_slot_language(slot_dir: Path, *, sidecar_name: str = _META_SIDECAR) -> 
     finally:
         conn.close()
     return row[0] if row and isinstance(row[0], str) and row[0] else "ja"
+
+
+class LanguageKwarg(TypedDict, total=False):
+    """The ``language=`` keyword bundle an importer call is splatted with."""
+
+    language: str
+
+
+def language_kwarg(language: str) -> LanguageKwarg:
+    """``{"language": language}``, or nothing at all when it is the "ja" default.
+
+    Every importer defaults to ``"ja"``, so a ja call site that spells the
+    keyword out and one that omits it are equivalent — and omitting it is what
+    keeps the pre-transition call byte-identical all the way down, including
+    the test doubles that mirror an importer's exact signature. Splat this
+    instead of passing ``language=`` unconditionally.
+    """
+    return {} if language == "ja" else {"language": language}
+
+
+def slot_language_kwarg(slot_dir: Path) -> LanguageKwarg:
+    """The ``language=`` keyword a rebuild of *slot_dir* has to carry, if any.
+
+    Reimport All (and the android-db re-point) rebuild a slot in place through
+    the ordinary *import* path, not the repair path — so the importer stamps its
+    own default and a Chinese slot would come back stamped "ja", dropping out of
+    a Chinese chain until the user reimported it by hand. Reading the stamp off
+    the slot first and replaying it keeps the language across the rebuild,
+    exactly as the repair path already does internally.
+    """
+    return language_kwarg(read_slot_language(slot_dir))
 
 
 def read_meta(db_path: Path) -> dict[str, str]:

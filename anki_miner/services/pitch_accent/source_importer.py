@@ -110,7 +110,7 @@ def import_pitch_source(
         before_promote: Optional last-moment guard run immediately before the
             staged directory replaces the managed slot.
         language: Mining language stamped into the index meta. Defaults to
-            ``"ja"`` so existing callers write byte-identical metas.
+            ``"ja"``, the pre-transition value for every existing caller.
 
     Raises:
         SetupError: On a missing/unsupported input, or a source that yields zero

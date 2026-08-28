@@ -171,7 +171,7 @@ def import_yomitan_zip(
         before_promote: Optional last-moment guard run immediately before the
                         staged directory replaces the managed slot.
         language: Mining language stamped into the index meta. Defaults to
-                  ``"ja"`` so existing callers write byte-identical metas.
+                  ``"ja"``, the pre-transition value for every existing caller.
 
     Raises:
         SetupError: On invalid input, format mismatch, or already-exists when

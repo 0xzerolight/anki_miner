@@ -202,7 +202,7 @@ def import_audio_pack(
         overwrite: If True and the destination already exists it is replaced
                    atomically.  If False raises :exc:`SetupError`.
         language: Mining language stamped into the index meta. Defaults to
-                  ``"ja"`` so existing callers write byte-identical metas.
+                  ``"ja"``, the pre-transition value for every existing caller.
 
     Returns:
         :class:`AudioPackImportResult` describing the completed import.
