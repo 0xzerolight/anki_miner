@@ -190,8 +190,14 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     # running session's theme/font unchanged yet persist defaults, silently
     # wiping the user's theme on the next launch.  Preserving them (as
     # _on_import_settings already does) keeps Reset safe and predictable.
+    #
+    # `language` (the MINING language) rides along for the same reason as
+    # `ui_language`, plus one of its own: `language_stash` is machine-specific
+    # and therefore preserved, so resetting `language` out from under it would
+    # leave the stash holding a parked snapshot for the language now active —
+    # the one thing that field's invariant forbids.
     _RESET_PRESERVE_UI: frozenset[str] = frozenset(
-        {"theme", "theme_favorites", "ui_font_scale", "ui_zoom", "ui_language"}
+        {"theme", "theme_favorites", "ui_font_scale", "ui_zoom", "ui_language", "language"}
     )
 
     def __init__(

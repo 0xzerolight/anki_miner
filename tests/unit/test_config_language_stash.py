@@ -37,6 +37,13 @@ def test_stash_is_read_only_outside_and_inside():
         cfg.language_stash["zh"]["anki_deck_name"] = "other"
 
 
+def test_stash_keys_are_normalized_like_the_language_field():
+    """``language`` is strip+lower normalized, so a stash key that is not could
+    never be matched against it."""
+    cfg = AnkiMinerConfig(language_stash={" ZH ": {"anki_deck_name": "ZH"}})
+    assert dict(cfg.language_stash) == {"zh": {"anki_deck_name": "ZH"}}
+
+
 def test_stash_round_trips_chains_and_paths(isolated_config_file, tmp_path: Path):
     black = tmp_path / "black.txt"
     cfg = dataclasses.replace(

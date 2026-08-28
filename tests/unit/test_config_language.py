@@ -48,6 +48,32 @@ def test_language_round_trips_through_json(isolated_config_file):
     assert GUIConfigManager.load_config().language == "zh"
 
 
+def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeypatch):
+    """`language_stash` is machine-specific, so Reset to Defaults preserves it.
+    Resetting `language` alongside it would leave the stash holding a parked
+    snapshot for the language now active, which the field's invariant forbids
+    ("every language that is NOT active")."""
+    from PyQt6.QtWidgets import QMessageBox
+
+    from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+    tab = SettingsTab(
+        dataclasses.replace(test_config, language="zh", language_stash={"ja": {"anki_deck_name": "JA"}}),
+    )
+    qtbot.addWidget(tab)
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.settings_tab.QMessageBox.question",
+        lambda *a, **kw: QMessageBox.StandardButton.Yes,
+    )
+    emitted: list[AnkiMinerConfig] = []
+    tab.config_changed.connect(emitted.append)
+
+    tab._on_reset_to_defaults_clicked()
+
+    assert emitted[-1].language == "zh"
+    assert emitted[-1].language not in emitted[-1].language_stash
+
+
 def test_old_build_drops_the_key_without_raising(isolated_config_file):
     """Downgrade simulation: an unknown key is dropped by the valid-keys filter
     in _migrate_dict, exactly as `language` would be on a pre-Stage-0 build."""

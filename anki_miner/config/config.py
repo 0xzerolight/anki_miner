@@ -684,7 +684,9 @@ class AnkiMinerConfig:
                 "language_stash",
                 types.MappingProxyType(
                     {
-                        str(code): types.MappingProxyType(dict(values))
+                        # Keyed the same way `language` is normalized below, so a
+                        # hand-edited " ZH" can still be matched against it.
+                        str(code).strip().lower(): types.MappingProxyType(dict(values))
                         for code, values in dict(self.language_stash).items()
                     }
                 ),
