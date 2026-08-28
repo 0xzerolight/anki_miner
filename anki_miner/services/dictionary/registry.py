@@ -8,6 +8,7 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
+from anki_miner.languages.registry import get_profile
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     meta_language,
@@ -191,6 +192,7 @@ class DictionaryRegistry:
                         dict_id=meta.dict_id,
                         db_path=meta.db_path,
                         display_name=meta.source_name,
+                        keys=get_profile(config.language).dict_keys,
                     )
                 )
             elif entry.kind == "jisho":
