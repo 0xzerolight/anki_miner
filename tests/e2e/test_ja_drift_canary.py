@@ -158,6 +158,10 @@ def capture_payloads(tmp_home: Path) -> list[dict]:
                 expression_audio_chain=(),
                 reading_min_occurrence=1,
                 use_known_words_db=False,
+                # Widest possible watch surface: the default (True) cards one
+                # word per subtitle line, so a drift that only moved a
+                # deduped-away lemma would be invisible to the canary.
+                deduplicate_sentences=False,
                 # Pin every resource chain at the seeded fixture data.
                 dictionary_chain=(ChainEntry(kind="indexed", dict_id=DEFAULT_DICT_ID, enabled=True),),
                 frequency_chain=(FreqEntry(source_id=FREQ_SOURCE_ID, enabled=True),),
