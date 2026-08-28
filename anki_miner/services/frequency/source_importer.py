@@ -40,6 +40,7 @@ from pathlib import Path
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
+    read_slot_language,
     resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
@@ -192,6 +193,9 @@ def repair_frequency_source(
     cancel_check: Callable[[], bool] | None = None,
 ) -> FreqSourceImportResult:
     """Explicitly repair ``source_id``, retaining an invalid prior slot as quarantine."""
+    # Read the stamp before the rebuild: repair_managed_slot may quarantine the
+    # slot, and a re-import would otherwise fall back to the "ja" default.
+    language = read_slot_language(dest_root / source_id)
     return repair_managed_slot(
         input_path,
         dest_root,
@@ -205,6 +209,7 @@ def repair_frequency_source(
             progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            language=language,
         ),
     )
 

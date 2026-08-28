@@ -16,6 +16,7 @@ from typing import Any, Callable
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     prove_owned_slot,
+    read_slot_language,
     resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
@@ -487,6 +488,9 @@ def repair_yomitan_zip(
     cancel_check: Callable[[], bool] | None = None,
 ) -> YomitanImportResult:
     """Explicitly repair ``dict_id``, retaining an invalid prior slot as quarantine."""
+    # Read the stamp before the rebuild: repair_managed_slot may quarantine the
+    # slot, and a re-import would otherwise fall back to the "ja" default.
+    language = read_slot_language(dest_root / dict_id)
     return repair_managed_slot(
         zip_path,
         dest_root,
@@ -499,6 +503,7 @@ def repair_yomitan_zip(
             overwrite=overwrite,
             cancel_check=cancel_check,
             dict_id=dict_id,
+            language=language,
         ),
     )
 

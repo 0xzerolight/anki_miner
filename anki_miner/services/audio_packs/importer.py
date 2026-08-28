@@ -14,6 +14,7 @@ from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
     open_readonly,
     prove_owned_slot,
+    read_slot_language,
     resolve_auto_store_id,
     resolve_managed_slot,
     write_ownership_marker,
@@ -355,6 +356,9 @@ def repair_audio_pack(
     cancel_check: Callable[[], bool] | None = None,
 ) -> AudioPackImportResult:
     """Explicitly repair ``pack_id``, retaining an invalid prior slot as quarantine."""
+    # Read the stamp before the rebuild: repair_managed_slot may quarantine the
+    # slot, and a re-import would otherwise fall back to the "ja" default.
+    language = read_slot_language(dest_root / pack_id)
     result = repair_managed_slot(
         pack_dir,
         dest_root,
@@ -367,6 +371,7 @@ def repair_audio_pack(
             progress=progress,
             cancel_check=cancel_check,
             overwrite=overwrite,
+            language=language,
         ),
     )
     purge_pack_cache(config_paths.ANKI_MINER_HOME / "audio_cache" / "local_packs", pack_id)
