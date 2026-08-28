@@ -153,13 +153,25 @@ class StatsService:
         user_version gate: a database that held only ``series_difficulty`` gets a
         fresh ``mining_sessions`` from the CREATE above, which already has the
         column, and a blind ALTER would raise "duplicate column name".
+
+        Neither gate serializes two *connections*: the probe result is held in
+        Python, not in a database snapshot, so a second connection that passed
+        the same probe -- MinePassStats wraps a second StatsService on the same
+        file, and a second app instance is reachable past the advisory
+        single-instance guard -- can ALTER and commit in between. The loser
+        therefore treats "duplicate column name" as the migration having already
+        happened; every other OperationalError still propagates.
         """
         if int(conn.execute("PRAGMA user_version").fetchone()[0]) >= _SCHEMA_VERSION:
             return
         for table in ("mining_sessions", "series_difficulty"):
             columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
             if columns and "language" not in columns:
-                conn.execute(f"ALTER TABLE {table} ADD COLUMN language TEXT NOT NULL DEFAULT 'ja'")
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN language TEXT NOT NULL DEFAULT 'ja'")
+                except sqlite3.OperationalError as exc:
+                    if "duplicate column name" not in str(exc):
+                        raise
         conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
 
     # === Feature 1: Mining Session Recording ===

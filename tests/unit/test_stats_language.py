@@ -58,6 +58,69 @@ def test_existing_rows_migrate_to_ja(tmp_path: Path):
         assert conn.execute("SELECT language FROM mining_sessions").fetchone()[0] == "ja"
 
 
+class _AlterPausingConnection:
+    """A connection proxy that lets a *rival* migration commit first.
+
+    ``_migrate_language_column`` materializes its column probe into a Python
+    set, so a rival connection that ALTERs and commits in between leaves this
+    one about to add a column that already exists — the production race between
+    a StatsService and the MinePassStats instance wrapping it (or a second app
+    instance). Firing the rival from inside the proxy replays that interleave
+    deterministically, with no threads.
+    """
+
+    def __init__(self, conn: sqlite3.Connection, before_first_alter):
+        self._conn = conn
+        self._before_first_alter = before_first_alter
+
+    def execute(self, sql: str, *args):
+        if sql.startswith("ALTER TABLE") and self._before_first_alter is not None:
+            run, self._before_first_alter = self._before_first_alter, None
+            run()
+        return self._conn.execute(sql, *args)
+
+
+def _write_legacy_stats_db(db_path: Path) -> None:
+    """Both tables at user_version 0, neither carrying ``language``."""
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("""CREATE TABLE mining_sessions (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   series_name TEXT NOT NULL, episode_name TEXT NOT NULL,
+                   cards_created INTEGER NOT NULL DEFAULT 0,
+                   mined_at TEXT NOT NULL DEFAULT (datetime('now')))""")
+        conn.execute("""CREATE TABLE series_difficulty (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   series_name TEXT NOT NULL, episode_name TEXT NOT NULL,
+                   difficulty_score REAL NOT NULL DEFAULT 0.0,
+                   recorded_at TEXT NOT NULL DEFAULT (datetime('now')))""")
+
+
+def test_a_migration_that_loses_the_alter_race_still_succeeds(tmp_path: Path):
+    db_path = tmp_path / "legacy.db"
+    _write_legacy_stats_db(db_path)
+    winner = sqlite3.connect(db_path)
+    loser = sqlite3.connect(db_path)
+    loser.execute("PRAGMA busy_timeout = 5000")
+
+    def rival_migration() -> None:
+        StatsService._migrate_language_column(winner)
+        winner.commit()
+
+    try:
+        StatsService._migrate_language_column(_AlterPausingConnection(loser, rival_migration))
+        loser.commit()
+    finally:
+        winner.close()
+        loser.close()
+
+    assert StatsService(db_path).load()
+    with sqlite3.connect(db_path) as conn:
+        assert int(conn.execute("PRAGMA user_version").fetchone()[0]) == 1
+        for table in ("mining_sessions", "series_difficulty"):
+            columns = [row[1] for row in conn.execute(f"PRAGMA table_info({table})")]
+            assert columns.count("language") == 1, table
+
+
 def test_mine_pass_stats_forwards_the_language(tmp_path: Path):
     inner = StatsService(tmp_path / "stats.db", language="zh")
     assert inner.load()
