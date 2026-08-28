@@ -3784,6 +3784,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation>Migliore disponibile</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>Fino a 1440p</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>Fino a 1080p</translation>
     </message>

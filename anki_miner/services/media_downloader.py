@@ -52,6 +52,7 @@ _OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 #: muxed-only sites.
 FORMAT_PRESETS: dict[str, tuple[str, str | None]] = {
     "best": ("bestvideo*+bestaudio/best", None),
+    "1440p": ("bestvideo[height<=1440]+bestaudio/best[height<=1440]", None),
     "1080p": ("bestvideo[height<=1080]+bestaudio/best[height<=1080]", None),
     "720p": ("bestvideo[height<=720]+bestaudio/best[height<=720]", None),
     "audio_mp3": ("bestaudio/best", "mp3"),

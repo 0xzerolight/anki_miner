@@ -3782,6 +3782,10 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Tốt nhất hiện có</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>Tối đa 1440p</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>Tối đa 1080p</translation>
     </message>

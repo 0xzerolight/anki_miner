@@ -198,6 +198,20 @@ class TestWorkerConstruction:
         assert options.format_selector == "bestvideo[height<=480]+bestaudio"
         assert options.extract_audio_format is None
 
+    def test_quality_presets_offered_in_descending_order(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        keys = [tab.preset_combo.itemData(i) for i in range(tab.preset_combo.count())]
+        assert keys == ["best", "1440p", "1080p", "720p", "audio_mp3", "audio_m4a"]
+
+    def test_1440p_preset_maps_to_height_capped_selector(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/v")
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("1440p"))
+        worker_cls = _start_download(tab, _FakeWorker())
+        options = worker_cls.call_args.kwargs["options"]
+        assert options.format_selector == "bestvideo[height<=1440]+bestaudio/best[height<=1440]"
+        assert options.extract_audio_format is None
+
     def test_extras_map_to_options(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/v")

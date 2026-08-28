@@ -281,6 +281,7 @@ class DownloadTab(_ToolTabBase):
         quality_row.addWidget(QLabel(self.tr("Quality:")))
         self.preset_combo = QComboBox()
         self.preset_combo.addItem(self.tr("Best available"), "best")
+        self.preset_combo.addItem(self.tr("Up to 1440p"), "1440p")
         self.preset_combo.addItem(self.tr("Up to 1080p"), "1080p")
         self.preset_combo.addItem(self.tr("Up to 720p"), "720p")
         self.preset_combo.addItem(self.tr("Audio only (MP3)"), "audio_mp3")
