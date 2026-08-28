@@ -500,6 +500,17 @@ def write_meta(
     write_meta_sidecar(db_path, full_meta, sidecar_name=sidecar_name, columns=columns)
 
 
+def meta_language(meta: dict[str, str]) -> str:
+    """The language a slot was imported under; ``"ja"`` when absent.
+
+    Every index written before the multi-language transition has no ``language``
+    key, and the tolerant default is what keeps those slots loading unchanged —
+    there is no migration and no reimport for them.
+    """
+    value = meta.get("language")
+    return value if isinstance(value, str) and value else "ja"
+
+
 def read_meta(db_path: Path) -> dict[str, str]:
     """Read all ``meta`` rows. Returns an empty dict if the file is missing."""
     if not db_path.exists():
