@@ -1145,6 +1145,20 @@ def _rollback_workers_on_startup_fault(fn: Callable[[], None]) -> Callable[[], N
     return wrapped
 
 
+def _bind_stats_language(window: MainWindow, stats_service: StatsService) -> None:
+    """Keep the stats partition in step with the active mining language.
+
+    The service is constructed once and never rebuilt, but the language switch
+    is restart-free -- so the language is re-stamped on every config refresh
+    rather than captured at construction.
+    """
+
+    def _apply(config: AnkiMinerConfig) -> None:
+        stats_service.language = config.language
+
+    window.config_refreshed.connect(_apply)
+
+
 def compose_main_window(
     config: AnkiMinerConfig,
     *,
@@ -1157,7 +1171,8 @@ def compose_main_window(
     # Initialize stats service for analytics. ``.load()`` opens the SQLite
     # file; defer to after window.show() so the empty shell paints first
     # and the user sees feedback while disk I/O finishes.
-    stats_service = StatsService(window.get_config().stats_db_path)
+    stats_service = StatsService(window.get_config().stats_db_path, language=window.get_config().language)
+    _bind_stats_language(window, stats_service)
 
     # Create per-child presenters and progress callbacks to avoid cross-tab signal
     # pollution (Single/Batch wire presenter signals into their own log widgets).

@@ -165,7 +165,7 @@ class MinePassStats(StatsService):
     """
 
     def __init__(self, inner: StatsService) -> None:
-        super().__init__(inner._db_path)
+        super().__init__(inner._db_path, language=inner.language)
 
     def record_difficulty(
         self,
