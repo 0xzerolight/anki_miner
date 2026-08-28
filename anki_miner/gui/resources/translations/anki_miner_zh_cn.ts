@@ -3782,6 +3782,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>最佳画质</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>最高 1440p</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>最高 1080p</translation>
     </message>

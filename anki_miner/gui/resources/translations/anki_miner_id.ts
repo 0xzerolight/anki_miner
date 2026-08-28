@@ -3782,6 +3782,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Terbaik yang tersedia</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>Hingga 1440p</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>Hingga 1080p</translation>
     </message>

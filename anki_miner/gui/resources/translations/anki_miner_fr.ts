@@ -3784,6 +3784,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Meilleure disponible</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>Jusqu’à 1440p</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>Jusqu’à 1080p</translation>
     </message>

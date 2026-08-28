@@ -3784,6 +3784,10 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation>Beste verfügbare</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>Bis zu 1440p</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>Bis zu 1080p</translation>
     </message>

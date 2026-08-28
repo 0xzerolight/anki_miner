@@ -3782,6 +3782,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>利用可能な最高画質</translation>
     </message>
     <message>
+        <source>Up to 1440p</source>
+        <translation>1440p まで</translation>
+    </message>
+    <message>
         <source>Up to 1080p</source>
         <translation>1080p まで</translation>
     </message>
