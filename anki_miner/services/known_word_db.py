@@ -458,8 +458,9 @@ def add_user_known_words(db_path: Path, forms: set[str]) -> int:
     as "persisted the moment the user clicked"; it is the commit step.
 
     Args:
-        db_path: Path to the known-words SQLite database
-            (``config.known_words_db_path``).
+        db_path: Path to the known-words SQLite database. Callers pass the
+            active language's file — ``resolve_known_words_db_path(config)``,
+            never the raw config field.
         forms: Set of ``mined_form`` strings the curator marked as known.
 
     Returns:

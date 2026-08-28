@@ -2059,6 +2059,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         words after it was already synced requires a full rebuild. The next
         mining run re-syncs from Anki with the current exclusions applied.
         """
+        from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
+
         confirm = QMessageBox.question(
             self,
             self.tr("Rebuild Known Words DB"),
@@ -2074,7 +2076,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             return
 
         try:
-            db = KnownWordDB(self.config.known_words_db_path)
+            db = KnownWordDB(resolve_known_words_db_path(self.config))
         except Exception as error:  # noqa: BLE001 - preserve the existing constructor boundary
             self._on_rebuild_known_words_error(str(error))
             return
@@ -2120,10 +2122,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     def _on_manage_known_words(self) -> None:
         """Open the Manage Known Words dialog (Issue #42)."""
+        from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
         from anki_miner.gui.widgets.dialogs.known_words_dialog import KnownWordsManagerDialog
 
         try:
-            db = KnownWordDB(self.config.known_words_db_path)
+            db = KnownWordDB(resolve_known_words_db_path(self.config))
             KnownWordsManagerDialog(db, self).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             self.show_screen_issue(

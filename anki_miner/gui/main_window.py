@@ -1811,9 +1811,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             # try/except so a DB failure never crashes the GUI.
             if result.mined_forms:
                 try:
+                    from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
                     from anki_miner.services.known_word_db import KnownWordDB
 
-                    kw_db = KnownWordDB(self.config.known_words_db_path)
+                    kw_db = KnownWordDB(resolve_known_words_db_path(self.config))
                     if kw_db.is_available():
                         kw_db.remove_words(set(result.mined_forms), source="mined")
                 except Exception:

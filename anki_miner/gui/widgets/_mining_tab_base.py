@@ -563,9 +563,10 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         Runs ON A WORKER THREAD (the dialog dispatches it through
         ``run_off_thread``), so it must not touch Qt widgets.
         """
+        from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
         from anki_miner.services.known_word_db import add_user_known_words
 
-        return add_user_known_words(self.config.known_words_db_path, forms)
+        return add_user_known_words(resolve_known_words_db_path(self.config), forms)
 
     # ------------------------------------------------------------------
     # Word curation bridge (Issue #60)
