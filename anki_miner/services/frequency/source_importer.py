@@ -122,6 +122,7 @@ def import_frequency_source(
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
     before_promote: Callable[[], None] | None = None,
+    language: str = "ja",
 ) -> FreqSourceImportResult:
     """Import ``input_path`` into ``dest_root/<source_id>/index.sqlite``.
 
@@ -143,6 +144,8 @@ def import_frequency_source(
         overwrite: If true, replace an existing same-id source atomically.
         before_promote: Optional last-moment guard run immediately before the
             staged directory replaces the managed slot.
+        language: Mining language stamped into the index meta. Defaults to
+            ``"ja"`` so existing callers write byte-identical metas.
 
     Raises:
         SetupError: On a missing/unsupported input, or a source that yields zero
@@ -161,6 +164,7 @@ def import_frequency_source(
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
+            language=language,
         )
     if suffix in _CSV_SUFFIXES:
         return _import_csv(
@@ -171,6 +175,7 @@ def import_frequency_source(
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
+            language=language,
         )
     raise SetupError(
         f"Unsupported frequency source '{input_path.name}'. Provide a Yomitan .zip or a .csv/.tsv/.txt rank list."
@@ -213,6 +218,7 @@ def _import_zip(
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
+    language: str,
 ) -> FreqSourceImportResult:
     with open_yomitan_meta_banks(zip_path, kind="frequency") as banks:
         title = banks.title
@@ -322,6 +328,7 @@ def _import_zip(
             cancel_check=cancel_check,
             overwrite=overwrite,
             before_promote=before_promote,
+            language=language,
         )
 
     logger.info(
@@ -345,6 +352,7 @@ def _import_csv(
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
+    language: str,
 ) -> FreqSourceImportResult:
     stem = csv_path.stem
     # Honor an explicit display name (reimport passes the existing meta name);
@@ -426,6 +434,7 @@ def _import_csv(
         cancel_check=cancel_check,
         overwrite=overwrite,
         before_promote=before_promote,
+        language=language,
     )
     logger.info(
         "Imported %d frequency entries from CSV '%s' as source '%s'",
@@ -525,6 +534,7 @@ def _finalize(
     cancel_check: Callable[[], bool] | None,
     overwrite: bool,
     before_promote: Callable[[], None] | None,
+    language: str,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -559,6 +569,7 @@ def _finalize(
             # "1"/"0" (not bool) — read back with an explicit == "1" compare so a
             # stored "0" never coerces truthy (bool("0") is True).
             "is_categorical": "1" if is_categorical else "0",
+            "language": language,
         }
         storage.build_index(db_path, rows, meta)
 

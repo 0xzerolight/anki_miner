@@ -125,6 +125,7 @@ def import_yomitan_zip(
     cancel_check: Callable[[], bool] | None = None,
     dict_id: str | None = None,
     before_promote: Callable[[], None] | None = None,
+    language: str = "ja",
 ) -> YomitanImportResult:
     """Import a Yomitan zip into dest_root/<dict_id>/index.sqlite.
 
@@ -168,6 +169,8 @@ def import_yomitan_zip(
                  comes from the zip title; only the folder name is pinned.
         before_promote: Optional last-moment guard run immediately before the
                         staged directory replaces the managed slot.
+        language: Mining language stamped into the index meta. Defaults to
+                  ``"ja"`` so existing callers write byte-identical metas.
 
     Raises:
         SetupError: On invalid input, format mismatch, or already-exists when
@@ -419,6 +422,9 @@ def import_yomitan_zip(
             "source_revision": revision,
             "import_date": datetime.now(UTC).isoformat(),
             "entry_count": str(total_entries),
+            # Mining language this dictionary serves. Read back by the registries
+            # and (Stage 1B) used to skip a mismatched chain entry.
+            "language": language,
         }
         # Attribution metadata (author / attribution / description) shown in the
         # dictionary settings list.

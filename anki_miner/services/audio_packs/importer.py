@@ -100,6 +100,7 @@ def import_android_audio_db(
     progress: Callable[[str], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
+    language: str = "ja",
 ) -> AudioPackImportResult:
     """Register an external ``android.db`` without copying its multi-gigabyte blobs."""
     db_path = db_path.resolve()
@@ -149,6 +150,7 @@ def import_android_audio_db(
                 "entry_count": str(entry_count),
                 "audio_count": str(audio_count),
                 "schema_version": str(SCHEMA_VERSION),
+                "language": language,
                 "pack_dir": str(db_path.parent),
                 "source_db": str(db_path),
             },
@@ -183,6 +185,7 @@ def import_audio_pack(
     progress: Callable[[str], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
     overwrite: bool = False,
+    language: str = "ja",
 ) -> AudioPackImportResult:
     """Import an audio pack directory into ``dest_root/<pack_id>/index.sqlite``.
 
@@ -197,6 +200,8 @@ def import_audio_pack(
                       is aborted and any staging directory is cleaned up.
         overwrite: If True and the destination already exists it is replaced
                    atomically.  If False raises :exc:`SetupError`.
+        language: Mining language stamped into the index meta. Defaults to
+                  ``"ja"`` so existing callers write byte-identical metas.
 
     Returns:
         :class:`AudioPackImportResult` describing the completed import.
@@ -311,6 +316,7 @@ def import_audio_pack(
                 "format": fmt,
                 "entry_count": str(total_entries),
                 "schema_version": str(SCHEMA_VERSION),
+                "language": language,
                 "pack_dir": str(pack_dir),
             },
         )
