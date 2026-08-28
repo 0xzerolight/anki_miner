@@ -13,9 +13,10 @@ the composition root omits the keyword entirely for Japanese: for ja the two
 calls mean the same thing, and only the shorter one matches the pre-transition
 construction shape pre-existing tests pin.
 
-``EpisodeProcessor``'s phase-2 probe is NOT part of this task: it keeps calling
-the static, and task 1A.9 routes it through the processor's own profile once the
-processor has one.
+``EpisodeProcessor``'s phase-2 probe was NOT part of this task: task 1A.9 gave
+the processor a profile of its own and routed the probe through
+``self.profile.lookup``. Its coverage lives in
+``test_phase2_probe_dispatch.py``.
 """
 
 from __future__ import annotations

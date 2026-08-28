@@ -893,6 +893,10 @@ def create_episode_processor(
         pitch_registry=services.pitch_registry,
         audio_pack_registry=services.audio_pack_registry,
         owns_lookup_services=shared_lookup is None,
+        # Resolved once here so both processors of a shared-lookup run agree on
+        # one profile instance (the registry caches per code, so they would
+        # anyway — passing it keeps the composition root the single resolver).
+        profile=get_profile(config.language),
     )
 
 

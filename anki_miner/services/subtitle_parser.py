@@ -74,7 +74,7 @@ from anki_miner.utils.text_utils import (
 )
 
 if TYPE_CHECKING:
-    from anki_miner.languages.profile import MinedFormPolicy
+    from anki_miner.languages.profile import MinedFormPolicy, ReadingSupport
 
 logger = logging.getLogger(__name__)
 
@@ -344,6 +344,7 @@ class SubtitleParserService:
         term_rules_lookup: TermRulesLookup | None = None,
         *,
         mined_form_policy: "MinedFormPolicy | None" = None,
+        reading_support: "ReadingSupport | None" = None,
     ):
         """Initialize the subtitle parser.
 
@@ -394,6 +395,12 @@ class SubtitleParserService:
                 that JA function verbatim, which is what the drift canary pins.
                 Duck-typed: ``services`` keeps no runtime import of
                 ``languages``.
+            reading_support: Optional word-reading provider
+                (``languages.profile.ReadingSupport``) that owns the card's
+                reading fields outright at the emit site. ``None`` — every JA
+                path, since the ja profile's parser factory passes nothing —
+                runs today's JA derivation verbatim. Duck-typed like
+                ``mined_form_policy``.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -408,6 +415,9 @@ class SubtitleParserService:
         # verbatim (see _resolve_word_identity); the kana-recovery probe stays
         # on the static either way.
         self._mined_form_policy = mined_form_policy
+        # Word-reading provider for the emit site. None ⇒ the JA derivation runs
+        # verbatim (see _emit_word); the ja profile never injects one.
+        self._reading_support = reading_support
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -1040,164 +1050,175 @@ class SubtitleParserService:
             return None
         seen_mined_forms.add(mined)
 
-        # Get reading if available
-        reading = self._extract_reading(word_token)
-        kana_attested = getattr(word_token.feature, "kana_attested", False) is True
-        # Strict ``is True`` (like the is_comment guard above): a MagicMock
-        # token auto-creates a truthy ``compound`` attribute in tests.
-        if getattr(word_token, "compound", False) is True:
-            # Attested span (audit F2): the attestation pass corrected this
-            # token's kana against the dictionary — trust it, folded to
-            # hiragana (the compound-reading convention: curation Reading
-            # column / TSV export show hiragana for compounds). Unattested
-            # span (inflected kind-A: 手っ取り早く is not a headword): try the
-            # HEADWORD's attested reading — the dictionary form the card
-            # front shows — before falling back to the headword re-tokenize
-            # (which re-concatenates per-token kana: 気がする → キガシ,
-            # 手っ取り早い → てっとりはやい instead of てっとりばやい).
-            if kana_attested:
-                reading = katakana_to_hiragana(reading)
-            else:
-                reading = self._attested_headword_reading(lemma) or self._reading(lemma)
-
-        # ExpressionFurigana/Reading match the mined card front (computed above):
-        # orthBase for verbs/adjectives, surface for nouns (see
-        # TokenizedWord.mined_form / select_mined_form for the trade-off).
-        # Set by the two curated-reading-override branches so lemma_reading below
-        # reuses the corrected value even when the lemma spelling diverges.
-        reading_overridden = False
-        if mined == surface and getattr(word_token, "compound", False) is not True:
-            # Single source of truth for the target reading (Task 1.2). When the
-            # card front IS the surface token, keep the context-disambiguated
-            # reading this token already carries instead of re-tokenizing the
-            # surface in isolation: an isolated pass picks a context-free reading
-            # for polyphonic nouns (方 かた/ほう, 中 なか/ちゅう), which would
-            # split the card's ExpressionReading, expression furigana, and the
-            # JPod101/audio-pack identity pair (mined_form + expression_reading)
-            # from what the learner heard. This applies Yomitan's invariant —
-            # one reading flows from the matched headword everywhere, and
-            # anki-note-builder.js `getReading` overrides the parser token
-            # reading with the entry reading (upstream e2ed450) — but inverted:
-            # here the MeCab token IS the trustworthy contextual source, so we
-            # propagate it outward rather than re-derive. ``reading`` here
-            # equals extract_reading(word_token)
-            # (only the compound branch above — excluded by the guard — and the
-            # curated override just below replace it). Compound synthetics carry wrong
-            # concatenated component kana, so they take the else branch and keep
-            # the headword-regenerated reading.
-            expression_reading = katakana_to_hiragana(reading)
-            override = resolve_reading_override(mined, expression_reading)
-            if override is not None:
-                # unidic-lite misreads this spelling in every context (一日→ツイタチ,
-                # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
-                # regenerate ruby from it — a stale per-token furigana would
-                # contradict the corrected reading field (and the corrected value
-                # flows on to the word reading and lemma_reading below).
-                expression_reading = override
-                expression_furigana = _format_furigana(mined, override)
-                reading = hiragana_to_katakana(override)
-                reading_overridden = True
-            else:
-                expression_furigana = generate_furigana_from_tokens([word_token])
-        elif getattr(word_token, "compound", False) is True and kana_attested and mined == surface:
-            # Attested compound whose card front IS the span surface (kind-B, or
-            # a kind-A span appearing UNINFLECTED): the dictionary-corrected kana
-            # IS the expression reading — re-tokenizing ``mined`` would
-            # re-concatenate per-token kana and resurrect the rendaku bug (audit
-            # F2). ``reading`` was folded to hiragana in the compound branch
-            # above. The ``mined == surface`` guard (U6) is load-bearing: an
-            # INFLECTED kind-A span (surface 絶え間なく, mined headword 絶え間ない)
-            # can itself be an attested headword (絶え間なく is a JMdict adverb),
-            # stamping kana_attested on the span — but its attested kana is the
-            # INFLECTED reading (たえまなく), not the headword reading the card
-            # front shows. Such spans (mined != surface) fall through to the
-            # headword-attestation elif below, which yields たえまない.
-            expression_reading = reading
-            expression_furigana = _format_furigana(mined, expression_reading)
-        elif (
-            getattr(word_token, "compound", False) is True
-            and (attested_headword := self._attested_headword_reading(mined)) is not None
-        ):
-            # Inflected kind-A compound (span surface unattested): the mined
-            # card front IS the headword, so its attested reading applies to
-            # the expression fields even though the sentence span keeps its
-            # concat kana (declared residual for sentence ruby only).
-            expression_reading = attested_headword
-            expression_furigana = _format_furigana(mined, expression_reading)
+        if self._reading_support is not None:
+            # An injected ReadingSupport owns the reading fields outright. The
+            # block below is JA-shaped end to end (furigana assembly, attested-
+            # kana recovery, katakana pronoun folds, the lemma-reading retry)
+            # and none of it applies to a duck token whose feature.kana is ""
+            # by the LanguageToken contract.
+            reading = expression_reading = self._reading_support.word_reading(word_token)
+            expression_furigana = ""
+            lemma_reading = expression_reading
+            resolved_reading = ""
         else:
-            # Verbs/adjectives mine as orthBase, whose reading is genuinely not
-            # the surface token's kana (蒔い→蒔く); compound synthetics
-            # regenerate from the headword. Both re-derive from ``mined``.
-            expression_reading = self._reading(mined)
-            override = resolve_reading_override(mined, expression_reading)
-            pronoun_reading = resolve_pronoun_fold_reading(surface, mined)
-            if override is not None:
-                # Inflected misread spelling (マズかった→mined マズい→まじい,
-                # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
-                # ruby from it, mirroring the mined==surface branch above.
-                expression_reading = override
-                expression_furigana = _format_furigana(mined, override)
-                reading_overridden = True
-            elif pronoun_reading is not None:
-                # Katakana 代名詞 folded to kanji by select_mined_form (ワタシ→私,
-                # オマエ→お前): the paired reading is authoritative because
-                # generate_reading gives 私→わたくし and the lemma is 御前→ごぜん.
-                # Regenerate ruby from it, and reading_overridden makes
-                # lemma_reading reuse おまえ instead of the 御前 misreading below.
-                expression_reading = pronoun_reading
-                expression_furigana = _format_furigana(mined, pronoun_reading)
-                reading_overridden = True
+            # Get reading if available
+            reading = self._extract_reading(word_token)
+            kana_attested = getattr(word_token.feature, "kana_attested", False) is True
+            # Strict ``is True`` (like the is_comment guard above): a MagicMock
+            # token auto-creates a truthy ``compound`` attribute in tests.
+            if getattr(word_token, "compound", False) is True:
+                # Attested span (audit F2): the attestation pass corrected this
+                # token's kana against the dictionary — trust it, folded to
+                # hiragana (the compound-reading convention: curation Reading
+                # column / TSV export show hiragana for compounds). Unattested
+                # span (inflected kind-A: 手っ取り早く is not a headword): try the
+                # HEADWORD's attested reading — the dictionary form the card
+                # front shows — before falling back to the headword re-tokenize
+                # (which re-concatenates per-token kana: 気がする → キガシ,
+                # 手っ取り早い → てっとりはやい instead of てっとりばやい).
+                if kana_attested:
+                    reading = katakana_to_hiragana(reading)
+                else:
+                    reading = self._attested_headword_reading(lemma) or self._reading(lemma)
+
+            # ExpressionFurigana/Reading match the mined card front (computed above):
+            # orthBase for verbs/adjectives, surface for nouns (see
+            # TokenizedWord.mined_form / select_mined_form for the trade-off).
+            # Set by the two curated-reading-override branches so lemma_reading below
+            # reuses the corrected value even when the lemma spelling diverges.
+            reading_overridden = False
+            if mined == surface and getattr(word_token, "compound", False) is not True:
+                # Single source of truth for the target reading (Task 1.2). When the
+                # card front IS the surface token, keep the context-disambiguated
+                # reading this token already carries instead of re-tokenizing the
+                # surface in isolation: an isolated pass picks a context-free reading
+                # for polyphonic nouns (方 かた/ほう, 中 なか/ちゅう), which would
+                # split the card's ExpressionReading, expression furigana, and the
+                # JPod101/audio-pack identity pair (mined_form + expression_reading)
+                # from what the learner heard. This applies Yomitan's invariant —
+                # one reading flows from the matched headword everywhere, and
+                # anki-note-builder.js `getReading` overrides the parser token
+                # reading with the entry reading (upstream e2ed450) — but inverted:
+                # here the MeCab token IS the trustworthy contextual source, so we
+                # propagate it outward rather than re-derive. ``reading`` here
+                # equals extract_reading(word_token)
+                # (only the compound branch above — excluded by the guard — and the
+                # curated override just below replace it). Compound synthetics carry wrong
+                # concatenated component kana, so they take the else branch and keep
+                # the headword-regenerated reading.
+                expression_reading = katakana_to_hiragana(reading)
+                override = resolve_reading_override(mined, expression_reading)
+                if override is not None:
+                    # unidic-lite misreads this spelling in every context (一日→ツイタチ,
+                    # 仏→フツ, マズい→マジイ, 込む→ゴム). Take the curated reading and
+                    # regenerate ruby from it — a stale per-token furigana would
+                    # contradict the corrected reading field (and the corrected value
+                    # flows on to the word reading and lemma_reading below).
+                    expression_reading = override
+                    expression_furigana = _format_furigana(mined, override)
+                    reading = hiragana_to_katakana(override)
+                    reading_overridden = True
+                else:
+                    expression_furigana = generate_furigana_from_tokens([word_token])
+            elif getattr(word_token, "compound", False) is True and kana_attested and mined == surface:
+                # Attested compound whose card front IS the span surface (kind-B, or
+                # a kind-A span appearing UNINFLECTED): the dictionary-corrected kana
+                # IS the expression reading — re-tokenizing ``mined`` would
+                # re-concatenate per-token kana and resurrect the rendaku bug (audit
+                # F2). ``reading`` was folded to hiragana in the compound branch
+                # above. The ``mined == surface`` guard (U6) is load-bearing: an
+                # INFLECTED kind-A span (surface 絶え間なく, mined headword 絶え間ない)
+                # can itself be an attested headword (絶え間なく is a JMdict adverb),
+                # stamping kana_attested on the span — but its attested kana is the
+                # INFLECTED reading (たえまなく), not the headword reading the card
+                # front shows. Such spans (mined != surface) fall through to the
+                # headword-attestation elif below, which yields たえまない.
+                expression_reading = reading
+                expression_furigana = _format_furigana(mined, expression_reading)
+            elif (
+                getattr(word_token, "compound", False) is True
+                and (attested_headword := self._attested_headword_reading(mined)) is not None
+            ):
+                # Inflected kind-A compound (span surface unattested): the mined
+                # card front IS the headword, so its attested reading applies to
+                # the expression fields even though the sentence span keeps its
+                # concat kana (declared residual for sentence ruby only).
+                expression_reading = attested_headword
+                expression_furigana = _format_furigana(mined, expression_reading)
             else:
-                expression_furigana = self._furigana(mined)
+                # Verbs/adjectives mine as orthBase, whose reading is genuinely not
+                # the surface token's kana (蒔い→蒔く); compound synthetics
+                # regenerate from the headword. Both re-derive from ``mined``.
+                expression_reading = self._reading(mined)
+                override = resolve_reading_override(mined, expression_reading)
+                pronoun_reading = resolve_pronoun_fold_reading(surface, mined)
+                if override is not None:
+                    # Inflected misread spelling (マズかった→mined マズい→まじい,
+                    # 込んだ→mined 込む→ごむ): apply the curated reading and regenerate
+                    # ruby from it, mirroring the mined==surface branch above.
+                    expression_reading = override
+                    expression_furigana = _format_furigana(mined, override)
+                    reading_overridden = True
+                elif pronoun_reading is not None:
+                    # Katakana 代名詞 folded to kanji by select_mined_form (ワタシ→私,
+                    # オマエ→お前): the paired reading is authoritative because
+                    # generate_reading gives 私→わたくし and the lemma is 御前→ごぜん.
+                    # Regenerate ruby from it, and reading_overridden makes
+                    # lemma_reading reuse おまえ instead of the 御前 misreading below.
+                    expression_reading = pronoun_reading
+                    expression_furigana = _format_furigana(mined, pronoun_reading)
+                    reading_overridden = True
+                else:
+                    expression_furigana = self._furigana(mined)
 
-        # Without a curated override, a real token's contextual reading is
-        # trusted when the exact card-front headword attests it. On mismatch,
-        # one dictionary reading is authoritative; several are unresolved and
-        # recorded for review. This deliberately diverges from Yomitan's
-        # interactive headword selection: bulk mining has no user-selected row,
-        # so it must not guess among homographs by score order or edit distance.
-        if not reading_overridden and not isinstance(word_token, SyntheticToken):
-            resolution = resolve_attested_reading(
-                expression_reading,
-                self._attested_readings(mined),
-            )
-            if resolution.ambiguous:
-                self._ambiguous_readings.add(mined)
-            elif resolution.reading is not None and resolution.reading != expression_reading:
-                expression_reading = resolution.reading
-                expression_furigana = _format_furigana(mined, resolution.reading)
-                reading_overridden = True
-        # Synthetic OOV recovery remains unique-only. Merged compounds have
-        # their own contextual attestation path before expression assembly.
-        elif not is_kana_only(expression_reading):
-            recovered = self._attested_unique_reading(mined)
-            if recovered is not None:
-                expression_reading = recovered
-                expression_furigana = _format_furigana(mined, recovered)
-                reading_overridden = True
+            # Without a curated override, a real token's contextual reading is
+            # trusted when the exact card-front headword attests it. On mismatch,
+            # one dictionary reading is authoritative; several are unresolved and
+            # recorded for review. This deliberately diverges from Yomitan's
+            # interactive headword selection: bulk mining has no user-selected row,
+            # so it must not guess among homographs by score order or edit distance.
+            if not reading_overridden and not isinstance(word_token, SyntheticToken):
+                resolution = resolve_attested_reading(
+                    expression_reading,
+                    self._attested_readings(mined),
+                )
+                if resolution.ambiguous:
+                    self._ambiguous_readings.add(mined)
+                elif resolution.reading is not None and resolution.reading != expression_reading:
+                    expression_reading = resolution.reading
+                    expression_furigana = _format_furigana(mined, resolution.reading)
+                    reading_overridden = True
+            # Synthetic OOV recovery remains unique-only. Merged compounds have
+            # their own contextual attestation path before expression assembly.
+            elif not is_kana_only(expression_reading):
+                recovered = self._attested_unique_reading(mined)
+                if recovered is not None:
+                    expression_reading = recovered
+                    expression_furigana = _format_furigana(mined, recovered)
+                    reading_overridden = True
 
-        # Lemma reading for the JPod101 audio retry: when the mined form
-        # misses, the loop retries with the lemma kanji and needs the lemma's
-        # OWN reading (探す→さがす), not the surface reading (さがし). For
-        # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
-        # so reuse the value; a kanji-variant divergence (乞う vs 請う)
-        # recomputes the lemma's reading like the surface-mined case. On a curated
-        # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
-        # value in isolation, so reuse the corrected reading rather than recompute.
-        lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
-        # Same recovery for the lemma fallback used by audio and pitch: a
-        # kanji-variant lemma the tokenizer cannot read gets its unique attested
-        # reading, or stays on the surface fallback.
-        if lemma != mined and not is_kana_only(lemma_reading):
-            recovered_lemma = self._attested_unique_reading(lemma)
-            if recovered_lemma is not None:
-                lemma_reading = recovered_lemma
+            # Lemma reading for the JPod101 audio retry: when the mined form
+            # misses, the loop retries with the lemma kanji and needs the lemma's
+            # OWN reading (探す→さがす), not the surface reading (さがし). For
+            # most verb/adjective tokens ``mined`` (orthBase) equals the lemma,
+            # so reuse the value; a kanji-variant divergence (乞う vs 請う)
+            # recomputes the lemma's reading like the surface-mined case. On a curated
+            # reading override the lemma spelling (マズい→不味い) reads the SAME wrong
+            # value in isolation, so reuse the corrected reading rather than recompute.
+            lemma_reading = expression_reading if (mined == lemma or reading_overridden) else self._reading(lemma)
+            # Same recovery for the lemma fallback used by audio and pitch: a
+            # kanji-variant lemma the tokenizer cannot read gets its unique attested
+            # reading, or stays on the surface fallback.
+            if lemma != mined and not is_kana_only(lemma_reading):
+                recovered_lemma = self._attested_unique_reading(lemma)
+                if recovered_lemma is not None:
+                    lemma_reading = recovered_lemma
 
-        # Pitch fallback realignment: when the resolver diverged the front from
-        # the lemma (感じる card, but archaic lemma 感ずる), a lemma-key retry must
-        # keep the front's reading (かんじる), not switch to 感ずる→かんずる.
-        # Empty when no front override fired.
-        resolved_reading = self._reading(mined) if front_overridden else ""
+            # Pitch fallback realignment: when the resolver diverged the front from
+            # the lemma (感じる card, but archaic lemma 感ずる), a lemma-key retry must
+            # keep the front's reading (かんじる), not switch to 感ずる→かんずる.
+            # Empty when no front override fired.
+            resolved_reading = self._reading(mined) if front_overridden else ""
 
         if self.config.bold_target_in_sentence:
             # Bold the full inflected form (verb/adjective + auxiliary

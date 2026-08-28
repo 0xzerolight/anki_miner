@@ -70,6 +70,7 @@ PIPELINE_STAGE_COUNT = 5
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
+    from anki_miner.languages.profile import LanguageProfile
     from anki_miner.models import LineLemmas
     from anki_miner.models.reading import ImageRef, ReadingDocument
     from anki_miner.services.audio_packs.registry import AudioPackRegistry
@@ -234,6 +235,8 @@ class EpisodeProcessor:
         audio_pack_registry: AudioPackRegistry | None = None,
         sentence_audio_fetcher: SentenceAudioFetcher | None = None,
         owns_lookup_services: bool = True,
+        *,
+        profile: LanguageProfile | None = None,
     ):
         """Initialize the episode processor.
 
@@ -285,8 +288,16 @@ class EpisodeProcessor:
                 lazily reopen after close, so a between-items close would
                 silently kill frequency data for the rest of the run). Default
                 True preserves the per-run ownership of every other caller.
+            profile: Optional language profile driving the phase-2 probe's
+                candidate ladder and the phase-5 render hooks. ``None``
+                resolves it from ``config.language``, which is what every
+                pre-existing construction site (and every test) gets.
         """
         self.config = config
+        # Resolved, not required: every existing caller builds this positionally
+        # or by the create_episode_processor kwargs, and ja is the only profile
+        # until Stage 2.
+        self.profile = profile if profile is not None else get_profile(config.language)
         self.subtitle_parser = subtitle_parser
         self.word_filter = word_filter
         self.media_extractor = media_extractor
@@ -871,15 +882,17 @@ class EpisodeProcessor:
                 }
             )
             has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
-            # Probe terms route through the processor's profile from task 1A.9 —
-            # see plan; do not route through definition_service (pre-existing
-            # tests stub it). The static is the JA ladder and stays the JA ladder
-            # until the processor owns a LanguageProfile of its own.
+            # Candidate ladder comes from the PROFILE, never from
+            # definition_service: pre-existing tests stub that service with a
+            # bare MagicMock and assert on this probe's contents, so routing
+            # here through it would starve the probe. JaLookupStrategy is a
+            # pure delegate to DefinitionService._fallback_candidates, so the
+            # Japanese terms are byte-identical to the pre-profile static call.
             fallback_candidates = [
                 (
                     []
                     if has_def.get(w.mined_form) or has_def.get(alternate)
-                    else DefinitionService._fallback_candidates(w.mined_form, alternate, None)
+                    else self.profile.lookup.candidates(w.mined_form, alternate, None)
                 )
                 for w, alternate in zip(unknown_words, safe_alternates, strict=True)
             ]
@@ -1495,6 +1508,35 @@ class EpisodeProcessor:
         )
         return definitions, glossaries, pitch_data
 
+    def _apply_render_hooks(self, word: Any, definition: str, extra_fields: dict[str, str]) -> None:
+        """Merge non-ja hook fields into ``extra_fields`` under LOGICAL keys.
+
+        ``definition`` is phase 5's ``card_definition`` local. This task does
+        not read it — Stage 2A task 2A.10 adds the single line that stashes it
+        on the word, inside the ja gate, so ``ZhMeasureWordHook`` can see the
+        CC-CEDICT ``CL:`` marker. The parameter is declared here so 2A.10 adds
+        a line and never widens a signature.
+
+        JA's pitch, furigana, glossary and frequency fields are rendered inline
+        in _phase5_create and must NEVER route through a hook — hence the gate.
+        AnkiService maps a logical key to an Anki field name via
+        config.anki_fields and skips any whose configured name is empty.
+        THE PROCESSOR'S OWN VALUES WIN a collision: a hook may only fill a key
+        the pipeline left unset. A raising hook is logged and skipped so one
+        bad hook cannot fail the run.
+        """
+        if self.config.language == "ja":
+            return
+        for hook in self.profile.render_hooks:
+            try:
+                rendered = hook.render(word)
+            except Exception:
+                logger.warning("Render hook %s failed", type(hook).__name__, exc_info=True)
+                continue
+            for key, value in rendered.items():
+                if value and key not in extra_fields:
+                    extra_fields[key] = value
+
     def _phase5_create(
         self,
         ctx: _EpisodeContext,
@@ -1614,6 +1656,8 @@ class EpisodeProcessor:
             card_definition = definition
             if definition_mapped:
                 card_definition = attach_card_style_block(definition, dict_css_entries=episode_dict_css_entries)
+
+            self._apply_render_hooks(word, card_definition, extra_fields)
 
             card_data.append(
                 CardPayload(
