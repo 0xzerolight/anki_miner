@@ -14,7 +14,7 @@ import contextlib
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict, cast
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -666,6 +666,34 @@ def resolve_known_words_db_path(config: AnkiMinerConfig) -> Path:
     return base.with_name(f"{base.stem}.{config.language}{base.suffix}")
 
 
+def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> SubtitleParserService:
+    """Build the run's parser through the active language's profile factory.
+
+    Without this the composition root hands every language the Japanese parser
+    branch: no ``mined_form_policy`` (card fronts fall back to
+    ``models.word.select_mined_form``) and no ``reading_support`` (the reading
+    field is read off ``feature.kana``, empty on every ``LanguageToken``). Both
+    failures are silent — wrong cards, not an exception.
+
+    Dispatch is gated on the factory *object*, never on ``config.language``, the
+    way ``_lookup_kwarg`` gates on the strategy object. For the ja profile the
+    construction stays the literal ``SubtitleParserService(...)`` call this
+    module has always made: ja's ``_create_parser`` is a bare forward to the
+    same class, so the two branches build the same object, but only the direct
+    call reaches this module's ``SubtitleParserService`` attribute — which
+    ``test_batch_queue_worker.test_one_subtitle_parser_service_for_the_whole_queue``
+    patches to count the parsers a queue run builds. A profile-routed ja build
+    bypasses that patch and the run looks parser-less.
+
+    Every profile returns the same concrete class (the factories inject
+    policies, they do not subclass), which is what the ``cast`` records.
+    """
+    factory = get_profile(config_language(config)).create_parser
+    if factory is get_profile("ja").create_parser:
+        return SubtitleParserService(config, **lookups)
+    return cast(SubtitleParserService, factory(config, **lookups))
+
+
 def create_services(
     config: AnkiMinerConfig,
     subtitle_parser: SubtitleParserService | None = None,
@@ -776,7 +804,7 @@ def create_services(
         term_common_lookup = definition_service.offline_term_commonness if has_indexed_dict else None
         term_rules_lookup = definition_service.offline_deinflection_terms_exist if has_indexed_dict else None
         name_lookup = wordset_service.excluded_terms if wordset_service is not None else None
-        subtitle_parser = SubtitleParserService(
+        subtitle_parser = _create_subtitle_parser(
             config,
             term_lookup=term_lookup,
             name_lookup=name_lookup,
