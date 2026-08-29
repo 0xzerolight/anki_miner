@@ -484,6 +484,16 @@ class _QueueMiningTabBase(MiningTabBase):
                 self._processor.close()
                 self._processor = None
 
+    def clear_queue(self) -> None:
+        """Public alias for Clear, for the language switch (D16-C).
+
+        On the base rather than on the list subclass, so the Reading tabs -
+        whose ``_on_clear_clicked`` is their own - answer it as well. A switch
+        only reaches this with no worker running, so every subclass takes its
+        plain idle path.
+        """
+        self._on_clear_clicked()
+
     def release_dictionary_resources(self) -> bool:
         """Close any cached dictionary handles so the file can be deleted.
 
@@ -579,6 +589,10 @@ class _QueueMiningTabBase(MiningTabBase):
 
     def _on_queue_finished(self) -> None:
         """Worker ``queue_finished`` slot. Subclass MUST override."""
+        raise NotImplementedError
+
+    def _on_clear_clicked(self) -> None:
+        """Clear button slot. Every tab with a queue to clear overrides it."""
         raise NotImplementedError
 
     def _after_run_cleanup(self) -> None:

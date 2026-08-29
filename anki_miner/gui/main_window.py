@@ -976,6 +976,43 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if callable(open_subtab):
             open_subtab()
 
+    def request_mining_language(self, code: str) -> bool:
+        """Selector entry point for a language switch (spec 6.1, trigger 1).
+
+        The combo has already moved by the time this runs, so EVERY terminal
+        path re-points it - a selector showing 中文 over a live ja config is the
+        same wrong state a mis-pointed profile combo is.
+        """
+        from anki_miner.gui.controllers import language_switch
+
+        try:
+            return language_switch.request_language_change(self, code)
+        finally:
+            self.sync_mining_language_surfaces()
+
+    def sync_mining_language_surfaces(self) -> None:
+        """Point every language surface at the language that is actually live."""
+        idx = self._settings_tab_index()
+        if idx >= 0:
+            setter = getattr(self.tabs.widget(idx), "set_mining_language", None)
+            if callable(setter):
+                setter(self.config.language)
+
+    def restart_prewarm(self) -> None:
+        """Warm the incoming language's tokenizer and chain caches (spec 6.4).
+
+        Not ``_start_prewarm``: that one is one-shot by design (boot), guarded
+        by ``self._prewarm_started``. A switch legitimately re-runs it, but
+        never on top of a live worker.
+        """
+        if still_running(self.background_tasks.prewarm_worker):
+            return
+        from anki_miner.gui.workers import prewarm_worker as prewarm_module
+
+        worker = prewarm_module.PrewarmWorker(self.get_config())
+        self.background_tasks.set_prewarm(worker)
+        worker.start()
+
     def _open_profile_manager(self) -> None:
         """Open the settings-profile manager (header sentinel / Settings → UI).
 

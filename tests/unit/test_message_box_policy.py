@@ -58,6 +58,9 @@ LEDGER: dict[str, str] = {
     "gui/app.py::_install_excepthook._hook": "blocker",
     # --- Destructive confirmations and open questions -----------------------
     "gui/controllers/dictionary_import_flow.py::DictionaryImportFlow.restore_unlisted": "confirm",
+    # A language switch discards every queued row, on screen and in the copy
+    # saved for the next launch. Irreversible, so the last moment to say no.
+    "gui/controllers/language_switch.py::confirm_queue_flush": "confirm",
     "gui/main_window.py::MainWindow._restyle_mined_cards": "confirm",
     "gui/main_window.py::MainWindow._on_stale_resources_scanned": "choice",
     "gui/widgets/analytics_tab.py::AnalyticsTab._on_reset_clicked": "confirm",

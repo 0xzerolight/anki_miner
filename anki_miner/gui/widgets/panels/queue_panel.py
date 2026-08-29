@@ -464,10 +464,14 @@ class QueuePanel(QFrame):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
-            for widget in list(self.queue_item_widgets):
-                self._remove_item(widget)
-            self.queue.clear()
-            self._update_stats()
+            self.clear_all()
+
+    def clear_all(self) -> None:
+        """Remove every row without asking. The confirm lives with the button."""
+        for widget in list(self.queue_item_widgets):
+            self._remove_item(widget)
+        self.queue.clear()
+        self._update_stats()
 
     # ------------------------------------------------------------------
     # Selection, filter, search
