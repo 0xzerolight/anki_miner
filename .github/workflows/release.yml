@@ -1018,6 +1018,74 @@ jobs:
           "SMOKE_GGML_MODEL_PATH=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "Fetched ggml-tiny.bin for decode smoke: $dest"
 
+      # Fetch the Korean model so the ko language smoke has something to tokenize
+      # with. Unlike zh, the ko model is NOT bundle content: it is an ~88 MB
+      # in-app download pack (anki_miner/services/ko_model_installer.py), so the
+      # smoke has to be handed one or the leg cannot run at all. Every platform
+      # needs it — BUNDLE_SMOKE_LANGS carries ko on all legs. Pinned to the same
+      # immutable PyPI sdist + SHA256 the installer pins, verified fail-closed.
+      # FAIL-OPEN with a LOUD warning if the download itself fails (a PyPI outage
+      # must not red a release) — bundle_smoke.sh then skips the ko leg rather
+      # than failing it.
+      - name: Fetch the Korean model for the ko smoke (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -uo pipefail
+          URL="https://files.pythonhosted.org/packages/77/59/28403890c5f757254bf2068ff321fb3e656fb2e5658a3de8bfc092e4fd83/kiwipiepy_model-0.23.0.tar.gz"
+          SHA256="498a22f5585e6c4a162423d7557eb3ee3f71cddc6e0aeb2650c50467e85933e2"
+          ARCHIVE="${RUNNER_TEMP}/kiwipiepy_model.tar.gz"
+          EXTRACTED="${RUNNER_TEMP}/kiwipiepy_model_sdist"
+          if ! curl -fL "$URL" -o "$ARCHIVE"; then
+            echo "::warning::kiwipiepy_model download failed (PyPI outage?) — the ko bundle smoke will be skipped. NOT failing the release."
+            rm -f "$ARCHIVE"
+            exit 0
+          fi
+          # macOS ships shasum, not sha256sum; both read the same input format.
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "${SHA256}  ${ARCHIVE}" | sha256sum -c - \
+              || { echo "::error::kiwipiepy_model sha256 mismatch — refusing to smoke against a corrupt model"; exit 1; }
+          else
+            echo "${SHA256}  ${ARCHIVE}" | shasum -a 256 -c - \
+              || { echo "::error::kiwipiepy_model sha256 mismatch — refusing to smoke against a corrupt model"; exit 1; }
+          fi
+          rm -rf "$EXTRACTED"
+          mkdir -p "$EXTRACTED"
+          tar -xzf "$ARCHIVE" -C "$EXTRACTED"
+          MODEL="${EXTRACTED}/kiwipiepy_model-0.23.0/kiwipiepy_model"
+          test -f "${MODEL}/sj.morph" || { echo "::error::kiwipiepy_model sdist has no kiwipiepy_model/sj.morph"; exit 1; }
+          echo "SMOKE_KO_MODEL_PATH=${MODEL}" >> "$GITHUB_ENV"
+          echo "Fetched the Korean model for the ko smoke: ${MODEL}"
+
+      - name: Fetch the Korean model for the ko smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $url = "https://files.pythonhosted.org/packages/77/59/28403890c5f757254bf2068ff321fb3e656fb2e5658a3de8bfc092e4fd83/kiwipiepy_model-0.23.0.tar.gz"
+          $sha256 = "498a22f5585e6c4a162423d7557eb3ee3f71cddc6e0aeb2650c50467e85933e2"
+          $archive = Join-Path $env:RUNNER_TEMP "kiwipiepy_model.tar.gz"
+          $extracted = Join-Path $env:RUNNER_TEMP "kiwipiepy_model_sdist"
+          curl.exe -fL $url -o $archive
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "::warning::kiwipiepy_model download failed (PyPI outage?) — the ko bundle smoke will be skipped. NOT failing the release."
+            if (Test-Path $archive) { Remove-Item -Force $archive }
+            exit 0
+          }
+          $actual = (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower()
+          if ($actual -ne $sha256) {
+            Write-Error "kiwipiepy_model sha256 mismatch (expected $sha256 got $actual) — refusing to smoke against a corrupt model"; exit 1
+          }
+          if (Test-Path $extracted) { Remove-Item -Recurse -Force $extracted }
+          New-Item -ItemType Directory -Path $extracted | Out-Null
+          tar.exe -xzf $archive -C $extracted
+          $model = Join-Path $extracted "kiwipiepy_model-0.23.0\kiwipiepy_model"
+          if (-not (Test-Path (Join-Path $model "sj.morph"))) {
+            Write-Error "kiwipiepy_model sdist has no kiwipiepy_model/sj.morph"; exit 1
+          }
+          "SMOKE_KO_MODEL_PATH=$model" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "Fetched the Korean model for the ko smoke: $model"
+
       # Bundle-validation smokes, all three in one shared script so the local
       # preflight (scripts/release_preflight.sh) and CI assert identically and
       # cannot drift. The script runs, fail-closed:
@@ -1056,6 +1124,11 @@ jobs:
           # whispercpp construct+decode smoke (DEFECT 1/2 coverage). Empty on macOS
           # and when the HF download fell open, so the smoke stays import-only there.
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
+          # Korean model path from the fetch step above. The bundle excludes the
+          # model (it downloads in-app), so the smoke seeds this into its isolated
+          # home before the ko leg. Empty when the PyPI download fell open, and
+          # the ko leg then skips instead of failing.
+          BUNDLE_SMOKE_KO_MODEL: ${{ env.SMOKE_KO_MODEL_PATH }}
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
           # local invocation-count test stays valid).
           BUNDLE_SMOKE_LANGS: zh ko

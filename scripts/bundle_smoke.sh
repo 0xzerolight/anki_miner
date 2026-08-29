@@ -12,6 +12,8 @@
 #   2. asr       ANKI_MINER_SMOKE=asr  HF_HUB_OFFLINE=1     -> BUNDLED_SMOKE_PASS
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
 #   2d. language  ANKI_MINER_SMOKE=<code> (opt-in: BUNDLE_SMOKE_LANGS) -> BUNDLED_SMOKE_PASS
+#                 ko additionally needs BUNDLE_SMOKE_KO_MODEL (its model is an
+#                 in-app download, not bundle content); without it the leg skips.
 #   3. ffmpeg    bundled ffmpeg has the required encoders   -> encoders present
 set -euo pipefail
 export LC_ALL=C
@@ -283,6 +285,24 @@ if [ -n "${BUNDLE_SMOKE_LANGS:-}" ]; then
   read -r -a SMOKE_LANGS <<<"${BUNDLE_SMOKE_LANGS}"
   for lang in "${SMOKE_LANGS[@]}"; do
     echo "=== smoke: language $lang ==="
+    # ko only: the Korean MODEL is an in-app download pack, not bundle content
+    # (the bundle ships the kiwipiepy engine alone), so this leg has to be handed
+    # one. BUNDLE_SMOKE_KO_MODEL points at an extracted kiwipiepy_model dir; the
+    # release job fills it from the pinned sdist. Same fail-open shape as the
+    # ggml conditional above: no model means the FETCH did not happen, which must
+    # skip the leg loudly rather than red a release over a bundle that is correct.
+    if [ "$lang" = "ko" ]; then
+      if [ -n "${BUNDLE_SMOKE_KO_MODEL:-}" ] && [ -d "${BUNDLE_SMOKE_KO_MODEL}" ]; then
+        echo "Seeding the ko model pack from ${BUNDLE_SMOKE_KO_MODEL}"
+        mkdir -p "$ANKI_MINER_HOME/ko_model"
+        cp -R "${BUNDLE_SMOKE_KO_MODEL}" "$ANKI_MINER_HOME/ko_model/kiwipiepy_model"
+      else
+        echo "::warning::BUNDLE_SMOKE_KO_MODEL unset or not a directory — the Korean model download was not fetched, so the ko leg cannot run"
+        echo "SKIP language-ko"
+        echo
+        continue
+      fi
+    fi
     if ANKI_MINER_SMOKE="$lang" QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee "smoke_lang_$lang.log" \
       && grep -q "BUNDLED_SMOKE_PASS" "smoke_lang_$lang.log"; then
       echo "PASS language-$lang"
