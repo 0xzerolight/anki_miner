@@ -104,11 +104,17 @@ zh = [
     "pypinyin>=0.53.0",
     "opencc>=1.1.9",
 ]
+# Korean mining (Stage 3). kiwipiepy ships cp39-abi3 wheels for Linux/macOS/
+# Windows, so one wheel covers the whole 3.11-3.13 CI matrix; python-mecab-ko was
+# rejected for having no cp313 wheel (upstream #23/#24). kiwipiepy-model carries
+# the default model Kiwi() loads when no model_path is given.
+ko = [
+    "kiwipiepy>=0.20",
+    "kiwipiepy-model>=0.20",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = [
-    "anki-miner[zh]",
-]
+languages = ["anki-miner[zh]", "anki-miner[ko]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -248,7 +254,7 @@ module = ["fugashi.*", "pysubs2.*", "ffsubsync.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["faster_whisper.*", "ctranslate2.*", "pywhispercpp.*", "mpv.*"]
+module = ["faster_whisper.*", "ctranslate2.*", "pywhispercpp.*", "mpv.*", "kiwipiepy.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

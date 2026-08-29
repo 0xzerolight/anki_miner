@@ -45,6 +45,18 @@ def test_the_lock_pins_the_zh_engine() -> None:
         assert pin in lock, f"{pin} missing from requirements.lock"
 
 
+#: Same for the Korean engine: the lock's regeneration recipe installs `.[asr]`,
+#: so kiwipiepy needs a pinned block of its own or a bundle floats onto a
+#: tokenizer the Sejong POS tables were never run against.
+KO_LOCK_PINS = ("kiwipiepy==0.23.2", "kiwipiepy-model==0.23.0")
+
+
+def test_the_lock_pins_the_ko_engine() -> None:
+    lock = (PROJECT_ROOT / "requirements.lock").read_text(encoding="utf-8").splitlines()
+    for pin in KO_LOCK_PINS:
+        assert pin in lock, f"{pin} missing from requirements.lock"
+
+
 def test_the_release_preflight_builds_against_the_zh_extra() -> None:
     """The preflight venv must carry the engine the release bundles."""
     preflight = (PROJECT_ROOT / "scripts" / "release_preflight.sh").read_text(encoding="utf-8")
