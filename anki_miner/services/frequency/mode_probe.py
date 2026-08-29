@@ -46,6 +46,10 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # does not carry never votes (_min_max reports has_value False). One table
     # therefore serves both without a variant flag on the source.
     "zh": ["的", "是", "不", "我", "有", "人", "说", "說", "来", "來", "时候", "時候", "什么", "什麼", "知道"],
+    # ko: NIKL 현대 국어 사용 빈도 조사 2 headwords, lemma+다 granularity (the
+    # granularity languages/ko/morphology.py mines). Every term is in the top 31
+    # of that survey once its homograph indices are merged.
+    "ko": ["하다", "있다", "되다", "없다", "같다", "보다", "사람", "우리", "일", "말"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -66,6 +70,11 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "惆怅",
         "惆悵",
     ],
+    # ko: rare-but-real headwords, all present in that same survey with counts
+    # of 3-23 against the common table's 9,225-76,984. 물레 and 갈무리 were
+    # dropped from an earlier draft of this list: the survey carries only
+    # 물레방아 and 갈무리하다, so neither term could ever have voted.
+    "ko": ["노새", "자맥질", "여울", "두레박", "삿갓", "옹기", "맷돌", "나룻배", "멍석", "미나리"],
 }
 
 
