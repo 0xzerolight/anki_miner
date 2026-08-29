@@ -7306,6 +7306,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Загрузить рекомендуемые ресурсы</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>Для этого языка нет рекомендуемых ресурсов для загрузки — импортируйте словарь Yomitan в разделе Настройки → Словари и список частотности в разделе Настройки → Частотность.</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>Проверка офлайн-словаря...</translation>
     </message>

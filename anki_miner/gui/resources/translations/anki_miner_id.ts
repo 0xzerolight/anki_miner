@@ -7278,6 +7278,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Unduh sumber daya yang direkomendasikan</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>Tidak ada sumber daya unduhan yang direkomendasikan untuk bahasa ini — impor kamus Yomitan di Pengaturan → Kamus dan daftar frekuensi di Pengaturan → Frekuensi.</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>Memeriksa kamus luring...</translation>
     </message>

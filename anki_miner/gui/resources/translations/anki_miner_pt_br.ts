@@ -7292,6 +7292,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Baixar recursos recomendados</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>Nenhum recurso para download é recomendado para este idioma — importe um dicionário Yomitan em Configurações → Dicionários e uma lista de frequência em Configurações → Frequência.</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>Verificando um dicionário offline...</translation>
     </message>

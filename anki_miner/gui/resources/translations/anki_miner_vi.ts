@@ -7278,6 +7278,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Tải các tài nguyên được đề xuất</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>Không có tài nguyên tải xuống nào được đề xuất cho ngôn ngữ này — hãy nhập từ điển Yomitan trong Cài đặt → Từ điển và danh sách tần suất trong Cài đặt → Tần suất.</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>Đang kiểm tra từ điển ngoại tuyến...</translation>
     </message>
