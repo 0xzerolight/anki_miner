@@ -6928,6 +6928,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>要還原先前的佇列嗎？共 %1 個項目</translation>
     </message>
 </context><context>
+    <name>ResourceChain</name>
+    <message>
+        <source>Audio pack '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Starting download…</source>
@@ -7988,16 +8006,24 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>字幕產生</translation>
     </message>
     <message>
+        <source>Japanese</source>
+        <translation>日文</translation>
+    </message>
+    <message>
+        <source>Korean</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>輸入</translation>
     </message>
     <message>
         <source>Language:</source>
         <translation>語言：</translation>
-    </message>
-    <message>
-        <source>Japanese</source>
-        <translation>日文</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>

@@ -6941,6 +6941,24 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Restaurar a fila anterior? %1 itens</translation>
     </message>
 </context><context>
+    <name>ResourceChain</name>
+    <message>
+        <source>Audio pack '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Starting download…</source>
@@ -8003,16 +8021,24 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Geração de legendas</translation>
     </message>
     <message>
+        <source>Japanese</source>
+        <translation>Japonês</translation>
+    </message>
+    <message>
+        <source>Korean</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>Entrada</translation>
     </message>
     <message>
         <source>Language:</source>
         <translation>Idioma:</translation>
-    </message>
-    <message>
-        <source>Japanese</source>
-        <translation>Japonês</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>

@@ -16,8 +16,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.registry import config_language
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     meta_language,
@@ -28,6 +32,10 @@ from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
 from anki_miner.services.frequency.storage import SCHEMA_VERSION
+from anki_miner.utils.i18n import tr_format
+
+if TYPE_CHECKING:  # pragma: no cover - typing only, keeps services import-free of gui
+    from anki_miner.gui.utils.service_factory import ServiceLoadResult
 
 logger = logging.getLogger(__name__)
 
@@ -159,16 +167,27 @@ class FrequencySourceRegistry:
                 usable.append(meta)
         return sorted(usable, key=lambda m: m.source_id)
 
-    def build_sources(self, config: AnkiMinerConfig) -> list[IndexedFreqProvider]:
+    def build_sources(
+        self,
+        config: AnkiMinerConfig,
+        *,
+        load_result: ServiceLoadResult | None = None,
+    ) -> list[IndexedFreqProvider]:
         """Build the ordered provider list from config + disk state.
 
         Entries with enabled=False are skipped. Entries whose source_id is
-        missing on disk, or whose on-disk schema version is not current
-        (``schema_ok=False``), are dropped with a warning. Providers are returned
-        in chain order. This gate must match IndexedFreqProvider.load().
+        missing on disk, whose on-disk schema version is not current
+        (``schema_ok=False``), or which are stamped for another mining
+        language, are dropped with a warning. Providers are returned in chain
+        order. This gate must match IndexedFreqProvider.load().
+
+        ``load_result`` is an optional sink for the user-facing warnings (duck
+        typed: anything with a ``warnings`` list). ``None`` keeps them in the
+        log only.
 
         Caller is responsible for invoking provider.load() on each.
         """
+        language = config_language(config)
         sources: list[IndexedFreqProvider] = []
         for entry in config.frequency_chain:
             if not entry.enabled:
@@ -187,6 +206,24 @@ class FrequencySourceRegistry:
                     entry.source_id,
                     meta.version,
                 )
+                continue
+            if meta.language != language:
+                # A ko index answering a zh run returns confident nonsense;
+                # skipping is the only safe read of a cross-language slot.
+                logger.warning(
+                    "Frequency source '%s' is indexed for '%s'; skipped for '%s'",
+                    entry.source_id,
+                    meta.language,
+                    language,
+                )
+                if load_result is not None:
+                    load_result.warnings.append(
+                        tr_format(
+                            QCoreApplication.translate("ResourceChain", "Frequency source '%1' is for %2; skipped"),
+                            entry.source_id,
+                            meta.language,
+                        )
+                    )
                 continue
             sources.append(
                 IndexedFreqProvider(

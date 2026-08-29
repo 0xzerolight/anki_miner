@@ -136,6 +136,29 @@ def _load_dict_registry(
     return registry
 
 
+class _LoadResultKwarg(TypedDict, total=False):
+    """The ``load_result=`` keyword bundle a chain-build call is splatted with."""
+
+    load_result: ServiceLoadResult
+
+
+def _load_result_kwarg(config: AnkiMinerConfig, load_result: ServiceLoadResult | None) -> _LoadResultKwarg:
+    """``{"load_result": sink}``, or nothing at all for a Japanese session.
+
+    The four chain builders take the sink only to report a slot stamped for
+    another mining language — a state a Japanese session cannot reach through
+    the UI, since the chains are language-scoped config and every legacy slot
+    reads "ja". Omitting the keyword is therefore behaviour-neutral for JA and
+    keeps the call byte-identical to the pre-transition one, including for the
+    pre-existing test doubles that mirror a builder's exact signature
+    (``test_service_factory_no_dictionary_warning._FakeRegistry``). Same shape
+    and same reason as ``services/_sqlite_index.language_kwarg``.
+    """
+    if load_result is None or config_language(config) == "ja":
+        return {}
+    return {"load_result": load_result}
+
+
 class _LookupKwarg(TypedDict, total=False):
     """The ``lookup=`` keyword bundle a ``DefinitionService`` call is splatted with."""
 
@@ -190,7 +213,7 @@ def build_definition_service(
     """
     if registry is None:
         registry = _load_dict_registry(config, load_result)
-    providers = registry.build_provider_chain(config)
+    providers = registry.build_provider_chain(config, **_load_result_kwarg(config, load_result))
     # The single DefinitionService construction site, so injecting here covers
     # create_services, create_shared_lookup_services and the PrewarmWorker.
     definition_service = DefinitionService(config, providers=providers, registry=registry, **_lookup_kwarg(config))
@@ -266,7 +289,9 @@ def _build_pitch_service(
     registry = PitchSourceRegistry(config.pitch_root)
     try:
         registry.load()
-        loaded_providers = [p for p in registry.build_sources(config) if p.load()]
+        loaded_providers = [
+            p for p in registry.build_sources(config, **_load_result_kwarg(config, load_result)) if p.load()
+        ]
         providers_by_id: dict[str, list] = {}
         for provider in loaded_providers:
             providers_by_id.setdefault(provider.source_id, []).append(provider)
@@ -320,7 +345,7 @@ def _build_frequency_service(
     registry = FrequencySourceRegistry(config.freqs_root)
     try:
         registry.load()
-        providers = [p for p in registry.build_sources(config) if p.load()]
+        providers = [p for p in registry.build_sources(config, **_load_result_kwarg(config, load_result)) if p.load()]
         if not providers:
             # Nothing enabled / on-disk: no providers loaded. Not an error —
             # an enabled chain entry can still point at a missing on-disk index.
@@ -506,7 +531,7 @@ def _build_expression_audio_fetcher(
     pack_fetchers_by_id: dict[str, LocalAudioPackFetcher] = {}
     registry = pack_registry if pack_registry is not None else _load_audio_pack_registry(config)
     if registry is not None:
-        for pack_fetcher in registry.build_fetcher_chain(config, pack_cache):
+        for pack_fetcher in registry.build_fetcher_chain(config, pack_cache, **_load_result_kwarg(config, load_result)):
             pack_fetchers_by_id[pack_fetcher.pack_id] = pack_fetcher
 
     fetchers: list[ExpressionAudioFetcher] = []

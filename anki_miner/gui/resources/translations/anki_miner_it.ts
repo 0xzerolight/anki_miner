@@ -6941,6 +6941,24 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Ripristinare la coda precedente? %1 elementi</translation>
     </message>
 </context><context>
+    <name>ResourceChain</name>
+    <message>
+        <source>Audio pack '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Starting download…</source>
@@ -8003,16 +8021,24 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
         <translation>Generazione dei sottotitoli</translation>
     </message>
     <message>
+        <source>Japanese</source>
+        <translation>Giapponese</translation>
+    </message>
+    <message>
+        <source>Korean</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>Ingresso</translation>
     </message>
     <message>
         <source>Language:</source>
         <translation>Lingua:</translation>
-    </message>
-    <message>
-        <source>Japanese</source>
-        <translation>Giapponese</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>

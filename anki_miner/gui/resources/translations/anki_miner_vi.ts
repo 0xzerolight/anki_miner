@@ -6928,6 +6928,24 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Khôi phục hàng đợi trước? %1 mục</translation>
     </message>
 </context><context>
+    <name>ResourceChain</name>
+    <message>
+        <source>Audio pack '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Starting download…</source>
@@ -7988,16 +8006,24 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Tạo phụ đề</translation>
     </message>
     <message>
+        <source>Japanese</source>
+        <translation>Tiếng Nhật</translation>
+    </message>
+    <message>
+        <source>Korean</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>Đầu vào</translation>
     </message>
     <message>
         <source>Language:</source>
         <translation>Ngôn ngữ:</translation>
-    </message>
-    <message>
-        <source>Japanese</source>
-        <translation>Tiếng Nhật</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>

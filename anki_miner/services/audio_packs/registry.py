@@ -6,8 +6,12 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.registry import config_language
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     meta_language,
@@ -16,6 +20,10 @@ from anki_miner.services._sqlite_index import (
 )
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
 from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
+from anki_miner.utils.i18n import tr_format
+
+if TYPE_CHECKING:  # pragma: no cover - typing only, keeps services import-free of gui
+    from anki_miner.gui.utils.service_factory import ServiceLoadResult
 
 logger = logging.getLogger(__name__)
 
@@ -176,6 +184,8 @@ class AudioPackRegistry:
         self,
         config: AnkiMinerConfig,
         cache_dir: Path,
+        *,
+        load_result: ServiceLoadResult | None = None,
     ) -> list[LocalAudioPackFetcher]:
         """Build an ordered list of pack fetchers from config + disk state.
 
@@ -186,6 +196,8 @@ class AudioPackRegistry:
         * Packs with a stale index schema are skipped with a warning.
         * Packs whose ``pack_dir`` is missing on disk are skipped with a
           warning (audio files moved or external drive unplugged).
+        * Packs imported for another mining language are skipped with a
+          warning.
         * Non-pack entries (``kind="jpod101"``, ``kind="googletts"``) are
           silently skipped here; they are composed by the service factory (T7)
           around the list this method returns.  Unlike
@@ -193,8 +205,13 @@ class AudioPackRegistry:
           builds ``JishoProvider`` inline, this registry intentionally returns
           only local pack fetchers and carries no network-fetcher knowledge.
 
+        ``load_result`` is an optional sink for the user-facing warnings (duck
+        typed: anything with a ``warnings`` list). ``None`` keeps them in the
+        log only.
+
         Returns only :class:`LocalAudioPackFetcher` instances (pack entries).
         """
+        language = config_language(config)
         chain: list[LocalAudioPackFetcher] = []
         for entry in config.expression_audio_chain:
             if not entry.enabled:
@@ -226,6 +243,24 @@ class AudioPackRegistry:
                     entry.pack_id,
                     meta.source_db if meta.format == "android_db" else meta.pack_dir,
                 )
+                continue
+            if meta.language != language:
+                # A ko pack answering a zh run returns confident nonsense;
+                # skipping is the only safe read of a cross-language slot.
+                logger.warning(
+                    "Audio pack '%s' is indexed for '%s'; skipped for '%s'",
+                    entry.pack_id,
+                    meta.language,
+                    language,
+                )
+                if load_result is not None:
+                    load_result.warnings.append(
+                        tr_format(
+                            QCoreApplication.translate("ResourceChain", "Audio pack '%1' is for %2; skipped"),
+                            entry.pack_id,
+                            meta.language,
+                        )
+                    )
                 continue
             chain.append(
                 LocalAudioPackFetcher(
