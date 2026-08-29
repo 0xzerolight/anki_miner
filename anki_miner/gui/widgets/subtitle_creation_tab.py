@@ -44,6 +44,7 @@ from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.asr import _engine, ggml_model_installer, model_manager
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
@@ -137,11 +138,29 @@ class SubtitleCreationTab(_ToolTabBase):
         config it captured at construction.
         """
         self.config = config
+        self.language_label.setText(self._language_display())
         self._refresh_engine_state()
 
     # ------------------------------------------------------------------
     # UI construction
     # ------------------------------------------------------------------
+
+    def _language_display(self) -> str:
+        """English name of the active mining language for the read-only label.
+
+        ja returns the literal "Japanese": tests/unit/test_subtitle_creation_tab.py
+        ::test_language_label_shows_japanese asserts that exact word and pre-existing
+        tests are never edited. Native display names live on the profile and are
+        used only for a language this table does not know.
+        """
+        code = self.config.language
+        if code == "ja":
+            return self.tr("Japanese")
+        if code == "ko":
+            return self.tr("Korean")
+        if code == "zh":
+            return self.tr("Chinese")
+        return get_profile(code).display_name
 
     def _setup_ui(self) -> None:
         scroll_area = QScrollArea()
@@ -176,7 +195,7 @@ class SubtitleCreationTab(_ToolTabBase):
         # Read-only language label
         lang_row = QHBoxLayout()
         lang_row.addWidget(QLabel(self.tr("Language:")))
-        self.language_label = QLabel(self.tr("Japanese"))
+        self.language_label = QLabel(self._language_display())
         lang_row.addWidget(self.language_label)
         lang_row.addStretch()
         layout.addLayout(lang_row)
