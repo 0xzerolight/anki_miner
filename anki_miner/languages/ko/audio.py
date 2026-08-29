@@ -2,8 +2,10 @@
 
 Word audio defaults to Google Translate TTS with tl=ko. JPod101 is not in the
 chain: its endpoint path is literally /dictionary/japanese/, so it can only ever
-answer Japanese. A KoreanClass101 entry is added ONLY after the live probe (Task
-3.8) confirms the endpoint family generalises.
+answer Japanese. There is no KoreanClass101 entry either, and this is settled
+rather than pending: the endpoint family does not generalise. The Korean bucket
+prefix answers an S3 AccessDenied at the transport level, not an
+application-level miss, so no per-word URL under it can resolve.
 
 The ladder puts the ORTHOGRAPHIC form in the reading slot: the Google fetcher
 synthesises from that slot, and Korean TTS applies its own phonology, so 국물 is
@@ -16,8 +18,8 @@ han spelling would share one audio file. sentence_cache_stem_prefix does the sam
 for sentence TTS. Japanese stems are unchanged.
 
 Sentence TTS uses Papago's native Korean voice. kyuri is the Korean speaker id,
-sibling of the Japanese yuri already used at sentence_tts_fetcher.py:68; Task
-3.8 re-confirms it against the live endpoint before release.
+sibling of the Japanese yuri already used at sentence_tts_fetcher.py:68, and it
+is live-confirmed: the endpoint returns real Korean audio for it.
 """
 
 from __future__ import annotations

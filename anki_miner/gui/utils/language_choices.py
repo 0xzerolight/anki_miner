@@ -4,10 +4,9 @@
 ``__init__`` (Stage 0); ``get_profile`` lives in ``languages.registry``, which
 is the only import surface consumers use - ``languages/__init__.py`` stays
 sealed because ``profile.py`` imports ``services.resource_catalog`` at module
-level. A code is only offerable once ``get_profile`` builds: ko is declared
-from Stage 0 and registered in Stage 3, and a tokenizer extra can be absent
-from any build, so the selector resolves every code and drops what does not
-resolve rather than assuming.
+level. A code is only offerable once ``get_profile`` builds, and a tokenizer
+extra can be absent from any build, so the selector resolves every code and
+drops what does not resolve rather than assuming.
 """
 
 from __future__ import annotations

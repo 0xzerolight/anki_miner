@@ -277,7 +277,7 @@ echo
 
 # --- 2d. language smokes: each mining language's tokenizer data survived -------
 # OPT-IN, empty by default. BUNDLE_SMOKE_LANGS is a space-separated list of
-# mining language codes; release.yml sets it to "zh". Empty means the loop runs
+# mining language codes; release.yml sets it to "zh ko". Empty means the loop runs
 # zero times, which is what keeps the app-invocation count (and therefore
 # tests/unit/test_bundle_smoke.py's len(homes) == 5) unchanged for every caller
 # that does not opt in.
