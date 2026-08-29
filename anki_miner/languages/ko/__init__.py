@@ -144,7 +144,7 @@ def build_profile() -> LanguageProfile:
             excluded_subtypes=ko_morphology.KO_EXCLUDED_SUBTYPES,
             labels=ko_morphology.KO_POS_LABELS,
         ),
-        catalog=KO_CATALOG,  # empty tuple until task 3.11 fills ko/catalog.py
+        catalog=KO_CATALOG,  # empty by design; ko/catalog.py documents the manual imports
         capabilities=frozenset({"hangul_filters", "hanja"}),
         card_field_defaults=KO_CARD_FIELDS,
         render_hooks=(),  # filled by the ko render-hooks task later in this stage
