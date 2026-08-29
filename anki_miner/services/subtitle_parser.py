@@ -345,6 +345,7 @@ class SubtitleParserService:
         *,
         mined_form_policy: "MinedFormPolicy | None" = None,
         reading_support: "ReadingSupport | None" = None,
+        script_gate: Callable[[str], bool] | None = None,
     ):
         """Initialize the subtitle parser.
 
@@ -401,6 +402,12 @@ class SubtitleParserService:
                 path, since the ja profile's parser factory passes nothing —
                 runs today's JA derivation verbatim. Duck-typed like
                 ``mined_form_policy``.
+            script_gate: Optional final script decision for the inclusion rule
+                (``languages.profile.ScriptSupport.contains_target_script``).
+                ``None`` — every JA path — keeps ``should_include``'s kanji /
+                katakana / loanword ladder exactly as it was; a callable
+                replaces only its last step, which is what lets a pure-hangul
+                Korean word be mined at all.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -443,6 +450,7 @@ class SubtitleParserService:
         self._inclusion_rule = TokenInclusionRule(
             allowed_pos=frozenset(config.allowed_pos),
             excluded_subtypes=frozenset(config.excluded_subtypes),
+            script_gate=script_gate,
         )
         # Exact-headword existence serves compound/front remap gates; the sibling
         # rules-aware probe serves deinflection overrides. Keeping them distinct
