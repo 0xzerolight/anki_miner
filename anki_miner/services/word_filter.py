@@ -5,8 +5,8 @@ from __future__ import annotations
 import dataclasses
 import logging
 import unicodedata
-from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Any, NamedTuple
+from collections.abc import Callable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, NamedTuple, TypedDict
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import LineLemmas, TokenizedWord
@@ -23,10 +23,64 @@ from anki_miner.utils import (
 )
 
 if TYPE_CHECKING:
+    from anki_miner.languages.profile import MinedFormPolicy, ScriptSupport
     from anki_miner.services.word_list_service import WordListService
     from anki_miner.services.wordset_service import WordsetService
 
 logger = logging.getLogger(__name__)
+
+#: The JA script predicates, keyed by the option ids ``JaScriptSupport``
+#: declares. Runs when no ``ScriptSupport`` was injected, so a caller with no
+#: profile in scope keeps the pre-extraction behaviour verbatim.
+_JA_SCRIPT_PREDICATES: dict[str, Callable[[str], bool]] = {
+    "hiragana_only": is_hiragana_only,
+    "katakana_only": is_katakana_only,
+    "mixed_kana_only": is_mixed_kana_only,
+}
+
+
+def _ja_matches(option_id: str, form: str) -> bool:
+    """``ScriptSupport.matches`` for Japanese, without importing ``languages``."""
+    predicate = _JA_SCRIPT_PREDICATES.get(option_id)
+    return False if predicate is None else predicate(form)
+
+
+def enabled_script_options(script: ScriptSupport, config: AnkiMinerConfig) -> frozenset[str]:
+    """Option ids this *config* turns on for *script*.
+
+    An option whose ``config_field`` is "" has no switch of its own and is
+    implicit: it fires only when EVERY field-backed option is on. For ja that
+    is ``mixed_kana_only`` when both booleans are set — the pre-extraction
+    three-branch derivation, verbatim. ko's two options are both field-backed;
+    zh declares none, so the set is always empty and the filter is skipped.
+    """
+    options = script.filter_options()
+    field_backed = [opt for opt in options if opt.config_field]
+    enabled = {opt.option_id for opt in field_backed if getattr(config, opt.config_field, False)}
+    if field_backed and len(enabled) == len(field_backed):
+        enabled.update(opt.option_id for opt in options if not opt.config_field)
+    return frozenset(enabled)
+
+
+class ScriptOptionsKwarg(TypedDict, total=False):
+    """The ``enabled_options=`` keyword a filter call is splatted with."""
+
+    enabled_options: frozenset[str]
+
+
+def script_options_kwarg(options: frozenset[str], language: str) -> ScriptOptionsKwarg:
+    """``{"enabled_options": options}``, or nothing at all for the "ja" default.
+
+    ``filter_by_script_type``'s ``None`` path re-derives exactly this set from
+    the two kana booleans, so a ja call site that spells the keyword out and one
+    that omits it are equivalent — and omitting it is what keeps the
+    pre-transition call byte-identical all the way down, including the test
+    doubles that mirror the method's exact signature. Splat this instead of
+    passing ``enabled_options=`` unconditionally. Same shape and same reason as
+    ``services/_sqlite_index.language_kwarg``.
+    """
+    return {} if language == "ja" else {"enabled_options": options}
+
 
 #: Joiner between merged cue texts (Issue #120 line expansion). A space
 #: mirrors _clean_line_text's own physical-line flattening (" ".join), and the
@@ -107,7 +161,14 @@ def _normalize_sentence(text: str) -> str:
 class WordFilterService:
     """Filter vocabulary words based on various criteria (stateless service)."""
 
-    def __init__(self, config: AnkiMinerConfig, tagger: Any | None = None):
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        tagger: Any | None = None,
+        *,
+        mined_form: MinedFormPolicy | None = None,
+        script: ScriptSupport | None = None,
+    ):
         """Initialize the word filter service.
 
         Args:
@@ -117,9 +178,22 @@ class WordFilterService:
                 line. Required only when ``config.bold_target_in_sentence``
                 is True AND ``filter_i_plus_one`` is called; otherwise the
                 bolded-field recompute is skipped and the tagger is unused.
+            mined_form: The SAME card-front policy the parser emitted these
+                words with (``languages.profile.MinedFormPolicy``). Read only
+                by ``_line_preserves_mined_form``, which must recompute a
+                candidate line's front with the policy that produced
+                ``word.mined_form``. ``None`` runs the JA static verbatim.
+                Duck-typed: ``services`` keeps no runtime import of
+                ``languages``.
+            script: The active language's ``languages.profile.ScriptSupport``,
+                deciding each script-filter option id in
+                ``filter_by_script_type``. ``None`` runs the JA predicates
+                verbatim. Duck-typed, same as ``mined_form``.
         """
         self.config = config
         self.tagger = tagger
+        self._mined_form = mined_form
+        self._script = script
 
     def filter_unknown(
         self,
@@ -304,6 +378,8 @@ class WordFilterService:
         words: list[TokenizedWord],
         exclude_hiragana_only: bool = False,
         exclude_katakana_only: bool = False,
+        *,
+        enabled_options: frozenset[str] | None = None,
     ) -> list[TokenizedWord]:
         """Drop words whose card form is written entirely in a single kana script.
 
@@ -327,22 +403,32 @@ class WordFilterService:
             words: Words to filter.
             exclude_hiragana_only: Drop words whose mined form is all hiragana.
             exclude_katakana_only: Drop words whose mined form is all katakana.
+            enabled_options: The option ids to apply, already derived from the
+                active profile by ``enabled_script_options``. ``None`` — the
+                only shape a caller with no profile in scope can pass — falls
+                back to the two booleans through the JA derivation below. An
+                EMPTY set is not ``None``: it means "this language turns none
+                of its options on" and drops nothing.
 
         Returns:
             Filtered list of words.
         """
-        exclude_mixed_kana = exclude_hiragana_only and exclude_katakana_only
-        result = []
-        for word in words:
-            form = word.mined_form
-            if exclude_hiragana_only and is_hiragana_only(form):
-                continue
-            if exclude_katakana_only and is_katakana_only(form):
-                continue
-            if exclude_mixed_kana and is_mixed_kana_only(form):
-                continue
-            result.append(word)
-        return result
+        if enabled_options is None:
+            # ja derivation, byte-identical to the pre-extraction body: mixed
+            # kana is dropped only when BOTH exclusions are on.
+            opts = set()
+            if exclude_hiragana_only:
+                opts.add("hiragana_only")
+            if exclude_katakana_only:
+                opts.add("katakana_only")
+            if exclude_hiragana_only and exclude_katakana_only:
+                opts.add("mixed_kana_only")
+        else:
+            opts = set(enabled_options)
+        if not opts:
+            return list(words)
+        matches: Callable[[str, str], bool] = _ja_matches if self._script is None else self._script.matches
+        return [w for w in words if not any(matches(oid, w.mined_form) for oid in opts)]
 
     def filter_by_wordsets(
         self,
@@ -506,8 +592,7 @@ class WordFilterService:
             result.append(self._swap_word_to_line(word, match))
         return result
 
-    @staticmethod
-    def _line_preserves_mined_form(word: TokenizedWord, line: LineLemmas) -> bool:
+    def _line_preserves_mined_form(self, word: TokenizedWord, line: LineLemmas) -> bool:
         """Whether swapping to ``line`` keeps a surface-mined card front."""
         if word.pos in ("動詞", "形容詞"):
             return True
@@ -522,7 +607,17 @@ class WordFilterService:
         # Thread the word's own pronunciation evidence (S4-01): omitting it takes
         # the no-evidence compatibility path, which folds lexical vowel-tail
         # nouns (舞い → 舞) and wrongly rejects every line for such words.
-        return select_mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation) == word.mined_form
+        #
+        # Compare like with like: the candidate line's form must be recomputed by
+        # the SAME policy that produced word.mined_form. Recomputing with the JA
+        # table while the word carries a profile override rejects EVERY line for a
+        # non-ja word — a Korean VV falls through to `return surface`, which is
+        # never the override — emptying the curator's sentence picker silently.
+        if self._mined_form is None:
+            recomputed = select_mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation)
+        else:
+            recomputed = self._mined_form.mined_form(word.pos, word.orth_base, word.lemma, surface, word.pronunciation)
+        return recomputed == word.mined_form
 
     def _swap_word_to_line(self, word: TokenizedWord, match: LineLemmas) -> TokenizedWord:
         """Rebuild ``word`` as if it had been mined from the ``match`` line.

@@ -196,6 +196,12 @@ class TokenizedWord:
     # WordFilterService.expand_word_lines before phase 3 — the dialog stores
     # intent, the processor rebuilds text/spans/furigana.
     line_expansion: tuple[int, int] = (0, 0)
+    # The parser's resolved card front, set at the emit site. Non-empty means
+    # "already decided" — the profile's MinedFormPolicy answered, and for a
+    # non-ja token select_mined_form's JA POS table would answer wrongly
+    # (a Korean VV falls through to `return surface`). Empty on every
+    # hand-built TokenizedWord, which keeps the property's JA behaviour.
+    mined_form_override: str = ""
 
     @property
     def bold_end(self) -> int:
@@ -257,7 +263,7 @@ class TokenizedWord:
         ``気い`` → ``気``) folds to the lemma when its spelling or UniDic
         pronunciation proves elongation — see ``select_mined_form`` for the guards.
         """
-        return select_mined_form(
+        return self.mined_form_override or select_mined_form(
             self.pos,
             self.orth_base,
             self.lemma,

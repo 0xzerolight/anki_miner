@@ -23,6 +23,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import (
     CANCELLED_ERROR,
     AnkiWriteState,
@@ -51,6 +52,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
+from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -68,6 +70,7 @@ PIPELINE_STAGE_COUNT = 5
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
+    from anki_miner.languages.profile import LanguageProfile
     from anki_miner.models import LineLemmas
     from anki_miner.models.reading import ImageRef, ReadingDocument
     from anki_miner.services.audio_packs.registry import AudioPackRegistry
@@ -209,6 +212,12 @@ class _EpisodeContext:
 class EpisodeProcessor:
     """Orchestrate processing of a single episode."""
 
+    #: Backing store for :attr:`profile`. A CLASS attribute so it is readable on
+    #: an instance built with ``EpisodeProcessor.__new__`` — a pre-existing test
+    #: does that and hand-sets only the collaborators its phase needs, so
+    #: ``__init__`` never runs and no instance attribute exists.
+    _profile: LanguageProfile | None = None
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -232,6 +241,8 @@ class EpisodeProcessor:
         audio_pack_registry: AudioPackRegistry | None = None,
         sentence_audio_fetcher: SentenceAudioFetcher | None = None,
         owns_lookup_services: bool = True,
+        *,
+        profile: LanguageProfile | None = None,
     ):
         """Initialize the episode processor.
 
@@ -283,8 +294,16 @@ class EpisodeProcessor:
                 lazily reopen after close, so a between-items close would
                 silently kill frequency data for the rest of the run). Default
                 True preserves the per-run ownership of every other caller.
+            profile: Optional language profile driving the phase-2 probe's
+                candidate ladder and the phase-5 render hooks. ``None``
+                resolves it from ``config.language``, which is what every
+                pre-existing construction site (and every test) gets.
         """
         self.config = config
+        # Resolved, not required: every existing caller builds this positionally
+        # or by the create_episode_processor kwargs, and ja is the only profile
+        # until Stage 2.
+        self.profile = profile if profile is not None else get_profile(config.language)
         self.subtitle_parser = subtitle_parser
         self.word_filter = word_filter
         self.media_extractor = media_extractor
@@ -328,6 +347,28 @@ class EpisodeProcessor:
             expression_audio_fetcher=expression_audio_fetcher,
             sentence_audio_fetcher=sentence_audio_fetcher,
         )
+
+    @property
+    def profile(self) -> LanguageProfile:
+        """The run's language profile — the ONE place this processor answers
+        "what language is this".
+
+        Every phase reads this attribute; no phase re-resolves
+        ``get_profile(self.config.language)`` for itself, which is how the
+        phase-2 script filter used to disagree with the phase-2 probe and the
+        phase-5 hook loop when a caller injected a profile.
+
+        Lazy, because the fallback has to survive an instance that skipped
+        ``__init__`` (see :attr:`_profile`).
+        """
+        profile = self._profile
+        if profile is None:
+            profile = self._profile = get_profile(self.config.language)
+        return profile
+
+    @profile.setter
+    def profile(self, profile: LanguageProfile) -> None:
+        self._profile = profile
 
     def cancel(self) -> None:
         """Request cancellation of processing."""
@@ -869,11 +910,17 @@ class EpisodeProcessor:
                 }
             )
             has_def = self.definition_service.has_offline_definitions(probe_terms) or {}
+            # Candidate ladder comes from the PROFILE, never from
+            # definition_service: pre-existing tests stub that service with a
+            # bare MagicMock and assert on this probe's contents, so routing
+            # here through it would starve the probe. JaLookupStrategy is a
+            # pure delegate to DefinitionService._fallback_candidates, so the
+            # Japanese terms are byte-identical to the pre-profile static call.
             fallback_candidates = [
                 (
                     []
                     if has_def.get(w.mined_form) or has_def.get(alternate)
-                    else DefinitionService._fallback_candidates(w.mined_form, alternate, None)
+                    else self.profile.lookup.candidates(w.mined_form, alternate, None)
                 )
                 for w, alternate in zip(unknown_words, safe_alternates, strict=True)
             ]
@@ -988,15 +1035,21 @@ class EpisodeProcessor:
                     )
                 )
 
-        # Script-type filter (hiragana-only / katakana-only). Issue #57.
-        if (
-            self.config.exclude_hiragana_only_words or self.config.exclude_katakana_only_words
-        ) and not self.config.bypass_optional_filters:
+        # Script-type filter (for ja: hiragana-only / katakana-only). Issue #57.
+        # For ja the guard is equivalent to the old two-boolean `or` — neither
+        # box ticked derives an empty set, so the block is skipped exactly as
+        # before — and the derived ids are the same three the old body applied.
+        # The keyword is SPLATTED, not spelled out: ja omits it (the filter's
+        # own None path re-derives the identical set from the two booleans), so
+        # the ja call shape stays byte-identical down to the test doubles.
+        script_options = enabled_script_options(self.profile.script, self.config)
+        if script_options and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_script_type(
                 unknown_words,
                 exclude_hiragana_only=self.config.exclude_hiragana_only_words,
                 exclude_katakana_only=self.config.exclude_katakana_only_words,
+                **script_options_kwarg(script_options, self.config.language),
             )
             removed = before - len(unknown_words)
             script_rejects = removed
@@ -1483,6 +1536,35 @@ class EpisodeProcessor:
         )
         return definitions, glossaries, pitch_data
 
+    def _apply_render_hooks(self, word: Any, definition: str, extra_fields: dict[str, str]) -> None:
+        """Merge non-ja hook fields into ``extra_fields`` under LOGICAL keys.
+
+        ``definition`` is phase 5's ``card_definition`` local. This task does
+        not read it — Stage 2A task 2A.10 adds the single line that stashes it
+        on the word, inside the ja gate, so ``ZhMeasureWordHook`` can see the
+        CC-CEDICT ``CL:`` marker. The parameter is declared here so 2A.10 adds
+        a line and never widens a signature.
+
+        JA's pitch, furigana, glossary and frequency fields are rendered inline
+        in _phase5_create and must NEVER route through a hook — hence the gate.
+        AnkiService maps a logical key to an Anki field name via
+        config.anki_fields and skips any whose configured name is empty.
+        THE PROCESSOR'S OWN VALUES WIN a collision: a hook may only fill a key
+        the pipeline left unset. A raising hook is logged and skipped so one
+        bad hook cannot fail the run.
+        """
+        if self.config.language == "ja":
+            return
+        for hook in self.profile.render_hooks:
+            try:
+                rendered = hook.render(word)
+            except Exception:
+                logger.warning("Render hook %s failed", type(hook).__name__, exc_info=True)
+                continue
+            for key, value in rendered.items():
+                if value and key not in extra_fields:
+                    extra_fields[key] = value
+
     def _phase5_create(
         self,
         ctx: _EpisodeContext,
@@ -1602,6 +1684,8 @@ class EpisodeProcessor:
             card_definition = definition
             if definition_mapped:
                 card_definition = attach_card_style_block(definition, dict_css_entries=episode_dict_css_entries)
+
+            self._apply_render_hooks(word, card_definition, extra_fields)
 
             card_data.append(
                 CardPayload(

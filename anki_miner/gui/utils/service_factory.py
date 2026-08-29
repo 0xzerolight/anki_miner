@@ -14,6 +14,7 @@ import contextlib
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypedDict
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -22,6 +23,8 @@ from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
+from anki_miner.languages.profile import LookupStrategy
+from anki_miner.languages.registry import get_profile
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
@@ -132,6 +135,32 @@ def _load_dict_registry(
     return registry
 
 
+class _LookupKwarg(TypedDict, total=False):
+    """The ``lookup=`` keyword bundle a ``DefinitionService`` call is splatted with."""
+
+    lookup: LookupStrategy
+
+
+def _lookup_kwarg(config: AnkiMinerConfig) -> _LookupKwarg:
+    """``{"lookup": strategy}``, or nothing at all for the default JA strategy.
+
+    ``DefinitionService``'s ``lookup=None`` default *is* the JA candidate ladder
+    and the JA strategy is a pure delegate to it, so for Japanese the two calls
+    are the same behaviour — and only the shorter one is byte-identical to the
+    pre-transition call. That matters here because pre-existing tests pin the
+    exact JA construction shape (``assert_called_once_with(config,
+    providers=..., registry=...)``), which any extra keyword would break; task
+    1A.4's controller ruling therefore keeps the JA path byte-identical and
+    passes the keyword only for a non-JA profile. Mirrors Stage 0's
+    ``services/_sqlite_index.language_kwarg``.
+
+    Gated on the strategy *object*, not on ``config.language`` — outside
+    ``anki_miner/languages/`` there are no language-code checks.
+    """
+    lookup = get_profile(config.language).lookup
+    return {} if lookup is get_profile("ja").lookup else {"lookup": lookup}
+
+
 def build_definition_service(
     config: AnkiMinerConfig,
     load_result: ServiceLoadResult | None = None,
@@ -161,7 +190,9 @@ def build_definition_service(
     if registry is None:
         registry = _load_dict_registry(config, load_result)
     providers = registry.build_provider_chain(config)
-    definition_service = DefinitionService(config, providers=providers, registry=registry)
+    # The single DefinitionService construction site, so injecting here covers
+    # create_services, create_shared_lookup_services and the PrewarmWorker.
+    definition_service = DefinitionService(config, providers=providers, registry=registry, **_lookup_kwarg(config))
 
     # Fully-disabled chain: nothing below the indexed gate can fire, so warn
     # here — otherwise mining silently produces definition-less cards.
@@ -709,7 +740,12 @@ def create_services(
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
-    word_filter = WordFilterService(config, tagger=subtitle_parser.tagger)
+    word_filter = WordFilterService(
+        config,
+        tagger=subtitle_parser.tagger,
+        mined_form=get_profile(config.language).mined_form,
+        script=get_profile(config.language).script,
+    )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
         anki_service = AnkiService(config)
@@ -857,6 +893,10 @@ def create_episode_processor(
         pitch_registry=services.pitch_registry,
         audio_pack_registry=services.audio_pack_registry,
         owns_lookup_services=shared_lookup is None,
+        # Resolved once here so both processors of a shared-lookup run agree on
+        # one profile instance (the registry caches per code, so they would
+        # anyway — passing it keeps the composition root the single resolver).
+        profile=get_profile(config.language),
     )
 
 

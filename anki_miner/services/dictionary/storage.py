@@ -18,13 +18,16 @@ import sqlite3
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, NamedTuple
+from typing import TYPE_CHECKING, Callable, Iterable, NamedTuple
 
 import anki_miner.services._sqlite_index as _sqlite_index
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.utils.text_utils import _is_kana_only, _is_kanji, katakana_to_hiragana
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import DictKeyFolding
 
 # v6: no table change — bumped to force a one-time reimport with NFC-normalized
 # term and reading keys.
@@ -295,6 +298,37 @@ def _homograph_keep_mask(word: str, rows: list[tuple[str, str]], lemma: str | No
     return [True] * len(rows)
 
 
+def _nfc(value: str) -> str:
+    """Term-key fold for Japanese: NFC only (schema v6)."""
+    return unicodedata.normalize("NFC", value)
+
+
+# The key-folding seam. Every import/query helper below takes a keyword-only
+# ``keys: DictKeyFolding | None``; ``None`` selects the Japanese pair above, which
+# is what every existing caller and every committed index was built with. Folding
+# is a strategy, NEVER stored schema — the index stays at SCHEMA_VERSION 6
+# whichever folding wrote it.
+#
+# The two halves must be SYMMETRIC: an index written with one folding and queried
+# with another silently returns zero rows (no exception, no log line), so the
+# import site and the provider must always be handed the same profile's
+# ``dict_keys``.
+def _folders(
+    keys: DictKeyFolding | None,
+) -> tuple[Callable[[str], str], Callable[[str | None], str | None]]:
+    """Resolve the (term, reading) folding pair once per call."""
+    if keys is None:
+        return _nfc, _fold_reading
+    return keys.fold_term, keys.fold_reading
+
+
+def _keep_mask_fn(
+    keys: DictKeyFolding | None,
+) -> Callable[[str, list[tuple[str, str]], str | None], list[bool]]:
+    """Resolve the render-path homograph scope once per call."""
+    return _homograph_keep_mask if keys is None else keys.homograph_keep_mask
+
+
 def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
     """Open *db_path* tuned for a one-shot bulk load.
 
@@ -372,6 +406,7 @@ def bulk_insert(
     *,
     progress: Callable[[int], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    keys: DictKeyFolding | None = None,
 ) -> int:
     """Insert rows in batched transactions. Returns total inserted.
 
@@ -379,10 +414,16 @@ def bulk_insert(
     ``executemany``. ``cancel_check`` is polled before each batch and aborts
     with ``OperationCancelled("Import cancelled")`` when true.
 
+    ``keys`` folds the term/reading key columns; ``None`` is the Japanese pair
+    (NFC term, hiragana-folded reading) every committed index was written with.
+    Whatever writes an index MUST be queried with the same folding — see
+    :func:`_folders`.
+
     The sqlite3 `with` context manager commits/rolls back but does NOT close
     the connection — we close explicitly so the db file is not held open
     across the importer's staging-dir cleanup (matters on Windows).
     """
+    fold_t, fold_r = _folders(keys)
     total = 0
     conn = _connect_for_bulk_write(db_path)
     try:
@@ -409,8 +450,8 @@ def bulk_insert(
             # collate to one key (schema v3); lookup folds the query side too.
             batch.append(
                 (
-                    _scrub_surrogates(unicodedata.normalize("NFC", row.term)),
-                    _scrub_surrogates(_fold_reading(row.reading)),
+                    _scrub_surrogates(fold_t(row.term)),
+                    _scrub_surrogates(fold_r(row.reading)),
                     _scrub_surrogates(row.content),
                     _scrub_surrogates(row.tags),
                     _scrub_surrogates(row.rules),
@@ -596,7 +637,12 @@ def _substitute_redirect_rows(
 
 
 def lookup(
-    conn: sqlite3.Connection, word: str, reading: str | None = None, lemma: str | None = None
+    conn: sqlite3.Connection,
+    word: str,
+    reading: str | None = None,
+    lemma: str | None = None,
+    *,
+    keys: DictKeyFolding | None = None,
 ) -> list[tuple[str, str, int | None]]:
     """Return up to ``_LOOKUP_LIMIT`` (content, tags, sequence) triples matching
     word (term or folded reading), reading-boosted then ranked.
@@ -615,18 +661,22 @@ def lookup(
     while the term comparison (and the ``(term = ?)`` priority tiebreak) binds the
     raw word — a katakana query still matches a kanji headword's folded reading
     (schema v3, touch point a).
+
+    ``keys`` folds both key spaces; ``None`` is the Japanese pair this index was
+    written with (see :func:`_folders`).
     """
-    word = unicodedata.normalize("NFC", word)
-    folded_word = katakana_to_hiragana(word)
-    folded_boost = _fold_reading(reading)
-    normalized_lemma = unicodedata.normalize("NFC", lemma) if lemma else None
+    fold_t, fold_r = _folders(keys)
+    word = fold_t(word)
+    folded_word = fold_r(word)
+    folded_boost = fold_r(reading)
+    normalized_lemma = fold_t(lemma) if lemma else None
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
     # rows: (content, tags, sequence, term). Scope homographs (Rule A/A′/B) over
     # the ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
     # filter-before-cap order ``lookup_many`` uses. Row-for-row equal to
     # ``lookup_many`` on every input: neither fetch caps rows in SQL (see the
     # ``_LOOKUP_LIMIT`` comment above).
-    keep = _homograph_keep_mask(word, [(row[3], row[0]) for row in rows], normalized_lemma)
+    keep = _keep_mask_fn(keys)(word, [(row[3], row[0]) for row in rows], normalized_lemma)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
     # resolved canonical entry can't be truncated by its own pointer row.
@@ -634,7 +684,9 @@ def lookup(
     return projected[:_LOOKUP_LIMIT]  # type: ignore[return-value]
 
 
-def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, str, int | None, str]]:
+def lookup_with_rules(
+    conn: sqlite3.Connection, word: str, *, keys: DictKeyFolding | None = None
+) -> list[tuple[str, str, int | None, str]]:
     """Return (content, tags, sequence, rules) rows matching ``word`` by term or
     folded reading, ranked like :func:`lookup` (no reading boost).
 
@@ -643,13 +695,17 @@ def lookup_with_rules(conn: sqlite3.Connection, word: str) -> list[tuple[str, st
     rendering. A NULL/absent ``rules`` column normalises to ``""`` (accept
     unconditionally at the caller). Katakana folding matches ``lookup``: a
     katakana candidate still matches a kanji headword's hiragana-folded reading.
+
+    ``keys`` folds both key spaces; ``None`` is the Japanese pair (see
+    :func:`_folders`).
     """
-    word = unicodedata.normalize("NFC", word)
-    folded_word = katakana_to_hiragana(word)
+    fold_t, fold_r = _folders(keys)
+    word = fold_t(word)
+    folded_word = fold_r(word)
     rows = conn.execute(_LOOKUP_RULES_SQL, (word, folded_word, word)).fetchall()
     # rows: (content, tags, sequence, rules, term). Render-side, so scope
     # homographs (Rule A/B) then apply the pool cap, mirroring ``lookup``.
-    keep = _homograph_keep_mask(word, [(row[4], row[0]) for row in rows])
+    keep = _keep_mask_fn(keys)(word, [(row[4], row[0]) for row in rows], None)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
     projected = _substitute_redirect_rows(
         conn,
@@ -689,6 +745,8 @@ def lookup_many(
     pairs: list[tuple[str, str | None]],
     scope_homographs: bool = True,
     lemmas: dict[str, str] | None = None,
+    *,
+    keys: DictKeyFolding | None = None,
 ) -> dict[str, list[tuple[str, str, int | None]]]:
     """Batch variant of :func:`lookup`.
 
@@ -717,7 +775,12 @@ def lookup_many(
     Returns a dict keyed by every requested word (duplicate words collapse to the
     first reading seen). A word with no matches maps to ``[]``, mirroring
     ``lookup``'s empty-result case.
+
+    ``keys`` folds both key spaces; ``None`` is the Japanese pair (see
+    :func:`_folders`).
     """
+    fold_t, fold_r = _folders(keys)
+    keep_mask = _keep_mask_fn(keys)
     # Preserve first-seen order; collapse duplicate words to one bucket (first
     # reading wins, matching the caller's own word-level dedup).
     unique_pairs: list[tuple[str, str | None]] = []
@@ -731,11 +794,11 @@ def lookup_many(
     if not unique_pairs:
         return result
 
-    normalized_by_word = {word: unicodedata.normalize("NFC", word) for word, _ in unique_pairs}
+    normalized_by_word = {word: fold_t(word) for word, _ in unique_pairs}
 
     # Per-word folded boost reading (hiragana-folded to match stored readings);
     # None keeps the wildcard (no-boost) ordering for that word.
-    boost_by_word: dict[str, str | None] = {w: _fold_reading(r) for w, r in unique_pairs}
+    boost_by_word: dict[str, str | None] = {w: fold_r(r) for w, r in unique_pairs}
     unique_words = [w for w, _ in unique_pairs]
 
     for start in range(0, len(unique_words), _LOOKUP_MANY_CHUNK):
@@ -759,7 +822,7 @@ def lookup_many(
             # must be the folded query word (touch point b) — a katakana
             # requested word still fetches the row whose folded reading it
             # matches.
-            folded_term = katakana_to_hiragana(normalized)
+            folded_term = fold_r(normalized)
             subqueries.append(
                 "SELECT ? AS req_idx, id, term, reading, content, tags, score, sequence FROM entries "
                 "WHERE term = ? OR reading = ?"
@@ -788,7 +851,7 @@ def lookup_many(
         for req_idx, row_id, term, reading, content, tags, score, sequence in rows:
             w = chunk[req_idx]
             tags_val = tags if tags is not None else ""
-            folded_reading = katakana_to_hiragana(reading) if reading is not None else None
+            folded_reading = fold_r(reading)
             seq_key = _seq_key(sequence)
             score_key = _score_key(score)
             term_priority = 0 if term == normalized_by_word[w] else 1
@@ -804,8 +867,8 @@ def lookup_many(
                 # scoping then sorting equals ``lookup``'s scope-the-sorted-set.
                 # e[5]=term, e[6]=content (see the entry tuple above).
                 raw_lemma = (lemmas or {}).get(w)
-                normalized_lemma = unicodedata.normalize("NFC", raw_lemma) if raw_lemma else None
-                keep = _homograph_keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries], normalized_lemma)
+                normalized_lemma = fold_t(raw_lemma) if raw_lemma else None
+                keep = keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries], normalized_lemma)
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
             entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
             pending[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries]
@@ -836,7 +899,7 @@ def lookup_many(
 _EXIST_CHUNK = 900
 
 
-def terms_exist(conn: sqlite3.Connection, terms: list[str]) -> set[str]:
+def terms_exist(conn: sqlite3.Connection, terms: list[str], *, keys: DictKeyFolding | None = None) -> set[str]:
     """Return the subset of ``terms`` present as an exact ``entries.term`` match.
 
     Reading-column matches deliberately do NOT count: the compound matcher
@@ -844,9 +907,13 @@ def terms_exist(conn: sqlite3.Connection, terms: list[str]) -> set[str]:
     be looked up somehow". Matching on reading would attest every kana
     sequence that happens to be some entry's reading and cause spurious
     token merges.
+
+    ``keys`` folds the term key; ``None`` is the Japanese pair (see
+    :func:`_folders`).
     """
+    fold_t, _fold_r = _folders(keys)
     unique = list(dict.fromkeys(terms))
-    normalized = {term: unicodedata.normalize("NFC", term) for term in unique}
+    normalized = {term: fold_t(term) for term in unique}
     requested_by_term: dict[str, list[str]] = {}
     for requested, term in normalized.items():
         requested_by_term.setdefault(term, []).append(requested)
@@ -900,6 +967,8 @@ def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list
 def exact_term_sequences(
     conn: sqlite3.Connection,
     pairs: list[tuple[str, str | None]],
+    *,
+    keys: DictKeyFolding | None = None,
 ) -> dict[tuple[str, str], set[int]]:
     """Return dictionary sequences for exact ``(term, reading)`` pairs.
 
@@ -917,14 +986,18 @@ def exact_term_sequences(
     (no arrow) are real content and pass through untouched, so ``-N`` and ``+N``
     stay distinct identities for those. Both sides of every identity comparison
     flow through this probe, so the fold is consistent.
+
+    ``keys`` folds both key spaces; ``None`` is the Japanese pair (see
+    :func:`_folders`).
     """
+    fold_t, fold_r = _folders(keys)
     normalized_pairs: list[tuple[str, str]] = []
     for term, reading in pairs:
         if not term or not reading:
             continue
-        folded_reading = _fold_reading(reading)
+        folded_reading = fold_r(reading)
         if folded_reading:
-            normalized_pairs.append((unicodedata.normalize("NFC", term), folded_reading))
+            normalized_pairs.append((fold_t(term), folded_reading))
     normalized_pairs = list(dict.fromkeys(normalized_pairs))
     requested = set(normalized_pairs)
     terms = list(dict.fromkeys(term for term, _ in normalized_pairs))
@@ -940,7 +1013,7 @@ def exact_term_sequences(
             chunk,
         ).fetchall()
         for term, reading, sequence, content in rows:
-            folded_reading = _fold_reading(reading)
+            folded_reading = fold_r(reading)
             if folded_reading is None:
                 continue
             key = (term, folded_reading)

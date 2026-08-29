@@ -8,6 +8,7 @@ import logging
 import sqlite3
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.services.dictionary.dict_css_scope import scope_dict_css
 from anki_miner.services.dictionary.storage import (
@@ -42,6 +43,9 @@ from anki_miner.services.dictionary.storage import (
     terms_readings as storage_terms_readings,
 )
 
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import DictKeyFolding
+
 logger = logging.getLogger(__name__)
 
 # Rendered senses shown per dictionary hit, applied AFTER content-dedup and
@@ -75,10 +79,21 @@ class IndexedDictProvider:
     internally via the GIL + sqlite library mutex.
     """
 
-    def __init__(self, dict_id: str, db_path: Path, display_name: str | None = None):
+    def __init__(
+        self,
+        dict_id: str,
+        db_path: Path,
+        display_name: str | None = None,
+        *,
+        keys: DictKeyFolding | None = None,
+    ):
         self.dict_id = dict_id
         self._db_path = db_path
         self._display_name = display_name or dict_id
+        # Import/query key folding for this index. ``None`` = the Japanese pair
+        # every committed index was written with. MUST be the same folding the
+        # importer used: a mismatch returns zero rows and raises nothing.
+        self._keys = keys
         self._conn: sqlite3.Connection | None = None
         # Guards load()'s check-then-set on ``_conn``: PrewarmWorker and the
         # first mining run can both call load() on a never-loaded provider,
@@ -193,7 +208,7 @@ class IndexedDictProvider:
         if self._conn is None:
             return None
         try:
-            return self._render(storage_lookup(self._conn, word))
+            return self._render(storage_lookup(self._conn, word, keys=self._keys))
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup; treating as miss: %s",
@@ -224,7 +239,9 @@ class IndexedDictProvider:
         if self._conn is None:
             return {w: None for w, _ in pairs}
         try:
-            rows_by_word = storage_lookup_many(self._conn, pairs, scope_homographs=scope_homographs, lemmas=lemmas)
+            rows_by_word = storage_lookup_many(
+                self._conn, pairs, scope_homographs=scope_homographs, lemmas=lemmas, keys=self._keys
+            )
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup_many; treating as all-miss: %s",
@@ -260,7 +277,7 @@ class IndexedDictProvider:
         from anki_miner.services.deinflection import condition_flags_from_rules, conditions_match
 
         try:
-            rows = storage_lookup_with_rules(self._conn, word)
+            rows = storage_lookup_with_rules(self._conn, word, keys=self._keys)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during lookup_fallback; treating as miss: %s",
@@ -286,7 +303,7 @@ class IndexedDictProvider:
         if self._conn is None:
             return set()
         try:
-            return storage_terms_exist(self._conn, terms)
+            return storage_terms_exist(self._conn, terms, keys=self._keys)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during has_terms; treating as all-miss: %s",
@@ -330,7 +347,7 @@ class IndexedDictProvider:
         if self._conn is None:
             return {}
         try:
-            return storage_exact_term_sequences(self._conn, pairs)
+            return storage_exact_term_sequences(self._conn, pairs, keys=self._keys)
         except sqlite3.DatabaseError as e:
             logger.warning(
                 "Dictionary '%s' (%s) raised DatabaseError during exact_term_sequences; treating as all-miss: %s",

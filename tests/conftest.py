@@ -194,6 +194,30 @@ def _clear_resolver_caches():
         _mod._CACHE.clear()
 
 
+@pytest.fixture(autouse=True)
+def _clear_tagger_provider_cache():
+    """Reset ``languages.tagger_provider._TAGGERS`` around every test.
+
+    Same leaked-global class as ``_clear_resolver_caches`` above, and the
+    process-wide sibling of ``tests/unit/languages/test_tagger_provider.py``'s
+    own ``_clear_tagger_cache``. The provider's cache is never evicted in
+    production, so once ANY test warms ``_TAGGERS["ja"]`` every later test on
+    the same ``--dist loadfile`` worker gets the cached tokenizer and never
+    reaches its own monkeypatched construction — which silently defanged
+    ``tests/unit/test_prewarm_worker.py::test_prewarm_swallows_tagger_failure``
+    (its failing ``get_shared_tagger`` was never called). Clearing here restores
+    that pre-existing coverage without touching the pre-existing test.
+
+    Cheap: the ja branch delegates to ``services.tagger.get_shared_tagger``,
+    whose own singleton keeps fugashi construction amortized across the run.
+    """
+    from anki_miner.languages import tagger_provider
+
+    tagger_provider._TAGGERS.clear()
+    yield
+    tagger_provider._TAGGERS.clear()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _isolate_anki_home_session(tmp_path_factory):
     """Session-wide SAFETY FLOOR: home/CONFIG_FILE never resolve to the real

@@ -1,0 +1,36 @@
+"""Process-wide {language: tagger} cache. Never evicted.
+
+``"ja"`` delegates to services.tagger.get_shared_tagger() unchanged — the
+single-flight LockedTagger contract stays exactly where it is. Later stages add
+their branch inside ``_build``, never inside ``get_tagger``, so the cache write
+always happens.
+"""
+
+from __future__ import annotations
+
+import threading
+from typing import Any
+
+_TAGGERS: dict[str, Any] = {}
+_LOCK = threading.Lock()
+
+
+def _build(language: str) -> Any:
+    if language == "ja":
+        from anki_miner.services.tagger import get_shared_tagger
+
+        return get_shared_tagger()
+    raise ValueError(f"No tokenizer registered for language: {language!r}")
+
+
+def get_tagger(language: str = "ja") -> Any:
+    """Return the cached tokenizer for ``language`` (double-checked lock)."""
+    cached = _TAGGERS.get(language)
+    if cached is not None:
+        return cached
+    with _LOCK:
+        cached = _TAGGERS.get(language)
+        if cached is None:
+            cached = _build(language)
+            _TAGGERS[language] = cached
+        return cached
