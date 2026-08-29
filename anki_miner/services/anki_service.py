@@ -5,6 +5,7 @@ import re
 import time
 from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import requests
 from PyQt6.QtCore import QCoreApplication
@@ -31,6 +32,11 @@ from anki_miner.services.anki_note_builder import (
 )
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:
+    # Type-only: `services` must not take a module-level runtime import of
+    # `languages` (profile.py reaches back into services.resource_catalog).
+    from anki_miner.languages.profile import ScriptSupport
 
 logger = logging.getLogger(__name__)
 
@@ -132,16 +138,30 @@ class AnkiService:
     REQUIRED_FIELD_KEYS = _REQUIRED_FIELD_KEYS
     OPTIONAL_FIELD_KEYS = _OPTIONAL_FIELD_KEYS
 
-    def __init__(self, config: AnkiMinerConfig):
+    def __init__(self, config: AnkiMinerConfig, *, script: "ScriptSupport | None" = None):
         """Initialize the Anki service.
 
         Args:
             config: Configuration for Anki integration
+            script: Script support for the vocabulary-scan gate. ``None``
+                resolves it from the configured mining language.
 
         Raises:
             ValueError: If required field keys are missing from config
         """
         self.config = config
+        # Resolved here, not at the call sites: fifteen constructions exist and
+        # only one is a composition root, so a caller-supplied default would
+        # leave fourteen scanning for Japanese under a Korean config.
+        if script is None:
+            from anki_miner.languages.registry import config_language, get_profile
+
+            script = get_profile(config_language(config)).script
+        # Unannotated on purpose: mypy takes the narrowed ScriptSupport from the
+        # parameter, and an annotation here would be evaluated at runtime on
+        # Python <= 3.13 (this module has no `from __future__ import
+        # annotations`), which a TYPE_CHECKING-only name cannot survive.
+        self._script = script
         # What this service can prove about note writes (D30). Only ever
         # escalated by create_cards_batch; reset per mining run by
         # EpisodeProcessor._run_pipeline, which is the sole run boundary.
@@ -572,8 +592,12 @@ class AnkiService:
             logger.warning("Failed to fetch existing vocabulary (filtering disabled): %s", e)
             return set()
 
+    def _is_target_script(self, text: str) -> bool:
+        """Whether *text* is written in the mining language's script."""
+        return self._script.contains_target_script(text)
+
     def _collect_first_field_forms(self, query: str) -> set[str]:
-        """Run ``query`` and return the dedup-normalized Japanese first fields.
+        """Run ``query`` and return the dedup-normalized in-script first fields.
 
         The findNotes → notesInfo → first-field scan shared by
         :meth:`get_existing_vocabulary` and
@@ -635,7 +659,7 @@ class AnkiService:
                     # Malformed field entry (not a {value, order} object).
                     continue
                 word = _strip_for_dedup(field_info.get("value", ""))
-                if word and _JAPANESE_RE.search(word):
+                if word and self._is_target_script(word):
                     existing_words.add(word)
 
         return existing_words
@@ -940,7 +964,7 @@ class AnkiService:
             if self._existing_vocab_cache is not None:
                 for form in created_forms:
                     key = _strip_for_dedup(form)
-                    if key and _JAPANESE_RE.search(key):
+                    if key and self._is_target_script(key):
                         self._existing_vocab_cache.add(key)
 
         if progress_callback and not cancelled_between_batches:

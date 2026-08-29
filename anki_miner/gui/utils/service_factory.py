@@ -24,7 +24,7 @@ from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
 from anki_miner.languages.profile import LookupStrategy
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
@@ -748,7 +748,12 @@ def create_services(
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
-        anki_service = AnkiService(config)
+        # Injected from the profile this factory already resolved, the way
+        # WordFilterService's script is: the composition root is the one site a
+        # stubbed non-ja profile is reachable from (ruling R6 keeps unregistered
+        # codes out of the registry). The other fourteen AnkiService sites take
+        # the constructor's own default, which resolves the same profile.
+        anki_service = AnkiService(config, script=get_profile(config_language(config)).script)
     youtube_fetcher = YouTubeFetcherService(config=config)
     # Scanned once here, then handed to both consumers: the fetcher chain that
     # resolves pack entries, and Services, whose EpisodeProcessor reads it for

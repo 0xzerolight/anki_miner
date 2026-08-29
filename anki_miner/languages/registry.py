@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
+from typing import Any
 
 from anki_miner.languages.profile import LanguageProfile
 
@@ -30,6 +31,20 @@ def _ja_builder() -> LanguageProfile:
 
 
 _register("ja", _ja_builder)
+
+
+def config_language(config: Any) -> str:
+    """The mining-language code carried by *config*, ``"ja"`` when it has none.
+
+    Stage 0 validates ``AnkiMinerConfig.language`` against ``_LANGUAGE_CODES``,
+    so the fallback is unreachable for a real config. It exists because four
+    pre-existing test files build their config as a bare ``MagicMock``
+    (test_alass_engine.py:61, test_audio_condenser.py:508,
+    test_retime_reference.py:64, test_subtitle_retimer.py:80) and may not be
+    edited; the pre-1B behaviour at every site reading this was "Japanese".
+    """
+    language = getattr(config, "language", "ja")
+    return language if isinstance(language, str) else "ja"
 
 
 def available_languages() -> tuple[str, ...]:
