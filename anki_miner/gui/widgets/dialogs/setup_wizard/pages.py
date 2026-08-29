@@ -919,6 +919,23 @@ class ResourcesPage(_LiveCheckPage):
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
+        # Derived, never assumed: the button was born enabled, and the only
+        # thing that ever re-derived it was a checkbox toggling. A language
+        # whose catalog is empty has no checkbox to toggle, so it kept an
+        # enabled button over a handler that returns silently at :1070.
+        self._sync_download_button()
+        if not self._specs:
+            # ko's catalog is empty on purpose (languages/ko/catalog.py): no
+            # Korean resource is both redistributable by link and shaped like
+            # an importer here. Saying so beats a dead button, and the sentence
+            # has to name where the resources DO come from.
+            self.status_label.setText(
+                self.tr(
+                    "No downloadable resources are recommended for this language — import a Yomitan "
+                    "dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency."
+                )
+            )
+
         # Kept apart from status_label: one reports how the *download* ended,
         # the other what the app can *do now*. A single label would let a
         # finished download overwrite the readiness verdict that gates Next.
@@ -979,7 +996,13 @@ class ResourcesPage(_LiveCheckPage):
         self._recheck_resources()
 
     def isComplete(self) -> bool:
-        return self._dictionary_ready
+        # Nothing to download is nothing to block on. The dictionary gate exists
+        # so nobody finishes setup into a guaranteed-empty first mine (D26), and
+        # it holds wherever a dictionary is one button away. Where the catalog is
+        # empty that button does not exist, so the same gate is a wizard with no
+        # exit but Skip Setup — the page still reports what the disk has through
+        # dictionary_label, it just stops standing in the way.
+        return self._dictionary_ready or not self._specs
 
     # --- live dictionary readiness ---
 

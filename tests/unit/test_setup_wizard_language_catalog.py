@@ -72,3 +72,49 @@ def test_zh_offers_its_own_catalogue_and_no_pitch_line(wizard_factory, test_conf
     assert all(box.isChecked() for box in page.resource_checks.values())
     assert "jmdict-english" not in page.resource_checks
     assert page.pitch_label.isHidden()
+
+
+class TestAnEmptyCatalogue:
+    """ko ships no downloadable resource, and the page has to survive that.
+
+    With ``_specs == []`` the page used to offer an enabled Download button over
+    a handler that returns silently, and gate Next on a dictionary probe with
+    nothing to find - a first run that cannot be finished and cannot be
+    explained. Nothing to download is nothing to block on.
+    """
+
+    @pytest.fixture
+    def ko_page(self, wizard_factory, test_config):
+        assert get_profile("ko").catalog == ()
+        return wizard_factory(switch_language(test_config, "ko")).resources_page
+
+    def test_nothing_is_offered_for_download(self, ko_page):
+        assert ko_page.resource_checks == {}
+        assert ko_page.selected_specs() == []
+
+    def test_the_download_button_is_disabled(self, ko_page):
+        assert not ko_page.download_button.isEnabled()
+
+    def test_the_page_says_where_the_resources_come_from(self, ko_page):
+        text = ko_page.status_label.text()
+
+        assert text
+        assert "Settings" in text
+
+    def test_next_is_not_blocked(self, ko_page):
+        assert ko_page.isComplete()
+
+
+class TestAPopulatedCatalogueIsUnchanged:
+    """ja and zh must behave exactly as they did before the empty-catalogue fix."""
+
+    @pytest.mark.parametrize("code", ["ja", "zh"])
+    def test_the_download_button_is_offered_and_next_still_waits_for_a_dictionary(
+        self, wizard_factory, test_config, code
+    ):
+        assert get_profile(code).catalog  # non-empty, so the branch below is the live one
+        page = wizard_factory(switch_language(test_config, code)).resources_page
+
+        assert page.download_button.isEnabled()
+        assert page.status_label.text() == ""
+        assert not page.isComplete()
