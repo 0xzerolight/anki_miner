@@ -266,6 +266,12 @@ assert_installer_upgrade_terminal() {
 }
 assert_installer_upgrade_terminal
 
+echo "=== artifact size report ==="
+if ! python3 "$(dirname "$0")/artifact_size_report.py" --run-id "$RUN_ID" --repo "$REPOSITORY"; then
+  echo "ERROR: artifact size gate failed (see the per-artifact lines above)." >&2
+  exit 1
+fi
+
 echo "############################################"
 echo "RELEASE DRY-RUN GREEN (run $RUN_ID, platforms=$PLATFORMS)"
 echo "  build matrix + bundle smokes passed; release + ci-gate jobs skipped;"

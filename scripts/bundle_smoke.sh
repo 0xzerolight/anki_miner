@@ -11,6 +11,7 @@
 #   1. youtube   ANKI_MINER_SMOKE=youtube                  -> BUNDLED_SMOKE_PASS
 #   2. asr       ANKI_MINER_SMOKE=asr  HF_HUB_OFFLINE=1     -> BUNDLED_SMOKE_PASS
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
+#   2d. language  ANKI_MINER_SMOKE=<code> (opt-in: BUNDLE_SMOKE_LANGS) -> BUNDLED_SMOKE_PASS
 #   3. ffmpeg    bundled ffmpeg has the required encoders   -> encoders present
 set -euo pipefail
 export LC_ALL=C
@@ -271,6 +272,27 @@ else
   fi
 fi
 echo
+
+# --- 2d. language smokes: each mining language's tokenizer data survived -------
+# OPT-IN, empty by default. BUNDLE_SMOKE_LANGS is a space-separated list of
+# mining language codes; release.yml sets it to "zh". Empty means the loop runs
+# zero times, which is what keeps the app-invocation count (and therefore
+# tests/unit/test_bundle_smoke.py's len(homes) == 5) unchanged for every caller
+# that does not opt in.
+if [ -n "${BUNDLE_SMOKE_LANGS:-}" ]; then
+  read -r -a SMOKE_LANGS <<<"${BUNDLE_SMOKE_LANGS}"
+  for lang in "${SMOKE_LANGS[@]}"; do
+    echo "=== smoke: language $lang ==="
+    if ANKI_MINER_SMOKE="$lang" QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee "smoke_lang_$lang.log" \
+      && grep -q "BUNDLED_SMOKE_PASS" "smoke_lang_$lang.log"; then
+      echo "PASS language-$lang"
+    else
+      echo "FAIL language-$lang"
+      FAILED+=("language-$lang")
+    fi
+    echo
+  done
+fi
 
 # --- 3. ffmpeg encoder smoke: bundled ffmpeg ships the required encoders -------
 # libwebp_anim is asserted separately because still-image libwebp builds would
