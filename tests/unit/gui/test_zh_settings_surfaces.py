@@ -78,6 +78,34 @@ def test_the_gated_row_hides_its_label_too(qtbot, test_config):
     assert not widget.isVisibleTo(panel)
 
 
+def test_the_zh_script_rows_carry_their_own_heading(qtbot, test_config):
+    """ "Script Type" above is gated on kana_filters and hides under zh.
+
+    Without a heading of their own the zh rows read as part of "Deduplication".
+    """
+    panel = _filtering(qtbot, _zh(test_config))
+    heading = panel._script_variants_section_label
+    assert heading is not None
+    assert heading.isVisibleTo(panel)
+    assert not panel._script_type_section_label.isVisibleTo(panel)
+
+
+def test_ja_hides_the_zh_heading(qtbot, test_config):
+    panel = _filtering(qtbot, test_config)
+    assert not panel._script_variants_section_label.isVisibleTo(panel)
+    assert panel._script_type_section_label.isVisibleTo(panel)
+
+
+def test_the_headings_swap_back_on_a_return_to_ja(qtbot, test_config):
+    config = _zh(test_config, script_variant="traditional")
+    panel = _filtering(qtbot, config)
+    panel.load_from_config(test_config)
+
+    assert not panel._script_variants_section_label.isVisibleTo(panel)
+    assert panel._script_type_section_label.isVisibleTo(panel)
+    assert panel.contribute(test_config).script_variant == ""
+
+
 def test_measure_word_is_a_ja_no_op(qtbot, test_config):
     panel = _anki(qtbot, test_config)
     assert not panel.measure_word_field_input.isVisibleTo(panel)

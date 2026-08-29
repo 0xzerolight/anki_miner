@@ -432,7 +432,12 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field("", self.match_kana_variants_checkbox)
 
         # Chinese script preference. Generic, language-scoped field - ja and ko
-        # carry "" here and never see this row.
+        # carry "" here and never see this row. It gets a heading of its own
+        # because "Script Type" above is gated on kana_filters and hides under
+        # zh, which would leave this row reading as part of "Deduplication".
+        self.add_section(self.tr("Script Variants"))
+        self._script_variants_section_label = self._active_section_label
+
         self.script_variant_combo = QComboBox()
         self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
         self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
@@ -551,6 +556,8 @@ class FilteringSettingsPanel(FormPanel):
         self._language_gate_pairs.extend(
             (w, "script_variants") for w in field_row_widgets(self, self.script_variant_combo)
         )
+        if self._script_variants_section_label is not None:
+            self._language_gate_pairs.append((self._script_variants_section_label, "script_variants"))
         self._language_gate_pairs.extend(
             (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
         )
