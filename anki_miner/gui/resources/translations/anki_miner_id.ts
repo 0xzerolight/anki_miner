@@ -466,6 +466,30 @@
         <translation>Menyimpan kata penggolong yang diuraikan dari entri kamus. Kosong = lewati.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Bidang Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Menyimpan bacaan pinyin dari kata, diwarnai berdasarkan nada bila opsi itu aktif. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Bidang Aksara Tradisional</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Menyimpan kata dalam varian aksara lainnya, bila berbeda. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Bidang Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Menyimpan karakter hanja yang terkandung dalam kata. Kosong = lewati.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Bidang Data Tambahan</translation>
     </message>
@@ -4365,6 +4389,22 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Kecualikan Kata Hanya-Hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Kecualikan Kata yang Mengandung Hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Lewati kata yang ditulis sepenuhnya dengan hangul. Menyisakan kata yang ditulis dengan hanja di dek.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Lewati kata yang mengandung karakter hanja, sehingga dek berisi kosakata hangul murni.</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>Bahasa Mining</translation>

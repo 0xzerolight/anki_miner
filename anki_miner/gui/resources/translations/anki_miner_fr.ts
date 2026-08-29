@@ -467,6 +467,30 @@
         <translation>Stocke le classificateur extrait de l'entrée du dictionnaire. Vide = ignorer.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Champ Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Stocke la lecture en pinyin du mot, colorée selon le ton si cette option est activée. Vide = ignorer.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Champ Caractères traditionnels</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Stocke le mot dans l'autre variante d'écriture, lorsqu'elle diffère. Vide = ignorer.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Champ Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Stocke les caractères hanja contenus dans le mot. Vide = ignorer.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Champs de données auxiliaires</translation>
     </message>
@@ -4378,6 +4402,22 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Exclure les mots uniquement en hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Exclure les mots contenant des hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Ignorer les mots écrits entièrement en hangul. Laisse dans le paquet les mots écrits avec des hanja.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Ignorer les mots contenant un caractère hanja, en gardant dans le paquet le vocabulaire uniquement en hangul.</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>Langue d'extraction</translation>

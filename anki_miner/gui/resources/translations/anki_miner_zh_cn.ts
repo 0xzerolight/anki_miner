@@ -466,6 +466,30 @@
         <translation>存储从词典条目中解析出的量词。留空 = 跳过。</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>拼音字段</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>存储单词的拼音读音；若已开启声调着色，则带颜色。留空 = 跳过。</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>繁体字字段</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>当另一种字形变体不同时，存储该变体的写法。留空 = 跳过。</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>韩文汉字字段</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>存储单词中包含的韩文汉字。留空 = 跳过。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>辅助数据字段</translation>
     </message>
@@ -4365,6 +4389,22 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>排除纯谚文单词</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>排除含韩文汉字的单词</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>跳过完全用谚文书写的词。让牌组只留下用韩文汉字书写的词。</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>跳过含有任何韩文汉字的词，让牌组保持纯谚文词汇。</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>挖词语言</translation>

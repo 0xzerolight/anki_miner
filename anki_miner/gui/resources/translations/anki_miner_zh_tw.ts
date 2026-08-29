@@ -466,6 +466,30 @@
         <translation>儲存從字典詞條中解析出的量詞。留空＝略過。</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>拼音欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>儲存單字的拼音讀音；若已開啟聲調上色，則會帶顏色。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>繁體字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>當另一種字形變體不同時，儲存該變體的寫法。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>韓文漢字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>儲存單字中包含的韓文漢字。留空＝略過。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>輔助資料欄位</translation>
     </message>
@@ -4365,6 +4389,22 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>排除純諺文單字</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>排除含韓文漢字的單字</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>略過完全以諺文書寫的詞。讓牌組只留下以韓文漢字書寫的詞。</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>略過含有任何韓文漢字的詞，讓牌組保持純諺文詞彙。</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>採集語言</translation>

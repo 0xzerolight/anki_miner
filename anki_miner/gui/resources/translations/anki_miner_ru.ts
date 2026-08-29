@@ -468,6 +468,30 @@
         <translation>Хранит счётное слово, разобранное из словарной статьи. Пусто = пропустить.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Поле пиньиня</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Хранит чтение слова в пиньине, раскрашенное по тонам, если эта опция включена. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Поле традиционного написания</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Хранит слово в другом варианте письменности, если он отличается. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Поле ханчи</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Хранит знаки ханчи, содержащиеся в слове. Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Поля вспомогательных данных</translation>
     </message>
@@ -4391,6 +4415,22 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Исключить слова только из хангыля</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Исключить слова, содержащие ханчу</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Пропускать слова, записанные полностью хангылем. Оставляет в колоде слова, записанные ханчей.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Пропускать слова, содержащие любой знак ханчи, оставляя в колоде лексику только на хангыле.</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>Язык майнинга</translation>

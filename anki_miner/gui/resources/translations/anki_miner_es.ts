@@ -467,6 +467,30 @@
         <translation>Almacena el clasificador extraído de la entrada del diccionario. En blanco = omitir.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Campo de pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Almacena la lectura en pinyin de la palabra, coloreada por tono si esa opción está activada. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Campo de caracteres tradicionales</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Almacena la palabra en la otra variante de escritura, cuando difiere. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Campo de hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Almacena los caracteres hanja contenidos en la palabra. En blanco = omitir.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Campos de datos auxiliares</translation>
     </message>
@@ -4378,6 +4402,22 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Excluir palabras solo en hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Excluir palabras que contengan hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Omitir palabras escritas enteramente en hangul. Deja el mazo con las palabras escritas con hanja.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Omitir palabras que contengan algún carácter hanja, dejando el mazo con vocabulario solo en hangul.</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>Idioma de minería</translation>

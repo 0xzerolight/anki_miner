@@ -466,6 +466,30 @@
         <translation>Lưu lượng từ được phân tích từ mục từ điển. Để trống = bỏ qua.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Trường Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Lưu cách đọc pinyin của từ, được tô màu theo thanh điệu khi tùy chọn đó bật. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Trường Phồn thể</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Lưu từ ở biến thể chữ viết còn lại, khi có khác biệt. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Trường Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Lưu các ký tự hanja có trong từ. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Trường Dữ liệu Phụ trợ</translation>
     </message>
@@ -4365,6 +4389,22 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Loại trừ từ chỉ có hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Loại trừ từ có chứa hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Bỏ qua các từ viết hoàn toàn bằng hangul. Giữ lại trong bộ thẻ những từ viết bằng hanja.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Bỏ qua các từ có chứa ký tự hanja, giữ cho bộ thẻ chỉ có từ vựng hangul thuần.</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>Ngôn ngữ khai thác</translation>

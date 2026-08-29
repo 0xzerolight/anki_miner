@@ -466,6 +466,30 @@
         <translation>辞書項目から解析した量詞を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>ピンインフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>単語のピンイン読みを格納します。声調による色分けが有効な場合は色付きになります。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>繁体字フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>字体バリエーションが異なる場合に、もう一方の字体で単語を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>韓国漢字フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>単語に含まれる韓国漢字を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>補助データフィールド</translation>
     </message>
@@ -4365,6 +4389,22 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
 </context><context>
     <name>FilteringSettingsPanel</name>
+    <message>
+        <source>Exclude hangul-only words</source>
+        <translation>ハングルのみの単語を除外</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>韓国漢字を含む単語を除外</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>ハングルだけで書かれた語をスキップします。デッキには韓国漢字で書かれた語が残ります。</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>韓国漢字を含む語をスキップし、デッキをハングルのみの語彙に保ちます。</translation>
+    </message>
     <message>
         <source>Mining Language</source>
         <translation>マイニング言語</translation>
