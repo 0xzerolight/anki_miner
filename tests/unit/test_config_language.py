@@ -56,6 +56,18 @@ def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeyp
     from PyQt6.QtWidgets import QMessageBox
 
     from anki_miner.gui.widgets.settings_tab import SettingsTab
+    from anki_miner.languages import registry
+
+    # The settings panels resolve the active language's capabilities as they
+    # load (gui/utils/language_gate.py), and zh has no registered profile until
+    # Stage 2A. Register a ja clone under "zh" for this test only; the cache is
+    # swapped for a copy first so the stub cannot leak into another test. The
+    # clone is built out here, not inside the builder: get_profile holds a plain
+    # (non-reentrant) lock while it calls one, so a builder that re-enters it
+    # deadlocks.
+    ja_profile = registry.get_profile("ja")
+    monkeypatch.setattr(registry, "_CACHE", dict(registry._CACHE))
+    monkeypatch.setitem(registry._BUILDERS, "zh", lambda: dataclasses.replace(ja_profile, code="zh"))
 
     tab = SettingsTab(
         dataclasses.replace(test_config, language="zh", language_stash={"ja": {"anki_deck_name": "JA"}}),

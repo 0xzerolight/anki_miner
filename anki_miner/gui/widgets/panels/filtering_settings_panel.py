@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.utils.qt_helpers import (
     configure_data_view,
     data_row_height,
@@ -27,6 +28,7 @@ from anki_miner.gui.utils.qt_helpers import (
 )
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.wordset_service import load_wordset_catalog
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -80,6 +82,11 @@ class FilteringSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
+        # Every capability contributor extends this list; Stage 2B adds the
+        # non-ja rows to the same one. A second assignment would drop these
+        # pairs, so this is the only place it is bound.
+        self._language_gate_pairs: list[tuple[QWidget, str]] = []
+
         # Word Frequency section. Frequency-source management lives on its own
         # settings page; only the rank band — a filter — stays here.
         self.add_section(self.tr("Word Frequency"))
@@ -269,16 +276,20 @@ class FilteringSettingsPanel(FormPanel):
         # names unidic-lite mistags as common nouns (the POS filter only drops
         # proper nouns the parser actually recognizes as 固有名詞).
         self.add_section(self.tr("Name Wordsets"))
+        # Captured while it is the active heading: the language gate hides the
+        # divider and its helper with the rows under them, so a language
+        # without name wordsets is not left with an empty section.
+        self._wordset_section_label = self._active_section_label
 
-        wordsets_helper = QLabel(
+        self._wordsets_helper = QLabel(
             self.tr(
                 "Exclude bundled lists of Japanese people and place names from "
                 "mining. Whitelisted names are still mined."
             )
         )
-        wordsets_helper.setObjectName("helper-text")
-        wordsets_helper.setWordWrap(True)
-        self.add_widget(wordsets_helper)
+        self._wordsets_helper.setObjectName("helper-text")
+        self._wordsets_helper.setWordWrap(True)
+        self.add_widget(self._wordsets_helper)
 
         self.wordset_checkboxes: dict[str, QCheckBox] = {}
         for info in load_wordset_catalog():
@@ -361,6 +372,7 @@ class FilteringSettingsPanel(FormPanel):
 
         # Script Type section (Issue #57)
         self.add_section(self.tr("Script Type"))
+        self._script_type_section_label = self._active_section_label
 
         self.exclude_hiragana_only_checkbox = QCheckBox(self.tr("Exclude Hiragana-Only Words"))
         self.add_field(
@@ -474,6 +486,26 @@ class FilteringSettingsPanel(FormPanel):
             )
         )
         self.add_field("", self.bold_target_in_sentence_checkbox)
+
+        # Language-gated rows. Each row contributes its label too, so a hidden
+        # field never leaves a dangling caption behind.
+        self._language_gate_pairs.extend(
+            (w, "kana_filters")
+            for cb in (
+                self.exclude_hiragana_only_checkbox,
+                self.exclude_katakana_only_checkbox,
+                self.match_kana_variants_checkbox,
+            )
+            for w in field_row_widgets(self, cb)
+        )
+        if self._script_type_section_label is not None:
+            self._language_gate_pairs.append((self._script_type_section_label, "kana_filters"))
+        self._language_gate_pairs.extend(
+            (w, "name_wordsets") for cb in self.wordset_checkboxes.values() for w in field_row_widgets(self, cb)
+        )
+        self._language_gate_pairs.extend(
+            (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
+        )
 
         self.add_stretch()
 
@@ -843,6 +875,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
+        apply_language_gate(self._language_gate_pairs, get_profile(config.language).capabilities)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.
