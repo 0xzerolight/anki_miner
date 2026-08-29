@@ -90,7 +90,7 @@ class ZhToneColorHook:
         syllables = pinyin_syllables(getattr(word, "mined_form", "") or "")
         if not syllables:
             return {}
-        if not getattr(config, "reading_tone_color", False):
+        if not config.reading_tone_color:
             return {"expression_pinyin": " ".join(html.escape(text) for text, _ in syllables)}
         spans = " ".join(
             f'<span style="color:{_TONE_COLORS.get(tone, _TONE_COLORS[5])}">{html.escape(text)}</span>'
