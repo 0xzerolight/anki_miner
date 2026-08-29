@@ -367,6 +367,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # any refusal itself and snaps the combo back on every terminal path.
         self.header.profile_changed.connect(self.profile_controller.switch_to)
         self.header.open_profile_manager.connect(self._open_profile_manager)
+        self.header.open_mining_language_settings.connect(self._open_mining_language_settings)
         self.central_layout.addWidget(self.header)
 
         # Whole-window issues (system checks, dictionary mutation refusals) sit
@@ -396,6 +397,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
+
+        # What makes the header chip correct at first paint. The tab stack is
+        # still empty here — ``compose_main_window`` fills it after the window
+        # is built — so this pass only reaches the header; the Settings selector
+        # points itself as it is constructed, and every switch re-syncs both.
+        self.sync_mining_language_surfaces()
 
         # Set up accessibility features
         self._setup_accessibility()
@@ -976,6 +983,16 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if callable(open_subtab):
             open_subtab()
 
+    def _open_mining_language_settings(self) -> None:
+        """Header chip: land on the selector itself, not just its page."""
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        jump = getattr(self.tabs.widget(idx), "jump_to_setting", None)
+        if callable(jump):
+            jump("filtering.mining_language_combo")
+
     def request_mining_language(self, code: str) -> bool:
         """Selector entry point for a language switch (spec 6.1, trigger 1).
 
@@ -992,11 +1009,23 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
     def sync_mining_language_surfaces(self) -> None:
         """Point every language surface at the language that is actually live."""
+        from anki_miner.gui.utils.language_choices import available_mining_languages
+        from anki_miner.languages.registry import config_language
+
+        # config_language, never the raw field: the config accepts any stored
+        # code, and one with no registered profile mines as ja everywhere else.
+        # A surface reading the raw field would name a language nothing uses.
+        code = config_language(self.config)
+
         idx = self._settings_tab_index()
         if idx >= 0:
             setter = getattr(self.tabs.widget(idx), "set_mining_language", None)
             if callable(setter):
-                setter(self.config.language)
+                setter(code)
+
+        choices = available_mining_languages()
+        names = dict(choices)
+        self.header.set_mining_language(names.get(code, code), choices=len(choices))
 
     def restart_prewarm(self) -> None:
         """Warm the incoming language's tokenizer and chain caches (spec 6.4).
