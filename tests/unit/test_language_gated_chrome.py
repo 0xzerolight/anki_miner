@@ -63,6 +63,35 @@ def test_retry_affordance_follows_an_in_place_chain_append(qtbot, tmp_path):
     assert not panel._retry_missing_btn.isHidden()
 
 
+def test_retry_affordance_follows_a_row_toggle(qtbot, tmp_path):
+    """The base class writes ``_chain`` on a toggle without going through
+    ``_write_chain``, so the affordance has to follow ``chain_changed`` too.
+
+    Unticking the one jpod101 row leaves nothing writing ``.miss`` markers, and
+    the button then names a Japanese service to a chain that never calls it.
+    """
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),
+            AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),
+        )
+    )
+    assert not panel._retry_missing_btn.isHidden()
+
+    rows = panel._rows()
+    jpod_row = next(row for row in rows if row.entry.kind == "jpod101")
+    jpod_row.checkbox.setChecked(False)
+
+    assert panel._retry_missing_btn.isHidden()
+
+    jpod_row = next(row for row in panel._rows() if row.entry.kind == "jpod101")
+    jpod_row.checkbox.setChecked(True)
+    assert not panel._retry_missing_btn.isHidden()
+
+
 def test_retry_affordance_follows_an_in_place_chain_removal(qtbot, tmp_path):
     """The diskless-remove path writes the chain twice; both writes resync."""
     panel = AudioPackSettingsPanel(tmp_path)

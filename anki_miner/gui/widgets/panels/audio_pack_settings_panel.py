@@ -213,6 +213,12 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         self._retry_missing_btn = ModernButton(self.tr("Retry missing audio"), variant="secondary")
         self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
         self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
+        # _write_chain re-syncs the affordance for this panel's own writers, but
+        # the base class writes _chain directly on a row toggle, a reorder and a
+        # chain-only remove - all of which announce themselves here. Subscribing
+        # is cheaper than routing six base-class writers through a hook, and
+        # setVisible is idempotent, so the double call on our own writes is free.
+        self.chain_changed.connect(self._sync_retry_affordance)
 
         self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
         self._restore_btn.setToolTip(
