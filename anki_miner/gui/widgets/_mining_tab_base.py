@@ -42,6 +42,7 @@ from anki_miner.gui.widgets.base import (
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
 
@@ -836,6 +837,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                 commit_known_callback=self._commit_known_words,
                 media_context=media_context,
                 lookup_fn=lookup_fn,
+                content_style=get_profile(config_language(self.config)).content_style,
             )
             self._curation_dialog_seq += 1
             presentation = self._curation_dialog_seq

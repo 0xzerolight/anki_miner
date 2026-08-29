@@ -578,6 +578,7 @@ class SingleEpisodeTab(MiningTabBase):
                     initial_offset=offset,
                     parent=self,
                     audio_track_override=self._audio_track_override,
+                    content_style=get_profile(config_language(self.config)).content_style,
                 )
                 # Nothing happens until exec() returns: the viewer holds a live mpv
                 # core and releases it on the way out, so navigating (or writing the

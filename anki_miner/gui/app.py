@@ -67,6 +67,7 @@ from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.validation_service import ValidationService
@@ -1259,7 +1260,9 @@ def compose_main_window(
     register_mining_tab(window, reading_tab, reading_presenter, QCoreApplication.translate("MainWindow", "Reading"))
 
     # Analytics tab (non-mining: no presenter, no update_config wiring)
-    analytics_tab = AnalyticsTab(stats_service)
+    analytics_tab = AnalyticsTab(
+        stats_service, content_style=get_profile(config_language(window.get_config())).content_style
+    )
     window.tabs.addTab(analytics_tab, QCoreApplication.translate("MainWindow", "Analytics"))
 
     # Utilities tab (non-mining: no presenter). Nests Generate (SubtitleCreationTab)

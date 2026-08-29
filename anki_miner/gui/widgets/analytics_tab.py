@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils.fonts import japanese_cell_font
+from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
     SortableTableWidgetItem,
@@ -42,6 +42,8 @@ from anki_miner.gui.widgets.base import (
     configure_scrolled_page,
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader, StatCard
+from anki_miner.languages.profile import ContentTextStyle
+from anki_miner.languages.registry import get_profile
 from anki_miner.models.stats import (
     DifficultyEntry,
     Milestone,
@@ -74,15 +76,16 @@ def _count(value: int) -> SortableTableWidgetItem:
     return make_table_item(f"{value:,}", CellRole.NUMBER, sort_value=value)
 
 
-def _japanese(item: SortableTableWidgetItem) -> SortableTableWidgetItem:
-    """Give a name cell the Japanese face, and nothing else.
+def _japanese(item: SortableTableWidgetItem, style: ContentTextStyle) -> SortableTableWidgetItem:
+    """Give a name cell the mining language's face, and nothing else.
 
-    Series and episode names are usually Japanese, and this app also ships
-    Simplified and Traditional Chinese interfaces, which prefer different shapes
-    for the same characters (decision D45-B). The cell font carries no size, so
-    it resolves against the view's own and the row height does not move.
+    Series and episode names are usually written in the mined language, and this
+    app also ships Simplified and Traditional Chinese interfaces, which prefer
+    different shapes for the same characters (decision D45-B). The cell font
+    carries no size, so it resolves against the view's own and the row height
+    does not move.
     """
-    item.setFont(japanese_cell_font())
+    item.setFont(content_cell_font(style))
     return item
 
 
@@ -124,9 +127,12 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     # within this window so rapid tab clicking stays snappy.
     _REFRESH_TTL_SECONDS = 5.0
 
-    def __init__(self, stats_service: StatsService, parent=None):
+    def __init__(self, stats_service: StatsService, parent=None, *, content_style: ContentTextStyle | None = None):
         super().__init__(parent)
         self.stats_service = stats_service
+        # Series and episode names are mined content: the face comes from the
+        # mining language's profile. None keeps today's Japanese face.
+        self._content_style = content_style or get_profile("ja").content_style
         self._last_refresh: float | None = None
         # Guard against overlapping off-thread refreshes stacking up (a fast
         # tab switch fires showEvent repeatedly). Cleared in on_done/on_error.
@@ -526,8 +532,8 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
                         session.mined_at.strftime("%Y-%m-%d %H:%M"),
                         sort_value=session.mined_at.timestamp(),
                     ),
-                    _japanese(make_table_item(session.series_name)),
-                    _japanese(make_table_item(session.episode_name)),
+                    _japanese(make_table_item(session.series_name), self._content_style),
+                    _japanese(make_table_item(session.episode_name), self._content_style),
                     _count(session.total_words),
                     _count(session.unknown_words),
                     _count(session.cards_created),
@@ -552,7 +558,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             for row_idx, entry in enumerate(difficulties):
                 items = [
                     _count(row_idx + 1),
-                    _japanese(make_table_item(entry.series_name)),
+                    _japanese(make_table_item(entry.series_name), self._content_style),
                     _count(entry.total_words),
                     _count(entry.unknown_words),
                     # Sorted on the share itself; "9.0%" would rank above "15.0%".
