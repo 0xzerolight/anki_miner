@@ -39,6 +39,7 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
+from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
     configure_data_view,
@@ -78,6 +79,12 @@ _CELL_ELIDE = 120
 #: than pixels: a flat pixel floor holds fewer and fewer rows as the text scale
 #: grows, which is Issue #102's class of bug rather than its fix.
 PREVIEW_MIN_VISIBLE_ROWS = 8
+
+#: Backfill group → the capability whose absence makes it meaningless. The ja
+#: profile declares both "pitch" and "furigana". The other four groups
+#: (frequency, definition, glossary, word_audio) are language-neutral and
+#: always offered.
+_GROUP_CAPABILITIES: dict[str, str] = {"pitch": "pitch", "reading": "furigana"}
 
 
 def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
@@ -138,6 +145,7 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         # table keeps a hard floor and the tab scrolls instead of crushing it.
         container = QWidget()
         layout = QVBoxLayout(container)
+        self._language_gate_pairs: list[tuple[QWidget, str]] = []
 
         layout.addWidget(SectionHeader(self.tr("Card Backfill")))
         hint = QLabel(
@@ -186,6 +194,9 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             checkbox.setToolTip(self._group_tooltips.get(group, ""))
             self.field_checkboxes[group] = checkbox
             layout.addWidget(checkbox)
+        self._language_gate_pairs.extend(
+            (self.field_checkboxes[group], capability) for group, capability in _GROUP_CAPABILITIES.items()
+        )
 
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
         layout.addWidget(self.overwrite_checkbox)
@@ -368,6 +379,9 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         (per-field compute skips unmapped keys). The reading group is pure
         cross-fill, so it needs BOTH fields mapped to ever do anything —
         an enabled-but-inert checkbox would be dishonest UI.
+
+        Then hide the groups the active mining language has no capability for:
+        pitch and reading are Japanese-only, the other four are neutral.
         """
         for group, keys in FIELD_GROUPS.items():
             mapped = [bool(self.config.anki_fields.get(key)) for key in keys]
@@ -382,6 +396,16 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
                 # "Map this field…" text set above outlives the condition that
                 # produced it and the group's explanation is gone for good.
                 checkbox.setToolTip(self._group_tooltips.get(group, ""))
+        # Capability gate, second and last word: a group the language cannot
+        # fill is hidden outright, and un-ticked on the way out — the scan
+        # collects keys from isChecked(), which a hidden box still answers.
+        # The gate is two-way and owns these boxes' whole visibility, so a
+        # switch away from Japanese and back re-offers them.
+        capabilities = get_profile(config_language(self.config)).capabilities
+        apply_language_gate(self._language_gate_pairs, capabilities)
+        for group, capability in _GROUP_CAPABILITIES.items():
+            if capability not in capabilities:
+                self.field_checkboxes[group].setChecked(False)
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new config: re-gate checkboxes and drop any held plan.
