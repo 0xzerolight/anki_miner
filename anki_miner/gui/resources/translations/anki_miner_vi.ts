@@ -4606,6 +4606,10 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Khi phụ đề viết một từ bằng kana (ví dụ: うなずく) và dạng từ điển bằng kanji (頷く) đã có trong bộ sưu tập hoặc danh sách từ đã biết, bỏ qua từ đó thay vì tạo thêm thẻ thứ hai. Cách viết kanji không bao giờ được gộp theo cách này.</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>Biến thể chữ viết</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Giản thể (简体)</translation>
     </message>
@@ -5070,6 +5074,54 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Gỡ bỏ TẤT CẢ các từ bạn đã thêm vào danh sách từ đã biết cục bộ? Không thể hoàn tác. Bộ nhớ đệm đồng bộ với Anki không bị ảnh hưởng.</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>Đổi ngôn ngữ khai thác</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>Chuyển sang %1 sẽ loại bỏ %n mục trong hàng đợi, cả trên màn hình lẫn trong bản lưu cho lần khởi động sau. Tiếp tục?</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>Lần đầu khai thác ngôn ngữ này</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>Chưa từng khai thác %1 trước đây.</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>Quá trình quét từ đã biết đọc mọi bộ thẻ không bị loại trừ, nên các từ trong %1 sẽ bị tính là đã biết. Loại trừ chúng khỏi ngôn ngữ này?</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>Loại trừ các bộ thẻ này</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>Thiết lập tài nguyên…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>Ngôn ngữ khai thác đó không có trong bản dựng này.</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>Cài đặt đang bận. Không có gì được đổi.</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>Đang khai thác. Hãy dừng lại rồi đổi ngôn ngữ.</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>Không thể chuyển sang %1: %2. Không có gì được đổi.</translation>
     </message>
 </context><context>
     <name>LogWidget</name>

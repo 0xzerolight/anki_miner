@@ -4606,6 +4606,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>当字幕以假名拼写某个单词（例如 うなずく），而该词的汉字词典形式（頷く）已存在于您的收藏或已知单词列表中时，将跳过该单词，而不会创建第二张卡片。汉字拼写永远不会以这种方式合并。</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>字形变体</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>简体</translation>
     </message>
@@ -5070,6 +5074,54 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>切换挖词语言</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>切换到 %1 将丢弃队列中的 %n 个项目，屏幕上的和为下次启动保存的副本都会丢弃。是否继续？</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>首次挖取此语言</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>你还没有挖过 %1。</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>已知单词扫描会读取所有未排除的牌组，因此 %1 中的单词会被算作已知。是否在此语言下排除它们？</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>排除这些牌组</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>设置资源…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>此构建不支持该挖词语言。</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>设置正忙。未进行切换。</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>挖词正在运行。请先停止，再切换语言。</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>无法切换到 %1：%2。未进行切换。</translation>
     </message>
 </context><context>
     <name>LogWidget</name>

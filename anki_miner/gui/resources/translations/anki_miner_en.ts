@@ -4581,6 +4581,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation type="unfinished" />
     </message>
@@ -5034,6 +5038,54 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation type="unfinished" />
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

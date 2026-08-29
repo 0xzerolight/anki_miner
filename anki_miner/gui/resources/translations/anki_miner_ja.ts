@@ -4606,6 +4606,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>字幕が単語をかなで表記していて（例：うなずく）、その漢字の辞書形（頷く）がすでにコレクションまたは既知単語リストにある場合、2枚目のカードを作成せずにスキップします。漢字表記がこの方法で統合されることはありません。</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>字体バリエーション</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>簡体字（简体）</translation>
     </message>
@@ -5070,6 +5074,54 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか？この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>マイニング言語を切り替え</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>%1 に切り替えると、キュー内の %n 件の項目が画面上からも次回起動用の保存分からも破棄されます。続行しますか？</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>この言語のマイニングは初めてです</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>%1 はこれまでマイニングしていません。</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>既知単語のスキャンは除外されていないすべてのデッキを読み取るため、%1 の単語も既知として扱われます。この言語では除外しますか？</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>これらのデッキを除外</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>リソースを設定…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>そのマイニング言語はこのビルドでは利用できません。</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>設定が使用中です。切り替えは行われませんでした。</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>マイニングの実行中です。停止してから言語を切り替えてください。</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>%1 に切り替えられませんでした: %2。切り替えは行われませんでした。</translation>
     </message>
 </context><context>
     <name>LogWidget</name>

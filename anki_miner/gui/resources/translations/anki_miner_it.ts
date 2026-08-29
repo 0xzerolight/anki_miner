@@ -4619,6 +4619,10 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation>Se un sottotitolo scrive una parola in kana (es. うなずく) e la forma con kanji del dizionario (頷く) è già presente nella collezione o nell'elenco delle parole conosciute, la parola viene saltata invece di creare una seconda carta. Le grafie in kanji non vengono mai unite in questo modo.</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>Varianti di scrittura</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Semplificato (简体)</translation>
     </message>
@@ -5083,6 +5087,55 @@ Aggiungere %3 parola/e all'elenco delle parole conosciute?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Rimuovere TUTTE le parole aggiunte all'elenco locale delle parole conosciute? Questa operazione non può essere annullata. La cache sincronizzata con Anki non viene modificata.</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>Cambia lingua di mining</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>Il passaggio a %1 elimina %n elemento in coda, a schermo e nella copia salvata per il prossimo avvio. Continuare?</numerusform>
+            <numerusform>Il passaggio a %1 elimina %n elementi in coda, a schermo e nella copia salvata per il prossimo avvio. Continuare?</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>Primo mining in questa lingua</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>Non è mai stato fatto mining di %1.</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>La scansione delle parole conosciute legge ogni mazzo non escluso, quindi le parole in %1 risulterebbero già conosciute. Escluderli da questa lingua?</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>Escludi questi mazzi</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>Configura risorse…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>Quella lingua di mining non è disponibile in questa build.</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>Le impostazioni sono occupate. Non è stato cambiato nulla.</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>Il mining è in corso. Arrestarlo, poi cambiare lingua.</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>Impossibile passare a %1: %2. Non è stato cambiato nulla.</translation>
     </message>
 </context><context>
     <name>LogWidget</name>

@@ -4632,6 +4632,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Если субтитры записывают слово каной (например, うなずく), а словарная форма с иероглифами (頷く) уже есть в вашей коллекции или списке известных слов, слово будет пропущено вместо создания второй карточки. Написания с иероглифами таким образом никогда не объединяются.</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>Варианты письменности</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Упрощённое (简体)</translation>
     </message>
@@ -5096,6 +5100,56 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Удалить ВСЕ слова, добавленные вами в локальный список известных слов? Это нельзя отменить. Синхронизированный с Anki кэш не затрагивается.</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>Смена языка майнинга</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>Переход на %1 отбросит %n элемент очереди — и на экране, и в копии, сохранённой для следующего запуска. Продолжить?</numerusform>
+            <numerusform>Переход на %1 отбросит %n элемента очереди — и на экране, и в копии, сохранённой для следующего запуска. Продолжить?</numerusform>
+            <numerusform>Переход на %1 отбросит %n элементов очереди — и на экране, и в копии, сохранённой для следующего запуска. Продолжить?</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>Майнинг этого языка выполняется впервые</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>Вы ещё не майнили %1.</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>Сканирование известных слов читает все неисключённые колоды, поэтому слова из %1 будут считаться уже известными. Исключить их для этого языка?</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>Исключить эти колоды</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>Настроить ресурсы…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>Этот язык майнинга недоступен в этой сборке.</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>Настройки заняты. Ничего не переключено.</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>Майнинг выполняется. Остановите его, затем смените язык.</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>Не удалось переключиться на %1: %2. Ничего не переключено.</translation>
     </message>
 </context><context>
     <name>LogWidget</name>

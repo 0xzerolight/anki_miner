@@ -4606,6 +4606,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>當字幕以假名拼寫單字（例如 うなずく），而該單字的漢字字典形（頷く）已在您的收藏或已知單字清單中時，則略過該單字，而不建立第二張卡片。漢字拼寫絕不會以此方式合併。</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>字形變體</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>簡體</translation>
     </message>
@@ -5070,6 +5074,54 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>要移除你加入本機已知單字清單的所有單字嗎？此操作無法復原。不會影響與 Anki 同步的快取。</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>切換採集語言</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>切換到 %1 將捨棄佇列中的 %n 個項目，畫面上的與為下次啟動儲存的副本都會捨棄。要繼續嗎？</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>首次採集此語言</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>您尚未採集過 %1。</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>已知單字掃描會讀取所有未排除的牌組，因此 %1 中的單字會被視為已知。要在此語言中排除它們嗎？</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>排除這些牌組</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>設定資源…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>此版本不支援該採集語言。</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>設定忙碌中。未進行切換。</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>採集正在執行中。請先停止，再切換語言。</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>無法切換到 %1：%2。未進行切換。</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
