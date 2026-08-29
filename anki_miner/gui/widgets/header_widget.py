@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QFontMetrics
-from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.resources.styles.theme import Theme
@@ -91,6 +91,8 @@ class HeaderWidget(QWidget):
     profile_changed = pyqtSignal(str)
     # User picked the "Manage profiles…" sentinel — open the profile manager.
     open_profile_manager = pyqtSignal()
+    # User clicked the mining-language chip — open the selector in Settings.
+    open_mining_language_settings = pyqtSignal()
 
     def __init__(self, parent=None):
         """Initialize the header widget.
@@ -128,9 +130,10 @@ class HeaderWidget(QWidget):
         layout.addLayout(branding_layout)
         layout.addStretch()
 
-        # Right side: settings-profile selector, then theme selector. Creation
-        # order IS tab order, so building the profile block first gives
-        # profile -> theme for free; keep it that way.
+        # Right side: settings-profile selector, mining-language chip, then
+        # theme selector. Creation order IS tab order, so building the blocks in
+        # this order gives profile -> language -> theme for free; keep it that
+        # way.
         profile_layout = QHBoxLayout()
         profile_layout.setSpacing(SPACING.xs)
 
@@ -170,6 +173,39 @@ class HeaderWidget(QWidget):
         profile_layout.addWidget(self.profile_combo)
 
         layout.addLayout(profile_layout)
+
+        mining_language_layout = QHBoxLayout()
+        mining_language_layout.setSpacing(SPACING.xs)
+
+        # "Mining language", never "Language": the app also has an interface
+        # language, and the two axes are independent (spec 7).
+        self.mining_language_label = QLabel(self.tr("Mining language:"))
+        self.mining_language_label.setObjectName("caption")
+        mining_language_layout.addWidget(self.mining_language_label)
+
+        # A button, not a combo: one writable selector for a control that swaps
+        # every mining setting is enough, and it lives on the Settings page that
+        # shows what the switch will change. This is a readout plus a shortcut.
+        self.mining_language_button = QPushButton("")
+        self.mining_language_button.setObjectName("mining-language-chip")
+        self.mining_language_button.setFlat(True)
+        self.mining_language_button.setAccessibleName(self.tr("Mining language"))
+        self.mining_language_button.clicked.connect(self.open_mining_language_settings)
+        self.mining_language_label.setBuddy(self.mining_language_button)
+        mining_language_layout.addWidget(self.mining_language_button)
+
+        # Both explicit minimums are what keeps this block OUT of the window's
+        # minimum width. Without them the header demands its own hint — measured
+        # at 1.5x text on DejaVu Sans, 972px -> 1258px against a WINDOW_MIN_WIDTH
+        # contract of 1024 — and the window minimum follows it, which
+        # test_layout_hostile_scale pins. The two combos cannot give that space
+        # back (a combo's minimum ignores its items), so the chip is the block
+        # that yields: it is a readout with a writable twin on the Settings page,
+        # and the last thing in this row worth reserving space for.
+        self.mining_language_label.setMinimumWidth(1)
+        self.mining_language_button.setMinimumWidth(1)
+
+        layout.addLayout(mining_language_layout)
 
         theme_layout = QHBoxLayout()
         theme_layout.setSpacing(SPACING.xs)
@@ -216,6 +252,10 @@ class HeaderWidget(QWidget):
         # an existing user who never creates a profile sees no change here.
         self.set_profiles((), None)
         self.profile_combo.currentIndexChanged.connect(self._on_profile_changed)
+
+        # Start hidden for the same reason the profile block does: a build
+        # offering one language shows no chip at all.
+        self.set_mining_language("", choices=0)
 
         # MUST run after setLayout: a widget added to a not-yet-installed
         # layout is not reparented onto the container, so before this line
@@ -377,6 +417,23 @@ class HeaderWidget(QWidget):
         visible = bool(profiles)
         self.profile_label.setVisible(visible)
         self.profile_combo.setVisible(visible)
+
+    def set_mining_language(self, display_name: str, *, choices: int) -> None:
+        """Show the live mining language, or hide the chip entirely.
+
+        Hidden below two buildable languages: a chip that can only ever read
+        日本語 is chrome describing the absence of a choice.
+        """
+        visible = choices >= 2 and bool(display_name)
+        self.mining_language_label.setVisible(visible)
+        self.mining_language_button.setVisible(visible)
+        self.mining_language_button.setText(display_name)
+        self.mining_language_button.setToolTip(
+            tr_format(
+                self.tr("Mining language: %1. Opens the selector in Settings."),
+                display_name,
+            )
+        )
 
     def _profile_combo_max_width(self, metrics: QFontMetrics) -> int:
         """Backstop width for the profile combo, in the combo's CURRENT font.

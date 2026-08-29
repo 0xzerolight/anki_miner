@@ -460,6 +460,14 @@
         <translation>Хранит предложение в виде чистой каны.</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Поле счётного слова</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит счётное слово, разобранное из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Поля вспомогательных данных</translation>
     </message>
@@ -4384,6 +4392,14 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>Язык майнинга</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>Язык, который вы майните. Не связан с языком интерфейса (Настройки -&gt; Внешний вид и язык). Переключение меняет словари, фильтры, колоду и поля карточек на настройки этого языка.</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>Частотность слов</translation>
     </message>
@@ -4616,6 +4632,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Если субтитры записывают слово каной (например, うなずく), а словарная форма с иероглифами (頷く) уже есть в вашей коллекции или списке известных слов, слово будет пропущено вместо создания второй карточки. Написания с иероглифами таким образом никогда не объединяются.</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>Варианты письменности</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>Упрощённое (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Традиционное (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Набор иероглифов</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>Какое написание предпочитают лицевая сторона карточки и поиск по словарю.</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>Фильтр предложений i+1</translation>
     </message>
@@ -4686,6 +4722,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>Оборачивать майненное слово в &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; внутри полей Sentence и SentenceFurigana. Совпадение — это точный диапазон MeCab майненной морфемы, поэтому при повторении одинаковых форм в предложении жирным выделяется только действительно майненное вхождение.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Раскрашивать чтение по тонам</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>Оборачивает каждый слог пиньиня в класс тона, чтобы стили карточки могли его раскрасить.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4872,6 +4916,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Активный профиль настроек. При переключении заменяются все настройки; выберите «Управление профилями…», чтобы добавить, переименовать или удалить профиль.</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>Язык майнинга:</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>Язык майнинга</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Тема:</translation>
     </message>
@@ -4890,6 +4942,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Manage profiles…</source>
         <translation>Управление профилями…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>Язык майнинга: %1. Открывает выбор языка в настройках.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5044,6 +5100,56 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Удалить ВСЕ слова, добавленные вами в локальный список известных слов? Это нельзя отменить. Синхронизированный с Anki кэш не затрагивается.</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>Смена языка майнинга</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>Переход на %1 отбросит %n элемент очереди — и на экране, и в копии, сохранённой для следующего запуска. Продолжить?</numerusform>
+            <numerusform>Переход на %1 отбросит %n элемента очереди — и на экране, и в копии, сохранённой для следующего запуска. Продолжить?</numerusform>
+            <numerusform>Переход на %1 отбросит %n элементов очереди — и на экране, и в копии, сохранённой для следующего запуска. Продолжить?</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>Майнинг этого языка выполняется впервые</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>Вы ещё не майнили %1.</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>Сканирование известных слов читает все неисключённые колоды, поэтому слова из %1 будут считаться уже известными. Исключить их для этого языка?</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>Исключить эти колоды</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>Настроить ресурсы…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>Этот язык майнинга недоступен в этой сборке.</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>Настройки заняты. Ничего не переключено.</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>Майнинг выполняется. Остановите его, затем смените язык.</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>Не удалось переключиться на %1: %2. Ничего не переключено.</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6068,6 +6174,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Майнинг или заполнение карточек всё ещё использует словари. Остановите его и попробуйте снова.</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>Этот профиль майнит другой язык, а в очередях ещё осталась работа. Ничего не переключено.</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>Не удалось применить профиль «%1»: %2. Текущие настройки не изменены.</translation>
     </message>
@@ -6957,19 +7067,19 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Аудиопакет «%1» предназначен для %2; пропущен</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Словарь «%1» предназначен для %2; пропущен</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Источник частотности «%1» предназначен для %2; пропущен</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Источник тонального ударения «%1» предназначен для %2; пропущен</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8041,11 +8151,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>Корейский</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>Китайский</translation>
     </message>
     <message>
         <source>Input</source>

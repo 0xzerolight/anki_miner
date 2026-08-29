@@ -31,6 +31,7 @@ from PyQt6.QtGui import QFont, QGuiApplication
 from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.language_gate import apply_language_gate
 from anki_miner.gui.widgets.base import EnhancedDialog, StatusBadge
 from anki_miner.models import ValidationResult
 from anki_miner.utils.i18n import tr_format
@@ -71,6 +72,11 @@ HEALTH_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 HEALTH_KEYS: tuple[str, ...] = tuple(key for _group, keys in HEALTH_GROUPS for key in keys)
+
+#: Health rows that only exist for a language with the matching capability.
+#: The keys stay in HEALTH_GROUPS: the report still carries every row, and
+#: the window is the only thing that hides one.
+_ROW_CAPABILITIES: dict[str, str] = {"resources.pitch": "pitch"}
 
 #: Where a broken row is repaired, as a stable setting-anchor id (D11). Rows
 #: absent from this map have no in-app control to jump to — ffmpeg and ffprobe
@@ -413,6 +419,9 @@ class SystemHealthWindow(EnhancedDialog):
         self.add_content(self.error_label)
 
         self._rows: dict[str, _HealthRow] = {}
+        #: ``(row, capability)`` pairs for ``set_capabilities``; appended to by
+        #: ``_build_rows`` so a later contributor extends rather than replaces.
+        self._language_gate_pairs: list[tuple[QWidget, str]] = []
         #: Set by ``_build_rows``; kept so ``_size_to_content`` can ask the list
         #: how tall it wants to be rather than the scroller how tall it settles
         #: for.
@@ -471,6 +480,9 @@ class SystemHealthWindow(EnhancedDialog):
                 row.fix_requested.connect(self._on_fix_requested)
                 self._rows[key] = row
                 column.addWidget(row)
+        self._language_gate_pairs.extend(
+            (self._rows[key], capability) for key, capability in _ROW_CAPABILITIES.items() if key in self._rows
+        )
         column.addStretch()
         self._align_columns()
 
@@ -572,6 +584,16 @@ class SystemHealthWindow(EnhancedDialog):
     def set_export_enabled(self, enabled: bool) -> None:
         """Enable both visible and programmatic diagnostics export."""
         self.export_button.setEnabled(enabled)
+
+    def set_capabilities(self, capabilities: frozenset[str]) -> None:
+        """Show only the resource rows the active mining language can use.
+
+        ``apply_language_gate`` owns a paired row's whole visibility in both
+        directions, so a switch away from pitch and back lands where it
+        started. The row keeps its key either way: the report and the
+        diagnostics export still carry every check.
+        """
+        apply_language_gate(self._language_gate_pairs, capabilities)
 
     def show_health(self, report: HealthReport) -> None:
         """Repaint every row from ``report``. Safe to call while hidden."""

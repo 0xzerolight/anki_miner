@@ -544,6 +544,19 @@ def _reset_theme_state():
     preview_mod = sys.modules.get("anki_miner.gui.widgets.enhanced.theme_preview")
     if preview_mod is not None:
         preview_mod.clear_thumbnail_cache()
+    # The third leak on the same worker, and the one the two resets above miss:
+    # ``Theme.apply_to_app`` installs the compiled sheet on the QApplication,
+    # which outlives every reset here. Its ``*[japanese="..."]`` and ``QWidget``
+    # rules then rewrite the font of any widget a later test builds -- a widget
+    # asserting ``Sans Serif`` reads ``Noto Sans CJK JP`` instead, and only when
+    # scheduling happens to place a theme-applying file first. Same guarded
+    # lookup as above: QtWidgets is read from sys.modules so a non-GUI test pays
+    # no PyQt import.
+    qt_widgets = sys.modules.get("PyQt6.QtWidgets")
+    if qt_widgets is not None:
+        app = qt_widgets.QApplication.instance()
+        if app is not None and app.styleSheet():
+            app.setStyleSheet("")
     yield
 
 

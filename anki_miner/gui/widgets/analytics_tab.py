@@ -66,6 +66,10 @@ _SESSION_FIT_COLUMNS = (0, *_SESSION_COUNT_COLUMNS)
 _DIFFICULTY_COUNT_COLUMNS = (0, 2, 3, 4)
 _DIFFICULTY_FIT_COLUMNS = _DIFFICULTY_COUNT_COLUMNS
 
+#: The cells carrying MINED content, which is what the language face is for.
+_SESSION_NAME_COLUMNS = (1, 2)
+_DIFFICULTY_NAME_COLUMNS = (1,)
+
 
 def _count(value: int) -> SortableTableWidgetItem:
     """Build a count cell: grouped for reading, sorted on the number itself.
@@ -153,6 +157,26 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
         self._teardown_generation = 0
         self._setup_ui()
         self._setup_accessibility()
+
+    def set_content_style(self, style: ContentTextStyle) -> None:
+        """Re-point the name cells at *style* after a language switch (spec 6.1).
+
+        The style is captured at construction, so without this the tab keeps
+        rendering series and episode names in the outgoing language's shapes
+        until the next launch. The rows already on screen are re-faced in place:
+        the data has not changed, only what it should look like.
+        """
+        self._content_style = style
+        font = content_cell_font(style)
+        for table, columns in (
+            (self.sessions_table, _SESSION_NAME_COLUMNS),
+            (self.difficulty_table, _DIFFICULTY_NAME_COLUMNS),
+        ):
+            for row in range(table.rowCount()):
+                for column in columns:
+                    item = table.item(row, column)
+                    if item is not None:
+                        item.setFont(font)
 
     def shutdown(self) -> None:
         """Invalidate in-flight refresh/reset callbacks before app close."""

@@ -298,6 +298,14 @@ a = Analysis(
         "jieba.posseg",
         "pypinyin",
         "opencc",
+        # The tokenizer module itself: tagger_provider._build resolves
+        # "anki_miner.languages.<lang>.tokenizer" through importlib with an
+        # f-string, which bytecode analysis cannot follow, and zh/__init__.py
+        # deliberately never imports it (the engine loads lazily). Without this
+        # pin the frozen app ships jieba but not the module that uses it, and
+        # get_tagger("zh") dies as "No tokenizer registered". Stage 3 must add
+        # the ko line beside it.
+        "anki_miner.languages.zh.tokenizer",
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).

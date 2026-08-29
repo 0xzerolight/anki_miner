@@ -6,8 +6,9 @@ pins, reused by the profile's ``normalize`` field and by the dictionary key
 folding, so import-time and query-time keys can never disagree.
 
 OpenCC is optional. Without it there are no variants and lookups behave exactly
-as they would for a single-script corpus; ``availability.zh_unavailable_reason``
-is what tells the user why.
+as they would for a single-script corpus, so it stays out of the availability
+gate (``availability.zh_missing_required_reason``) and is named only by
+``availability.zh_unavailable_reason``, which lists the whole stack.
 """
 
 from __future__ import annotations

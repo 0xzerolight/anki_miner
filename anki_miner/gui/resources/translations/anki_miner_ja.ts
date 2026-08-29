@@ -458,6 +458,14 @@
         <translation>例文をかなのみで格納します。</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>量詞フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>辞書項目から解析した量詞を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>補助データフィールド</translation>
     </message>
@@ -4358,6 +4366,14 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>マイニング言語</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>マイニングする言語です。インターフェース言語（設定 -&gt; 外観と言語）とは別の設定です。切り替えると、辞書、フィルター、デッキ、カードのフィールドがその言語専用の設定に入れ替わります。</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>単語の頻度</translation>
     </message>
@@ -4590,6 +4606,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>字幕が単語をかなで表記していて（例：うなずく）、その漢字の辞書形（頷く）がすでにコレクションまたは既知単語リストにある場合、2枚目のカードを作成せずにスキップします。漢字表記がこの方法で統合されることはありません。</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>字体バリエーション</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>簡体字（简体）</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>繁体字（繁體）</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>文字セット</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>カードの表面と辞書検索でどちらの表記を優先するかを指定します。</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>i+1 文フィルター</translation>
     </message>
@@ -4660,6 +4696,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>Sentence および SentenceFurigana フィールド内で、マイニングした単語を &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; で囲みます。一致は MeCab が解析したマイニング対象の形態素の正確な範囲に基づくため、文中で同じ表記が重複していても、実際にマイニングされた箇所だけが太字になります。</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>読みを声調で色分けする</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>各ピンイン音節を声調クラスで囲み、カードのスタイルで色を付けられるようにします。</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4846,6 +4890,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>アクティブな設定プロファイル。切り替えるとすべての設定が入れ替わります。追加、名前変更、削除するには「プロファイルを管理…」を選択してください。</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>マイニング言語：</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>マイニング言語</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>テーマ:</translation>
     </message>
@@ -4864,6 +4916,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Manage profiles…</source>
         <translation>プロファイルを管理…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>マイニング言語: %1。設定の選択画面を開きます。</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5018,6 +5074,54 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか？この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>マイニング言語を切り替え</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>%1 に切り替えると、キュー内の %n 件の項目が画面上からも次回起動用の保存分からも破棄されます。続行しますか？</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>この言語のマイニングは初めてです</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>%1 はこれまでマイニングしていません。</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>既知単語のスキャンは除外されていないすべてのデッキを読み取るため、%1 の単語も既知として扱われます。この言語では除外しますか？</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>これらのデッキを除外</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>リソースを設定…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>そのマイニング言語はこのビルドでは利用できません。</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>設定が使用中です。切り替えは行われませんでした。</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>マイニングの実行中です。停止してから言語を切り替えてください。</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>%1 に切り替えられませんでした: %2。切り替えは行われませんでした。</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6042,6 +6146,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>マイニングまたはカード補完がまだ辞書を使用しています。停止してから再試行してください。</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>そのプロファイルは別の言語をマイニングし、キューにはまだ作業が残っています。切り替えは行われませんでした。</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>プロファイル「%1」を適用できませんでした：%2。現在の設定は変更されていません。</translation>
     </message>
@@ -6931,19 +7039,19 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>音声パック「%1」は %2 用です。スキップしました</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>辞書「%1」は %2 用です。スキップしました</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>頻度ソース「%1」は %2 用です。スキップしました</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>ピッチアクセントソース「%1」は %2 用です。スキップしました</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8011,11 +8119,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>韓国語</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>中国語</translation>
     </message>
     <message>
         <source>Input</source>

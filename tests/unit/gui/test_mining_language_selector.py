@@ -1,0 +1,102 @@
+"""The selector offers only languages this build can actually build.
+
+``AVAILABLE_LANGUAGES`` is the DECLARED set - config validates against a copy of
+it and it names ``ko`` from Stage 0 onward. A code only becomes selectable once
+``get_profile`` can build its profile, which for ``ko`` is Stage 3. Listing a
+declared-but-unregistered code made building the Settings panel raise.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.utils import language_choices
+from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.zh import availability
+
+
+def _panel(qtbot, config: AnkiMinerConfig) -> FilteringSettingsPanel:
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(config)
+    return panel
+
+
+def test_a_declared_but_unbuildable_language_is_not_offered(monkeypatch):
+    monkeypatch.setattr(language_choices, "AVAILABLE_LANGUAGES", ("ja", "zh", "xx"))
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh"]
+
+
+def test_a_language_whose_stack_is_missing_is_not_offered(monkeypatch):
+    """A profile builds fine without its optional stack; it still can't mine.
+
+    ``unavailable_reason`` is the profile's own runtime probe (zh answers it
+    from ``find_spec``), so a build missing the tokenizer drops the language
+    from the selector instead of offering a switch that cannot mine a word.
+    ``ja`` leaves the field ``None`` and is therefore always offered.
+    """
+
+    def fake_get_profile(code: str):
+        profile = get_profile(code)
+        if code == "zh":
+            return dataclasses.replace(profile, unavailable_reason=lambda: "needs jieba")
+        return profile
+
+    monkeypatch.setattr(language_choices, "get_profile", fake_get_profile)
+
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja"]
+
+
+def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
+    """R11a: opencc is optional, so its absence degrades a feature, not the menu.
+
+    The profile's gate probes the REQUIRED packages; ``zh_unavailable_reason``
+    keeps naming the optional one for whoever wants the full list.
+    """
+    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
+
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh"]
+
+
+def test_a_missing_required_package_drops_the_language(monkeypatch):
+    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
+
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja"]
+
+
+def test_offered_languages_carry_their_native_names():
+    names = dict(language_choices.available_mining_languages())
+    assert names["ja"] == "日本語"
+    assert names["zh"] == "中文"
+
+
+def test_the_panel_builds_and_lists_only_buildable_languages(qtbot, test_config):
+    combo = _panel(qtbot, test_config).mining_language_combo
+    assert [combo.itemData(i) for i in range(combo.count())] == ["ja", "zh"]
+    assert combo.currentData() == "ja"
+
+
+def test_changing_the_combo_only_requests_a_switch(qtbot, test_config):
+    panel = _panel(qtbot, test_config)
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+
+    panel.mining_language_combo.setCurrentIndex(1)
+
+    assert requested == ["zh"]
+    # The panel never writes the field itself: the switch owns that, because it
+    # has to stash the outgoing language's scoped values first.
+    assert panel.contribute(test_config).language == "ja"
+
+
+def test_set_mining_language_repoints_without_re_requesting(qtbot, test_config):
+    panel = _panel(qtbot, test_config)
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+
+    panel.set_mining_language("zh")
+
+    assert panel.mining_language_combo.currentData() == "zh"
+    assert requested == []

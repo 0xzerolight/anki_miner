@@ -26,9 +26,23 @@ def _installed(name: str) -> bool:
         return False
 
 
-def zh_unavailable_reason() -> str | None:
-    """Names every missing zh package, or ``None`` when the stack is complete."""
-    missing = [name for name in ZH_REQUIRED_PACKAGES + ZH_OPTIONAL_PACKAGES if not _installed(name)]
+def _reason(missing: list[str]) -> str | None:
     if not missing:
         return None
     return f"Chinese mining needs {', '.join(missing)}. Install with: pip install \"anki-miner[zh]\""
+
+
+def zh_unavailable_reason() -> str | None:
+    """Names every missing zh package, or ``None`` when the stack is complete."""
+    return _reason([name for name in ZH_REQUIRED_PACKAGES + ZH_OPTIONAL_PACKAGES if not _installed(name)])
+
+
+def zh_missing_required_reason() -> str | None:
+    """Names the missing HARD requirements only - the availability gate.
+
+    This, not :func:`zh_unavailable_reason`, is what the profile hands the GUI:
+    a build missing only OpenCC still mines Chinese (the variant lookups come
+    back empty), so gating on the full set would take the language out of the
+    selector and refuse the switch over a degraded feature.
+    """
+    return _reason([name for name in ZH_REQUIRED_PACKAGES if not _installed(name)])

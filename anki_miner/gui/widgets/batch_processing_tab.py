@@ -952,6 +952,10 @@ class BatchProcessingTab(MiningTabBase):
     # Durable queue contents (D16-C)
     # ------------------------------------------------------------------
 
+    def clear_queue(self) -> None:
+        """Public alias for Clear, for the language switch (D16-C)."""
+        self.queue_panel.clear_all()
+
     def queue_snapshot(self) -> QueueSnapshot:
         """Describe the series queue as folder pairs and outcomes.
 

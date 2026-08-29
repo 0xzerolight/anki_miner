@@ -458,6 +458,14 @@
         <translation>以纯假名形式存储例句。</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>量词字段</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>存储从词典条目中解析出的量词。留空 = 跳过。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>辅助数据字段</translation>
     </message>
@@ -4358,6 +4366,14 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>挖词语言</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>要挖词的语言。与界面语言（设置 -&gt; 外观和语言）相互独立。切换后，词典、过滤器、牌组和卡片字段都会换成该语言自己的设置。</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>词频</translation>
     </message>
@@ -4590,6 +4606,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>当字幕以假名拼写某个单词（例如 うなずく），而该词的汉字词典形式（頷く）已存在于您的收藏或已知单词列表中时，将跳过该单词，而不会创建第二张卡片。汉字拼写永远不会以这种方式合并。</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>字形变体</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>简体</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>繁体</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>字符集</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>卡片正面和词典查询优先使用哪种写法。</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>i+1 句子过滤器</translation>
     </message>
@@ -4660,6 +4696,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>在 Sentence 和 SentenceFurigana 字段中将挖出的单词用 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包裹。匹配基于挖出词素在 MeCab 中的精确跨度，因此句子中重复出现的表层形式只会加粗实际挖出的那一处。</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>按声调为读音着色</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>为每个拼音音节加上声调类名，以便卡片样式为其着色。</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4846,6 +4890,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>当前设置配置文件。切换会替换所有设置；选择“管理配置文件…”可添加、重命名或移除它们。</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>挖词语言：</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>挖词语言</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>主题：</translation>
     </message>
@@ -4864,6 +4916,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Manage profiles…</source>
         <translation>管理配置文件…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>挖词语言：%1。打开设置中的选择器。</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5018,6 +5074,54 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>切换挖词语言</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>切换到 %1 将丢弃队列中的 %n 个项目，屏幕上的和为下次启动保存的副本都会丢弃。是否继续？</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>首次挖取此语言</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>你还没有挖过 %1。</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>已知单词扫描会读取所有未排除的牌组，因此 %1 中的单词会被算作已知。是否在此语言下排除它们？</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>排除这些牌组</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>设置资源…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>此构建不支持该挖词语言。</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>设置正忙。未进行切换。</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>挖词正在运行。请先停止，再切换语言。</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>无法切换到 %1：%2。未进行切换。</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6042,6 +6146,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>挖词或卡片补全仍在使用词典。请停止后再重试。</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>该配置文件挖取的是其他语言，且队列中仍有待处理的任务。未进行切换。</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>无法应用配置文件“%1”：%2。当前设置未更改。</translation>
     </message>
@@ -6931,19 +7039,19 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>音频包“%1”用于 %2；已跳过</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>词典“%1”用于 %2；已跳过</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>词频来源“%1”用于 %2；已跳过</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>音调来源“%1”用于 %2；已跳过</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8011,11 +8119,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>韩语</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>中文</translation>
     </message>
     <message>
         <source>Input</source>

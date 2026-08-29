@@ -459,6 +459,14 @@
         <translation>Stocke la phrase en kana simple.</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Champ Classificateur</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Stocke le classificateur extrait de l'entrée du dictionnaire. Vide = ignorer.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Champs de données auxiliaires</translation>
     </message>
@@ -4371,6 +4379,14 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>Langue d'extraction</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>La langue que vous extrayez. Distincte de la langue de l'interface (Paramètres -&gt; Apparence et langue). Le changement remplace les dictionnaires, les filtres, le paquet et les champs de carte par les réglages propres à cette langue.</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>Fréquence des mots</translation>
     </message>
@@ -4603,6 +4619,26 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Lorsqu'un sous-titre orthographie un mot en kana (par exemple うなずく) et que la forme kanji du dictionnaire (頷く) figure déjà dans votre collection ou votre liste de mots connus, ce mot est ignoré au lieu de créer une seconde carte. Les orthographes en kanji ne sont jamais fusionnées de cette manière.</translation>
     </message>
     <message>
+        <source>Script Variants</source>
+        <translation>Variantes d'écriture</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>Simplifié (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Traditionnel (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Jeu de caractères</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>L'orthographe que privilégient le recto de la carte et la recherche dans le dictionnaire.</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>Filtre de phrases i+1</translation>
     </message>
@@ -4673,6 +4709,14 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>Encadre le mot extrait dans &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; au sein des champs Sentence et SentenceFurigana. La correspondance est la portée MeCab exacte du morphème extrait, de sorte que les surfaces dupliquées dans une phrase ne mettent en gras que l'occurrence réellement extraite.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Colorer la lecture selon le ton</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>Entoure chaque syllabe du pinyin d'une classe de ton pour que le style de la carte puisse la colorer.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4859,6 +4903,14 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Profil de paramètres actif. Le changement échange tous les paramètres ; choisissez « Gérer les profils… » pour les ajouter, renommer ou supprimer.</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>Langue d'extraction :</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>Langue d'extraction</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Thème :</translation>
     </message>
@@ -4877,6 +4929,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Manage profiles…</source>
         <translation>Gérer les profils…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>Langue d'extraction : %1. Ouvre le sélecteur dans les paramètres.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5031,6 +5087,55 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Supprimer TOUS les mots que vous avez ajoutés à la liste locale de mots connus ? Cette action est irréversible. Le cache synchronisé depuis Anki n'est pas affecté.</translation>
+    </message>
+</context><context>
+    <name>LanguageSwitch</name>
+    <message>
+        <source>Switch mining language</source>
+        <translation>Changer la langue d'extraction</translation>
+    </message>
+    <message numerus="yes">
+        <source>Switching to %1 discards %n queued item(s), on screen and in the copy saved for the next launch. Continue?</source>
+        <translation>
+            <numerusform>Passer à %1 supprime %n élément en file d'attente, à l'écran comme dans la copie enregistrée pour le prochain lancement. Continuer ?</numerusform>
+            <numerusform>Passer à %1 supprime %n éléments en file d'attente, à l'écran comme dans la copie enregistrée pour le prochain lancement. Continuer ?</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation>Première extraction dans cette langue</translation>
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation>Vous n'avez encore rien extrait en %1.</translation>
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
+        <translation>L'analyse des mots connus lit tous les paquets non exclus, donc les mots en %1 compteraient comme déjà connus. Les exclure pour cette langue ?</translation>
+    </message>
+    <message>
+        <source>Exclude these decks</source>
+        <translation>Exclure ces paquets</translation>
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation>Configurer les ressources…</translation>
+    </message>
+    <message>
+        <source>That mining language is not available in this build.</source>
+        <translation>Cette langue d'extraction n'est pas disponible dans cette version.</translation>
+    </message>
+    <message>
+        <source>Settings are busy. Nothing was switched.</source>
+        <translation>Les paramètres sont occupés. Rien n'a été changé.</translation>
+    </message>
+    <message>
+        <source>Mining is running. Stop it, then switch language.</source>
+        <translation>Une extraction est en cours. Arrêtez-la, puis changez de langue.</translation>
+    </message>
+    <message>
+        <source>Could not switch to %1: %2. Nothing was switched.</source>
+        <translation>Impossible de passer à %1 : %2. Rien n'a été changé.</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6055,6 +6160,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>L'extraction ou le remplissage des cartes utilise encore les dictionnaires. Arrêtez-la et réessayez.</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>Ce profil extrait une autre langue et les files d'attente contiennent encore du travail. Rien n'a été changé.</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>Impossible d'appliquer le profil « %1 » : %2. Vos paramètres actuels restent inchangés.</translation>
     </message>
@@ -6944,19 +7053,19 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Le pack audio « %1 » est destiné à %2 ; ignoré</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Le dictionnaire « %1 » est destiné à %2 ; ignoré</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>La source de fréquence « %1 » est destinée à %2 ; ignorée</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>La source d'accent de hauteur « %1 » est destinée à %2 ; ignorée</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8026,11 +8135,11 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>Coréen</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>Chinois</translation>
     </message>
     <message>
         <source>Input</source>

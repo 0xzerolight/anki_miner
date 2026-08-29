@@ -77,6 +77,7 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.mini_job_monitor import MiniJobMonitor
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
@@ -367,6 +368,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # any refusal itself and snaps the combo back on every terminal path.
         self.header.profile_changed.connect(self.profile_controller.switch_to)
         self.header.open_profile_manager.connect(self._open_profile_manager)
+        self.header.open_mining_language_settings.connect(self._open_mining_language_settings)
         self.central_layout.addWidget(self.header)
 
         # Whole-window issues (system checks, dictionary mutation refusals) sit
@@ -396,6 +398,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         # Set up keyboard shortcuts
         self._setup_shortcuts()
+
+        # What makes the header chip correct at first paint. The tab stack is
+        # still empty here — ``compose_main_window`` fills it after the window
+        # is built — so this pass only reaches the header; the Settings selector
+        # points itself as it is constructed, and every switch re-syncs both.
+        self.sync_mining_language_surfaces()
 
         # Set up accessibility features
         self._setup_accessibility()
@@ -975,6 +983,74 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         open_subtab = getattr(settings_widget, "open_ui_subtab", None)
         if callable(open_subtab):
             open_subtab()
+
+    def _open_mining_language_settings(self) -> None:
+        """Header chip: land on the selector itself, not just its page."""
+        idx = self._settings_tab_index()
+        if idx < 0:
+            return
+        self.tabs.setCurrentIndex(idx)
+        jump = getattr(self.tabs.widget(idx), "jump_to_setting", None)
+        if callable(jump):
+            jump("filtering.mining_language_combo")
+
+    def request_mining_language(self, code: str) -> bool:
+        """Selector entry point for a language switch (spec 6.1, trigger 1).
+
+        The combo has already moved by the time this runs, so EVERY terminal
+        path re-points it - a selector showing 中文 over a live ja config is the
+        same wrong state a mis-pointed profile combo is.
+        """
+        from anki_miner.gui.controllers import language_switch
+
+        try:
+            return language_switch.request_language_change(self, code)
+        finally:
+            self.sync_mining_language_surfaces()
+
+    def sync_mining_language_surfaces(self) -> None:
+        """Point every language surface at the language that is actually live."""
+        from anki_miner.gui.utils.language_choices import available_mining_languages
+
+        # config_language, never the raw field: the config accepts any stored
+        # code, and one with no registered profile mines as ja everywhere else.
+        # A surface reading the raw field would name a language nothing uses.
+        code = config_language(self.config)
+
+        idx = self._settings_tab_index()
+        if idx >= 0:
+            setter = getattr(self.tabs.widget(idx), "set_mining_language", None)
+            if callable(setter):
+                setter(code)
+
+        # Mined-content typography is captured when a tab is built, so a switch
+        # has to push the new face out or the tab keeps the outgoing language's
+        # shapes until the next launch. Duck-typed, like set_mining_language
+        # above: only the tabs that show mined content answer.
+        style = get_profile(code).content_style
+        for index in range(self.tabs.count()):
+            restyle = getattr(self.tabs.widget(index), "set_content_style", None)
+            if callable(restyle):
+                restyle(style)
+
+        choices = available_mining_languages()
+        names = dict(choices)
+        self.header.set_mining_language(names.get(code, code), choices=len(choices))
+
+    def restart_prewarm(self) -> None:
+        """Warm the incoming language's tokenizer and chain caches (spec 6.4).
+
+        Not ``_start_prewarm``: that one is one-shot by design (boot), guarded
+        by ``self._prewarm_started``. A switch legitimately re-runs it, but
+        never on top of a live worker.
+        """
+        if still_running(self.background_tasks.prewarm_worker):
+            return
+        from anki_miner.gui.workers import prewarm_worker as prewarm_module
+
+        worker = prewarm_module.PrewarmWorker(self.get_config())
+        self.background_tasks.set_prewarm(worker)
+        worker.start()
 
     def _open_profile_manager(self) -> None:
         """Open the settings-profile manager (header sentinel / Settings → UI).
@@ -2076,6 +2152,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             window.set_export_enabled(not self._diagnostics_export_running)
             self._system_health_window = window
             window.show_health(self._health_report)
+        # Outside the build block: every open re-applies the gate, so a language
+        # switch between two opens cannot leave a stale row on screen. Per-open
+        # is enough — a switch requires idle queues, so the window cannot go
+        # stale while a run is live.
+        window.set_capabilities(get_profile(config_language(self.config)).capabilities)
         window.show()
         window.raise_()
         window.activateWindow()

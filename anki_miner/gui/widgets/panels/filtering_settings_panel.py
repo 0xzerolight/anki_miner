@@ -7,6 +7,7 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QHBoxLayout,
     QInputDialog,
@@ -19,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.utils.qt_helpers import (
     configure_data_view,
@@ -64,6 +66,8 @@ class FilteringSettingsPanel(FormPanel):
             local known-words cache.
         manage_known_words_requested: Emitted when the user opens the Manage
             Known Words dialog (Issue #42).
+        mining_language_requested: Emitted when the user picks another mining
+            language. The window runs the guard and decides.
     """
 
     ANCHOR_NAMESPACE = "filtering"
@@ -71,6 +75,7 @@ class FilteringSettingsPanel(FormPanel):
     fetch_decks_requested = pyqtSignal()
     rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
+    mining_language_requested = pyqtSignal(str)  # proposes a switch; never commits one
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
@@ -86,6 +91,24 @@ class FilteringSettingsPanel(FormPanel):
         # non-ja rows to the same one. A second assignment would drop these
         # pairs, so this is the only place it is bound.
         self._language_gate_pairs: list[tuple[QWidget, str]] = []
+
+        # Mining Language section. First, because every row below it is scoped
+        # to the language this one names.
+        self.add_section(self.tr("Mining Language"))
+
+        self.mining_language_combo = QComboBox()
+        for code, display_name in available_mining_languages():
+            self.mining_language_combo.addItem(display_name, code)
+        self.mining_language_combo.currentIndexChanged.connect(self._on_mining_language_changed)
+        self.add_field(
+            self.tr("Mining Language"),
+            self.mining_language_combo,
+            helper=self.tr(
+                "The language you mine. Separate from the interface language "
+                "(Settings -> Appearance & Language). Switching swaps dictionaries, "
+                "filters, deck and card fields to that language's own settings."
+            ),
+        )
 
         # Word Frequency section. Frequency-source management lives on its own
         # settings page; only the rank band — a filter — stays here.
@@ -408,6 +431,22 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.match_kana_variants_checkbox)
 
+        # Chinese script preference. Generic, language-scoped field - ja and ko
+        # carry "" here and never see this row. It gets a heading of its own
+        # because "Script Type" above is gated on kana_filters and hides under
+        # zh, which would leave this row reading as part of "Deduplication".
+        self.add_section(self.tr("Script Variants"))
+        self._script_variants_section_label = self._active_section_label
+
+        self.script_variant_combo = QComboBox()
+        self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
+        self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
+        self.add_field(
+            self.tr("Character Set"),
+            self.script_variant_combo,
+            helper=self.tr("Which spelling the card front and the dictionary lookup prefer."),
+        )
+
         # i+1 Sentence Filter section
         self.add_section(self.tr("i+1 Sentence Filter"))
 
@@ -487,6 +526,12 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.bold_target_in_sentence_checkbox)
 
+        self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
+        self.reading_tone_color_checkbox.setToolTip(
+            self.tr("Wraps each pinyin syllable in a tone class so the card styling can colour it.")
+        )
+        self.add_field("", self.reading_tone_color_checkbox)
+
         # Language-gated rows. Each row contributes its label too, so a hidden
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
@@ -505,6 +550,16 @@ class FilteringSettingsPanel(FormPanel):
         )
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
+        )
+        # The zh rows join the same list. EXTENDED, never assigned: a plain
+        # assignment here would drop the kana and wordset pairs above.
+        self._language_gate_pairs.extend(
+            (w, "script_variants") for w in field_row_widgets(self, self.script_variant_combo)
+        )
+        if self._script_variants_section_label is not None:
+            self._language_gate_pairs.append((self._script_variants_section_label, "script_variants"))
+        self._language_gate_pairs.extend(
+            (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
         )
 
         self.add_stretch()
@@ -812,6 +867,28 @@ class FilteringSettingsPanel(FormPanel):
         """Enable or disable the Add Deck button."""
         self.add_deck_button.setEnabled(enabled)
 
+    def set_mining_language(self, code: str) -> None:
+        """Point the combo at ``code`` without proposing a switch.
+
+        Signals blocked: this runs from ``load_from_config`` and from the
+        window's re-point after a REFUSED switch, and an emit there would ask
+        for the switch that was just refused.
+        """
+        index = self.mining_language_combo.findData(code)
+        if index < 0:
+            return
+        self.mining_language_combo.blockSignals(True)
+        try:
+            self.mining_language_combo.setCurrentIndex(index)
+        finally:
+            self.mining_language_combo.blockSignals(False)
+
+    def _on_mining_language_changed(self, index: int) -> None:
+        """Propose a switch. The window decides, and re-points this combo."""
+        code = self.mining_language_combo.itemData(index)
+        if isinstance(code, str) and code:
+            self.mining_language_requested.emit(code)
+
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)
     # ------------------------------------------------------------------
@@ -823,6 +900,9 @@ class FilteringSettingsPanel(FormPanel):
         Word-list selectors always set the value (including '' when the path is
         None) so Reset-to-Defaults clears a previously visible path (T-11).
         """
+        # config_language, not config.language: an unregistered code mines as
+        # Japanese, and the selector has to show the language actually in force.
+        self.set_mining_language(config_language(config))
         # Signals blocked while loading: a stored band with min > max (reachable
         # only by hand-editing gui_config.json) would otherwise have the clamp
         # silently rewrite the other end during a plain load.
@@ -875,6 +955,10 @@ class FilteringSettingsPanel(FormPanel):
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
+        index = self.script_variant_combo.findData(config.script_variant)
+        if index >= 0:
+            self.script_variant_combo.setCurrentIndex(index)
+        self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
@@ -888,7 +972,7 @@ class FilteringSettingsPanel(FormPanel):
         stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
         so any invalid pattern aborts Save before ``contribute`` is ever called.
         """
-        return replace(
+        updated = replace(
             config,
             min_frequency_rank=self.get_min_frequency_rank(),
             max_frequency_rank=self.get_max_frequency_rank(),
@@ -914,3 +998,13 @@ class FilteringSettingsPanel(FormPanel):
             reading_min_occurrence=self.get_reading_min_occurrence(),
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
         )
+        # Language-scoped rows contribute only while their capability is present.
+        # A ja config holds script_variant "" and the combo has no entry for it,
+        # so a blind write here would drift ja to "simplified" on the next
+        # autosave. Visibility is the gate's own output, so there is one source
+        # of truth for "does this language have this setting".
+        if self.script_variant_combo.isVisibleTo(self):
+            updated = replace(updated, script_variant=str(self.script_variant_combo.currentData()))
+        if self.reading_tone_color_checkbox.isVisibleTo(self):
+            updated = replace(updated, reading_tone_color=self.reading_tone_color_checkbox.isChecked())
+        return updated

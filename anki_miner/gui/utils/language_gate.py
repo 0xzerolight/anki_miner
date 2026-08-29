@@ -2,9 +2,11 @@
 
 Panels declare ``(widget, capability)`` pairs where they build the widgets and
 apply them from ``load_from_config`` -- the panels take a parent only, so the
-config-carrying load is the sole place an active language is in scope. A gate
-never re-shows: it hides what the active language cannot use and leaves
-everything else exactly as the panel built it.
+config-carrying load is the sole place an active language is in scope. The gate
+is two-way and owns the whole visibility of a paired widget: it hides what the
+active language cannot use and re-shows what it can, so a switch away and back
+lands where it started instead of hiding the rows until the next restart.
+Nothing else may drive a paired widget's visibility.
 """
 
 from __future__ import annotations
@@ -21,10 +23,9 @@ __all__ = ["apply_language_gate", "field_row_widgets"]
 
 
 def apply_language_gate(pairs: Iterable[tuple[QWidget, str]], capabilities: frozenset[str]) -> None:
-    """Hide every widget whose required capability the active language lacks."""
+    """Show every widget whose required capability the active language has, hide the rest."""
     for widget, capability in pairs:
-        if capability not in capabilities:
-            widget.setVisible(False)
+        widget.setVisible(capability in capabilities)
 
 
 def field_row_widgets(panel: FormPanel, widget: QWidget) -> tuple[QWidget, ...]:

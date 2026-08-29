@@ -2,8 +2,8 @@
 
 Hidden ``ANKI_MINER_SMOKE`` modes:
 
-* ``youtube``, ``asr``, and ``whispercpp`` validate frozen dependencies before
-  Qt starts.
+* ``youtube``, ``asr``, ``whispercpp`` and ``ja``/``ko``/``zh`` validate frozen
+  dependencies before Qt starts.
 * ``installer`` runs full GUI composition while suppressing optional startup
   work, validates installed-runtime invariants, and writes an atomic result
   marker before exiting.
@@ -254,6 +254,54 @@ def _run_asr_bundled_smoke() -> int:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print("BUNDLED_SMOKE_PASS: asr faster_whisper+ctranslate2 resolved")
+    return 0
+
+
+#: One line per mining language for the bundled language smoke. Short, real
+#: sentences: the point is that the tokenizer's packaged data files survived
+#: PyInstaller, which only a real segmentation proves.
+_LANGUAGE_SMOKE_LINES: dict[str, str] = {
+    "ja": "今日は良い天気ですね。",
+    "zh": "我今天早上吃了三个苹果。",
+}
+
+
+def _run_language_bundled_smoke(code: str) -> int:
+    """Env-var-gated smoke path for a mining language's frozen tokenizer stack.
+
+    Triggered by ANKI_MINER_SMOKE=ja|ko|zh. Builds the profile, prewarms its
+    tokenizer, and parses one line — frozen data-file collection failures
+    (jieba's dict.txt, pypinyin's phrase data, unidic, the kiwi model) manifest
+    only in a bundle, and only a real parse walks them. Not a CLI surface: the
+    flag is hidden, env-var-only, and exits before any Qt init.
+    """
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.languages.registry import get_profile
+    from anki_miner.languages.switching import switch_language
+    from anki_miner.languages.tagger_provider import get_tagger
+    from anki_miner.models.reading import ReadingUnit
+
+    try:
+        line = _LANGUAGE_SMOKE_LINES.get(code)
+        if line is None:
+            raise RuntimeError(f"no bundled smoke line for language {code!r}")
+        profile = get_profile(code)
+        config = AnkiMinerConfig() if code == "ja" else switch_language(AnkiMinerConfig(), code)
+        get_tagger(code)
+        parser = profile.create_parser(config)
+        words, _index, _counts = parser.parse_text_units(
+            [ReadingUnit(text=line, index=0, location_label="smoke")], False
+        )
+        if not words:
+            raise RuntimeError(f"{code}: tokenizer produced no words for the smoke line")
+        if profile.reading is not None and not any(w.expression_reading for w in words):
+            raise RuntimeError(f"{code}: reading support produced no reading")
+        # Exercises the lookup strategy's data too (OpenCC's dictionaries for zh).
+        profile.lookup.candidates(words[0].mined_form, words[0].orth_base, None)
+        print(f"BUNDLED_SMOKE_PASS: language {code} tokenized {len(words)} words")
+    except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
+        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 
@@ -1330,6 +1378,9 @@ def compose_main_window(
     # window owns the dialog, because a switch reloads every panel in this tab
     # from the incoming config. Same handler as the header's combo sentinel.
     settings_tab.manage_profiles_requested.connect(window._open_profile_manager)
+    # The selector only ever PROPOSES a switch: the window runs the guard, shows
+    # any refusal itself and re-points the combo on every terminal path.
+    settings_tab.mining_language_requested.connect(window.request_mining_language)
     window.tabs.addTab(settings_tab, QCoreApplication.translate("MainWindow", "Settings"))
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the
@@ -1645,6 +1696,10 @@ def main():
 
     if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
         sys.exit(_run_whispercpp_bundled_smoke())
+
+    smoke_language = os.environ.get("ANKI_MINER_SMOKE")
+    if smoke_language in ("ja", "ko", "zh"):
+        sys.exit(_run_language_bundled_smoke(smoke_language))
 
     # Env-var-gated ASR Vulkan device probe. The parent process
     # (_engine.vulkan_device_count) spawns a frozen bundle with this flag set so

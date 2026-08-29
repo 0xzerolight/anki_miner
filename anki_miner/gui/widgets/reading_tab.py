@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from PyQt6.QtCore import QThread
 
     from anki_miner.interfaces.presenter import PresenterProtocol
+    from anki_miner.languages.profile import ContentTextStyle
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,14 @@ class ReadingTab(QWidget):
         self.novels_tab.update_config(config)
         self.subtitles_tab.update_config(config)
         self.text_tab.update_config(config)
+
+    def set_content_style(self, style: ContentTextStyle) -> None:
+        """Forward the mining language's face to the one child that shows it.
+
+        The container is what ``MainWindow.sync_mining_language_surfaces``
+        iterates; the paste buffer lives a level down.
+        """
+        self.text_tab.set_content_style(style)
 
     # ------------------------------------------------------------------
     # Close contract
