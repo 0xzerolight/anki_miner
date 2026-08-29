@@ -47,9 +47,11 @@ from anki_miner.utils.i18n import tr_format
 class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
     """View / remove / export / reset the user-curated known words list."""
 
-    def __init__(self, known_word_db: KnownWordDB, parent=None):
+    # 1B.13 adds its typography keyword here — do not drop existing keywords.
+    def __init__(self, known_word_db: KnownWordDB, parent=None, *, language: str = "ja"):
         super().__init__(parent)
         self._db = known_word_db
+        self._language = language
         self._dialog_generation = 0
         # The list may never have been written if the user only just enabled the
         # feature — initialize so reads/writes don't hit a missing file.
@@ -218,7 +220,9 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 # Expected failures travel through on_done so the reason survives
                 # (run_off_thread's on_error only receives a message string).
                 try:
-                    return parse_known_words_file(path)
+                    from anki_miner.languages.registry import get_profile
+
+                    return parse_known_words_file(path, encodings=get_profile(self._language).import_encodings)
                 except KnownWordsImportError as exc:
                     return exc
 

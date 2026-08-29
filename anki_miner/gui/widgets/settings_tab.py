@@ -2124,10 +2124,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """Open the Manage Known Words dialog (Issue #42)."""
         from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
         from anki_miner.gui.widgets.dialogs.known_words_dialog import KnownWordsManagerDialog
+        from anki_miner.languages.registry import config_language
 
         try:
             db = KnownWordDB(resolve_known_words_db_path(self.config))
-            KnownWordsManagerDialog(db, self).exec()
+            KnownWordsManagerDialog(db, self, language=config_language(self.config)).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             self.show_screen_issue(
                 ScreenIssue(
