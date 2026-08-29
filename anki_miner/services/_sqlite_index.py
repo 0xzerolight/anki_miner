@@ -154,7 +154,27 @@ def _owned_slot_meta(directory: Path, slot_id: str, family: StoreFamily) -> dict
 
 
 def _identity_matches(meta: dict[str, str], identity: dict[str, str]) -> bool:
-    return all(meta.get(key) == value for key, value in identity.items())
+    """Whether an installed slot is the same source, imported for the same language.
+
+    The language is compared through :func:`meta_language` on BOTH sides, so an
+    absent key reads as ``"ja"`` wherever it is missing. That single rule covers
+    the three cases:
+
+    * A slot installed before the transition has no ``language`` meta row and a
+      Japanese import passes no ``language`` identity key — both normalize to
+      ``"ja"`` and the slot is reused, byte for byte as it is today. No existing
+      user grows a duplicate.
+    * A Chinese import of a source already installed for Japanese mismatches, so
+      it forks its own slot instead of relabelling the Japanese one.
+    * The reverse order mismatches too: an unstamped Japanese identity is not a
+      wildcard, so a Japanese import cannot claim an installed Chinese slot.
+
+    Every other key keeps the plain subset comparison — an identity names only
+    the fields it wants to pin, and a slot may carry more.
+    """
+    if meta_language(meta) != meta_language(identity):
+        return False
+    return all(meta.get(key) == value for key, value in identity.items() if key != "language")
 
 
 def is_generated_store_artifact(name: str) -> bool:
@@ -559,6 +579,22 @@ def language_kwarg(language: str) -> LanguageKwarg:
     keeps the pre-transition call byte-identical all the way down, including
     the test doubles that mirror an importer's exact signature. Splat this
     instead of passing ``language=`` unconditionally.
+    """
+    return {} if language == "ja" else {"language": language}
+
+
+def language_identity(language: str) -> dict[str, str]:
+    """``{"language": language}`` for a slot-identity dict, empty for ja.
+
+    ``resolve_auto_store_id`` derives a fork id by hashing the identity dict, so
+    the Japanese identity has to stay key for key what it was before the
+    transition — one extra key would move every already-forked Japanese slot to
+    a new id and orphan the installed one. ``_identity_matches`` reads an absent
+    key as ``"ja"`` on both sides, so the omission carries the same meaning the
+    explicit value would.
+
+    Same omit-when-ja reasoning as :func:`language_kwarg`, kept separate because
+    that one is typed as a call-keyword bundle rather than as identity fields.
     """
     return {} if language == "ja" else {"language": language}
 

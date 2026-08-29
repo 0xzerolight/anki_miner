@@ -41,9 +41,31 @@ ASCENDING = "ascending"
 # _getFrequencyOrder (moreCommonTerms / lessCommonTerms).
 MORE_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["来る", "言う", "出る", "入る", "方", "男", "女", "今", "何", "時"],
+    # Both script variants are listed in one table: a SUBTLEX-CH port is
+    # simplified and a Sinica-style port is traditional, and a term the source
+    # does not carry never votes (_min_max reports has_value False). One table
+    # therefore serves both without a variant flag on the source.
+    "zh": ["的", "是", "不", "我", "有", "人", "说", "說", "来", "來", "时候", "時候", "什么", "什麼", "知道"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
+    "zh": [
+        "忐忑",
+        "熠熠",
+        "缱绻",
+        "繾綣",
+        "龃龉",
+        "齟齬",
+        "蹉跎",
+        "阑珊",
+        "闌珊",
+        "斑驳",
+        "斑駁",
+        "踌躇",
+        "躊躇",
+        "惆怅",
+        "惆悵",
+    ],
 }
 
 

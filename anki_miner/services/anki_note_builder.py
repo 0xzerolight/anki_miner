@@ -36,6 +36,12 @@ OPTIONAL_FIELD_KEYS = {
     "frequency_sort",
     "source",
     "expression_audio",
+    # Non-ja card hooks (spec 9.3): the mapped field name is the on/off switch,
+    # exactly like frequency/pitch. A ja config never maps them, so the empty-name
+    # skip below leaves every Japanese note byte-identical.
+    "measure_word",
+    "expression_traditional",
+    "expression_pinyin",
 }
 
 
@@ -110,7 +116,7 @@ def field_mapping_error(
 # glossary), NOT html.escape()d by the OPTIONAL pass — escaping would turn the
 # tags into literal text. They follow the skip-when-empty contract: an absent
 # value leaves the field untouched rather than blanking it.
-_RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text")
+_RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text", "expression_pinyin")
 
 
 # Used to normalize a stored first-field value to the same key Anki dedups on.
@@ -255,6 +261,7 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         "frequency": raw_html_values["frequency"],
         "pitch_graph": raw_html_values["pitch_graph"],
         "pitch_text": raw_html_values["pitch_text"],
+        "expression_pinyin": raw_html_values["expression_pinyin"],
         "picture": picture_html,
         "audio": audio_ref,
         "expression_audio": expression_audio_ref,
@@ -268,7 +275,8 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         anki_field_name = config.anki_fields.get(key, "")
         if not anki_field_name:
             continue
-        # The raw-HTML fields (frequency, pitch_graph, pitch_text) are inserted
+        # The raw-HTML fields (frequency, pitch_graph, pitch_text,
+        # expression_pinyin — tone-coloured spans) are inserted
         # verbatim (like glossary). Unlike the always-emitted fields above they
         # follow the optional gating contract: omit entirely when the value is
         # empty so a word with no data leaves the field untouched rather than

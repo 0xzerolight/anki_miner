@@ -78,8 +78,7 @@ def _pack_meta(pack_id: str, language: str, tmp_path) -> AudioPackMeta:
 # ---------------------------------------------------------------------------
 
 
-def test_dict_chain_drops_other_language_slots(tmp_path, monkeypatch):
-    register_stub_profile(monkeypatch, "zh")
+def test_dict_chain_drops_other_language_slots(tmp_path):
     registry = DictionaryRegistry(tmp_path)
     registry._dicts = {
         "ja-dict": _dict_meta("ja-dict", "ja", tmp_path),
@@ -163,8 +162,7 @@ def test_frequency_chain_drops_other_language_slots(tmp_path, monkeypatch):
     assert registry.build_sources(config) == []
 
 
-def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path, monkeypatch):
-    register_stub_profile(monkeypatch, "zh")
+def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path):
     registry = FrequencySourceRegistry(tmp_path)
     registry._sources = {
         "ja-freq": _freq_meta("ja-freq", "ja", tmp_path),
@@ -225,8 +223,7 @@ def test_pitch_chain_keeps_every_slot_for_ja(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_audio_pack_chain_drops_other_language_slots(tmp_path, monkeypatch):
-    register_stub_profile(monkeypatch, "zh")
+def test_audio_pack_chain_drops_other_language_slots(tmp_path):
     registry = AudioPackRegistry(tmp_path)
     registry._packs = {
         "ja-pack": _pack_meta("ja-pack", "ja", tmp_path),
@@ -273,10 +270,9 @@ class _RecordingDictRegistry:
         return []
 
 
-def test_factory_passes_the_sink_for_a_non_ja_config(test_config, monkeypatch):
+def test_factory_passes_the_sink_for_a_non_ja_config(test_config):
     from anki_miner.gui.utils.service_factory import build_definition_service
 
-    register_stub_profile(monkeypatch, "zh")
     registry = _RecordingDictRegistry()
     load_result = ServiceLoadResult()
     config = dataclasses.replace(test_config, language="zh", dictionary_chain=())

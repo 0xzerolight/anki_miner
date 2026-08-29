@@ -31,6 +31,7 @@ from anki_miner.languages.profile import (
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
 from anki_miner.services.reading import sentence_splitter
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+from anki_miner.services.sentence_tts_fetcher import PAPAGO_SPEAKER_JA
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ja_normalize import normalize_for_tokenization
@@ -38,13 +39,15 @@ from anki_miner.utils.ja_normalize import normalize_for_tokenization
 __all__ = ["JA_AUDIO", "build_profile"]
 
 #: ja keeps today's cache stem literals ("googletts_…", "sentencetts_…"), so
-#: existing cached audio files stay valid byte-for-byte.
+#: existing cached audio files stay valid byte-for-byte. ``papago_speaker`` is
+#: the JA voice explicitly: the factory used to coerce a missing speaker to it,
+#: which would have read Chinese sentences in Japanese once zh registered.
 JA_AUDIO = AudioDefaults(
     gtts_lang="ja",
     cache_stem_prefix="googletts",
     sentence_cache_stem_prefix="sentencetts",
     custom_fetcher_language="ja",
-    papago_speaker=None,
+    papago_speaker=PAPAGO_SPEAKER_JA,
     default_chain=AnkiMinerConfig().expression_audio_chain,
     candidates=None,
 )

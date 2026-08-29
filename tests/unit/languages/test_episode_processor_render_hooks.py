@@ -93,7 +93,7 @@ class _FieldHook:
     def field_names(self) -> tuple[str, ...]:
         return tuple(self._fields)
 
-    def render(self, word: Any) -> dict[str, str]:
+    def render(self, word: Any, *, config: Any) -> dict[str, str]:
         self.words.append(word)
         return dict(self._fields)
 
@@ -102,7 +102,7 @@ class _RaisingHook:
     def field_names(self) -> tuple[str, ...]:
         return ("pinyin",)
 
-    def render(self, word: Any) -> dict[str, str]:
+    def render(self, word: Any, *, config: Any) -> dict[str, str]:
         raise RuntimeError("hook exploded")
 
 
@@ -199,7 +199,7 @@ def test_non_ja_run_merges_hook_fields_under_logical_keys(config_zh):
         def field_names(self) -> tuple[str, ...]:
             return ("measure_word",)
 
-        def render(self, word: Any) -> dict[str, str]:
+        def render(self, word: Any, *, config: Any) -> dict[str, str]:
             return {"measure_word": "个"}
 
     payloads = _run_phase5(config_zh, hooks=(Hook(),))

@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.utils.cjk_encoding import prefers_big5
 
 logger = logging.getLogger(__name__)
 
@@ -160,8 +161,41 @@ def _jp_ratio(text: str) -> float:
     return score / len(text)
 
 
-def _decode(raw: bytes) -> str:
-    """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak)."""
+def _decode(raw: bytes, *, encodings: tuple[str, ...] | None = None) -> str:
+    """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak).
+
+    ``encodings`` is the mining language's ``get_profile(...).import_encodings``.
+    ``None`` — never ``()``, which is an EMPTY ladder — selects the built-in
+    Japanese path above, unchanged, and is what every Japanese call site passes.
+
+    The two are not interchangeable for Japanese, and that is why the sentinel
+    exists rather than ja simply handing over its own ladder: the built-in path
+    carries a UTF-16 BOM branch and the cp932-versus-EUC-JP tiebreak, and EUC-JP
+    bytes usually decode *without error* as cp932. A first-success ladder would
+    stop at that mojibake, so ``("utf-8-sig", "cp932", "euc_jp")`` is a different
+    decoder from this one, not a spelling of it.
+
+    A supplied ladder is exactly ordered first-success, with no Japanese
+    heuristic on top: nothing here knows which of several successful decodes of
+    another language's bytes is the right one. Exhausting it raises rather than
+    returning a replacement-character string, because a novel that decoded to
+    U+FFFD noise would mine into cards.
+    """
+    if encodings is not None:
+        for encoding in encodings:
+            # gb18030 accepts every valid Big5 sequence and decodes it into PUA
+            # garbage without raising, so first-success could never reach a big5
+            # leg further down. Step over gb18030 only when its own result
+            # carries that signature; a real GB18030 file scores zero and is
+            # unaffected. Reordering the ladder instead would mis-decode the GB
+            # majority, which decodes cleanly (and wrongly) under big5.
+            if encoding == "gb18030" and "big5" in encodings and prefers_big5(raw):
+                continue
+            try:
+                return raw.decode(encoding)
+            except (UnicodeDecodeError, LookupError):
+                continue
+        raise SetupError(f"Could not decode {len(raw):,} bytes as any of: {', '.join(encodings) or '(none)'}.")
     if raw[:3] == b"\xef\xbb\xbf":
         return raw.decode("utf-8-sig")
     if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):

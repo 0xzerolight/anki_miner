@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from anki_miner.exceptions import SetupError
+from anki_miner.languages.registry import config_language
 from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
@@ -412,8 +413,11 @@ def _scan_backfill_impl(
     dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
 
     # get_shared_tagger stays a module attribute: the pre-existing tests patch
-    # THIS name, so the ja branch must keep calling it here.
-    tagger = get_shared_tagger() if config.language == "ja" else get_tagger(config.language)
+    # THIS name, so the ja branch must keep calling it here. config_language,
+    # never the raw field — a whitelisted code with no registered profile yet
+    # (ko) would otherwise reach get_tagger's ValueError and kill the scan.
+    language = config_language(config)
+    tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
 
     scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = reading_failures = lemma_failures = 0

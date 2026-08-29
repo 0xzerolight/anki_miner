@@ -39,6 +39,7 @@ from pathlib import Path
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
+    language_identity,
     prove_owned_slot,
     read_slot_language,
     resolve_auto_store_id,
@@ -233,7 +234,7 @@ def _import_zip(
             dest_root,
             _derive_source_id(title),
             "frequency",
-            {"source_name": title, "source_revision": revision},
+            {"source_name": title, "source_revision": revision, **language_identity(language)},
         )
 
         # Numeric path: key = (term, reading) -> (best rank, display_value),
@@ -368,7 +369,7 @@ def _import_csv(
         dest_root,
         _derive_source_id(stem),
         "frequency",
-        {"source_name": resolved_name, "source_revision": ""},
+        {"source_name": resolved_name, "source_revision": "", **language_identity(language)},
     )
 
     # key = (term, reading) -> rank; first occurrence wins (matches the legacy

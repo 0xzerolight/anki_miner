@@ -94,7 +94,8 @@ def test_serialization_gains_exactly_two_keys(isolated_config_file):
 def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
     """Spec §13 item 3: a gui_config.json written by the pre-multi-language
     build loads with every pre-existing field equal to its recorded value, and
-    the only keys Stage 0 adds are `language` and `language_stash`."""
+    the only added keys are Stage 0's `language` / `language_stash` plus task
+    2A.11's two language-scoped fields, which load as their ja-inert defaults."""
     raw = PRE_CHANGE_CONFIG.read_text(encoding="utf-8")
     recorded = json.loads(raw)
     isolated_config_file.write_text(raw, encoding="utf-8")
@@ -106,4 +107,10 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         if key == "config_schema_version":  # envelope key, not a dataclass field
             continue
         assert reserialized[key] == value, key
-    assert set(reserialized) - set(recorded) == {"language", "language_stash"}
+    assert set(reserialized) - set(recorded) == {
+        "language",
+        "language_stash",
+        "script_variant",
+        "reading_tone_color",
+    }
+    assert loaded.script_variant == "" and loaded.reading_tone_color is False

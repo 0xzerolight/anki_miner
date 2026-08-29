@@ -1,0 +1,5 @@
+{"id":"zh01","sentence":"我昨天看了一部非常漂亮的电影。","must_mine":["我","昨天","非常","漂亮","电影"],"must_not_mine":["的","了","。"],"note":"particle/punct dropped; pronoun, time word, adverb, adjective and noun kept"}
+{"id":"zh02","sentence":"他在图书馆学习。","must_mine":["他","图书馆","学习"],"must_not_mine":["在","。"],"note":"preposition p is outside allowed_pos; the pronoun is mined"}
+{"id":"zh03","sentence":"这个电影非常有意思。","must_mine":["这个","电影","非常","有意思"],"must_not_mine":["。"],"note":"demonstrative r and set phrase l are both core vocabulary"}
+{"id":"zh04","sentence":"今天我在家里学习中文。","must_mine":["今天","家里","学习","中文"],"must_not_mine":["在","。"],"note":"time word t, place word s and the nz catch-all all mine"}
+{"id":"zh05","sentence":"他把书放在桌子的里面。","must_mine":["里面","书","桌子","放在"],"must_not_mine":["把","的","。"],"note":"locative noun f is mined; preposition and particle are not"}

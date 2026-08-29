@@ -7,6 +7,7 @@ branch keeps calling the *module-level* name in ``subtitle_parser`` /
 
 from __future__ import annotations
 
+import sys
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -98,6 +99,25 @@ def test_unknown_language_is_not_cached():
     with pytest.raises(ValueError):
         get_tagger("xx")
     assert "xx" not in tagger_provider._TAGGERS
+
+
+def test_missing_tokenizer_dependency_is_reported_as_unregistered(monkeypatch):
+    """A missing third-party engine reaches callers as the documented ValueError.
+
+    ``languages/zh/tokenizer.py`` imports jieba at module level, so an install
+    without the ``zh`` extra raised a bare ``ModuleNotFoundError`` out of every
+    get_tagger("zh") — past every ``except ValueError`` the provider's contract
+    tells callers to write.
+    """
+    monkeypatch.setitem(sys.modules, "jieba", None)
+    monkeypatch.setitem(sys.modules, "jieba.posseg", None)
+
+    with pytest.raises(ValueError) as excinfo:
+        get_tagger("zh")
+
+    assert "zh" in str(excinfo.value)
+    assert isinstance(excinfo.value.__cause__, ImportError)
+    assert "zh" not in tagger_provider._TAGGERS
 
 
 # ---------------------------------------------------------------------------

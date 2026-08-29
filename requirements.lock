@@ -95,3 +95,14 @@ unidic-lite==1.0.8
 urllib3==2.7.0
 webrtcvad-wheels==2.0.14
 yt-dlp==2026.6.9
+
+# [zh] EXTRA — PINNED
+# ─────────────────────────────────────
+# The Chinese mining engine, kept in its own block because the regeneration
+# recipe above installs `.[asr]` only — a freeze from that venv would silently
+# drop these three. Every release leg installs `.[asr,zh]`, so an unpinned
+# jieba/pypinyin would let a bundle ship a tokenizer the corpus tests never ran
+# against. Regenerate with `pip install -e ".[zh]"` and freeze just these names.
+jieba==0.42.1
+pypinyin==0.55.0
+opencc==1.4.2

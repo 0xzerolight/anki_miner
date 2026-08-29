@@ -2,7 +2,7 @@
 # Local release-CI preflight — run BEFORE pushing any v* tag.
 #
 # Mirrors the Linux build job of .github/workflows/release.yml as faithfully as
-# a Linux box allows: isolated venv (.[asr] + pinned PyInstaller), SHA-verified
+# a Linux box allows: isolated venv (.[asr,zh] + pinned PyInstaller), SHA-verified
 # vendor fetch (ffmpeg + alass + yt-dlp + libmpv), PyInstaller build, the three bundle smokes
 # (via scripts/bundle_smoke.sh — the same script CI runs), then AppImage + .deb.
 #
@@ -74,9 +74,9 @@ if [ ! -x "$PY" ]; then
   python3 -m venv "$VENV" || die "venv create failed"
   "$PIP" install --upgrade pip >/dev/null || die "pip upgrade failed"
 fi
-# Install/refresh the bundle deps exactly as CI does: .[asr] constrained by the
+# Install/refresh the bundle deps exactly as CI does: .[asr,zh] constrained by the
 # lock, plus the pinned PyInstaller. Idempotent — pip no-ops if satisfied.
-"$PIP" install ".[asr]" -c requirements.lock || die "pip install .[asr] failed"
+"$PIP" install ".[asr,zh]" -c requirements.lock || die "pip install .[asr,zh] failed"
 "$PIP" install "pyinstaller==${PYINSTALLER_VERSION}" || die "pyinstaller install failed"
 echo "pyinstaller: $("$VENV/bin/pyinstaller" --version)"
 echo

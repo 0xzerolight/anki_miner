@@ -17,6 +17,7 @@ from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary import storage
 from anki_miner.services.reading import sentence_splitter
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+from anki_miner.services.sentence_tts_fetcher import PAPAGO_SPEAKER_JA
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.ja_normalize import normalize_for_tokenization
 from anki_miner.utils.text_utils import (
@@ -55,7 +56,10 @@ def test_audio_defaults_keep_todays_cache_stems(profile):
     assert profile.audio.cache_stem_prefix == "googletts"
     assert profile.audio.sentence_cache_stem_prefix == "sentencetts"
     assert profile.audio.custom_fetcher_language == "ja"
-    assert profile.audio.papago_speaker is None
+    # Explicit, not None: the factory's `or PAPAGO_SPEAKER_JA` coercion was
+    # dropped when zh registered (a missing speaker would have read Chinese
+    # sentences in the Japanese voice), so ja now names its own.
+    assert profile.audio.papago_speaker == PAPAGO_SPEAKER_JA
     assert profile.audio.candidates is None
     assert profile.audio.default_chain == AnkiMinerConfig().expression_audio_chain
 

@@ -43,6 +43,8 @@ from anki_miner.gui.utils import service_factory
 from anki_miner.gui.utils.service_factory import Services, create_services
 from anki_miner.languages import tagger_provider
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.zh.parser import create_parser as zh_create_parser
+from anki_miner.languages.zh.reading import ZhReadingSupport
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.definition_service import DefinitionService
@@ -287,6 +289,71 @@ def test_non_ja_construction_receives_every_language_keyword(config, monkeypatch
     assert services.subtitle_parser.tagger is tagger
     assert services.word_filter.tagger is tagger
     assert services.known_word_db._db_path == config.known_words_db_path.with_name("known_words.zh.db")
+
+
+#: The six probe keywords ``create_services`` has always splatted into the
+#: parser. Spelled out so an added-but-unpassed keyword, or a keyword the
+#: profile seam starts injecting for ja, shows up as a diff here.
+JA_PARSER_KEYWORDS = {
+    "term_lookup",
+    "name_lookup",
+    "reading_lookup",
+    "kana_attest_lookup",
+    "term_common_lookup",
+    "term_rules_lookup",
+}
+
+
+def test_ja_parser_is_built_with_the_pre_transition_call_shape(config, monkeypatch):
+    """Japanese still constructs the parser class this module imports, verbatim.
+
+    The parser is the one service whose construction a pre-existing test spies
+    on through this module's attribute
+    (``test_batch_queue_worker.test_one_subtitle_parser_service_for_the_whole_queue``
+    patches ``service_factory.SubtitleParserService`` and counts the builds), so
+    the ja branch of ``_create_subtitle_parser`` must keep reaching that global
+    rather than the profile's factory. Config positional, six probe keywords,
+    no policy keywords: ja's ``mined_form_policy=None`` / ``reading_support=None``
+    defaults ARE today's Japanese behaviour and the drift canary pins them.
+    """
+    parser_cls = _record(monkeypatch, "SubtitleParserService")
+
+    services = create_services(config)
+
+    assert type(services.subtitle_parser) is SubtitleParserService
+    assert parser_cls.call_args.args == (config,)
+    assert set(parser_cls.call_args.kwargs) == JA_PARSER_KEYWORDS
+    assert services.subtitle_parser._mined_form_policy is None
+    assert services.subtitle_parser._reading_support is None
+
+
+def test_non_ja_parser_is_built_by_the_profile_factory(config, monkeypatch):
+    """A zh run gets the zh factory's parser, policies and all.
+
+    The mirror of the test above, and the reason the seam exists: built as ja
+    is, a Chinese parser would take its reading from ``feature.kana`` — empty on
+    every ``LanguageToken`` — and its card front from the Japanese
+    ``select_mined_form``, silently. The stub carries the REAL zh pieces
+    (``zh.parser.create_parser``, ``ZhReadingSupport``) because
+    ``zh.build_profile`` only registers at 2A.12; the mined-form policy is a
+    stub until 2A.7 creates the zh one.
+    """
+    profile, tagger = _use_stub_profile(
+        monkeypatch,
+        "zh",
+        create_parser=zh_create_parser,
+        reading=ZhReadingSupport(),
+        mined_form=_StubMinedForm(),
+    )
+    zh_config = dataclasses.replace(config, language="zh")
+
+    services = create_services(zh_config)
+
+    assert type(services.subtitle_parser) is SubtitleParserService
+    assert type(services.subtitle_parser._reading_support) is ZhReadingSupport
+    assert services.subtitle_parser._reading_support is profile.reading
+    assert services.subtitle_parser._mined_form_policy is profile.mined_form
+    assert services.subtitle_parser.tagger is tagger
 
 
 def test_non_ja_builds_the_same_concrete_classes(config, monkeypatch):

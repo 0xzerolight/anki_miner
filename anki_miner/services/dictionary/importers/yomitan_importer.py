@@ -15,6 +15,7 @@ from typing import Any, Callable
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
+    language_identity,
     prove_owned_slot,
     read_slot_language,
     resolve_auto_store_id,
@@ -220,7 +221,7 @@ def import_yomitan_zip(
                 dest_root,
                 _derive_dict_id(title, revision),
                 "dictionary",
-                {"source_name": title, "source_revision": revision},
+                {"source_name": title, "source_revision": revision, **language_identity(language)},
             )
 
         try:

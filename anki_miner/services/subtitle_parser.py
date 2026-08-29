@@ -427,9 +427,18 @@ class SubtitleParserService:
         # tokenize, so they don't race the worker thread's .parse() calls on this
         # shared tagger.
         # get_shared_tagger stays a module attribute: the pre-existing tests patch
-        # THIS name. Non-ja parsers never construct SubtitleParserService, so
-        # the language branch only ever falls through for a future ja variant.
-        self.tagger = get_shared_tagger() if config.language == "ja" else get_tagger(config.language)
+        # THIS name, so the ja branch must keep calling it here.
+        # config_language, never the raw field: the config accepts every code in
+        # _LANGUAGE_CODES, including ones with no registered profile yet, and a
+        # raw read would take an unregistered code straight into get_tagger's
+        # ValueError — out of a constructor every mining path (and the curation
+        # dialog, which builds this service directly) runs through.
+        # Function-local for the same reason as _load_subtitle_file's import: a
+        # module-level registry import here is circular.
+        from anki_miner.languages.registry import config_language
+
+        language = config_language(config)
+        self.tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
         # POS/subtype inclusion gate, snapshotted from the (frozen) config.
         self._inclusion_rule = TokenInclusionRule(
             allowed_pos=frozenset(config.allowed_pos),

@@ -290,6 +290,14 @@ a = Analysis(
         # startup. Bytecode analysis should find the IMPORT opcode; pinned
         # here like mpv/ffsubsync so the graph never loses it.
         "budoux",
+        # zh engine: jieba.posseg / pypinyin / opencc are imported
+        # function-locally in anki_miner/languages/zh/ so a missing extra
+        # degrades instead of failing startup. Bytecode analysis finds those
+        # IMPORT opcodes; pinned here like mpv/ffsubsync so the graph never
+        # loses them, and so the matching PyInstaller-Hooks/ hooks always fire.
+        "jieba.posseg",
+        "pypinyin",
+        "opencc",
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).
