@@ -41,6 +41,7 @@ from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.sentence_tts_fetcher import (
+    PAPAGO_SPEAKER_JA,
     ChainedSentenceAudioFetcher,
     GoogleSentenceTtsFetcher,
     PapagoSentenceTtsFetcher,
@@ -491,6 +492,10 @@ def _build_expression_audio_fetcher(
         A :class:`ChainedExpressionAudioFetcher` wrapping the resolved list.
         The list may be empty (all entries disabled) — the chain returns None.
     """
+    # One profile read for the whole chain: the gtts language code, the word
+    # stem prefix and the custom-source {language} value all come from here, so
+    # no member has to know the language code itself.
+    audio = get_profile(config.language).audio
     audio_cache_root = ANKI_MINER_HOME / "audio_cache"
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
@@ -520,6 +525,8 @@ def _build_expression_audio_fetcher(
                 GoogleTranslateAudioFetcher(
                     cache_dir=googletts_cache,
                     delay=config.expression_audio_delay,
+                    gtts_lang=audio.gtts_lang,
+                    cache_stem_prefix=audio.cache_stem_prefix,
                 )
             )
         elif entry.kind in ("custom", "custom_json"):
@@ -537,6 +544,7 @@ def _build_expression_audio_fetcher(
                     cache_dir=audio_cache_root / f"custom_{slug}",
                     file_prefix=f"custom_{slug}",
                     delay=config.expression_audio_delay,
+                    language=audio.custom_fetcher_language,
                 )
             )
         elif entry.kind == "pack":
@@ -592,12 +600,27 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     if not config.reading_tts_enabled:
         return ChainedSentenceAudioFetcher([])
 
+    audio = get_profile(config.language).audio
     cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
     fetchers: list[SentenceAudioFetcher] = []
     if config.reading_tts_google_enabled:
-        fetchers.append(GoogleSentenceTtsFetcher(cache_dir=cache_dir, delay=config.expression_audio_delay))
+        fetchers.append(
+            GoogleSentenceTtsFetcher(
+                cache_dir=cache_dir,
+                delay=config.expression_audio_delay,
+                gtts_lang=audio.gtts_lang,
+                cache_stem_prefix=audio.sentence_cache_stem_prefix,
+            )
+        )
     if config.reading_tts_papago_enabled:
-        fetchers.append(PapagoSentenceTtsFetcher(cache_dir=cache_dir, delay=config.expression_audio_delay))
+        fetchers.append(
+            PapagoSentenceTtsFetcher(
+                cache_dir=cache_dir,
+                delay=config.expression_audio_delay,
+                cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                speaker=audio.papago_speaker or PAPAGO_SPEAKER_JA,
+            )
+        )
     return ChainedSentenceAudioFetcher(fetchers)
 
 
