@@ -181,7 +181,7 @@ def _lookup_kwarg(config: AnkiMinerConfig) -> _LookupKwarg:
     Gated on the strategy *object*, not on ``config.language`` — outside
     ``anki_miner/languages/`` there are no language-code checks.
     """
-    lookup = get_profile(config.language).lookup
+    lookup = get_profile(config_language(config)).lookup
     return {} if lookup is get_profile("ja").lookup else {"lookup": lookup}
 
 
@@ -520,7 +520,7 @@ def _build_expression_audio_fetcher(
     # One profile read for the whole chain: the gtts language code, the word
     # stem prefix and the custom-source {language} value all come from here, so
     # no member has to know the language code itself.
-    audio = get_profile(config.language).audio
+    audio = get_profile(config_language(config)).audio
     audio_cache_root = ANKI_MINER_HOME / "audio_cache"
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
@@ -625,7 +625,7 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     if not config.reading_tts_enabled:
         return ChainedSentenceAudioFetcher([])
 
-    audio = get_profile(config.language).audio
+    audio = get_profile(config_language(config)).audio
     cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
     fetchers: list[SentenceAudioFetcher] = []
     if config.reading_tts_google_enabled:
@@ -791,8 +791,8 @@ def create_services(
     word_filter = WordFilterService(
         config,
         tagger=subtitle_parser.tagger,
-        mined_form=get_profile(config.language).mined_form,
-        script=get_profile(config.language).script,
+        mined_form=get_profile(config_language(config)).mined_form,
+        script=get_profile(config_language(config)).script,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
@@ -949,7 +949,7 @@ def create_episode_processor(
         # Resolved once here so both processors of a shared-lookup run agree on
         # one profile instance (the registry caches per code, so they would
         # anyway — passing it keeps the composition root the single resolver).
-        profile=get_profile(config.language),
+        profile=get_profile(config_language(config)),
     )
 
 

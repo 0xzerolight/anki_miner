@@ -306,10 +306,17 @@ def test_resource_download_worker_stamps_its_importers(qapp, tmp_path, monkeypat
 
 
 @pytest.mark.parametrize("language", ["zh", "ja"])
-def test_download_dialog_passes_the_config_language(qapp, tmp_path, monkeypatch, language):
+def test_download_dialog_stamps_the_catalog_language(qapp, tmp_path, monkeypatch, language):
+    """The recommended set IS the ja catalog, so the stamp is ja in every session.
+
+    Stamping the active language would both mislabel JMdict and fold it out of
+    the ja chain filter, leaving it downloaded but unqueryable. Per-profile
+    catalog routing lands with the setup-wizard task (2B.8).
+    """
     from unittest.mock import MagicMock
 
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as mod
+    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 
     seen: list[dict] = []
     monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *a, **kw: (seen.append(kw), MagicMock())[1])
@@ -317,14 +324,65 @@ def test_download_dialog_passes_the_config_language(qapp, tmp_path, monkeypatch,
     session = mod.ResourceDownloadSession(
         None,
         dataclasses.replace(_config(language), dicts_root=tmp_path, freqs_root=tmp_path, pitch_root=tmp_path),
-        specs=(),
+        specs=RECOMMENDED_DEFAULT_SET,
         activate=lambda _s: None,
     )
     monkeypatch.setattr(mod, "ResourceDownloadWindow", MagicMock())
     assert session.start() is True
 
     assert seen
-    assert seen[0].get("language") == (None if language == "ja" else "zh")
+    # Omit-when-ja: no keyword at all, so the ja call stays byte-identical.
+    assert "language" not in seen[0]
+
+
+def test_download_from_a_zh_session_indexes_a_ja_slot(qapp, tmp_path, monkeypatch):
+    """End of the same thread: the slot's meta.language is ja, not the session's.
+
+    The worker the zh session builds is constructed for real and then run on
+    this thread, so the assertion is on the importer call the download actually
+    makes rather than on the session's keyword.
+    """
+    from unittest.mock import MagicMock
+
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as mod
+    from anki_miner.gui.workers import resource_download_worker as worker_mod
+    from anki_miner.services.resource_catalog import ResourceSpec
+
+    spec = ResourceSpec(id="f", kind="freq", display_name="F", url="http://x/f.csv", license_note="")
+    stamped: list[str] = []
+    built: list = []
+
+    def fake_download(url, **kwargs):
+        temp = Path(kwargs["dest_dir"]) / "f.csv"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_text("word,1\n", encoding="utf-8")
+        return temp
+
+    def fake_import(source, root, **kwargs):
+        stamped.append(kwargs.get("language", "ja"))
+        return _fake_result()
+
+    monkeypatch.setattr(worker_mod, "download_to_temp", fake_download)
+    monkeypatch.setattr(worker_mod, "import_frequency_source", fake_import)
+    monkeypatch.setattr(mod, "ResourceDownloadWindow", MagicMock())
+
+    def _capture(*args, **kwargs):
+        built.append(worker_mod.ResourceDownloadWorker(*args, **kwargs))
+        return MagicMock()
+
+    monkeypatch.setattr(mod, "ResourceDownloadWorker", _capture)
+
+    session = mod.ResourceDownloadSession(
+        None,
+        dataclasses.replace(_config("zh"), dicts_root=tmp_path, freqs_root=tmp_path, pitch_root=tmp_path),
+        specs=(spec,),
+        activate=lambda _s: None,
+    )
+    assert session.start() is True
+    assert built, "the session must build a download worker"
+    built[0].run()
+
+    assert stamped == ["ja"]
 
 
 # ---------------------------------------------------------------------------

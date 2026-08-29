@@ -20,8 +20,11 @@ Two halves, both cheap:
 
 The non-ja side runs against a stub profile (controller ruling R6): a
 ``dataclasses.replace`` of the real ja profile behind a ``get_profile``
-monkeypatch, never a registry registration — the registry caches per code and a
-registration would leak into later tests. The pattern (including seeding the
+monkeypatch, plus a ``monkeypatch.setitem`` registry entry — ``config_language``
+degrades a code with no registered profile to ja before ``get_profile`` is
+reached, and ``setitem`` is what keeps the entry from leaking into later tests
+(a plain registration would, since the registry caches per code). The pattern
+(including seeding the
 process-wide tagger cache, which ``SubtitleParserService`` reaches for on the
 non-ja branch) is ``test_lookup_strategy_dispatch._use_stub_profile``; this file
 generalizes it to override three profile fields at once and to seed a *distinct*
@@ -167,7 +170,13 @@ def _use_stub_profile(monkeypatch, code: str, **overrides):
     code with no tokenizer. Seeded with a sentinel (not the ja tagger) so the
     parser's tagger assertion actually distinguishes the two branches;
     ``monkeypatch.setitem`` drops it again at teardown.
+
+    The registry entries are ``monkeypatch.setitem`` too, and for the same
+    reason they are dropped at teardown: ``config_language`` degrades a code
+    with no registered profile to ja before ``get_profile`` is reached.
     """
+    from anki_miner.languages import registry
+
     stub_profile = dataclasses.replace(get_profile("ja"), code=code, **overrides)
     real_get_profile = service_factory.get_profile
 
@@ -175,6 +184,8 @@ def _use_stub_profile(monkeypatch, code: str, **overrides):
         return stub_profile if requested == code else real_get_profile(requested)
 
     monkeypatch.setattr(service_factory, "get_profile", fake_get_profile)
+    monkeypatch.setitem(registry._BUILDERS, code, lambda: stub_profile)
+    monkeypatch.setitem(registry._CACHE, code, stub_profile)
     tagger = MagicMock(name=f"tagger-{code}")
     monkeypatch.setitem(tagger_provider._TAGGERS, code, tagger)
     return stub_profile, tagger
