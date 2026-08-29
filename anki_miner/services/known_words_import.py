@@ -226,7 +226,11 @@ def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> str:
     # json.loads and the exact first-cell header matches; the rest of the
     # ladder is the mining language's (cp932 for Japanese Notepad/Excel
     # exports). Every candidate failing => truly unreadable.
-    for encoding in encodings or ("utf-8-sig", "cp932"):
+    #
+    # `is None`, not truthiness: `()` is an EMPTY ladder the caller asked for,
+    # not a request for the Japanese default. Truthiness would decode a
+    # profile's deliberately-empty ladder as Japanese.
+    for encoding in ("utf-8-sig", "cp932") if encodings is None else encodings:
         try:
             return raw.decode(encoding)
         except (UnicodeDecodeError, LookupError):

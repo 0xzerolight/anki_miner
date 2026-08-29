@@ -2,7 +2,7 @@
 
 import pytest
 
-from anki_miner.services.known_words_import import parse_known_words_file
+from anki_miner.services.known_words_import import KnownWordsImportError, parse_known_words_file
 
 JA_LADDER = ("utf-8-sig", "cp932", "euc_jp")
 KO_LADDER = ("utf-8-sig", "cp949")
@@ -27,6 +27,19 @@ def test_japanese_ladder_mangles_the_same_list(tmp_path):
     path = _write(tmp_path, "사과\n학교\n", "cp949")
     result = parse_known_words_file(path, encodings=JA_LADDER)
     assert result.words == frozenset({"紫引", "俳嘘"})
+
+
+def test_an_explicit_empty_ladder_decodes_nothing(tmp_path):
+    """`None` is the "use the default" sentinel, never `()`.
+
+    Truthiness silently turned an empty ladder into the Japanese default, which
+    is the failure the contract's is-None rule exists to stop: a profile that
+    ships no import encodings would have decoded every list as Japanese.
+    """
+    path = _write(tmp_path, "猫\n犬\n", "utf-8")
+    with pytest.raises(KnownWordsImportError) as exc:
+        parse_known_words_file(path, encodings=())
+    assert str(exc.value) == "unreadable"
 
 
 @pytest.mark.parametrize("encoding", ["utf-8", "cp932"])
