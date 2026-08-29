@@ -31,7 +31,6 @@ def test_both_fields_are_language_scoped():
     assert "reading_tone_color" in LANGUAGE_SCOPED_FIELDS
 
 
-@pytest.mark.xfail(reason="the zh profile lands in task 2A.12", strict=True)
 def test_switching_to_zh_sets_them_and_back_to_ja_clears_them():
     zh = switch_language(AnkiMinerConfig(), "zh")
     assert zh.script_variant == "simplified"

@@ -36,16 +36,6 @@ _ANDROID = "anki_miner.gui.workers.import_worker.import_android_audio_db"
 _YOMITAN = "anki_miner.gui.workers.import_worker.import_yomitan_zip"
 
 
-@pytest.fixture(autouse=True)
-def _zh_profile_registered(monkeypatch):
-    """``config_language`` degrades a code with no registered profile to ja, so
-    the zh legs need one registered before they can stamp zh at all. Registering
-    it changes nothing for the ja legs."""
-    from tests.unit.languages.stub_registry import register_stub_profile
-
-    register_stub_profile(monkeypatch, "zh")
-
-
 def _fake_result():
     return type(
         "R",
@@ -461,13 +451,23 @@ def frozen_import_date(monkeypatch):
 
 
 def test_dict_import_folds_with_the_stamped_language(tmp_path, monkeypatch):
-    """A non-ja import writes keys folded by that language's own rule."""
+    """A non-ja import writes keys folded by that language's own rule.
+
+    The real zh profile with its folding swapped for ``_UpperKeys``: what is
+    under test is that the STAMP picks the folding, and zh's own NFC+casefold
+    rule leaves this ASCII bank indistinguishable from ja's.
+    """
+    from anki_miner.languages import registry
     from anki_miner.services.dictionary import storage
     from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
     from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
-    from tests.unit.languages.stub_registry import register_stub_profile
 
-    register_stub_profile(monkeypatch, "zh", dict_keys=_UpperKeys())
+    monkeypatch.setattr(registry, "_CACHE", dict(registry._CACHE))
+    monkeypatch.setitem(
+        registry._CACHE,
+        "zh",
+        dataclasses.replace(registry.get_profile("zh"), dict_keys=_UpperKeys()),
+    )
 
     zip_path = build_yomitan_zip(tmp_path / "src" / "d.zip", term_banks=_ASCII_BANK)
     dest = tmp_path / "dicts"

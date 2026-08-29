@@ -56,18 +56,6 @@ def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeyp
     from PyQt6.QtWidgets import QMessageBox
 
     from anki_miner.gui.widgets.settings_tab import SettingsTab
-    from anki_miner.languages import registry
-
-    # The settings panels resolve the active language's capabilities as they
-    # load (gui/utils/language_gate.py), and zh has no registered profile until
-    # Stage 2A. Register a ja clone under "zh" for this test only; the cache is
-    # swapped for a copy first so the stub cannot leak into another test. The
-    # clone is built out here, not inside the builder: get_profile holds a plain
-    # (non-reentrant) lock while it calls one, so a builder that re-enters it
-    # deadlocks.
-    ja_profile = registry.get_profile("ja")
-    monkeypatch.setattr(registry, "_CACHE", dict(registry._CACHE))
-    monkeypatch.setitem(registry._BUILDERS, "zh", lambda: dataclasses.replace(ja_profile, code="zh"))
 
     tab = SettingsTab(
         dataclasses.replace(test_config, language="zh", language_stash={"ja": {"anki_deck_name": "JA"}}),
@@ -90,19 +78,21 @@ def test_an_unregistered_language_degrades_to_ja():
     """`_LANGUAGE_CODES` whitelists zh/ko before their profiles exist, so a
     hand-edited config carries a code the registry cannot build. Pre-1B the
     field was inert; degrading here keeps it inert instead of raising out of
-    every `get_profile(config_language(config))` site."""
+    every `get_profile(config_language(config))` site.
+
+    "ko" is the unregistered code from Stage 2A on — zh registers there, and
+    the whole point of this rule is that it stops applying to a code the moment
+    its profile lands."""
     from anki_miner.languages.registry import available_languages, config_language
 
-    assert "zh" not in available_languages()
-    assert config_language(AnkiMinerConfig(language="zh")) == "ja"
+    assert "ko" not in available_languages()
+    assert config_language(AnkiMinerConfig(language="ko")) == "ja"
 
 
-def test_a_registered_language_is_returned_verbatim(monkeypatch):
-    """Self-heals the moment Stage 2A registers the real profile."""
+def test_a_registered_language_is_returned_verbatim():
+    """Self-healed the moment Stage 2A registered the real zh profile."""
     from anki_miner.languages.registry import config_language
-    from tests.unit.languages.stub_registry import register_stub_profile
 
-    register_stub_profile(monkeypatch, "zh")
     assert config_language(AnkiMinerConfig(language="zh")) == "zh"
 
 
@@ -112,10 +102,10 @@ def test_the_degrade_is_logged_once_per_code(caplog, monkeypatch):
     monkeypatch.setattr(registry, "_DEGRADE_WARNED", set())
     with caplog.at_level("WARNING", logger="anki_miner.languages.registry"):
         for _ in range(3):
-            registry.config_language(AnkiMinerConfig(language="zh"))
+            registry.config_language(AnkiMinerConfig(language="ko"))
     warnings = [r for r in caplog.records if r.levelname == "WARNING"]
     assert len(warnings) == 1
-    assert "zh" in warnings[0].getMessage()
+    assert "ko" in warnings[0].getMessage()
 
 
 def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
@@ -125,7 +115,7 @@ def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
     from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
     from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 
-    cfg = dataclasses.replace(test_config, language="zh")
+    cfg = dataclasses.replace(test_config, language="ko")
     # Held in a list: qtbot.addWidget keeps only a weakref.
     panels = [FilteringSettingsPanel(), AnkiSettingsPanel()]
     for panel in panels:
@@ -136,13 +126,13 @@ def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
 def test_anki_service_accepts_an_unregistered_language(test_config):
     from anki_miner.services.anki_service import AnkiService
 
-    assert AnkiService(dataclasses.replace(test_config, language="zh")) is not None
+    assert AnkiService(dataclasses.replace(test_config, language="ko")) is not None
 
 
 def test_deck_filter_scan_runs_under_an_unregistered_language(test_config):
     """Utilities -> Deck Filter, scan half: the script-type gate read the raw
-    field, so a hand-edited zh config raised ValueError mid-scan. Degraded, the
-    scan applies the JA hiragana-only rule."""
+    field, so a hand-edited config carrying an unbuilt code raised ValueError
+    mid-scan. Degraded, the scan applies the JA hiragana-only rule."""
     from types import SimpleNamespace
 
     from anki_miner.services.deck_filter import DeckFilterOptions, scan_deck_filter
@@ -167,7 +157,7 @@ def test_deck_filter_scan_runs_under_an_unregistered_language(test_config):
 
     cfg = dataclasses.replace(
         test_config,
-        language="zh",
+        language="ko",
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,
         use_known_words_db=False,
@@ -190,7 +180,7 @@ def test_the_deck_filter_bundle_builds_under_an_unregistered_language(test_confi
     from anki_miner.gui.workers.deck_filter_worker import _build_filter_bundle
     from anki_miner.languages.registry import get_profile
 
-    bundle = _build_filter_bundle(dataclasses.replace(test_config, language="zh"), None)
+    bundle = _build_filter_bundle(dataclasses.replace(test_config, language="ko"), None)
 
     ja = get_profile("ja")
     # Private reads: the bundle exists to hand these two to the filter, and
@@ -216,7 +206,7 @@ def test_subtitle_generation_runs_under_an_unregistered_language(test_config, tm
 
     video = tmp_path / "ep01.mkv"
     worker = worker_mod.SubtitleGenWorker(
-        dataclasses.replace(test_config, language="zh"),
+        dataclasses.replace(test_config, language="ko"),
         [video],
         extractor=object(),
     )
@@ -248,7 +238,7 @@ def test_manage_known_words_opens_under_an_unregistered_language(test_config, qt
 
     monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _FakeDialog)
 
-    tab = SettingsTab(dataclasses.replace(test_config, language="zh"))
+    tab = SettingsTab(dataclasses.replace(test_config, language="ko"))
     qtbot.addWidget(tab)
     issues: list[object] = []
     monkeypatch.setattr(tab, "show_screen_issue", issues.append)

@@ -41,7 +41,6 @@ from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.sentence_tts_fetcher import (
-    PAPAGO_SPEAKER_JA,
     ChainedSentenceAudioFetcher,
     GoogleSentenceTtsFetcher,
     PapagoSentenceTtsFetcher,
@@ -637,13 +636,17 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
                 cache_stem_prefix=audio.sentence_cache_stem_prefix,
             )
         )
-    if config.reading_tts_papago_enabled:
+    # Papago speaks Japanese and Korean only, so membership follows the
+    # profile's own speaker rather than the config bool alone. Coercing a
+    # missing speaker to the JA voice would read a Chinese sentence in
+    # Japanese; a language with no Papago voice simply has no Papago leg.
+    if config.reading_tts_papago_enabled and audio.papago_speaker:
         fetchers.append(
             PapagoSentenceTtsFetcher(
                 cache_dir=cache_dir,
                 delay=config.expression_audio_delay,
                 cache_stem_prefix=audio.sentence_cache_stem_prefix,
-                speaker=audio.papago_speaker or PAPAGO_SPEAKER_JA,
+                speaker=audio.papago_speaker,
             )
         )
     return ChainedSentenceAudioFetcher(fetchers)

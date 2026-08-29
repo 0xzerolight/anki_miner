@@ -8,6 +8,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.languages.profile import AudioDefaults, LanguageProfile
+from anki_miner.languages.registry import get_profile
 from anki_miner.languages.zh import variants
 from anki_miner.languages.zh.audio import ZH_AUDIO, zh_audio_candidates
 from anki_miner.languages.zh.catalog import ZH_CATALOG
@@ -16,19 +17,11 @@ from anki_miner.languages.zh.reading import ZhReadingSupport
 from anki_miner.services.resource_catalog import RESOURCE_KINDS
 from anki_miner.services.subtitle_parser import SubtitleParserService
 
-from .stub_registry import register_stub_profile
-
 
 @pytest.fixture
-def zh_profile(monkeypatch: pytest.MonkeyPatch) -> LanguageProfile:
-    """A registered zh profile, so ``create_parser`` can resolve one.
-
-    ``build_profile()`` lands with task 2A.12; until it does, the factory's
-    ``get_profile(config.language)`` has nothing to find. The stub carries the
-    real ``ZhReadingSupport`` so the injected reading is the zh one; drop this
-    fixture for the real profile once 2A.12 registers it.
-    """
-    return register_stub_profile(monkeypatch, "zh", reading=ZhReadingSupport())
+def zh_profile() -> LanguageProfile:
+    """The registered zh profile ``create_parser`` resolves (task 2A.12)."""
+    return get_profile("zh")
 
 
 def _word(mined_form: str, reading: str) -> SimpleNamespace:
