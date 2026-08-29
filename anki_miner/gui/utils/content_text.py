@@ -47,6 +47,17 @@ def apply_content_font(widget: QWidget, style: ContentTextStyle, *, role: str = 
     # The property name stays "japanese": common.qss selects on it for every
     # content surface, and renaming it would be a stylesheet rewrite.
     widget.setProperty(JAPANESE_PROPERTY, role)
+    # ...but those same rules pin the JAPANESE family, and a stylesheet beats
+    # setFont for the family, so the setFamilies above would be overwritten and
+    # Chinese would render in Japanese glyph shapes. The declarations cannot be
+    # dropped -- ``QWidget { font-family: ${font-family-interface}; }`` matches
+    # everything and would then win, costing Japanese its own face. A
+    # widget-level stylesheet outranks the application one, so the non-ja
+    # branch restates its families there. Scoped to the property so it lands on
+    # this surface only; the size, colours and the rest of the theme still come
+    # from the application sheet.
+    families = ", ".join(f"'{name}'" for name in style.families)
+    widget.setStyleSheet(f'*[{JAPANESE_PROPERTY}="{role}"] {{ font-family: {families}; }}')
     qstyle = widget.style()
     if qstyle is not None:
         qstyle.unpolish(widget)
