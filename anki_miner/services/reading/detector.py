@@ -164,6 +164,7 @@ def load(
     ref: ReadingSourceRef,
     *,
     cancel_check: Callable[[], bool] | None = None,
+    encodings: tuple[str, ...] | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -171,31 +172,40 @@ def load(
     module stays cheap and a broken/absent loader can't fail unrelated kinds.
     ``kind="text"`` refs are pathless (built by the Text sub-tab, never by
     :func:`detect`) and carry their content in ``ref.text``.
+
+    ``encodings`` is the mining language's decode ladder, and reaches only the
+    two loaders that guess an encoding — the novel and subtitle ones. mokuro
+    reads a UTF-8 JSON sidecar, EPUB takes its encoding from the archive's own
+    XML declaration, and a ``text`` ref is already a decoded string, so none of
+    the other three accepts the keyword at all.
+
+    Optional arguments are omitted rather than passed as ``None``, so a call
+    that supplies neither is the pre-transition ``loader.load(ref)`` verbatim.
     """
     if cancel_check is not None and cancel_check():
         raise OperationCancelled("Reading load cancelled")
+    common: dict[str, Any] = {} if cancel_check is None else {"cancel_check": cancel_check}
+    sniffing: dict[str, Any] = common if encodings is None else {**common, "encodings": encodings}
     if ref.kind == "mokuro":
         from . import mokuro_source
 
-        return mokuro_source.load(ref) if cancel_check is None else mokuro_source.load(ref, cancel_check=cancel_check)
+        return mokuro_source.load(ref, **common)
     if ref.kind == "epub":
         from . import epub_source
 
-        return epub_source.load(ref) if cancel_check is None else epub_source.load(ref, cancel_check=cancel_check)
+        return epub_source.load(ref, **common)
     if ref.kind == "txt":
         from . import aozora_source
 
-        return aozora_source.load(ref) if cancel_check is None else aozora_source.load(ref, cancel_check=cancel_check)
+        return aozora_source.load(ref, **sniffing)
     if ref.kind == "subtitle":
         from . import subtitle_source
 
-        return (
-            subtitle_source.load(ref) if cancel_check is None else subtitle_source.load(ref, cancel_check=cancel_check)
-        )
+        return subtitle_source.load(ref, **sniffing)
     if ref.kind == "text":
         from . import text_source
 
-        return text_source.load(ref) if cancel_check is None else text_source.load(ref, cancel_check=cancel_check)
+        return text_source.load(ref, **common)
 
     raise SetupError(f"Unknown reading source kind: {ref.kind!r}")
 

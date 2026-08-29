@@ -335,8 +335,13 @@ def load(
     ref: ReadingSourceRef,
     *,
     cancel_check: Callable[[], bool] | None = None,
+    encodings: tuple[str, ...] | None = None,
 ) -> ReadingDocument:
-    """Load an Aozora or plain-text novel into a book ``ReadingDocument``."""
+    """Load an Aozora or plain-text novel into a book ``ReadingDocument``.
+
+    ``encodings`` is the mining language's decode ladder; ``None`` keeps the
+    built-in Japanese sniffing path (see ``_util._decode``).
+    """
     _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
@@ -356,7 +361,7 @@ def load(
     except OSError as e:
         logger.debug("Aozora read failed: file=%s error=%s detail=%s", ref.path, type(e).__name__, e)
         raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e
-    text = _decode(raw)
+    text = _decode(raw, encodings=encodings)
     lines = _cut_footer(_splitlines(text))
 
     aozora = _is_aozora(text)
