@@ -4,7 +4,7 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -30,12 +30,73 @@ from anki_miner.gui.utils.qt_helpers import (
 )
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
+from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages.profile import ScriptFilterOption
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.wordset_service import load_wordset_catalog
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
+
+#: tr-context for the option-driven script-filter rows. Spelled explicitly
+#: because the label reaches the panel as data: ``self.tr(option.label)`` reads
+#: fine and works at runtime, but pylupdate parses the source rather than
+#: running it, so the English never reaches a catalogue. The literals below are
+#: what gets extracted; a contract test pins each one equal to its option's
+#: ``label`` so the two cannot drift into a silent lookup miss.
+_TR_CONTEXT = "FilteringSettingsPanel"
+
+#: ``option_id`` -> extractable English label, for every script-filter option
+#: whose language has no hand-built rows of its own. An option missing here
+#: falls back to its own ``label`` (English, untranslated) rather than to a
+#: blank checkbox.
+SCRIPT_FILTER_LABELS: dict[str, str] = {
+    "hangul_only": QT_TRANSLATE_NOOP("FilteringSettingsPanel", "Exclude hangul-only words"),
+    "hanja_containing": QT_TRANSLATE_NOOP("FilteringSettingsPanel", "Exclude words containing hanja"),
+}
+
+#: Help text per option, keyed the same way. Separate from the label because
+#: ``ScriptFilterOption`` carries no helper of its own -- it is a mining-side
+#: contract, and tooltip prose is a GUI concern.
+SCRIPT_FILTER_HELPERS: dict[str, str] = {
+    "hangul_only": QT_TRANSLATE_NOOP(
+        "FilteringSettingsPanel",
+        "Skip words written entirely in hangul. Leaves the deck to words written with hanja.",
+    ),
+    "hanja_containing": QT_TRANSLATE_NOOP(
+        "FilteringSettingsPanel",
+        "Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.",
+    ),
+}
+
+#: Capability whose profile supplies the option-driven script-filter rows.
+#: Japanese keeps its own hand-built rows under ``kana_filters``: they carry
+#: helper prose, search anchors derived from their panel attributes, and a third
+#: option (``mixed_kana_only``) that deliberately has no checkbox because it has
+#: no config field. Rebuilding those from options would move ja's extracted
+#: strings and anchors, and a ja user must see zero change.
+_OPTION_DRIVEN_FILTER_CAPABILITY = "hangul_filters"
+
+
+def _capability_script_filter_options(capability: str) -> tuple[ScriptFilterOption, ...]:
+    """Script-filter options declared by the registered profile with *capability*.
+
+    Resolved from the registry rather than from a language code, and NOT from
+    ``available_mining_languages`` -- that one drops a language whose engine is
+    missing, and a config already set to it would then gate rows into view that
+    were never built. Options with no config field of their own are skipped:
+    there is no boolean for a checkbox to write.
+    """
+    for code in AVAILABLE_LANGUAGES:
+        try:
+            profile = get_profile(code)
+        except (LookupError, ValueError, ImportError) as exc:
+            logger.debug("No profile for %r while building script-filter rows: %s", code, exc)
+            continue
+        if capability in profile.capabilities:
+            return tuple(opt for opt in profile.script.filter_options() if opt.config_field)
+    return ()
 
 
 def kiwipiepy_installed() -> bool:
@@ -452,6 +513,33 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.match_kana_variants_checkbox)
 
+        # Option-driven script filters. The Korean pair binds to the SAME two
+        # language-scoped booleans the kana rows above use, and the mapping is
+        # counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
+        # binding is taken from the profile's own options instead of restated
+        # here: the panel and WordFilterService then read one source of truth.
+        # It gets a heading of its own because "Script Type" above is gated on
+        # kana_filters and hides here, which would leave these rows reading as
+        # part of "Deduplication".
+        self.add_section(self.tr("Script Type"))
+        self._script_filter_section_label = self._active_section_label
+
+        self.script_filter_checkboxes: dict[str, QCheckBox] = {}
+        self._script_filter_fields: dict[str, str] = {}
+        for option in _capability_script_filter_options(_OPTION_DRIVEN_FILTER_CAPABILITY):
+            label = SCRIPT_FILTER_LABELS.get(option.option_id, option.label)
+            helper = SCRIPT_FILTER_HELPERS.get(option.option_id, "")
+            checkbox = QCheckBox(QCoreApplication.translate(_TR_CONTEXT, label))
+            self.add_field(
+                "",
+                checkbox,
+                helper=QCoreApplication.translate(_TR_CONTEXT, helper) if helper else "",
+                # Loop-built, so there is no panel attribute to derive from.
+                anchor=f"script_filter_{option.option_id}",
+            )
+            self.script_filter_checkboxes[option.option_id] = checkbox
+            self._script_filter_fields[option.option_id] = option.config_field
+
         # Chinese script preference. Generic, language-scoped field - ja and ko
         # carry "" here and never see this row. It gets a heading of its own
         # because "Script Type" above is gated on kana_filters and hides under
@@ -566,6 +654,15 @@ class FilteringSettingsPanel(FormPanel):
         )
         if self._script_type_section_label is not None:
             self._language_gate_pairs.append((self._script_type_section_label, "kana_filters"))
+        # The option-driven rows join the same list, gated on the capability
+        # that supplied them. EXTENDED, never assigned (see the zh note below).
+        self._language_gate_pairs.extend(
+            (w, _OPTION_DRIVEN_FILTER_CAPABILITY)
+            for cb in self.script_filter_checkboxes.values()
+            for w in field_row_widgets(self, cb)
+        )
+        if self._script_filter_section_label is not None:
+            self._language_gate_pairs.append((self._script_filter_section_label, _OPTION_DRIVEN_FILTER_CAPABILITY))
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for cb in self.wordset_checkboxes.values() for w in field_row_widgets(self, cb)
         )
@@ -1075,6 +1172,9 @@ class FilteringSettingsPanel(FormPanel):
         self.set_deduplicate_sentences(config.deduplicate_sentences)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
+        # Same two booleans, read through whichever language's option named them.
+        for option_id, checkbox in self.script_filter_checkboxes.items():
+            checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
         self.set_use_i_plus_one_filter(config.use_i_plus_one_filter)
         self.set_use_sentence_length_filter(config.use_sentence_length_filter)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
@@ -1129,6 +1229,13 @@ class FilteringSettingsPanel(FormPanel):
         # so a blind write here would drift ja to "simplified" on the next
         # autosave. Visibility is the gate's own output, so there is one source
         # of truth for "does this language have this setting".
+        # The kana boxes above already wrote these two fields unconditionally --
+        # under another language they are hidden and still hold the loaded
+        # value, so that write is a no-op. The visible option-driven row is the
+        # one the user can actually reach, so it wins.
+        for option_id, checkbox in self.script_filter_checkboxes.items():
+            if checkbox.isVisibleTo(self):
+                updated = replace(updated, **{self._script_filter_fields[option_id]: checkbox.isChecked()})
         if self.script_variant_combo.isVisibleTo(self):
             updated = replace(updated, script_variant=str(self.script_variant_combo.currentData()))
         if self.reading_tone_color_checkbox.isVisibleTo(self):
