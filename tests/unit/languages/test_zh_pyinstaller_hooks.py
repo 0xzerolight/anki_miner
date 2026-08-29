@@ -83,5 +83,13 @@ def test_opencc_hook_collects_native_lib_and_dictionaries(monkeypatch: pytest.Mo
 
 def test_spec_pins_the_zh_packages_into_the_import_graph() -> None:
     spec_text = (PROJECT_ROOT / "anki_miner.spec").read_text(encoding="utf-8")
-    for entry in ('"jieba.posseg"', '"pypinyin"', '"opencc"'):
+    for entry in (
+        '"jieba.posseg"',
+        '"pypinyin"',
+        '"opencc"',
+        # tagger_provider resolves this module through an f-string importlib
+        # call bytecode analysis cannot follow; the 2B dry-run shipped a bundle
+        # without it and the zh smoke died on "No tokenizer registered".
+        '"anki_miner.languages.zh.tokenizer"',
+    ):
         assert entry in spec_text, f"anki_miner.spec does not pin {entry}"
