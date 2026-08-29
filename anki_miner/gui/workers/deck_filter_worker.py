@@ -8,7 +8,7 @@ from PyQt6.QtCore import pyqtSignal
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import create_shared_lookup_services, resolve_known_words_db_path
 from anki_miner.gui.workers.base_worker import CancellableWorker
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.deck_filter import (
     DeckFilterOptions,
@@ -78,8 +78,8 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
         # predicate table and match nothing.
         word_filter=WordFilterService(
             config,
-            mined_form=get_profile(config.language).mined_form,
-            script=get_profile(config.language).script,
+            mined_form=get_profile(config_language(config)).mined_form,
+            script=get_profile(config_language(config)).script,
         ),
         frequency_service=frequency_service,
         word_list_service=word_list_service,

@@ -411,7 +411,7 @@ def scan_deck_filter(
         drops["blacklist"] += before - len(words)
 
     # Script type (for ja: hiragana-only / katakana-only forms).
-    script_options = enabled_script_options(get_profile(config.language).script, config)
+    script_options = enabled_script_options(get_profile(config_language(config)).script, config)
     if script_options:
         before = len(words)
         words = word_filter.filter_by_script_type(

@@ -139,6 +139,127 @@ def test_anki_service_accepts_an_unregistered_language(test_config):
     assert AnkiService(dataclasses.replace(test_config, language="zh")) is not None
 
 
+def test_deck_filter_scan_runs_under_an_unregistered_language(test_config):
+    """Utilities -> Deck Filter, scan half: the script-type gate read the raw
+    field, so a hand-edited zh config raised ValueError mid-scan. Degraded, the
+    scan applies the JA hiragana-only rule."""
+    from types import SimpleNamespace
+
+    from anki_miner.services.deck_filter import DeckFilterOptions, scan_deck_filter
+    from anki_miner.services.word_filter import WordFilterService
+
+    class _Anki:
+        def find_notes(self, query):
+            return [1]
+
+        def notes_info(self, note_ids):
+            return [
+                {
+                    "noteId": 1,
+                    "modelName": "Basic",
+                    "tags": [],
+                    "fields": {"Expression": {"value": "する", "order": 0}},
+                }
+            ]
+
+        def get_vocabulary_excluding_deck(self, deck):
+            return set()
+
+    cfg = dataclasses.replace(
+        test_config,
+        language="zh",
+        exclude_hiragana_only_words=True,
+        exclude_katakana_only_words=True,
+        use_known_words_db=False,
+    )
+    plan = scan_deck_filter(
+        _Anki(),
+        cfg,
+        SimpleNamespace(word_filter=WordFilterService(cfg)),
+        DeckFilterOptions(source_deck="Src", target_deck="Dst"),
+    )
+
+    assert plan.scanned == 1
+    assert dict(plan.drops)["script_type"] == 1
+    assert plan.kept == ()
+
+
+def test_the_deck_filter_bundle_builds_under_an_unregistered_language(test_config):
+    """Utilities -> Deck Filter, service bundle: both profile reads used the
+    raw field, so the scan crashed before it started."""
+    from anki_miner.gui.workers.deck_filter_worker import _build_filter_bundle
+    from anki_miner.languages.registry import get_profile
+
+    bundle = _build_filter_bundle(dataclasses.replace(test_config, language="zh"), None)
+
+    ja = get_profile("ja")
+    # Private reads: the bundle exists to hand these two to the filter, and
+    # nothing public re-exposes which policy objects it picked.
+    assert bundle.word_filter._mined_form is ja.mined_form
+    assert bundle.word_filter._script is ja.script
+
+
+def test_subtitle_generation_runs_under_an_unregistered_language(test_config, tmp_path, monkeypatch, qtbot):
+    """Utilities -> Generate: the ASR language read the raw field, so the
+    worker raised on its first file."""
+    from anki_miner.gui.workers import subtitle_gen_worker as worker_mod
+    from anki_miner.languages.registry import get_profile
+    from anki_miner.services.asr.subtitle_generation import SubtitleGenResult, SubtitleGenStatus
+
+    captured: dict[str, object] = {}
+
+    def _fake_generate(config, extractor, video_path, out_srt, **kwargs):
+        captured.update(kwargs)
+        return SubtitleGenResult(status=SubtitleGenStatus.NO_SPEECH)
+
+    monkeypatch.setattr(worker_mod, "generate_subtitle_one", _fake_generate)
+
+    video = tmp_path / "ep01.mkv"
+    worker = worker_mod.SubtitleGenWorker(
+        dataclasses.replace(test_config, language="zh"),
+        [video],
+        extractor=object(),
+    )
+    try:
+        worker._process_file(0, video, tmp_path / "ep01.srt")
+    finally:
+        worker.deleteLater()
+
+    assert captured["language"] == get_profile("ja").asr_language
+
+
+def test_manage_known_words_opens_under_an_unregistered_language(test_config, qtbot, monkeypatch):
+    """Settings -> Filtering -> Manage Known Words: the content style read the
+    degraded code already; this pins it (the site swallows exceptions into a
+    screen issue, so a regression would surface as an error banner, not a
+    raise)."""
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
+    from anki_miner.gui.widgets.settings_tab import SettingsTab
+    from anki_miner.languages.registry import get_profile
+
+    captured: dict[str, object] = {}
+
+    class _FakeDialog:
+        def __init__(self, db, parent, **kwargs):
+            captured.update(kwargs)
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _FakeDialog)
+
+    tab = SettingsTab(dataclasses.replace(test_config, language="zh"))
+    qtbot.addWidget(tab)
+    issues: list[object] = []
+    monkeypatch.setattr(tab, "show_screen_issue", issues.append)
+
+    tab._on_manage_known_words()
+
+    assert issues == []
+    assert captured["language"] == "ja"
+    assert captured["content_style"] is get_profile("ja").content_style
+
+
 def test_old_build_drops_the_key_without_raising(isolated_config_file):
     """Downgrade simulation: an unknown key is dropped by the valid-keys filter
     in _migrate_dict, exactly as `language` would be on a pre-Stage-0 build."""
