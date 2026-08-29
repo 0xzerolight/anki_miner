@@ -86,5 +86,16 @@ def switch_language(config: AnkiMinerConfig, new_code: str) -> AnkiMinerConfig:
         logger.debug("Overwriting the stale %r language_stash entry with its live values", config.language)
     stash[config.language] = {name: getattr(config, name) for name in LANGUAGE_SCOPED_FIELDS}
     incoming = stash.pop(code, None)
-    values: dict[str, Any] = dict(incoming) if incoming is not None else dict(profile.scoped_defaults)
+    # The stash is a snapshot, not a schema: it is layered OVER the incoming
+    # profile's defaults and filtered to the scoped names rather than trusted
+    # as a complete key set. A field the snapshot omits would otherwise keep the
+    # OUTGOING language's live value, and every pre-2A.11 stash is partial by
+    # construction — 2A.11 appends "script_variant" and "reading_tone_color" to
+    # LANGUAGE_SCOPED_FIELDS with no CONFIG_SCHEMA_VERSION bump. The filter also
+    # keeps a hand-edited gui_config.json from reaching dataclasses.replace with
+    # a name that is not a config field (TypeError).
+    values: dict[str, Any] = {
+        **dict(profile.scoped_defaults),
+        **{k: v for k, v in dict(incoming or {}).items() if k in LANGUAGE_SCOPED_FIELDS},
+    }
     return dataclasses.replace(config, language=code, language_stash=stash, **values)

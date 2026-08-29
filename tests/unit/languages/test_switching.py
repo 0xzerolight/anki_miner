@@ -171,6 +171,44 @@ def test_the_incoming_code_is_normalized_like_the_stash_keys(monkeypatch):
     assert out.anki_deck_name == "Parked zh deck"
 
 
+def test_a_partial_stash_falls_back_to_the_defaults_for_absent_fields(monkeypatch):
+    """Every pre-2A.11 stash is partial by construction (2A.11 appends two names
+    to LANGUAGE_SCOPED_FIELDS with no schema bump), so an absent key must take
+    the incoming profile's default — never the OUTGOING language's live value."""
+    defaults = _stub_defaults()
+    _register(monkeypatch, _stub(STUB_CODE, defaults))
+    kept, dropped = LANGUAGE_SCOPED_FIELDS[0], "anki_deck_name"
+    ja = dataclasses.replace(
+        AnkiMinerConfig(),
+        anki_deck_name="Live ja deck",
+        language_stash={STUB_CODE: {kept: defaults[kept]}},
+    )
+
+    out = switch_language(ja, STUB_CODE)
+
+    assert getattr(out, kept) == defaults[kept]
+    assert out.anki_deck_name == defaults[dropped]
+    assert out.anki_deck_name != "Live ja deck"
+
+
+def test_a_bogus_stash_key_is_dropped_instead_of_raising(monkeypatch):
+    """A hand-edited gui_config.json can park a name that is not a config field;
+    `dataclasses.replace` would raise TypeError on it."""
+    defaults = _stub_defaults()
+    _register(monkeypatch, _stub(STUB_CODE, defaults))
+    ja = dataclasses.replace(
+        AnkiMinerConfig(),
+        language_stash={STUB_CODE: dict(defaults) | {"not_a_config_field": "boom"}},
+    )
+
+    out = switch_language(ja, STUB_CODE)
+
+    assert out.language == STUB_CODE
+    assert not hasattr(out, "not_a_config_field")
+    for name in LANGUAGE_SCOPED_FIELDS:
+        assert getattr(out, name) == defaults[name], name
+
+
 def test_missing_scoped_default_raises_valueerror_naming_the_field(monkeypatch):
     partial = {n: getattr(AnkiMinerConfig(), n) for n in LANGUAGE_SCOPED_FIELDS[:-1]}
     _register(monkeypatch, _stub(STUB_CODE, partial))
