@@ -14,10 +14,14 @@ from anki_miner.services.frequency.source_importer import import_frequency_sourc
 from anki_miner.services.pitch_accent import storage as pitch_storage
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
+from tests.unit.languages.stub_registry import register_stub_profile
 from tests.unit.test_audio_pack_registry import _make_ajt_pack
 
 
-def test_yomitan_dict_stamps_language(tmp_path: Path):
+def test_yomitan_dict_stamps_language(tmp_path: Path, monkeypatch):
+    # The stamped language also picks the import-side key folding, so the zh
+    # leg needs a registered profile until Stage 2A builds the real one.
+    register_stub_profile(monkeypatch, "zh")
     zip_path = build_yomitan_zip(tmp_path / "src" / "d.zip")
     dest = tmp_path / "dicts"
     ja = import_yomitan_zip(zip_path, dest, dict_id="ja-dict")

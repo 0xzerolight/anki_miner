@@ -72,6 +72,23 @@ def is_japanese_language_tag(language_tag: str | None) -> bool:
     return normalized in JAPANESE_LANGUAGE_CODES or normalized.startswith("ja-")
 
 
+def matches_language_tag(language_tag: str | None, codes: frozenset[str]) -> bool:
+    """Whether *language_tag* names one of *codes*.
+
+    Accepts the exact tag and a BCP 47 regional variant whose primary subtag
+    is in *codes* (``ja-JP`` -> ``ja``, ``ko-KR`` -> ``ko``). A code that is
+    merely a prefix (``jav``) never matches: the variant must be
+    dash-separated, same rule as :func:`is_japanese_language_tag`.
+    """
+    if language_tag is None:
+        return False
+    normalized = language_tag.lower()
+    if normalized in codes:
+        return True
+    primary, sep, _ = normalized.partition("-")
+    return bool(sep) and primary in codes
+
+
 def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -> dict | None:
     """Run ffprobe for ``select_streams`` and return the parsed JSON object.
 
@@ -283,18 +300,25 @@ def list_subtitle_streams(video_path: Path, ffprobe_cmd: str = "ffprobe") -> lis
     return result
 
 
-def find_japanese_audio_stream(video_file: Path, ffprobe_cmd: str = "ffprobe") -> AudioStream | None:
-    """Probe a video file with ffprobe and return its Japanese audio stream.
+def find_japanese_audio_stream(
+    video_file: Path, ffprobe_cmd: str = "ffprobe", *, codes: frozenset[str] | None = None
+) -> AudioStream | None:
+    """Probe a video file with ffprobe and return its mining-language audio stream.
 
     Returns None if ffprobe fails, returns malformed JSON, or no audio stream
-    has a Japanese language tag.
+    carries a matching language tag.
 
     ``ffprobe_cmd`` is forwarded to :func:`list_audio_streams`; defaults to the
     bare ``"ffprobe"`` literal so direct callers are unaffected.
+
+    ``codes`` is the mining language's ``LanguageProfile.audio_track_codes``;
+    it is keyword-only so the pre-existing positional ``ffprobe_cmd`` callers
+    stay untouched, and ``None`` means :data:`JAPANESE_LANGUAGE_CODES`.
     """
+    wanted = JAPANESE_LANGUAGE_CODES if codes is None else codes
     streams = list_audio_streams(video_file, ffprobe_cmd=ffprobe_cmd)
 
-    japanese_streams = [stream for stream in streams if is_japanese_language_tag(stream.language_tag)]
+    japanese_streams = [stream for stream in streams if matches_language_tag(stream.language_tag, wanted)]
     if japanese_streams:
         stream = next((candidate for candidate in japanese_streams if candidate.is_default), japanese_streams[0])
         logger.info(

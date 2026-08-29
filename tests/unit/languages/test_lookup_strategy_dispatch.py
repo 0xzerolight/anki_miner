@@ -93,7 +93,13 @@ def _use_stub_profile(monkeypatch, code: str, lookup: _StubStrategy):
     registered for. Seed the provider cache with the ja tagger for the same
     reason the profile is a real one — ``monkeypatch.setitem`` drops the entry
     again at teardown, so the process-wide cache is left as it was found.
+
+    The registry gets the same profile registered under *code*, because
+    ``config_language`` degrades a code with no registered profile to ja before
+    ``get_profile`` is ever reached.
     """
+    from anki_miner.languages import registry
+
     stub_profile = dataclasses.replace(get_profile("ja"), code=code, lookup=lookup)
     real_get_profile = service_factory.get_profile
 
@@ -101,6 +107,8 @@ def _use_stub_profile(monkeypatch, code: str, lookup: _StubStrategy):
         return stub_profile if requested == code else real_get_profile(requested)
 
     monkeypatch.setattr(service_factory, "get_profile", fake_get_profile)
+    monkeypatch.setitem(registry._BUILDERS, code, lambda: stub_profile)
+    monkeypatch.setitem(registry._CACHE, code, stub_profile)
     monkeypatch.setitem(tagger_provider._TAGGERS, code, tagger_provider.get_tagger("ja"))
     return stub_profile
 

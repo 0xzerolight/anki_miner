@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr.subtitle_generation import (
     SubtitleGenResult,
     SubtitleGenStatus,
@@ -140,6 +141,7 @@ class SubtitleGenWorker(FileQueueWorker):
                 transcribe_progress_cb=_transcribe_progress,
                 cancel_event=self._cancel_event,
                 ct2_model_session=self._ct2_model_session,
+                language=get_profile(config_language(self._config)).asr_language,
             )
         except Exception as exc:  # noqa: BLE001 — per-file isolation
             logger.exception("subtitle_gen_worker: error on %s", video_path)

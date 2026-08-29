@@ -15,8 +15,10 @@ Design notes (mirroring the expression-audio fetchers):
   limit) and retried next run — the googletts word-fetcher precedent.
 * **Content-hash cache keys.** Sentences are long and contain characters
   unfit for filenames, so the cache stem hashes the NFC-normalized, stripped
-  text: ``sentencetts_{provider}_{sha1[:16]}``. The stem doubles as the Anki
-  media filename base, unique per (provider, sentence).
+  text: ``{prefix}_{provider}_{sha1[:16]}``. The stem doubles as the Anki
+  media filename base, unique per (provider, sentence). The prefix comes from
+  ``AudioDefaults.sentence_cache_stem_prefix`` (ja keeps ``"sentencetts"``),
+  so a shared hanzi never reuses another language's cached sentence audio.
 """
 
 import hashlib
@@ -79,11 +81,11 @@ _PAPAGO_HEADERS = {
 }
 
 
-def _sentence_stem(provider: str, sentence: str) -> str:
+def _sentence_stem(provider: str, sentence: str, *, prefix: str = "sentencetts") -> str:
     """Return the cache/media filename stem for *sentence* under *provider*."""
     text = unicodedata.normalize("NFC", sentence).strip()
     digest = hashlib.sha1(text.encode("utf-8")).hexdigest()[:16]
-    return f"sentencetts_{provider}_{digest}"
+    return f"{prefix}_{provider}_{digest}"
 
 
 def _reject_input(sentence: str) -> bool:
@@ -95,18 +97,30 @@ def _reject_input(sentence: str) -> bool:
 class GoogleSentenceTtsFetcher:
     """Synthesizes sentence audio via Google Translate TTS (gtts)."""
 
-    def __init__(self, cache_dir: Path, delay: float = 0.2):
+    def __init__(
+        self,
+        cache_dir: Path,
+        delay: float = 0.2,
+        *,
+        gtts_lang: str = "ja",
+        cache_stem_prefix: str = "sentencetts",
+    ):
         """Initialize with cache directory and politeness delay.
 
         Args:
             cache_dir: Directory for cached mp3s (caller passes
                 ``~/.anki_miner/audio_cache/sentence_tts/``).
             delay: Seconds to wait before each synthesis request.
+            gtts_lang: gTTS language code (``AudioDefaults.gtts_lang``).
+            cache_stem_prefix: Stem prefix
+                (``AudioDefaults.sentence_cache_stem_prefix``).
         """
         self._cache_dir = cache_dir
         # NaN must clamp to 0.0 (time.sleep(nan) raises); the >= comparison
         # is False for nan, so the else branch handles it.
         self._delay = delay if delay >= 0.0 else 0.0
+        self._gtts_lang = gtts_lang
+        self._cache_stem_prefix = cache_stem_prefix
         self._failure_counts = _new_failure_counts()
 
     def fetch(
@@ -129,10 +143,11 @@ class GoogleSentenceTtsFetcher:
         return _synthesize_gtts_to_cache(
             self._cache_dir,
             text=sentence,
-            stem=_sentence_stem("google", sentence),
+            stem=_sentence_stem("google", sentence, prefix=self._cache_stem_prefix),
             delay=self._delay,
             failure_counts=self._failure_counts,
             cancelled_check=cancelled_check,
+            lang=self._gtts_lang,
         )
 
     def stats(self) -> dict[str, int]:
@@ -151,16 +166,29 @@ class PapagoSentenceTtsFetcher:
     receive ``{"id": ...}``, then GET the audio at ``/api/tts/{id}``.
     """
 
-    def __init__(self, cache_dir: Path, delay: float = 0.2):
+    def __init__(
+        self,
+        cache_dir: Path,
+        delay: float = 0.2,
+        *,
+        speaker: str = PAPAGO_SPEAKER_JA,
+        cache_stem_prefix: str = "sentencetts",
+    ):
         """Initialize with cache directory and politeness delay.
 
         The politeness sleep runs once before the makeID POST; the follow-up
         GET is the second half of the same logical fetch (like following a
         redirect) and is not delayed again.
+
+        ``speaker`` is the Papago voice (``AudioDefaults.papago_speaker``) and
+        ``cache_stem_prefix`` the stem prefix
+        (``AudioDefaults.sentence_cache_stem_prefix``).
         """
         self._cache_dir = cache_dir
         # NaN clamp, same as the gtts fetchers.
         self._delay = delay if delay >= 0.0 else 0.0
+        self._speaker = speaker
+        self._cache_stem_prefix = cache_stem_prefix
         self._failure_counts = _new_failure_counts()
         self._session = _new_browser_session()
         self._session.headers.update(_PAPAGO_HEADERS)
@@ -177,7 +205,7 @@ class PapagoSentenceTtsFetcher:
         if cancelled_check is not None and cancelled_check():
             return None
 
-        stem = _sentence_stem("papago", sentence)
+        stem = _sentence_stem("papago", sentence, prefix=self._cache_stem_prefix)
 
         # Extension may vary by Content-Type (download_audio_to_cache picks
         # it), so match any suffix for the cache hit.
@@ -206,7 +234,7 @@ class PapagoSentenceTtsFetcher:
                 data={
                     "alpha": 0,
                     "pitch": 0,
-                    "speaker": PAPAGO_SPEAKER_JA,
+                    "speaker": self._speaker,
                     "speed": 0,
                     "text": sentence,
                 },

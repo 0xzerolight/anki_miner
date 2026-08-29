@@ -714,14 +714,24 @@ class SubtitleParserService:
         consistent regardless of entry point. The UTF-8 default is tried first
         (the ``pysubs2.load`` seam patched by tests); on a decode failure the
         shared fallback (see utils/subtitle_encoding.py) dispatches on a
-        UTF-16/32 BOM first, then tries cp932, so both UTF-16 and Shift-JIS
-        subtitles parse instead of aborting the episode.
+        UTF-16/32 BOM first, then walks the mining language's own ladder, so
+        both UTF-16 and Shift-JIS subtitles parse instead of aborting the
+        episode.
         """
+        # Function-local: languages.profile pulls in services.resource_catalog,
+        # whose package __init__ imports definition_service -> this module, so a
+        # module-level registry import here is a circular one.
+        from anki_miner.languages.registry import config_language, get_profile
+
         try:
             try:
                 return pysubs2.load(str(subtitle_file))
             except UnicodeDecodeError as utf8_error:
-                return load_with_fallback_encoding(subtitle_file, utf8_error)
+                return load_with_fallback_encoding(
+                    subtitle_file,
+                    utf8_error,
+                    encodings=get_profile(config_language(self.config)).import_encodings,
+                )
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
         except Exception as e:

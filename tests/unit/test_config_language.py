@@ -56,6 +56,18 @@ def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeyp
     from PyQt6.QtWidgets import QMessageBox
 
     from anki_miner.gui.widgets.settings_tab import SettingsTab
+    from anki_miner.languages import registry
+
+    # The settings panels resolve the active language's capabilities as they
+    # load (gui/utils/language_gate.py), and zh has no registered profile until
+    # Stage 2A. Register a ja clone under "zh" for this test only; the cache is
+    # swapped for a copy first so the stub cannot leak into another test. The
+    # clone is built out here, not inside the builder: get_profile holds a plain
+    # (non-reentrant) lock while it calls one, so a builder that re-enters it
+    # deadlocks.
+    ja_profile = registry.get_profile("ja")
+    monkeypatch.setattr(registry, "_CACHE", dict(registry._CACHE))
+    monkeypatch.setitem(registry._BUILDERS, "zh", lambda: dataclasses.replace(ja_profile, code="zh"))
 
     tab = SettingsTab(
         dataclasses.replace(test_config, language="zh", language_stash={"ja": {"anki_deck_name": "JA"}}),
@@ -72,6 +84,180 @@ def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeyp
 
     assert emitted[-1].language == "zh"
     assert emitted[-1].language not in emitted[-1].language_stash
+
+
+def test_an_unregistered_language_degrades_to_ja():
+    """`_LANGUAGE_CODES` whitelists zh/ko before their profiles exist, so a
+    hand-edited config carries a code the registry cannot build. Pre-1B the
+    field was inert; degrading here keeps it inert instead of raising out of
+    every `get_profile(config_language(config))` site."""
+    from anki_miner.languages.registry import available_languages, config_language
+
+    assert "zh" not in available_languages()
+    assert config_language(AnkiMinerConfig(language="zh")) == "ja"
+
+
+def test_a_registered_language_is_returned_verbatim(monkeypatch):
+    """Self-heals the moment Stage 2A registers the real profile."""
+    from anki_miner.languages.registry import config_language
+    from tests.unit.languages.stub_registry import register_stub_profile
+
+    register_stub_profile(monkeypatch, "zh")
+    assert config_language(AnkiMinerConfig(language="zh")) == "zh"
+
+
+def test_the_degrade_is_logged_once_per_code(caplog, monkeypatch):
+    from anki_miner.languages import registry
+
+    monkeypatch.setattr(registry, "_DEGRADE_WARNED", set())
+    with caplog.at_level("WARNING", logger="anki_miner.languages.registry"):
+        for _ in range(3):
+            registry.config_language(AnkiMinerConfig(language="zh"))
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1
+    assert "zh" in warnings[0].getMessage()
+
+
+def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
+    """The finding's crash site: `load_from_config` resolves the profile's
+    capabilities, and an unbuilt code used to raise ValueError with no in-app
+    recovery."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
+    from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+
+    cfg = dataclasses.replace(test_config, language="zh")
+    # Held in a list: qtbot.addWidget keeps only a weakref.
+    panels = [FilteringSettingsPanel(), AnkiSettingsPanel()]
+    for panel in panels:
+        qtbot.addWidget(panel)
+        panel.load_from_config(cfg)
+
+
+def test_anki_service_accepts_an_unregistered_language(test_config):
+    from anki_miner.services.anki_service import AnkiService
+
+    assert AnkiService(dataclasses.replace(test_config, language="zh")) is not None
+
+
+def test_deck_filter_scan_runs_under_an_unregistered_language(test_config):
+    """Utilities -> Deck Filter, scan half: the script-type gate read the raw
+    field, so a hand-edited zh config raised ValueError mid-scan. Degraded, the
+    scan applies the JA hiragana-only rule."""
+    from types import SimpleNamespace
+
+    from anki_miner.services.deck_filter import DeckFilterOptions, scan_deck_filter
+    from anki_miner.services.word_filter import WordFilterService
+
+    class _Anki:
+        def find_notes(self, query):
+            return [1]
+
+        def notes_info(self, note_ids):
+            return [
+                {
+                    "noteId": 1,
+                    "modelName": "Basic",
+                    "tags": [],
+                    "fields": {"Expression": {"value": "する", "order": 0}},
+                }
+            ]
+
+        def get_vocabulary_excluding_deck(self, deck):
+            return set()
+
+    cfg = dataclasses.replace(
+        test_config,
+        language="zh",
+        exclude_hiragana_only_words=True,
+        exclude_katakana_only_words=True,
+        use_known_words_db=False,
+    )
+    plan = scan_deck_filter(
+        _Anki(),
+        cfg,
+        SimpleNamespace(word_filter=WordFilterService(cfg)),
+        DeckFilterOptions(source_deck="Src", target_deck="Dst"),
+    )
+
+    assert plan.scanned == 1
+    assert dict(plan.drops)["script_type"] == 1
+    assert plan.kept == ()
+
+
+def test_the_deck_filter_bundle_builds_under_an_unregistered_language(test_config):
+    """Utilities -> Deck Filter, service bundle: both profile reads used the
+    raw field, so the scan crashed before it started."""
+    from anki_miner.gui.workers.deck_filter_worker import _build_filter_bundle
+    from anki_miner.languages.registry import get_profile
+
+    bundle = _build_filter_bundle(dataclasses.replace(test_config, language="zh"), None)
+
+    ja = get_profile("ja")
+    # Private reads: the bundle exists to hand these two to the filter, and
+    # nothing public re-exposes which policy objects it picked.
+    assert bundle.word_filter._mined_form is ja.mined_form
+    assert bundle.word_filter._script is ja.script
+
+
+def test_subtitle_generation_runs_under_an_unregistered_language(test_config, tmp_path, monkeypatch, qtbot):
+    """Utilities -> Generate: the ASR language read the raw field, so the
+    worker raised on its first file."""
+    from anki_miner.gui.workers import subtitle_gen_worker as worker_mod
+    from anki_miner.languages.registry import get_profile
+    from anki_miner.services.asr.subtitle_generation import SubtitleGenResult, SubtitleGenStatus
+
+    captured: dict[str, object] = {}
+
+    def _fake_generate(config, extractor, video_path, out_srt, **kwargs):
+        captured.update(kwargs)
+        return SubtitleGenResult(status=SubtitleGenStatus.NO_SPEECH)
+
+    monkeypatch.setattr(worker_mod, "generate_subtitle_one", _fake_generate)
+
+    video = tmp_path / "ep01.mkv"
+    worker = worker_mod.SubtitleGenWorker(
+        dataclasses.replace(test_config, language="zh"),
+        [video],
+        extractor=object(),
+    )
+    try:
+        worker._process_file(0, video, tmp_path / "ep01.srt")
+    finally:
+        worker.deleteLater()
+
+    assert captured["language"] == get_profile("ja").asr_language
+
+
+def test_manage_known_words_opens_under_an_unregistered_language(test_config, qtbot, monkeypatch):
+    """Settings -> Filtering -> Manage Known Words: the content style read the
+    degraded code already; this pins it (the site swallows exceptions into a
+    screen issue, so a regression would surface as an error banner, not a
+    raise)."""
+    from anki_miner.gui.widgets.dialogs import known_words_dialog
+    from anki_miner.gui.widgets.settings_tab import SettingsTab
+    from anki_miner.languages.registry import get_profile
+
+    captured: dict[str, object] = {}
+
+    class _FakeDialog:
+        def __init__(self, db, parent, **kwargs):
+            captured.update(kwargs)
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(known_words_dialog, "KnownWordsManagerDialog", _FakeDialog)
+
+    tab = SettingsTab(dataclasses.replace(test_config, language="zh"))
+    qtbot.addWidget(tab)
+    issues: list[object] = []
+    monkeypatch.setattr(tab, "show_screen_issue", issues.append)
+
+    tab._on_manage_known_words()
+
+    assert issues == []
+    assert captured["language"] == "ja"
+    assert captured["content_style"] is get_profile("ja").content_style
 
 
 def test_old_build_drops_the_key_without_raising(isolated_config_file):

@@ -8,7 +8,7 @@ import tempfile
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from anki_miner.services.audio_fetch_common import (
     FAILURE_KEYS,
@@ -361,13 +361,30 @@ class ChainedExpressionAudioFetcher:
     to honor the protocol contract (never raise); no try/except is added here.
     """
 
-    def __init__(self, fetchers: "Sequence[ExpressionAudioFetcher]") -> None:
+    def __init__(
+        self,
+        fetchers: "Sequence[ExpressionAudioFetcher]",
+        *,
+        candidates: "Callable[[Any], list[tuple[str, str]]] | None" = None,
+    ) -> None:
         """Initialize with an ordered list of fetchers.
 
         Args:
             fetchers: Fetchers tried left-to-right; first non-None Path wins.
+            candidates: The active language's ladder builder
+                (``AudioDefaults.candidates``). None keeps the Japanese ladder,
+                which is what every pre-multilanguage caller got.
         """
         self._fetchers: list[ExpressionAudioFetcher] = list(fetchers)
+        self._candidates = candidates
+
+    def candidates_for(self, word: Any) -> list[tuple[str, str]]:
+        """The ``(term, reading)`` ladder to feed :meth:`fetch_candidates`."""
+        if self._candidates is not None:
+            return self._candidates(word)
+        from anki_miner.services.audio_fetch_common import expression_audio_candidates
+
+        return expression_audio_candidates(word)
 
     def fetch(
         self,

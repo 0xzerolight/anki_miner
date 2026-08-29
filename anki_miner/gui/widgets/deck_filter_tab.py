@@ -37,7 +37,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.fonts import japanese_cell_font
+from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     CellRole,
@@ -60,6 +60,7 @@ from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.deck_filter_worker import DeckFilterApplyWorker, DeckFilterScanWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.deck_filter import (
     DECKFILTER_TAG,
@@ -102,6 +103,9 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.config = config
+        # The Expression column is mined content, so its face follows the mining
+        # language; re-derived in update_config when the language changes.
+        self._content_style = get_profile(config_language(config)).content_style
         self.worker_thread: DeckFilterScanWorker | DeckFilterApplyWorker | None = None
         self._plan: DeckFilterPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
@@ -313,6 +317,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new config: drop any held plan (its decisions are stale)."""
         self.config = config
+        self._content_style = get_profile(config_language(config)).content_style
         self._plan = None
         self._scan_warnings = ()
         self.preview_table.setRowCount(0)
@@ -540,7 +545,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
                     )
                     item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                     if col == 0:
-                        item.setFont(japanese_cell_font())
+                        item.setFont(content_cell_font(self._content_style))
                     self.preview_table.setItem(row, col, item)
         finally:
             self.preview_table.setSortingEnabled(was_sorting)

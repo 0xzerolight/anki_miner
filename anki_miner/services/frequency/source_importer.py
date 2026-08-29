@@ -314,7 +314,7 @@ def _import_zip(
                     f"{skipped_display_only} display-only entries). "
                     "The dictionary may use an unsupported data format."
                 )
-            rows, converted = _iter_rank_rows(ranks, declared_mode)
+            rows, converted = _iter_rank_rows(ranks, declared_mode, language)
             entry_count = len(ranks)
 
         result = _finalize(
@@ -423,7 +423,7 @@ def _import_csv(
 
     # An explicit count/rank header is authoritative. Headerless and ambiguous
     # CSVs still use the statistical probe.
-    rows, converted = _iter_rank_rows(ranks, declared_mode)
+    rows, converted = _iter_rank_rows(ranks, declared_mode, language)
 
     result = _finalize(
         input_path=csv_path,
@@ -453,17 +453,27 @@ def _import_csv(
 def _iter_rank_rows(
     ranks: Mapping[tuple[str, str | None], int | tuple[int, str | None]],
     declared_mode: str,
+    source_language: str = "ja",
 ) -> tuple[Iterable[storage.FreqRow], bool]:
     """Yield stored rows in stable order, re-ranking occurrence sources.
 
     The dedupe mapping remains necessary, but yielded rows stream into SQLite
     instead of duplicating the entire source in a second list.
+
+    ``source_language`` is the language the import stamps into ``meta.json``; it
+    selects the probe terms, so a source is only ever steered by its own
+    language's list.
     """
+    # terms_for_language, NOT mode_probe._terms_for: the latter pools every
+    # language's terms for an unknown code, which would let ja decide a ko
+    # source's direction. A language with no table contributes no terms, so
+    # term_values stays empty and probe_direction's own pooling fallback finds
+    # nothing to look up — the decision falls through to rank-based. Widening
+    # this set would re-open exactly that miscall.
     probe_terms = {
         term
         for table in (mode_probe.MORE_COMMON_TERMS, mode_probe.LESS_COMMON_TERMS)
-        for terms in table.values()
-        for term in terms
+        for term in mode_probe.terms_for_language(table, source_language)
     }
     term_values: dict[str, list[int]] = {}
     for (term, _reading), value in ranks.items():
@@ -471,7 +481,7 @@ def _iter_rank_rows(
             rank = value if isinstance(value, int) else value[0]
             term_values.setdefault(term, []).append(rank)
 
-    if mode_probe.resolve_is_occurrence(declared_mode, term_values):
+    if mode_probe.resolve_is_occurrence(declared_mode, term_values, source_language):
         ordered = sorted(
             ranks.items(),
             key=lambda item: (

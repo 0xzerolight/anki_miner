@@ -6928,6 +6928,24 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Pulihkan antrean sebelumnya? %1 item</translation>
     </message>
 </context><context>
+    <name>ResourceChain</name>
+    <message>
+        <source>Audio pack '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Starting download…</source>
@@ -7988,16 +8006,24 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Pembuatan subtitel</translation>
     </message>
     <message>
+        <source>Japanese</source>
+        <translation>Jepang</translation>
+    </message>
+    <message>
+        <source>Korean</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>Masukan</translation>
     </message>
     <message>
         <source>Language:</source>
         <translation>Bahasa:</translation>
-    </message>
-    <message>
-        <source>Japanese</source>
-        <translation>Jepang</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>

@@ -24,8 +24,8 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.utils.content_text import content_cell_font
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.fonts import japanese_cell_font
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons
 from anki_miner.gui.utils.qt_helpers import (
     add_min_max_buttons,
@@ -35,6 +35,8 @@ from anki_miner.gui.utils.qt_helpers import (
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.languages.profile import ContentTextStyle
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.known_word_db import KnownWordDB, normalize_lemma
 from anki_miner.services.known_words_import import (
     KnownWordsImportError,
@@ -47,9 +49,21 @@ from anki_miner.utils.i18n import tr_format
 class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
     """View / remove / export / reset the user-curated known words list."""
 
-    def __init__(self, known_word_db: KnownWordDB, parent=None):
+    # Keyword-only additions accumulate here — do not drop existing keywords.
+    def __init__(
+        self,
+        known_word_db: KnownWordDB,
+        parent=None,
+        *,
+        language: str = "ja",
+        content_style: ContentTextStyle | None = None,
+    ):
         super().__init__(parent)
         self._db = known_word_db
+        self._language = language
+        # Every listed word is mined content: the face follows the mining
+        # language. None keeps today's Japanese face.
+        self._content_style = content_style or get_profile("ja").content_style
         self._dialog_generation = 0
         # The list may never have been written if the user only just enabled the
         # feature — initialize so reads/writes don't hit a missing file.
@@ -135,10 +149,10 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         user_words = sorted(self._db.get_words_by_source("user"))
         self.word_list.clear()
         self.word_list.addItems(user_words)
-        # Every entry is a Japanese word: the Japanese face, and only the face —
+        # Every entry is a mined word: the content face, and only the face —
         # a cell font carrying no size leaves the shared row height alone
         # (decision D45-B).
-        cell_font = japanese_cell_font()
+        cell_font = content_cell_font(self._content_style)
         for row in range(self.word_list.count()):
             item = self.word_list.item(row)
             if item is not None:
@@ -218,7 +232,9 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 # Expected failures travel through on_done so the reason survives
                 # (run_off_thread's on_error only receives a message string).
                 try:
-                    return parse_known_words_file(path)
+                    from anki_miner.languages.registry import get_profile
+
+                    return parse_known_words_file(path, encodings=get_profile(self._language).import_encodings)
                 except KnownWordsImportError as exc:
                     return exc
 

@@ -5,10 +5,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     meta_language,
@@ -18,6 +21,10 @@ from anki_miner.services._sqlite_index import (
 from anki_miner.services.dictionary.providers.indexed_provider import IndexedDictProvider
 from anki_miner.services.dictionary.providers.jisho_provider import JishoProvider
 from anki_miner.services.dictionary.storage import SCHEMA_VERSION
+from anki_miner.utils.i18n import tr_format
+
+if TYPE_CHECKING:  # pragma: no cover - typing only, keeps services import-free of gui
+    from anki_miner.gui.utils.service_factory import ServiceLoadResult
 
 logger = logging.getLogger(__name__)
 
@@ -150,15 +157,26 @@ class DictionaryRegistry:
                 usable.append(meta)
         return sorted(usable, key=lambda m: m.dict_id)
 
-    def build_provider_chain(self, config: AnkiMinerConfig) -> list[DictionaryProvider]:
+    def build_provider_chain(
+        self,
+        config: AnkiMinerConfig,
+        *,
+        load_result: ServiceLoadResult | None = None,
+    ) -> list[DictionaryProvider]:
         """Build the ordered provider chain from config + disk state.
 
         Entries with enabled=False are skipped. Indexed entries whose dict_id
-        is missing on disk are dropped with a warning. Jisho is included if
-        its ChainEntry is enabled. Providers are returned in chain order.
+        is missing on disk are dropped with a warning. Indexed entries stamped
+        for another mining language are dropped the same way. Jisho is included
+        if its ChainEntry is enabled. Providers are returned in chain order.
+
+        ``load_result`` is an optional sink for the user-facing warnings (duck
+        typed: anything with a ``warnings`` list). ``None`` keeps them in the
+        log only.
 
         Caller is responsible for invoking provider.load() on each.
         """
+        language = config_language(config)
         chain: list[DictionaryProvider] = []
         for entry in config.dictionary_chain:
             if not entry.enabled:
@@ -187,12 +205,30 @@ class DictionaryRegistry:
                         entry.dict_id,
                     )
                     continue
+                if meta.language != language:
+                    # A ko index answering a zh run returns confident nonsense;
+                    # skipping is the only safe read of a cross-language slot.
+                    logger.warning(
+                        "Dictionary '%s' is indexed for '%s'; skipped for '%s'",
+                        entry.dict_id,
+                        meta.language,
+                        language,
+                    )
+                    if load_result is not None:
+                        load_result.warnings.append(
+                            tr_format(
+                                QCoreApplication.translate("ResourceChain", "Dictionary '%1' is for %2; skipped"),
+                                entry.dict_id,
+                                meta.language,
+                            )
+                        )
+                    continue
                 chain.append(
                     IndexedDictProvider(
                         dict_id=meta.dict_id,
                         db_path=meta.db_path,
                         display_name=meta.source_name,
-                        keys=get_profile(config.language).dict_keys,
+                        keys=get_profile(language).dict_keys,
                     )
                 )
             elif entry.kind == "jisho":

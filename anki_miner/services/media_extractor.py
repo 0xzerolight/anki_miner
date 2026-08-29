@@ -25,7 +25,7 @@ from anki_miner.utils import (
     list_audio_streams,
     safe_filename,
 )
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.audio_track_detector import matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -1251,6 +1251,12 @@ class MediaExtractorService:
             return False
         return output_path.exists()
 
+    def _audio_codes(self) -> frozenset[str]:
+        """The mining language's audio-track language codes (ja by default)."""
+        from anki_miner.languages.registry import config_language, get_profile
+
+        return get_profile(config_language(self.config)).audio_track_codes
+
     def _get_japanese_audio_stream(self, video_file: Path) -> int | None:
         """Detect Japanese audio stream index using ffprobe.
 
@@ -1261,7 +1267,9 @@ class MediaExtractorService:
             if video_file in self._audio_stream_cache:
                 return self._audio_stream_cache[video_file]
 
-        result = find_japanese_audio_stream(video_file, ffprobe_cmd=resolve_ffprobe(self.config))
+        result = find_japanese_audio_stream(
+            video_file, ffprobe_cmd=resolve_ffprobe(self.config), codes=self._audio_codes()
+        )
         global_index = result.global_index if result is not None else None
 
         with self._cache_lock:
@@ -1332,8 +1340,9 @@ class MediaExtractorService:
             len(streams),
         )
         # Reuse the streams list we already probed; don't re-run ffprobe.
+        codes = self._audio_codes()
         for stream in streams:
-            if stream.language_tag in JAPANESE_LANGUAGE_CODES:
+            if matches_language_tag(stream.language_tag, codes):
                 return stream.global_index
         return None
 

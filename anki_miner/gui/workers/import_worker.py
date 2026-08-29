@@ -226,11 +226,14 @@ class ImportWorker(CancellableWorker):
         source_id: str | None = None,
         source_name: str | None = None,
         overwrite: bool = False,
+        language: str = "ja",
     ) -> ImportWorker:
         """Build a worker that imports a frequency source file.
 
         ``source_name`` is forwarded so reimport can preserve the existing
-        display name (see ``import_frequency_source``).
+        display name (see ``import_frequency_source``). ``language`` is the
+        stamp the new index carries; the repair path never takes one, so a
+        rebuild keeps the slot's own.
         """
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
@@ -242,6 +245,7 @@ class ImportWorker(CancellableWorker):
                 progress=progress_fn,
                 cancel_check=cancel_fn,
                 overwrite=overwrite,
+                **language_kwarg(language),
             )
             meta: dict[str, Any] = {
                 "entry_count": getattr(result, "entry_count", 0),
@@ -296,11 +300,13 @@ class ImportWorker(CancellableWorker):
         source_id: str | None = None,
         source_name: str | None = None,
         overwrite: bool = False,
+        language: str = "ja",
     ) -> ImportWorker:
         """Build a worker that imports a pitch accent source file.
 
         ``source_name`` is forwarded so reimport can preserve the existing
-        display name (see ``import_pitch_source``).
+        display name (see ``import_pitch_source``). ``language`` is the stamp
+        the new index carries.
         """
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
@@ -312,6 +318,7 @@ class ImportWorker(CancellableWorker):
                 progress=progress_fn,
                 cancel_check=cancel_fn,
                 overwrite=overwrite,
+                **language_kwarg(language),
             )
             meta: dict[str, Any] = {
                 "entry_count": result.entry_count,
@@ -361,12 +368,14 @@ class ImportWorker(CancellableWorker):
         *,
         pack_id: str | None = None,
         overwrite: bool = False,
+        language: str = "ja",
     ) -> ImportWorker:
         """Build a worker that imports an audio pack directory.
 
         The audio pack importer reports progress as a single human-readable
         string; the runner adapts it to the ``(cur, total, msg)`` triplet the
         worker emits (indeterminate cur/total — the flow shows only the label).
+        ``language`` is the stamp the new pack index carries.
         """
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
@@ -377,6 +386,7 @@ class ImportWorker(CancellableWorker):
                 progress=lambda msg: progress_fn(0, 0, msg),
                 cancel_check=cancel_fn,
                 overwrite=overwrite,
+                **language_kwarg(language),
             )
             meta: dict[str, Any] = {
                 "entry_count": getattr(result, "entry_count", 0),

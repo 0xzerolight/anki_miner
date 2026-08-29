@@ -44,11 +44,12 @@ from typing import TYPE_CHECKING
 
 import pysubs2
 
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
-from anki_miner.utils.audio_track_detector import is_japanese_language_tag, list_subtitle_streams
+from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_utils import no_window_kwargs
@@ -80,23 +81,27 @@ _BRACKET_PAIRS: tuple[tuple[str, str], ...] = (
 # ---------------------------------------------------------------------------
 
 
-def load_subtitle_events(path: str | Path) -> list[Event]:
+def load_subtitle_events(path: str | Path, *, encodings: tuple[str, ...] | None = None) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
     Uses pysubs2 with a UTF-8 default; on a decode failure it dispatches on a
-    UTF-16/32 BOM when one is present, otherwise retries with ``cp932`` first
-    (the dominant non-BOM non-UTF-8 input), then — only if cp932 also fails to
-    decode — with a charset-normalizer-detected encoding, and finally
-    re-raises the original UTF-8 error (D10). ``Comment`` events are skipped.
+    UTF-16/32 BOM when one is present, otherwise walks the *encodings* ladder
+    (``cp932`` first — the dominant non-BOM non-UTF-8 input) and then, only if
+    every leg fails to decode, a charset-normalizer-detected encoding, finally
+    re-raising the original UTF-8 error (D10). ``Comment`` events are skipped.
     Times come straight from ``event.start`` / ``event.end`` (millisecond
     ints); text is the raw cue text — markup stripping happens later in
     :func:`filter_lines`.
+
+    *encodings* is the mining language's ladder (``None`` = the built-in
+    Japanese one); a config-bearing caller passes
+    ``get_profile(config_language(config)).import_encodings``.
     """
     path = Path(path)
     try:
         subs = pysubs2.load(str(path))
     except UnicodeDecodeError as utf8_error:
-        subs = load_with_fallback_encoding(path, utf8_error)
+        subs = load_with_fallback_encoding(path, utf8_error, encodings=encodings)
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []
@@ -863,7 +868,7 @@ def condense_one(
             return failure
         assert sub_path is not None  # failure is None ⇒ a source was resolved
 
-        events = load_subtitle_events(sub_path)
+        events = load_subtitle_events(sub_path, encodings=get_profile(config_language(config)).import_encodings)
         shifted = shift_events(events, offset_ms)
         filtered = filter_lines(shifted, filtered_chars)
         periods = build_periods(filtered, padding_ms)
@@ -944,7 +949,9 @@ def _resolve_embedded_subtitle(
     if not streams:
         return None, None, CondenseResult(CondenseStatus.NO_SOURCE)
 
-    stream = _pick_subtitle_stream(streams, subtitle_track_override)
+    stream = _pick_subtitle_stream(
+        streams, subtitle_track_override, get_profile(config_language(config)).audio_track_codes
+    )
     if stream is None:
         if subtitle_track_override is not None:
             return None, None, CondenseResult(CondenseStatus.SUBTITLE_TRACK_NOT_FOUND)
@@ -961,8 +968,14 @@ def _resolve_embedded_subtitle(
     return extracted, extracted, None
 
 
-def _pick_subtitle_stream(streams: list[SubtitleStream], subtitle_track_override: int | None) -> SubtitleStream | None:
-    """Choose a subtitle stream: override, then non-forced/Japanese/demux order."""
+def _pick_subtitle_stream(
+    streams: list[SubtitleStream], subtitle_track_override: int | None, codes: frozenset[str]
+) -> SubtitleStream | None:
+    """Choose a subtitle stream: override, then non-forced/mining-language/demux order.
+
+    *codes* is the mining language's ``audio_track_codes`` and is required: the
+    caller holds the config, so the language decision never lives here.
+    """
     if subtitle_track_override is not None:
         return next((s for s in streams if s.sub_index == subtitle_track_override), None)
     text_streams = [s for s in streams if s.is_text]
@@ -972,7 +985,7 @@ def _pick_subtitle_stream(streams: list[SubtitleStream], subtitle_track_override
         text_streams,
         key=lambda stream: (
             stream.is_forced,
-            not is_japanese_language_tag(stream.language_tag),
+            not matches_language_tag(stream.language_tag, codes),
             stream.sub_index,
         ),
     )

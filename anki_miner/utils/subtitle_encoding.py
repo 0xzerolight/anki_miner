@@ -1,4 +1,4 @@
-"""Shared pysubs2 encoding fallback (BOM, cp932, validated EUC-JP, detector).
+"""Shared pysubs2 encoding fallback (BOM, caller's ladder, detector).
 
 Japanese subtitle files are frequently cp932/Shift-JIS, but pysubs2 defaults to
 UTF-8 and raises :class:`UnicodeDecodeError` on them. Both the Audio Condenser
@@ -11,6 +11,12 @@ the fallback chain lives in exactly one place.
 :func:`detect_subtitle_encoding` runs that same chain for a caller that needs the
 *name* of the encoding rather than a parsed file — subtitle retiming, which
 declares it to alass via ``--encoding-inc``.
+
+The ladder itself belongs to the caller: a config-bearing site passes
+``encodings=get_profile(config_language(config)).import_encodings``, so a Chinese
+subtitle is tried against gb18030/big5 and a Korean one against cp949. The
+"use the built-in ladder" sentinel is ``None``, never ``()`` — an empty tuple is
+an EMPTY ladder that silently stops every non-UTF-8 subtitle decoding.
 """
 
 from __future__ import annotations
@@ -70,37 +76,77 @@ _WHATWG_LABELS = {
 #: case to one bounded read instead of decoding the whole thing twice over.
 _MAX_SNIFF_BYTES = 1024 * 1024
 
+#: Ladder used when a caller passes no ``encodings``. UTF-8 is absent from the
+#: load ladder because it is the attempt the caller already made and lost —
+#: that failure is what ``original_error`` holds.
+_DEFAULT_LOAD_LADDER = ("cp932", "euc_jp")
+_DEFAULT_DETECT_LADDER = ("utf-8", "cp932", "euc_jp")
 
-def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeError) -> pysubs2.SSAFile:
-    """Retry loading *path* from its BOM, cp932, EUC-JP, then detection (D10).
 
-    UTF-16/UTF-32 BOMs are authoritative and checked before cp932 because their
-    NUL-interleaved bytes can decode as cp932 without producing usable cues.
-    For BOM-free input, cp932 is tried before the charset-normalizer detector
-    on purpose: the detector confidently mis-detects real cp932 Japanese as
-    ``cp949`` and decodes it *without* raising (silent mojibake), so for the
-    app's dominant non-UTF-8 input the explicit cp932 attempt must win first.
-    Only if cp932 itself raises :class:`UnicodeDecodeError` do we try EUC-JP.
-    That candidate must decode to Japanese text before it can win; otherwise
-    unrestricted detection follows. If that also fails, *original_error* (the
-    UTF-8 error) is raised.
+def _read_head(path: Path) -> bytes:
+    """The bounded head the load path sniffs; ``b""`` when *path* is unreadable.
+
+    :func:`detect_subtitle_encoding` reads its own head instead of calling this:
+    there an unreadable file must come back *unnameable* (None), not empty.
+    """
+    try:
+        with path.open("rb") as f:
+            return f.read(_MAX_SNIFF_BYTES)
+    except OSError:
+        return b""
+
+
+def load_with_fallback_encoding(
+    path: str | Path,
+    original_error: UnicodeDecodeError,
+    *,
+    encodings: tuple[str, ...] | None = None,
+) -> pysubs2.SSAFile:
+    """Retry loading *path* from its BOM, the *encodings* ladder, then detection (D10).
+
+    UTF-16/UTF-32 BOMs are authoritative and checked before the ladder because
+    their NUL-interleaved bytes can decode as cp932 without producing usable
+    cues. For BOM-free input each ladder entry is tried in order, before the
+    charset-normalizer detector on purpose: the detector confidently
+    mis-detects real cp932 Japanese as ``cp949`` and decodes it *without*
+    raising (silent mojibake), so for the app's dominant non-UTF-8 input the
+    explicit cp932 attempt must win first. An ``euc_jp`` entry is special-cased:
+    that candidate must decode to Japanese text before it can win. If the whole
+    ladder and the detector fail, *original_error* (the UTF-8 error) is raised.
+
+    *encodings* is the caller's ladder — ``get_profile(...).import_encodings``
+    at a config-bearing site. ``None`` (never ``()``) means the built-in
+    Japanese ladder: cp932, then validated EUC-JP, then the detector.
     """
     path = Path(path)
     if original_error.object.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
         return pysubs2.load(str(path), encoding="utf_32")
     if original_error.object.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
         return pysubs2.load(str(path), encoding="utf_16")
-    try:
-        return pysubs2.load(str(path), encoding="cp932")
-    except UnicodeDecodeError:
-        pass
-    try:
-        with path.open("rb") as f:
-            head = f.read(_MAX_SNIFF_BYTES)
-    except OSError:
-        head = b""
-    if _is_japanese_euc_jp_bytes(head):
-        return pysubs2.load(str(path), encoding="euc_jp")
+
+    ladder = _DEFAULT_LOAD_LADDER if encodings is None else encodings
+    head: bytes | None = None
+    for candidate in ladder:
+        if candidate == "euc_jp":
+            if head is None:
+                head = _read_head(path)
+            # EUC-JP only wins when it produces real Japanese: gb18030 bytes
+            # decode as EUC-JP into plausible-looking kanji, so an ungated
+            # attempt steals Chinese subtitles.
+            if not _is_japanese_euc_jp_bytes(head):
+                continue
+            # The guard has already decoded these bytes as Japanese EUC-JP, so
+            # this leg is committed: a failure past the sniffed head propagates
+            # instead of falling through to the detector. Pre-ladder behaviour,
+            # kept exactly.
+            return pysubs2.load(str(path), encoding=candidate)
+        try:
+            return pysubs2.load(str(path), encoding=candidate)
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    if head is None:
+        head = _read_head(path)
     encoding = _detect_encoding(head)
     if encoding:
         try:
@@ -110,18 +156,19 @@ def load_with_fallback_encoding(path: str | Path, original_error: UnicodeDecodeE
     raise original_error
 
 
-def detect_subtitle_encoding(path: str | Path) -> str | None:
+def detect_subtitle_encoding(path: str | Path, *, encodings: tuple[str, ...] | None = None) -> str | None:
     """Return the WHATWG encoding label for *path*, or None when unsure.
 
-    Runs the same precedence as :func:`load_with_fallback_encoding` — UTF-8,
-    then BOM, then cp932, then validated EUC-JP, then the charset-normalizer
-    detector — but reports the encoding's *name* instead of a parsed file, for
-    callers that must declare it to an external tool.
+    Runs the same precedence as :func:`load_with_fallback_encoding` — BOM, then
+    the *encodings* ladder, then the charset-normalizer detector — but reports
+    the encoding's *name* instead of a parsed file, for callers that must
+    declare it to an external tool. ``None`` (never ``()``) means the built-in
+    Japanese ladder: UTF-8, cp932, validated EUC-JP.
 
     None means "could not name it confidently"; callers must then omit the
     declaration rather than guess, because naming the wrong encoding is worse
-    than letting the consumer detect. A detected encoding outside
-    :data:`_WHATWG_LABELS` also yields None for the same reason.
+    than letting the consumer detect. A ladder entry or a detected encoding
+    outside :data:`_WHATWG_LABELS` also yields None for the same reason.
 
     Only sniffs the first ``_MAX_SNIFF_BYTES`` of *path* — every real subtitle
     file fits inside that whole, so detection is unaffected; it just stops a
@@ -142,23 +189,32 @@ def detect_subtitle_encoding(path: str | Path) -> str | None:
     if head.startswith(codecs.BOM_UTF16_BE):
         return "utf-16be"
 
-    for candidate in ("utf-8", "cp932"):
+    for candidate in _DEFAULT_DETECT_LADDER if encodings is None else encodings:
+        if candidate == "euc_jp":
+            if not _is_japanese_euc_jp_bytes(head):
+                continue
+            return _WHATWG_LABELS.get(candidate)
         try:
             head.decode(candidate)
         except UnicodeDecodeError as exc:
-            if exc.end != len(head):
+            # Compare against ``exc.object``, never ``head``: a BOM-stripping
+            # codec (utf_8_sig, the first leg of every profile ladder) hands
+            # the delegate the bytes AFTER the BOM, so its offsets are relative
+            # to those and can never reach len(head) when a BOM is present.
+            # Keying on head made this whole retry unreachable, and a BOM'd
+            # UTF-8 subtitle with a cut tail got named cp932/windows-1251.
+            if exc.end != len(exc.object):
                 continue  # a genuine invalid byte, not a truncation artifact
             # The bounded read can cut mid multi-byte sequence right at the
             # tail; that's an artifact of the bound, not proof this candidate
             # is wrong. Retry without the truncated tail before giving up on it.
             try:
-                head[: exc.start].decode(candidate)
+                exc.object[: exc.start].decode(candidate)
             except UnicodeDecodeError:
                 continue
-        return _WHATWG_LABELS[candidate]
-
-    if _is_japanese_euc_jp_bytes(head):
-        return "euc-jp"
+        except LookupError:
+            continue  # a ladder entry Python has no codec for
+        return _WHATWG_LABELS.get(candidate)
 
     detected = _detect_encoding(head)
     if detected is None:
@@ -172,15 +228,17 @@ def _is_japanese_euc_jp_bytes(data: bytes) -> bool:
     *data* is a caller-owned, already-bounded head (never a full file read —
     both callers hold one already). EUC-JP is mostly double-byte, so a
     bounded head can cut mid-character right at the tail; same truncation
-    tolerance as the utf-8/cp932 checks in :func:`detect_subtitle_encoding`.
+    tolerance as the ladder checks in :func:`detect_subtitle_encoding`, and
+    keyed on ``exc.object`` for the same reason (here euc_jp strips nothing, so
+    it is the same bytes — the spelling is what keeps the two in step).
     """
     try:
         text = data.decode("euc_jp")
     except UnicodeDecodeError as exc:
-        if exc.end != len(data):
+        if exc.end != len(exc.object):
             return False  # a genuine invalid byte, not a truncation artifact
         try:
-            text = data[: exc.start].decode("euc_jp")
+            text = exc.object[: exc.start].decode("euc_jp")
         except UnicodeDecodeError:
             return False
     return any(

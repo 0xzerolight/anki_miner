@@ -93,6 +93,10 @@ def _is_non_dialogue_event(event: pysubs2.SSAEvent) -> bool:
 
 
 def _load(path: Path) -> pysubs2.SSAFile:
+    # Deliberately on the default ladder: this module only re-times cues for
+    # alignment (its text never reaches the pipeline) and none of
+    # clean_reference / clean_for_alignment / map_deltas_back carries a config
+    # to take a language ladder from. The detector leg still covers big5/gb18030.
     try:
         return pysubs2.load(str(path))
     except UnicodeDecodeError as exc:

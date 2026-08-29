@@ -145,7 +145,7 @@ def test_the_factory_hands_the_processor_the_config_languages_profile(config_zh,
     provider cache for the zh code, since no zh tokenizer exists until Stage 2A.
     """
     from anki_miner.gui.utils import service_factory
-    from anki_miner.languages import tagger_provider
+    from anki_miner.languages import registry, tagger_provider
     from anki_miner.presenters import NullPresenter
 
     stub = _profile_with()
@@ -155,6 +155,10 @@ def test_the_factory_hands_the_processor_the_config_languages_profile(config_zh,
         "get_profile",
         lambda code: stub if code == "zh" else real_get_profile(code),
     )
+    # config_language degrades an unregistered code to ja before get_profile is
+    # reached, so the stub is registered too (dropped again at teardown).
+    monkeypatch.setitem(registry._BUILDERS, "zh", lambda: stub)
+    monkeypatch.setitem(registry._CACHE, "zh", stub)
     monkeypatch.setitem(tagger_provider._TAGGERS, "zh", tagger_provider.get_tagger("ja"))
 
     proc = service_factory.create_episode_processor(config_zh, NullPresenter())

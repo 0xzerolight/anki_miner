@@ -63,9 +63,10 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseWorker,
     plan_condense_outputs,
 )
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.audio_tagger import prefill_track_metadata
 from anki_miner.utils import list_audio_streams
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, list_subtitle_streams
+from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
@@ -687,7 +688,8 @@ class CondenseTab(_ToolTabBase):
                 )
                 return
 
-            auto_stream = next((s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES), None)
+            codes = get_profile(config_language(self.config)).audio_track_codes
+            auto_stream = next((s for s in streams if matches_language_tag(s.language_tag, codes)), None)
             dialog = AudioTracksDialog(
                 streams=streams,
                 current_override=self._audio_track_override,
@@ -750,8 +752,9 @@ class CondenseTab(_ToolTabBase):
 
             # Caller computes the auto-detected stream: the first JP-tagged text
             # track, else None (the worker then falls back to the first text track).
+            codes = get_profile(config_language(self.config)).audio_track_codes
             auto_stream = next(
-                (s for s in streams if s.is_text and s.language_tag in JAPANESE_LANGUAGE_CODES),
+                (s for s in streams if s.is_text and matches_language_tag(s.language_tag, codes)),
                 None,
             )
             dialog = SubtitleTracksDialog(

@@ -54,10 +54,11 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaCon
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.workers.episode_worker import EpisodeWorkerThread
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.orchestration.episode_processor import sanitize_source_label
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.audio_track_detector import matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle
 from anki_miner.utils.i18n import tr_format
@@ -472,8 +473,9 @@ class SingleEpisodeTab(MiningTabBase):
                     return
 
                 # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
+                codes = get_profile(config_language(self.config)).audio_track_codes
                 auto_stream = next(
-                    (s for s in streams if s.language_tag in JAPANESE_LANGUAGE_CODES),
+                    (s for s in streams if matches_language_tag(s.language_tag, codes)),
                     None,
                 )
 
@@ -576,6 +578,7 @@ class SingleEpisodeTab(MiningTabBase):
                     initial_offset=offset,
                     parent=self,
                     audio_track_override=self._audio_track_override,
+                    content_style=get_profile(config_language(self.config)).content_style,
                 )
                 # Nothing happens until exec() returns: the viewer holds a live mpv
                 # core and releases it on the way out, so navigating (or writing the

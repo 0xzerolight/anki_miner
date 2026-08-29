@@ -79,7 +79,7 @@ class KnownWordsImportResult:
     skipped_malformed: int = 0
 
 
-def parse_known_words_file(path: Path) -> KnownWordsImportResult:
+def parse_known_words_file(path: Path, *, encodings: tuple[str, ...] | None = None) -> KnownWordsImportResult:
     """Detect the export format of ``path`` and extract its known words.
 
     Content is tried as JSON first; valid JSON that matches no known JSON
@@ -87,8 +87,10 @@ def parse_known_words_file(path: Path) -> KnownWordsImportResult:
     reader (which would ingest syntax fragments as words). ``.json`` files
     are never read as generic word lists for the same reason.
 
-    Bytes are decoded utf-8-sig first (BOM-stripping), then cp932 — the
-    Japanese Windows/Excel default for hand-made lists — before giving up.
+    *encodings* is the caller's decode ladder — the mining language's
+    ``get_profile(...).import_encodings``. ``None`` keeps the historical
+    two-leg Japanese default; ``()`` would be an EMPTY ladder, so never pass
+    it as the "use the default" sentinel.
     """
     try:
         if path.stat().st_size > _MAX_IMPORT_BYTES:
@@ -96,7 +98,7 @@ def parse_known_words_file(path: Path) -> KnownWordsImportResult:
         raw = path.read_bytes()
     except OSError as exc:
         raise KnownWordsImportError("unreadable") from exc
-    text = _decode(raw)
+    text = _decode(raw, encodings)
 
     try:
         data = json.loads(text)
@@ -219,14 +221,19 @@ def _parse_generic(text: str) -> KnownWordsImportResult:
     return _result("generic", words, total)
 
 
-def _decode(raw: bytes) -> str:
-    # utf-8-sig strips a Windows/Excel BOM that would otherwise break json.loads
-    # and the exact first-cell header matches; cp932 covers Shift-JIS lists
-    # exported from Japanese Notepad/Excel. Both failing ⇒ truly unreadable.
-    for encoding in ("utf-8-sig", "cp932"):
+def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> str:
+    # utf-8-sig strips a Windows/Excel BOM that would otherwise break
+    # json.loads and the exact first-cell header matches; the rest of the
+    # ladder is the mining language's (cp932 for Japanese Notepad/Excel
+    # exports). Every candidate failing => truly unreadable.
+    #
+    # `is None`, not truthiness: `()` is an EMPTY ladder the caller asked for,
+    # not a request for the Japanese default. Truthiness would decode a
+    # profile's deliberately-empty ladder as Japanese.
+    for encoding in ("utf-8-sig", "cp932") if encodings is None else encodings:
         try:
             return raw.decode(encoding)
-        except UnicodeDecodeError:
+        except (UnicodeDecodeError, LookupError):
             continue
     raise KnownWordsImportError("unreadable")
 

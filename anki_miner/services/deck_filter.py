@@ -42,9 +42,8 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import TokenizedWord
-from anki_miner.services.anki_service import _JAPANESE_RE
 from anki_miner.services.card_backfiller import (
     _chunks,
     _escape_anki_search,
@@ -328,6 +327,7 @@ def scan_deck_filter(
     seen_expressions: set[str] = set()
     scanned = 0
     tagger = getattr(services, "tagger", None)
+    script = get_profile(config_language(config)).script
 
     for chunk in _chunks(note_ids, _NOTES_CHUNK):
         if is_cancelled and is_cancelled():
@@ -349,7 +349,9 @@ def scan_deck_filter(
             if not expression:
                 drops["no_expression"] += 1
                 continue
-            if not _JAPANESE_RE.search(expression):
+            if not script.contains_target_script(expression):
+                # Persisted plan key read by deck_filter_worker and pinned by
+                # tests/unit/test_deck_filter.py — never renamed.
                 drops["not_japanese"] += 1
                 continue
             if expression in seen_expressions:
@@ -409,7 +411,7 @@ def scan_deck_filter(
         drops["blacklist"] += before - len(words)
 
     # Script type (for ja: hiragana-only / katakana-only forms).
-    script_options = enabled_script_options(get_profile(config.language).script, config)
+    script_options = enabled_script_options(get_profile(config_language(config)).script, config)
     if script_options:
         before = len(words)
         words = word_filter.filter_by_script_type(

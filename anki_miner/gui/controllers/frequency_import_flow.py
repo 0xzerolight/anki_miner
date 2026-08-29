@@ -28,6 +28,8 @@ from anki_miner.gui.controllers.source_chain_import_flow import (
     SourceFlowLabels,
 )
 from anki_miner.gui.workers.import_worker import ImportWorker
+from anki_miner.languages.registry import config_language
+from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.frequency import storage
 from anki_miner.services.frequency.source_importer import FREQUENCY_SOURCE_SUFFIXES
 from anki_miner.utils.i18n import tr_format
@@ -105,7 +107,15 @@ class FrequencyImportFlow(SourceChainImportFlow):
         return stored if isinstance(stored, str) else None
 
     def _make_add_worker(self, source_file: Path, dest_root: Path) -> ImportWorker:
-        return ImportWorker.for_source(source_file, dest_root, overwrite=False)
+        # A new source is stamped with the language it is being added for; the
+        # repair factory below takes no language, so a rebuild keeps the stamp
+        # already on the slot instead of relabelling it.
+        return ImportWorker.for_source(
+            source_file,
+            dest_root,
+            overwrite=False,
+            **language_kwarg(config_language(self._get_config())),
+        )
 
     def _make_repair_worker(
         self,

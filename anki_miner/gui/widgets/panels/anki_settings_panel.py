@@ -17,8 +17,10 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.note_presets import (
     NOTE_PRESETS,
     NotePreset,
@@ -178,6 +180,11 @@ class AnkiSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
+        # Every capability contributor extends this list; Stage 2B adds the
+        # non-ja rows to the same one. A second assignment would drop these
+        # pairs, so this is the only place it is bound.
+        self._language_gate_pairs: list[tuple[QWidget, str]] = []
+
         # Connection status badge
         self.connection_status = StatusBadge("AnkiConnect", status="checking", clickable=False)
         self.add_widget(self.connection_status)
@@ -524,6 +531,29 @@ class AnkiSettingsPanel(FormPanel):
             anchor="card_type_marker_fields",
             anchor_focus=self.card_type_word_and_sentence_input,
             anchor_text=lambda: (self.card_type_names_group.title(),),
+        )
+
+        # Language-gated rows. Each row contributes its label too, so a hidden
+        # field never leaves a dangling caption behind. The Auxiliary Data
+        # Fields heading stays: frequency and source live under it as well.
+        self._language_gate_pairs.extend(
+            (w, "furigana")
+            for field in (
+                self.expression_furigana_field_input,
+                self.sentence_furigana_field_input,
+            )
+            for w in field_row_widgets(self, field)
+        )
+        self._language_gate_pairs.extend(
+            (w, "pitch")
+            for field in (
+                self.pitch_position_field_input,
+                self.pitch_category_field_input,
+                self.pitch_category_format_combo,
+                self.pitch_graph_field_input,
+                self.pitch_text_field_input,
+            )
+            for w in field_row_widgets(self, field)
         )
 
         self.add_stretch()
@@ -1025,6 +1055,7 @@ class AnkiSettingsPanel(FormPanel):
         self.set_pitch_category_format(config.pitch_category_format)
         self.set_card_type(config.card_type)
         self.set_card_type_marker_fields(config.card_type_marker_fields)
+        apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.

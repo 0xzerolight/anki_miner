@@ -56,12 +56,15 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.resources.styles import BORDER_RADIUS, SPACING
-from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_font
+from anki_miner.gui.utils.content_text import apply_content_font
+from anki_miner.gui.utils.fonts import JAPANESE_BODY
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut, scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.enhanced.modern_button import ModernButton
 from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
+from anki_miner.languages.profile import ContentTextStyle
+from anki_miner.languages.registry import get_profile
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -106,6 +109,8 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         parent: Optional parent widget.
         audio_track_override: Optional 0-indexed audio track to force instead of
             auto-detecting Japanese. None preserves auto-detect (mpv metadata).
+        audio_track_codes: The mining language's audio-track language codes,
+            used for that auto-detect. None keeps the player's ja default.
     """
 
     #: ``exec()`` result meaning "hand this pair to the automatic aligner".
@@ -121,8 +126,13 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         parent=None,
         *,
         audio_track_override: int | None = None,
+        audio_track_codes: frozenset[str] | None = None,
+        content_style: ContentTextStyle | None = None,
     ):
         super().__init__(parent)
+        # The cue list and the player's strip are mined content (D45-B); None
+        # keeps today's Japanese face.
+        self._content_style = content_style or get_profile("ja").content_style
         self._entries: list[tuple[float, float, str]] = list(subtitle_entries)
         self._initial_offset = initial_offset
         self._working_offset = initial_offset
@@ -138,6 +148,11 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         self._setup_ui(initial_offset)
         self._setup_shortcuts()
         add_min_max_buttons(self)
+
+        # Set before set_source: that call is what triggers the mpv load whose
+        # file-loaded event picks the audio track.
+        if audio_track_codes is not None:
+            self.player_widget.audio_track_codes = audio_track_codes
 
         self.player_widget.source_loaded.connect(self._on_source_loaded)
         self.player_widget.playback_failed.connect(self._on_playback_failed)
@@ -195,7 +210,7 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         self.line_list.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.line_list.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.line_list.setUniformItemSizes(True)
-        apply_japanese_font(self.line_list, role=JAPANESE_BODY)
+        apply_content_font(self.line_list, self._content_style, role=JAPANESE_BODY)
         self._populate_lines()
         self.line_list.currentRowChanged.connect(self._on_line_selected)
         row.addWidget(self.line_list, 2)
@@ -207,7 +222,7 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         cell = QGridLayout(player_cell)
         cell.setContentsMargins(0, 0, 0, 0)
 
-        self.player_widget = SubtitlePlayerWidget()
+        self.player_widget = SubtitlePlayerWidget(content_style=self._content_style)
         cell.addWidget(self.player_widget, 0, 0)
 
         self.offset_overlay = QLabel()

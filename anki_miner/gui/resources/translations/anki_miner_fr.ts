@@ -6941,6 +6941,24 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Restaurer la file d'attente précédente ? %1 éléments</translation>
     </message>
 </context><context>
+    <name>ResourceChain</name>
+    <message>
+        <source>Audio pack '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source '%1' is for %2; skipped</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ResourceDownloadDialog</name>
     <message>
         <source>Starting download…</source>
@@ -8003,16 +8021,24 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Génération de sous-titres</translation>
     </message>
     <message>
+        <source>Japanese</source>
+        <translation>Japonais</translation>
+    </message>
+    <message>
+        <source>Korean</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Input</source>
         <translation>Entrée</translation>
     </message>
     <message>
         <source>Language:</source>
         <translation>Langue :</translation>
-    </message>
-    <message>
-        <source>Japanese</source>
-        <translation>Japonais</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>

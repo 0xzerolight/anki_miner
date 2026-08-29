@@ -325,11 +325,12 @@ def _cpp_ggml_present(model_name: str, models_root: Path) -> bool:
         return False
 
 
-def _cpp_decode_params(models_root: Path) -> dict[str, Any]:
+def _cpp_decode_params(models_root: Path, language: str = "ja") -> dict[str, Any]:
     """Build the whisper.cpp decode params.
 
-    ``language="ja"`` and ``no_context=True`` (disable conditioning on previously
-    decoded text, curbing runaway repetition loops).
+    ``language`` (ISO code from ``LanguageProfile.asr_language``; the default keeps
+    every existing caller on Japanese) and ``no_context=True`` (disable conditioning
+    on previously decoded text, curbing runaway repetition loops).
 
     whisper.cpp's built-in VAD is kept ON when the ggml Silero file is present: it
     feeds only detected speech to the decoder, which is what stops the QUANTIZED
@@ -346,7 +347,7 @@ def _cpp_decode_params(models_root: Path) -> dict[str, Any]:
     segment to its own speech window against an independent Silero mask in
     :func:`_transcribe_cpp` (see :func:`_clip_cpp_segment_to_speech`).
     """
-    params: dict[str, Any] = {"language": "ja", "no_context": True}
+    params: dict[str, Any] = {"language": language, "no_context": True}
     if ggml_model_installer.is_vad_downloaded(models_root):
         params["vad"] = True
         params["vad_model_path"] = str(ggml_model_installer.vad_model_path(models_root))
@@ -582,6 +583,7 @@ def transcribe(
     cuda_libs_root: Path | None = None,
     onnx_pack_root: Path | None = None,
     ct2_model_session: Ct2ModelSession | None = None,
+    language: str = "ja",
 ) -> list[tuple[float, float, str]]:
     """Transcribe *audio* using the specified faster-whisper model.
 
@@ -608,6 +610,8 @@ def transcribe(
         ct2_model_session: Optional queue-owned faster-whisper model state.
             Sequential callers reuse its resolved model and must call
             :meth:`Ct2ModelSession.release` after the queue terminates.
+        language: ISO code from ``LanguageProfile.asr_language``; the default
+            keeps every existing caller on Japanese.
 
     Returns:
         A list of ``(start_s, end_s, text)`` tuples in chronological order.
@@ -649,6 +653,7 @@ def transcribe(
                 cuda_libs_root=cuda_libs_root,
                 onnx_pack_root=onnx_pack_root,
                 ct2_model_session=ct2_model_session,
+                language=language,
             )
         else:
             # CT2 only understands cpu/cuda/auto; a 'vulkan' request that did not
@@ -673,6 +678,7 @@ def transcribe(
                     cuda_libs_root=cuda_libs_root,
                     onnx_pack_root=onnx_pack_root,
                     ct2_model_session=ct2_model_session,
+                    language=language,
                     # Only 'auto' reconsiders: it committed to CT2 on CUDA-device
                     # PRESENCE alone, before knowing CUDA can initialise (another
                     # app may own the VRAM; cuDNN may be absent). Explicit
@@ -700,6 +706,7 @@ def transcribe(
                         cuda_libs_root=cuda_libs_root,
                         onnx_pack_root=onnx_pack_root,
                         ct2_model_session=ct2_model_session,
+                        language=language,
                     )
                 else:
                     logger.warning("ASR: CUDA unusable (%s) and no whisper.cpp route; using CPU.", exc)
@@ -714,13 +721,14 @@ def transcribe(
                         cuda_libs_root=cuda_libs_root,
                         onnx_pack_root=onnx_pack_root,
                         ct2_model_session=ct2_model_session,
+                        language=language,
                     )
 
     log_summary(
         logger,
         "ASR transcribe done",
         model=model_name,
-        language="ja",
+        language=language,
         duration_s=duration_s,
         segments=len(results),
         chars=sum(len(text) for _start, _end, text in results),
@@ -786,6 +794,7 @@ def _transcribe_cpp(
     cuda_libs_root: Path | None,
     onnx_pack_root: Path | None,
     ct2_model_session: Ct2ModelSession | None = None,
+    language: str = "ja",
 ) -> list[tuple[float, float, str]]:
     """Transcribe via the whisper.cpp (pywhispercpp) engine, with a CT2 CPU fallback.
 
@@ -796,7 +805,7 @@ def _transcribe_cpp(
     re-decode), so a GPU/driver failure never crashes the run. Junk filtering,
     cancel checks and live progress mirror the CT2 loop.
     """
-    decode_params = _cpp_decode_params(models_root)
+    decode_params = _cpp_decode_params(models_root, language)
     try:
         # Register the ggml DL backends (cpu+vulkan) BEFORE importing pywhispercpp:
         # ensure_ggml_backends_loaded() dlopens libggml with RTLD_GLOBAL and calls
@@ -862,6 +871,7 @@ def _transcribe_cpp(
             cuda_libs_root=cuda_libs_root,
             onnx_pack_root=onnx_pack_root,
             ct2_model_session=ct2_model_session,
+            language=language,
         )
 
 
@@ -878,6 +888,7 @@ def _transcribe_ct2(
     onnx_pack_root: Path | None,
     ct2_model_session: Ct2ModelSession | None = None,
     raise_on_cuda_failure: bool = False,
+    language: str = "ja",
 ) -> list[tuple[float, float, str]]:
     """The faster-whisper (ctranslate2) transcription path — unchanged behaviour.
 
@@ -937,7 +948,7 @@ def _transcribe_ct2(
     #    instead yields tight, coherent segments; non-speech hallucinations are then
     #    removed by _is_nonspeech_ct2_segment against an independent Silero mask.
     transcribe_kwargs = {
-        "language": "ja",
+        "language": language,
         "condition_on_previous_text": False,
         "word_timestamps": True,
         "hallucination_silence_threshold": 2.0,

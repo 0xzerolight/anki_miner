@@ -45,12 +45,14 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING, TYPOGRAPHY
-from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format, apply_japanese_font
+from anki_miner.gui.utils.content_text import apply_content_font
+from anki_miner.gui.utils.fonts import JAPANESE_BODY, apply_japanese_block_format
 from anki_miner.gui.widgets._reading_mining_base import _ReadingMiningTabBase
 from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, field_label_width
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import MiningOutcome, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingSourceRef
@@ -245,10 +247,10 @@ class ReadingTextTab(_ReadingMiningTabBase):
         viewport = self.text_edit.viewport()
         if viewport is not None:
             viewport.installEventFilter(self._file_drop_filter)
-        # What the user pastes here is the Japanese they came to mine, not
-        # interface chrome: the Japanese face, a reading size, and the looser
+        # What the user pastes here is the text they came to mine, not interface
+        # chrome: the mining language's face, a reading size, and the looser
         # leading (decision D45-B).
-        apply_japanese_font(self.text_edit, role=JAPANESE_BODY)
+        apply_content_font(self.text_edit, get_profile(config_language(self.config)).content_style, role=JAPANESE_BODY)
         apply_japanese_block_format(self.text_edit.document())
         self.text_edit.textChanged.connect(self._keep_japanese_leading)
         self.text_edit.textChanged.connect(self._recompute_buttons)

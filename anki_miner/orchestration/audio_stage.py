@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -37,6 +37,26 @@ if TYPE_CHECKING:
     from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
 
 logger = logging.getLogger(__name__)
+
+
+def _candidate_ladder(fetcher: Any, word: TokenizedWord) -> list[tuple[str, str]]:
+    """The fetcher's own ladder, or the Japanese one for a plain duck fetcher.
+
+    The probe is load-bearing, not defensive: several existing suites inject
+    minimal fetcher fakes that satisfy the ExpressionAudioFetcher Protocol and
+    nothing more, and those must keep mining with the ja ladder.
+
+    It looks the method up on the fetcher's TYPE rather than the instance
+    because those suites pass a bare ``MagicMock``, on which every instance
+    attribute auto-exists: an instance-level probe would hand the stage a
+    MagicMock in place of the candidate list and silently take the ja path off
+    the ladder. A real fetcher class declaring ``candidates_for`` is still
+    honoured, mock or not.
+    """
+    if hasattr(type(fetcher), "candidates_for"):
+        ladder: list[tuple[str, str]] = fetcher.candidates_for(word)
+        return ladder
+    return _expression_audio_candidates(word)
 
 
 def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | None:
@@ -344,7 +364,7 @@ class AudioStage:
             # lower-priority source, so a synthetic fallback can't satisfy
             # the surface form before JPod101 sees the lemma it actually has.
             path = self.expression_audio_fetcher.fetch_candidates(  # type: ignore[union-attr]
-                _expression_audio_candidates(word),
+                _candidate_ladder(self.expression_audio_fetcher, word),
                 cancelled_check=self._is_cancelled,
             )
             if path is not None:

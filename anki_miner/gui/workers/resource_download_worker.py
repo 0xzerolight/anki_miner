@@ -37,6 +37,7 @@ from PyQt6.QtCore import QCoreApplication, pyqtSignal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
 from anki_miner.services.frequency.source_importer import import_frequency_source
@@ -286,6 +287,7 @@ class ResourceDownloadWorker(CancellableWorker):
         pitch_root: Path,
         download_dir: Path,
         parent=None,
+        language: str = "ja",
     ) -> None:
         super().__init__(parent)
         self._specs = list(specs)
@@ -293,6 +295,10 @@ class ResourceDownloadWorker(CancellableWorker):
         self._freqs_root = freqs_root
         self._pitch_root = pitch_root
         self._download_dir = download_dir
+        # Stamp for every index this run writes. The recommended set is
+        # downloaded for the language the user is mining in, so all three
+        # importer calls below carry it.
+        self._language = language
         self._promotion_approval_required = False
 
     def require_promotion_approval(self) -> None:
@@ -400,6 +406,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         progress=reporter.importing,
                         dict_id=spec.id,
                         before_promote=self._require_promotion_allowed,
+                        **language_kwarg(self._language),
                     )
                     dict_id = result.dict_id
                     detail = f"{result.entry_count} entries"
@@ -425,6 +432,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         progress=reporter.importing,
                         overwrite=True,
                         before_promote=self._require_promotion_allowed,
+                        **language_kwarg(self._language),
                     )
                     source_id = freq_result.source_id
                     detail = f"{freq_result.entry_count} entries"
@@ -443,6 +451,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         progress=reporter.importing,
                         overwrite=True,
                         before_promote=self._require_promotion_allowed,
+                        **language_kwarg(self._language),
                     )
                     source_id = pitch_result.source_id
                     detail = tr_format(

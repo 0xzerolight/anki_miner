@@ -11,7 +11,7 @@ import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
-from typing import Literal, NoReturn
+from typing import TYPE_CHECKING, Literal, NoReturn
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -21,7 +21,7 @@ from anki_miner.exceptions.youtube import (
     CookieDatabaseLockedError,
     DubAudioUnavailableError,
     FfmpegNotFoundError,
-    NoJapaneseSubtitlesError,
+    NoSourceSubtitlesError,
     VideoTooLongError,
     YouTubeFetchError,
     YtdlpNotFoundError,
@@ -31,6 +31,9 @@ from anki_miner.services import ytdlp_invocation
 from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import CaptionLangs
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +52,10 @@ _YTDLP_FETCH_TIMEOUT_S = 3 * 60 * 60
 # video and best-fallback streams. Was the hidden `config.youtube_max_height`
 # knob (ARC-004: inlined, never surfaced in any panel).
 YOUTUBE_MAX_HEIGHT = 720
+
+# Adjective naming the mining language in the "wrote no <X> subtitle" failure.
+# ja renders the pre-existing wording byte-for-byte.
+_SUB_LABELS = {"ja": "Japanese", "ko": "Korean", "zh": "Chinese"}
 
 
 class YouTubeFetcherService:
@@ -73,6 +80,16 @@ class YouTubeFetcherService:
             return resolve_ytdlp(self._config)
         except FileNotFoundError as exc:
             raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from exc
+
+    def _captions(self) -> CaptionLangs:
+        """The mining language's yt-dlp caption/audio-track parameters.
+
+        Imported function-locally so ``services`` keeps no import-time
+        dependency on ``anki_miner.languages``.
+        """
+        from anki_miner.languages.registry import config_language, get_profile
+
+        return get_profile(config_language(self._config)).captions
 
     # ------------------------------------------------------------------
     # probe_metadata
@@ -164,16 +181,21 @@ class YouTubeFetcherService:
                 f"Video duration {duration_s}s exceeds configured maximum {self._config.youtube_max_duration_s}s"
             )
 
+        captions = self._captions()
         subs = data.get("subtitles") or {}
         auto_captions = data.get("automatic_captions") or {}
-        has_manual_ja = bool(subs.get("ja"))
-        has_auto_ja = self._has_native_auto_ja(data)
+        has_manual_ja = bool(subs.get(captions.primary))
+        has_auto_ja = self._has_native_auto_ja(data, captions=captions)
         # Auto-dub relaxation: machine-translated ja captions are normally
         # rejected because they do not match the audio — but when YouTube also
         # carries a Japanese (auto-dub) audio track, captions and dub come from
         # the same translation pipeline, so together they are mineable. The
         # fetch side requests that track fail-closed (see _build_fetch_cmd).
-        has_dub_ja = (not has_auto_ja) and bool(auto_captions.get("ja")) and self._has_ja_audio_track(data)
+        has_dub_ja = (
+            (not has_auto_ja)
+            and bool(auto_captions.get(captions.primary))
+            and self._has_ja_audio_track(data, captions=captions)
+        )
 
         logger.info("youtube probe ok: id=%s duration=%s", video_id, duration_s)
         return VideoInfo(
@@ -346,7 +368,7 @@ class YouTubeFetcherService:
         )
 
     @staticmethod
-    def _has_native_auto_ja(data: dict) -> bool:
+    def _has_native_auto_ja(data: dict, *, captions: CaptionLangs | None = None) -> bool:
         """Detect native Japanese auto-captions, ignoring auto-translated ones.
 
         The mere presence of ``automatic_captions.ja`` does NOT mean the video is
@@ -388,22 +410,31 @@ class YouTubeFetcherService:
         auto-translated track is named plainly "Japanese" and the check was dead code
         for this dict. It still works for *manual* subs, which is why the manual
         branch in :meth:`probe_metadata` keeps it.
+
+        ``captions=None`` means the Japanese literals, so an unbound call keeps
+        the pre-profile behaviour exactly.
         """
+        primary = "ja" if captions is None else captions.primary
+        orig_keys = ("ja-orig",) if captions is None else captions.orig_codes
+        codes = ("ja",) if captions is None else captions.codes
+        accept_bare = True if captions is None else captions.bare_fallback
         auto = data.get("automatic_captions") or {}
-        if not auto.get("ja"):
+        if not auto.get(primary):
             return False
 
-        if auto.get("ja-orig"):
+        if any(auto.get(key) for key in orig_keys):
             return True
 
         if any(key.endswith("-orig") and value for key, value in auto.items()):
             return False
 
         lang = (data.get("language") or "").lower()
-        return not lang or lang == "ja"
+        if not lang:
+            return True
+        return accept_bare and lang in {code.lower() for code in codes}
 
     @staticmethod
-    def _has_ja_audio_track(data: dict) -> bool:
+    def _has_ja_audio_track(data: dict, *, captions: CaptionLangs | None = None) -> bool:
         """Detect a Japanese audio-only format among the probed formats.
 
         This is the fetch-side reachability check for the auto-dub route: the
@@ -419,13 +450,17 @@ class YouTubeFetcherService:
 
         Matches ``ja`` exactly or a regional variant like ``ja-JP``; a plain
         prefix test would also admit unrelated codes (e.g. ``jav``), so the
-        variant must be dash-separated.
+        variant must be dash-separated. The anchored pattern comes from the
+        profile — the same string ``_build_fetch_cmd``'s auto-dub format
+        selector hands to yt-dlp, so probe and fetch can never disagree.
+        ``captions=None`` means the Japanese literal.
         """
+        pattern = re.compile("^ja(-|$)" if captions is None else captions.audio_pattern)
         for fmt in data.get("formats") or []:
             if fmt.get("vcodec") not in (None, "none"):
                 continue
             lang = (fmt.get("language") or "").lower()
-            if lang == "ja" or lang.startswith("ja-"):
+            if pattern.match(lang):
                 return True
         return False
 
@@ -555,6 +590,7 @@ class YouTubeFetcherService:
         fallback_allowed: bool = False,
     ) -> list[str]:
         max_height = YOUTUBE_MAX_HEIGHT
+        captions = self._captions()
         # Route the workspace directory through --paths (a literal path) and keep
         # -o a bare, relative template. Embedding the (user-configurable) temp
         # folder in the -o template treated any '%' in the path as a template
@@ -574,7 +610,7 @@ class YouTubeFetcherService:
             # would silently mine MT subs against foreign audio. If the dub
             # vanished since the probe, the fetch fails and _raise_for_error
             # names the cause.
-            fmt = f"bestvideo[height<={max_height}]+bestaudio[language~='^ja(-|$)']"
+            fmt = f"bestvideo[height<={max_height}]+bestaudio[language~='{captions.audio_pattern}']"
 
         cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
@@ -603,7 +639,7 @@ class YouTubeFetcherService:
             [
                 "--no-playlist",
                 "--sub-lang",
-                "ja",
+                captions.primary,
                 "--sub-format",
                 "vtt/best",
                 "--convert-subs",
@@ -746,6 +782,10 @@ class YouTubeFetcherService:
         raise YouTubeFetchError(f"yt-dlp {label} probe failed (exit {returncode}): {chr(10).join(lines)}")
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
+        from anki_miner.languages.registry import config_language
+
+        captions = self._captions()
+        suffixes = tuple(f".{code}." for code in dict.fromkeys((captions.primary, *captions.codes)))
         candidates = list(workspace.glob(f"{video_id}*"))
         video_candidates: list[Path] = []
         subtitle_candidates: list[Path] = []
@@ -759,7 +799,7 @@ class YouTubeFetcherService:
             # No "ja-orig" handling here on purpose: yt-dlp matches --sub-lang with a
             # regex fullmatch, so "ja" can never select the "ja-orig" track and such a
             # file can never be written.
-            if c.name.endswith(".ja.srt") or c.name.endswith(".ja.vtt"):
+            if any(c.name.endswith(f"{s}srt") or c.name.endswith(f"{s}vtt") for s in suffixes):
                 subtitle_candidates.append(c)
                 continue
             if c.suffix.lower() in _VIDEO_EXTS:
@@ -785,8 +825,9 @@ class YouTubeFetcherService:
             # "There are no subtitles for the requested languages" as an info line
             # while still exiting 0, so we only learn this after paying for the whole
             # download. Deterministic, so the queue worker must not retry it.
-            raise NoJapaneseSubtitlesError(
-                "yt-dlp downloaded the video but wrote no Japanese subtitle "
+            label = _SUB_LABELS.get(config_language(self._config), "source")
+            raise NoSourceSubtitlesError(
+                f"yt-dlp downloaded the video but wrote no {label} subtitle "
                 f"(mode={sub_mode}). The track listed at probe time was not available "
                 "at download time."
             )

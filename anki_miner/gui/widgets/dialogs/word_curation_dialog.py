@@ -49,9 +49,9 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
-from anki_miner.gui.utils.fonts import japanese_cell_font, make_scaled_font
+from anki_miner.gui.utils.content_text import content_cell_font, content_phrase_wrap
+from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
-from anki_miner.gui.utils.phrase_wrap import phrase_wrap_ja
 from anki_miner.gui.utils.qt_helpers import (
     COPY_ROLE,
     CellRole,
@@ -69,9 +69,12 @@ from anki_miner.gui.widgets.base.sizing import metric_row_height
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
 from anki_miner.gui.workers.base_worker import SingleCallWorker
+from anki_miner.languages.profile import ContentTextStyle
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import TokenizedWord
 from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_html
 from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -104,6 +107,10 @@ class CurationMediaContext:
     subtitle_entries: list[tuple[float, float, str]]  # parsed, offset-zeroed
     offset: float = 0.0
     audio_track_override: int | None = None
+    #: Mining-language audio-track codes for the player's auto-selection. A
+    #: defaulted field, like ``audio_track_override``: the dialog is built
+    #: without a config, so the construction sites pass the profile's value.
+    audio_track_codes: frozenset[str] = JAPANESE_LANGUAGE_CODES
     page_units: Mapping[int, ReadingUnit] | None = None  # manga: unit.index -> ReadingUnit
     #: ``config.audio_padding`` — what the default clip window widens the
     #: subtitle line by on each side. Carried here rather than handed to the
@@ -146,9 +153,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         commit_known_callback: Callable[[set[str]], int] | None = None,
         media_context: CurationMediaContext | None = None,
         lookup_fn: Callable[..., list[tuple[str, str]]] | None = None,
+        content_style: ContentTextStyle | None = None,
     ):
         super().__init__(parent)
         self._words = words
+        # Expressions, readings and sentences are mined content: face and
+        # soft-wrap both come from the mining language's profile. None keeps
+        # today's Japanese face and BudouX phrase wrapping.
+        self._content_style = content_style or get_profile("ja").content_style
         # Known Words are STAGED, not written (D34-B). Add to Known Words marks
         # rows "Known · pending"; only a successful Confirm calls this callback,
         # and it is called ON A WORKER THREAD. Cancel, Esc, the window X, the
@@ -1173,9 +1185,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # where the player backend may need patching.
         from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
 
-        widget = SubtitlePlayerWidget(self)
+        widget = SubtitlePlayerWidget(self, content_style=self._content_style)
         ctx = self._media_context
         assert ctx is not None  # guarded by self._show_player
+        widget.audio_track_codes = ctx.audio_track_codes
         # Offset is passed to set_source for subtitle overlay alignment only.
         # Seek calls use raw word.start_time (video timeline); see _on_focus_timer_fired.
         widget.set_source(
@@ -1349,16 +1362,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     ) -> QTableWidgetItem:
         """Build a non-editable cell on the shared data-surface contract.
 
-        ``japanese`` gives the cell the Japanese face and nothing else: an item
-        font carrying no size resolves against the view's own, so kanji take
-        Japanese rather than Chinese glyph shapes while the row stays exactly as
-        tall as the shared data-surface rule made it. No cell may pin a size —
-        the density is what makes this table scannable.
+        ``japanese`` gives the cell the mined language's face and nothing else:
+        an item font carrying no size resolves against the view's own, so kanji
+        take Japanese rather than Chinese glyph shapes while the row stays
+        exactly as tall as the shared data-surface rule made it. No cell may pin
+        a size — the density is what makes this table scannable.
         """
         item = make_table_item(text, role, sort_value=sort_value, copy_text=copy_text, tooltip=tooltip)
         item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
         if japanese:
-            item.setFont(japanese_cell_font())
+            item.setFont(content_cell_font(self._content_style))
         return item
 
     def _pick_cell_values(self, word: TokenizedWord, chosen: TokenizedWord) -> tuple[tuple[int, str, str, str], ...]:
@@ -1730,13 +1743,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 text = cand.sentence
                 if multi_episode and cand.video_file is not None:
                     text = f"[{cand.video_file.stem}] {cand.sentence}"
-                # Display text carries BudouX word joiners so the row wraps at
-                # phrase boundaries; COPY_ROLE and the tooltip keep the pristine
-                # string so Ctrl+C never lifts an invisible character.
-                list_item = QListWidgetItem(phrase_wrap_ja(text))
+                # Display text carries the language's soft-wrap marks (ja: BudouX
+                # word joiners) so the row wraps at phrase boundaries; COPY_ROLE
+                # and the tooltip keep the pristine string so Ctrl+C never lifts
+                # an invisible character.
+                list_item = QListWidgetItem(content_phrase_wrap(text, self._content_style))
                 list_item.setToolTip(text)
                 list_item.setData(COPY_ROLE, text)
-                list_item.setFont(japanese_cell_font())
+                list_item.setFont(content_cell_font(self._content_style))
                 self.sentence_list.addItem(list_item)
                 if self._same_pick(cand, chosen):
                     selected_row = i

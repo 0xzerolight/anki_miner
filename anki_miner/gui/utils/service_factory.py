@@ -24,7 +24,7 @@ from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
 from anki_miner.languages.profile import LookupStrategy
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
@@ -41,6 +41,7 @@ from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.services.pitch_accent.multi_pitch_service import MultiPitchAccentService
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 from anki_miner.services.sentence_tts_fetcher import (
+    PAPAGO_SPEAKER_JA,
     ChainedSentenceAudioFetcher,
     GoogleSentenceTtsFetcher,
     PapagoSentenceTtsFetcher,
@@ -135,6 +136,29 @@ def _load_dict_registry(
     return registry
 
 
+class _LoadResultKwarg(TypedDict, total=False):
+    """The ``load_result=`` keyword bundle a chain-build call is splatted with."""
+
+    load_result: ServiceLoadResult
+
+
+def _load_result_kwarg(config: AnkiMinerConfig, load_result: ServiceLoadResult | None) -> _LoadResultKwarg:
+    """``{"load_result": sink}``, or nothing at all for a Japanese session.
+
+    The four chain builders take the sink only to report a slot stamped for
+    another mining language — a state a Japanese session cannot reach through
+    the UI, since the chains are language-scoped config and every legacy slot
+    reads "ja". Omitting the keyword is therefore behaviour-neutral for JA and
+    keeps the call byte-identical to the pre-transition one, including for the
+    pre-existing test doubles that mirror a builder's exact signature
+    (``test_service_factory_no_dictionary_warning._FakeRegistry``). Same shape
+    and same reason as ``services/_sqlite_index.language_kwarg``.
+    """
+    if load_result is None or config_language(config) == "ja":
+        return {}
+    return {"load_result": load_result}
+
+
 class _LookupKwarg(TypedDict, total=False):
     """The ``lookup=`` keyword bundle a ``DefinitionService`` call is splatted with."""
 
@@ -157,7 +181,7 @@ def _lookup_kwarg(config: AnkiMinerConfig) -> _LookupKwarg:
     Gated on the strategy *object*, not on ``config.language`` — outside
     ``anki_miner/languages/`` there are no language-code checks.
     """
-    lookup = get_profile(config.language).lookup
+    lookup = get_profile(config_language(config)).lookup
     return {} if lookup is get_profile("ja").lookup else {"lookup": lookup}
 
 
@@ -189,7 +213,7 @@ def build_definition_service(
     """
     if registry is None:
         registry = _load_dict_registry(config, load_result)
-    providers = registry.build_provider_chain(config)
+    providers = registry.build_provider_chain(config, **_load_result_kwarg(config, load_result))
     # The single DefinitionService construction site, so injecting here covers
     # create_services, create_shared_lookup_services and the PrewarmWorker.
     definition_service = DefinitionService(config, providers=providers, registry=registry, **_lookup_kwarg(config))
@@ -265,7 +289,9 @@ def _build_pitch_service(
     registry = PitchSourceRegistry(config.pitch_root)
     try:
         registry.load()
-        loaded_providers = [p for p in registry.build_sources(config) if p.load()]
+        loaded_providers = [
+            p for p in registry.build_sources(config, **_load_result_kwarg(config, load_result)) if p.load()
+        ]
         providers_by_id: dict[str, list] = {}
         for provider in loaded_providers:
             providers_by_id.setdefault(provider.source_id, []).append(provider)
@@ -319,7 +345,7 @@ def _build_frequency_service(
     registry = FrequencySourceRegistry(config.freqs_root)
     try:
         registry.load()
-        providers = [p for p in registry.build_sources(config) if p.load()]
+        providers = [p for p in registry.build_sources(config, **_load_result_kwarg(config, load_result)) if p.load()]
         if not providers:
             # Nothing enabled / on-disk: no providers loaded. Not an error —
             # an enabled chain entry can still point at a missing on-disk index.
@@ -491,6 +517,10 @@ def _build_expression_audio_fetcher(
         A :class:`ChainedExpressionAudioFetcher` wrapping the resolved list.
         The list may be empty (all entries disabled) — the chain returns None.
     """
+    # One profile read for the whole chain: the gtts language code, the word
+    # stem prefix and the custom-source {language} value all come from here, so
+    # no member has to know the language code itself.
+    audio = get_profile(config_language(config)).audio
     audio_cache_root = ANKI_MINER_HOME / "audio_cache"
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
@@ -501,7 +531,7 @@ def _build_expression_audio_fetcher(
     pack_fetchers_by_id: dict[str, LocalAudioPackFetcher] = {}
     registry = pack_registry if pack_registry is not None else _load_audio_pack_registry(config)
     if registry is not None:
-        for pack_fetcher in registry.build_fetcher_chain(config, pack_cache):
+        for pack_fetcher in registry.build_fetcher_chain(config, pack_cache, **_load_result_kwarg(config, load_result)):
             pack_fetchers_by_id[pack_fetcher.pack_id] = pack_fetcher
 
     fetchers: list[ExpressionAudioFetcher] = []
@@ -520,6 +550,8 @@ def _build_expression_audio_fetcher(
                 GoogleTranslateAudioFetcher(
                     cache_dir=googletts_cache,
                     delay=config.expression_audio_delay,
+                    gtts_lang=audio.gtts_lang,
+                    cache_stem_prefix=audio.cache_stem_prefix,
                 )
             )
         elif entry.kind in ("custom", "custom_json"):
@@ -537,6 +569,7 @@ def _build_expression_audio_fetcher(
                     cache_dir=audio_cache_root / f"custom_{slug}",
                     file_prefix=f"custom_{slug}",
                     delay=config.expression_audio_delay,
+                    language=audio.custom_fetcher_language,
                 )
             )
         elif entry.kind == "pack":
@@ -558,7 +591,7 @@ def _build_expression_audio_fetcher(
                 continue
             fetchers.append(resolved_pack)  # duplicate pack_ids pass through (same object queried twice)
 
-    return ChainedExpressionAudioFetcher(fetchers)
+    return ChainedExpressionAudioFetcher(fetchers, candidates=audio.candidates)
 
 
 def create_expression_audio_fetcher(
@@ -592,12 +625,27 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     if not config.reading_tts_enabled:
         return ChainedSentenceAudioFetcher([])
 
+    audio = get_profile(config_language(config)).audio
     cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
     fetchers: list[SentenceAudioFetcher] = []
     if config.reading_tts_google_enabled:
-        fetchers.append(GoogleSentenceTtsFetcher(cache_dir=cache_dir, delay=config.expression_audio_delay))
+        fetchers.append(
+            GoogleSentenceTtsFetcher(
+                cache_dir=cache_dir,
+                delay=config.expression_audio_delay,
+                gtts_lang=audio.gtts_lang,
+                cache_stem_prefix=audio.sentence_cache_stem_prefix,
+            )
+        )
     if config.reading_tts_papago_enabled:
-        fetchers.append(PapagoSentenceTtsFetcher(cache_dir=cache_dir, delay=config.expression_audio_delay))
+        fetchers.append(
+            PapagoSentenceTtsFetcher(
+                cache_dir=cache_dir,
+                delay=config.expression_audio_delay,
+                cache_stem_prefix=audio.sentence_cache_stem_prefix,
+                speaker=audio.papago_speaker or PAPAGO_SPEAKER_JA,
+            )
+        )
     return ChainedSentenceAudioFetcher(fetchers)
 
 
@@ -743,12 +791,17 @@ def create_services(
     word_filter = WordFilterService(
         config,
         tagger=subtitle_parser.tagger,
-        mined_form=get_profile(config.language).mined_form,
-        script=get_profile(config.language).script,
+        mined_form=get_profile(config_language(config)).mined_form,
+        script=get_profile(config_language(config)).script,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
-        anki_service = AnkiService(config)
+        # Injected from the profile this factory already resolved, the way
+        # WordFilterService's script is: the composition root is the one site a
+        # stubbed non-ja profile is reachable from (ruling R6 keeps unregistered
+        # codes out of the registry). The other fourteen AnkiService sites take
+        # the constructor's own default, which resolves the same profile.
+        anki_service = AnkiService(config, script=get_profile(config_language(config)).script)
     youtube_fetcher = YouTubeFetcherService(config=config)
     # Scanned once here, then handed to both consumers: the fetcher chain that
     # resolves pack entries, and Services, whose EpisodeProcessor reads it for
@@ -896,7 +949,7 @@ def create_episode_processor(
         # Resolved once here so both processors of a shared-lookup run agree on
         # one profile instance (the registry caches per code, so they would
         # anyway — passing it keeps the composition root the single resolver).
-        profile=get_profile(config.language),
+        profile=get_profile(config_language(config)),
     )
 
 

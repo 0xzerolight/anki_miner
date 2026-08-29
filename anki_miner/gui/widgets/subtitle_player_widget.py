@@ -44,14 +44,16 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import video_preview
+from anki_miner.gui.utils.content_text import apply_content_font
 from anki_miner.gui.utils.fonts import (
     JAPANESE_FEATURE,
     apply_japanese_block_format,
-    apply_japanese_font,
     japanese_line_spacing,
 )
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.languages.profile import ContentTextStyle
+from anki_miner.languages.registry import get_profile
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, matches_language_tag
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available, terminate_mpv_player
@@ -101,18 +103,27 @@ class SubtitlePlayerWidget(QWidget):
     _mpv_file_loaded = pyqtSignal()
     _mpv_playback_error = pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, content_style: ContentTextStyle | None = None):
         """Initialize the player widget (no media until set_source is called).
 
         Args:
             parent: Optional parent widget.
+            content_style: Typography for the subtitle strip, from the mining
+                language's profile. ``None`` keeps today's Japanese face.
         """
         super().__init__(parent)
+
+        # The cue line is mined content, not chrome (decision D45-B).
+        self._content_style = content_style or get_profile("ja").content_style
 
         # Will be populated by set_source
         self.subtitle_entries: list[tuple[float, float, str]] = []
         self._offset: float = 0.0
         self._audio_track_override: int | None = None
+        # Mining-language audio-track codes for auto-selection. Set by the
+        # owner (SubtitleViewer / WordCurationDialog) when it holds a config;
+        # this widget is constructed without one, so ja is the default.
+        self.audio_track_codes: frozenset[str] = JAPANESE_LANGUAGE_CODES
 
         # Player is None until the first set_source call; one instance per
         # widget lifetime afterwards (loadfile per source).
@@ -219,7 +230,7 @@ class SubtitlePlayerWidget(QWidget):
         self.subtitle_strip.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.subtitle_strip.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         self.subtitle_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        apply_japanese_font(self.subtitle_strip, role=JAPANESE_FEATURE)
+        apply_content_font(self.subtitle_strip, self._content_style, role=JAPANESE_FEATURE)
         strip_height = 2 * japanese_line_spacing(JAPANESE_FEATURE) + 2 * _STRIP_PADDING_Y
         self.subtitle_strip.setFixedHeight(strip_height)
         self._set_cue_text("")
@@ -607,7 +618,7 @@ class SubtitlePlayerWidget(QWidget):
 
         for position, track in enumerate(audio_tracks):
             lang = (track.get("lang") or "").lower()
-            if lang in JAPANESE_LANGUAGE_CODES:
+            if matches_language_tag(lang, self.audio_track_codes):
                 self.player.aid = track.get("id", position + 1)
                 logger.info("Selected Japanese audio track %d via mpv track metadata", position)
                 return

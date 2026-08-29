@@ -62,8 +62,18 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceProgress,
     ResourcePromotionRequest,
 )
+from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.utils.i18n import tr_format
+
+#: Language every spec this session can download is actually indexed for.
+#: ``RECOMMENDED_DEFAULT_SET`` is the Japanese catalog and is the only catalog
+#: there is, so the stamp is the catalog's language, never the session's:
+#: stamping a non-ja session's code onto JMdict would both mislabel it and hide
+#: it from the ja chain filter. Per-profile catalog routing
+#: (``profile.catalog``) lands with the setup-wizard task (2B.8) — that is the
+#: change that makes this a variable.
+_CATALOG_LANGUAGE = "ja"
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -508,6 +518,7 @@ class ResourceDownloadSession(QObject):
                 freqs_root=self._config.freqs_root,
                 pitch_root=self._config.pitch_root,
                 download_dir=self._download_dir,
+                **language_kwarg(_CATALOG_LANGUAGE),
             )
             self._worker = worker
             worker.item_progress.connect(self._on_item_progress)

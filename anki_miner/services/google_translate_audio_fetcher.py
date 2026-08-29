@@ -60,6 +60,7 @@ def _synthesize_gtts_to_cache(
     delay: float,
     failure_counts: dict[str, int],
     cancelled_check: Callable[[], bool] | None,
+    lang: str = "ja",
 ) -> Path | None:
     """Synthesize *text* via gTTS and atomically cache it as ``<stem>.mp3``.
 
@@ -88,13 +89,13 @@ def _synthesize_gtts_to_cache(
         if cancelled_check is not None and cancelled_check():
             return None
 
-        # lang="ja" is fixed; calling gtts.lang.tts_langs() would make a
-        # network request, so it is deliberately avoided.
+        # lang comes from AudioDefaults.gtts_lang. gtts.lang.tts_langs() is
+        # still never called — it would make a network request.
         buffer = io.BytesIO()
         # timeout=10 bounds the synthesis HTTP request; the default None lets
         # write_to_fp block forever on a stalled connection, and cancelled_check
         # is only consulted before the call (matches the 10s cap other fetchers use).
-        tts = gtts.gTTS(text=text, lang="ja", timeout=10)
+        tts = gtts.gTTS(text=text, lang=lang, timeout=10)
         tts.write_to_fp(buffer)
         body = buffer.getvalue()
 
@@ -166,18 +167,32 @@ class GoogleTranslateAudioFetcher:
     protocol structurally; ``fetch`` never raises.
     """
 
-    def __init__(self, cache_dir: Path, delay: float = 0.2):
+    def __init__(
+        self,
+        cache_dir: Path,
+        delay: float = 0.2,
+        *,
+        gtts_lang: str = "ja",
+        cache_stem_prefix: str = "googletts",
+    ):
         """Initialize with cache directory and rate-limiting delay.
 
         Args:
             cache_dir: Directory for cached mp3s (caller passes
                 ``~/.anki_miner/audio_cache/googletts/``).
             delay: Seconds to wait before each synthesis request.
+            gtts_lang: gTTS language code (``AudioDefaults.gtts_lang``).
+            cache_stem_prefix: Cache/media filename prefix
+                (``AudioDefaults.cache_stem_prefix``).
         """
         self._cache_dir = cache_dir
         # NaN must clamp to 0.0 (time.sleep(nan) raises); the >= comparison
         # is False for nan, so the else branch handles it.
         self._delay = delay if delay >= 0.0 else 0.0
+        self._gtts_lang = gtts_lang
+        # Stems double as Anki media filenames: without the language namespace a
+        # zh and a ja card for one shared hanzi reuse each other's audio.
+        self._cache_stem_prefix = cache_stem_prefix
         # Per-run failure-cause tally (see FAILURE_KEYS). Synthetic TTS keeps no
         # negative markers, so every non-hit is a transient failure; bumped only
         # in the branches below. Read via stats().
@@ -222,10 +237,11 @@ class GoogleTranslateAudioFetcher:
         return _synthesize_gtts_to_cache(
             self._cache_dir,
             text=reading,
-            stem=safe_filename(f"googletts_{mined_form}_{reading}"),
+            stem=safe_filename(f"{self._cache_stem_prefix}_{mined_form}_{reading}"),
             delay=self._delay,
             failure_counts=self._failure_counts,
             cancelled_check=cancelled_check,
+            lang=self._gtts_lang,
         )
 
     def fetch_candidates(
