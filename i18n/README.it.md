@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Trasforma contenuti giapponesi nativi in carte di vocabolario Anki.
+Trasforma contenuti giapponesi, cinesi e coreani nativi in carte di vocabolario Anki.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - **Video** - estrai da una singola coppia video/sottotitoli, una cartella in batch o URL YouTube.
 - **Costruttore di mazzi** - estrai un'intera serie in un unico mazzo ordinato per frequenza.
 - **Audiolibri** - estrai audiolibri, podcast, radio, canzoni (coppie audio + sottotitoli/trascrizione).
-- **Lettura** - estrai manga (mokuro), romanzi (`.epub`, `.txt`; un singolo libro o un'intera cartella), file di sottotitoli autonomi o testo giapponese incollato.
+- **Lettura** - estrai manga (mokuro), romanzi (`.epub`, `.txt`; un singolo libro o un'intera cartella), file di sottotitoli autonomi o testo incollato.
 - **Analisi** - cronologia del mining, classifiche di difficoltà, traguardi.
 - **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo e completa retroattivamente i campi delle carte esistenti.
 - **Impostazioni** - tutto ciò che è configurabile.
 
 ## Altre funzionalità
 
+- Lingue di mining - giapponese, cinese e coreano, si cambiano nelle Impostazioni. Il coreano scarica il suo modello linguistico dall'app.
 - Curatore di parole - rivedi ogni parola candidata prima che vengano create le carte, con la sua scena, pagina del manga e voce del dizionario affiancate.
 - Annulla un'esecuzione - elimina le note appena create da un'esecuzione, direttamente dalla sua finestra dei risultati.
 - Filtri avanzati: i+1, intervallo di rango di frequenza, blacklist, regex, insiemi di parole e altro ancora.
@@ -151,7 +152,7 @@ Vuoi che venga aggiunto un altro tema? Proponilo in una Issue di GitHub.
 <details>
 <summary><strong>Come funziona</strong></summary>
 
-1. **Leggi i sottotitoli** e suddividi il giapponese in singole parole.
+1. **Leggi i sottotitoli** e suddividi il testo in singole parole.
 2. **Filtra** per ottenere le parole di contenuto che non conosci già - rivedendo facoltativamente l'elenco tu stesso nel Curatore di parole.
 3. **Cattura una schermata e una clip audio** dal video per ogni riga.
 4. **Cerca le definizioni** nei tuoi dizionari offline configurati, ricadendo facoltativamente su Jisho online se abilitato (più lento, con limite di velocità).
@@ -195,7 +196,7 @@ Utilizza insiemi di nomi in bundle derivati da [JMnedict](https://www.edrdg.org/
 | Dove si trovano i log?      | Usa Aiuto -> Apri cartella dei registri, oppure apri `%USERPROFILE%\.anki_miner\anki_miner.log` su Windows o `~/.anki_miner/anki_miner.log` su macOS/Linux. I log ruotati usano i suffissi da `.1` a `.5`. |
 | Segnalare un bug          | Aiuto -> Esporta diagnostica… scrive uno ZIP con i log e i dettagli di sistema in una posizione a tua scelta. Controllalo prima di caricarlo perché contiene percorsi e nomi di file del tuo computer. Nulla viene caricato automaticamente. |
 | Più log diagnostici | Imposta `ANKI_MINER_LOG_LEVEL=DEBUG` prima di avviare Anki Miner per acquisire i dettagli di terze parti di yt-dlp, urllib3 e fugashi. Il valore predefinito è `WARNING`; i log di Anki Miner restano a DEBUG. |
-| L'audio è nella lingua sbagliata  | Lo strumento prova prima le tracce audio giapponesi, poi ricade su quella predefinita.      |
+| L'audio è nella lingua sbagliata  | Lo strumento prova prima le tracce audio nella lingua di mining, poi ricade su quella predefinita.      |
 | Sottotitoli non sincronizzati    | Usa il controllo di offset dei sottotitoli nell'interfaccia grafica (intervallo ±300 secondi).                 |
 
 ## Roadmap
@@ -214,7 +215,7 @@ Elenco di idee per le versioni future di Anki Miner. Non in ordine di priorità.
 
 - **Lungo termine**:
   - [x] Port per Android -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Oltre il giapponese: mining di altre lingue.
+  - [x] Oltre il giapponese: mining di cinese e coreano.
   - [ ] Estensione per browser di Anki Miner.
 
 

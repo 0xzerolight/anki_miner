@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Ubah konten Jepang asli menjadi kartu kosakata Anki.
+Ubah konten asli berbahasa Jepang, Mandarin, dan Korea menjadi kartu kosakata Anki.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - **Video** - mining satu pasang video/subtitel, folder batch, atau URL YouTube.
 - **Pembuat Dek** - mining seluruh serial menjadi satu dek yang diurutkan berdasarkan frekuensi.
 - **Buku Audio** - mining buku audio, podcast, radio, lagu (pasangan audio + subtitel/transkrip).
-- **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks Jepang yang ditempel.
+- **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks yang ditempel.
 - **Analitik** - riwayat mining, peringkat kesulitan, milestone.
 - **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (ffsubsync/alass), memadatkan media menjadi audio berisi dialog saja, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, dan mengisi ulang bidang pada kartu yang sudah ada.
 - **Pengaturan** - semua yang bisa dikonfigurasi.
 
 ## Fitur Lainnya
 
+- Bahasa mining - Jepang, Mandarin, dan Korea, diganti di Pengaturan. Bahasa Korea mengunduh model bahasanya di dalam aplikasi.
 - Word Curator - tinjau setiap kata kandidat sebelum kartu dibuat, lengkap dengan adegan, halaman manga, dan entri kamus berdampingan.
 - Batalkan sebuah proses - hapus catatan yang baru saja dibuat oleh sebuah proses, langsung dari dialog hasilnya.
 - Filter yang luas: i+1, rentang peringkat frekuensi, daftar hitam, regex, kumpulan kata, dan lainnya.
@@ -151,7 +152,7 @@ Ingin tema lain ditambahkan? Ajukan lewat GitHub Issue.
 <details>
 <summary><strong>Cara Kerjanya</strong></summary>
 
-1. **Baca subtitel** dan pecah bahasa Jepang menjadi kata per kata.
+1. **Baca subtitel** dan pecah teksnya menjadi kata per kata.
 2. **Filter** ke kata isi yang belum Anda kenal - opsional meninjau sendiri daftarnya di Word Curator.
 3. **Ambil tangkapan layar dan klip audio** dari video untuk setiap baris.
 4. **Cari definisi** di kamus offline yang Anda konfigurasi, opsional beralih ke Jisho online jika diaktifkan (lebih lambat, dibatasi laju).
@@ -195,7 +196,7 @@ Menggunakan kumpulan kata nama bawaan yang berasal dari [JMnedict](https://www.e
 | Di mana letak lognya?      | Gunakan Bantuan -> Buka Folder Log, atau buka `%USERPROFILE%\.anki_miner\anki_miner.log` di Windows atau `~/.anki_miner/anki_miner.log` di macOS/Linux. Log yang dirotasi memakai akhiran `.1` sampai `.5`. |
 | Melaporkan bug          | Bantuan -> Ekspor Diagnostik… menulis ZIP berisi log dan detail sistem ke lokasi pilihan Anda. Tinjau dulu sebelum mengunggahnya karena berisi jalur berkas dan nama berkas dari komputer Anda. Tidak ada yang diunggah otomatis. |
 | Logging diagnostik lebih rinci | Atur `ANKI_MINER_LOG_LEVEL=DEBUG` sebelum menjalankan Anki Miner untuk menangkap detail yt-dlp, urllib3, dan fugashi pihak ketiga. Default-nya `WARNING`; log Anki Miner tetap di DEBUG. |
-| Audio bahasanya salah  | Alat ini mencoba trek audio Jepang terlebih dahulu, lalu beralih ke default.      |
+| Audio bahasanya salah  | Alat ini mencoba trek audio dalam bahasa mining terlebih dahulu, lalu beralih ke default.      |
 | Subtitel tidak sinkron    | Gunakan kontrol offset subtitel di GUI (rentang ±300 detik).                 |
 
 ## Peta Jalan
@@ -214,7 +215,7 @@ Daftar ide untuk versi mendatang Anki Miner. Bukan dalam urutan prioritas. Permi
 
 - **Jangka panjang**:
   - [x] Port Android -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Di luar bahasa Jepang: Mining bahasa lain.
+  - [x] Di luar bahasa Jepang: mining bahasa Mandarin dan Korea.
   - [ ] Ekstensi peramban Anki Miner.
 
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-把原汁原味的日语内容变成 Anki 词汇卡片。
+把原汁原味的日语、中文和韩语内容变成 Anki 词汇卡片。
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ anki_miner_gui
 - **视频** - 挖词单个视频/字幕配对、批量文件夹或 YouTube 链接。
 - **牌组构建器** - 把整部剧集挖词成一个按词频排序的牌组。
 - **有声书** - 挖词有声书、播客、广播和歌曲（音频 + 字幕/文稿配对）。
-- **阅读** - 挖词漫画（mokuro）、小说（`.epub`、`.txt`；单本书或整个文件夹）、独立字幕文件，或粘贴的日语文本。
+- **阅读** - 挖词漫画（mokuro）、小说（`.epub`、`.txt`；单本书或整个文件夹）、独立字幕文件，或粘贴的文本。
 - **分析** - 挖词历史、难度排名、里程碑。
 - **工具** - 生成字幕（本地 Whisper）、重新校准字幕时间轴（ffsubsync/alass）、把媒体压缩成纯对话音频、把现成牌组中值得学习的部分复制到新牌组，以及为已有卡片回填字段。
 - **设置** - 所有可配置项。
 
 ## 其他功能
 
+- 挖词语言 - 日语、中文和韩语，在设置中切换。韩语的语言模型在应用内下载。
 - 单词整理器 - 在生成卡片之前逐一审阅每个候选单词，画面、漫画页面和词典条目并排显示。
 - 撤销一次运行 - 直接在结果对话框中删除该次运行刚创建的笔记。
 - 丰富的过滤器：i+1、词频排名区间、黑名单、正则表达式、词汇集等。
@@ -151,7 +152,7 @@ anki_miner_gui
 <details>
 <summary><strong>工作原理</strong></summary>
 
-1. **读取字幕**，并把日语切分成一个个单词。
+1. **读取字幕**，并把文本切分成一个个单词。
 2. **过滤**出你还不认识的实词 - 也可以在单词整理器里自己审阅这份列表。
 3. 为每一句**从视频中抓取截图和音频片段**。
 4. 在你配置的离线词典中**查找释义**，如果启用了，还可以回退到在线 Jisho（较慢，有速率限制）。
@@ -195,7 +196,7 @@ anki_miner_gui
 | 日志在哪里？      | 使用 帮助 -> 打开日志文件夹，或在 Windows 上打开 `%USERPROFILE%\.anki_miner\anki_miner.log`，在 macOS/Linux 上打开 `~/.anki_miner/anki_miner.log`。轮转日志使用 `.1` 到 `.5` 后缀。 |
 | 报告缺陷          | 帮助 -> 导出诊断信息… 会把日志和系统信息写入一个 ZIP，保存到你选择的位置。上传前请先检查内容，因为其中含有你电脑上的文件路径和文件名。不会自动上传任何内容。 |
 | 更详细的诊断日志 | 启动 Anki Miner 前设置 `ANKI_MINER_LOG_LEVEL=DEBUG`，即可记录第三方 yt-dlp、urllib3 和 fugashi 的详细信息。默认为 `WARNING`；Anki Miner 自身的日志仍为 DEBUG。 |
-| 音频语言不对  | 本工具会优先尝试日语音轨，然后回退到默认音轨。      |
+| 音频语言不对  | 本工具会优先尝试挖词语言的音轨，然后回退到默认音轨。      |
 | 字幕不同步    | 使用 GUI 中的字幕偏移控件（范围 ±300 秒）。                 |
 
 ## 路线图
@@ -214,7 +215,7 @@ Anki Miner 未来版本的想法清单。排列顺序不代表优先级。功能
 
 - **长期**：
   - [x] Android 移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] 超越日语：挖词其他语言。
+  - [x] 超越日语：挖词中文和韩语。
   - [ ] Anki Miner 浏览器扩展。
 
 

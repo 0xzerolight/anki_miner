@@ -29,7 +29,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Turn native Japanese content into Anki vocabulary cards.
+Turn native Japanese, Chinese, and Korean content into Anki vocabulary cards.
 </p>
 
 <p align="center">
@@ -107,13 +107,14 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
 - **Deck Builder** - mine a whole series into one frequency-ranked deck.
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
-- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted Japanese text.
+- **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted text.
 - **Analytics** - mining history, difficulty rankings, milestones.
 - **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features
 
+- Mining languages - Japanese, Chinese, and Korean, switched in Settings. Korean downloads its language model in-app.
 - Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
 - Undo a run - delete the notes a run just created, straight from its results dialog.
 - Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
@@ -149,7 +150,7 @@ Want another theme added? Suggest in a GitHub Issue.
 <details>
 <summary><strong>How It Works</strong></summary>
 
-1. **Read the subtitles** and split Japanese into individual words.
+1. **Read the subtitles** and split the text into individual words.
 2. **Filter** to content words you don't already know - optionally reviewing the list yourself in the Word Curator.
 3. **Grab a screenshot and audio clip** from the video for each line.
 4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online if enabled (slower, rate-limited).
@@ -193,7 +194,7 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. |
 | Reporting a bug          | Help → Export Diagnostics… writes a ZIP with logs and system details to a location you choose. Review it before uploading because it contains file paths and file names from your computer. Nothing is uploaded automatically. |
 | More diagnostic logging | Set `ANKI_MINER_LOG_LEVEL=DEBUG` before starting Anki Miner to capture third-party yt-dlp, urllib3, and fugashi details. The default is `WARNING`; Anki Miner logs remain at DEBUG. |
-| Audio is wrong language  | The tool tries Japanese audio tracks first, then falls back to the default.      |
+| Audio is wrong language  | The tool tries the mining language's audio tracks first, then falls back to the default. |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 
 ## Roadmap
@@ -212,7 +213,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 
 - **Long-term**:
   - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Beyond Japanese: Mining other languages.
+  - [x] Beyond Japanese: Chinese and Korean mining.
   - [ ] Anki Miner browser extension.
 
 
