@@ -1,16 +1,16 @@
 """A whitelisted-but-unregistered language degrades to ja at every live site.
 
-``AnkiMinerConfig.__post_init__`` accepts ``ko`` today (``_LANGUAGE_CODES``)
-while no ko profile is registered until Stage 3. ``config_language`` exists to
-make that survivable: every seam reads the mining language through it and lands
-on Japanese for a code with no builder. The two tagger sites read the RAW field
-instead, so a hand-edited ``gui_config.json`` (or the Settings combo, once it
-lists ko) raised ``ValueError`` out of the parser constructor — killing every
-mining path, including the curation dialog, which builds
-``SubtitleParserService`` directly.
+``AnkiMinerConfig.__post_init__`` accepts every ``_LANGUAGE_CODES`` entry, and a
+build can carry a code it cannot resolve. ``config_language`` exists to make that
+survivable: every seam reads the mining language through it and lands on Japanese
+for a code with no builder. The two tagger sites read the RAW field instead, so a
+hand-edited ``gui_config.json`` (or the Settings combo) raised ``ValueError`` out
+of the parser constructor — killing every mining path, including the curation
+dialog, which builds ``SubtitleParserService`` directly.
 
-Stub-free on purpose: the point is the real ``ko`` code against the real
-registry, not a stub profile.
+Stub-free on purpose: the point is a real whitelisted code against the real
+registry, not a stub profile. Stage 3 registered ``ko``, so the fixture hides it
+again rather than naming a code ``__post_init__`` would fold to ``ja``.
 """
 
 from __future__ import annotations
@@ -18,10 +18,19 @@ from __future__ import annotations
 from dataclasses import replace
 from types import SimpleNamespace
 
+import pytest
+
 from anki_miner.gui.utils.service_factory import create_services
 from anki_miner.services import card_backfiller, subtitle_parser
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.services.tagger import get_shared_tagger
+from tests.unit.languages.stub_registry import unregister_profile
+
+
+@pytest.fixture(autouse=True)
+def ko_is_unregistered(monkeypatch):
+    """``ko`` is the unresolvable code every case below carries."""
+    unregister_profile(monkeypatch, "ko")
 
 
 class _FakeAnki:

@@ -14,6 +14,7 @@ from anki_miner.gui.controllers import profile_controller as pc
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
+from tests.unit.languages.stub_registry import unregister_profile
 
 
 class _Screen:
@@ -63,9 +64,12 @@ def test_the_incoming_language_is_named_in_its_own_script(test_config):
     assert pc._incoming_language_name(replace(test_config, language="zh")) == "中文"
 
 
-def test_a_code_with_no_registered_profile_degrades_instead_of_raising(test_config):
-    # "ko" passes AnkiMinerConfig's own whitelist but has no profile until
-    # Stage 3; get_profile would raise ValueError straight out of the switch.
+def test_a_code_with_no_registered_profile_degrades_instead_of_raising(test_config, monkeypatch):
+    # A code passing AnkiMinerConfig's own whitelist whose profile this build
+    # cannot resolve; get_profile would raise ValueError straight out of the
+    # switch. Stage 3 registered "ko", so it is hidden to play the part.
+    unregister_profile(monkeypatch, "ko")
+
     assert pc._incoming_language_name(replace(test_config, language="ko")) == "日本語"
 
 

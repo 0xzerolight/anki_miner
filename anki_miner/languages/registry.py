@@ -52,6 +52,17 @@ def _zh_builder() -> LanguageProfile:
 _register("zh", _zh_builder)
 
 
+def _ko_builder() -> LanguageProfile:
+    # Same reason as zh: the import stays in the builder so a ja session never
+    # pays for (or fails on) the ko engine's optional dependency set.
+    from anki_miner.languages.ko import build_profile
+
+    return build_profile()
+
+
+_register("ko", _ko_builder)
+
+
 def config_language(config: Any) -> str:
     """The mining-language code carried by *config*, ``"ja"`` when unusable.
 

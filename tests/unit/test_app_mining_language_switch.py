@@ -22,6 +22,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 from PyQt6.QtCore import QThread
 
 from anki_miner.gui.controllers import language_switch
+from tests.unit.languages.stub_registry import unregister_profile
 
 
 def _settings_tab(window):
@@ -150,9 +151,12 @@ class TestSyncRepointsTheRealSurfaces:
 
         assert seen == []
 
-    def test_an_unregistered_stored_code_names_the_language_that_mines(self, wired_window):
-        """R7: ``ko`` is legal on disk and mines as ja, so the chip says ja."""
+    def test_an_unregistered_stored_code_names_the_language_that_mines(self, wired_window, monkeypatch):
+        """R7: a code legal on disk but unresolvable here mines as ja, so the
+        chip says ja. ``ko`` registered in Stage 3, so it is hidden to play the
+        part - every other whitelisted code folds to ``ja`` in the config."""
         window, _titles, _tabs = wired_window
+        unregister_profile(monkeypatch, "ko")
 
         window.config = dataclasses.replace(window.config, language="ko")
         window.sync_mining_language_surfaces()

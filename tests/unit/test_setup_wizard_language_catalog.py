@@ -10,6 +10,7 @@ from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+from tests.unit.languages.stub_registry import unregister_profile
 
 
 class _FakeValidation:
@@ -46,14 +47,17 @@ def test_ja_catalogue_is_the_recommended_default_set(wizard_factory, test_config
     assert not page.pitch_label.isHidden()
 
 
-def test_an_unregistered_language_degrades_instead_of_breaking_the_wizard(wizard_factory, test_config):
-    """R7: ``ko`` is a LEGAL stored code with no registered profile until Stage 3.
+def test_an_unregistered_language_degrades_instead_of_breaking_the_wizard(wizard_factory, test_config, monkeypatch):
+    """R7: a LEGAL stored code whose profile this build does not carry.
 
     ``get_profile`` raises on it, and this page is built during wizard
-    construction - so a settings import from a future ko build, or a hand-edited
+    construction - so a settings import from another build, or a hand-edited
     ``gui_config.json``, would make the whole wizard unconstructible on first run
     AND from Tools -> Setup Wizard. ``config_language`` degrades it to ja.
+    ``ko`` registered in Stage 3, so the code is hidden rather than renamed.
     """
+    unregister_profile(monkeypatch, "ko")
+
     page = wizard_factory(replace(test_config, language="ko")).resources_page
 
     assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)

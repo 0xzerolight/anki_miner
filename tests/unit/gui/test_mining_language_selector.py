@@ -10,11 +10,28 @@ from __future__ import annotations
 
 import dataclasses
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import language_choices
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+from anki_miner.languages.ko import availability as ko_availability
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.zh import availability
+
+
+@pytest.fixture(autouse=True)
+def ko_stack_absent(monkeypatch):
+    """Pin the ko engine as missing, so these lists do not read the machine.
+
+    ``kiwipiepy`` is an optional extra: present on a dev box with ``[ko]``,
+    absent from CI until the languages extra lands. Every assertion below is an
+    exact list, so leaving the probe live would make the file pass or fail on
+    what happens to be installed. ko's own selector coverage - dropped when the
+    engine is missing, offered as 한국어 when it is there - lives in
+    ``tests/unit/languages/test_ko_availability.py``.
+    """
+    monkeypatch.setattr(ko_availability, "find_spec", lambda _name: None)
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> FilteringSettingsPanel:
