@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from anki_miner.exceptions import SetupError
-from anki_miner.languages.registry import config_language
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
@@ -320,6 +320,22 @@ class _NoteContext:
     lemma_failed: bool
 
 
+@dataclass(frozen=True)
+class _AudioWord:
+    """Word-like view of a note context for ``AudioDefaults.candidates``.
+
+    The profile ladders read a mined word's ``mined_form`` and
+    ``expression_reading``; a ``_NoteContext`` recovers the same identity but
+    spells the reading ``reading``. Carries exactly the three values
+    ``_resolve_context`` produced — no ``lemma_reading``, because deriving one
+    is the Japanese ladder's own tagger work.
+    """
+
+    mined_form: str
+    expression_reading: str
+    lemma: str
+
+
 def scan_backfill(
     anki_service: AnkiService,
     config: AnkiMinerConfig,
@@ -418,6 +434,11 @@ def _scan_backfill_impl(
     # (ko) would otherwise reach get_tagger's ValueError and kill the scan.
     language = config_language(config)
     tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
+    # The word-audio ladder, resolved once per scan like the tagger (mining's
+    # 1B.9 shape: service_factory hands the same callable to
+    # ChainedExpressionAudioFetcher). None is Japanese and keeps
+    # backfill_audio.word_audio_candidates.
+    audio_candidates = get_profile(language).audio.candidates
 
     scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = reading_failures = lemma_failures = 0
@@ -478,6 +499,7 @@ def _scan_backfill_impl(
                 dict_css_entries=dict_css_entries,
                 expression_audio_fetcher=expression_audio_fetcher,
                 tagger=tagger,
+                audio_candidates=audio_candidates,
                 is_cancelled=is_cancelled,
             )
             identical_skips += note_identicals
@@ -735,6 +757,7 @@ def _compute_note_changes(
     dict_css_entries: list[tuple[str, str, str]],
     expression_audio_fetcher: Any = None,
     tagger: Any = None,
+    audio_candidates: Callable[[Any], list[tuple[str, str]]] | None = None,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[FieldChange], int, int]:
     """Emit FieldChanges for one note under the fill/overwrite policy.
@@ -791,7 +814,13 @@ def _compute_note_changes(
         audio_field = anki_fields.get("expression_audio")
         current_audio = _field_value(ctx.fields, audio_field) if audio_field else None
         if current_audio is not None and (options.overwrite or _is_fillable("expression_audio", current_audio)):
-            audio_path = _audio_proposal(ctx, expression_audio_fetcher, tagger, is_cancelled)
+            audio_path = _audio_proposal(
+                ctx,
+                expression_audio_fetcher,
+                tagger,
+                is_cancelled,
+                audio_candidates=audio_candidates,
+            )
             if audio_path is not None:
                 proposals["expression_audio"] = f"[sound:{audio_path.name}]"
                 media_paths["expression_audio"] = audio_path
@@ -932,6 +961,8 @@ def _audio_proposal(
     fetcher: Any,
     tagger: Any,
     is_cancelled: Callable[[], bool] | None,
+    *,
+    audio_candidates: Callable[[Any], list[tuple[str, str]]] | None = None,
 ) -> Path | None:
     """Resolve word audio for one note through the configured chain.
 
@@ -944,8 +975,16 @@ def _audio_proposal(
     reading outright and a wrong kana reading misses rather than fetching a
     homograph; a synthetic source will voice the guess, which is the accepted
     cost of the feature.
+
+    ``audio_candidates`` is the active profile's ladder builder
+    (``AudioDefaults.candidates``); None is Japanese and keeps the kana ladder
+    ``backfill_audio`` builds from the recovered (reading, lemma) pair, which
+    is also the only branch that consults ``tagger``.
     """
-    candidates = word_audio_candidates(ctx.mined_form, ctx.reading, ctx.lemma, tagger)
+    if audio_candidates is not None:
+        candidates = audio_candidates(_AudioWord(ctx.mined_form, ctx.reading, ctx.lemma))
+    else:
+        candidates = word_audio_candidates(ctx.mined_form, ctx.reading, ctx.lemma, tagger)
     if not candidates:
         return None
     path: Path | None = fetcher.fetch_candidates(candidates, cancelled_check=is_cancelled)
