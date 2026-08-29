@@ -54,7 +54,7 @@ class YtdlpNotFoundError(YouTubeFetchError):
 
 
 class NoJapaneseSubtitlesError(YouTubeFetchError):
-    """Raised when yt-dlp exited 0 but wrote no Japanese subtitle file.
+    """Raised when yt-dlp exited 0 but wrote no subtitle file for the mining language.
 
     yt-dlp reports "There are no subtitles for the requested languages" as an
     *info* line and exits 0, and it writes subtitles before the video, so the whole
@@ -73,6 +73,13 @@ class NoJapaneseSubtitlesError(YouTubeFetchError):
     """
 
     pass
+
+
+#: Forward-looking name for the same class. An alias, not a subclass, so every
+#: existing ``except`` clause, ``issubclass`` check and ordered queue-worker
+#: catch is unaffected — and ``type(exc).__name__`` keeps the spelling
+#: tests/unit/test_youtube_queue_worker.py:202 asserts on the worker message.
+NoSourceSubtitlesError = NoJapaneseSubtitlesError
 
 
 class DubAudioUnavailableError(YouTubeFetchError):

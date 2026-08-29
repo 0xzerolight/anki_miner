@@ -92,7 +92,11 @@ def build_profile() -> LanguageProfile:
             codes=("ja",),
             orig_codes=("ja-orig",),
             audio_pattern="^ja(-|$)",
-            bare_fallback=False,
+            # The bare automatic caption is the LAST-RESORT leg the pre-existing
+            # fetcher behaviour includes: still after "ja-orig" and after the
+            # manual track, but a video whose metadata carries no "*-orig" key
+            # at all and reports language "ja" is accepted rather than rejected.
+            bare_fallback=True,
         ),
         pos_defaults=PosDefaults(
             allowed_pos=tuple(base.allowed_pos),
