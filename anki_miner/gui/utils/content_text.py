@@ -38,6 +38,14 @@ def content_cell_font(style: ContentTextStyle) -> QFont:
 def apply_content_font(widget: QWidget, style: ContentTextStyle, *, role: str = JAPANESE_BODY) -> None:
     """Give *widget* the content face + size and mark it for the QSS rules."""
     if style.font_role == "japanese":
+        # A previous non-ja call pinned that language's families in a WIDGET
+        # stylesheet, which outranks both the application sheet and setFont --
+        # so a switch back to Japanese has to take it off again, or ja keeps
+        # rendering in the outgoing face. Matched on the marker written below,
+        # so a consumer's own stylesheet is never touched, and skipped entirely
+        # on a widget that never left Japanese.
+        if f'*[{JAPANESE_PROPERTY}="' in widget.styleSheet():
+            widget.setStyleSheet("")
         apply_japanese_font(widget, role=role)
         return
     size = FONT_SIZES.japanese_feature if role == JAPANESE_FEATURE else FONT_SIZES.japanese_body

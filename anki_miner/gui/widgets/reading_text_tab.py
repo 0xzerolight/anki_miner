@@ -28,10 +28,10 @@ from __future__ import annotations
 import contextlib
 from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QTextBlockFormat, QTextCursor, QTextDocument
 from PyQt6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -68,7 +68,27 @@ _IMAGE_FILTER_GLOB = " ".join(f"*{ext}" for ext in _IMAGE_EXTS)
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.interfaces.presenter import PresenterProtocol
+    from anki_miner.languages.profile import ContentTextStyle
     from anki_miner.orchestration import EpisodeProcessor
+
+
+def _clear_block_leading(document: QTextDocument | None) -> None:
+    """Undo :func:`apply_japanese_block_format`, back to Qt's own spacing.
+
+    A switch away from Japanese has to reach the blocks already in the buffer:
+    the leading rides on each QTextBlockFormat, so text pasted while ja was live
+    keeps the ja leading until the format is merged back out.
+    """
+    if document is None:
+        return
+    # The mode argument is an int, not the enum -- same reason as the sibling
+    # helper in gui/utils/fonts.py: passing the scoped member raises.
+    single = cast(int, QTextBlockFormat.LineHeightTypes.SingleHeight.value)
+    block_format = QTextBlockFormat()
+    block_format.setLineHeight(0, single)
+    cursor = QTextCursor(document)
+    cursor.select(QTextCursor.SelectionType.Document)
+    cursor.mergeBlockFormat(block_format)
 
 
 class _RefuseFileDrops(QObject):
@@ -249,15 +269,10 @@ class ReadingTextTab(_ReadingMiningTabBase):
             viewport.installEventFilter(self._file_drop_filter)
         # What the user pastes here is the text they came to mine, not interface
         # chrome: the mining language's face and a reading size (decision D45-B).
-        language = config_language(self.config)
-        apply_content_font(self.text_edit, get_profile(language).content_style, role=JAPANESE_BODY)
-        # The looser leading is Japanese typography, and it is a
-        # QTextBlockFormat rather than a stylesheet rule because Qt has no
-        # line-height -- so it cannot be language-scoped in the QSS and is gated
-        # here instead. Chinese takes Qt's own line spacing.
-        if language == "ja":
-            apply_japanese_block_format(self.text_edit.document())
-            self.text_edit.textChanged.connect(self._keep_japanese_leading)
+        # Applied through set_content_style so construction and an in-session
+        # language switch can never disagree about what this buffer looks like.
+        self._japanese_leading = False
+        self.set_content_style(get_profile(config_language(self.config)).content_style)
         self.text_edit.textChanged.connect(self._recompute_buttons)
         card_layout.addWidget(self.text_edit)
 
@@ -445,6 +460,35 @@ class ReadingTextTab(_ReadingMiningTabBase):
     # ------------------------------------------------------------------
     # Button recomputation
     # ------------------------------------------------------------------
+
+    def set_content_style(self, style: ContentTextStyle) -> None:
+        """Point the paste buffer at *style*: the face AND the leading.
+
+        Both were captured at construction, so an in-session language switch
+        left the buffer in the outgoing language's typography until the next
+        launch. ``MainWindow.sync_mining_language_surfaces`` calls this on both
+        switch triggers.
+
+        The looser leading is Japanese typography, and it is a QTextBlockFormat
+        rather than a stylesheet rule because Qt has no line-height -- so it
+        cannot be language-scoped in the QSS and is gated here instead. Chinese
+        takes Qt's own line spacing.
+        """
+        apply_content_font(self.text_edit, style, role=JAPANESE_BODY)
+        japanese = style.font_role == "japanese"
+        if japanese is not self._japanese_leading:
+            # A Qt connection is not idempotent: connecting twice fires the
+            # keeper twice per keystroke, and disconnecting an absent one raises.
+            self._japanese_leading = japanese
+            if japanese:
+                self.text_edit.textChanged.connect(self._keep_japanese_leading)
+            else:
+                self.text_edit.textChanged.disconnect(self._keep_japanese_leading)
+        document = self.text_edit.document()
+        if japanese:
+            apply_japanese_block_format(document)
+        else:
+            _clear_block_leading(document)
 
     def _keep_japanese_leading(self) -> None:
         """Restore the Japanese leading after a wholesale text replacement.

@@ -1011,7 +1011,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def sync_mining_language_surfaces(self) -> None:
         """Point every language surface at the language that is actually live."""
         from anki_miner.gui.utils.language_choices import available_mining_languages
-        from anki_miner.languages.registry import config_language
 
         # config_language, never the raw field: the config accepts any stored
         # code, and one with no registered profile mines as ja everywhere else.
@@ -1023,6 +1022,16 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             setter = getattr(self.tabs.widget(idx), "set_mining_language", None)
             if callable(setter):
                 setter(code)
+
+        # Mined-content typography is captured when a tab is built, so a switch
+        # has to push the new face out or the tab keeps the outgoing language's
+        # shapes until the next launch. Duck-typed, like set_mining_language
+        # above: only the tabs that show mined content answer.
+        style = get_profile(code).content_style
+        for index in range(self.tabs.count()):
+            restyle = getattr(self.tabs.widget(index), "set_content_style", None)
+            if callable(restyle):
+                restyle(style)
 
         choices = available_mining_languages()
         names = dict(choices)
