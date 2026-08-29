@@ -35,6 +35,17 @@ def zh_stack_present(monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def no_first_visit_prompt(monkeypatch):
+    """This file is about the switch ORDER; the prompt has its own file.
+
+    Every switch to zh here is a first visit, so the commit tail would open the
+    real first-visit modal - and ``_FakeWindow`` is not a QWidget, so it opens
+    parentless and blocks in ``exec``. Answer "no thanks" and get out of the way.
+    """
+    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: language_switch.FIRST_VISIT_NONE)
+
+
 class _FakeScreen:
     QUEUE_STATE_KEY = "queue.youtube"
 

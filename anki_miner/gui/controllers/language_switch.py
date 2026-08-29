@@ -153,7 +153,11 @@ def offer_first_visit_setup(window: Any, previous_config: Any) -> None:
     if not decks:
         return
     display_name = getattr(get_profile(config.language), "display_name", config.language)
-    choice = _first_visit_choice(window, display_name, decks, offer_setup=not config.dictionary_chain)
+    # QMessageBox rejects a non-QWidget parent with a TypeError, and the caller
+    # wraps this in a try/except - so an unparentable window would not crash,
+    # it would silently skip the prompt. Parentless is the honest fallback.
+    parent = window if isinstance(window, QWidget) else None
+    choice = _first_visit_choice(parent, display_name, decks, offer_setup=not config.dictionary_chain)
     if choice == FIRST_VISIT_EXCLUDE:
         window.update_config(replace(config, excluded_decks=(*config.excluded_decks, *decks)))
     elif choice == FIRST_VISIT_SETUP:
