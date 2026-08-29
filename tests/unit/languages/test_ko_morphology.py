@@ -91,3 +91,29 @@ def test_every_allowed_class_and_excluded_subtype_has_a_ui_label():
     labels = set(ko_morph.KO_POS_LABELS)
     assert set(ko_morph.KO_ALLOWED_POS) <= labels
     assert set(ko_morph.KO_EXCLUDED_SUBTYPES) <= labels
+
+
+def test_latin_runs_are_not_advertised_as_mineable():
+    """The script gate rejects a pure-Latin run before POS is ever consulted.
+
+    Listing SL as an allowed class promised mining the gate cannot deliver, and
+    put a class in the settings POS editor that does nothing when ticked.
+    """
+    from anki_miner.languages.ko.script import KoreanScript
+
+    script = KoreanScript()
+    gated = TokenInclusionRule(
+        allowed_pos=frozenset(ko_morph.KO_ALLOWED_POS),
+        excluded_subtypes=frozenset(ko_morph.KO_EXCLUDED_SUBTYPES),
+        script_gate=script.contains_target_script,
+    )
+    latin = LanguageToken("Netflix", "SL", "", "Netflix", "")
+    assert script.contains_target_script("Netflix") is False
+    assert gated.should_include(latin) is False
+
+    assert "SL" not in ko_morph.KO_ALLOWED_POS
+    assert "SL" not in ko_morph.KO_POS_LABELS
+    # The classes that DO survive the same gate stay allowed.
+    assert {"NN", "SH", "VV"} <= set(ko_morph.KO_ALLOWED_POS)
+    assert gated.should_include(LanguageToken("학생", "NN", "NNG", "학생", "")) is True
+    assert gated.should_include(LanguageToken("銀行", "SH", "", "銀行", "")) is True

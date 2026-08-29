@@ -35,12 +35,19 @@ from anki_miner.languages.ko.tokenizer import coarse_tag
 PREDICATE_TAGS: frozenset[str] = frozenset({"VV", "VA", "VX"})
 
 #: Mineable content classes, sorted (the settings editor shows them in order).
-#: MA = adverbs, NN = nouns, SH = hanja, SL = a Latin-script loanword run,
-#: VA/VV/VX = predicates, XR = the bound root carrying the meaning of
-#: 하다-predicates. NP (pronouns), NR (numerals), MM (determiners), IC
-#: (interjections), VC (copulas), XS (affixes), J* (particles), E* (endings),
-#: S[FPONE] (punctuation, digits, symbols) and Z_* are absent on purpose.
-KO_ALLOWED_POS: tuple[str, ...] = ("MA", "NN", "SH", "SL", "VA", "VV", "VX", "XR")
+#: MA = adverbs, NN = nouns, SH = hanja, VA/VV/VX = predicates, XR = the bound
+#: root carrying the meaning of 하다-predicates. NP (pronouns), NR (numerals),
+#: MM (determiners), IC (interjections), VC (copulas), XS (affixes), J*
+#: (particles), E* (endings), S[FPONE] (punctuation, digits, symbols) and Z_*
+#: are absent on purpose.
+#:
+#: SL (a Latin-script loanword run) is absent for a different reason: the real
+#: gate for it is the script gate, not this one. KoreanScript.contains_target_
+#: script admits only hangul or hanja, and TokenInclusionRule.should_include
+#: consults it AFTER the class gate, so an SL token is rejected however this
+#: tuple is set. Listing it promised mining that cannot happen and put a class
+#: in the POS editor that does nothing when ticked.
+KO_ALLOWED_POS: tuple[str, ...] = ("MA", "NN", "SH", "VA", "VV", "VX", "XR")
 
 #: Full tags dropped inside an allowed class - the pos2 gate. Both entries name
 #: grammar scaffolding that cannot be excluded by class without taking real
@@ -56,7 +63,6 @@ KO_POS_LABELS: dict[str, str] = {
     "NN": "Noun",
     "NNB": "Bound noun",
     "SH": "Hanja",
-    "SL": "Latin script",
     "VA": "Adjective",
     "VV": "Verb",
     "VX": "Auxiliary predicate",
