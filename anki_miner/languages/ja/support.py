@@ -23,11 +23,17 @@ from anki_miner.utils.text_utils import (
     is_mixed_kana_only,
 )
 
-# Verbatim copy of ``services/anki_service.py:38`` ``_JAPANESE_RE``. Stage 1B.1
-# makes AnkiService resolve its gate from JaScriptSupport.contains_target_script,
-# so this class must stay byte-identical to that regex — a copy rather than an
-# import because ``anki_service`` is a heavy, network-facing module and 1B.1
-# would otherwise close an import cycle through it.
+# Codepoint-equivalent transliteration of ``services/anki_service.py``'s
+# ``_JAPANESE_RE`` — the same four ranges written as literal characters rather
+# than ``\uXXXX`` escapes, so the two patterns are NOT byte-identical and a
+# textual diff of the sources will not prove them equal. What must hold is that
+# they match the same set of characters, which
+# ``test_ja_profile.py::test_contains_target_script_is_the_anki_service_regex``
+# pins against the real ``_JAPANESE_RE``, block edge by block edge. Stage 1B.1
+# makes AnkiService resolve its gate from JaScriptSupport.contains_target_script;
+# until then this is a copy rather than an import because ``anki_service`` is a
+# heavy, network-facing module and 1B.1 would otherwise close an import cycle
+# through it.
 _JAPANESE_RE = re.compile(r"[぀-ゟ゠-ヿ一-鿿㐀-䶿]")
 
 #: Option ids the settings script-filter section renders, mapped to the
