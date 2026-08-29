@@ -60,7 +60,7 @@ def test_the_lock_pins_the_ko_engine() -> None:
 def test_the_release_preflight_builds_against_the_zh_extra() -> None:
     """The preflight venv must carry the engine the release bundles."""
     preflight = (PROJECT_ROOT / "scripts" / "release_preflight.sh").read_text(encoding="utf-8")
-    assert '".[asr,zh]"' in preflight
+    assert '".[asr,zh,ko]"' in preflight
     assert '".[asr]"' not in preflight
 
 
