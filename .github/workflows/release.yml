@@ -1057,8 +1057,8 @@ jobs:
           # and when the HF download fell open, so the smoke stays import-only there.
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
-          # local invocation-count test stays valid). Stage 3 appends " ko".
-          BUNDLE_SMOKE_LANGS: zh
+          # local invocation-count test stays valid).
+          BUNDLE_SMOKE_LANGS: zh ko
         run: scripts/bundle_smoke.sh dist/AnkiMiner
 
       # packaging/linux-launcher.sh became the AppImage's AppRun and the .deb's

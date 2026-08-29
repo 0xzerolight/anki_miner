@@ -263,6 +263,7 @@ def _run_asr_bundled_smoke() -> int:
 _LANGUAGE_SMOKE_LINES: dict[str, str] = {
     "ja": "今日は良い天気ですね。",
     "zh": "我今天早上吃了三个苹果。",
+    "ko": "학생이 밥을 먹었어요.",
 }
 
 
