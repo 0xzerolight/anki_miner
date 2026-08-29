@@ -39,9 +39,16 @@ def _sentinel_for(value: object) -> object:
     raise AssertionError(f"no sentinel rule for {type(value).__name__}")
 
 
+#: Scoped fields whose value space `AnkiMinerConfig.__post_init__` validates, so
+#: a merely type-shaped sentinel would raise instead of differing: task 2A.11's
+#: `script_variant` is constrained to {"", "simplified", "traditional"}. Each
+#: value here still differs from the ja one, which is what the tests assert.
+_VALIDATED_SENTINELS: Mapping[str, object] = {"script_variant": "traditional"}
+
+
 def _stub_defaults() -> dict[str, object]:
     ja = AnkiMinerConfig()
-    return {name: _sentinel_for(getattr(ja, name)) for name in LANGUAGE_SCOPED_FIELDS}
+    return {name: _VALIDATED_SENTINELS.get(name, _sentinel_for(getattr(ja, name))) for name in LANGUAGE_SCOPED_FIELDS}
 
 
 def _stub(code, defaults):

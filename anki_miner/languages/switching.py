@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 #: Config fields whose value belongs to the ACTIVE language. Every profile's
 #: scoped_defaults is derived by iterating this tuple, never hand-written.
-#: Stage 2A task 2A.11 appends "script_variant" and "reading_tone_color".
+#: Stage 2A task 2A.11 appended "script_variant" and "reading_tone_color".
 LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
     "dictionary_chain",
     "frequency_chain",
@@ -35,6 +35,8 @@ LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
     "use_whitelist",
     "downloader_subtitle_langs",
     "excluded_decks",
+    "script_variant",
+    "reading_tone_color",
 )
 
 

@@ -357,6 +357,13 @@ class AnkiMinerConfig:
     exclude_hiragana_only_words: bool = False
     exclude_katakana_only_words: bool = False
 
+    # Language-scoped display/content preferences (multi-language transition).
+    # Deliberately generic rather than zh-prefixed: they are carried per
+    # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets
+    # "simplified" / True from its profile's scoped_defaults.
+    script_variant: str = ""  # "" | "simplified" | "traditional"
+    reading_tone_color: bool = False
+
     # Word list settings
     blacklist_path: Path | None = None
     whitelist_path: Path | None = None
@@ -578,6 +585,9 @@ class AnkiMinerConfig:
             or not 1 <= self.max_parallel_workers <= 20
         ):
             raise ValueError("max_parallel_workers must be an integer from 1 to 20")
+
+        if self.script_variant not in ("", "simplified", "traditional"):
+            raise ValueError('script_variant must be "", "simplified" or "traditional"')
 
         # Convert paths to Path objects (handles both str and Path inputs)
         if isinstance(self.media_temp_folder, str):
