@@ -78,6 +78,32 @@ def test_a_supplied_ladder_decodes_chinese_bytes() -> None:
     assert _decode(raw) != "这是一个测试"
 
 
+def test_a_supplied_ladder_rescues_big5_from_the_total_gb18030_decode() -> None:
+    """gb18030 decodes every valid Big5 sequence, so first-success never got there.
+
+    The rescue is signature-driven, not an ordering change: gb18030 is only
+    stepped over when its own output is private-use-area mojibake.
+    """
+    traditional = "他喜歡看電影和學習中文。"
+    zh_ladder = ("utf-8-sig", "gb18030", "big5")
+
+    assert _decode(traditional.encode("big5"), encodings=zh_ladder) == traditional
+
+
+def test_gb18030_bytes_never_flip_to_big5() -> None:
+    """They decode cleanly under big5 too, so only the signature keeps them apart."""
+    simplified = "他喜欢看电影和学习中文。"
+    zh_ladder = ("utf-8-sig", "gb18030", "big5")
+
+    assert _decode(simplified.encode("gb18030"), encodings=zh_ladder) == simplified
+
+
+def test_the_big5_rescue_is_inert_without_a_big5_leg() -> None:
+    raw = "他喜歡看電影和學習中文。".encode("big5")
+
+    assert _decode(raw, encodings=("utf-8-sig", "gb18030")) == raw.decode("gb18030")
+
+
 def test_a_supplied_ladder_is_ordered_first_success() -> None:
     utf8 = "这是".encode()
 

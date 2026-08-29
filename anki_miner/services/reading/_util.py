@@ -13,6 +13,7 @@ import zipfile
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.utils.cjk_encoding import prefers_big5
 
 logger = logging.getLogger(__name__)
 
@@ -182,6 +183,14 @@ def _decode(raw: bytes, *, encodings: tuple[str, ...] | None = None) -> str:
     """
     if encodings is not None:
         for encoding in encodings:
+            # gb18030 accepts every valid Big5 sequence and decodes it into PUA
+            # garbage without raising, so first-success could never reach a big5
+            # leg further down. Step over gb18030 only when its own result
+            # carries that signature; a real GB18030 file scores zero and is
+            # unaffected. Reordering the ladder instead would mis-decode the GB
+            # majority, which decodes cleanly (and wrongly) under big5.
+            if encoding == "gb18030" and "big5" in encodings and prefers_big5(raw):
+                continue
             try:
                 return raw.decode(encoding)
             except (UnicodeDecodeError, LookupError):

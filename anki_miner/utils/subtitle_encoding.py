@@ -26,6 +26,8 @@ from pathlib import Path
 
 import pysubs2
 
+from anki_miner.utils.cjk_encoding import prefers_big5
+
 #: Python codec name → WHATWG encoding label, for callers that must name an
 #: encoding to a non-Python consumer. alass parses its ``--encoding-*`` values
 #: with encoding_rs and **panics** (aborting the retime) on any label it does
@@ -140,6 +142,15 @@ def load_with_fallback_encoding(
             # instead of falling through to the detector. Pre-ladder behaviour,
             # kept exactly.
             return pysubs2.load(str(path), encoding=candidate)
+        if candidate == "gb18030" and "big5" in ladder:
+            if head is None:
+                head = _read_head(path)
+            # gb18030 accepts every valid Big5 sequence and decodes it into PUA
+            # garbage without raising, so first-success could never reach the
+            # big5 leg. Step over gb18030 only when its own result carries that
+            # signature; a real GB18030 file scores zero and is unaffected.
+            if prefers_big5(head):
+                continue
         try:
             return pysubs2.load(str(path), encoding=candidate)
         except (UnicodeDecodeError, LookupError):
@@ -189,11 +200,16 @@ def detect_subtitle_encoding(path: str | Path, *, encodings: tuple[str, ...] | N
     if head.startswith(codecs.BOM_UTF16_BE):
         return "utf-16be"
 
-    for candidate in _DEFAULT_DETECT_LADDER if encodings is None else encodings:
+    ladder = _DEFAULT_DETECT_LADDER if encodings is None else encodings
+    for candidate in ladder:
         if candidate == "euc_jp":
             if not _is_japanese_euc_jp_bytes(head):
                 continue
             return _WHATWG_LABELS.get(candidate)
+        # Same guard as the load path: gb18030 names itself for Big5 bytes
+        # unless its own decode is PUA mojibake and big5's is clean.
+        if candidate == "gb18030" and "big5" in ladder and prefers_big5(head):
+            continue
         try:
             head.decode(candidate)
         except UnicodeDecodeError as exc:

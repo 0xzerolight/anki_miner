@@ -49,6 +49,60 @@ def test_japanese_ladder_would_mangle_the_same_file(tmp_path, monkeypatch):
     assert seen == ["cp932", "euc_jp"]
 
 
+#: Traditional-Chinese line whose Big5 bytes gb18030 swallows whole.
+_BIG5_LINE = "他喜歡看電影和學習中文。"
+#: Its simplified counterpart, written in GB18030 — the file that must NEVER flip.
+_GB_LINE = "他喜欢看电影和学习中文。"
+
+
+def test_zh_ladder_rescues_a_big5_subtitle(tmp_path, monkeypatch):
+    """gb18030 decodes every valid Big5 sequence, so the big5 leg was dead.
+
+    Not a reorder: gb18030 stays first and only steps aside when its own result
+    carries the private-use-area mojibake signature.
+    """
+    path, err = _write(tmp_path, _BIG5_LINE, "big5")
+    seen = _spy(monkeypatch)
+    subs = load_with_fallback_encoding(path, err, encodings=ZH_LADDER)
+    assert subs[0].text == _BIG5_LINE
+    assert seen == ["utf-8-sig", "big5"]
+
+
+def test_a_gb18030_subtitle_never_flips_to_big5(tmp_path, monkeypatch):
+    """The whole risk of the guard: GB majority content must keep gb18030."""
+    path, err = _write(tmp_path, _GB_LINE, "gb18030")
+    seen = _spy(monkeypatch)
+    subs = load_with_fallback_encoding(path, err, encodings=ZH_LADDER)
+    assert subs[0].text == _GB_LINE
+    assert seen == ["utf-8-sig", "gb18030"]
+
+
+def test_detect_names_big5_for_a_big5_subtitle(tmp_path):
+    path, _ = _write(tmp_path, _BIG5_LINE, "big5")
+    assert detect_subtitle_encoding(path, encodings=ZH_LADDER) == "big5"
+
+
+def test_detect_still_names_gb18030_for_a_gb18030_subtitle(tmp_path):
+    path, _ = _write(tmp_path, _GB_LINE, "gb18030")
+    assert detect_subtitle_encoding(path, encodings=ZH_LADDER) == "gb18030"
+
+
+def test_a_bounded_head_cut_mid_character_still_names_big5(tmp_path, monkeypatch):
+    """The sniff bound cuts a double-byte sequence; that is not a wrong codec."""
+    path = tmp_path / "big5.srt"
+    path.write_bytes(_SRT.format(_BIG5_LINE * 40).encode("big5"))
+    monkeypatch.setattr(enc_mod, "_MAX_SNIFF_BYTES", 41)
+    assert detect_subtitle_encoding(path, encodings=ZH_LADDER) == "big5"
+
+
+def test_the_guard_is_inert_without_a_big5_leg(tmp_path, monkeypatch):
+    """A ladder with no big5 entry keeps gb18030 even for Big5 bytes."""
+    path, err = _write(tmp_path, _BIG5_LINE, "big5")
+    seen = _spy(monkeypatch)
+    load_with_fallback_encoding(path, err, encodings=("utf-8-sig", "gb18030"))
+    assert seen == ["utf-8-sig", "gb18030"]
+
+
 def test_default_ladder_is_unchanged_for_japanese(tmp_path, monkeypatch):
     path, err = _write(tmp_path, "猫が走る", "euc_jp")
     seen = _spy(monkeypatch)
