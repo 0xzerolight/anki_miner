@@ -80,10 +80,19 @@ def test_switching_back_to_ja_drops_the_key_again(qtbot, test_config, code, key,
 
 
 def test_every_hook_field_key_has_a_row(qtbot, test_config):
-    """The regression that made this file: a hook key with no row is inert."""
+    """The regression that made this file: a hook key with no row is inert.
+
+    Derived from the profiles, not a hardcoded copy: a future hook whose
+    field_names() gain a key without a matching Settings row must fail here.
+    measure_word is gloss-derived rather than hook-rendered; its row landed
+    with the zh settings surfaces and it joins the derived set explicitly.
+    """
+    from anki_miner.languages.registry import available_languages, get_profile
     from anki_miner.services.anki_note_builder import OPTIONAL_FIELD_KEYS
 
-    hook_keys = {"measure_word", "expression_traditional", "expression_pinyin", "hanja"}
+    hook_keys = {
+        name for code in available_languages() for hook in get_profile(code).render_hooks for name in hook.field_names()
+    } | {"measure_word"}
     assert hook_keys <= OPTIONAL_FIELD_KEYS
     panel = _anki(qtbot, test_config)
     covered = {key for _, key, _, _ in HOOK_ROWS} | {"measure_word"}
