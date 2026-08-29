@@ -29,7 +29,6 @@ from anki_miner.utils.i18n import tr_format
 logger = logging.getLogger(__name__)
 
 MUTATION_KIND = "language-switch"
-_CTX = "LanguageSwitch"
 
 FIRST_VISIT_NONE = "none"
 FIRST_VISIT_EXCLUDE = "exclude"
@@ -58,10 +57,10 @@ def confirm_queue_flush(parent: QWidget | None, screens: tuple[Any, ...], displa
     rows = sum(len(screen.queue_snapshot().items) for screen in screens)
     reply = QMessageBox.question(
         parent,
-        QCoreApplication.translate(_CTX, "Switch mining language"),
+        QCoreApplication.translate("LanguageSwitch", "Switch mining language"),
         tr_format(
             QCoreApplication.translate(
-                _CTX,
+                "LanguageSwitch",
                 "Switching to %1 discards %n queued item(s), on screen and in the copy saved "
                 "for the next launch. Continue?",
                 "",
@@ -105,26 +104,30 @@ def other_language_decks(config: Any) -> tuple[str, ...]:
 def _first_visit_choice(parent: QWidget | None, display_name: str, decks: tuple[str, ...], offer_setup: bool) -> str:
     """One modal, one decision. Returns a FIRST_VISIT_* constant."""
     box = QMessageBox(parent)
-    box.setWindowTitle(QCoreApplication.translate(_CTX, "First time mining this language"))
+    box.setWindowTitle(QCoreApplication.translate("LanguageSwitch", "First time mining this language"))
     box.setText(
         tr_format(
-            QCoreApplication.translate(_CTX, "You have not mined %1 before."),
+            QCoreApplication.translate("LanguageSwitch", "You have not mined %1 before."),
             display_name,
         )
     )
     box.setInformativeText(
         tr_format(
             QCoreApplication.translate(
-                _CTX,
+                "LanguageSwitch",
                 "The known-words scan reads every deck that is not excluded, so words in "
                 "%1 would count as already known. Exclude them from this language?",
             ),
             ", ".join(decks),
         )
     )
-    exclude = box.addButton(QCoreApplication.translate(_CTX, "Exclude these decks"), QMessageBox.ButtonRole.AcceptRole)
+    exclude = box.addButton(
+        QCoreApplication.translate("LanguageSwitch", "Exclude these decks"), QMessageBox.ButtonRole.AcceptRole
+    )
     setup = (
-        box.addButton(QCoreApplication.translate(_CTX, "Set up resources…"), QMessageBox.ButtonRole.ActionRole)
+        box.addButton(
+            QCoreApplication.translate("LanguageSwitch", "Set up resources…"), QMessageBox.ButtonRole.ActionRole
+        )
         if offer_setup
         else None
     )
@@ -190,7 +193,9 @@ def request_language_change(window: Any, code: str) -> bool:
         profile = get_profile(code)
     except (LookupError, ValueError, ImportError) as exc:
         logger.warning("Mining language %r is not available here: %s", code, exc)
-        _refuse(window, QCoreApplication.translate(_CTX, "That mining language is not available in this build."))
+        _refuse(
+            window, QCoreApplication.translate("LanguageSwitch", "That mining language is not available in this build.")
+        )
         return False
 
     # A profile builds without the packages it parses with - every zh
@@ -208,7 +213,7 @@ def request_language_change(window: Any, code: str) -> bool:
         if not ready:
             _refuse(
                 window,
-                QCoreApplication.translate(_CTX, "Settings are busy. Nothing was switched."),
+                QCoreApplication.translate("LanguageSwitch", "Settings are busy. Nothing was switched."),
             )
             return False
         # READ THE CONFIG HERE, not before the guard: the guard's preflight
@@ -225,7 +230,7 @@ def request_language_change(window: Any, code: str) -> bool:
         if not window.release_dictionary_resources():
             _refuse(
                 window,
-                QCoreApplication.translate(_CTX, "Mining is running. Stop it, then switch language."),
+                QCoreApplication.translate("LanguageSwitch", "Mining is running. Stop it, then switch language."),
             )
             return False
         pending = queued_screens(window)
@@ -238,7 +243,7 @@ def request_language_change(window: Any, code: str) -> bool:
             _refuse(
                 window,
                 tr_format(
-                    QCoreApplication.translate(_CTX, "Could not switch to %1: %2. Nothing was switched."),
+                    QCoreApplication.translate("LanguageSwitch", "Could not switch to %1: %2. Nothing was switched."),
                     profile.display_name,
                     error,
                 ),
