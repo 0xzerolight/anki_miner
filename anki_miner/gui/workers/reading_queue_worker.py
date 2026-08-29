@@ -199,6 +199,7 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
             item.source,
             cancel_check=self.check_cancelled,
             encodings=reading_decode_ladder(self._config),
+            rules=get_profile(self._config.language).sentence_rules,
         )
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document

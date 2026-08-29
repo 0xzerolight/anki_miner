@@ -21,7 +21,7 @@ import logging
 import zipfile
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
@@ -34,6 +34,9 @@ from ._util import (
     read_text_capped,
     read_zip_member_text_capped,
 )
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +168,7 @@ def load(
     *,
     cancel_check: Callable[[], bool] | None = None,
     encodings: tuple[str, ...] | None = None,
+    rules: SentenceRules | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -179,33 +183,41 @@ def load(
     XML declaration, and a ``text`` ref is already a decoded string, so none of
     the other three accepts the keyword at all.
 
-    Optional arguments are omitted rather than passed as ``None``, so a call
-    that supplies neither is the pre-transition ``loader.load(ref)`` verbatim.
+    ``rules`` is that language's sentence-splitting policy, and reaches the four
+    loaders that call ``split_sentences``. ``subtitle`` is the odd one out the
+    other way round: it splits nothing, so it takes the ladder but not the
+    rules.
+
+    Each optional argument is built as its own fragment and omitted when
+    ``None``, so a call that supplies none is the pre-transition
+    ``loader.load(ref)`` verbatim and no branch is handed a keyword its loader
+    does not accept.
     """
     if cancel_check is not None and cancel_check():
         raise OperationCancelled("Reading load cancelled")
     common: dict[str, Any] = {} if cancel_check is None else {"cancel_check": cancel_check}
-    sniffing: dict[str, Any] = common if encodings is None else {**common, "encodings": encodings}
+    sniffing: dict[str, Any] = {} if encodings is None else {"encodings": encodings}
+    splitting: dict[str, Any] = {} if rules is None else {"rules": rules}
     if ref.kind == "mokuro":
         from . import mokuro_source
 
-        return mokuro_source.load(ref, **common)
+        return mokuro_source.load(ref, **common, **splitting)
     if ref.kind == "epub":
         from . import epub_source
 
-        return epub_source.load(ref, **common)
+        return epub_source.load(ref, **common, **splitting)
     if ref.kind == "txt":
         from . import aozora_source
 
-        return aozora_source.load(ref, **sniffing)
+        return aozora_source.load(ref, **common, **sniffing, **splitting)
     if ref.kind == "subtitle":
         from . import subtitle_source
 
-        return subtitle_source.load(ref, **sniffing)
+        return subtitle_source.load(ref, **common, **sniffing)
     if ref.kind == "text":
         from . import text_source
 
-        return text_source.load(ref, **common)
+        return text_source.load(ref, **common, **splitting)
 
     raise SetupError(f"Unknown reading source kind: {ref.kind!r}")
 

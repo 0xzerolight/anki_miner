@@ -17,6 +17,7 @@ import logging
 import re
 import unicodedata
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
@@ -30,6 +31,9 @@ from anki_miner.models.reading import (
 from anki_miner.services.reading._util import _decode
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +266,7 @@ def _emit_units(
     aozora: bool = True,
     *,
     cancel_check: Callable[[], bool] | None = None,
+    rules: SentenceRules | None = None,
 ) -> tuple[list[ReadingUnit], int, int]:
     units: list[ReadingUnit] = []
     index = 0
@@ -310,7 +315,7 @@ def _emit_units(
         else:
             para_no += 1
             label = current_chapter if current_chapter else f"¶{para_no}"
-            for sentence in split_sentences(text):
+            for sentence in split_sentences(text, rules=rules):
                 _raise_if_cancelled(cancel_check)
                 units.append(
                     ReadingUnit(
@@ -336,11 +341,13 @@ def load(
     *,
     cancel_check: Callable[[], bool] | None = None,
     encodings: tuple[str, ...] | None = None,
+    rules: SentenceRules | None = None,
 ) -> ReadingDocument:
     """Load an Aozora or plain-text novel into a book ``ReadingDocument``.
 
     ``encodings`` is the mining language's decode ladder; ``None`` keeps the
-    built-in Japanese sniffing path (see ``_util._decode``).
+    built-in Japanese sniffing path (see ``_util._decode``). ``rules`` is that
+    language's sentence-splitting policy; ``None`` is the built-in Japanese one.
     """
     _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
@@ -376,6 +383,7 @@ def load(
         body_lines,
         aozora=aozora,
         cancel_check=cancel_check,
+        rules=rules,
     )
     doc = ReadingDocument(
         title=title,

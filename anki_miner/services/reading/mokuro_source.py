@@ -18,6 +18,7 @@ import zipfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
@@ -36,6 +37,9 @@ from anki_miner.services.reading._util import (
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +84,13 @@ def load(
     ref: ReadingSourceRef,
     *,
     cancel_check: Callable[[], bool] | None = None,
+    rules: SentenceRules | None = None,
 ) -> ReadingDocument:
-    """Load one mokuro volume into a ``ReadingDocument``. See module docstring."""
+    """Load one mokuro volume into a ``ReadingDocument``. See module docstring.
+
+    ``rules`` is the mining language's sentence-splitting policy, used only by
+    the oversized-block fallback; ``None`` is the built-in Japanese one.
+    """
     _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
@@ -170,7 +179,7 @@ def load(
             else:
                 image_ref = record.ref
         label = f"p.{page_num}"
-        entries, skipped = _page_unit_entries(page, cancel_check=cancel_check)
+        entries, skipped = _page_unit_entries(page, cancel_check=cancel_check, rules=rules)
         skipped_malformed += skipped
         for text, box in entries:
             doc.units.append(
@@ -199,6 +208,7 @@ def _page_unit_entries(
     page: dict,
     *,
     cancel_check: Callable[[], bool] | None = None,
+    rules: SentenceRules | None = None,
 ) -> tuple[list[tuple[str, tuple[int, int, int, int] | None]], int]:
     """Mineable (text, block_box) pairs for one page, in block order.
 
@@ -223,7 +233,7 @@ def _page_unit_entries(
             continue
         box = _block_box(block)
         if len(cleaned) > _BLOCK_SPLIT_THRESHOLD:
-            pieces = split_sentences(cleaned, split_adjacent_quotes=True)
+            pieces = split_sentences(cleaned, split_adjacent_quotes=True, rules=rules)
         else:
             pieces = [cleaned]
         entries.extend((piece, box) for piece in pieces if _is_mineable(piece))
