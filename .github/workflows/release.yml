@@ -187,9 +187,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # matrix.install_target is ".[asr]" everywhere except Intel macOS,
-          # where it is "." (no [asr] — onnxruntime has no x86_64-mac wheel; see
-          # the matrix note). The [asr] extra lands faster-whisper + ctranslate2
+          # matrix.install_target is ".[asr,zh]" everywhere except Intel macOS,
+          # where it is ".[zh]" (no [asr] — onnxruntime has no x86_64-mac wheel;
+          # see the matrix note). The [asr] extra lands faster-whisper + ctranslate2
           # in the PyInstaller tree for Windows, macOS-arm64, and the AppImage
           # (Linux). requirements.lock pins transitive deps to known-good
           # versions. Version-constraint form (no --require-hashes): cross-

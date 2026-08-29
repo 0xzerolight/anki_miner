@@ -95,6 +95,20 @@ asr-vulkan = [
     "faster-whisper>=1.1.0",
     "pywhispercpp>=1.5.0",
 ]
+# Chinese mining engine. jieba/pypinyin are pure-Python universal wheels and are
+# hard requirements of the zh code paths; OpenCC ships a native extension, so
+# every consumer degrades to "no script variants" when it is absent (see
+# languages/zh/variants.py) rather than failing to import.
+zh = [
+    "jieba>=0.42.1",
+    "pypinyin>=0.53.0",
+    "opencc>=1.1.9",
+]
+# Bundle-all aggregate: the release matrix installs this, pip's default stays
+# JA-lean (same shape as the asr extras).
+languages = [
+    "anki-miner[zh]",
+]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -239,6 +253,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["numpy.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["jieba.*", "pypinyin.*", "opencc.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
