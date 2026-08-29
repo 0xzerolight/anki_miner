@@ -70,6 +70,19 @@ def _terms_for(table: dict[str, list[str]], source_language: str) -> list[str]:
     return pooled
 
 
+def terms_for_language(table: dict[str, list[str]], source_language: str) -> list[str]:
+    """Probe terms belonging to ``source_language`` alone; empty when it has none.
+
+    The strict counterpart of :func:`_terms_for`, and what an *import* must use.
+    Pooling every language's terms — what ``_terms_for`` does for an unknown code,
+    mirroring Yomitan — would let the Japanese list decide a Korean source's
+    direction while ja is the only language with a table. A language with no
+    table therefore votes with nothing at all, and the caller lands on
+    :func:`resolve_is_occurrence`'s undetermined (rank-based) path.
+    """
+    return list(table.get(source_language, []))
+
+
 def _min_max(values: Iterable[int]) -> tuple[bool, int, int]:
     """Return ``(has_value, min, max)`` over ``values`` (has_value False if empty)."""
     has_value = False
