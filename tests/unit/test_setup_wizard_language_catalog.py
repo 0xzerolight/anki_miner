@@ -10,7 +10,7 @@ from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
-from tests.unit.languages.stub_registry import unregister_profile
+from tests.unit.languages.stub_registry import register_stub_profile, unregister_profile
 
 
 class _FakeValidation:
@@ -74,41 +74,56 @@ def test_zh_offers_its_own_catalogue_and_no_pitch_line(wizard_factory, test_conf
     assert page.pitch_label.isHidden()
 
 
+def test_ko_offers_its_own_catalogue_and_no_pitch_line(wizard_factory, test_config):
+    ko_catalog = get_profile("ko").catalog
+    page = wizard_factory(switch_language(test_config, "ko")).resources_page
+
+    assert set(page.resource_checks) == {spec.id for spec in ko_catalog}
+    assert all(box.isChecked() for box in page.resource_checks.values())
+    assert "jmdict-english" not in page.resource_checks
+    assert page.pitch_label.isHidden()
+
+
 class TestAnEmptyCatalogue:
-    """ko ships no downloadable resource, and the page has to survive that.
+    """A language with nothing to download, and the page has to survive it.
 
     With ``_specs == []`` the page used to offer an enabled Download button over
     a handler that returns silently, and gate Next on a dictionary probe with
     nothing to find - a first run that cannot be finished and cannot be
     explained. Nothing to download is nothing to block on.
+
+    ko was the empty catalogue when this fix landed and is no longer one, so the
+    case is now synthesised: a profile whose catalogue is empty is a shape the
+    page must keep handling, not a fact about any particular language.
     """
 
     @pytest.fixture
-    def ko_page(self, wizard_factory, test_config):
+    def empty_page(self, wizard_factory, test_config, monkeypatch):
+        register_stub_profile(monkeypatch, "ko", catalog=())
         assert get_profile("ko").catalog == ()
-        return wizard_factory(switch_language(test_config, "ko")).resources_page
+        return wizard_factory(replace(test_config, language="ko")).resources_page
 
-    def test_nothing_is_offered_for_download(self, ko_page):
-        assert ko_page.resource_checks == {}
-        assert ko_page.selected_specs() == []
+    def test_nothing_is_offered_for_download(self, empty_page):
+        assert empty_page.resource_checks == {}
+        assert empty_page.selected_specs() == []
 
-    def test_the_download_button_is_disabled(self, ko_page):
-        assert not ko_page.download_button.isEnabled()
+    def test_the_download_button_is_disabled(self, empty_page):
+        assert not empty_page.download_button.isEnabled()
 
-    def test_the_page_says_where_the_resources_come_from(self, ko_page):
-        text = ko_page.status_label.text()
+    def test_the_page_says_where_the_resources_come_from(self, empty_page):
+        text = empty_page.status_label.text()
 
         assert text
         assert "Settings" in text
 
-    def test_next_is_not_blocked(self, ko_page):
-        assert ko_page.isComplete()
+    def test_next_is_not_blocked(self, empty_page):
+        assert empty_page.isComplete()
 
 
 class TestAPopulatedCatalogueIsUnchanged:
-    """ja and zh must behave exactly as they did before the empty-catalogue fix."""
+    """ja, zh and ko must behave exactly as they did before the empty-catalogue fix."""
 
-    @pytest.mark.parametrize("code", ["ja", "zh"])
+    @pytest.mark.parametrize("code", ["ja", "zh", "ko"])
     def test_the_download_button_is_offered_and_next_still_waits_for_a_dictionary(
         self, wizard_factory, test_config, code
     ):
