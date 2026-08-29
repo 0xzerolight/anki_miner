@@ -12,6 +12,7 @@ from typing import Callable
 from anki_miner.config import paths as config_paths
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.services._sqlite_index import (
+    language_identity,
     open_readonly,
     prove_owned_slot,
     read_slot_language,
@@ -118,7 +119,7 @@ def import_android_audio_db(
             dest_root,
             derive_pack_id(db_path.stem),
             "audio",
-            {"source_db": str(db_path)},
+            {"source_db": str(db_path), **language_identity(language)},
         )
     if pack_id == "jpod101":
         raise SetupError("Pack id 'jpod101' is reserved for the online JPod101 source")
@@ -219,7 +220,7 @@ def import_audio_pack(
             dest_root,
             derive_pack_id(pack_dir.name),
             "audio",
-            {"pack_dir": str(pack_dir)},
+            {"pack_dir": str(pack_dir), **language_identity(language)},
         )
     if pack_id == "jpod101":
         # Reserved for the online JPod101 source: its cache files are named
