@@ -1,0 +1,1 @@
+"""Korean language profile."""
