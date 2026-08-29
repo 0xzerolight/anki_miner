@@ -1176,8 +1176,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self._loading = False
 
     def set_mining_language(self, code: str) -> None:
-        """Point the selector at the language that is actually live."""
+        """Point the selector at the language that is actually live.
+
+        Also re-indexes search. The window calls this after adopting the new
+        config, so the language gate has already moved its rows by now, and the
+        index carries a visibility verdict that is otherwise a switch out of
+        date — the incoming language's rows on screen and unsearchable, the
+        outgoing language's gone and still listed.
+        """
         self.filtering_panel.set_mining_language(code)
+        self.refresh_setting_search_index()
 
     def open_subtab(self, key: str) -> None:
         """Switch the settings navigator to the destination named by ``key``.
@@ -1254,12 +1262,18 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         an anchor id self-locating: ``filtering.max_frequency_spinbox`` names
         both the page to open and the control to focus. This tab's own anchors
         get no page — they sit below the navigator and are always on screen.
+
+        Each source names the surface its anchors are laid out on, which is what
+        the index resolves visibility against: the language gate hides rows on
+        the panel, and only a panel-relative check sees that while the tab is
+        still unshown.
         """
         sources = [
             SettingSearchSource(
                 page_key="",
                 breadcrumb=self.tr("Settings"),
                 anchors=super().setting_anchors(),
+                host=self,
             )
         ]
         for host in self.setting_anchor_hosts():
@@ -1269,24 +1283,39 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     page_key=key,
                     breadcrumb=self._page_breadcrumbs[key],
                     anchors=host.setting_anchors(),
+                    # Every host is a FormPanel; SettingAnchorHost is the mixin
+                    # in front of the Qt base, so the widget half needs saying.
+                    host=cast("QWidget", host),
                 )
             )
         return tuple(sources)
 
     def setting_search_entries(self) -> tuple[SettingSearchEntry, ...]:
-        """The current search index, in navigator order."""
+        """Every addressable setting, in navigator order.
+
+        The address book, not the result list: :meth:`jump_to_setting` resolves
+        System Health's Fix deep links against it, and those must keep landing
+        whatever the active language hides.
+        """
         return tuple(self._search_entries.values())
 
     def refresh_setting_search_index(self) -> None:
         """Rebuild the search index from the anchors registered right now.
 
-        Called once at the end of construction, when the translators are in
-        place. Call it again after registering or dropping anchors; nothing
-        rebuilds it implicitly, because nothing else knows when the set changed.
+        Called at the end of construction, when the translators are in place,
+        and again whenever the mining language changes — the gate moves rows,
+        and visibility is resolved at index time. Call it too after registering
+        or dropping anchors; nothing rebuilds it implicitly, because nothing
+        else knows when the set changed.
+
+        The two halves are deliberately different sets. Everything stays
+        addressable by id; only what is on screen is offered as a result,
+        because search reveals nothing and a jump to a hidden control scrolls,
+        focuses and flashes something the user cannot see.
         """
         entries = build_entries(self.setting_search_sources())
         self._search_entries = {entry.stable_id: entry for entry in entries}
-        self.search_box.set_entries(entries)
+        self.search_box.set_entries(tuple(entry for entry in entries if entry.visible))
 
     def jump_to_setting(self, stable_id: str) -> None:
         """Open the page holding ``stable_id`` and reveal that exact control.
