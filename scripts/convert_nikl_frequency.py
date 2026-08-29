@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert the NIKL frequency + learner-vocabulary lists into app inputs.
+"""Convert the NIKL frequency list into an app input.
 
 Emits a CSV whose header DECLARES its direction, so the importer never falls
 back to the statistical probe (services/frequency/mode_probe.py). ``count`` is
@@ -12,18 +12,17 @@ Source: NIKL 현대 국어 사용 빈도 조사 2 (2005), 김한샘, 국립국�
 member this reads is ``일반어휘통계.txt`` inside that survey's zip; its
 spreadsheet siblings hold the same table and need no conversion step.
 
-The learner-vocabulary list (한국어 학습용 어휘 목록) is handled by the optional
-``--grades`` path, but note that NIKL publishes it only as a scanned PDF with no
-text layer, under KOGL Type 4 (non-commercial, NO derivatives). Nothing derived
-from it may ship; the grade path exists for a differently-licensed, machine-
-readable list.
+The learner-vocabulary list (한국어 학습용 어휘 목록) is NOT converted here. NIKL
+publishes it only as a scanned PDF with no text layer, under KOGL Type 4
+(non-commercial, NO derivatives), so nothing derived from it may ship — which
+left the grade map with no input it could ever legally be given.
 
 Every line marked "Ledger" below is a shape recorded by the Task 3.9 spike
 against the real archive, not a guess: change it here if the source layout ever
 changes.
 
 Usage:
-  python scripts/convert_nikl_frequency.py FREQ.tsv OUT.csv [--grades GRADES.tsv --grades-out G.json]
+  python scripts/convert_nikl_frequency.py FREQ.tsv OUT.csv
 """
 
 from __future__ import annotations
@@ -31,7 +30,6 @@ from __future__ import annotations
 import argparse
 import codecs
 import csv
-import json
 import re
 import unicodedata
 from pathlib import Path
@@ -47,11 +45,6 @@ _UTF16_BOMS = (codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)
 #: the miner never produces. Exactly two digits: the eight one-digit tails in the
 #: source (레짐8, 한가닥1) are corpus typos belonging to the term.
 _HOMOGRAPH_INDEX_RE = re.compile(r"\d{2}$")
-
-#: Ledger A5 — the learner list's 최종등급 column is Latin A/B/C (its report says
-#: the tiers were lettered to keep them apart from the hangul and numeric
-#: frequency units), NOT 초급/중급/고급.
-_GRADES = frozenset({"A", "B", "C"})
 
 #: Ledger A2/A4 — tab-delimited columns 순위, 빈도, 어휘, 풀이, 품사. Only the
 #: first three indices are stable: 풀이 carries tab-separated variant hanja, so
@@ -94,8 +87,8 @@ def _normalize_term(cell: str) -> str:
     return _HOMOGRAPH_INDEX_RE.sub("", unicodedata.normalize("NFC", cell.strip())).strip()
 
 
-def convert(freq_path: Path, grades_path: Path | None, out_csv: Path, out_grades_json: Path | None) -> tuple[int, int]:
-    """Write the declared-direction frequency CSV and the optional grade map."""
+def convert(freq_path: Path, out_csv: Path) -> int:
+    """Write the declared-direction frequency CSV. Returns the row count."""
     totals: dict[str, int] = {}
     for row in _read_rows(freq_path):
         if len(row) <= _TERM_COLUMN:
@@ -114,47 +107,16 @@ def convert(freq_path: Path, grades_path: Path | None, out_csv: Path, out_grades
         writer = csv.writer(f)
         writer.writerow(["term", "count"])  # the direction declaration
         writer.writerows(totals.items())
-
-    grades: dict[str, str] = {}
-    if grades_path is not None:
-        for row in _read_rows(grades_path):
-            cells = [c.strip() for c in row if c.strip()]
-            tier = next((c for c in cells if c in _GRADES), None)
-            if tier is None:  # also skips the header row
-                continue
-            # Ledger A5: 빈도순위 leads the row, so the word is the first cell
-            # that is neither the ordinal nor a grade letter.
-            term = ""
-            for cell in cells:
-                if cell in _GRADES or _cell_int(cell) is not None:
-                    continue
-                term = _normalize_term(cell)
-                if term:
-                    break
-            if term:
-                grades.setdefault(term, tier)
-        if out_grades_json is not None:
-            out_grades_json.parent.mkdir(parents=True, exist_ok=True)
-            out_grades_json.write_text(
-                json.dumps(grades, ensure_ascii=False, sort_keys=True, indent=0) + "\n", encoding="utf-8"
-            )
-    return len(totals), len(grades)
+    return len(totals)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("freq")
     parser.add_argument("out_csv")
-    parser.add_argument("--grades")
-    parser.add_argument("--grades-out")
     args = parser.parse_args()
-    rows, grades = convert(
-        Path(args.freq),
-        Path(args.grades) if args.grades else None,
-        Path(args.out_csv),
-        Path(args.grades_out) if args.grades_out else None,
-    )
-    print(f"wrote {rows} frequency rows, {grades} grade rows")
+    rows = convert(Path(args.freq), Path(args.out_csv))
+    print(f"wrote {rows} frequency rows")
     return 0
 
 

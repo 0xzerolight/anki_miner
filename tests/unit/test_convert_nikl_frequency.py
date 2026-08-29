@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import csv
 import importlib.util
-import json
 import sys
 import unicodedata
 from pathlib import Path
@@ -41,19 +40,6 @@ _FREQ_ROWS = [
 ]
 _FREQ_TSV = "\r\n".join(_FREQ_ROWS) + "\r\n"
 
-# Ledger A5 (corrected by the spike): the learner list's 최종등급 is A/B/C, not
-# 초급/중급/고급, and its first column is 빈도순위 — a number, not the word.
-_GRADE_TSV = (
-    "\r\n".join(
-        [
-            "빈도순위\t단어\t품사\t풀이\t최종등급\t1차 판정\t1차 등급\t중간 등급",
-            "185\t손01\t명\t신체의 일부\tA\tA:6\tA+\tA",
-            "1904\t노새\t명\t말과의 짐승\tC\tC:3\tC\tC",
-        ]
-    )
-    + "\r\n"
-)
-
 
 def _write_utf16(tmp_path: Path, name: str, text: str) -> Path:
     """Write the primary member's real encoding: UTF-16 LE with a BOM."""
@@ -80,10 +66,10 @@ def _body(out: Path) -> dict[str, str]:
 
 def test_emitted_header_declares_occurrence_direction(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    rows, grades = cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    rows = cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     header = next(csv.reader(out.open(encoding="utf-8")))
     assert header == ["term", "count"]
-    assert (rows, grades) == (len(_body(out)), 0)
+    assert rows == len(_body(out))
     # The importer only reads a declaration off a row it recognises as a header.
     assert _is_frequency_header(header)
     assert _header_frequency_mode(header) == "occurrence-based"
@@ -91,7 +77,7 @@ def test_emitted_header_declares_occurrence_direction(tmp_path: Path) -> None:
 
 def test_declared_direction_short_circuits_the_probe(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     header, *body = list(csv.reader(out.open(encoding="utf-8")))
     values = {term: (int(count),) for term, count in body}
     # 하다 is a ko probe term but 노새's partner terms are absent, so a probe
@@ -101,7 +87,7 @@ def test_declared_direction_short_circuits_the_probe(tmp_path: Path) -> None:
 
 def test_counts_are_preserved_not_reranked(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     # 빈도 (index 1) is the emitted value, never 순위 (index 0).
     assert _body(out) == {
         "하다": "63825",
@@ -115,7 +101,7 @@ def test_counts_are_preserved_not_reranked(tmp_path: Path) -> None:
 
 def test_homograph_indices_are_stripped_and_their_counts_summed(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     body = _body(out)
     # 하다01 + 하다02: the miner mines the surface form 하다, so the rows merge
     # by sum. First-wins would report 42900 and lose 20925.
@@ -127,14 +113,14 @@ def test_homograph_indices_are_stripped_and_their_counts_summed(tmp_path: Path) 
 
 def test_a_numeric_gloss_never_becomes_the_count(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     # 빵80 carries 풀이 "80": picking the last numeric cell yields the gloss.
     assert _body(out)["빵"] == "2"
 
 
 def test_ragged_rows_read_by_fixed_index(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     # 곡차02's 풀이 spills variant hanja across four extra cells; indices 1 and 2
     # are still the count and the term.
     assert _body(out)["곡차"] == "14"
@@ -142,7 +128,7 @@ def test_ragged_rows_read_by_fixed_index(tmp_path: Path) -> None:
 
 def test_terms_are_stripped_and_nfc(tmp_path: Path) -> None:
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), None, out, None)
+    cnf.convert(_write_utf16(tmp_path, "freq.tsv", _FREQ_TSV), out)
     terms = list(_body(out))
     assert "노새" in terms
     assert all(t == unicodedata.normalize("NFC", t.strip()) for t in terms)
@@ -153,7 +139,7 @@ def test_a_cp949_member_decodes_too(tmp_path: Path) -> None:
     # cp949. BOM-less cp949 bytes decode as UTF-16 garbage instead of raising,
     # so the ladder must not offer UTF-16 to them.
     out = tmp_path / "nikl.csv"
-    cnf.convert(_write_cp949(tmp_path, "freq.tsv", _CP949_TSV), None, out, None)
+    cnf.convert(_write_cp949(tmp_path, "freq.tsv", _CP949_TSV), out)
     assert _body(out) == {"하다": "42900", "학생": "980", "노새": "9"}
 
 
@@ -161,23 +147,8 @@ def test_an_undecodable_file_is_reported_not_mojibake(tmp_path: Path) -> None:
     bad = tmp_path / "freq.tsv"
     bad.write_bytes(b"\x81\x00\xff\x81\xfe\x00")
     try:
-        cnf.convert(bad, None, tmp_path / "nikl.csv", None)
+        cnf.convert(bad, tmp_path / "nikl.csv")
     except SystemExit as exc:
         assert "could not decode" in str(exc)
     else:  # pragma: no cover - the assertion below reports the failure
         raise AssertionError("undecodable bytes were accepted")
-
-
-def test_grade_map_is_written_as_nfc_json(tmp_path: Path) -> None:
-    out, grades = tmp_path / "nikl.csv", tmp_path / "grades.json"
-    rows, n = cnf.convert(
-        _write_utf16(tmp_path, "freq.tsv", _FREQ_TSV),
-        _write_utf16(tmp_path, "grades.tsv", _GRADE_TSV),
-        out,
-        grades,
-    )
-    assert rows == len(_body(out))
-    # 최종등급 is A/B/C; the word is 단어 (index 1), and it carries the same
-    # homograph index as the frequency list.
-    assert json.loads(grades.read_text(encoding="utf-8")) == {"손": "A", "노새": "C"}
-    assert n == 2
