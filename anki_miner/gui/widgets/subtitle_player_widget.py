@@ -51,7 +51,7 @@ from anki_miner.gui.utils.fonts import (
     japanese_line_spacing,
 )
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
-from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
+from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES, matches_language_tag
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.mpv_loader import create_mpv_player, mpv_available, terminate_mpv_player
@@ -113,6 +113,10 @@ class SubtitlePlayerWidget(QWidget):
         self.subtitle_entries: list[tuple[float, float, str]] = []
         self._offset: float = 0.0
         self._audio_track_override: int | None = None
+        # Mining-language audio-track codes for auto-selection. Set by the
+        # owner (SubtitleViewer / WordCurationDialog) when it holds a config;
+        # this widget is constructed without one, so ja is the default.
+        self.audio_track_codes: frozenset[str] = JAPANESE_LANGUAGE_CODES
 
         # Player is None until the first set_source call; one instance per
         # widget lifetime afterwards (loadfile per source).
@@ -607,7 +611,7 @@ class SubtitlePlayerWidget(QWidget):
 
         for position, track in enumerate(audio_tracks):
             lang = (track.get("lang") or "").lower()
-            if lang in JAPANESE_LANGUAGE_CODES:
+            if matches_language_tag(lang, self.audio_track_codes):
                 self.player.aid = track.get("id", position + 1)
                 logger.info("Selected Japanese audio track %d via mpv track metadata", position)
                 return

@@ -44,12 +44,13 @@ from typing import Literal
 
 from PyQt6.QtCore import QCoreApplication
 
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.subtitle_cleaner import clean_reference as _clean_reference
 from anki_miner.utils.audio_track_detector import (
-    JAPANESE_LANGUAGE_CODES,
     SubtitleStream,
     find_japanese_audio_stream,
     list_subtitle_streams,
+    matches_language_tag,
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
@@ -120,7 +121,8 @@ def list_reference_subtitle_streams(config, video: Path) -> list[SubtitleStream]
     user who knows better can still pick one.
     """
     streams = [s for s in list_subtitle_streams(video, resolve_ffprobe(config)) if s.is_text]
-    return sorted(streams, key=_candidate_rank)
+    codes = get_profile(config_language(config)).audio_track_codes
+    return sorted(streams, key=lambda s: _candidate_rank(s, codes))
 
 
 def resolve_reference(
@@ -198,14 +200,18 @@ def resolve_reference(
 # ---------------------------------------------------------------------------
 
 
-def _candidate_rank(stream: SubtitleStream) -> tuple:
+def _candidate_rank(stream: SubtitleStream, codes: frozenset[str]) -> tuple:
     """Sort key ordering reference candidates best-first.
 
-    Dialogue before signs, then Japanese before English before everything else
-    (a same-language reference has the closest cue boundaries), then the default
-    track, then demuxer order as the tiebreak.
+    Dialogue before signs, then the mining language before English before
+    everything else (a same-language reference has the closest cue boundaries),
+    then the default track, then demuxer order as the tiebreak.
+
+    *codes* is the mining language's ``audio_track_codes`` and is required:
+    passing it is what keeps the language decision at the caller, which holds
+    the config.
     """
-    if stream.language_tag in JAPANESE_LANGUAGE_CODES:
+    if matches_language_tag(stream.language_tag, codes):
         language_rank = 0
     elif stream.language_tag in ENGLISH_LANGUAGE_CODES:
         language_rank = 1
@@ -382,7 +388,8 @@ def _audio_reference(
         # Honest labelling: extraction falls back to the FIRST audio track when
         # no Japanese-tagged stream exists, which on dual-audio releases can be
         # the dub — say so instead of claiming "auto-detected Japanese".
-        jp_stream = find_japanese_audio_stream(video, resolve_ffprobe(config))
+        codes = get_profile(config_language(config)).audio_track_codes
+        jp_stream = find_japanese_audio_stream(video, resolve_ffprobe(config), codes=codes)
         if jp_stream is not None:
             label = "Japanese audio"
         else:

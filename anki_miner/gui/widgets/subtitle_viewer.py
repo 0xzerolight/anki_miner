@@ -106,6 +106,8 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         parent: Optional parent widget.
         audio_track_override: Optional 0-indexed audio track to force instead of
             auto-detecting Japanese. None preserves auto-detect (mpv metadata).
+        audio_track_codes: The mining language's audio-track language codes,
+            used for that auto-detect. None keeps the player's ja default.
     """
 
     #: ``exec()`` result meaning "hand this pair to the automatic aligner".
@@ -121,6 +123,7 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         parent=None,
         *,
         audio_track_override: int | None = None,
+        audio_track_codes: frozenset[str] | None = None,
     ):
         super().__init__(parent)
         self._entries: list[tuple[float, float, str]] = list(subtitle_entries)
@@ -138,6 +141,11 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         self._setup_ui(initial_offset)
         self._setup_shortcuts()
         add_min_max_buttons(self)
+
+        # Set before set_source: that call is what triggers the mpv load whose
+        # file-loaded event picks the audio track.
+        if audio_track_codes is not None:
+            self.player_widget.audio_track_codes = audio_track_codes
 
         self.player_widget.source_loaded.connect(self._on_source_loaded)
         self.player_widget.playback_failed.connect(self._on_playback_failed)

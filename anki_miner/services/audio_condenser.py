@@ -44,11 +44,12 @@ from typing import TYPE_CHECKING
 
 import pysubs2
 
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
-from anki_miner.utils.audio_track_detector import is_japanese_language_tag, list_subtitle_streams
+from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_utils import no_window_kwargs
@@ -944,7 +945,9 @@ def _resolve_embedded_subtitle(
     if not streams:
         return None, None, CondenseResult(CondenseStatus.NO_SOURCE)
 
-    stream = _pick_subtitle_stream(streams, subtitle_track_override)
+    stream = _pick_subtitle_stream(
+        streams, subtitle_track_override, get_profile(config_language(config)).audio_track_codes
+    )
     if stream is None:
         if subtitle_track_override is not None:
             return None, None, CondenseResult(CondenseStatus.SUBTITLE_TRACK_NOT_FOUND)
@@ -961,8 +964,14 @@ def _resolve_embedded_subtitle(
     return extracted, extracted, None
 
 
-def _pick_subtitle_stream(streams: list[SubtitleStream], subtitle_track_override: int | None) -> SubtitleStream | None:
-    """Choose a subtitle stream: override, then non-forced/Japanese/demux order."""
+def _pick_subtitle_stream(
+    streams: list[SubtitleStream], subtitle_track_override: int | None, codes: frozenset[str]
+) -> SubtitleStream | None:
+    """Choose a subtitle stream: override, then non-forced/mining-language/demux order.
+
+    *codes* is the mining language's ``audio_track_codes`` and is required: the
+    caller holds the config, so the language decision never lives here.
+    """
     if subtitle_track_override is not None:
         return next((s for s in streams if s.sub_index == subtitle_track_override), None)
     text_streams = [s for s in streams if s.is_text]
@@ -972,7 +981,7 @@ def _pick_subtitle_stream(streams: list[SubtitleStream], subtitle_track_override
         text_streams,
         key=lambda stream: (
             stream.is_forced,
-            not is_japanese_language_tag(stream.language_tag),
+            not matches_language_tag(stream.language_tag, codes),
             stream.sub_index,
         ),
     )
