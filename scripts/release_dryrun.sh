@@ -267,7 +267,11 @@ assert_installer_upgrade_terminal() {
 assert_installer_upgrade_terminal
 
 echo "=== artifact size report ==="
-if ! python3 "$(dirname "$0")/artifact_size_report.py" --run-id "$RUN_ID" --repo "$REPOSITORY"; then
+# Prefer the project venv python (health.sh convention) — bare python3 is
+# shimmed on some dev machines and the report only ever runs locally.
+SIZE_PY="python3"
+[ -x "$(dirname "$0")/../.venv/bin/python" ] && SIZE_PY="$(dirname "$0")/../.venv/bin/python"
+if ! "$SIZE_PY" "$(dirname "$0")/artifact_size_report.py" --run-id "$RUN_ID" --repo "$REPOSITORY"; then
   echo "ERROR: artifact size gate failed (see the per-artifact lines above)." >&2
   exit 1
 fi
