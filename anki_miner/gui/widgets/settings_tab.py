@@ -148,6 +148,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         manage_profiles_requested: Emitted by the footer's "Settings Profiles…"
             button. The window opens the dialog, not this tab: a profile switch
             reloads every panel here from the incoming config.
+        mining_language_requested: Re-emitted from the Filtering panel's mining
+            language selector. The window runs the guard and commits, because a
+            switch clears queues and reloads every panel in this tab.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -164,6 +167,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     vad_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
     manage_profiles_requested = pyqtSignal()
+    mining_language_requested = pyqtSignal(str)  # Emits the requested language code
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -718,6 +722,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
+        self.filtering_panel.mining_language_requested.connect(self.mining_language_requested)
 
         # UI panel persists immediately on any change (live-preview model).
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
@@ -936,6 +941,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             for double_spinbox in panel.findChildren(QDoubleSpinBox):
                 double_spinbox.valueChanged.connect(self._on_settings_edited)
             for combo in panel.findChildren(QComboBox):
+                if combo is getattr(panel, "mining_language_combo", None):
+                    # Proposes a guarded switch which commits its own config;
+                    # arming the debounce here would re-save the pre-switch
+                    # panel state on top of it.
+                    continue
                 combo.currentIndexChanged.connect(self._on_settings_edited)
             for list_widget in panel.findChildren(QListWidget):
                 # Excluded-decks list mutates via Add/Remove buttons, so the
@@ -1147,6 +1157,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.ui_panel.load_from_config(self.config)
         finally:
             self._loading = False
+
+    def set_mining_language(self, code: str) -> None:
+        """Point the selector at the language that is actually live."""
+        self.filtering_panel.set_mining_language(code)
 
     def open_subtab(self, key: str) -> None:
         """Switch the settings navigator to the destination named by ``key``.

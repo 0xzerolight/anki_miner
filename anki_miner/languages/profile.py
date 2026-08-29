@@ -239,3 +239,9 @@ class LanguageProfile:
     card_field_defaults: Mapping[str, str]
     render_hooks: tuple[CardRenderHook, ...]
     content_style: ContentTextStyle
+    #: Why this language cannot mine on THIS machine, or ``None`` when it can.
+    #: Optional like ``reading``/``sentence_annotator``, and last because it is
+    #: the only defaulted field - every profile that has nothing optional to
+    #: report leaves it unset. The probe runs at call time (zh answers from
+    #: ``find_spec``), never at construction: the profile itself always builds.
+    unavailable_reason: Callable[[], str | None] | None = None

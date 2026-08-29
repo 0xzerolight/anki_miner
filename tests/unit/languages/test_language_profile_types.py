@@ -33,6 +33,7 @@ EXPECTED_FIELDS = (
     "card_field_defaults",
     "render_hooks",
     "content_style",
+    "unavailable_reason",
 )
 
 

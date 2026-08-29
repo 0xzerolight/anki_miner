@@ -7,6 +7,7 @@ from pathlib import Path
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QHBoxLayout,
     QInputDialog,
@@ -19,6 +20,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.utils.qt_helpers import (
     configure_data_view,
@@ -64,6 +66,8 @@ class FilteringSettingsPanel(FormPanel):
             local known-words cache.
         manage_known_words_requested: Emitted when the user opens the Manage
             Known Words dialog (Issue #42).
+        mining_language_requested: Emitted when the user picks another mining
+            language. The window runs the guard and decides.
     """
 
     ANCHOR_NAMESPACE = "filtering"
@@ -71,6 +75,7 @@ class FilteringSettingsPanel(FormPanel):
     fetch_decks_requested = pyqtSignal()
     rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
+    mining_language_requested = pyqtSignal(str)  # proposes a switch; never commits one
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
@@ -86,6 +91,24 @@ class FilteringSettingsPanel(FormPanel):
         # non-ja rows to the same one. A second assignment would drop these
         # pairs, so this is the only place it is bound.
         self._language_gate_pairs: list[tuple[QWidget, str]] = []
+
+        # Mining Language section. First, because every row below it is scoped
+        # to the language this one names.
+        self.add_section(self.tr("Mining Language"))
+
+        self.mining_language_combo = QComboBox()
+        for code, display_name in available_mining_languages():
+            self.mining_language_combo.addItem(display_name, code)
+        self.mining_language_combo.currentIndexChanged.connect(self._on_mining_language_changed)
+        self.add_field(
+            self.tr("Mining Language"),
+            self.mining_language_combo,
+            helper=self.tr(
+                "The language you mine. Separate from the interface language "
+                "(Settings -> Appearance & Language). Switching swaps dictionaries, "
+                "filters, deck and card fields to that language's own settings."
+            ),
+        )
 
         # Word Frequency section. Frequency-source management lives on its own
         # settings page; only the rank band — a filter — stays here.
@@ -812,6 +835,28 @@ class FilteringSettingsPanel(FormPanel):
         """Enable or disable the Add Deck button."""
         self.add_deck_button.setEnabled(enabled)
 
+    def set_mining_language(self, code: str) -> None:
+        """Point the combo at ``code`` without proposing a switch.
+
+        Signals blocked: this runs from ``load_from_config`` and from the
+        window's re-point after a REFUSED switch, and an emit there would ask
+        for the switch that was just refused.
+        """
+        index = self.mining_language_combo.findData(code)
+        if index < 0:
+            return
+        self.mining_language_combo.blockSignals(True)
+        try:
+            self.mining_language_combo.setCurrentIndex(index)
+        finally:
+            self.mining_language_combo.blockSignals(False)
+
+    def _on_mining_language_changed(self, index: int) -> None:
+        """Propose a switch. The window decides, and re-points this combo."""
+        code = self.mining_language_combo.itemData(index)
+        if isinstance(code, str) and code:
+            self.mining_language_requested.emit(code)
+
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)
     # ------------------------------------------------------------------
@@ -823,6 +868,9 @@ class FilteringSettingsPanel(FormPanel):
         Word-list selectors always set the value (including '' when the path is
         None) so Reset-to-Defaults clears a previously visible path (T-11).
         """
+        # config_language, not config.language: an unregistered code mines as
+        # Japanese, and the selector has to show the language actually in force.
+        self.set_mining_language(config_language(config))
         # Signals blocked while loading: a stored band with min > max (reachable
         # only by hand-editing gui_config.json) would otherwise have the clamp
         # silently rewrite the other end during a plain load.
