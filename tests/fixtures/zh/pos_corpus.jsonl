@@ -1,0 +1,3 @@
+{"id":"zh01","sentence":"我昨天看了一部非常漂亮的电影。","must_mine":["非常","漂亮","电影"],"must_not_mine":["我","的","了","。"],"note":"pronoun/particle/punct dropped; adverb, adjective and noun kept"}
+{"id":"zh02","sentence":"他在图书馆学习。","must_mine":["图书馆","学习"],"must_not_mine":["他","在","。"],"note":"preposition p and pronoun r are outside allowed_pos"}
+{"id":"zh03","sentence":"这个电影非常有意思。","must_mine":["电影","非常"],"must_not_mine":["这个","。"],"note":"demonstrative r dropped"}
