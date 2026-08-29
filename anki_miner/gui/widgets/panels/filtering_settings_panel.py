@@ -28,7 +28,7 @@ from anki_miner.gui.utils.qt_helpers import (
 )
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.wordset_service import load_wordset_catalog
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -875,7 +875,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
-        apply_language_gate(self._language_gate_pairs, get_profile(config.language).capabilities)
+        apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.

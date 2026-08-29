@@ -36,6 +36,16 @@ _ANDROID = "anki_miner.gui.workers.import_worker.import_android_audio_db"
 _YOMITAN = "anki_miner.gui.workers.import_worker.import_yomitan_zip"
 
 
+@pytest.fixture(autouse=True)
+def _zh_profile_registered(monkeypatch):
+    """``config_language`` degrades a code with no registered profile to ja, so
+    the zh legs need one registered before they can stamp zh at all. Registering
+    it changes nothing for the ja legs."""
+    from tests.unit.languages.stub_registry import register_stub_profile
+
+    register_stub_profile(monkeypatch, "zh")
+
+
 def _fake_result():
     return type(
         "R",

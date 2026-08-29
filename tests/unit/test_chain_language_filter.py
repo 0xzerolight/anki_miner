@@ -122,8 +122,9 @@ def test_ja_slot_in_a_ja_session_never_warns(tmp_path):
     assert result.warnings == []
 
 
-def test_dict_chain_skips_without_a_load_result(tmp_path):
+def test_dict_chain_skips_without_a_load_result(tmp_path, monkeypatch):
     """The skip is the registry's, not the sink's: no load_result, same chain."""
+    register_stub_profile(monkeypatch, "ko")
     registry = DictionaryRegistry(tmp_path)
     registry._dicts = {"ja-dict": _dict_meta("ja-dict", "ja", tmp_path)}
     config = dataclasses.replace(
@@ -139,7 +140,8 @@ def test_dict_chain_skips_without_a_load_result(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_frequency_chain_drops_other_language_slots(tmp_path):
+def test_frequency_chain_drops_other_language_slots(tmp_path, monkeypatch):
+    register_stub_profile(monkeypatch, "ko")
     registry = FrequencySourceRegistry(tmp_path)
     registry._sources = {
         "ja-freq": FreqSourceMeta(
@@ -161,7 +163,8 @@ def test_frequency_chain_drops_other_language_slots(tmp_path):
     assert registry.build_sources(config) == []
 
 
-def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path):
+def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path, monkeypatch):
+    register_stub_profile(monkeypatch, "zh")
     registry = FrequencySourceRegistry(tmp_path)
     registry._sources = {
         "ja-freq": _freq_meta("ja-freq", "ja", tmp_path),
@@ -186,7 +189,8 @@ def test_frequency_chain_warns_and_keeps_the_matching_slot(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_pitch_chain_drops_other_language_slots(tmp_path):
+def test_pitch_chain_drops_other_language_slots(tmp_path, monkeypatch):
+    register_stub_profile(monkeypatch, "ko")
     registry = PitchSourceRegistry(tmp_path)
     registry._sources = {
         "ja-pitch": _pitch_meta("ja-pitch", "ja", tmp_path),
@@ -221,7 +225,8 @@ def test_pitch_chain_keeps_every_slot_for_ja(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_audio_pack_chain_drops_other_language_slots(tmp_path):
+def test_audio_pack_chain_drops_other_language_slots(tmp_path, monkeypatch):
+    register_stub_profile(monkeypatch, "zh")
     registry = AudioPackRegistry(tmp_path)
     registry._packs = {
         "ja-pack": _pack_meta("ja-pack", "ja", tmp_path),

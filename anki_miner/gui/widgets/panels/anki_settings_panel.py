@@ -20,7 +20,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.note_presets import (
     NOTE_PRESETS,
     NotePreset,
@@ -1055,7 +1055,7 @@ class AnkiSettingsPanel(FormPanel):
         self.set_pitch_category_format(config.pitch_category_format)
         self.set_card_type(config.card_type)
         self.set_card_type_marker_fields(config.card_type_marker_fields)
-        apply_language_gate(self._language_gate_pairs, get_profile(config.language).capabilities)
+        apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.

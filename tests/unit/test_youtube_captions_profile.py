@@ -19,12 +19,15 @@ KO = CaptionLangs(
 
 @pytest.fixture()
 def ko_config(monkeypatch, test_config):
-    """A ko-shaped profile, injected: Stage 1B registers ja only."""
-    from anki_miner.languages import registry
+    """A ko-shaped profile, registered: Stage 1B registers ja only.
 
-    real = registry.get_profile
-    ko_profile = dataclasses.replace(real("ja"), code="ko", captions=KO)
-    monkeypatch.setattr(registry, "get_profile", lambda code: ko_profile if code == "ko" else real(code))
+    Registered rather than monkeypatched over ``get_profile``, because
+    ``config_language`` degrades an unregistered code to ja before the profile
+    is ever resolved.
+    """
+    from tests.unit.languages.stub_registry import register_stub_profile
+
+    register_stub_profile(monkeypatch, "ko", captions=KO)
     return dataclasses.replace(test_config, language="ko")
 
 

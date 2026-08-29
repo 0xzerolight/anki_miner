@@ -86,6 +86,59 @@ def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeyp
     assert emitted[-1].language not in emitted[-1].language_stash
 
 
+def test_an_unregistered_language_degrades_to_ja():
+    """`_LANGUAGE_CODES` whitelists zh/ko before their profiles exist, so a
+    hand-edited config carries a code the registry cannot build. Pre-1B the
+    field was inert; degrading here keeps it inert instead of raising out of
+    every `get_profile(config_language(config))` site."""
+    from anki_miner.languages.registry import available_languages, config_language
+
+    assert "zh" not in available_languages()
+    assert config_language(AnkiMinerConfig(language="zh")) == "ja"
+
+
+def test_a_registered_language_is_returned_verbatim(monkeypatch):
+    """Self-heals the moment Stage 2A registers the real profile."""
+    from anki_miner.languages.registry import config_language
+    from tests.unit.languages.stub_registry import register_stub_profile
+
+    register_stub_profile(monkeypatch, "zh")
+    assert config_language(AnkiMinerConfig(language="zh")) == "zh"
+
+
+def test_the_degrade_is_logged_once_per_code(caplog, monkeypatch):
+    from anki_miner.languages import registry
+
+    monkeypatch.setattr(registry, "_DEGRADE_WARNED", set())
+    with caplog.at_level("WARNING", logger="anki_miner.languages.registry"):
+        for _ in range(3):
+            registry.config_language(AnkiMinerConfig(language="zh"))
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1
+    assert "zh" in warnings[0].getMessage()
+
+
+def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
+    """The finding's crash site: `load_from_config` resolves the profile's
+    capabilities, and an unbuilt code used to raise ValueError with no in-app
+    recovery."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
+    from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+
+    cfg = dataclasses.replace(test_config, language="zh")
+    # Held in a list: qtbot.addWidget keeps only a weakref.
+    panels = [FilteringSettingsPanel(), AnkiSettingsPanel()]
+    for panel in panels:
+        qtbot.addWidget(panel)
+        panel.load_from_config(cfg)
+
+
+def test_anki_service_accepts_an_unregistered_language(test_config):
+    from anki_miner.services.anki_service import AnkiService
+
+    assert AnkiService(dataclasses.replace(test_config, language="zh")) is not None
+
+
 def test_old_build_drops_the_key_without_raising(isolated_config_file):
     """Downgrade simulation: an unknown key is dropped by the valid-keys filter
     in _migrate_dict, exactly as `language` would be on a pre-Stage-0 build."""

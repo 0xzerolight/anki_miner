@@ -22,8 +22,14 @@ def _notes(*values):
     return [{"fields": {"Expression": {"value": v, "order": 0}}} for v in values]
 
 
-def test_config_language_reads_the_field(test_config):
+def test_config_language_reads_the_field(test_config, monkeypatch):
+    """The field is honoured — for a code whose profile is registered. An
+    unregistered one degrades to ja instead of raising (see
+    test_config_language.py); the stub is what makes zh a real code here."""
+    from tests.unit.languages.stub_registry import register_stub_profile
+
     assert config_language(test_config) == "ja"
+    register_stub_profile(monkeypatch, "zh")
     assert config_language(replace(test_config, language="zh")) == "zh"
 
 
