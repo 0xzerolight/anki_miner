@@ -28,6 +28,8 @@ from anki_miner.gui.controllers.source_chain_import_flow import (
     SourceFlowLabels,
 )
 from anki_miner.gui.workers.import_worker import ImportWorker
+from anki_miner.languages.registry import config_language
+from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.pitch_accent import storage
 from anki_miner.services.pitch_accent.source_importer import PITCH_SOURCE_SUFFIXES
 from anki_miner.utils.i18n import tr_format
@@ -105,7 +107,14 @@ class PitchImportFlow(SourceChainImportFlow):
         return stored if isinstance(stored, str) else None
 
     def _make_add_worker(self, source_file: Path, dest_root: Path) -> ImportWorker:
-        return ImportWorker.for_pitch_source(source_file, dest_root, overwrite=False)
+        # Stamped with the language it is added for; the repair factory below
+        # takes none, so a rebuild keeps the slot's own stamp.
+        return ImportWorker.for_pitch_source(
+            source_file,
+            dest_root,
+            overwrite=False,
+            **language_kwarg(config_language(self._get_config())),
+        )
 
     def _make_repair_worker(
         self,

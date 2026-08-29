@@ -33,6 +33,7 @@ from anki_miner.services.pitch_accent.source_importer import (
     repair_pitch_source,
 )
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
+from tests.unit.languages.stub_registry import register_stub_profile
 from tests.unit.test_audio_pack_registry import _make_ajt_pack
 
 
@@ -53,7 +54,10 @@ def test_read_slot_language_falls_back_to_sqlite_without_a_sidecar(tmp_path: Pat
     assert read_slot_language(dest / "zh-freq") == "zh"
 
 
-def test_dictionary_repair_keeps_zh(tmp_path: Path):
+def test_dictionary_repair_keeps_zh(tmp_path: Path, monkeypatch):
+    # A dictionary import folds its keys with the stamped language's profile,
+    # so a zh import needs one registered until Stage 2A builds the real zh.
+    register_stub_profile(monkeypatch, "zh")
     zip_path = build_yomitan_zip(tmp_path / "src" / "d.zip")
     dest = tmp_path / "dicts"
     import_yomitan_zip(zip_path, dest, dict_id="zh-dict", language="zh")
@@ -181,6 +185,7 @@ def _install_android_db_slot(packs_root: Path, pack_id: str, source_db: Path, la
 
 def test_dictionary_reimport_all_replays_the_slot_stamp(language_flow_tab, monkeypatch, tmp_path: Path):
     tab = language_flow_tab
+    register_stub_profile(monkeypatch, "zh")
     zip_path = build_yomitan_zip(tmp_path / "src" / "d.zip")
     import_yomitan_zip(zip_path, tab.config.dicts_root, dict_id="zh-dict", language="zh")
     import_yomitan_zip(zip_path, tab.config.dicts_root, dict_id="ja-dict")

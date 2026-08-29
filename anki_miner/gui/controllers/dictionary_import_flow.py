@@ -32,7 +32,13 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.services._sqlite_index import prove_owned_slot, resolve_managed_slot, slot_language_kwarg
+from anki_miner.languages.registry import config_language
+from anki_miner.services._sqlite_index import (
+    language_kwarg,
+    prove_owned_slot,
+    resolve_managed_slot,
+    slot_language_kwarg,
+)
 from anki_miner.services.dictionary.importers.yomitan_importer import (
     derive_dict_id_from_zip,
     read_yomitan_title,
@@ -181,7 +187,15 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         jobs = [Path(path) for path in zip_path_strs]
 
         def make_worker(zip_path: Path) -> ImportWorker:
-            return ImportWorker.for_yomitan(zip_path, self._get_config().dicts_root)
+            config = self._get_config()
+            # A freshly added dictionary is stamped — and folded — for the
+            # language it is being added for. Reimport All (below) replays the
+            # slot's own stamp instead, so an existing index is never relabelled.
+            return ImportWorker.for_yomitan(
+                zip_path,
+                config.dicts_root,
+                **language_kwarg(config_language(config)),
+            )
 
         def format_label(index: int, total: int, zip_path: Path, message: str | None) -> str:
             label = tr_format(

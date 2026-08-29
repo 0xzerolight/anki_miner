@@ -33,7 +33,8 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.services._sqlite_index import resolve_managed_slot, slot_language_kwarg
+from anki_miner.languages.registry import config_language
+from anki_miner.services._sqlite_index import language_kwarg, resolve_managed_slot, slot_language_kwarg
 from anki_miner.services.audio_packs.formats import scan_importable_packs
 from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
@@ -216,11 +217,15 @@ class AudioPackImportFlow(ModalImportFlowMixin):
 
         # Import all detected packs sequentially using the same chained
         # state-machine pattern as DictionaryImportFlow.reimport_all.
-        dest_root = self._get_config().audio_packs_root
+        config = self._get_config()
+        dest_root = config.audio_packs_root
+        # A newly added pack is stamped for the language it is added under;
+        # the reimport paths replay the slot's own stamp instead.
+        add_language = language_kwarg(config_language(config))
 
         def make_worker(job: tuple[Path, str]) -> ImportWorker:
             pack_dir, _format = job
-            return ImportWorker.for_pack(pack_dir, dest_root)
+            return ImportWorker.for_pack(pack_dir, dest_root, **add_language)
 
         def format_label(
             index: int,
@@ -332,7 +337,12 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._set_import_buttons_enabled(True)
             return
         try:
-            worker = ImportWorker.for_android_audio_db(Path(chosen), self._get_config().audio_packs_root)
+            config = self._get_config()
+            worker = ImportWorker.for_android_audio_db(
+                Path(chosen),
+                config.audio_packs_root,
+                **language_kwarg(config_language(config)),
+            )
         except Exception:
             self._set_import_buttons_enabled(True)
             raise

@@ -62,6 +62,8 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceProgress,
     ResourcePromotionRequest,
 )
+from anki_miner.languages.registry import config_language
+from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.utils.i18n import tr_format
 
@@ -508,6 +510,7 @@ class ResourceDownloadSession(QObject):
                 freqs_root=self._config.freqs_root,
                 pitch_root=self._config.pitch_root,
                 download_dir=self._download_dir,
+                **language_kwarg(config_language(self._config)),
             )
             self._worker = worker
             worker.item_progress.connect(self._on_item_progress)

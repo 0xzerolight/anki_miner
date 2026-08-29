@@ -379,11 +379,21 @@ def import_yomitan_zip(
                 # that regex.
                 progress(min(cur, total), total, f"Inserted {inserted:,} entries")
 
+        # Import-side key folding MUST match the query side (IndexedDictProvider),
+        # which resolves its DictKeyFolding from the SAME language this import
+        # stamps into meta below. A mismatch is silent: the rows land under keys
+        # no query ever builds, so every lookup misses with no exception and no
+        # log line. The import is function-local because languages/ja/support.py
+        # delegates back into services/dictionary/storage.py — a module-level one
+        # would make that a load-order question for no benefit.
+        from anki_miner.languages.registry import get_profile
+
         bulk_insert(
             db_path,
             rows(),
             progress=on_insert_progress if progress else None,
             cancel_check=cancel_check,
+            keys=get_profile(language).dict_keys,
         )
 
         if progress:
