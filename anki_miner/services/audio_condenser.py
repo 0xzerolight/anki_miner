@@ -81,23 +81,27 @@ _BRACKET_PAIRS: tuple[tuple[str, str], ...] = (
 # ---------------------------------------------------------------------------
 
 
-def load_subtitle_events(path: str | Path) -> list[Event]:
+def load_subtitle_events(path: str | Path, *, encodings: tuple[str, ...] | None = None) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
     Uses pysubs2 with a UTF-8 default; on a decode failure it dispatches on a
-    UTF-16/32 BOM when one is present, otherwise retries with ``cp932`` first
-    (the dominant non-BOM non-UTF-8 input), then — only if cp932 also fails to
-    decode — with a charset-normalizer-detected encoding, and finally
-    re-raises the original UTF-8 error (D10). ``Comment`` events are skipped.
+    UTF-16/32 BOM when one is present, otherwise walks the *encodings* ladder
+    (``cp932`` first — the dominant non-BOM non-UTF-8 input) and then, only if
+    every leg fails to decode, a charset-normalizer-detected encoding, finally
+    re-raising the original UTF-8 error (D10). ``Comment`` events are skipped.
     Times come straight from ``event.start`` / ``event.end`` (millisecond
     ints); text is the raw cue text — markup stripping happens later in
     :func:`filter_lines`.
+
+    *encodings* is the mining language's ladder (``None`` = the built-in
+    Japanese one); a config-bearing caller passes
+    ``get_profile(config_language(config)).import_encodings``.
     """
     path = Path(path)
     try:
         subs = pysubs2.load(str(path))
     except UnicodeDecodeError as utf8_error:
-        subs = load_with_fallback_encoding(path, utf8_error)
+        subs = load_with_fallback_encoding(path, utf8_error, encodings=encodings)
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []
@@ -864,7 +868,7 @@ def condense_one(
             return failure
         assert sub_path is not None  # failure is None ⇒ a source was resolved
 
-        events = load_subtitle_events(sub_path)
+        events = load_subtitle_events(sub_path, encodings=get_profile(config_language(config)).import_encodings)
         shifted = shift_events(events, offset_ms)
         filtered = filter_lines(shifted, filtered_chars)
         periods = build_periods(filtered, padding_ms)
