@@ -197,13 +197,19 @@ def detect_subtitle_encoding(path: str | Path, *, encodings: tuple[str, ...] | N
         try:
             head.decode(candidate)
         except UnicodeDecodeError as exc:
-            if exc.end != len(head):
+            # Compare against ``exc.object``, never ``head``: a BOM-stripping
+            # codec (utf_8_sig, the first leg of every profile ladder) hands
+            # the delegate the bytes AFTER the BOM, so its offsets are relative
+            # to those and can never reach len(head) when a BOM is present.
+            # Keying on head made this whole retry unreachable, and a BOM'd
+            # UTF-8 subtitle with a cut tail got named cp932/windows-1251.
+            if exc.end != len(exc.object):
                 continue  # a genuine invalid byte, not a truncation artifact
             # The bounded read can cut mid multi-byte sequence right at the
             # tail; that's an artifact of the bound, not proof this candidate
             # is wrong. Retry without the truncated tail before giving up on it.
             try:
-                head[: exc.start].decode(candidate)
+                exc.object[: exc.start].decode(candidate)
             except UnicodeDecodeError:
                 continue
         except LookupError:
@@ -222,15 +228,17 @@ def _is_japanese_euc_jp_bytes(data: bytes) -> bool:
     *data* is a caller-owned, already-bounded head (never a full file read —
     both callers hold one already). EUC-JP is mostly double-byte, so a
     bounded head can cut mid-character right at the tail; same truncation
-    tolerance as the utf-8/cp932 checks in :func:`detect_subtitle_encoding`.
+    tolerance as the ladder checks in :func:`detect_subtitle_encoding`, and
+    keyed on ``exc.object`` for the same reason (here euc_jp strips nothing, so
+    it is the same bytes — the spelling is what keeps the two in step).
     """
     try:
         text = data.decode("euc_jp")
     except UnicodeDecodeError as exc:
-        if exc.end != len(data):
+        if exc.end != len(exc.object):
             return False  # a genuine invalid byte, not a truncation artifact
         try:
-            text = data[: exc.start].decode("euc_jp")
+            text = exc.object[: exc.start].decode("euc_jp")
         except UnicodeDecodeError:
             return False
     return any(
