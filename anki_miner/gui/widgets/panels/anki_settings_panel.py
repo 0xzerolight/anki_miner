@@ -396,6 +396,16 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the sentence as plain kana."),
         )
 
+        # Chinese measure word / classifier. The canonical zh schema gives it a
+        # named field; ja and ko never see the row and never write the key.
+        self.measure_word_field_input = QLineEdit()
+        self.measure_word_field_input.setPlaceholderText("MeasureWord")
+        self.add_field(
+            self.tr("Measure Word Field"),
+            self.measure_word_field_input,
+            helper=self.tr("Stores the classifier parsed from the dictionary entry. Blank = skip."),
+        )
+
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
@@ -554,6 +564,9 @@ class AnkiSettingsPanel(FormPanel):
                 self.pitch_text_field_input,
             )
             for w in field_row_widgets(self, field)
+        )
+        self._language_gate_pairs.extend(
+            (w, "measure_word") for w in field_row_widgets(self, self.measure_word_field_input)
         )
 
         self.add_stretch()
@@ -865,6 +878,11 @@ class AnkiSettingsPanel(FormPanel):
             "frequency_sort": self.frequency_sort_field_input.text().strip(),
             "source": self.source_field_input.text().strip(),
         }
+        # Language-scoped keys are contributed only while their row is on screen
+        # (or the mapping already carried them). Keeps a ja anki_fields
+        # byte-identical instead of seeding it with an empty zh key.
+        if self.measure_word_field_input.isVisibleTo(self) or "measure_word" in self._loaded_fields:
+            owned["measure_word"] = self.measure_word_field_input.text().strip()
         return {**self._loaded_fields, **owned}
 
     def set_card_fields(self, fields: Mapping[str, str]) -> None:
@@ -886,6 +904,7 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
+        self.measure_word_field_input.setText(fields.get("measure_word", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.pitch_graph_field_input.setText(fields.get("pitch_graph", ""))

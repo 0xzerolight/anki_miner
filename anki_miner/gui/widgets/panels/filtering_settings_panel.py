@@ -431,6 +431,17 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.match_kana_variants_checkbox)
 
+        # Chinese script preference. Generic, language-scoped field - ja and ko
+        # carry "" here and never see this row.
+        self.script_variant_combo = QComboBox()
+        self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
+        self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
+        self.add_field(
+            self.tr("Character Set"),
+            self.script_variant_combo,
+            helper=self.tr("Which spelling the card front and the dictionary lookup prefer."),
+        )
+
         # i+1 Sentence Filter section
         self.add_section(self.tr("i+1 Sentence Filter"))
 
@@ -510,6 +521,12 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.bold_target_in_sentence_checkbox)
 
+        self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
+        self.reading_tone_color_checkbox.setToolTip(
+            self.tr("Wraps each pinyin syllable in a tone class so the card styling can colour it.")
+        )
+        self.add_field("", self.reading_tone_color_checkbox)
+
         # Language-gated rows. Each row contributes its label too, so a hidden
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
@@ -528,6 +545,14 @@ class FilteringSettingsPanel(FormPanel):
         )
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
+        )
+        # The zh rows join the same list. EXTENDED, never assigned: a plain
+        # assignment here would drop the kana and wordset pairs above.
+        self._language_gate_pairs.extend(
+            (w, "script_variants") for w in field_row_widgets(self, self.script_variant_combo)
+        )
+        self._language_gate_pairs.extend(
+            (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
         )
 
         self.add_stretch()
@@ -923,6 +948,10 @@ class FilteringSettingsPanel(FormPanel):
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
         self.set_bold_target_in_sentence(config.bold_target_in_sentence)
+        index = self.script_variant_combo.findData(config.script_variant)
+        if index >= 0:
+            self.script_variant_combo.setCurrentIndex(index)
+        self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
@@ -936,7 +965,7 @@ class FilteringSettingsPanel(FormPanel):
         stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
         so any invalid pattern aborts Save before ``contribute`` is ever called.
         """
-        return replace(
+        updated = replace(
             config,
             min_frequency_rank=self.get_min_frequency_rank(),
             max_frequency_rank=self.get_max_frequency_rank(),
@@ -962,3 +991,13 @@ class FilteringSettingsPanel(FormPanel):
             reading_min_occurrence=self.get_reading_min_occurrence(),
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
         )
+        # Language-scoped rows contribute only while their capability is present.
+        # A ja config holds script_variant "" and the combo has no entry for it,
+        # so a blind write here would drift ja to "simplified" on the next
+        # autosave. Visibility is the gate's own output, so there is one source
+        # of truth for "does this language have this setting".
+        if self.script_variant_combo.isVisibleTo(self):
+            updated = replace(updated, script_variant=str(self.script_variant_combo.currentData()))
+        if self.reading_tone_color_checkbox.isVisibleTo(self):
+            updated = replace(updated, reading_tone_color=self.reading_tone_color_checkbox.isChecked())
+        return updated
