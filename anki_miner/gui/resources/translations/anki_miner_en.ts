@@ -4688,6 +4688,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Deck to exclude from known-words detection:</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5038,6 +5058,16 @@ Add %3 word(s) to your known list?</source>
     </message>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

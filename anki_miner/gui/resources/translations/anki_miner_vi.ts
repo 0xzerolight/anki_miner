@@ -4713,6 +4713,26 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <source>Deck to exclude from known-words detection:</source>
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Tải mô hình tiếng Hàn</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Tải mô hình ngôn ngữ tiếng Hàn vào thư mục của Anki Miner. Bản cài đóng gói có sẵn công cụ tiếng Hàn nhưng không kèm mô hình.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Mô hình tiếng Hàn</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Đã cài đặt</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Chưa cài đặt</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5074,6 +5094,16 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Gỡ bỏ TẤT CẢ các từ bạn đã thêm vào danh sách từ đã biết cục bộ? Không thể hoàn tác. Bộ nhớ đệm đồng bộ với Anki không bị ảnh hưởng.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Đang tải mô hình tiếng Hàn…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Đã cài đặt mô hình tiếng Hàn thành công.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

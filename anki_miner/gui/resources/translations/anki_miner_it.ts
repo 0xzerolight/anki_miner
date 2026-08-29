@@ -4726,6 +4726,26 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <source>Deck to exclude from known-words detection:</source>
         <translation>Mazzo da escludere dal rilevamento delle parole conosciute:</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Scarica modello coreano</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Scarica il modello linguistico coreano nella cartella di Anki Miner. Le installazioni bundle includono il motore coreano senza il suo modello.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Modello coreano</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Installato</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Non installato</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5087,6 +5107,16 @@ Aggiungere %3 parola/e all'elenco delle parole conosciute?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Rimuovere TUTTE le parole aggiunte all'elenco locale delle parole conosciute? Questa operazione non può essere annullata. La cache sincronizzata con Anki non viene modificata.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Download del modello coreano…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Modello coreano installato correttamente.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

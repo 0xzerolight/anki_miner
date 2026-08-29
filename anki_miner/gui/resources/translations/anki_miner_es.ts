@@ -4726,6 +4726,26 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
         <source>Deck to exclude from known-words detection:</source>
         <translation>Mazo a excluir de la detección de palabras conocidas:</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Descargar modelo coreano</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Descarga el modelo de idioma coreano en la carpeta de Anki Miner. Las instalaciones empaquetadas incluyen el motor coreano sin su modelo.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Modelo coreano</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Instalado</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>No instalado</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5087,6 +5107,16 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>¿Eliminar TODAS las palabras que añadió a la lista local de palabras conocidas? Esto no se puede deshacer. La caché sincronizada con Anki no se ve afectada.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Descargando modelo coreano…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Modelo coreano instalado correctamente.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

@@ -4739,6 +4739,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Deck to exclude from known-words detection:</source>
         <translation>Колода, исключаемая из определения известных слов:</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Скачать корейскую модель</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Скачать модель корейского языка в папку Anki Miner. В упакованных сборках корейский движок поставляется без своей модели.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Корейская модель</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Установлено</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Не установлено</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5100,6 +5120,16 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Удалить ВСЕ слова, добавленные вами в локальный список известных слов? Это нельзя отменить. Синхронизированный с Anki кэш не затрагивается.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Скачивание корейской модели…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Корейская модель успешно установлена.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

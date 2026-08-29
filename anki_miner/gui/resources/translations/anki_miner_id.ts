@@ -4713,6 +4713,26 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <source>Deck to exclude from known-words detection:</source>
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Unduh model Korea</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Unduh model bahasa Korea ke folder Anki Miner. Instalasi bundel menyertakan mesin Korea tanpa modelnya.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Model Korea</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Terpasang</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Tidak terpasang</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5074,6 +5094,16 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Hapus SEMUA kata yang Anda tambahkan ke daftar kata yang dikenal lokal? Ini tidak dapat dibatalkan. Cache yang tersinkron dengan Anki tidak terpengaruh.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Mengunduh model Korea…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Model Korea berhasil dipasang.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

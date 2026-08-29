@@ -4726,6 +4726,26 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <source>Deck to exclude from known-words detection:</source>
         <translation>Baralho a excluir da detecção de palavras conhecidas:</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Baixar modelo coreano</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Baixe o modelo de idioma coreano para a pasta do Anki Miner. Instalações empacotadas incluem o mecanismo coreano sem o seu modelo.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Modelo coreano</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Instalado</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Não instalado</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5087,6 +5107,16 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Remover TODAS as palavras que você adicionou à lista local de palavras conhecidas? Isso não pode ser desfeito. O cache sincronizado do Anki não é afetado.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Baixando modelo coreano…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Modelo coreano instalado com sucesso.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

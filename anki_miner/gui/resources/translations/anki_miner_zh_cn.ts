@@ -4713,6 +4713,26 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Deck to exclude from known-words detection:</source>
         <translation>从已知单词检测中排除的牌组：</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>下载韩语模型</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>将韩语语言模型下载到 Anki Miner 的文件夹。打包安装自带韩语引擎，但不含其模型。</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>韩语模型</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>已安装</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安装</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5074,6 +5094,16 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>正在下载韩语模型…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>韩语模型安装成功。</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

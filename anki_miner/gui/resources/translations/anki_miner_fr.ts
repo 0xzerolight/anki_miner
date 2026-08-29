@@ -4726,6 +4726,26 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <source>Deck to exclude from known-words detection:</source>
         <translation>Paquet à exclure de la détection des mots connus :</translation>
     </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Télécharger le modèle coréen</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Télécharger le modèle linguistique coréen dans le dossier d'Anki Miner. Les installations groupées fournissent le moteur coréen sans son modèle.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Modèle coréen</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Installé</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Non installé</translation>
+    </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
@@ -5087,6 +5107,16 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Supprimer TOUS les mots que vous avez ajoutés à la liste locale de mots connus ? Cette action est irréversible. Le cache synchronisé depuis Anki n'est pas affecté.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Téléchargement du modèle coréen…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Modèle coréen installé avec succès.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
