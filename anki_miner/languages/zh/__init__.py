@@ -17,7 +17,7 @@ from anki_miner.languages.profile import (
 )
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
 from anki_miner.languages.zh.audio import ZH_AUDIO
-from anki_miner.languages.zh.availability import zh_unavailable_reason
+from anki_miner.languages.zh.availability import zh_missing_required_reason
 from anki_miner.languages.zh.catalog import ZH_CATALOG
 from anki_miner.languages.zh.fields import ZH_CARD_FIELD_DEFAULTS
 from anki_miner.languages.zh.parser import create_parser
@@ -129,5 +129,8 @@ def build_profile() -> LanguageProfile:
         card_field_defaults=ZH_CARD_FIELD_DEFAULTS,
         render_hooks=ZH_RENDER_HOOKS,
         content_style=ZH_CONTENT_STYLE,
-        unavailable_reason=zh_unavailable_reason,
+        # Required packages only. OpenCC absent leaves the variant lookups empty
+        # and mining working, so gating on it would take the language off the
+        # selector and refuse the switch over a degraded feature.
+        unavailable_reason=zh_missing_required_reason,
     )

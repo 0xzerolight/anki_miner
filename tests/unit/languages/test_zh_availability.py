@@ -30,6 +30,23 @@ class TestUnavailableReason:
         for package in availability.ZH_REQUIRED_PACKAGES + availability.ZH_OPTIONAL_PACKAGES:
             assert package in reason
 
+    def test_an_optional_package_alone_is_not_an_availability_gate(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """OpenCC absent degrades variants; it must not take zh off the menu.
+
+        ``zh_unavailable_reason`` still names it — a full-stack consumer wants
+        the whole list — but the profile's gate reads required packages only.
+        """
+        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
+        assert availability.zh_missing_required_reason() is None
+        assert "opencc" in (availability.zh_unavailable_reason() or "")
+
+    def test_a_missing_required_package_gates_the_language(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
+        reason = availability.zh_missing_required_reason() or ""
+        assert "jieba" in reason
+        assert "opencc" not in reason
+        assert "anki-miner[zh]" in reason
+
     def test_the_probe_reads_the_real_environment(self) -> None:
         # _installed answers from find_spec, so an installed stdlib module is a
         # true probe and a nonsense name is a false one — no import executed.

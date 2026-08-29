@@ -14,6 +14,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import language_choices
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.zh import availability
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> FilteringSettingsPanel:
@@ -44,6 +45,23 @@ def test_a_language_whose_stack_is_missing_is_not_offered(monkeypatch):
         return profile
 
     monkeypatch.setattr(language_choices, "get_profile", fake_get_profile)
+
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja"]
+
+
+def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
+    """R11a: opencc is optional, so its absence degrades a feature, not the menu.
+
+    The profile's gate probes the REQUIRED packages; ``zh_unavailable_reason``
+    keeps naming the optional one for whoever wants the full list.
+    """
+    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
+
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh"]
+
+
+def test_a_missing_required_package_drops_the_language(monkeypatch):
+    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
 
     assert [code for code, _name in language_choices.available_mining_languages()] == ["ja"]
 

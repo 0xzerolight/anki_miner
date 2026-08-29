@@ -17,6 +17,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers import language_switch
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.zh import availability
 
 
 @pytest.fixture(autouse=True)
@@ -219,6 +220,32 @@ def test_a_language_whose_stack_is_missing_is_refused_before_the_guard(test_conf
     assert window.issues == [reason]
     assert queue_state_store.stored_keys() == ("queue.youtube",)
     assert window.screen.cleared == 0
+
+
+def test_a_missing_optional_package_does_not_refuse_the_switch(test_config, monkeypatch):
+    """R11b: the real zh probe gates on REQUIRED packages only.
+
+    ``opencc`` absent leaves the variant lookups empty and mining working, so
+    refusing the switch would disable a language over a degraded feature.
+    """
+    monkeypatch.setattr(language_switch, "get_profile", get_profile)  # the real probe, not the fixture's
+    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
+    window = _FakeWindow(test_config, rows=0)
+
+    assert language_switch.request_language_change(window, "zh") is True
+    assert window.config.language == "zh"
+    assert window.issues == []
+
+
+def test_a_missing_required_package_still_refuses_the_switch(test_config, monkeypatch):
+    monkeypatch.setattr(language_switch, "get_profile", get_profile)
+    monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
+    window = _FakeWindow(test_config, rows=0)
+
+    assert language_switch.request_language_change(window, "zh") is False
+    assert window.config.language == "ja"
+    assert window.guard_kinds == []
+    assert "jieba" in window.issues[0]
 
 
 def test_every_durable_queue_screen_answers_clear_queue():
