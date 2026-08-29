@@ -92,6 +92,22 @@ def test_a_non_widget_window_still_gets_the_prompt(qtbot, monkeypatch, test_conf
     assert seen[0].parent() is None
 
 
+def test_an_unregistered_language_still_gets_the_prompt(qtbot, monkeypatch, test_config):
+    """R7: ``ko`` is a legal stored code with no registered profile until Stage 3.
+
+    ``get_profile`` raises on it, and ``commit_language_change`` swallows the
+    raise - so the prompt would silently never appear. Degrade to ja instead.
+    """
+    seen: list[QMessageBox] = []
+    monkeypatch.setattr(QMessageBox, "exec", lambda self: seen.append(self) or 0)
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _Window(replace(previous, language="ko", excluded_decks=(), anki_deck_name="Korean Mining"))
+
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert len(seen) == 1
+
+
 def test_commit_only_offers_on_a_first_visit(monkeypatch, test_config):
     calls: list[str] = []
     monkeypatch.setattr(language_switch, "offer_first_visit_setup", lambda *a, **k: calls.append("asked"))

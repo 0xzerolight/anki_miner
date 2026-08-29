@@ -883,14 +883,17 @@ class ResourcesPage(_LiveCheckPage):
         # added to a profile's catalog has to appear here without touching this
         # page. ja's catalog IS RECOMMENDED_DEFAULT_SET, so the ja wizard is
         # byte-identical to the pre-multilanguage one.
-        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+        from anki_miner.languages.registry import config_language, get_profile  # noqa: PLC0415
 
         # _sync_download_button reads _download_running, and the toggled
         # connection below deliberately comes AFTER setChecked: a fresh
         # unchecked box emits toggled the first time it is checked, and that
         # slot touches download_button, which this loop runs before.
         self._download_running = False
-        self._specs = list(get_profile(wizard.working_config().language).catalog)
+        # config_language, never the raw field: a stored code with no registered
+        # profile (ko until Stage 3) is legal on disk, and raising here would
+        # make the whole wizard unconstructible on first run.
+        self._specs = list(get_profile(config_language(wizard.working_config())).catalog)
         self.resource_checks: dict[str, QCheckBox] = {}
         for spec in self._specs:
             noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
@@ -964,9 +967,9 @@ class ResourcesPage(_LiveCheckPage):
         visibility of a paired widget, so a switch back re-shows the row.
         """
         from anki_miner.gui.utils.language_gate import apply_language_gate  # noqa: PLC0415
-        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+        from anki_miner.languages.registry import config_language, get_profile  # noqa: PLC0415
 
-        capabilities = get_profile(self._wizard.working_config().language).capabilities
+        capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
         apply_language_gate(self._language_gate_pairs, capabilities)
 
     def initializePage(self) -> None:

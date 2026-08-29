@@ -46,6 +46,20 @@ def test_ja_catalogue_is_the_recommended_default_set(wizard_factory, test_config
     assert not page.pitch_label.isHidden()
 
 
+def test_an_unregistered_language_degrades_instead_of_breaking_the_wizard(wizard_factory, test_config):
+    """R7: ``ko`` is a LEGAL stored code with no registered profile until Stage 3.
+
+    ``get_profile`` raises on it, and this page is built during wizard
+    construction - so a settings import from a future ko build, or a hand-edited
+    ``gui_config.json``, would make the whole wizard unconstructible on first run
+    AND from Tools -> Setup Wizard. ``config_language`` degrades it to ja.
+    """
+    page = wizard_factory(replace(test_config, language="ko")).resources_page
+
+    assert page.selected_specs() == list(RECOMMENDED_DEFAULT_SET)
+    assert not page.pitch_label.isHidden()
+
+
 def test_zh_offers_its_own_catalogue_and_no_pitch_line(wizard_factory, test_config):
     zh_catalog = get_profile("zh").catalog
     page = wizard_factory(switch_language(test_config, "zh")).resources_page

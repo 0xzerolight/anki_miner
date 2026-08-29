@@ -22,7 +22,7 @@ from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.gui.utils import queue_state_store
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.utils.i18n import tr_format
 
@@ -152,7 +152,7 @@ def offer_first_visit_setup(window: Any, previous_config: Any) -> None:
     decks = tuple(name for name in other_language_decks(previous_config) if name not in config.excluded_decks)
     if not decks:
         return
-    display_name = getattr(get_profile(config.language), "display_name", config.language)
+    display_name = getattr(get_profile(config_language(config)), "display_name", config.language)
     # QMessageBox rejects a non-QWidget parent with a TypeError, and the caller
     # wraps this in a try/except - so an unparentable window would not crash,
     # it would silently skip the prompt. Parentless is the honest fallback.
