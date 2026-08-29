@@ -7,6 +7,7 @@ from anki_miner.languages.ko.audio import KO_AUDIO
 from anki_miner.languages.ko.availability import ko_missing_required_reason
 from anki_miner.languages.ko.catalog import KO_CATALOG
 from anki_miner.languages.ko.parser import create_parser
+from anki_miner.languages.ko.render import KO_RENDER_HOOKS
 from anki_miner.languages.ko.script import (
     KO_SENTENCE_RULES,
     KoreanDictKeys,
@@ -24,8 +25,8 @@ __all__ = ["build_profile"]
 
 #: Korean cards start from the same core fields as Japanese, with every
 #: JA-specific field unmapped ("" = feature off, the existing empty-name skip).
-#: The hanja/vocab-grade/pronunciation keys arrive with the ko render hooks
-#: later in this stage, which extends this mapping.
+#: "hanja" is the ko render hook's own key and follows the same convention: the
+#: mapped field name is the switch, so an unmapped key writes nothing.
 KO_CARD_FIELDS: dict[str, str] = {
     "word": "Expression",
     "sentence": "Sentence",
@@ -45,6 +46,7 @@ KO_CARD_FIELDS: dict[str, str] = {
     "frequency_sort": "",
     "source": "",
     "expression_audio": "",
+    "hanja": "",
 }
 
 #: Face candidates for surfaces showing MINED Korean text (not chrome).
@@ -147,7 +149,7 @@ def build_profile() -> LanguageProfile:
         catalog=KO_CATALOG,  # empty by design; ko/catalog.py documents the manual imports
         capabilities=frozenset({"hangul_filters", "hanja"}),
         card_field_defaults=KO_CARD_FIELDS,
-        render_hooks=(),  # filled by the ko render-hooks task later in this stage
+        render_hooks=KO_RENDER_HOOKS,
         content_style=ContentTextStyle(font_role="ko", families=KO_FONT_FAMILIES, wrap=ko_space_wrap),
         # Required packages only, and for Korean both are hard: the profile
         # builds with neither installed, so this probe is the only thing that
