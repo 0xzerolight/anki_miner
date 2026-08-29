@@ -200,7 +200,7 @@ def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, mak
     word.definition_html = "bank; CL:家[jia1]"
     extra: dict[str, str] = {}
     for hook in profile.render_hooks:
-        extra.update(hook.render(word))
+        extra.update(hook.render(word, config=config))
     note = build_note(CardPayload(word=word, media=MediaData(), definition="bank", extra_fields=extra), config, set())
     fields = note.note["fields"]
     assert fields["Expression"] == "银行"

@@ -16,6 +16,7 @@ from anki_miner.languages.zh.reading import pinyin_syllables
 from anki_miner.languages.zh.variants import to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
+    from anki_miner.config.config import AnkiMinerConfig
     from anki_miner.languages.profile import CardRenderHook
 
 # CC-CEDICT writes classifiers inline in the gloss: "CL:家[jia1],個|个[ge4]".
@@ -31,7 +32,8 @@ class ZhMeasureWordHook:
     def field_names(self) -> tuple[str, ...]:
         return ("measure_word",)
 
-    def render(self, word: Any) -> dict[str, str]:
+    def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
+        del config  # the classifier is always emitted when the gloss carries one
         match = _CL_RE.search(getattr(word, "definition_html", "") or "")
         if not match:
             return {}
@@ -55,27 +57,42 @@ class ZhTraditionalHook:
     def field_names(self) -> tuple[str, ...]:
         return ("expression_traditional",)
 
-    def render(self, word: Any) -> dict[str, str]:
+    def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
+        del config  # script_variant selects the CARD FRONT, not this extra field
         form = getattr(word, "mined_form", "") or ""
         traditional = to_traditional(form) if form else ""
         return {"expression_traditional": traditional} if traditional and traditional != form else {}
 
 
 class ZhToneColorHook:
-    """Tone-coloured pinyin as self-contained inline-styled spans.
+    """Pinyin for the extra field, tone-coloured when the config asks for it.
+
+    ``config.reading_tone_color`` is the language-scoped field 2A.11 added; this
+    hook is its only consumer, so it must reach the setting or the setting does
+    nothing. Off, the field carries the same plain pinyin ``word_pinyin`` puts
+    in the reading field.
 
     Inline ``style`` on purpose: the card must carry its own styling, never a
-    note-type-global stylesheet (same rule as the glossary style block).
+    note-type-global stylesheet (same rule as the glossary style block). Both
+    branches escape — this is an HTML field either way, and real pinyin has
+    nothing to escape, so the off branch stays character-identical to the plain
+    reading.
+
+    Syllables are joined with a SPACE, not concatenated: pinyin is a
+    romanisation whose word boundaries are the spaces (yín háng, not yínháng),
+    and the coloured field has to read like the plain one beside it.
     """
 
     def field_names(self) -> tuple[str, ...]:
         return ("expression_pinyin",)
 
-    def render(self, word: Any) -> dict[str, str]:
+    def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
         syllables = pinyin_syllables(getattr(word, "mined_form", "") or "")
         if not syllables:
             return {}
-        spans = "".join(
+        if not getattr(config, "reading_tone_color", False):
+            return {"expression_pinyin": " ".join(html.escape(text) for text, _ in syllables)}
+        spans = " ".join(
             f'<span style="color:{_TONE_COLORS.get(tone, _TONE_COLORS[5])}">{html.escape(text)}</span>'
             for text, tone in syllables
         )

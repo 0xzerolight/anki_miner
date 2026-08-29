@@ -116,10 +116,17 @@ class DictKeyFolding(Protocol):
 
 class CardRenderHook(Protocol):
     """Non-ja extra card fields. ``field_names`` are LOGICAL anki_fields keys
-    (like "frequency"/"glossary"), never Anki field names."""
+    (like "frequency"/"glossary"), never Anki field names.
+
+    ``render`` takes the running :class:`AnkiMinerConfig` keyword-only. Without
+    it a language-scoped setting that only a hook can honour — zh's
+    ``reading_tone_color`` — has nothing to reach: the field would exist,
+    serialize and switch with the language while changing no output anywhere.
+    Keyword-only so a hook cannot bind it to ``word`` by accident.
+    """
 
     def field_names(self) -> tuple[str, ...]: ...
-    def render(self, word: Any) -> dict[str, str]: ...
+    def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]: ...
 
 
 @dataclass(frozen=True)

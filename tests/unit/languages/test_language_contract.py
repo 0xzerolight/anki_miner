@@ -8,6 +8,7 @@ stay exactly as written and later stages only append.
 from __future__ import annotations
 
 import dataclasses
+import inspect
 import os
 import subprocess
 import sys
@@ -93,6 +94,19 @@ def test_render_hook_field_names_are_logical_keys(code):
     logical = set(AnkiMinerConfig().anki_fields)
     for hook in get_profile(code).render_hooks:
         assert set(hook.field_names()) <= logical | EXTRA_HOOK_FIELDS
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_render_hooks_take_the_config_keyword_only(code):
+    """A hook is the only thing that can honour a hook-only scoped setting.
+
+    ``reading_tone_color`` shipped structurally unreachable because ``render``
+    took no config; the keyword-only spelling is what stops the next one from
+    binding to ``word`` instead.
+    """
+    for hook in get_profile(code).render_hooks:
+        parameter = inspect.signature(hook.render).parameters["config"]
+        assert parameter.kind is inspect.Parameter.KEYWORD_ONLY, (code, type(hook).__name__)
 
 
 def test_available_languages_contains_ja():

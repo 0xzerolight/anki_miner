@@ -1550,13 +1550,17 @@ class EpisodeProcessor:
         THE PROCESSOR'S OWN VALUES WIN a collision: a hook may only fill a key
         the pipeline left unset. A raising hook is logged and skipped so one
         bad hook cannot fail the run.
+
+        The config goes in keyword-only because a language-scoped setting whose
+        only consumer is a hook — zh's ``reading_tone_color`` — is otherwise
+        structurally unreachable, however correctly it is stored and switched.
         """
         if self.config.language == "ja":
             return
         word.definition_html = definition
         for hook in self.profile.render_hooks:
             try:
-                rendered = hook.render(word)
+                rendered = hook.render(word, config=self.config)
             except Exception:
                 logger.warning("Render hook %s failed", type(hook).__name__, exc_info=True)
                 continue

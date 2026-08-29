@@ -14,7 +14,7 @@ class _MeasureWordHook:
     def field_names(self):
         return ("measure_word",)
 
-    def render(self, word):
+    def render(self, word, *, config):
         return {"measure_word": f"{word.mined_form}:{word.definition_html}"}
 
 
