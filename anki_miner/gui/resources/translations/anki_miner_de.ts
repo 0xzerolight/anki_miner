@@ -7292,6 +7292,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Empfohlene Ressourcen herunterladen</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>Für diese Sprache werden keine herunterladbaren Ressourcen empfohlen — importieren Sie ein Yomitan-Wörterbuch unter Einstellungen → Wörterbücher und eine Häufigkeitsliste unter Einstellungen → Häufigkeit.</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>Suche nach Offline-Wörterbuch...</translation>
     </message>

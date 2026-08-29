@@ -12,9 +12,13 @@ Three constraints shaped it.
   translators. Building from module-level constants, or snapshotting text when a
   panel is constructed, hands non-English users an index of English.
 * **Search is a jump aid, nothing more.** It never hides, reveals, expands or
-  edits a setting: every setting is visible on its page already, because the
-  Basic/Advanced disclosure was rejected. The only thing activation changes is
-  which page is shown and where focus is.
+  edits a setting: every setting on offer is visible on its page already,
+  because the Basic/Advanced disclosure was rejected. The only thing activation
+  changes is which page is shown and where focus is. The corollary, since the
+  language gate started hiding rows: a setting the active language does not have
+  is not offered, because search cannot reveal it and jumping to it would
+  scroll, focus and flash a control the user cannot see. Hence
+  :attr:`SettingSearchEntry.visible` — resolved here, once, per index build.
 * **Renamed destinations keep answering to their old names.** D10 renamed
   half the destinations. Users did not rename their vocabulary, so a small table
   of previous names is folded into the matched text — see
@@ -87,11 +91,17 @@ class SettingSearchSource:
     ``page_key`` is the stable navigator key :meth:`SettingsTab.open_subtab`
     takes; empty means the setting is not on a page at all (the tab's own
     always-visible controls) and activating it switches no page.
+
+    ``host`` is the surface the anchors are laid out on, and visibility is
+    judged relative to it — never to the window. The index is built before
+    Settings is ever shown, and only one navigator page is on the stack at a
+    time, so a window-relative check calls every anchor invisible.
     """
 
     page_key: str
     breadcrumb: str
     anchors: tuple[SettingAnchor, ...]
+    host: QWidget | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +115,10 @@ class SettingSearchEntry:
     #: Everything matched against, already normalized. ``haystack[0]`` is the
     #: normalized title, which is what ranking reads.
     haystack: tuple[str, ...]
+    #: Whether the setting is on screen for the active language. False entries
+    #: stay addressable by id — deep links resolve against the same index — but
+    #: are kept out of the searchable set the query field is handed.
+    visible: bool = True
 
     @property
     def stable_id(self) -> str:
@@ -115,11 +129,28 @@ class SettingSearchEntry:
         return f"{self.title}  —  {self.breadcrumb}"
 
 
+def is_on_screen(anchor: SettingAnchor, host: QWidget | None) -> bool:
+    """Whether ``anchor``'s control is on screen within ``host``.
+
+    ``isVisibleTo`` and not ``isVisible``: this runs while Settings is still
+    being constructed, so nothing has been shown yet and ``isVisible`` is False
+    for every widget in the app. ``isVisibleTo(host)`` answers the question that
+    is actually being asked — would this control be there if its panel were —
+    and that is exactly what the language gate's ``setVisible`` drives.
+
+    A source with no host claims nothing about layout, so its anchors are taken
+    as on screen.
+    """
+    return True if host is None else anchor.widget.isVisibleTo(host)
+
+
 def build_entries(sources: tuple[SettingSearchSource, ...]) -> tuple[SettingSearchEntry, ...]:
     """Resolve ``sources`` into index entries, reading every string right now.
 
     Call this after the translators are installed; call it again whenever the
-    registered anchors change. Nothing here is cached between calls.
+    registered anchors change **or the language gate moves a row** — visibility
+    is resolved here, so an index built before a switch describes the outgoing
+    language. Nothing here is cached between calls.
     """
     entries: list[SettingSearchEntry] = []
     for source in sources:
@@ -135,6 +166,7 @@ def build_entries(sources: tuple[SettingSearchSource, ...]) -> tuple[SettingSear
                     breadcrumb=source.breadcrumb,
                     title=title,
                     haystack=haystack,
+                    visible=is_on_screen(anchor, source.host),
                 )
             )
     return tuple(entries)

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Wandelt originalsprachige japanische Inhalte in Anki-Vokabelkarten um.
+Wandelt originalsprachige japanische, chinesische und koreanische Inhalte in Anki-Vokabelkarten um.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - **Video** - mine ein einzelnes Video/Untertitel-Paar, einen Stapelordner oder YouTube-URLs.
 - **Deck Builder** - mine eine ganze Serie zu einem nach Häufigkeit geordneten Stapel.
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
-- **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten japanischen Text.
+- **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
 - **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren und Felder bestehender Karten nachträglich befüllen.
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen
 
+- Mining-Sprachen - Japanisch, Chinesisch und Koreanisch, umschaltbar in den Einstellungen. Koreanisch lädt sein Sprachmodell in der App herunter.
 - Word Curator - jedes Kandidatenwort vor der Kartenerstellung prüfen, mit Szene, Manga-Seite und Wörterbucheintrag nebeneinander.
 - Lauf rückgängig machen - die Notizen, die ein Lauf gerade erstellt hat, direkt aus seinem Ergebnisdialog löschen.
 - Umfangreiche Filterung: i+1, Häufigkeitsrang-Bereich, Sperrliste, Regex, Wortgruppen und mehr.
@@ -151,7 +152,7 @@ Möchtest du ein weiteres Theme vorschlagen? Reiche einen Vorschlag als GitHub I
 <details>
 <summary><strong>So funktioniert es</strong></summary>
 
-1. **Untertitel einlesen** und Japanisch in einzelne Wörter zerlegen.
+1. **Untertitel einlesen** und den Text in einzelne Wörter zerlegen.
 2. **Filtern** auf Inhaltswörter, die du noch nicht kennst - optional selbst im Word Curator prüfen.
 3. **Screenshot und Audioclip** für jede Zeile aus dem Video holen.
 4. **Definitionen nachschlagen** in deinen konfigurierten Offline-Wörterbüchern, optional mit Rückgriff auf Jisho online, falls aktiviert (langsamer, ratenbegrenzt).
@@ -195,7 +196,7 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | Wo sind die Logs?      | Hilfe -> Protokollordner öffnen verwenden, oder unter Windows `%USERPROFILE%\.anki_miner\anki_miner.log` bzw. unter macOS/Linux `~/.anki_miner/anki_miner.log` öffnen. Rotierte Logs verwenden die Endungen `.1` bis `.5`. |
 | Einen Fehler melden          | Hilfe -> Diagnose exportieren… schreibt eine ZIP mit Logs und Systemdetails an einen Ort deiner Wahl. Vor dem Hochladen prüfen, da sie Dateipfade und Dateinamen von deinem Computer enthält. Es wird nichts automatisch hochgeladen. |
 | Mehr Diagnoseprotokollierung | `ANKI_MINER_LOG_LEVEL=DEBUG` vor dem Start von Anki Miner setzen, um Details von yt-dlp, urllib3 und fugashi (Drittanbieter) zu erfassen. Standard ist `WARNING`; Anki-Miner-Logs bleiben bei DEBUG. |
-| Audio ist in falscher Sprache  | Das Tool versucht zuerst japanische Audiospuren, dann greift es auf die Standardspur zurück. |
+| Audio ist in falscher Sprache  | Das Tool versucht zuerst Audiospuren in der Mining-Sprache, dann greift es auf die Standardspur zurück. |
 | Untertitel sind nicht synchron    | Die Untertitel-Offset-Steuerung in der GUI verwenden (Bereich ±300 Sekunden).      |
 
 ## Roadmap
@@ -214,7 +215,7 @@ Liste von Ideen für künftige Versionen von Anki Miner. Nicht nach Priorität g
 
 - **Langfristig**:
   - [x] Android-Portierung -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Über Japanisch hinaus: Mining anderer Sprachen.
+  - [x] Über Japanisch hinaus: Mining von Chinesisch und Koreanisch.
   - [ ] Anki-Miner-Browsererweiterung.
 
 

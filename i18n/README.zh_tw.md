@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-把日文原生內容變成 Anki 單字卡片。
+把日文、中文與韓文的原生內容變成 Anki 單字卡片。
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ anki_miner_gui
 - **影片** - 採集單一影片／字幕組合、批次資料夾，或 YouTube 網址。
 - **牌組建立器** - 把整部影集採集成一個依頻率排序的牌組。
 - **有聲書** - 採集有聲書、Podcast、廣播、歌曲（音訊 + 字幕／逐字稿組合）。
-- **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的日文文字。
+- **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的文字。
 - **分析** - 採集歷史、難度排名、里程碑。
 - **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、把現成牌組中值得學的部分複製到新牌組，以及為既有卡片補齊欄位。
 - **設定** - 所有可調整的項目。
 
 ## 其他功能
 
+- 採集語言 - 日文、中文與韓文，可在設定中切換。韓文的語言模型會在程式內下載。
 - 單字整理工具 - 在製作卡片前逐一檢視每個候選單字，並排顯示它的場景、漫畫頁面與字典條目。
 - 復原一次執行 - 直接在結果對話框中刪除該次執行剛建立的筆記。
 - 完整的篩選機制：i+1、頻率排名區間、黑名單、正規表示式、單字集等等。
@@ -151,7 +152,7 @@ anki_miner_gui
 <details>
 <summary><strong>運作方式</strong></summary>
 
-1. **讀取字幕**並把日文切分成一個個單字。
+1. **讀取字幕**並把文字切分成一個個單字。
 2. **篩選**出你還不認識的實詞 - 也可以自己在單字整理工具中檢視清單。
 3. 為每一行**擷取螢幕截圖與音訊片段**。
 4. 在你設定的離線字典中**查詢釋義**，若有啟用則可退回線上 Jisho（較慢，有速率限制）。
@@ -195,7 +196,7 @@ anki_miner_gui
 | 記錄檔在哪裡？      | 使用說明 -> 開啟記錄資料夾，或在 Windows 上開啟 `%USERPROFILE%\.anki_miner\anki_miner.log`，macOS/Linux 上開啟 `~/.anki_miner/anki_miner.log`。輪替後的記錄檔使用 `.1` 到 `.5` 的後綴。 |
 | 回報錯誤          | 說明 -> 匯出診斷資訊… 會把記錄檔與系統資訊寫成 ZIP，存到你選擇的位置。上傳前請先檢視內容，因為其中包含你電腦上的檔案路徑與檔名。程式不會自動上傳任何東西。 |
 | 更詳細的診斷記錄 | 啟動 Anki Miner 前設定 `ANKI_MINER_LOG_LEVEL=DEBUG`，以擷取第三方 yt-dlp、urllib3 與 fugashi 的細節。預設為 `WARNING`；Anki Miner 本身的記錄維持在 DEBUG。 |
-| 音訊語言不對  | 程式會先嘗試日文音軌，找不到才退回預設音軌。      |
+| 音訊語言不對  | 程式會先嘗試採集語言的音軌，找不到才退回預設音軌。      |
 | 字幕不同步    | 使用 GUI 中的字幕位移控制項（範圍 ±300 秒）。                 |
 
 ## 藍圖
@@ -214,7 +215,7 @@ Anki Miner 未來版本的構想清單。順序不代表優先度。功能請求
 
 - **長期目標**：
   - [x] Android 移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] 超越日文：採集其他語言。
+  - [x] 超越日文：採集中文與韓文。
   - [ ] Anki Miner 瀏覽器擴充功能。
 
 

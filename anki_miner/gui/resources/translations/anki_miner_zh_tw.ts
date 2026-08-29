@@ -7278,6 +7278,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>下載建議資源</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>此語言沒有建議下載的資源 — 請透過「設定 → 字典」匯入 Yomitan 字典，並透過「設定 → 頻率」匯入頻率清單。</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>正在檢查離線字典...</translation>
     </message>

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Biến nội dung tiếng Nhật bản ngữ thành thẻ từ vựng Anki.
+Biến nội dung tiếng Nhật, tiếng Trung và tiếng Hàn bản ngữ thành thẻ từ vựng Anki.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ anki_miner_gui
 - **Video** - khai thác một cặp video/phụ đề đơn lẻ, một thư mục hàng loạt, hoặc các URL YouTube.
 - **Trình dựng bộ thẻ** - khai thác cả một loạt phim thành một bộ thẻ được xếp hạng theo tần suất.
 - **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
-- **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản tiếng Nhật dán vào.
+- **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản dán vào.
 - **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc.
 - **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, và điền bổ sung các trường trên thẻ đã có.
 - **Cài đặt** - mọi thứ có thể cấu hình.
 
 ## Tính năng khác
 
+- Ngôn ngữ khai thác - tiếng Nhật, tiếng Trung và tiếng Hàn, chuyển đổi trong Cài đặt. Tiếng Hàn tải mô hình ngôn ngữ ngay trong ứng dụng.
 - Word Curator - xem lại từng từ ứng viên trước khi thẻ được tạo, cùng với cảnh phim, trang manga và mục từ điển của nó đặt cạnh nhau.
 - Hoàn tác một lần chạy - xóa các ghi chú mà một lần chạy vừa tạo, ngay trong hộp thoại kết quả.
 - Bộ lọc phong phú: i+1, khoảng hạng tần suất, danh sách đen, regex, tập từ, và hơn thế nữa.
@@ -151,7 +152,7 @@ Muốn thêm chủ đề khác? Hãy đề xuất trong một GitHub Issue.
 <details>
 <summary><strong>Cách hoạt động</strong></summary>
 
-1. **Đọc phụ đề** và tách tiếng Nhật thành từng từ riêng lẻ.
+1. **Đọc phụ đề** và tách văn bản thành từng từ riêng lẻ.
 2. **Lọc** xuống còn các từ mang nghĩa mà bạn chưa biết - tùy chọn tự bạn xem lại danh sách trong Word Curator.
 3. **Lấy ảnh chụp màn hình và đoạn âm thanh** từ video cho mỗi dòng.
 4. **Tra định nghĩa** trong các từ điển ngoại tuyến bạn đã cấu hình, tùy chọn dự phòng sang Jisho trực tuyến nếu được bật (chậm hơn, bị giới hạn tốc độ).
@@ -195,7 +196,7 @@ Sử dụng các tập từ tên riêng đi kèm được dẫn xuất từ [JMn
 | Nhật ký nằm ở đâu?      | Dùng Trợ giúp -> Mở thư mục nhật ký, hoặc mở `%USERPROFILE%\.anki_miner\anki_miner.log` trên Windows hoặc `~/.anki_miner/anki_miner.log` trên macOS/Linux. Nhật ký xoay vòng dùng hậu tố `.1` đến `.5`. |
 | Báo cáo lỗi          | Trợ giúp -> Xuất chẩn đoán… sẽ ghi một tệp ZIP chứa nhật ký và thông tin hệ thống vào vị trí bạn chọn. Hãy xem lại nó trước khi tải lên vì nó chứa đường dẫn và tên tệp từ máy tính của bạn. Không có gì được tải lên tự động. |
 | Nhật ký chẩn đoán chi tiết hơn | Đặt `ANKI_MINER_LOG_LEVEL=DEBUG` trước khi khởi động Anki Miner để ghi lại chi tiết của yt-dlp, urllib3 và fugashi bên thứ ba. Mặc định là `WARNING`; nhật ký của Anki Miner vẫn ở mức DEBUG. |
-| Âm thanh sai ngôn ngữ  | Công cụ thử các bản âm thanh tiếng Nhật trước, rồi mới lùi về bản mặc định.      |
+| Âm thanh sai ngôn ngữ  | Công cụ thử các bản âm thanh theo ngôn ngữ khai thác trước, rồi mới lùi về bản mặc định.      |
 | Phụ đề không khớp tiếng    | Dùng điều khiển bù thời gian phụ đề trong giao diện (khoảng ±300 giây).                 |
 
 ## Lộ trình
@@ -214,7 +215,7 @@ Danh sách ý tưởng cho các phiên bản Anki Miner trong tương lai. Khôn
 
 - **Dài hạn**:
   - [x] Bản chuyển sang Android -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Vượt ra ngoài tiếng Nhật: khai thác các ngôn ngữ khác.
+  - [x] Vượt ra ngoài tiếng Nhật: khai thác tiếng Trung và tiếng Hàn.
   - [ ] Tiện ích mở rộng trình duyệt cho Anki Miner.
 
 

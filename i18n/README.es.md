@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Convierte contenido japonés nativo en tarjetas de vocabulario de Anki.
+Convierte contenido japonés, chino y coreano nativo en tarjetas de vocabulario de Anki.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 - **Video** - minera un solo par de video/subtítulo, una carpeta por lotes o URLs de YouTube.
 - **Constructor de mazos** - minera una serie completa en un solo mazo clasificado por frecuencia.
 - **Audiolibros** - minera audiolibros, pódcasts, radio, canciones (pares de audio + subtítulo/transcripción).
-- **Lectura** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto japonés pegado.
+- **Lectura** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto pegado.
 - **Analíticas** - historial de minería, clasificaciones de dificultad, hitos.
 - **Utilidades** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (ffsubsync/alass), condensa medios a audio solo de diálogos, copia la parte que vale la pena aprender de un mazo prediseñado a uno nuevo, y rellena campos en tarjetas existentes.
 - **Configuración** - todo lo configurable.
 
 ## Otras Características
 
+- Idiomas de minería - japonés, chino y coreano, se cambian en Configuración. El coreano descarga su modelo de idioma dentro de la aplicación.
 - Word Curator - revisa cada palabra candidata antes de crear las tarjetas, con su escena, su página de manga y su entrada de diccionario al lado.
 - Deshacer una ejecución - elimina las notas que una ejecución acaba de crear, directamente desde su diálogo de resultados.
 - Filtrado extenso: i+1, rango de clasificación de frecuencia, lista negra, regex, conjuntos de palabras y más.
@@ -151,7 +152,7 @@ Licencias de temas: [LICENSE-THEMES.md](../LICENSE-THEMES.md).
 <details>
 <summary><strong>Cómo Funciona</strong></summary>
 
-1. **Lee los subtítulos** y divide el japonés en palabras individuales.
+1. **Lee los subtítulos** y divide el texto en palabras individuales.
 2. **Filtra** para obtener palabras de contenido que aún no conozcas, con la opción de revisar la lista tú mismo en el Word Curator.
 3. **Toma una captura de pantalla y un clip de audio** del video para cada línea.
 4. **Busca definiciones** en tus diccionarios offline configurados, con la opción de recurrir a Jisho en línea si está habilitado (más lento, limitado por tasa de peticiones).
@@ -195,7 +196,7 @@ Utiliza conjuntos de palabras de nombres incluidos derivados de [JMnedict](https
 | ¿Dónde están los registros?      | Usa Ayuda -> Abrir carpeta de registros, o abre `%USERPROFILE%\.anki_miner\anki_miner.log` en Windows o `~/.anki_miner/anki_miner.log` en macOS/Linux. Los registros rotados usan los sufijos `.1` a `.5`. |
 | Informar de un error          | Ayuda -> Exportar diagnósticos… crea un ZIP con los registros y los detalles del sistema en la ubicación que elijas. Revísalo antes de subirlo porque contiene rutas de archivos y nombres de archivos de tu ordenador. No se sube nada automáticamente. |
 | Más registro de diagnóstico | Define `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar Anki Miner para capturar detalles de terceros de yt-dlp, urllib3 y fugashi. El valor predeterminado es `WARNING`; los registros de Anki Miner permanecen en DEBUG. |
-| El audio está en el idioma incorrecto  | La herramienta intenta primero las pistas de audio en japonés, luego recurre a la predeterminada.      |
+| El audio está en el idioma incorrecto  | La herramienta intenta primero las pistas de audio en el idioma de minería, luego recurre a la predeterminada.      |
 | Subtítulos desincronizados    | Usa el control de desplazamiento de subtítulos en la GUI (rango ±300 segundos).                 |
 
 ## Hoja de Ruta
@@ -214,7 +215,7 @@ Lista de ideas para futuras versiones de Anki Miner. No están en orden de prior
 
 - **Largo plazo**:
   - [x] Puerto a Android -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Más allá del japonés: minería de otros idiomas.
+  - [x] Más allá del japonés: minería de chino y coreano.
   - [ ] Extensión de navegador para Anki Miner.
 
 

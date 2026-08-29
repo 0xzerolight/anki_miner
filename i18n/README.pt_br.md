@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Transforme conteúdo japonês nativo em cartões de vocabulário do Anki.
+Transforme conteúdo japonês, chinês e coreano nativo em cartões de vocabulário do Anki.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 - **Vídeo** - minere um único par de vídeo/legenda, uma pasta em lote ou URLs do YouTube.
 - **Construtor de Baralho** - minere uma série inteira em um único baralho ordenado por frequência.
 - **Audiolivros** - minere audiolivros, podcasts, rádio, músicas (pares de áudio + legenda/transcrição).
-- **Leitura** - minere mangás (mokuro), romances (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto em japonês colado.
+- **Leitura** - minere mangás (mokuro), romances (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto colado.
 - **Análises** - histórico de mineração, classificações de dificuldade, marcos.
 - **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (ffsubsync/alass), condensar mídia em áudio só com diálogos, copiar a parte que vale a pena aprender de um baralho pronto para um novo, e preencher retroativamente campos em cartões existentes.
 - **Configurações** - tudo que é configurável.
 
 ## Outros Recursos
 
+- Idiomas de mineração - japonês, chinês e coreano, alternados em Configurações. O coreano baixa o modelo de idioma dentro do aplicativo.
 - Curador de Palavras - revise cada palavra candidata antes de os cartões serem criados, com a cena, a página do mangá e a entrada do dicionário lado a lado.
 - Desfazer uma execução - exclua as notas que uma execução acabou de criar, direto da caixa de diálogo de resultados.
 - Filtragem extensa: i+1, faixa de posição de frequência, blacklist, regex, wordsets e muito mais.
@@ -151,7 +152,7 @@ Quer sugerir outro tema? Abra uma issue no GitHub.
 <details>
 <summary><strong>Como Funciona</strong></summary>
 
-1. **Leia as legendas** e divida o japonês em palavras individuais.
+1. **Leia as legendas** e divida o texto em palavras individuais.
 2. **Filtre** as palavras de conteúdo que você ainda não conhece - opcionalmente revisando a lista você mesmo no Curador de Palavras.
 3. **Capture uma captura de tela e um clipe de áudio** do vídeo para cada linha.
 4. **Busque definições** nos seus dicionários offline configurados, recorrendo opcionalmente ao Jisho online se ativado (mais lento, com limite de taxa).
@@ -195,7 +196,7 @@ Usa conjuntos de nomes empacotados derivados do [JMnedict](https://www.edrdg.org
 | Onde estão os registros?      | Use Ajuda -> Abrir Pasta de Registros, ou abra `%USERPROFILE%\.anki_miner\anki_miner.log` no Windows ou `~/.anki_miner/anki_miner.log` no macOS/Linux. Os registros rotacionados usam os sufixos `.1` a `.5`. |
 | Reportando um bug          | Ajuda -> Exportar Diagnósticos… grava um ZIP com registros e detalhes do sistema no local que você escolher. Revise-o antes de enviar, pois ele contém caminhos e nomes de arquivos do seu computador. Nada é enviado automaticamente. |
 | Mais registro de diagnóstico | Defina `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar o Anki Miner para capturar detalhes de terceiros do yt-dlp, urllib3 e fugashi. O padrão é `WARNING`; os registros do Anki Miner permanecem em DEBUG. |
-| O áudio está no idioma errado  | A ferramenta tenta primeiro as faixas de áudio em japonês e depois usa a padrão.      |
+| O áudio está no idioma errado  | A ferramenta tenta primeiro as faixas de áudio no idioma de mineração e depois usa a padrão.      |
 | Legendas fora de sincronia    | Use o controle de deslocamento de legenda na interface (faixa de ±300 segundos).                 |
 
 ## Roteiro
@@ -214,7 +215,7 @@ Lista de ideias para futuras versões do Anki Miner. Não estão em ordem de pri
 
 - **Longo prazo**:
   - [x] Porte para Android -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Além do japonês: mineração de outros idiomas.
+  - [x] Além do japonês: mineração de chinês e coreano.
   - [ ] Extensão de navegador do Anki Miner.
 
 

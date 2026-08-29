@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:5648ea423d8eee0f -->
+<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Transformez du contenu japonais authentique en cartes de vocabulaire Anki.
+Transformez du contenu japonais, chinois et coréen authentique en cartes de vocabulaire Anki.
 </p>
 
 <p align="center">
@@ -109,13 +109,14 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - **Vidéo** - extraire une seule paire vidéo/sous-titres, un dossier de traitement par lot, ou des URL YouTube.
 - **Générateur de paquets** - extraire une série entière dans un seul paquet classé par fréquence.
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
-- **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte japonais collé.
+- **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte collé.
 - **Statistiques** - historique d'extraction, classements de difficulté, jalons.
 - **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
 - **Paramètres** - tout ce qui est configurable.
 
 ## Autres fonctionnalités
 
+- Langues d'extraction - japonais, chinois et coréen, changées dans les Paramètres. Le coréen télécharge son modèle de langue dans l'application.
 - Curateur de mots - passez en revue chaque mot candidat avant la création des cartes, avec sa scène, sa page de manga et son entrée de dictionnaire côte à côte.
 - Annuler une exécution - supprimez les notes qu'une exécution vient de créer, directement depuis sa boîte de dialogue de résultats.
 - Filtrage étendu : i+1, plage de rang de fréquence, liste noire, regex, ensembles de mots, et plus encore.
@@ -151,7 +152,7 @@ Vous voulez qu'un autre thème soit ajouté ? Proposez-le dans une Issue GitHub.
 <details>
 <summary><strong>Comment ça marche</strong></summary>
 
-1. **Lisez les sous-titres** et découpez le japonais en mots individuels.
+1. **Lisez les sous-titres** et découpez le texte en mots individuels.
 2. **Filtrez** pour ne garder que les mots pleins que vous ne connaissez pas déjà - en révisant éventuellement la liste vous-même dans le Curateur de mots.
 3. **Récupérez une capture d'écran et un extrait audio** de la vidéo pour chaque ligne.
 4. **Recherchez les définitions** dans vos dictionnaires hors ligne configurés, avec repli optionnel sur Jisho en ligne si activé (plus lent, limité en débit).
@@ -195,7 +196,7 @@ Utilise des ensembles de noms propres regroupés dérivés de [JMnedict](https:/
 | Où sont les journaux ?      | Utilisez Aide -> Ouvrir le dossier des journaux, ou ouvrez `%USERPROFILE%\.anki_miner\anki_miner.log` sous Windows ou `~/.anki_miner/anki_miner.log` sous macOS/Linux. Les journaux archivés utilisent les suffixes `.1` à `.5`. |
 | Signaler un bug          | Aide -> Exporter les diagnostics… écrit une archive ZIP contenant les journaux et les détails système à l'emplacement de votre choix. Vérifiez-la avant de l'envoyer car elle contient des chemins et noms de fichiers de votre ordinateur. Rien n'est envoyé automatiquement. |
 | Journalisation de diagnostic supplémentaire | Définissez `ANKI_MINER_LOG_LEVEL=DEBUG` avant de démarrer Anki Miner pour capturer les détails tiers de yt-dlp, urllib3 et fugashi. La valeur par défaut est `WARNING` ; les journaux d'Anki Miner restent en DEBUG. |
-| L'audio est dans la mauvaise langue  | L'outil essaie d'abord les pistes audio japonaises, puis se replie sur la piste par défaut.      |
+| L'audio est dans la mauvaise langue  | L'outil essaie d'abord les pistes audio dans la langue d'extraction, puis se replie sur la piste par défaut.      |
 | Sous-titres désynchronisés    | Utilisez le réglage de décalage des sous-titres dans l'interface (plage ±300 secondes).                 |
 
 ## Feuille de route
@@ -214,7 +215,7 @@ Liste d'idées pour les futures versions d'Anki Miner. Sans ordre de priorité. 
 
 - **Long terme** :
   - [x] Portage Android -- https://github.com/0xzerolight/anki_miner_android
-  - [ ] Au-delà du japonais : extraction d'autres langues.
+  - [x] Au-delà du japonais : extraction du chinois et du coréen.
   - [ ] Extension de navigateur Anki Miner.
 
 

@@ -7292,6 +7292,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Télécharger les ressources recommandées</translation>
     </message>
     <message>
+        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
+        <translation>Aucune ressource téléchargeable n'est recommandée pour cette langue — importez un dictionnaire Yomitan dans Paramètres → Dictionnaires et une liste de fréquence dans Paramètres → Fréquence.</translation>
+    </message>
+    <message>
         <source>Checking for an offline dictionary...</source>
         <translation>Recherche d'un dictionnaire hors ligne...</translation>
     </message>
