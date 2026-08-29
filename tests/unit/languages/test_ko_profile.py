@@ -74,3 +74,17 @@ def test_scoped_defaults_apply_on_a_first_switch():
     assert switched.anki_fields["word"] == "Expression"
     assert switched.anki_fields["expression_furigana"] == ""
     assert dataclasses.is_dataclass(switched)
+
+
+def test_first_switch_lands_on_a_deck_ankiconnect_accepts():
+    """A blank deck name fails every add: AnkiConnect rejects "" as a deck."""
+    from anki_miner.config.config import AnkiMinerConfig
+    from anki_miner.languages.switching import switch_language
+
+    switched = switch_language(AnkiMinerConfig(), "ko")
+    assert switched.anki_deck_name == "Anki Miner"
+    # Parity with zh: "Anki Miner" is the generic default, not a ja-specific one.
+    assert switched.anki_deck_name == switch_language(AnkiMinerConfig(), "zh").anki_deck_name
+    # The ja note type ("Lapis") IS ja-specific, so ko ships empty like zh.
+    assert switched.anki_note_type == ""
+    assert switch_language(AnkiMinerConfig(), "zh").anki_note_type == ""

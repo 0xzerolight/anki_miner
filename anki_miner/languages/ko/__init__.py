@@ -110,6 +110,12 @@ def _scoped_defaults() -> dict[str, object]:
     defaults["allowed_pos"] = ko_morphology.KO_ALLOWED_POS
     defaults["excluded_subtypes"] = ko_morphology.KO_EXCLUDED_SUBTYPES
     defaults["anki_fields"] = dict(KO_CARD_FIELDS)
+    # One the blank-by-type loop gets wrong rather than merely empty: "" is not
+    # a deck AnkiConnect will accept, and inheriting ja's default would file
+    # Korean cards into the Japanese deck. "Anki Miner" is the generic default,
+    # not a ja-specific one. The ja note type ("Lapis") IS ja-specific, so ko
+    # ships empty and the user picks — same split as zh.
+    defaults["anki_deck_name"] = "Anki Miner"
     defaults["script_variant"] = ""
     defaults["reading_tone_color"] = False
     return defaults
