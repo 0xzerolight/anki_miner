@@ -95,8 +95,8 @@ asr-vulkan = [
     "faster-whisper>=1.1.0",
     "pywhispercpp>=1.5.0",
 ]
-# Chinese mining engine. jieba/pypinyin are pure-Python universal wheels and are
-# hard requirements of the zh code paths; OpenCC ships a native extension, so
+# Chinese mining engine. jieba (pure Python, sdist-only on PyPI) and pypinyin
+# are hard requirements of the zh code paths; OpenCC ships a native extension, so
 # every consumer degrades to "no script variants" when it is absent (see
 # languages/zh/variants.py) rather than failing to import.
 zh = [
