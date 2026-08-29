@@ -23,6 +23,15 @@ CASES = [
     ("漂亮", "a", True),
     ("非常", "d", True),
     ("一举两得", "i", True),
+    ("今天", "t", True),
+    ("家里", "s", True),
+    ("里面", "f", True),
+    ("有意思", "l", True),
+    ("我", "r", True),
+    ("他", "r", True),
+    # jieba's nz is a catch-all that fires on ordinary vocabulary, not just
+    # proper nouns — dropping it silently lost core words like this one.
+    ("中文", "nz", True),
     ("北京", "ns", False),
     ("小明", "nr", False),
     ("联合国", "nt", False),
@@ -30,7 +39,6 @@ CASES = [
     ("的", "uj", False),
     ("三", "m", False),
     ("本", "q", False),
-    ("我", "r", False),
     ("。", "x", False),
     ("ok", "eng", False),
 ]

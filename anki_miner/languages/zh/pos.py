@@ -11,13 +11,25 @@ becomes the bound-morpheme flags (ng/vg/ag/dg), which mark fragments that are
 never independent words. Numerals (m), classifiers (q), pronouns (r),
 prepositions (p), particles (u*), conjunctions (c) and punctuation (x) need no
 exclusion at all — their pos1 is outside ``ZH_ALLOWED_POS``.
+
+Two rulings shape the defaults beyond that mapping:
+
+* **ja parity.** unidic mines time nouns (名詞-普通名詞-副詞可能), place nouns
+  and pronouns into Japanese cards today, so jieba's t (时间词), s (处所词),
+  f (方位词), l (习用语) and r (代词) classes belong in the Chinese defaults for
+  the same reason. Dropping them lost 今天, 家里, 里面, 有意思 and 他.
+* **Over-include beats silent drop.** jieba's ``nz`` is a catch-all, not a
+  proper-noun class: it fires on ordinary vocabulary (中文 is tagged nz), and an
+  excluded subtype removes a word with no trace anywhere the user can see.
+  Volume is what the frequency, known-words and i+1 filters downstream are for;
+  a word the tagger never emitted cannot be recovered by any of them.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 
-ZH_ALLOWED_POS: tuple[str, ...] = ("n", "v", "a", "d", "i")
+ZH_ALLOWED_POS: tuple[str, ...] = ("n", "v", "a", "d", "i", "t", "s", "f", "l", "r")
 
 ZH_EXCLUDED_SUBTYPES: tuple[str, ...] = (
     "nr",  # person name
@@ -25,7 +37,6 @@ ZH_EXCLUDED_SUBTYPES: tuple[str, ...] = (
     "nrfg",  # name-like fragment
     "ns",  # place name
     "nt",  # organisation
-    "nz",  # other proper noun
     "ng",  # bound noun morpheme
     "vg",  # bound verb morpheme
     "ag",  # bound adjective morpheme
@@ -40,4 +51,9 @@ ZH_POS_LABELS: Mapping[str, str] = {
     "a": "形容词 (adjective)",
     "d": "副词 (adverb)",
     "i": "成语 (idiom)",
+    "t": "时间词 (time word)",
+    "s": "处所词 (place word)",
+    "f": "方位词 (locative noun)",
+    "l": "习用语 (set phrase)",
+    "r": "代词 (pronoun)",
 }
