@@ -16,14 +16,27 @@ def test_spec_wires_the_kiwipiepy_license_datas():
     spec = (ROOT / "anki_miner.spec").read_text(encoding="utf-8")
     assert '"licenses", "kiwipiepy"' in spec
     assert "+ kiwipiepy_license_datas" in spec
-    assert '"kiwipiepy_model",' in spec
 
 
-def test_hooks_exist_and_are_find_spec_gated():
-    for name in ("hook-kiwipiepy.py", "hook-kiwipiepy_model.py"):
-        text = (ROOT / "PyInstaller-Hooks" / name).read_text(encoding="utf-8")
-        assert "find_spec" in text
-        assert "datas" in text
+def test_the_model_is_excluded_from_the_graph_not_pinned_into_it():
+    """The ~88 MB model ships as an in-app download pack, never in the bundle.
+
+    kiwipiepy's native loader imports ``kiwipiepy_model`` itself, which bytecode
+    analysis cannot see but a hook or a stray transitive pull could still drag in
+    — the Analysis exclude is what makes its absence a guarantee.
+    """
+    spec = (ROOT / "anki_miner.spec").read_text(encoding="utf-8")
+    hiddenimports, _, excludes = spec.partition("excludes=[")
+
+    assert '"kiwipiepy_model"' not in hiddenimports
+    assert '"kiwipiepy_model",' in excludes
+
+
+def test_the_engine_hook_survives_and_the_model_hook_is_gone():
+    text = (ROOT / "PyInstaller-Hooks" / "hook-kiwipiepy.py").read_text(encoding="utf-8")
+    assert "find_spec" in text
+    assert "datas" in text
+    assert not (ROOT / "PyInstaller-Hooks" / "hook-kiwipiepy_model.py").exists()
 
 
 def test_every_release_matrix_leg_installs_the_ko_engine():

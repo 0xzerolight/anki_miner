@@ -106,6 +106,14 @@ class BackgroundTaskController(QObject):
     ytdlp_update_result = pyqtSignal(object)  # YtdlpUpdateResult
     jmdict_migration_finished = pyqtSignal(str, dict)  # (dict_id, meta)
 
+    #: Korean model pack download handle. Declared on the CLASS, unlike its
+    #: siblings below, so it is part of the controller's published attribute set
+    #: rather than an instance-only name: ``shutdown`` reads every handle by
+    #: name, and the attribute-spec'd stand-ins the shutdown suites drive it with
+    #: only know what the class declares. ``__init__`` still binds the instance
+    #: copy, and ``_start_install``/``_release_worker`` only ever touch that one.
+    ko_model_download_worker: InstallWorker | None = None
+
     def __init__(self, window: MainWindow) -> None:
         """Initialize the controller.
 
@@ -135,6 +143,7 @@ class BackgroundTaskController(QObject):
         self.cuda_pack_download_worker: InstallWorker | None = None
         self.onnx_pack_download_worker: InstallWorker | None = None
         self.vulkan_model_download_worker: InstallWorker | None = None
+        self.ko_model_download_worker = None
         self.restyle_cards_worker: RestyleCardsWorker | None = None
         # The recommended-resource download. Adopted rather than started here:
         # the session owns the run, but the download is now backgroundable, so
@@ -338,6 +347,31 @@ class BackgroundTaskController(QObject):
         self._start_install(
             "cuda_pack_download_worker",
             lambda: InstallWorker(cuda_pack_task(cuda_libs_root), parent=self),
+            on_status,
+            on_finished,
+        )
+
+    def start_ko_model_download(
+        self,
+        ko_model_root: Path,
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Start a Korean model pack download worker unless one is already running.
+
+        Args:
+            ko_model_root: Directory where the Korean model will be placed;
+                ``services.ko_model_installer.ko_model_root()``.
+            on_status: Slot for ``status(str)`` — typically
+                ``SettingsTab.set_ko_model_status``.
+            on_finished: Slot for ``result_ready(bool, str)`` — called with
+                ``(ok, message)`` when the install completes or fails.
+        """
+        from anki_miner.gui.workers.install_worker import InstallWorker, ko_model_task
+
+        self._start_install(
+            "ko_model_download_worker",
+            lambda: InstallWorker(ko_model_task(ko_model_root), parent=self),
             on_status,
             on_finished,
         )
@@ -598,7 +632,8 @@ class BackgroundTaskController(QObject):
 
         # Controller-owned workers: validation, update check, yt-dlp update,
         # JMdict migration, ASR model download, alass install, CUDA pack download,
-        # onnxruntime (VAD) pack download, Vulkan model download.
+        # onnxruntime (VAD) pack download, Vulkan model download, Korean model
+        # download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
@@ -608,6 +643,7 @@ class BackgroundTaskController(QObject):
         join(self.cuda_pack_download_worker)
         join(self.onnx_pack_download_worker)
         join(self.vulkan_model_download_worker)
+        join(self.ko_model_download_worker)
         join(self.restyle_cards_worker)
         join(self.resource_download_worker)
 

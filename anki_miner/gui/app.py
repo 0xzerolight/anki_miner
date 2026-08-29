@@ -1053,6 +1053,31 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
     )
 
 
+def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Filtering panel's "Download Korean model" button to the worker.
+
+    The pack root is derived, not configured: it is a managed directory under the
+    app home like ``cuda_libs_root``, but the tokenizer has to find it without a
+    config in scope, so ``ko_model_installer`` owns the one definition and both
+    sides call it.
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        settings_tab.filtering_panel.notify_ko_model_download_finished()
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        from anki_miner.services.ko_model_installer import ko_model_root
+
+        window.background_tasks.start_ko_model_download(ko_model_root(), on_status, on_finished)
+
+    _connect_download(
+        settings_tab.ko_model_download_requested,
+        set_status=settings_tab.set_ko_model_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Wire the Subtitles panel's "Download silence removal" button to the worker.
 
@@ -1351,15 +1376,18 @@ def compose_main_window(
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
     # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, Vulkan
-    # model): each Subtitles-panel "Download …" button hands off to a background
-    # worker and refreshes the panel on finish. All five share the connect
+    # model, Korean model): each "Download …" button hands off to a background
+    # worker and refreshes its panel on finish. All six share the connect
     # skeleton in _connect_download; the per-tool builders carry the differences.
+    # Five sit on the Subtitles panel; the Korean model sits on Filtering, beside
+    # the mining-language selector it unlocks.
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
         _connect_vulkan_download,
+        _connect_ko_model_download,
     ):
         _connect(window, settings_tab)
     # Wire indexed-resource mutation hooks so replacing or deleting a store

@@ -187,6 +187,20 @@ def cuda_pack_task(cuda_libs_root: Path) -> InstallTask:
     return _task
 
 
+def ko_model_task(ko_model_root: Path) -> InstallTask:
+    """Task: download + install the Korean (kiwipiepy) model (percentage progress)."""
+
+    def _task(worker: InstallWorker) -> str:
+        from anki_miner.services.ko_model_installer import install_ko_model
+
+        worker._progress_ctx = "KoModelDownloadWorker"
+        worker.status.emit(QCoreApplication.translate("KoModelDownloadWorker", "Downloading the Korean model…"))
+        install_ko_model(ko_model_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
+        return QCoreApplication.translate("KoModelDownloadWorker", "Korean model installed successfully.")
+
+    return _task
+
+
 def onnx_pack_task(onnx_pack_root: Path) -> InstallTask:
     """Task: download + install the onnxruntime (Silero VAD) pack (percentage progress)."""
 

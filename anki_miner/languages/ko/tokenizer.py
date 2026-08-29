@@ -37,8 +37,10 @@ into one unanalysable NNG.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from importlib.util import find_spec
 from typing import Any
 
+from anki_miner.languages.ko.availability import KO_MODEL_DOWNLOAD_HINT
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
 
@@ -46,15 +48,51 @@ from anki_miner.services.tagger import LockedTagger
 Z_CODA_TAG = "Z_CODA"
 
 
+def resolve_model_path() -> str | None:
+    """Return the Kiwi ``model_path``, or None to let Kiwi resolve it itself.
+
+    The ladder, in order:
+
+    1. The ``kiwipiepy_model`` PACKAGE. A pip install with the ``[ko]`` extra and
+       every dev/CI env has it, and Kiwi's own native loader finds it — so the
+       answer is None and nothing about those environments changes.
+    2. The in-app download PACK (``services.ko_model_installer``). The frozen
+       bundle deliberately excludes the ~88 MB model, so this is the path a
+       bundled install takes once the user has downloaded it.
+    3. Neither: raise ``ImportError`` naming the download. ``tagger_provider``
+       chains it into the ``ValueError`` every caller already handles, so the
+       reason reaches the user instead of a bare "No tokenizer registered".
+
+    Resolved through ``find_spec`` and a couple of stat calls — nothing is
+    imported or loaded here.
+    """
+    try:
+        package_present = find_spec("kiwipiepy_model") is not None
+    except (ImportError, ValueError):
+        package_present = False
+    if package_present:
+        return None
+
+    from anki_miner.services.ko_model_installer import is_installed, ko_model_path, ko_model_root
+
+    root = ko_model_root()
+    if is_installed(root):
+        return str(ko_model_path(root))
+    raise ImportError(f"The Korean language model is not installed. {KO_MODEL_DOWNLOAD_HINT}")
+
+
 def _create_kiwi() -> Any:
-    """Build a raw kiwipiepy.Kiwi.
+    """Build a raw kiwipiepy.Kiwi against whichever model this install has.
 
     Imported function-locally: an install without the [ko] extra must fail here,
     with an actionable message, not at module import time.
     """
     from kiwipiepy import Kiwi
 
-    return Kiwi()
+    model_path = resolve_model_path()
+    if model_path is None:
+        return Kiwi()
+    return Kiwi(model_path=model_path)
 
 
 def base_tag(tag: str) -> str:
