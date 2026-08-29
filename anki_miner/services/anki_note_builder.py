@@ -42,6 +42,7 @@ OPTIONAL_FIELD_KEYS = {
     "measure_word",
     "expression_traditional",
     "expression_pinyin",
+    "hanja",
 }
 
 

@@ -151,6 +151,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         mining_language_requested: Re-emitted from the Filtering panel's mining
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
+        ko_model_download_requested: Emitted when the Filtering panel's "Download
+            Korean model" button is clicked.
     """
 
     #: A label beside its control; a wider window buys gutters, not longer inputs.
@@ -168,6 +170,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
     manage_profiles_requested = pyqtSignal()
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
+    ko_model_download_requested = pyqtSignal()
 
     # Fields written OUTSIDE the Settings Save path (theme selector, update
     # banner, first-run flags).  An update_config call that touches ONLY these
@@ -723,6 +726,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
         self.filtering_panel.mining_language_requested.connect(self.mining_language_requested)
+        self.filtering_panel.ko_model_download_requested.connect(self._on_ko_model_download_clicked)
 
         # UI panel persists immediately on any change (live-preview model).
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
@@ -1006,6 +1010,15 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.set_cuda_pack_status(self.tr("Downloading…"))
         self.cuda_pack_download_requested.emit()
 
+    def _on_ko_model_download_clicked(self) -> None:
+        """Set a pending status and re-emit so the caller can start the download.
+
+        Mirrors :meth:`_on_cuda_pack_download_clicked`: the download itself is
+        owned by the caller (MainWindow / background_tasks).
+        """
+        self.filtering_panel.set_ko_model_status(self.tr("Downloading…"))
+        self.ko_model_download_requested.emit()
+
     def _on_vad_pack_download_clicked(self) -> None:
         """Set a pending status and re-emit so the caller can start the download.
 
@@ -1036,6 +1049,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def set_cuda_pack_status(self, text: str) -> None:
         """Forward a GPU-pack download status line to the Subtitles panel."""
         self.subtitles_panel.set_cuda_pack_status(text)
+
+    def set_ko_model_status(self, text: str) -> None:
+        """Forward a Korean model download status line to the Filtering panel."""
+        self.filtering_panel.set_ko_model_status(text)
 
     def set_vad_pack_status(self, text: str) -> None:
         """Forward a VAD-pack download status line to the Subtitles panel."""

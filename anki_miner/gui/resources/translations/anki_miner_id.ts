@@ -466,6 +466,30 @@
         <translation>Menyimpan kata penggolong yang diuraikan dari entri kamus. Kosong = lewati.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Bidang Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Menyimpan bacaan pinyin dari kata, diwarnai berdasarkan nada bila opsi itu aktif. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Bidang Aksara Tradisional</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Menyimpan kata dalam varian aksara lainnya, bila berbeda. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Bidang Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Menyimpan karakter hanja yang terkandung dalam kata. Kosong = lewati.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Bidang Data Tambahan</translation>
     </message>
@@ -4366,6 +4390,22 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Kecualikan Kata Hanya-Hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Kecualikan Kata yang Mengandung Hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Lewati kata yang ditulis sepenuhnya dengan hangul. Menyisakan kata yang ditulis dengan hanja di dek.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Lewati kata yang mengandung karakter hanja, sehingga dek berisi kosakata hangul murni.</translation>
+    </message>
+    <message>
         <source>Mining Language</source>
         <translation>Bahasa Mining</translation>
     </message>
@@ -4712,6 +4752,26 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Unduh model Korea</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Unduh model bahasa Korea ke folder Anki Miner. Instalasi bundel menyertakan mesin Korea tanpa modelnya.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Model Korea</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Terpasang</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Tidak terpasang</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5074,6 +5134,16 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Hapus SEMUA kata yang Anda tambahkan ke daftar kata yang dikenal lokal? Ini tidak dapat dibatalkan. Cache yang tersinkron dengan Anki tidak terpengaruh.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Mengunduh model Korea…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Model Korea berhasil dipasang.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

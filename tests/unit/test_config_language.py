@@ -12,6 +12,7 @@ from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.languages import AVAILABLE_LANGUAGES
+from tests.unit.languages.stub_registry import unregister_profile
 
 
 @pytest.fixture
@@ -19,6 +20,17 @@ def isolated_config_file(tmp_path: Path, monkeypatch) -> Path:
     fake = tmp_path / "gui_config.json"
     monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", fake)
     return fake
+
+
+@pytest.fixture
+def ko_unregistered(monkeypatch) -> None:
+    """``ko`` is the code the degrade cases below carry, taken back out.
+
+    Stage 3 registered it, and ``__post_init__`` folds anything outside
+    ``_LANGUAGE_CODES`` to ``ja``, so hiding a real code is what keeps these
+    cases pointed at ``config_language``'s still-live degrade branch.
+    """
+    unregister_profile(monkeypatch, "ko")
 
 
 def test_language_defaults_to_ja():
@@ -74,15 +86,14 @@ def test_reset_to_defaults_keeps_the_mining_language(test_config, qtbot, monkeyp
     assert emitted[-1].language not in emitted[-1].language_stash
 
 
-def test_an_unregistered_language_degrades_to_ja():
-    """`_LANGUAGE_CODES` whitelists zh/ko before their profiles exist, so a
-    hand-edited config carries a code the registry cannot build. Pre-1B the
-    field was inert; degrading here keeps it inert instead of raising out of
-    every `get_profile(config_language(config))` site.
+def test_an_unregistered_language_degrades_to_ja(ko_unregistered):
+    """`_LANGUAGE_CODES` whitelists a code whose profile a build may not carry,
+    so a config can name one the registry cannot build. Pre-1B the field was
+    inert; degrading here keeps it inert instead of raising out of every
+    `get_profile(config_language(config))` site.
 
-    "ko" is the unregistered code from Stage 2A on — zh registers there, and
-    the whole point of this rule is that it stops applying to a code the moment
-    its profile lands."""
+    The rule stops applying to a code the moment its profile lands, which is why
+    the fixture hides one: ja, zh and ko all register as of Stage 3."""
     from anki_miner.languages.registry import available_languages, config_language
 
     assert "ko" not in available_languages()
@@ -96,7 +107,7 @@ def test_a_registered_language_is_returned_verbatim():
     assert config_language(AnkiMinerConfig(language="zh")) == "zh"
 
 
-def test_the_degrade_is_logged_once_per_code(caplog, monkeypatch):
+def test_the_degrade_is_logged_once_per_code(caplog, monkeypatch, ko_unregistered):
     from anki_miner.languages import registry
 
     monkeypatch.setattr(registry, "_DEGRADE_WARNED", set())
@@ -108,7 +119,7 @@ def test_the_degrade_is_logged_once_per_code(caplog, monkeypatch):
     assert "ko" in warnings[0].getMessage()
 
 
-def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
+def test_settings_panels_load_an_unregistered_language(test_config, qtbot, ko_unregistered):
     """The finding's crash site: `load_from_config` resolves the profile's
     capabilities, and an unbuilt code used to raise ValueError with no in-app
     recovery."""
@@ -123,13 +134,13 @@ def test_settings_panels_load_an_unregistered_language(test_config, qtbot):
         panel.load_from_config(cfg)
 
 
-def test_anki_service_accepts_an_unregistered_language(test_config):
+def test_anki_service_accepts_an_unregistered_language(test_config, ko_unregistered):
     from anki_miner.services.anki_service import AnkiService
 
     assert AnkiService(dataclasses.replace(test_config, language="ko")) is not None
 
 
-def test_deck_filter_scan_runs_under_an_unregistered_language(test_config):
+def test_deck_filter_scan_runs_under_an_unregistered_language(test_config, ko_unregistered):
     """Utilities -> Deck Filter, scan half: the script-type gate read the raw
     field, so a hand-edited config carrying an unbuilt code raised ValueError
     mid-scan. Degraded, the scan applies the JA hiragana-only rule."""
@@ -174,7 +185,7 @@ def test_deck_filter_scan_runs_under_an_unregistered_language(test_config):
     assert plan.kept == ()
 
 
-def test_the_deck_filter_bundle_builds_under_an_unregistered_language(test_config):
+def test_the_deck_filter_bundle_builds_under_an_unregistered_language(test_config, ko_unregistered):
     """Utilities -> Deck Filter, service bundle: both profile reads used the
     raw field, so the scan crashed before it started."""
     from anki_miner.gui.workers.deck_filter_worker import _build_filter_bundle
@@ -189,7 +200,9 @@ def test_the_deck_filter_bundle_builds_under_an_unregistered_language(test_confi
     assert bundle.word_filter._script is ja.script
 
 
-def test_subtitle_generation_runs_under_an_unregistered_language(test_config, tmp_path, monkeypatch, qtbot):
+def test_subtitle_generation_runs_under_an_unregistered_language(
+    test_config, tmp_path, monkeypatch, qtbot, ko_unregistered
+):
     """Utilities -> Generate: the ASR language read the raw field, so the
     worker raised on its first file."""
     from anki_miner.gui.workers import subtitle_gen_worker as worker_mod
@@ -218,7 +231,7 @@ def test_subtitle_generation_runs_under_an_unregistered_language(test_config, tm
     assert captured["language"] == get_profile("ja").asr_language
 
 
-def test_manage_known_words_opens_under_an_unregistered_language(test_config, qtbot, monkeypatch):
+def test_manage_known_words_opens_under_an_unregistered_language(test_config, qtbot, monkeypatch, ko_unregistered):
     """Settings -> Filtering -> Manage Known Words: the content style read the
     degraded code already; this pins it (the site swallows exceptions into a
     screen issue, so a regression would surface as an error banner, not a

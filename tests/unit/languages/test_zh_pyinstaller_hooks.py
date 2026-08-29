@@ -91,5 +91,7 @@ def test_spec_pins_the_zh_packages_into_the_import_graph() -> None:
         # call bytecode analysis cannot follow; the 2B dry-run shipped a bundle
         # without it and the zh smoke died on "No tokenizer registered".
         '"anki_miner.languages.zh.tokenizer"',
+        # Same f-string importlib blind spot for the Korean engine.
+        '"anki_miner.languages.ko.tokenizer"',
     ):
         assert entry in spec_text, f"anki_miner.spec does not pin {entry}"

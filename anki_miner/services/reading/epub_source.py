@@ -34,6 +34,7 @@ import zipfile
 import zlib
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlsplit
 
 from lxml import etree, html  # type: ignore[import-untyped]
@@ -48,6 +49,9 @@ from anki_miner.models.reading import (
 from anki_miner.services.dictionary.zip_safety import MAX_UNCOMPRESSED_BYTES, validate_zip_safe
 from anki_miner.services.reading.sentence_splitter import split_sentences
 from anki_miner.utils.logging_ext import log_summary
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -182,12 +186,16 @@ def load(
     ref: ReadingSourceRef,
     *,
     cancel_check: _CancelCheck | None = None,
+    rules: SentenceRules | None = None,
 ) -> ReadingDocument:
     """Load ``ref.path`` (an ``.epub``) into a book :class:`ReadingDocument`.
 
     Raises :class:`SetupError` for DRM-protected or structurally invalid files;
     soft problems (unreadable cover, gaiji images) become ``warnings`` and the
     book still mines.
+
+    ``rules`` is the mining language's sentence-splitting policy; ``None`` is
+    the splitter's built-in Japanese one.
     """
     # Per-kind ref contract: file-backed kinds always carry a path.
     _raise_if_cancelled(cancel_check)
@@ -293,7 +301,7 @@ def load(
             content_i += 1
             for para in paragraphs:
                 _raise_if_cancelled(cancel_check)
-                for sentence in split_sentences(para):
+                for sentence in split_sentences(para, rules=rules):
                     _raise_if_cancelled(cancel_check)
                     doc.units.append(
                         ReadingUnit(

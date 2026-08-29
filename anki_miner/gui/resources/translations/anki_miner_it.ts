@@ -467,6 +467,30 @@
         <translation>Memorizza il classificatore estratto dalla voce del dizionario. Vuoto = salta.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Campo pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Memorizza la lettura in pinyin della parola, colorata in base al tono se l'opzione è attiva. Vuoto = salta.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Campo caratteri tradizionali</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Memorizza la parola nell'altra variante di scrittura, quando differisce. Vuoto = salta.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Campo hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Memorizza i caratteri hanja contenuti nella parola. Vuoto = salta.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Campi di dati ausiliari</translation>
     </message>
@@ -4379,6 +4403,22 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Escludi parole solo in hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Escludi parole contenenti hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Salta le parole scritte interamente in hangul. Lascia nel mazzo le parole scritte con gli hanja.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Salta le parole che contengono un carattere hanja, mantenendo nel mazzo il lessico in solo hangul.</translation>
+    </message>
+    <message>
         <source>Mining Language</source>
         <translation>Lingua di mining</translation>
     </message>
@@ -4725,6 +4765,26 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Mazzo da escludere dal rilevamento delle parole conosciute:</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Scarica modello coreano</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Scarica il modello linguistico coreano nella cartella di Anki Miner. Le installazioni bundle includono il motore coreano senza il suo modello.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Modello coreano</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Installato</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Non installato</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5087,6 +5147,16 @@ Aggiungere %3 parola/e all'elenco delle parole conosciute?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Rimuovere TUTTE le parole aggiunte all'elenco locale delle parole conosciute? Questa operazione non può essere annullata. La cache sincronizzata con Anki non viene modificata.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Download del modello coreano…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Modello coreano installato correttamente.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

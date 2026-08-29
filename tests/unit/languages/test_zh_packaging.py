@@ -30,8 +30,12 @@ def test_mypy_ignores_untyped_zh_packages() -> None:
 
 
 def test_ci_test_job_installs_the_zh_extra() -> None:
+    # Since the ko fixtures landed, the test job installs the `languages`
+    # aggregate rather than `zh` alone — the zh engine still arrives, via
+    # `anki-miner[zh]` (pinned by test_zh_extra_names_every_runtime_package),
+    # and the ko engine arrives with it so no fixture is silently skipped.
     ci = (PROJECT_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    assert 'pip install -e ".[dev,zh]"' in ci
+    assert 'pip install -e ".[dev,languages]"' in ci
 
 
 #: The versions the project's own venv resolved, pinned so a release bundle
@@ -45,10 +49,22 @@ def test_the_lock_pins_the_zh_engine() -> None:
         assert pin in lock, f"{pin} missing from requirements.lock"
 
 
+#: Same for the Korean engine: the lock's regeneration recipe installs `.[asr]`,
+#: so kiwipiepy needs a pinned block of its own or a bundle floats onto a
+#: tokenizer the Sejong POS tables were never run against.
+KO_LOCK_PINS = ("kiwipiepy==0.23.2", "kiwipiepy-model==0.23.0")
+
+
+def test_the_lock_pins_the_ko_engine() -> None:
+    lock = (PROJECT_ROOT / "requirements.lock").read_text(encoding="utf-8").splitlines()
+    for pin in KO_LOCK_PINS:
+        assert pin in lock, f"{pin} missing from requirements.lock"
+
+
 def test_the_release_preflight_builds_against_the_zh_extra() -> None:
     """The preflight venv must carry the engine the release bundles."""
     preflight = (PROJECT_ROOT / "scripts" / "release_preflight.sh").read_text(encoding="utf-8")
-    assert '".[asr,zh]"' in preflight
+    assert '".[asr,zh,ko]"' in preflight
     assert '".[asr]"' not in preflight
 
 

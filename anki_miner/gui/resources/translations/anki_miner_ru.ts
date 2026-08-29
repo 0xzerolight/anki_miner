@@ -468,6 +468,30 @@
         <translation>Хранит счётное слово, разобранное из словарной статьи. Пусто = пропустить.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Поле пиньиня</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Хранит чтение слова в пиньине, раскрашенное по тонам, если эта опция включена. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Поле традиционного написания</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Хранит слово в другом варианте письменности, если он отличается. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Поле ханчи</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Хранит знаки ханчи, содержащиеся в слове. Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Поля вспомогательных данных</translation>
     </message>
@@ -4392,6 +4416,22 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Исключить слова только из хангыля</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Исключить слова, содержащие ханчу</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Пропускать слова, записанные полностью хангылем. Оставляет в колоде слова, записанные ханчей.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Пропускать слова, содержащие любой знак ханчи, оставляя в колоде лексику только на хангыле.</translation>
+    </message>
+    <message>
         <source>Mining Language</source>
         <translation>Язык майнинга</translation>
     </message>
@@ -4738,6 +4778,26 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Колода, исключаемая из определения известных слов:</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Скачать корейскую модель</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Скачать модель корейского языка в папку Anki Miner. В упакованных сборках корейский движок поставляется без своей модели.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Корейская модель</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Установлено</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Не установлено</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5100,6 +5160,16 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Удалить ВСЕ слова, добавленные вами в локальный список известных слов? Это нельзя отменить. Синхронизированный с Anki кэш не затрагивается.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Скачивание корейской модели…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Корейская модель успешно установлена.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

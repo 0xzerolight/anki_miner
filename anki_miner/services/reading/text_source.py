@@ -16,12 +16,16 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingSourceRef, ReadingUnit
 from anki_miner.utils.logging_ext import log_summary
 
 from .sentence_splitter import split_sentences
+
+if TYPE_CHECKING:
+    from anki_miner.languages.profile import SentenceRules
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +39,7 @@ def load(
     ref: ReadingSourceRef,
     *,
     cancel_check: Callable[[], bool] | None = None,
+    rules: SentenceRules | None = None,
 ) -> ReadingDocument:
     """Split pasted text into sentence units and return a book document.
 
@@ -42,6 +47,9 @@ def load(
     physical line is stripped (including full-width indents) and sentence-split.
     Empty or whitespace-only text yields an empty-units document —
     ``process_reading`` surfaces the "no words" outcome.
+
+    ``rules`` is the mining language's sentence-splitting policy; ``None`` is
+    the splitter's built-in Japanese one.
     """
     _raise_if_cancelled(cancel_check)
     # Physical lines only (\r\n / \r / \n), like aozora's _splitlines —
@@ -64,7 +72,7 @@ def load(
             skipped += 1
             continue
         para_no += 1
-        for sentence in split_sentences(stripped):
+        for sentence in split_sentences(stripped, rules=rules):
             _raise_if_cancelled(cancel_check)
             units.append(
                 ReadingUnit(

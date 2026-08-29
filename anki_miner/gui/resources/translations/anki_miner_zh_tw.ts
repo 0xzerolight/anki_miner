@@ -466,6 +466,30 @@
         <translation>儲存從字典詞條中解析出的量詞。留空＝略過。</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>拼音欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>儲存單字的拼音讀音；若已開啟聲調上色，則會帶顏色。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>繁體字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>當另一種字形變體不同時，儲存該變體的寫法。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>韓文漢字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>儲存單字中包含的韓文漢字。留空＝略過。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>輔助資料欄位</translation>
     </message>
@@ -4366,6 +4390,22 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Exclude hangul-only words</source>
+        <translation>排除純諺文單字</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>排除含韓文漢字的單字</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>略過完全以諺文書寫的詞。讓牌組只留下以韓文漢字書寫的詞。</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>略過含有任何韓文漢字的詞，讓牌組保持純諺文詞彙。</translation>
+    </message>
+    <message>
         <source>Mining Language</source>
         <translation>採集語言</translation>
     </message>
@@ -4712,6 +4752,26 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>從已知單字偵測中排除的牌組：</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>下載韓文模型</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>將韓文語言模型下載至 Anki Miner 的資料夾。套裝安裝內含韓文引擎，但不包含其模型。</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>韓文模型</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>已安裝</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安裝</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5074,6 +5134,16 @@ Add %3 word(s) to your known list?</source>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>要移除你加入本機已知單字清單的所有單字嗎？此操作無法復原。不會影響與 Anki 同步的快取。</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>正在下載韓文模型…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>韓文模型已成功安裝。</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

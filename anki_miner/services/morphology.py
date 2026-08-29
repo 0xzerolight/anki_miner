@@ -1008,6 +1008,12 @@ class TokenInclusionRule:
 
     allowed_pos: frozenset[str]
     excluded_subtypes: frozenset[str]
+    #: Replaces the FINAL script decision of should_include for non-JA
+    #: languages: a pure-hangul word carries no kanji, so the ja ladder would
+    #: mine nothing for Korean. None (the default) keeps the ja path exactly as
+    #: it was - content_gate_ok, the katakana/loanword branches and the has_kanji
+    #: fallback all unchanged.
+    script_gate: Callable[[str], bool] | None = None
 
     def content_gate_ok(self, word_token) -> bool:
         """Content-word gate WITHOUT the final pure-hiragana script decision.
@@ -1121,6 +1127,9 @@ class TokenInclusionRule:
         # the script gate on top — no check is duplicated here.
         if not self.content_gate_ok(word_token):
             return False
+
+        if self.script_gate is not None:
+            return self.script_gate(word_token.surface)
 
         surface = word_token.surface
         feature = word_token.feature

@@ -466,6 +466,30 @@
         <translation>Lưu lượng từ được phân tích từ mục từ điển. Để trống = bỏ qua.</translation>
     </message>
     <message>
+        <source>Pinyin Field</source>
+        <translation>Trường Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Lưu cách đọc pinyin của từ, được tô màu theo thanh điệu khi tùy chọn đó bật. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Trường Phồn thể</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Lưu từ ở biến thể chữ viết còn lại, khi có khác biệt. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Trường Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Lưu các ký tự hanja có trong từ. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Trường Dữ liệu Phụ trợ</translation>
     </message>
@@ -4366,6 +4390,22 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Exclude hangul-only words</source>
+        <translation>Loại trừ từ chỉ có hangul</translation>
+    </message>
+    <message>
+        <source>Exclude words containing hanja</source>
+        <translation>Loại trừ từ có chứa hanja</translation>
+    </message>
+    <message>
+        <source>Skip words written entirely in hangul. Leaves the deck to words written with hanja.</source>
+        <translation>Bỏ qua các từ viết hoàn toàn bằng hangul. Giữ lại trong bộ thẻ những từ viết bằng hanja.</translation>
+    </message>
+    <message>
+        <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
+        <translation>Bỏ qua các từ có chứa ký tự hanja, giữ cho bộ thẻ chỉ có từ vựng hangul thuần.</translation>
+    </message>
+    <message>
         <source>Mining Language</source>
         <translation>Ngôn ngữ khai thác</translation>
     </message>
@@ -4712,6 +4752,26 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Tải mô hình tiếng Hàn</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Tải mô hình ngôn ngữ tiếng Hàn vào thư mục của Anki Miner. Bản cài đóng gói có sẵn công cụ tiếng Hàn nhưng không kèm mô hình.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Mô hình tiếng Hàn</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Đã cài đặt</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Chưa cài đặt</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5074,6 +5134,16 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <message>
         <source>Remove ALL words you added to the local known words list? This cannot be undone. The Anki-synced cache is not affected.</source>
         <translation>Gỡ bỏ TẤT CẢ các từ bạn đã thêm vào danh sách từ đã biết cục bộ? Không thể hoàn tác. Bộ nhớ đệm đồng bộ với Anki không bị ảnh hưởng.</translation>
+    </message>
+</context><context>
+    <name>KoModelDownloadWorker</name>
+    <message>
+        <source>Downloading the Korean model…</source>
+        <translation>Đang tải mô hình tiếng Hàn…</translation>
+    </message>
+    <message>
+        <source>Korean model installed successfully.</source>
+        <translation>Đã cài đặt mô hình tiếng Hàn thành công.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>

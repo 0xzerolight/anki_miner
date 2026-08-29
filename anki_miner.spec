@@ -164,6 +164,13 @@ if os.path.isdir(vulkan_loader_license_dir):
         (vulkan_loader_license_dir, os.path.join("licenses", "vulkan-loader"))
     )
 
+# kiwipiepy (Korean analyser) LGPL-3.0 notices: shipped whenever the license dir
+# exists. Lands at sys._MEIPASS/licenses/kiwipiepy/ in the bundle.
+kiwipiepy_license_dir = os.path.join(project_root, "licenses", "kiwipiepy")
+kiwipiepy_license_datas = []
+if os.path.isdir(kiwipiepy_license_dir):
+    kiwipiepy_license_datas.append((kiwipiepy_license_dir, os.path.join("licenses", "kiwipiepy")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -266,7 +273,8 @@ a = Analysis(
     + ytdlp_license_datas
     + libmpv_license_datas
     + local_audio_license_datas
-    + vulkan_loader_license_datas,
+    + vulkan_loader_license_datas
+    + kiwipiepy_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -298,14 +306,20 @@ a = Analysis(
         "jieba.posseg",
         "pypinyin",
         "opencc",
+        # kiwipiepy: imported function-locally in languages/ko/tokenizer.py so a
+        # missing [ko] extra degrades to an "install anki-miner[ko]" notice
+        # instead of an import error at startup. Pinned into the graph like mpv
+        # so the matching hooks always run.
+        "kiwipiepy",
         # The tokenizer module itself: tagger_provider._build resolves
         # "anki_miner.languages.<lang>.tokenizer" through importlib with an
         # f-string, which bytecode analysis cannot follow, and zh/__init__.py
         # deliberately never imports it (the engine loads lazily). Without this
         # pin the frozen app ships jieba but not the module that uses it, and
-        # get_tagger("zh") dies as "No tokenizer registered". Stage 3 must add
-        # the ko line beside it.
+        # get_tagger("zh") dies as "No tokenizer registered". The ko line is
+        # here for the same reason, with kiwipiepy standing in for jieba.
         "anki_miner.languages.zh.tokenizer",
+        "anki_miner.languages.ko.tokenizer",
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).
@@ -340,6 +354,14 @@ a = Analysis(
         # does `import av` at package load), so it MUST be bundled or the offline
         # ASR bundle smoke fails with ModuleNotFoundError: No module named 'av'.
         "onnxruntime",
+        # The Korean model (kiwipiepy_model, ~88 MB) ships as an on-demand
+        # download pack (services/ko_model_installer.py), not in the bundle:
+        # bundling it grew the artifacts 20% on Linux and 30% on Windows for a
+        # language most users never mine. kiwipiepy's own native loader imports
+        # the package by name — invisible to bytecode analysis, and the release
+        # build venv installs the [ko] extra, so only this exclude guarantees the
+        # model stays out. languages/ko/tokenizer.py resolves the pack instead.
+        "kiwipiepy_model",
         # yt-dlp ships as the vendored standalone EXECUTABLE (vendor/yt-dlp above),
         # which is the only form the app ever uses — every call site spawns it as a
         # subprocess. The Python package was collected wholesale for no runtime

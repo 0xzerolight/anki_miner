@@ -52,6 +52,17 @@ def _zh_builder() -> LanguageProfile:
 _register("zh", _zh_builder)
 
 
+def _ko_builder() -> LanguageProfile:
+    # Same reason as zh: the import stays in the builder so a ja session never
+    # pays for (or fails on) the ko engine's optional dependency set.
+    from anki_miner.languages.ko import build_profile
+
+    return build_profile()
+
+
+_register("ko", _ko_builder)
+
+
 def config_language(config: Any) -> str:
     """The mining-language code carried by *config*, ``"ja"`` when unusable.
 
@@ -63,7 +74,8 @@ def config_language(config: Any) -> str:
       test_subtitle_retimer.py:80) and may not be edited; the pre-Stage-1
       behaviour at every site reading this was "Japanese".
     * The code is whitelisted by ``config.config._LANGUAGE_CODES`` but has no
-      registered profile yet — ``zh``/``ko`` until Stages 2A/3 land. A
+      registered profile — every whitelisted code has one today, so this is the
+      path a code declared ahead of its profile takes. A
       hand-edited ``gui_config.json`` would otherwise raise out of every
       ``get_profile(config_language(config))`` site, including Settings'
       ``load_from_config`` and ``AnkiService.__init__``, with no in-app

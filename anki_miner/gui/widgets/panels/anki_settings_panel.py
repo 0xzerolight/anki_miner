@@ -406,6 +406,35 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the classifier parsed from the dictionary entry. Blank = skip."),
         )
 
+        # Chinese pinyin reading of the word. Same rule as the row above: the
+        # mapped name is the on/off switch, so with no row the render hook can
+        # never reach a note.
+        self.expression_pinyin_field_input = QLineEdit()
+        self.expression_pinyin_field_input.setPlaceholderText("Pinyin")
+        self.add_field(
+            self.tr("Pinyin Field"),
+            self.expression_pinyin_field_input,
+            helper=self.tr("Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip."),
+        )
+
+        # Traditional spelling of a word mined in simplified (and the reverse).
+        self.expression_traditional_field_input = QLineEdit()
+        self.expression_traditional_field_input.setPlaceholderText("Traditional")
+        self.add_field(
+            self.tr("Traditional Field"),
+            self.expression_traditional_field_input,
+            helper=self.tr("Stores the word in the other script variant, when it differs. Blank = skip."),
+        )
+
+        # Korean hanja. ja and zh never see the row and never write the key.
+        self.hanja_field_input = QLineEdit()
+        self.hanja_field_input.setPlaceholderText("Hanja")
+        self.add_field(
+            self.tr("Hanja Field"),
+            self.hanja_field_input,
+            helper=self.tr("Stores the hanja characters contained in the word. Blank = skip."),
+        )
+
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
@@ -568,6 +597,13 @@ class AnkiSettingsPanel(FormPanel):
         self._language_gate_pairs.extend(
             (w, "measure_word") for w in field_row_widgets(self, self.measure_word_field_input)
         )
+        self._language_gate_pairs.extend(
+            (w, "pinyin") for w in field_row_widgets(self, self.expression_pinyin_field_input)
+        )
+        self._language_gate_pairs.extend(
+            (w, "script_variants") for w in field_row_widgets(self, self.expression_traditional_field_input)
+        )
+        self._language_gate_pairs.extend((w, "hanja") for w in field_row_widgets(self, self.hanja_field_input))
 
         self.add_stretch()
 
@@ -881,8 +917,14 @@ class AnkiSettingsPanel(FormPanel):
         # Language-scoped keys are contributed only while their row is on screen
         # (or the mapping already carried them). Keeps a ja anki_fields
         # byte-identical instead of seeding it with an empty zh key.
-        if self.measure_word_field_input.isVisibleTo(self) or "measure_word" in self._loaded_fields:
-            owned["measure_word"] = self.measure_word_field_input.text().strip()
+        for key, widget in (
+            ("measure_word", self.measure_word_field_input),
+            ("expression_pinyin", self.expression_pinyin_field_input),
+            ("expression_traditional", self.expression_traditional_field_input),
+            ("hanja", self.hanja_field_input),
+        ):
+            if widget.isVisibleTo(self) or key in self._loaded_fields:
+                owned[key] = widget.text().strip()
         return {**self._loaded_fields, **owned}
 
     def set_card_fields(self, fields: Mapping[str, str]) -> None:
@@ -905,6 +947,9 @@ class AnkiSettingsPanel(FormPanel):
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
         self.measure_word_field_input.setText(fields.get("measure_word", ""))
+        self.expression_pinyin_field_input.setText(fields.get("expression_pinyin", ""))
+        self.expression_traditional_field_input.setText(fields.get("expression_traditional", ""))
+        self.hanja_field_input.setText(fields.get("hanja", ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.pitch_graph_field_input.setText(fields.get("pitch_graph", ""))

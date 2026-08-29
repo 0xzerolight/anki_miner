@@ -890,9 +890,10 @@ class ResourcesPage(_LiveCheckPage):
         # unchecked box emits toggled the first time it is checked, and that
         # slot touches download_button, which this loop runs before.
         self._download_running = False
-        # config_language, never the raw field: a stored code with no registered
-        # profile (ko until Stage 3) is legal on disk, and raising here would
-        # make the whole wizard unconstructible on first run.
+        # config_language, never the raw field: a stored code whose profile this
+        # build cannot supply — a language whitelisted in config but with its
+        # engine extra absent — is legal on disk, and raising here would make the
+        # whole wizard unconstructible on first run.
         self._specs = list(get_profile(config_language(wizard.working_config())).catalog)
         self.resource_checks: dict[str, QCheckBox] = {}
         for spec in self._specs:

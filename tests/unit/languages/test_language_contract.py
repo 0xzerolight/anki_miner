@@ -28,7 +28,7 @@ CODES = sorted(available_languages())
 
 #: Query word per language for the lookup-shape cases. A registered language
 #: with no entry here fails loudly rather than silently skipping.
-PROBE = {"ja": "食べた", "zh": "银行"}
+PROBE = {"ja": "食べた", "zh": "银行", "ko": "먹었다"}
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
 #: silently-off feature everywhere it is gated, so the vocabulary is closed.
