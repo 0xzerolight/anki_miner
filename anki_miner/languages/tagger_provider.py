@@ -29,9 +29,15 @@ def _build(language: str) -> Any:
 
     try:
         module = importlib.import_module(f"anki_miner.languages.{language}.tokenizer")
+        # Inside the try on purpose: every tokenizer module imports its engine
+        # lazily inside build_tagger (zh does ``import jieba.posseg`` there), so
+        # an install without the language's extra surfaces the missing engine
+        # HERE, not at import_module. Outside, it escaped as a bare
+        # ModuleNotFoundError past every ``except ValueError`` this contract
+        # tells callers to write.
+        return module.build_tagger()
     except ImportError as exc:
         raise ValueError(f"No tokenizer registered for language: {language!r}") from exc
-    return module.build_tagger()
 
 
 def get_tagger(language: str = "ja") -> Any:
