@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 MUTATION_KIND = "language-switch"
 _CTX = "LanguageSwitch"
 
+FIRST_VISIT_NONE = "none"
+FIRST_VISIT_EXCLUDE = "exclude"
+FIRST_VISIT_SETUP = "setup"
+
 
 def queued_screens(window: Any) -> tuple[Any, ...]:
     """Every queue screen still holding rows. Read-only, never raises."""
@@ -80,6 +84,84 @@ def flush_queues(window: Any) -> None:
     queue_state_store.discard_all()
 
 
+def other_language_decks(config: Any) -> tuple[str, ...]:
+    """Deck names the OTHER languages mine into: the live one plus every stash.
+
+    Derived from config alone - no AnkiConnect call, so the prompt works with
+    Anki closed, which is exactly when a user reconfigures languages.
+    """
+    names = [config.anki_deck_name]
+    for stashed in config.language_stash.values():
+        name = stashed.get("anki_deck_name")
+        if isinstance(name, str):
+            names.append(name)
+    seen: list[str] = []
+    for name in names:
+        if name and name not in seen:
+            seen.append(name)
+    return tuple(seen)
+
+
+def _first_visit_choice(parent: QWidget | None, display_name: str, decks: tuple[str, ...], offer_setup: bool) -> str:
+    """One modal, one decision. Returns a FIRST_VISIT_* constant."""
+    box = QMessageBox(parent)
+    box.setWindowTitle(QCoreApplication.translate(_CTX, "First time mining this language"))
+    box.setText(
+        tr_format(
+            QCoreApplication.translate(_CTX, "You have not mined %1 before."),
+            display_name,
+        )
+    )
+    box.setInformativeText(
+        tr_format(
+            QCoreApplication.translate(
+                _CTX,
+                "The known-words scan reads every deck that is not excluded, so words in "
+                "%1 would count as already known. Exclude them from this language?",
+            ),
+            ", ".join(decks),
+        )
+    )
+    exclude = box.addButton(QCoreApplication.translate(_CTX, "Exclude these decks"), QMessageBox.ButtonRole.AcceptRole)
+    setup = (
+        box.addButton(QCoreApplication.translate(_CTX, "Set up resources…"), QMessageBox.ButtonRole.ActionRole)
+        if offer_setup
+        else None
+    )
+    box.addButton(QMessageBox.StandardButton.Close)
+    box.setDefaultButton(exclude)
+    box.exec()
+    clicked = box.clickedButton()
+    if clicked is exclude:
+        return FIRST_VISIT_EXCLUDE
+    if setup is not None and clicked is setup:
+        return FIRST_VISIT_SETUP
+    return FIRST_VISIT_NONE
+
+
+def offer_first_visit_setup(window: Any, previous_config: Any) -> None:
+    """Offer the deck exclusions (and the wizard) on a first visit to a language.
+
+    Runs AFTER the switch is durable, so the config it edits is already the new
+    language's - the exclusions land in that language's scoped values and are
+    stashed with them when the user switches away.
+    """
+    from dataclasses import replace
+
+    config = window.get_config()
+    decks = tuple(name for name in other_language_decks(previous_config) if name not in config.excluded_decks)
+    if not decks:
+        return
+    display_name = getattr(get_profile(config.language), "display_name", config.language)
+    choice = _first_visit_choice(window, display_name, decks, offer_setup=not config.dictionary_chain)
+    if choice == FIRST_VISIT_EXCLUDE:
+        window.update_config(replace(config, excluded_decks=(*config.excluded_decks, *decks)))
+    elif choice == FIRST_VISIT_SETUP:
+        wizard = getattr(window, "_run_setup_wizard_tool", None)
+        if callable(wizard):
+            wizard()
+
+
 def commit_language_change(window: Any, previous_config: Any, *, flush: bool, first_visit: bool) -> None:
     """Everything a DURABLE language change owes, on both triggers."""
     if flush:
@@ -89,6 +171,11 @@ def commit_language_change(window: Any, previous_config: Any, *, flush: bool, fi
         if callable(hook):
             hook()
     logger.info("Mining language changed from %s to %s", previous_config.language, window.get_config().language)
+    if first_visit:
+        try:
+            offer_first_visit_setup(window, previous_config)
+        except Exception:
+            logger.exception("The first-visit prompt failed after switching to %s", window.get_config().language)
 
 
 def request_language_change(window: Any, code: str) -> bool:
