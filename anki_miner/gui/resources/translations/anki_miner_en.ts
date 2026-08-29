@@ -458,6 +458,14 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation type="unfinished" />
     </message>
@@ -4333,6 +4341,14 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation type="unfinished" />
     </message>
@@ -4565,6 +4581,22 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Simplified (简体)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation type="unfinished" />
     </message>
@@ -4634,6 +4666,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4816,6 +4856,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Theme:</source>
         <translation type="unfinished" />
     </message>
@@ -4833,6 +4881,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Manage profiles…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -5994,6 +6046,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mining or card backfill is still using the dictionaries. Stop it and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -458,6 +458,14 @@
         <translation>以純假名儲存例句。</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>量詞欄位</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>儲存從字典詞條中解析出的量詞。留空＝略過。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>輔助資料欄位</translation>
     </message>
@@ -4358,6 +4366,14 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>採集語言</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>要採集的語言。與介面語言（設定 -&gt; 外觀與語言）各自獨立。切換後，字典、篩選器、牌組與卡片欄位都會換成該語言自己的設定。</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>單字頻率</translation>
     </message>
@@ -4590,6 +4606,22 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>當字幕以假名拼寫單字（例如 うなずく），而該單字的漢字字典形（頷く）已在您的收藏或已知單字清單中時，則略過該單字，而不建立第二張卡片。漢字拼寫絕不會以此方式合併。</translation>
     </message>
     <message>
+        <source>Simplified (简体)</source>
+        <translation>簡體</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>繁體</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>字元集</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>卡片正面與字典查詢優先使用哪一種寫法。</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>i+1 句子篩選器</translation>
     </message>
@@ -4660,6 +4692,14 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>在 Sentence 與 SentenceFurigana 欄位中將採集的單字以 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包住。比對為採集詞素的精確 MeCab 範圍，因此句子中重複出現的表層形只會將實際採集的那一處加粗。</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>依聲調為讀音上色</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>為每個拼音音節加上聲調類別，讓卡片樣式可以為其上色。</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4846,6 +4886,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>使用中的設定檔。切換會替換所有設定；選取「管理設定檔…」即可新增、重新命名或移除。</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>採集語言：</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>採集語言</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>主題：</translation>
     </message>
@@ -4864,6 +4912,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Manage profiles…</source>
         <translation>管理設定檔…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>採集語言：%1。開啟設定中的選擇器。</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -6042,6 +6094,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>採集或卡片回填仍在使用字典。請停止後再試。</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>該設定檔採集的是其他語言，且佇列中仍有待處理的工作。未進行切換。</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>無法套用設定檔「%1」：%2。目前設定未變更。</translation>
     </message>
@@ -6931,19 +6987,19 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>音訊包「%1」是給 %2 用的；已略過</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>字典「%1」是給 %2 用的；已略過</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>頻率來源「%1」是給 %2 用的；已略過</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>高低音調來源「%1」是給 %2 用的；已略過</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8011,11 +8067,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>韓文</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>中文</translation>
     </message>
     <message>
         <source>Input</source>

@@ -458,6 +458,14 @@
         <translation>Menyimpan kalimat sebagai kana polos.</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Bidang Kata Penggolong</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan kata penggolong yang diuraikan dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Bidang Data Tambahan</translation>
     </message>
@@ -4358,6 +4366,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>Bahasa Mining</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>Bahasa yang di-mining. Terpisah dari bahasa antarmuka (Pengaturan -&gt; Tampilan &amp; Bahasa). Beralih akan mengganti kamus, filter, dek, dan bidang kartu ke pengaturan milik bahasa tersebut.</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>Frekuensi Kata</translation>
     </message>
@@ -4590,6 +4606,22 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Ketika subtitel mengeja kata dalam kana (misalnya うなずく) dan bentuk kamus kanji-nya (頷く) sudah ada di koleksi Anda atau daftar kata yang dikenal, kata tersebut dilewati alih-alih dibuatkan kartu kedua. Ejaan kanji tidak pernah digabungkan dengan cara ini.</translation>
     </message>
     <message>
+        <source>Simplified (简体)</source>
+        <translation>Sederhana (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Tradisional (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Set Karakter</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>Ejaan mana yang didahulukan oleh bagian depan kartu dan pencarian kamus.</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>Filter Kalimat i+1</translation>
     </message>
@@ -4660,6 +4692,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>Bungkus kata yang di-mining dalam &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; di dalam bidang Sentence dan SentenceFurigana. Kecocokan adalah rentang MeCab yang tepat dari morfem yang di-mining, sehingga permukaan yang berulang dalam sebuah kalimat hanya menebalkan kemunculan yang benar-benar di-mining.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Warnai bacaan berdasarkan nada</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>Membungkus setiap suku kata pinyin dalam kelas nada agar gaya kartu dapat mewarnainya.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4846,6 +4886,14 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Profil pengaturan aktif. Beralih akan menukar setiap pengaturan; pilih 'Kelola profil…' untuk menambah, mengganti nama, atau menghapusnya.</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>Bahasa mining:</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>Bahasa mining</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Tema:</translation>
     </message>
@@ -4864,6 +4912,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Manage profiles…</source>
         <translation>Kelola profil…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>Bahasa mining: %1. Membuka pemilihnya di Pengaturan.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -6042,6 +6094,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Mining atau pengisian ulang kartu masih menggunakan kamus. Hentikan dan coba lagi.</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>Profil itu melakukan mining bahasa lain dan antrean masih berisi pekerjaan. Tidak ada yang diganti.</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>Tidak dapat menerapkan profil '%1': %2. Pengaturan saat ini tidak berubah.</translation>
     </message>
@@ -6931,19 +6987,19 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Paket audio "%1" untuk %2; dilewati</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Kamus "%1" untuk %2; dilewati</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Sumber frekuensi "%1" untuk %2; dilewati</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>Sumber aksen nada "%1" untuk %2; dilewati</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8011,11 +8067,11 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>Korea</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>Mandarin</translation>
     </message>
     <message>
         <source>Input</source>

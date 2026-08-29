@@ -459,6 +459,14 @@
         <translation>Armazena a frase como kana simples.</translation>
     </message>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Campo de Classificador</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Armazena o classificador extraído do verbete do dicionário. Em branco = ignorar.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Campos de Dados Auxiliares</translation>
     </message>
@@ -4371,6 +4379,14 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
 </context><context>
     <name>FilteringSettingsPanel</name>
     <message>
+        <source>Mining Language</source>
+        <translation>Idioma de Mineração</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>O idioma que você minera. É separado do idioma da interface (Configurações -&gt; Aparência e Idioma). Alternar troca dicionários, filtros, baralho e campos do cartão pelas configurações do próprio idioma.</translation>
+    </message>
+    <message>
         <source>Word Frequency</source>
         <translation>Frequência de Palavras</translation>
     </message>
@@ -4603,6 +4619,22 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <translation>Quando uma legenda grafa uma palavra em kana (ex.: うなずく) e a forma de dicionário em kanji (頷く) já está na sua coleção ou lista de palavras conhecidas, ela é ignorada em vez de criar um segundo cartão. Grafias em kanji nunca são mescladas dessa forma.</translation>
     </message>
     <message>
+        <source>Simplified (简体)</source>
+        <translation>Simplificado (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Tradicional (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Conjunto de Caracteres</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation>Qual grafia a frente do cartão e a busca no dicionário preferem.</translation>
+    </message>
+    <message>
         <source>i+1 Sentence Filter</source>
         <translation>Filtro de Frase i+1</translation>
     </message>
@@ -4673,6 +4705,14 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
     <message>
         <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation>Envolve a palavra minerada em &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; dentro dos campos Sentence e SentenceFurigana. A correspondência é o intervalo exato do MeCab do morfema minerado, então superfícies duplicadas em uma frase só colocam em negrito a ocorrência efetivamente minerada.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Colorir a leitura por tom</translation>
+    </message>
+    <message>
+        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <translation>Envolve cada sílaba do pinyin em uma classe de tom para que o estilo do cartão possa colori-la.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -4859,6 +4899,14 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Perfil de configurações ativo. A alternância troca todas as configurações; escolha 'Gerenciar perfis…' para adicioná-los, renomeá-los ou removê-los.</translation>
     </message>
     <message>
+        <source>Mining language:</source>
+        <translation>Idioma de mineração:</translation>
+    </message>
+    <message>
+        <source>Mining language</source>
+        <translation>Idioma de mineração</translation>
+    </message>
+    <message>
         <source>Theme:</source>
         <translation>Tema:</translation>
     </message>
@@ -4877,6 +4925,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Manage profiles…</source>
         <translation>Gerenciar perfis…</translation>
+    </message>
+    <message>
+        <source>Mining language: %1. Opens the selector in Settings.</source>
+        <translation>Idioma de mineração: %1. Abre o seletor em Configurações.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -6055,6 +6107,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>A mineração ou o preenchimento de cartões ainda está usando os dicionários. Interrompa-o e tente novamente.</translation>
     </message>
     <message>
+        <source>That profile mines another language and the queues still hold work. Nothing was switched.</source>
+        <translation>Esse perfil minera outro idioma e as filas ainda têm trabalho pendente. Nada foi alterado.</translation>
+    </message>
+    <message>
         <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
         <translation>Não foi possível aplicar o perfil '%1': %2. Suas configurações atuais não foram alteradas.</translation>
     </message>
@@ -6944,19 +7000,19 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <name>ResourceChain</name>
     <message>
         <source>Audio pack '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>O pacote de áudio "%1" é para %2; ignorado</translation>
     </message>
     <message>
         <source>Dictionary '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>O dicionário "%1" é para %2; ignorado</translation>
     </message>
     <message>
         <source>Frequency source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>A fonte de frequência "%1" é para %2; ignorada</translation>
     </message>
     <message>
         <source>Pitch source '%1' is for %2; skipped</source>
-        <translation type="unfinished" />
+        <translation>A fonte de acento tonal "%1" é para %2; ignorada</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -8026,11 +8082,11 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     </message>
     <message>
         <source>Korean</source>
-        <translation type="unfinished" />
+        <translation>Coreano</translation>
     </message>
     <message>
         <source>Chinese</source>
-        <translation type="unfinished" />
+        <translation>Chinês</translation>
     </message>
     <message>
         <source>Input</source>
