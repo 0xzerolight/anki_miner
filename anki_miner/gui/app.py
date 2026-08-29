@@ -1330,6 +1330,9 @@ def compose_main_window(
     # window owns the dialog, because a switch reloads every panel in this tab
     # from the incoming config. Same handler as the header's combo sentinel.
     settings_tab.manage_profiles_requested.connect(window._open_profile_manager)
+    # The selector only ever PROPOSES a switch: the window runs the guard, shows
+    # any refusal itself and re-points the combo on every terminal path.
+    settings_tab.mining_language_requested.connect(window.request_mining_language)
     window.tabs.addTab(settings_tab, QCoreApplication.translate("MainWindow", "Settings"))
 
     # Non-Settings config refreshes (e.g. JMdict migration finishing in the
