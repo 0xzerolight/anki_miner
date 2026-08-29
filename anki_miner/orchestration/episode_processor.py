@@ -1539,11 +1539,9 @@ class EpisodeProcessor:
     def _apply_render_hooks(self, word: Any, definition: str, extra_fields: dict[str, str]) -> None:
         """Merge non-ja hook fields into ``extra_fields`` under LOGICAL keys.
 
-        ``definition`` is phase 5's ``card_definition`` local. This task does
-        not read it — Stage 2A task 2A.10 adds the single line that stashes it
-        on the word, inside the ja gate, so ``ZhMeasureWordHook`` can see the
-        CC-CEDICT ``CL:`` marker. The parameter is declared here so 2A.10 adds
-        a line and never widens a signature.
+        ``definition`` is phase 5's ``card_definition`` local, stashed onto the
+        word BELOW the ja gate (never on a ja run) so a hook can read it —
+        ``ZhMeasureWordHook`` parses the CC-CEDICT ``CL:`` marker out of it.
 
         JA's pitch, furigana, glossary and frequency fields are rendered inline
         in _phase5_create and must NEVER route through a hook — hence the gate.
@@ -1555,6 +1553,7 @@ class EpisodeProcessor:
         """
         if self.config.language == "ja":
             return
+        word.definition_html = definition
         for hook in self.profile.render_hooks:
             try:
                 rendered = hook.render(word)

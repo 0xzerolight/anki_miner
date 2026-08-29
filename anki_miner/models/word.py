@@ -202,6 +202,10 @@ class TokenizedWord:
     # (a Korean VV falls through to `return surface`). Empty on every
     # hand-built TokenizedWord, which keeps the property's JA behaviour.
     mined_form_override: str = ""
+    # Definition HTML fetched in phase 4, stashed for the non-ja render-hook
+    # pass only (EpisodeProcessor._apply_render_hooks). Always "" on every ja
+    # path — ja renders no hooks, so no ja card, filename or field changes.
+    definition_html: str = ""
 
     @property
     def bold_end(self) -> int:
