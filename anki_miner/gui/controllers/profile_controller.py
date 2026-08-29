@@ -37,11 +37,13 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.controllers import language_switch
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils.config_commit import ConfigCommitError
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -82,6 +84,21 @@ _BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "ui_font_scale", "stats
 def _boot_only_values(config: AnkiMinerConfig) -> dict[str, object]:
     """Snapshot the boot-only field values of ``config``."""
     return {name: getattr(config, name) for name in _BOOT_ONLY_FIELDS}
+
+
+def _language_change(outgoing: AnkiMinerConfig, incoming: AnkiMinerConfig) -> bool:
+    """Whether this profile switch is also a mining-language switch (spec 6.1)."""
+    return incoming.language != outgoing.language
+
+
+def _incoming_language_name(incoming: AnkiMinerConfig) -> str:
+    """The incoming language's own name (中文), never the bare code.
+
+    Degraded through ``config_language`` first: ``AnkiMinerConfig`` accepts every
+    whitelisted code, including one whose profile is not registered yet, and an
+    unregistered code would otherwise raise ``ValueError`` out of the switch.
+    """
+    return get_profile(config_language(incoming)).display_name
 
 
 def _boot_only_label(field: str) -> str:
@@ -506,6 +523,16 @@ class ProfileController:
                 ),
             )
 
+        # 2b. Trigger 2 of the mining-language switch (spec 6.1). The snapshot
+        # already carries that language's scoped values, so there is no stash
+        # swap to run here — what is still owed is the queue rule, refused
+        # BEFORE the commit, where a refusal is still free. After it, a refusal
+        # would cost the user the profile switch as well.
+        language_change = _language_change(outgoing_config, incoming)
+        pending = language_switch.queued_screens(window) if language_change else ()
+        if pending and not language_switch.confirm_queue_flush(window, pending, _incoming_language_name(incoming)):
+            return SwitchResult(switched=False, reason=self._queued_work())
+
         # 3. Re-seed Theme BEFORE the commit, because update_config's
         # config_refreshed fan-out reaches UISettingsPanel.load_from_config,
         # which renders the Active theme and captures the Revert baseline FROM
@@ -590,6 +617,11 @@ class ProfileController:
         self._apply_theme()
         self._header().refresh_favorites()
         self._note_restart_fields(incoming)
+
+        if language_change:
+            # A profile snapshot is already-configured settings, so never a
+            # first visit: no setup prompt on this path.
+            language_switch.commit_language_change(window, outgoing_config, flush=bool(pending), first_visit=False)
 
         if refresh_error is not None:
             logger.warning("Settings profile '%s' is live but the refresh failed: %s", profile_id, refresh_error)
@@ -732,6 +764,13 @@ class ProfileController:
         return QCoreApplication.translate(
             "ProfileController",
             "Mining or card backfill is still using the dictionaries. Stop it and try again.",
+        )
+
+    @staticmethod
+    def _queued_work() -> str:
+        return QCoreApplication.translate(
+            "ProfileController",
+            "That profile mines another language and the queues still hold work. Nothing was switched.",
         )
 
     @staticmethod
