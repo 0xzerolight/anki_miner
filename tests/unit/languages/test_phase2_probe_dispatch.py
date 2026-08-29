@@ -26,7 +26,6 @@ import pytest
 from anki_miner.languages.profile import LanguageProfile
 from anki_miner.languages.registry import get_profile
 from anki_miner.models import TokenizedWord
-from anki_miner.orchestration import episode_processor as ep_module
 from anki_miner.services.definition_service import DefinitionService
 from tests.conftest import build_processor
 
@@ -43,8 +42,28 @@ class _StubLookup:
         return list(self.answer)
 
 
-def _profile_with(lookup: Any, *, code: str = "zh") -> LanguageProfile:
-    return dataclasses.replace(get_profile("ja"), code=code, lookup=lookup)
+def _profile_with(lookup: Any, *, code: str = "zh", script: Any = None) -> LanguageProfile:
+    changes: dict[str, Any] = {"code": code, "lookup": lookup}
+    if script is not None:
+        changes["script"] = script
+    return dataclasses.replace(get_profile("ja"), **changes)
+
+
+class _RecordingScript:
+    """A ScriptSupport that records the phase-2 script-filter derivation."""
+
+    def __init__(self) -> None:
+        self.filter_options_calls = 0
+
+    def filter_options(self) -> tuple[()]:
+        self.filter_options_calls += 1
+        return ()
+
+    def matches(self, option_id: str, form: str) -> bool:
+        return False
+
+    def contains_target_script(self, text: str) -> bool:
+        return True
 
 
 def _word(lemma: str = "帰る", orth_base: str = "帰れる") -> TokenizedWord:
@@ -107,19 +126,26 @@ def test_the_probe_terms_come_from_the_processors_profile(test_config, services,
     assert lookup.calls == [("帰れる", "帰る", None)]
 
 
-def test_a_zh_config_probes_with_its_own_strategy(test_config, services, tmp_path, monkeypatch):
-    """The real non-ja shape: a zh config whose profile is the zh profile."""
+def test_a_zh_config_probes_with_its_own_strategy(test_config, services, tmp_path):
+    """The real non-ja shape: a zh config whose profile is the zh profile.
+
+    No registry stub is needed: every phase-2 site — the probe AND the later
+    script-type filter — reads the profile the processor holds, so nothing
+    re-resolves ``get_profile("zh")``, which has no builder until Stage 2A.
+    """
     lookup = _StubLookup([("电影", 0)])
-    profile = _profile_with(lookup)
-    # The script-type filter later in phase 2 resolves its own profile from the
-    # registry, where no zh builder exists until Stage 2A.
-    monkeypatch.setattr(ep_module, "get_profile", lambda code: profile)
+    script = _RecordingScript()
+    profile = _profile_with(lookup, script=script)
     config = dataclasses.replace(test_config, language="zh")
 
     proc = _run_phase2(config, services, [_word()], profile=profile, tmp_path=tmp_path)
 
     assert proc.profile is profile
     assert _probed_candidates(services) == [("电影", 0)]
+    # Both phase-2 seams read the HELD profile: the script-type filter derives
+    # its options from this profile's ScriptSupport rather than re-resolving
+    # get_profile("zh"), which has no builder and would raise.
+    assert script.filter_options_calls == 1
 
 
 def test_the_probe_does_not_route_through_definition_service(test_config, services, tmp_path):

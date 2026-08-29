@@ -212,6 +212,12 @@ class _EpisodeContext:
 class EpisodeProcessor:
     """Orchestrate processing of a single episode."""
 
+    #: Backing store for :attr:`profile`. A CLASS attribute so it is readable on
+    #: an instance built with ``EpisodeProcessor.__new__`` — a pre-existing test
+    #: does that and hand-sets only the collaborators its phase needs, so
+    #: ``__init__`` never runs and no instance attribute exists.
+    _profile: LanguageProfile | None = None
+
     def __init__(
         self,
         config: AnkiMinerConfig,
@@ -341,6 +347,28 @@ class EpisodeProcessor:
             expression_audio_fetcher=expression_audio_fetcher,
             sentence_audio_fetcher=sentence_audio_fetcher,
         )
+
+    @property
+    def profile(self) -> LanguageProfile:
+        """The run's language profile — the ONE place this processor answers
+        "what language is this".
+
+        Every phase reads this attribute; no phase re-resolves
+        ``get_profile(self.config.language)`` for itself, which is how the
+        phase-2 script filter used to disagree with the phase-2 probe and the
+        phase-5 hook loop when a caller injected a profile.
+
+        Lazy, because the fallback has to survive an instance that skipped
+        ``__init__`` (see :attr:`_profile`).
+        """
+        profile = self._profile
+        if profile is None:
+            profile = self._profile = get_profile(self.config.language)
+        return profile
+
+    @profile.setter
+    def profile(self, profile: LanguageProfile) -> None:
+        self._profile = profile
 
     def cancel(self) -> None:
         """Request cancellation of processing."""
@@ -1014,7 +1042,7 @@ class EpisodeProcessor:
         # The keyword is SPLATTED, not spelled out: ja omits it (the filter's
         # own None path re-derives the identical set from the two booleans), so
         # the ja call shape stays byte-identical down to the test doubles.
-        script_options = enabled_script_options(get_profile(self.config.language).script, self.config)
+        script_options = enabled_script_options(self.profile.script, self.config)
         if script_options and not self.config.bypass_optional_filters:
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_script_type(
