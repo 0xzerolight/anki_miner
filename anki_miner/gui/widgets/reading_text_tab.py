@@ -248,11 +248,16 @@ class ReadingTextTab(_ReadingMiningTabBase):
         if viewport is not None:
             viewport.installEventFilter(self._file_drop_filter)
         # What the user pastes here is the text they came to mine, not interface
-        # chrome: the mining language's face, a reading size, and the looser
-        # leading (decision D45-B).
-        apply_content_font(self.text_edit, get_profile(config_language(self.config)).content_style, role=JAPANESE_BODY)
-        apply_japanese_block_format(self.text_edit.document())
-        self.text_edit.textChanged.connect(self._keep_japanese_leading)
+        # chrome: the mining language's face and a reading size (decision D45-B).
+        language = config_language(self.config)
+        apply_content_font(self.text_edit, get_profile(language).content_style, role=JAPANESE_BODY)
+        # The looser leading is Japanese typography, and it is a
+        # QTextBlockFormat rather than a stylesheet rule because Qt has no
+        # line-height -- so it cannot be language-scoped in the QSS and is gated
+        # here instead. Chinese takes Qt's own line spacing.
+        if language == "ja":
+            apply_japanese_block_format(self.text_edit.document())
+            self.text_edit.textChanged.connect(self._keep_japanese_leading)
         self.text_edit.textChanged.connect(self._recompute_buttons)
         card_layout.addWidget(self.text_edit)
 
