@@ -566,7 +566,7 @@ def _build_expression_audio_fetcher(
                 continue
             fetchers.append(resolved_pack)  # duplicate pack_ids pass through (same object queried twice)
 
-    return ChainedExpressionAudioFetcher(fetchers)
+    return ChainedExpressionAudioFetcher(fetchers, candidates=audio.candidates)
 
 
 def create_expression_audio_fetcher(
