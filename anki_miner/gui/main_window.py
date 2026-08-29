@@ -77,6 +77,7 @@ from anki_miner.gui.widgets.dialogs.system_health_window import (
 from anki_miner.gui.widgets.header_widget import HeaderWidget
 from anki_miner.gui.widgets.mini_job_monitor import MiniJobMonitor
 from anki_miner.gui.widgets.status_bar_widget import StatusBarWidget
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import ProcessingResult, ValidationResult
 from anki_miner.services import ShortcutResult, ShortcutService, ValidationService
 from anki_miner.services.anki_service import AnkiService
@@ -2142,6 +2143,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             window.set_export_enabled(not self._diagnostics_export_running)
             self._system_health_window = window
             window.show_health(self._health_report)
+        # Outside the build block: every open re-applies the gate, so a language
+        # switch between two opens cannot leave a stale row on screen. Per-open
+        # is enough — a switch requires idle queues, so the window cannot go
+        # stale while a run is live.
+        window.set_capabilities(get_profile(config_language(self.config)).capabilities)
         window.show()
         window.raise_()
         window.activateWindow()

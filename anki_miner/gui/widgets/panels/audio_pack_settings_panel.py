@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, pyqtSignal
@@ -374,6 +374,27 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         """Enable/disable the retry button while its off-thread sweep runs."""
         self._retry_missing_btn.setEnabled(enabled)
 
+    def _write_chain(self, entries: Iterable[AudioSourceEntry]) -> None:
+        """The one place this panel's chain is written, so the chrome follows it.
+
+        Every writer goes through here: a caller that assigned ``_chain``
+        directly would leave the retry affordance describing the chain before
+        its edit.
+        """
+        self._chain = list(entries)
+        self._sync_retry_affordance()
+
+    def _sync_retry_affordance(self) -> None:
+        """Offer 'Retry missing audio' only when a chain entry caches misses.
+
+        jpod101 is the one source that writes zero-byte ``.miss`` markers;
+        googletts failures are transient and re-queried, and local packs are
+        re-read every run. With no jpod101 entry the sweep has nothing to
+        unlink, so the button would be a dead affordance naming a Japanese
+        service to a Chinese or Korean miner.
+        """
+        self._retry_missing_btn.setVisible(any(e.kind == "jpod101" and e.enabled for e in self._chain))
+
     def _set_mutation_controls_enabled(self, enabled: bool) -> None:
         self._add_btn.setEnabled(enabled)
         self._restore_btn.setEnabled(enabled)
@@ -383,7 +404,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         chain: tuple[AudioSourceEntry, ...],
         registry_meta: dict[str, AudioPackMeta] | None = None,
     ) -> None:
-        self._chain = list(chain)
+        self._write_chain(chain)
         if registry_meta is not None:
             # Caller pre-supplied meta; use it directly, no disk scan needed.
             self._view = _RegistryView(registry_meta.get)
@@ -399,7 +420,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         ``get_chain``) so an in-progress toggle isn't lost, appends *entry*, then
         emits ``chain_changed`` which the settings tab persists.
         """
-        self._chain = [*self.get_chain(), entry]
+        self._write_chain([*self.get_chain(), entry])
         self._rebuild_list()
         self.chain_changed.emit()
 
@@ -507,7 +528,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         chain = self.get_chain()
         new_chain = (*chain[:index], *chain[index + 1 :])
         if self._remove_chain_commit is None:
-            self._chain = list(new_chain)
+            self._write_chain(new_chain)
             self.chain_changed.emit()
             result = ConfigCommitResult.committed()
         else:
@@ -516,7 +537,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             except Exception as error:
                 result = ConfigCommitResult.pre_save_failure(error)
             if result.persisted:
-                self._chain = list(new_chain)
+                self._write_chain(new_chain)
         if not result.persisted:
             msg = self._error_text(result)
             self.show_screen_issue(
