@@ -14,7 +14,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import language_choices
-from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
 from anki_miner.languages.ko import availability as ko_availability
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.zh import availability
@@ -34,8 +34,8 @@ def ko_stack_absent(monkeypatch):
     monkeypatch.setattr(ko_availability, "find_spec", lambda _name: None)
 
 
-def _panel(qtbot, config: AnkiMinerConfig) -> FilteringSettingsPanel:
-    panel = FilteringSettingsPanel()
+def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
+    panel = MiningLanguageSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(config)
     return panel
@@ -103,9 +103,6 @@ def test_changing_the_combo_only_requests_a_switch(qtbot, test_config):
     panel.mining_language_combo.setCurrentIndex(1)
 
     assert requested == ["zh"]
-    # The panel never writes the field itself: the switch owns that, because it
-    # has to stash the outgoing language's scoped values first.
-    assert panel.contribute(test_config).language == "ja"
 
 
 def test_set_mining_language_repoints_without_re_requesting(qtbot, test_config):
@@ -117,3 +114,27 @@ def test_set_mining_language_repoints_without_re_requesting(qtbot, test_config):
 
     assert panel.mining_language_combo.currentData() == "zh"
     assert requested == []
+
+
+def test_the_panel_writes_no_config_field(qtbot, test_config):
+    """The switch owns ``language``: it has to stash the outgoing language's
+    scoped values first, and a second writer would race it."""
+    panel = _panel(qtbot, test_config)
+
+    assert not hasattr(panel, "contribute")
+
+
+def test_the_panel_title_matches_its_navigator_label(qtbot):
+    panel = MiningLanguageSettingsPanel()
+    qtbot.addWidget(panel)
+
+    assert panel._title_label.text() == "Mining Language"
+
+
+def test_the_panel_anchors_the_selector_and_the_model_row(qtbot):
+    panel = MiningLanguageSettingsPanel()
+    qtbot.addWidget(panel)
+
+    ids = {anchor.stable_id for anchor in panel.setting_anchors()}
+
+    assert ids == {"mining_language.mining_language_combo", "mining_language.ko_model"}
