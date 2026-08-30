@@ -58,9 +58,13 @@ class _AddSourceDialog(QDialog):
     """
 
     # (kind, English label). Labels go through self.tr at construction.
+    # custom_json first: the placeholder URL is the local-audio-yomichan
+    # server root, which speaks the audioSourceList JSON contract — naming
+    # that server on the direct-audio kind steered users into a source that
+    # silently missed on every word (JSON bodies never validate as audio).
     _KINDS: list[tuple[str, str]] = [
-        ("custom", "Custom URL (local-audio-yomichan / any audio URL)"),
-        ("custom_json", "Custom JSON list (audioSourceList)"),
+        ("custom_json", "Custom JSON list (local-audio-yomichan server)"),
+        ("custom", "Custom URL (a direct audio file URL)"),
     ]
 
     def __init__(self, parent: QWidget | None = None) -> None:

@@ -1424,29 +1424,39 @@ def test_remove_builtin_jpod101_blocked(qapp, qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_add_source_dialog_ok_disabled_until_url_for_custom(qapp, qtbot):
+def test_add_source_dialog_defaults_to_custom_json(qapp, qtbot):
+    # The placeholder URL is the local-audio-yomichan server root, which
+    # returns an audioSourceList JSON document — the custom_json contract.
+    # Defaulting to "custom" made that server silently miss on every word.
     dialog = asp_mod._AddSourceDialog()
     qtbot.addWidget(dialog)
-    # Default first kind is "custom" → OK disabled with empty URL.
-    assert dialog.selected_kind() == "custom"
-    ok = dialog._buttons.button(QDialogButtonBox.StandardButton.Ok)
-    assert not ok.isEnabled()
-    dialog._url_edit.setText("http://h/?t={term}")
-    assert ok.isEnabled()
-    assert dialog.url_value() == "http://h/?t={term}"
-
-
-def test_add_source_dialog_custom_json_also_needs_url(qapp, qtbot):
-    dialog = asp_mod._AddSourceDialog()
-    qtbot.addWidget(dialog)
-    # Select the custom_json kind — also URL-gated.
-    idx = dialog._kind_combo.findData("custom_json")
-    dialog._kind_combo.setCurrentIndex(idx)
+    assert dialog.selected_kind() == "custom_json"
     ok = dialog._buttons.button(QDialogButtonBox.StandardButton.Ok)
     assert not ok.isEnabled()
     dialog._url_edit.setText("http://h/list?t={term}")
     assert ok.isEnabled()
     assert dialog.url_value() == "http://h/list?t={term}"
+
+
+def test_add_source_dialog_local_audio_yomichan_named_on_json_kind(qapp, qtbot):
+    # The wording steers the choice: local-audio-yomichan must be named on the
+    # JSON kind (its server contract), never on the direct-audio kind.
+    labels = dict(asp_mod._AddSourceDialog._KINDS)
+    assert "local-audio-yomichan" in labels["custom_json"]
+    assert "local-audio-yomichan" not in labels["custom"]
+
+
+def test_add_source_dialog_custom_also_needs_url(qapp, qtbot):
+    dialog = asp_mod._AddSourceDialog()
+    qtbot.addWidget(dialog)
+    # Select the direct-audio custom kind — also URL-gated.
+    idx = dialog._kind_combo.findData("custom")
+    dialog._kind_combo.setCurrentIndex(idx)
+    ok = dialog._buttons.button(QDialogButtonBox.StandardButton.Ok)
+    assert not ok.isEnabled()
+    dialog._url_edit.setText("http://h/?t={term}")
+    assert ok.isEnabled()
+    assert dialog.url_value() == "http://h/?t={term}"
 
 
 # ---------------------------------------------------------------------------
