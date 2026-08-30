@@ -34,6 +34,7 @@ from anki_miner.config import (
     FreqEntry,
     PitchSourceEntry,
     create_default_config,
+    insert_above_first_enabled_jpod101,
 )
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.gui.controllers.anki_probe_controller import AnkiProbeController
@@ -816,13 +817,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     )
                 )
                 return
-            chain = list(scan_chain)
             entries = [AudioSourceEntry(kind="pack", pack_id=pack.pack_id, enabled=True) for pack in packs]
-            insert_at = next(
-                (index for index, entry in enumerate(chain) if entry.kind == "jpod101" and entry.enabled),
-                len(chain),
-            )
-            new_chain = tuple(chain[:insert_at] + entries + chain[insert_at:])
+            new_chain = insert_above_first_enabled_jpod101(scan_chain, entries)
             try:
                 self._persist_audio_chain_change(new_chain)
             except Exception as error:  # noqa: BLE001 - persistence boundary

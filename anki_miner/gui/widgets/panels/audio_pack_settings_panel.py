@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterable
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from PyQt6.QtCore import QPoint, pyqtSignal
 from PyQt6.QtGui import QAction
@@ -20,7 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AudioSourceEntry
+from anki_miner.config import AudioSourceEntry, insert_above_first_enabled_jpod101
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
@@ -40,6 +42,8 @@ from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
 shutil = robust_fs.shutil
+
+logger = logging.getLogger(__name__)
 
 
 def _robust_rmtree(target: Path) -> RmtreeOutcome:
@@ -420,13 +424,22 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled)
 
     def add_source_entry(self, entry: AudioSourceEntry) -> None:
-        """Append an online audio source to the chain and persist immediately.
+        """Add an online audio source above jpod101 and persist immediately.
 
         Reads the current enabled/order state off the row widgets first (via
-        ``get_chain``) so an in-progress toggle isn't lost, appends *entry*, then
-        emits ``chain_changed`` which the settings tab persists.
+        ``get_chain``) so an in-progress toggle isn't lost, splices *entry* in
+        above the first enabled jpod101 entry (the chain is first-hit-wins, so
+        a source below jpod101 is never consulted), then emits ``chain_changed``
+        which the settings tab persists.
         """
-        self._write_chain([*self.get_chain(), entry])
+        # Host only, never the full URL: the query string is the user's own
+        # source list and has no place in a diagnostics bundle.
+        logger.info(
+            "Online audio source added: kind=%s host=%s",
+            entry.kind,
+            urlsplit(entry.url).netloc if entry.url else "-",
+        )
+        self._write_chain(insert_above_first_enabled_jpod101(self.get_chain(), (entry,)))
         self._rebuild_list()
         self.chain_changed.emit()
 

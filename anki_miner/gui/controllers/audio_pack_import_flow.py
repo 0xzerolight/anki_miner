@@ -17,7 +17,7 @@ from pathlib import Path
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
-from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
+from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, insert_above_first_enabled_jpod101
 from anki_miner.gui.controllers.import_flow_common import (
     ModalImportFlowMixin,
     _begin_import_trace,
@@ -132,20 +132,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         current = [e for e in current if e.kind == "jpod101" or e.pack_id not in new_pack_ids]
 
         new_entries = [AudioSourceEntry(kind="pack", pack_id=pid, enabled=True) for pid in new_pack_ids]
-
-        # Find the first enabled jpod101 entry to insert before it.
-        insert_idx: int | None = None
-        for i, entry in enumerate(current):
-            if entry.kind == "jpod101" and entry.enabled:
-                insert_idx = i
-                break
-
-        if insert_idx is not None:
-            current[insert_idx:insert_idx] = new_entries
-        else:
-            current.extend(new_entries)
-
-        return tuple(current)
+        return insert_above_first_enabled_jpod101(current, new_entries)
 
     def add_pack(
         self,

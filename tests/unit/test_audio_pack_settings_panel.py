@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -1246,15 +1247,60 @@ def test_get_chain_preserves_url(qapp, qtbot, tmp_path):
     assert chain[0].url == "http://h/list?t={term}"
 
 
-def test_add_source_entry_appends_and_emits(qapp, qtbot, tmp_path):
+def test_add_source_entry_inserts_above_enabled_jpod101(qapp, qtbot, tmp_path):
+    # The chain is first-hit-wins: a source added below jpod101 would never be
+    # consulted for any word jpod101 can serve (support case 2026-08-30).
     panel = AudioPackSettingsPanel(tmp_path)
     qtbot.addWidget(panel)
     panel.set_chain((AudioSourceEntry(kind="jpod101", enabled=True),))
     with qtbot.waitSignal(panel.chain_changed, timeout=1000):
         panel.add_source_entry(AudioSourceEntry(kind="custom", url="http://h/?t={term}", enabled=True))
     chain = panel.get_chain()
-    assert [e.kind for e in chain] == ["jpod101", "custom"]
+    assert [e.kind for e in chain] == ["custom", "jpod101"]
     assert panel._list.count() == 2
+
+
+def test_add_source_entry_keeps_packs_above_and_disabled_tail_below(qapp, qtbot, tmp_path):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),
+            AudioSourceEntry(kind="jpod101", enabled=True),
+            AudioSourceEntry(kind="googletts", enabled=False),
+        )
+    )
+    with qtbot.waitSignal(panel.chain_changed, timeout=1000):
+        panel.add_source_entry(AudioSourceEntry(kind="custom_json", url="http://h/list?t={term}", enabled=True))
+    assert [e.kind for e in panel.get_chain()] == ["pack", "custom_json", "jpod101", "googletts"]
+
+
+def test_add_source_entry_appends_without_enabled_jpod101(qapp, qtbot, tmp_path):
+    # A disabled jpod101 is not an anchor: nothing outranks the new source.
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(
+        (
+            AudioSourceEntry(kind="pack", pack_id="forvo", enabled=True),
+            AudioSourceEntry(kind="jpod101", enabled=False),
+        )
+    )
+    with qtbot.waitSignal(panel.chain_changed, timeout=1000):
+        panel.add_source_entry(AudioSourceEntry(kind="custom", url="http://h/?t={term}", enabled=True))
+    assert [e.kind for e in panel.get_chain()] == ["pack", "jpod101", "custom"]
+
+
+def test_add_source_entry_logs_kind_and_host_only(qapp, qtbot, tmp_path, caplog):
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    panel.set_chain(())
+    with caplog.at_level(logging.INFO, logger="anki_miner.gui.widgets.panels.audio_pack_settings_panel"):
+        panel.add_source_entry(
+            AudioSourceEntry(kind="custom", url="http://127.0.0.1:5050/?term={term}&sources=jpod", enabled=True)
+        )
+    messages = [r.getMessage() for r in caplog.records]
+    assert any("custom" in m and "127.0.0.1:5050" in m for m in messages), messages
+    assert all("sources=jpod" not in m for m in messages), messages
 
 
 def test_remove_custom_source_no_confirmation(qapp, qtbot, tmp_path, monkeypatch):

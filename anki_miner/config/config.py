@@ -4,7 +4,7 @@ import tempfile
 import types
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Mapping
+from typing import Literal, Mapping, Sequence
 
 from .paths import ANKI_MINER_HOME
 
@@ -86,6 +86,26 @@ class AudioSourceEntry:
     pack_id: str | None = None
     url: str | None = None
     enabled: bool = True
+
+
+def insert_above_first_enabled_jpod101(
+    chain: Sequence[AudioSourceEntry],
+    new_entries: Sequence[AudioSourceEntry],
+) -> tuple[AudioSourceEntry, ...]:
+    """Splice *new_entries* above the first enabled jpod101 entry (else append).
+
+    The chain is first-hit-wins, so anything the user adds — a pack or a custom
+    URL source — must outrank the always-available jpod101 fallback or it is
+    never consulted for any word jpod101 can serve. A disabled jpod101 is not
+    an anchor: nothing needs to outrank it.
+    """
+    out = list(chain)
+    insert_at = next(
+        (index for index, entry in enumerate(out) if entry.kind == "jpod101" and entry.enabled),
+        len(out),
+    )
+    out[insert_at:insert_at] = new_entries
+    return tuple(out)
 
 
 @dataclass(frozen=True)
