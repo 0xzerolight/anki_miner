@@ -86,14 +86,24 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     """Name the dominant expression-audio failure cause, or None.
 
     ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
-    failure bucket (ssl/connection/timeout/http_status/non_audio), aggregated
-    across every enabled word-audio source (packs, JPod101, custom URL/JSON,
-    gTTS). Threshold/tie-break semantics live in
+    failure bucket (ssl/connection/timeout/http_status/non_audio/slow),
+    aggregated across every enabled word-audio source (packs, JPod101, custom
+    URL/JSON, gTTS). Threshold/tie-break semantics live in
     :func:`_dominant_transient_failure`.
     """
     dominant = _dominant_transient_failure(counts, attempts)
     if dominant is None:
         return None
+    if dominant == "slow":
+        # Distinct from every other bucket: nothing failed and nothing is
+        # retried differently next run. The source is reachable and answering,
+        # just far slower than the per-word budget, so the actionable advice is
+        # to reorder or disable it rather than to wait it out.
+        return QCoreApplication.translate(
+            "EpisodeProcessor",
+            "Word-audio source is responding too slowly — audio skipped for those words. "
+            "Reorder or disable it in Settings -> Audio if this keeps happening.",
+        )
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(
             "EpisodeProcessor",

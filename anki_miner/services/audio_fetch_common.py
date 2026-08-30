@@ -238,7 +238,12 @@ def find_cached_by_stem(cache_dir: Path, stem: str) -> Path | None:
 # diagnoses — notably the historical expired-server-certificate incident. Here the
 # never-raises fetchers tally why each transient failure happened so the pipeline
 # can name the dominant cause instead of reporting an undiagnosable "X/Y available".
-FAILURE_KEYS = ("ssl", "connection", "timeout", "http_status", "non_audio")
+# "slow" is appended last on purpose: _dominant_transient_failure breaks ties
+# with max() over this key order, so adding to the end cannot reorder the
+# pre-existing buckets. It is NOT a transport error — the request was still
+# running when the chain's per-word wall-clock budget expired. See
+# ChainedExpressionAudioFetcher.PER_WORD_BUDGET_SECONDS.
+FAILURE_KEYS = ("ssl", "connection", "timeout", "http_status", "non_audio", "slow")
 
 
 def new_failure_counts() -> dict[str, int]:

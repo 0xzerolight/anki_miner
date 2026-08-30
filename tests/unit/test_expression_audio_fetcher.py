@@ -3,6 +3,7 @@
 import hashlib
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -1317,7 +1318,9 @@ class TestChainedFailureStats:
 
         totals = chain.stats()
 
-        assert totals == {"ssl": 4, "connection": 1, "timeout": 2, "http_status": 0, "non_audio": 5}
+        # "slow" is the chain's own bucket (budget expiries), zero here because
+        # no member was abandoned; members that omit it still aggregate fine.
+        assert totals == {"ssl": 4, "connection": 1, "timeout": 2, "http_status": 0, "non_audio": 5, "slow": 0}
 
     def test_skips_member_without_stats(self):
         class _NoStats:
@@ -1396,3 +1399,124 @@ class TestPurgeMissMarkers:
         assert removed == 1
         assert (tmp_path / "a.miss").exists()
         assert not (tmp_path / "b.miss").exists()
+
+
+class TestChainPerWordBudget:
+    """The chain bounds one word's whole walk in wall clock.
+
+    Regression cover for the reported "Extract media takes 13 minutes for one
+    card" run: the audio stage spent 796s on a single word that ultimately
+    SUCCEEDED, so every transport counter read zero and no diagnosis fired. A
+    member's own ``timeout=`` is per-socket-operation and does not bound name
+    resolution, so only a wall-clock ceiling makes the run's worst case a
+    function of word count.
+    """
+
+    class _SlowStub:
+        """A member that blocks far longer than any budget under test."""
+
+        def __init__(self, block_s: float, hit: Path | None = None) -> None:
+            self._block_s = block_s
+            self._hit = hit
+            self.calls = 0
+            self.released = threading.Event()
+
+        def _block(self) -> Path | None:
+            self.calls += 1
+            # Bounded so an abandoned worker cannot outlive the test session.
+            self.released.wait(self._block_s)
+            return self._hit
+
+        def fetch(self, mined_form, reading, cancelled_check=None):
+            return self._block()
+
+        def fetch_candidates(self, candidates, cancelled_check=None):
+            return self._block()
+
+    def test_slow_hit_becomes_a_miss_instead_of_blocking_the_run(self, tmp_path, monkeypatch):
+        """A member that would eventually succeed still yields None at the budget."""
+        would_have_hit = tmp_path / "late.mp3"
+        would_have_hit.touch()
+        slow = self._SlowStub(block_s=30.0, hit=would_have_hit)
+        chain = ChainedExpressionAudioFetcher([slow])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        started = time.perf_counter()
+        result = chain.fetch_candidates([("噓", "うそ")])
+        elapsed = time.perf_counter() - started
+        slow.released.set()
+
+        assert result is None
+        # Without the budget this returns the Path after the full block.
+        assert elapsed < 5.0, f"chain walk was not bounded: {elapsed:.2f}s"
+        assert slow.calls == 1
+
+    def test_budget_expiry_is_counted_as_slow_not_as_a_transport_failure(self, tmp_path, monkeypatch):
+        """stats() reports the expiry under "slow", leaving transport buckets clean."""
+        slow = self._SlowStub(block_s=30.0)
+        chain = ChainedExpressionAudioFetcher([slow])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        chain.fetch_candidates([("噓", "うそ")])
+        slow.released.set()
+
+        counts = chain.stats()
+        assert counts["slow"] == 1
+        assert counts["connection"] == 0
+        assert counts["timeout"] == 0
+        assert counts["ssl"] == 0
+
+    def test_fetch_is_bounded_too(self, tmp_path, monkeypatch):
+        """The plain fetch() entry point carries the same ceiling as fetch_candidates()."""
+        slow = self._SlowStub(block_s=30.0, hit=tmp_path / "late.mp3")
+        chain = ChainedExpressionAudioFetcher([slow])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        started = time.perf_counter()
+        result = chain.fetch("噓", "うそ")
+        elapsed = time.perf_counter() - started
+        slow.released.set()
+
+        assert result is None
+        assert elapsed < 5.0, f"fetch() was not bounded: {elapsed:.2f}s"
+
+    def test_one_budget_covers_the_whole_chain_not_one_per_source(self, tmp_path, monkeypatch):
+        """Two slow sources cannot multiply the ceiling by the chain length."""
+        first = self._SlowStub(block_s=30.0)
+        second = self._SlowStub(block_s=30.0)
+        chain = ChainedExpressionAudioFetcher([first, second])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.3)
+
+        started = time.perf_counter()
+        chain.fetch_candidates([("噓", "うそ")])
+        elapsed = time.perf_counter() - started
+        first.released.set()
+        second.released.set()
+
+        assert elapsed < 5.0, f"budget was applied per source: {elapsed:.2f}s"
+        assert chain.stats()["slow"] == 1
+
+    def test_fast_members_are_unaffected(self, tmp_path):
+        """A normal fetch returns its Path with the real budget in force."""
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+
+        class _Fast:
+            def fetch_candidates(self, candidates, cancelled_check=None):
+                return audio
+
+        chain = ChainedExpressionAudioFetcher([_Fast()])  # type: ignore[list-item]
+
+        assert chain.fetch_candidates([("噓", "うそ")]) == audio
+        assert chain.stats()["slow"] == 0
+
+    def test_member_raising_is_still_swallowed(self, tmp_path):
+        """The never-raises contract survives the threaded walk."""
+
+        class _Boom:
+            def fetch_candidates(self, candidates, cancelled_check=None):
+                raise RuntimeError("member blew up")
+
+        chain = ChainedExpressionAudioFetcher([_Boom()])  # type: ignore[list-item]
+
+        assert chain.fetch_candidates([("噓", "うそ")]) is None
