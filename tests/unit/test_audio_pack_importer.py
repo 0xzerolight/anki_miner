@@ -205,6 +205,18 @@ class TestImportHappyPath:
         assert result.format == "jpod_legacy"
         assert result.entry_count == 2
 
+    def test_parse_progress_reports_running_count(self, tmp_path: Path, monkeypatch):
+        # An 80k-file pack parses for ~45 minutes; without a running count the
+        # progress dialog sits on one static string and reads as a hang.
+        monkeypatch.setattr(audio_pack_importer, "_PROGRESS_EVERY_ROWS", 2)
+        pack = _make_ajt_pack(tmp_path / "my_pack", n_entries=5)
+        messages: list[str] = []
+
+        import_audio_pack(pack, tmp_path / "out", progress=messages.append)
+
+        counted = [m for m in messages if "2" in m and "entries" in m]
+        assert counted, messages
+
 
 # ---------------------------------------------------------------------------
 # pack_id derivation

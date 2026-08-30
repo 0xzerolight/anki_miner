@@ -739,6 +739,7 @@ def scan_importable_packs(
     directory: Path,
     *,
     cancel_check: CancelCheck | None = None,
+    progress: Callable[[str], None] | None = None,
 ) -> list[tuple[Path, str]]:
     """Return (pack_dir, format) for every detectable pack under *directory*.
 
@@ -753,6 +754,11 @@ def scan_importable_packs(
     children would otherwise also be misreported as a junk parent pack.
     A directory that is itself a pack with no pack children gets the full
     detection as before.
+
+    ``progress`` receives the name of each directory just before it is
+    detected. Detection can walk an entire subtree per candidate, so this is
+    the caller's only liveness signal during a minutes-long scan. It is called
+    on whatever thread runs the scan.
     """
     is_cancelled = cancel_check or _never_cancelled
     seen: set[Path] = set()
@@ -773,6 +779,8 @@ def scan_importable_packs(
             if resolved in seen:
                 continue
             seen.add(resolved)
+            if progress is not None:
+                progress(child.name)
             fmt = detect_pack_format(child, cancel_check=is_cancelled)
             if is_cancelled():
                 return []
@@ -783,6 +791,8 @@ def scan_importable_packs(
     if is_cancelled():
         return results
     if directory.resolve() not in seen:
+        if progress is not None:
+            progress(directory.name)
         if child_results:
             dir_fmt = _detect_index_driven_format(directory) if directory.is_dir() else None
         else:

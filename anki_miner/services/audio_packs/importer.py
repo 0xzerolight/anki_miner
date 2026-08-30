@@ -293,7 +293,7 @@ def import_audio_pack(
         total_entries = bulk_insert(
             db_path,
             _rows_with_cancel(
-                rows,
+                _rows_with_progress(rows, progress, f"Parsing {fmt} pack —"),
                 cancel_check,
             ),
             on_malformed=_record_storage_malformed,
@@ -380,6 +380,22 @@ def repair_audio_pack(
 
 
 _CANCEL_BATCH_SIZE = 5000
+
+# An 80k-file pack parses for the better part of an hour on a cold Windows
+# disk; a running count is the user's only sign the import is alive.
+_PROGRESS_EVERY_ROWS = 500
+
+
+def _rows_with_progress(rows, progress: Callable[[str], None] | None, label: str):
+    """Wrap a row iterator to report a running entry count while parsing."""
+    if progress is None:
+        yield from rows
+        return
+
+    for count, row in enumerate(rows, 1):
+        yield row
+        if count % _PROGRESS_EVERY_ROWS == 0:
+            progress(f"{label} {count:,} entries …")
 
 
 def _rows_with_cancel(rows, cancel_check: Callable[[], bool] | None):

@@ -10,12 +10,14 @@ dependency stays one-way: tab → controller → workers/services.
 
 from __future__ import annotations
 
+import contextlib
+import logging
 import sqlite3
 from collections.abc import Callable
 from pathlib import Path
 
-from PyQt6.QtCore import QCoreApplication
-from PyQt6.QtWidgets import QMessageBox, QWidget
+from PyQt6.QtCore import QCoreApplication, Qt, QTimer
+from PyQt6.QtWidgets import QMessageBox, QProgressDialog, QWidget
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry, insert_above_first_enabled_jpod101
 from anki_miner.gui.controllers.import_flow_common import (
@@ -40,6 +42,8 @@ from anki_miner.services.audio_packs.importer import derive_pack_id
 from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.audio_packs.storage import read_meta_cached
 from anki_miner.utils.i18n import tr_format
+
+logger = logging.getLogger(__name__)
 
 # Upstream source priority for newly imported packs inserted into the chain.
 # Lower index = higher priority (queried first).  Keys are canonical pack_ids
@@ -153,11 +157,66 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     self._set_import_buttons_enabled(True)
                     return
 
+                # The scan can walk an entire pack tree per candidate folder —
+                # over an hour on a large real-world pack — so it gets its own
+                # busy dialog: indeterminate, live folder name, working Cancel.
+                # Without it the panel is just disabled buttons for the
+                # duration and users kill the app.
+                scan_status: dict[str, str] = {}
+                dlg = QProgressDialog(
+                    QCoreApplication.translate("AudioPackImportFlow", "Scanning folder for audio packs…"),
+                    QCoreApplication.translate("AudioPackImportFlow", "Cancel"),
+                    0,
+                    0,
+                    self._parent,
+                )
+                dlg.setWindowModality(Qt.WindowModality.ApplicationModal)
+                dlg.setAutoClose(False)
+                dlg.setAutoReset(False)
+                dlg.setMinimumDuration(0)
+                label_timer = QTimer(dlg)
+                label_timer.setInterval(500)
+
+                def _tick() -> None:
+                    name = scan_status.get("name")
+                    if name:
+                        dlg.setLabelText(
+                            tr_format(
+                                QCoreApplication.translate("AudioPackImportFlow", "Scanning %1 …"),
+                                name,
+                            )
+                        )
+
+                label_timer.timeout.connect(_tick)
+                label_timer.start()
+                dlg.show()
+                closed = {"done": False}
+
+                def _close_dialog() -> None:
+                    if closed["done"]:
+                        return
+                    closed["done"] = True
+                    label_timer.stop()
+                    with contextlib.suppress(TypeError):
+                        dlg.canceled.disconnect(_on_cancel)
+                    dlg.close()
+                    dlg.deleteLater()
+
+                def _on_cancel() -> None:
+                    logger.info("Import trace %s scan cancelled by user", trace_id)
+                    self._cancel_active_scan()
+                    _close_dialog()
+                    self._set_import_buttons_enabled(True)
+
+                dlg.canceled.connect(_on_cancel)
+
                 def _on_done(result: object) -> None:
+                    _close_dialog()
                     assert isinstance(result, list)
                     self.add_pack(_scan_result=(chosen_dir, result), _trace_id=trace_id)
 
                 def _on_error(message: str) -> None:
+                    _close_dialog()
                     self._set_import_buttons_enabled(True)
                     self._report_import_issue(
                         QCoreApplication.translate("AudioPackImportFlow", "That folder could not be scanned."),
@@ -168,6 +227,8 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     lambda is_cancelled: scan_importable_packs(
                         Path(chosen_dir),
                         cancel_check=is_cancelled,
+                        # Runs on the scan thread; the GUI-side timer polls it.
+                        progress=lambda name: scan_status.__setitem__("name", name),
                     ),
                     _on_done,
                     _on_error,
