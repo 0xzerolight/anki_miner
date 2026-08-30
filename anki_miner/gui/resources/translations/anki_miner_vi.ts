@@ -730,6 +730,18 @@ Vẫn tiếp tục?</translation>
 </context><context>
     <name>AudioPackImportFlow</name>
     <message>
+        <source>Scanning folder for audio packs…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Scanning %1 …</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That folder could not be scanned.</source>
         <translation>Không thể quét thư mục đó.</translation>
     </message>
@@ -774,10 +786,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Đã hoàn tất nhập, nhưng không thể cập nhật cài đặt.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3943,6 +3951,10 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
         <translation>Nguồn âm thanh từ gặp lỗi kết nối/chứng chỉ — bỏ qua âm thanh lần này, sẽ thử lại lần sau</translation>
