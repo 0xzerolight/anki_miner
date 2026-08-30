@@ -1054,7 +1054,7 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
 
 
 def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) -> None:
-    """Wire the Filtering panel's "Download Korean model" button to the worker.
+    """Wire the Mining Language panel's "Download Korean model" button to the worker.
 
     The pack root is derived, not configured: it is a managed directory under the
     app home like ``cuda_libs_root``, but the tokenizer has to find it without a
@@ -1063,7 +1063,7 @@ def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) ->
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
-        settings_tab.filtering_panel.notify_ko_model_download_finished()
+        settings_tab.mining_language_panel.notify_ko_model_download_finished()
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         from anki_miner.services.ko_model_installer import ko_model_root

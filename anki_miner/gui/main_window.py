@@ -992,7 +992,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.tabs.setCurrentIndex(idx)
         jump = getattr(self.tabs.widget(idx), "jump_to_setting", None)
         if callable(jump):
-            jump("filtering.mining_language_combo")
+            jump("mining_language.mining_language_combo")
 
     def request_mining_language(self, code: str) -> bool:
         """Selector entry point for a language switch (spec 6.1, trigger 1).

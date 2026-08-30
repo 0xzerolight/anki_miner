@@ -35,7 +35,19 @@ MAIN_TABS: frozenset[str] = frozenset(
 )
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
-    {"anki", "media", "dictionaries", "audio", "frequency", "pitch", "filtering", "youtube", "subtitles", "ui"}
+    {
+        "anki",
+        "media",
+        "dictionaries",
+        "audio",
+        "frequency",
+        "pitch",
+        "mining_language",
+        "filtering",
+        "youtube",
+        "subtitles",
+        "ui",
+    }
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
@@ -345,6 +357,28 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("settings", "youtube"),
         keywords=("yt-dlp", "ytdlp", "update downloader", "youtube broken", "custom binary"),
+    ),
+    Capability(
+        id="mining-language",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine Japanese, Korean or Chinese"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "mining_language"),
+        keywords=(
+            "language",
+            "japanese",
+            "korean",
+            "chinese",
+            "mandarin",
+            "hangul",
+            "switch language",
+            "ja",
+            "ko",
+            "zh",
+        ),
     ),
     # --- Filtering ---------------------------------------------------------
     Capability(

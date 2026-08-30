@@ -20,7 +20,6 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.utils.qt_helpers import (
     configure_data_view,
@@ -29,7 +28,7 @@ from anki_miner.gui.utils.qt_helpers import (
     reveal_settings,
 )
 from anki_miner.gui.widgets.base import FormPanel
-from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
+from anki_miner.gui.widgets.enhanced import FileSelector
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import ScriptFilterOption
 from anki_miner.languages.registry import config_language, get_profile
@@ -99,21 +98,6 @@ def _capability_script_filter_options(capability: str) -> tuple[ScriptFilterOpti
     return ()
 
 
-def kiwipiepy_installed() -> bool:
-    """Return True when the Korean ENGINE is importable in this install.
-
-    Module-level so the Korean model row can be probed (and stubbed) without
-    importing kiwipiepy: ``find_spec`` answers without executing it. The MODEL is
-    a separate question — ``ko_model_installer.is_installed`` answers that one.
-    """
-    from importlib.util import find_spec
-
-    try:
-        return find_spec("kiwipiepy") is not None
-    except (ImportError, ValueError):
-        return False
-
-
 # How tall the excluded-deck list is allowed to grow, in rows rather than
 # pixels: a flat cap shows fewer decks the larger the user's text gets.
 _EXCLUDED_DECK_ROWS = 5
@@ -143,10 +127,6 @@ class FilteringSettingsPanel(FormPanel):
             local known-words cache.
         manage_known_words_requested: Emitted when the user opens the Manage
             Known Words dialog (Issue #42).
-        mining_language_requested: Emitted when the user picks another mining
-            language. The window runs the guard and decides.
-        ko_model_download_requested: Emitted when the user asks for the Korean
-            model pack. The download itself is owned by the caller.
     """
 
     ANCHOR_NAMESPACE = "filtering"
@@ -154,8 +134,6 @@ class FilteringSettingsPanel(FormPanel):
     fetch_decks_requested = pyqtSignal()
     rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
-    mining_language_requested = pyqtSignal(str)  # proposes a switch; never commits one
-    ko_model_download_requested = pyqtSignal()  # asks the caller to fetch the Korean model
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
@@ -171,26 +149,6 @@ class FilteringSettingsPanel(FormPanel):
         # non-ja rows to the same one. A second assignment would drop these
         # pairs, so this is the only place it is bound.
         self._language_gate_pairs: list[tuple[QWidget, str]] = []
-
-        # Mining Language section. First, because every row below it is scoped
-        # to the language this one names.
-        self.add_section(self.tr("Mining Language"))
-
-        self.mining_language_combo = QComboBox()
-        for code, display_name in available_mining_languages():
-            self.mining_language_combo.addItem(display_name, code)
-        self.mining_language_combo.currentIndexChanged.connect(self._on_mining_language_changed)
-        self.add_field(
-            self.tr("Mining Language"),
-            self.mining_language_combo,
-            helper=self.tr(
-                "The language you mine. Separate from the interface language "
-                "(Settings -> Appearance & Language). Switching swaps dictionaries, "
-                "filters, deck and card fields to that language's own settings."
-            ),
-        )
-
-        self._setup_ko_model_row()
 
         # Word Frequency section. Frequency-source management lives on its own
         # settings page; only the rank band — a filter — stays here.
@@ -985,133 +943,6 @@ class FilteringSettingsPanel(FormPanel):
         """Enable or disable the Add Deck button."""
         self.add_deck_button.setEnabled(enabled)
 
-    def set_mining_language(self, code: str) -> None:
-        """Point the combo at ``code`` without proposing a switch.
-
-        Signals blocked: this runs from ``load_from_config`` and from the
-        window's re-point after a REFUSED switch, and an emit there would ask
-        for the switch that was just refused.
-        """
-        index = self.mining_language_combo.findData(code)
-        if index < 0:
-            return
-        self.mining_language_combo.blockSignals(True)
-        try:
-            self.mining_language_combo.setCurrentIndex(index)
-        finally:
-            self.mining_language_combo.blockSignals(False)
-
-    def _on_mining_language_changed(self, index: int) -> None:
-        """Propose a switch. The window decides, and re-points this combo."""
-        code = self.mining_language_combo.itemData(index)
-        if isinstance(code, str) and code:
-            self.mining_language_requested.emit(code)
-
-    # ------------------------------------------------------------------
-    # Korean model download (services/ko_model_installer.py)
-    # ------------------------------------------------------------------
-
-    def _setup_ko_model_row(self) -> None:
-        """Build the Korean model download row, under the language it belongs to.
-
-        The frozen bundle ships the kiwipiepy engine without its ~88 MB model,
-        and the availability probe gates Korean on that model — so until the pack
-        lands, ko is not even in the combo above. That is exactly why the row
-        lives here rather than beside the transcription packs: it is the only
-        thing on screen that explains where Korean went.
-        """
-        self.download_ko_model_button = ModernButton(self.tr("Download Korean model"), variant="secondary")
-        self.download_ko_model_button.setToolTip(
-            self.tr(
-                "Download the Korean language model into Anki Miner's folder. "
-                "Bundled installs ship the Korean engine without its model."
-            )
-        )
-        self.download_ko_model_button.clicked.connect(self._on_ko_model_download_clicked)
-
-        self.ko_model_status_label = QLabel("")
-        self.ko_model_status_label.setObjectName("settings-save-status")
-
-        ko_container = QWidget()
-        ko_row = QHBoxLayout(ko_container)
-        ko_row.setContentsMargins(0, 0, 0, 0)
-        ko_row.setSpacing(SPACING.xs)
-        ko_row.addWidget(self.download_ko_model_button)
-        ko_row.addWidget(self.ko_model_status_label)
-        ko_row.addStretch()
-        self.add_field(
-            self.tr("Korean model"),
-            ko_container,
-            anchor="ko_model",
-            anchor_focus=self.download_ko_model_button,
-            anchor_text=lambda: (self.download_ko_model_button.text(), self.download_ko_model_button.toolTip()),
-        )
-        # The whole row (label included) disappears where kiwipiepy is absent.
-        # NOT a _language_gate_pairs entry: this row is about a language the user
-        # is not on yet, so the capability gate would hide the one control that
-        # gets them there.
-        self._ko_model_row_widgets = field_row_widgets(self, ko_container)
-        self._ko_model_active = False
-        self._refresh_ko_model_row()
-
-    def _refresh_ko_model_row(self) -> None:
-        """Show, hide and label the row from what this install actually has."""
-        from anki_miner.services.ko_model_installer import is_installed, ko_model_root
-
-        engine = kiwipiepy_installed()
-        for widget in self._ko_model_row_widgets:
-            widget.setVisible(engine)
-        if not engine:
-            return
-        if self._ko_model_active:
-            self.download_ko_model_button.setEnabled(False)
-            return
-        installed = is_installed(ko_model_root())
-        self.download_ko_model_button.setEnabled(not installed)
-        self.ko_model_status_label.setText(self.tr("Installed") if installed else self.tr("Not installed"))
-
-    def _on_ko_model_download_clicked(self) -> None:
-        """Guard against a second press and ask the caller to run the download."""
-        if self._ko_model_active:
-            return
-        self._ko_model_active = True
-        self.download_ko_model_button.setEnabled(False)
-        self.ko_model_download_requested.emit()
-
-    def set_ko_model_status(self, text: str) -> None:
-        """Show a Korean model download status line."""
-        self.ko_model_status_label.setText(text)
-
-    def notify_ko_model_download_finished(self) -> None:
-        """Clear the in-flight guard and re-read what the download left behind.
-
-        The mining-language combo is repopulated too: ``available_mining_languages``
-        drops Korean while the model is missing, so a combo built at startup has
-        no ko entry to select even once the pack is on disk.
-        """
-        self._ko_model_active = False
-        self._repopulate_mining_languages()
-        self._refresh_ko_model_row()
-
-    def _repopulate_mining_languages(self) -> None:
-        """Rebuild the combo from the current availability, keeping the selection.
-
-        Signals blocked throughout: a rebuild reshuffles indices, and the
-        resulting ``currentIndexChanged`` would propose a language switch the
-        user never asked for.
-        """
-        current = self.mining_language_combo.currentData()
-        self.mining_language_combo.blockSignals(True)
-        try:
-            self.mining_language_combo.clear()
-            for code, display_name in available_mining_languages():
-                self.mining_language_combo.addItem(display_name, code)
-            index = self.mining_language_combo.findData(current)
-            if index >= 0:
-                self.mining_language_combo.setCurrentIndex(index)
-        finally:
-            self.mining_language_combo.blockSignals(False)
-
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)
     # ------------------------------------------------------------------
@@ -1123,9 +954,6 @@ class FilteringSettingsPanel(FormPanel):
         Word-list selectors always set the value (including '' when the path is
         None) so Reset-to-Defaults clears a previously visible path (T-11).
         """
-        # config_language, not config.language: an unregistered code mines as
-        # Japanese, and the selector has to show the language actually in force.
-        self.set_mining_language(config_language(config))
         # Signals blocked while loading: a stored band with min > max (reachable
         # only by hand-editing gui_config.json) would otherwise have the clamp
         # silently rewrite the other end during a plain load.

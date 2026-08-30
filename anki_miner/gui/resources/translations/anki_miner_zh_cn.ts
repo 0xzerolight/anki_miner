@@ -1708,6 +1708,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>自动更新内置的 yt-dlp 下载器、按需更新，或指定使用你自己的可执行文件。</translation>
     </message>
     <message>
+        <source>Mine Japanese, Korean or Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>i+1 句子挖词</translation>
     </message>
@@ -4406,14 +4414,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>跳过含有任何韩文汉字的词，让牌组保持纯谚文词汇。</translation>
     </message>
     <message>
-        <source>Mining Language</source>
-        <translation>挖词语言</translation>
-    </message>
-    <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation>要挖词的语言。与界面语言（设置 -&gt; 外观和语言）相互独立。切换后，词典、过滤器、牌组和卡片字段都会换成该语言自己的设置。</translation>
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>词频</translation>
     </message>
@@ -4752,26 +4752,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>从已知单词检测中排除的牌组：</translation>
-    </message>
-    <message>
-        <source>Download Korean model</source>
-        <translation>下载韩语模型</translation>
-    </message>
-    <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>将韩语语言模型下载到 Anki Miner 的文件夹。打包安装自带韩语引擎，但不含其模型。</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>韩语模型</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>已安装</translation>
-    </message>
-    <message>
-        <source>Not installed</source>
-        <translation>未安装</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5868,6 +5848,40 @@ Continue?</source>
     <message>
         <source>Show main window</source>
         <translation>显示主窗口</translation>
+    </message>
+</context><context>
+    <name>MiningLanguageSettingsPanel</name>
+    <message>
+        <source>Language</source>
+        <translation>语言</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>挖词语言</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>要挖词的语言。与界面语言（设置 -&gt; 外观和语言）相互独立。切换后，词典、过滤器、牌组和卡片字段都会换成该语言自己的设置。</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>下载韩语模型</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>将韩语语言模型下载到 Anki Miner 的文件夹。打包安装自带韩语引擎，但不含其模型。</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>韩语模型</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>已安装</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安装</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7638,6 +7652,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Mining</source>
         <translation>挖词</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>挖词语言</translation>
     </message>
     <message>
         <source>Filtering</source>

@@ -4,7 +4,7 @@ The bundle ships the kiwipiepy engine without its ~88 MB model, so the pack has
 to be reachable from the UI or a bundled user can never mine Korean: the model is
 also what the availability probe gates on, so ko is absent from the mining-language
 selector until the download lands. The row therefore lives beside that selector
-(Settings -> Filtering -> Mining Language), and the plumbing mirrors the CUDA pack:
+(Settings -> Mining Language), and the plumbing mirrors the CUDA pack:
 panel signal -> SettingsTab -> app wiring -> BackgroundTaskController -> InstallWorker.
 """
 
@@ -14,7 +14,7 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
-from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
 from anki_miner.services import ko_model_installer
 from tests.unit._worker_sync import _run_worker_sync
 
@@ -110,20 +110,20 @@ class TestControllerStarter:
 class TestPanelRow:
     def test_the_row_hides_where_the_engine_is_absent(self, monkeypatch, qtbot) -> None:
         # Without kiwipiepy the model alone buys nothing, so offering it is noise.
-        import anki_miner.gui.widgets.panels.filtering_settings_panel as module
+        import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: False)
-        panel = FilteringSettingsPanel()
+        panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
         assert not panel.download_ko_model_button.isVisibleTo(panel)
 
     def test_the_row_offers_the_download_when_the_model_is_missing(self, monkeypatch, tmp_path, qtbot) -> None:
-        import anki_miner.gui.widgets.panels.filtering_settings_panel as module
+        import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
         monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
-        panel = FilteringSettingsPanel()
+        panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
         assert panel.download_ko_model_button.isVisibleTo(panel)
@@ -131,23 +131,23 @@ class TestPanelRow:
         assert panel.ko_model_status_label.text() == "Not installed"
 
     def test_an_installed_pack_reports_itself(self, monkeypatch, tmp_path, qtbot) -> None:
-        import anki_miner.gui.widgets.panels.filtering_settings_panel as module
+        import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
         monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
         _install_fake_pack(ko_model_installer.ko_model_root())
-        panel = FilteringSettingsPanel()
+        panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
         assert panel.ko_model_status_label.text() == "Installed"
         assert not panel.download_ko_model_button.isEnabled()
 
     def test_pressing_it_asks_the_caller_to_download(self, monkeypatch, tmp_path, qtbot) -> None:
-        import anki_miner.gui.widgets.panels.filtering_settings_panel as module
+        import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
         monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
-        panel = FilteringSettingsPanel()
+        panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
         with qtbot.waitSignal(panel.ko_model_download_requested, timeout=1000):
@@ -159,11 +159,11 @@ class TestPanelRow:
         # The availability probe gates on the model, so ko is missing from the
         # selector until the pack lands — the finish hook has to repopulate it or
         # the user downloads the model and still cannot pick Korean.
-        import anki_miner.gui.widgets.panels.filtering_settings_panel as module
+        import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
         monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
-        panel = FilteringSettingsPanel()
+        panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
         panel.download_ko_model_button.click()
         _install_fake_pack(ko_model_installer.ko_model_root())
@@ -184,11 +184,20 @@ class TestSettingsTabForwarding:
         qtbot.addWidget(tab)
 
         with qtbot.waitSignal(tab.ko_model_download_requested, timeout=1000):
-            tab.filtering_panel.ko_model_download_requested.emit()
-        assert tab.filtering_panel.ko_model_status_label.text() == "Downloading…"
+            tab.mining_language_panel.ko_model_download_requested.emit()
+        assert tab.mining_language_panel.ko_model_status_label.text() == "Downloading…"
 
         tab.set_ko_model_status("Installed")
-        assert tab.filtering_panel.ko_model_status_label.text() == "Installed"
+        assert tab.mining_language_panel.ko_model_status_label.text() == "Installed"
+
+    def test_the_panel_is_outside_the_save_path(self, test_config, qtbot) -> None:
+        """It writes no field; arming the debounce would re-save pre-switch state."""
+        from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+
+        assert tab.mining_language_panel not in tab._save_panels
 
 
 class TestAppWiring:
@@ -219,12 +228,12 @@ class TestAppWiring:
 
         calls: list = []
         monkeypatch.setattr(
-            settings_tab.filtering_panel,
+            settings_tab.mining_language_panel,
             "notify_ko_model_download_finished",
             lambda: calls.append(True),
         )
         captured["on_finished"](True, "Korean model installed successfully.")
 
-        assert settings_tab.filtering_panel.ko_model_status_label.text() == "Korean model installed successfully."
+        assert settings_tab.mining_language_panel.ko_model_status_label.text() == "Korean model installed successfully."
         assert calls == [True]
         window.deleteLater()

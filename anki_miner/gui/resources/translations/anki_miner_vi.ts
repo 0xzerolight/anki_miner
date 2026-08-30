@@ -1708,6 +1708,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Tự động cập nhật trình tải yt-dlp đi kèm, cập nhật theo yêu cầu, hoặc trỏ đến tệp thực thi riêng của bạn.</translation>
     </message>
     <message>
+        <source>Mine Japanese, Korean or Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>Khai thác câu i+1</translation>
     </message>
@@ -4406,14 +4414,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Bỏ qua các từ có chứa ký tự hanja, giữ cho bộ thẻ chỉ có từ vựng hangul thuần.</translation>
     </message>
     <message>
-        <source>Mining Language</source>
-        <translation>Ngôn ngữ khai thác</translation>
-    </message>
-    <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation>Ngôn ngữ được khai thác. Tách biệt với ngôn ngữ giao diện (Cài đặt -&gt; Diện mạo &amp; Ngôn ngữ). Khi chuyển đổi, từ điển, bộ lọc, bộ thẻ và các trường thẻ sẽ đổi sang cài đặt riêng của ngôn ngữ đó.</translation>
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Tần suất từ</translation>
     </message>
@@ -4752,26 +4752,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
-    </message>
-    <message>
-        <source>Download Korean model</source>
-        <translation>Tải mô hình tiếng Hàn</translation>
-    </message>
-    <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Tải mô hình ngôn ngữ tiếng Hàn vào thư mục của Anki Miner. Bản cài đóng gói có sẵn công cụ tiếng Hàn nhưng không kèm mô hình.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Mô hình tiếng Hàn</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>Đã cài đặt</translation>
-    </message>
-    <message>
-        <source>Not installed</source>
-        <translation>Chưa cài đặt</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5868,6 +5848,40 @@ Tiếp tục?</translation>
     <message>
         <source>Show main window</source>
         <translation>Hiện cửa sổ chính</translation>
+    </message>
+</context><context>
+    <name>MiningLanguageSettingsPanel</name>
+    <message>
+        <source>Language</source>
+        <translation>Ngôn ngữ</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>Ngôn ngữ khai thác</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>Ngôn ngữ được khai thác. Tách biệt với ngôn ngữ giao diện (Cài đặt -&gt; Diện mạo &amp; Ngôn ngữ). Khi chuyển đổi, từ điển, bộ lọc, bộ thẻ và các trường thẻ sẽ đổi sang cài đặt riêng của ngôn ngữ đó.</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Tải mô hình tiếng Hàn</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Tải mô hình ngôn ngữ tiếng Hàn vào thư mục của Anki Miner. Bản cài đóng gói có sẵn công cụ tiếng Hàn nhưng không kèm mô hình.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Mô hình tiếng Hàn</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Đã cài đặt</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Chưa cài đặt</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7638,6 +7652,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Mining</source>
         <translation>Khai thác</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>Ngôn ngữ khai thác</translation>
     </message>
     <message>
         <source>Filtering</source>

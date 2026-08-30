@@ -1708,6 +1708,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>同梱の yt-dlp ダウンローダーを自動更新するか、必要なときに更新するか、独自のバイナリを指定できます。</translation>
     </message>
     <message>
+        <source>Mine Japanese, Korean or Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>i+1 文マイニング</translation>
     </message>
@@ -4406,14 +4414,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>韓国漢字を含む語をスキップし、デッキをハングルのみの語彙に保ちます。</translation>
     </message>
     <message>
-        <source>Mining Language</source>
-        <translation>マイニング言語</translation>
-    </message>
-    <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation>マイニングする言語です。インターフェース言語（設定 -&gt; 外観と言語）とは別の設定です。切り替えると、辞書、フィルター、デッキ、カードのフィールドがその言語専用の設定に入れ替わります。</translation>
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>単語の頻度</translation>
     </message>
@@ -4752,26 +4752,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>既知単語の検出から除外するデッキ:</translation>
-    </message>
-    <message>
-        <source>Download Korean model</source>
-        <translation>韓国語モデルをダウンロード</translation>
-    </message>
-    <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>韓国語の言語モデルを Anki Miner のフォルダにダウンロードします。バンドル版インストールには韓国語エンジンのみが含まれ、モデルは含まれていません。</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>韓国語モデル</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>インストール済み</translation>
-    </message>
-    <message>
-        <source>Not installed</source>
-        <translation>未インストール</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5868,6 +5848,40 @@ Continue?</source>
     <message>
         <source>Show main window</source>
         <translation>メインウィンドウを表示</translation>
+    </message>
+</context><context>
+    <name>MiningLanguageSettingsPanel</name>
+    <message>
+        <source>Language</source>
+        <translation>言語</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>マイニング言語</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>マイニングする言語です。インターフェース言語（設定 -&gt; 外観と言語）とは別の設定です。切り替えると、辞書、フィルター、デッキ、カードのフィールドがその言語専用の設定に入れ替わります。</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>韓国語モデルをダウンロード</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>韓国語の言語モデルを Anki Miner のフォルダにダウンロードします。バンドル版インストールには韓国語エンジンのみが含まれ、モデルは含まれていません。</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>韓国語モデル</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>インストール済み</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未インストール</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7638,6 +7652,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Mining</source>
         <translation>マイニング</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>マイニング言語</translation>
     </message>
     <message>
         <source>Filtering</source>

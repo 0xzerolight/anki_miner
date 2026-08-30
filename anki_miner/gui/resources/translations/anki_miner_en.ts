@@ -1695,6 +1695,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Mine Japanese, Korean or Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation type="unfinished" />
     </message>
@@ -4381,14 +4389,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining Language</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation type="unfinished" />
     </message>
@@ -4726,26 +4726,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Deck to exclude from known-words detection:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download Korean model</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Not installed</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -5828,6 +5808,40 @@ Continue?</source>
     </message>
     <message>
         <source>Show main window</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MiningLanguageSettingsPanel</name>
+    <message>
+        <source>Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not installed</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -7591,6 +7605,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mining Language</source>
         <translation type="unfinished" />
     </message>
     <message>

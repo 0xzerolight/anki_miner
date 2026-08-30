@@ -1710,6 +1710,14 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Das mitgelieferte yt-dlp automatisch aktualisieren, bei Bedarf aktualisieren oder auf eine eigene Binärdatei verweisen.</translation>
     </message>
     <message>
+        <source>Mine Japanese, Korean or Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>i+1-Satz-Mining</translation>
     </message>
@@ -4419,14 +4427,6 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation>Wörter überspringen, die ein Hanja-Zeichen enthalten, sodass das Deck reinen Hangul-Wortschatz behält.</translation>
     </message>
     <message>
-        <source>Mining Language</source>
-        <translation>Mining-Sprache</translation>
-    </message>
-    <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation>Die Sprache, die Sie minen. Unabhängig von der Oberflächensprache (Einstellungen -&gt; Darstellung &amp; Sprache). Beim Wechsel werden Wörterbücher, Filter, Stapel und Kartenfelder auf die eigenen Einstellungen dieser Sprache umgestellt.</translation>
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Worthäufigkeit</translation>
     </message>
@@ -4765,26 +4765,6 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Stapel, der von der Erkennung bekannter Wörter ausgeschlossen wird:</translation>
-    </message>
-    <message>
-        <source>Download Korean model</source>
-        <translation>Koreanisches Modell herunterladen</translation>
-    </message>
-    <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Lädt das koreanische Sprachmodell in den Ordner von Anki Miner herunter. Gebündelte Installationen enthalten die koreanische Engine ohne ihr Modell.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Koreanisches Modell</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>Installiert</translation>
-    </message>
-    <message>
-        <source>Not installed</source>
-        <translation>Nicht installiert</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5882,6 +5862,40 @@ Fortfahren?</translation>
     <message>
         <source>Show main window</source>
         <translation>Hauptfenster anzeigen</translation>
+    </message>
+</context><context>
+    <name>MiningLanguageSettingsPanel</name>
+    <message>
+        <source>Language</source>
+        <translation>Sprache</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>Mining-Sprache</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>Die Sprache, die Sie minen. Unabhängig von der Oberflächensprache (Einstellungen -&gt; Darstellung &amp; Sprache). Beim Wechsel werden Wörterbücher, Filter, Stapel und Kartenfelder auf die eigenen Einstellungen dieser Sprache umgestellt.</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Koreanisches Modell herunterladen</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Lädt das koreanische Sprachmodell in den Ordner von Anki Miner herunter. Gebündelte Installationen enthalten die koreanische Engine ohne ihr Modell.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Koreanisches Modell</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Installiert</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Nicht installiert</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7652,6 +7666,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     <message>
         <source>Mining</source>
         <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>Mining-Sprache</translation>
     </message>
     <message>
         <source>Filtering</source>

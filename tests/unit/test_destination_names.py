@@ -90,6 +90,15 @@ def test_the_settings_subtitles_panel_matches_its_navigator_entry(qtbot):
     assert panel._title_label.text() == "Transcription & Alignment"
 
 
+def test_the_mining_language_panel_matches_its_navigator_entry(qtbot):
+    """The panel title and the navigator label must be the same words."""
+    from anki_miner.gui.widgets.panels import MiningLanguageSettingsPanel
+
+    panel = MiningLanguageSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel._title_label.text() == "Mining Language"
+
+
 def test_stable_keys_did_not_move_with_the_labels():
     """A renamed label that shifts its key makes the destination unreachable."""
     assert set(MAIN_TABS) == {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}
