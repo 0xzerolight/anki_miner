@@ -371,8 +371,18 @@ QMessageBox {
     font-size: ${font-size-body}px;
 }
 
+/* A dialog button is chunkier than one on a screen, and this is the only safe
+   way to say so. NEVER `min-width` here: Qt turns a QSS min-width into
+   `setMinimumWidth()`, and an explicit minimum REPLACES the layout's
+   text-derived minimum instead of expanding it, so a button whose label is
+   wider than the floor gets squeezed below its own size hint and clipped --
+   QMessageBox pins itself with `setFixedSize()` to a width measured off the
+   label alone, and the button row lives on whatever that leaves. Padding grows
+   the size hint, so the width tracks the words in every translation.
+   Oracle: tests/unit/gui/test_message_box_button_width.py. */
 QMessageBox QPushButton {
-    min-width: 80px;
+    padding-left: ${spacing-md}px;
+    padding-right: ${spacing-md}px;
 }
 
 /* ============== STATUS BAR STYLES ============== */
