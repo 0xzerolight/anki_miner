@@ -358,6 +358,28 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "youtube"),
         keywords=("yt-dlp", "ytdlp", "update downloader", "youtube broken", "custom binary"),
     ),
+    Capability(
+        id="mining-language",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine Japanese, Korean or Chinese"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("settings", "mining_language"),
+        keywords=(
+            "language",
+            "japanese",
+            "korean",
+            "chinese",
+            "mandarin",
+            "hangul",
+            "switch language",
+            "ja",
+            "ko",
+            "zh",
+        ),
+    ),
     # --- Filtering ---------------------------------------------------------
     Capability(
         id="i-plus-one",

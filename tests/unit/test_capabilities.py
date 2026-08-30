@@ -42,6 +42,15 @@ def test_system_health_is_findable() -> None:
     assert any(c.id == "system-health" for c in hits)
 
 
+def test_mining_language_is_findable() -> None:
+    """Its own destination since v2.13; without an entry nothing points at it."""
+    assert any(c.id == "mining-language" for c in search("korean"))
+
+    entry = next(c for c in CAPABILITIES if c.id == "mining-language")
+    assert entry.target is not None
+    assert (entry.target.main_tab, entry.target.subtab) == ("settings", "mining_language")
+
+
 def test_target_is_optional() -> None:
     cap = Capability(
         id="x-dialog-only",
