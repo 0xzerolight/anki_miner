@@ -5,6 +5,7 @@ import hashlib
 import logging
 import os
 import tempfile
+import threading
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -359,7 +360,28 @@ class ChainedExpressionAudioFetcher:
     Implements the :class:`~anki_miner.interfaces.ExpressionAudioFetcher`
     protocol structurally.  An empty chain returns None.  Members are assumed
     to honor the protocol contract (never raise); no try/except is added here.
+
+    Every per-word walk runs under :attr:`PER_WORD_BUDGET_SECONDS` of wall
+    clock.  This is the ONLY real bound on the stage: a member's own
+    ``timeout=`` is a per-socket-operation limit, not a wall-clock one, so it
+    does not cover name resolution, and a redirect hop starts a fresh budget.
+    A reported run spent 796s fetching audio for a SINGLE word that ultimately
+    SUCCEEDED — every transport counter read zero, because nothing failed; the
+    endpoint 301-redirects hits to a second host with ``Connection: close``, so
+    each hit forces a fresh un-poolable connection, and the cost of that
+    connection escalated with request volume (35s -> 50s -> 599s -> 797s per
+    hit) and did not reset across app restarts.  Mining 11 episodes unattended
+    turned into hours with no failure and no diagnosis.  Bounding the walk is
+    what makes the run's worst case a function of word count rather than of
+    whatever the network decides to do.
     """
+
+    #: Wall-clock ceiling for one word's whole chain walk (every source, every
+    #: candidate form). Deliberately generous: a healthy cold hit measures well
+    #: under 2s, and a member's own request timeout is 10s, so this still
+    #: accommodates two sequential timed-out requests before giving up. Not a
+    #: setting — an escape hatch nobody should have to find and tune.
+    PER_WORD_BUDGET_SECONDS = 20.0
 
     def __init__(
         self,
@@ -377,6 +399,10 @@ class ChainedExpressionAudioFetcher:
         """
         self._fetchers: list[ExpressionAudioFetcher] = list(fetchers)
         self._candidates = candidates
+        # Chain-owned tally, merged into stats() alongside the members'. Only
+        # the "slow" bucket is ever bumped here; transport buckets belong to
+        # whichever member actually made the request.
+        self._failure_counts = _new_failure_counts()
 
     def candidates_for(self, word: Any) -> list[tuple[str, str]]:
         """The ``(term, reading)`` ladder to feed :meth:`fetch_candidates`."""
@@ -406,13 +432,10 @@ class ChainedExpressionAudioFetcher:
         Returns:
             Path to an audio file from the first matching fetcher, or None.
         """
-        for fetcher in self._fetchers:
-            if cancelled_check is not None and cancelled_check():
-                return None
-            result = fetcher.fetch(mined_form, reading, cancelled_check)
-            if result is not None:
-                return result
-        return None
+        return self._budgeted(
+            lambda: self._walk(lambda f: f.fetch(mined_form, reading, cancelled_check), cancelled_check),
+            identity=f"{mined_form}/{reading}",
+        )
 
     def fetch_candidates(
         self,
@@ -426,14 +449,65 @@ class ChainedExpressionAudioFetcher:
         priority source.  This is the fix for the inverted nesting that let a
         synthetic fallback satisfy the surface form before a higher-priority
         source ever saw the lemma it actually has.
+
+        The whole walk runs under one :attr:`PER_WORD_BUDGET_SECONDS` budget —
+        not one per source — so a chain of slow sources cannot multiply the
+        ceiling by its own length.
         """
+        return self._budgeted(
+            lambda: self._walk(lambda f: f.fetch_candidates(candidates, cancelled_check), cancelled_check),
+            identity=candidates[0][0] if candidates else "",
+        )
+
+    def _walk(
+        self,
+        attempt: "Callable[[ExpressionAudioFetcher], Path | None]",
+        cancelled_check: Callable[[], bool] | None,
+    ) -> Path | None:
+        """Try each member in priority order; first non-None wins."""
         for fetcher in self._fetchers:
             if cancelled_check is not None and cancelled_check():
                 return None
-            result = fetcher.fetch_candidates(candidates, cancelled_check)
+            result = attempt(fetcher)
             if result is not None:
                 return result
         return None
+
+    def _budgeted(self, walk: "Callable[[], Path | None]", identity: str) -> Path | None:
+        """Run *walk* under the per-word wall-clock budget; None when it expires.
+
+        The walk runs on a daemon thread and is ABANDONED rather than
+        cancelled: a thread blocked in ``getaddrinfo`` or a socket read cannot
+        be interrupted from outside, and the member fetchers already write
+        their caches atomically, so an abandoned walk that later succeeds
+        simply warms the cache for the next run instead of corrupting
+        anything. Daemon so a stuck resolver can never hold up interpreter
+        exit. The orphan count is bounded by the number of budget expiries in
+        a run, and each one ends on its own once the network answers.
+        """
+        outcome: list[Path | None] = [None]
+
+        def _target() -> None:
+            try:
+                outcome[0] = walk()
+            except Exception as exc:  # noqa: BLE001 — protocol contract: never raise
+                logger.debug("expression audio chain walk failed identity=%s error=%s", identity, type(exc).__name__)
+
+        worker = threading.Thread(target=_target, name="expression-audio-fetch", daemon=True)
+        worker.start()
+        worker.join(self.PER_WORD_BUDGET_SECONDS)
+        if worker.is_alive():
+            self._failure_counts["slow"] += 1
+            logger.warning(
+                "expression audio exceeded the %.0fs per-word budget identity=%s; "
+                "treating as a miss and continuing (the fetch is abandoned, not cancelled)",
+                self.PER_WORD_BUDGET_SECONDS,
+                identity,
+            )
+            return None
+        # join() returned without a timeout, so the write to outcome[0]
+        # happens-before this read.
+        return outcome[0]
 
     def stats(self) -> dict[str, int]:
         """Aggregate per-run failure-cause counts across member fetchers.
@@ -441,8 +515,13 @@ class ChainedExpressionAudioFetcher:
         ``stats()`` is optional/duck-typed (not on the ExpressionAudioFetcher
         Protocol), exactly like ``close()``: members without it (e.g.
         LocalAudioPackFetcher) are skipped. See ``aggregate_failure_stats``.
+
+        The chain's own "slow" tally is folded in on top: budget expiries are
+        the chain's to count, because no member knows it was abandoned.
         """
-        return _aggregate_failure_stats(self._fetchers)
+        totals = _aggregate_failure_stats(self._fetchers)
+        totals["slow"] = totals.get("slow", 0) + self._failure_counts["slow"]
+        return totals
 
     def close(self) -> None:
         """Fan out ``close()`` to every member fetcher that defines one.
