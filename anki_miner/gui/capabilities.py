@@ -35,7 +35,19 @@ MAIN_TABS: frozenset[str] = frozenset(
 )
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
-    {"anki", "media", "dictionaries", "audio", "frequency", "pitch", "filtering", "youtube", "subtitles", "ui"}
+    {
+        "anki",
+        "media",
+        "dictionaries",
+        "audio",
+        "frequency",
+        "pitch",
+        "mining_language",
+        "filtering",
+        "youtube",
+        "subtitles",
+        "ui",
+    }
 )
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.

@@ -56,7 +56,7 @@ class TestTheSelectorReachesTheController:
             "request_language_change",
             lambda _win, code: seen.append(code) or False,
         )
-        combo = _settings_tab(window).filtering_panel.mining_language_combo
+        combo = _settings_tab(window).mining_language_panel.mining_language_combo
 
         combo.setCurrentIndex(combo.findData("zh"))
 
@@ -126,7 +126,7 @@ class TestThePrewarmRestartGuard:
 class TestSyncRepointsTheRealSurfaces:
     def test_the_chip_and_the_combo_both_follow_the_config(self, wired_window):
         window, _titles, _tabs = wired_window
-        combo = _settings_tab(window).filtering_panel.mining_language_combo
+        combo = _settings_tab(window).mining_language_panel.mining_language_combo
         assert combo.currentData() == "ja"
         assert window.header.mining_language_button.text() == "日本語"
 
@@ -175,10 +175,10 @@ class TestTheHeaderChipOpensTheSelector:
         window.header.open_mining_language_settings.emit()
 
         assert window.tabs.currentWidget() is settings
-        assert jumps == ["filtering.mining_language_combo"]
+        assert jumps == ["mining_language.mining_language_combo"]
 
     def test_the_stable_id_the_chip_jumps_to_exists(self, wired_window):
         """A renamed search id would make the hop a silent no-op."""
         window, _titles, _tabs = wired_window
 
-        assert "filtering.mining_language_combo" in _settings_tab(window)._search_entries
+        assert "mining_language.mining_language_combo" in _settings_tab(window)._search_entries

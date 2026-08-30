@@ -66,6 +66,7 @@ from anki_miner.gui.widgets.panels import (
     FilteringSettingsPanel,
     FrequencySettingsPanel,
     MediaSettingsPanel,
+    MiningLanguageSettingsPanel,
     PitchSettingsPanel,
     UISettingsPanel,
     YouTubeSettingsPanel,
@@ -365,6 +366,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.audio_panel = AudioPackSettingsPanel(self.config.audio_packs_root)
         self.frequency_panel = FrequencySettingsPanel(self.config.freqs_root)
         self.pitch_panel = PitchSettingsPanel(self.config.pitch_root)
+        self.mining_language_panel = MiningLanguageSettingsPanel()
         self.filtering_panel = FilteringSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=self._suppress_optional_startup)
@@ -541,7 +543,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             ),
             (
                 self.tr("Mining"),
-                (("filtering", self.tr("Filtering"), self.filtering_panel),),
+                (
+                    ("mining_language", self.tr("Mining Language"), self.mining_language_panel),
+                    ("filtering", self.tr("Filtering"), self.filtering_panel),
+                ),
             ),
             (
                 self.tr("Integrations"),
@@ -725,8 +730,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
-        self.filtering_panel.mining_language_requested.connect(self.mining_language_requested)
-        self.filtering_panel.ko_model_download_requested.connect(self._on_ko_model_download_clicked)
+
+        # Mining Language panel: the guarded switch proposal + the Korean pack.
+        self.mining_language_panel.mining_language_requested.connect(self.mining_language_requested)
+        self.mining_language_panel.ko_model_download_requested.connect(self._on_ko_model_download_clicked)
 
         # UI panel persists immediately on any change (live-preview model).
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
@@ -928,6 +935,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QLineEdit, QListWidget, QSpinBox
 
+        # mining_language_panel is deliberately absent: its combo proposes a
+        # guarded switch which commits its own config, so arming the debounce
+        # would re-save the pre-switch panel state on top of it.
         panels: tuple[QWidget, ...] = (
             self.anki_panel,
             self.media_panel,
@@ -945,11 +955,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             for double_spinbox in panel.findChildren(QDoubleSpinBox):
                 double_spinbox.valueChanged.connect(self._on_settings_edited)
             for combo in panel.findChildren(QComboBox):
-                if combo is getattr(panel, "mining_language_combo", None):
-                    # Proposes a guarded switch which commits its own config;
-                    # arming the debounce here would re-save the pre-switch
-                    # panel state on top of it.
-                    continue
                 combo.currentIndexChanged.connect(self._on_settings_edited)
             for list_widget in panel.findChildren(QListWidget):
                 # Excluded-decks list mutates via Add/Remove buttons, so the
@@ -1016,7 +1021,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Mirrors :meth:`_on_cuda_pack_download_clicked`: the download itself is
         owned by the caller (MainWindow / background_tasks).
         """
-        self.filtering_panel.set_ko_model_status(self.tr("Downloading…"))
+        self.mining_language_panel.set_ko_model_status(self.tr("Downloading…"))
         self.ko_model_download_requested.emit()
 
     def _on_vad_pack_download_clicked(self) -> None:
@@ -1052,7 +1057,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     def set_ko_model_status(self, text: str) -> None:
         """Forward a Korean model download status line to the Filtering panel."""
-        self.filtering_panel.set_ko_model_status(text)
+        self.mining_language_panel.set_ko_model_status(text)
 
     def set_vad_pack_status(self, text: str) -> None:
         """Forward a VAD-pack download status line to the Subtitles panel."""
@@ -1169,6 +1174,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Update settings — standalone checkbox outside all panels.
             self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
 
+            # Also outside _save_panels — it writes no field, so its repaint is
+            # here rather than in the contribute fold.
+            self.mining_language_panel.load_from_config(self.config)
+
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.
             self.ui_panel.load_from_config(self.config)
@@ -1184,7 +1193,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         date — the incoming language's rows on screen and unsearchable, the
         outgoing language's gone and still listed.
         """
-        self.filtering_panel.set_mining_language(code)
+        self.mining_language_panel.set_mining_language(code)
         self.refresh_setting_search_index()
 
     def open_subtab(self, key: str) -> None:
@@ -1223,6 +1232,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.audio_panel,
             self.frequency_panel,
             self.pitch_panel,
+            self.mining_language_panel,
             self.filtering_panel,
             self.youtube_panel,
             self.subtitles_panel,
