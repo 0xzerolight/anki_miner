@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Iterable
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from PyQt6.QtCore import QPoint, pyqtSignal
 from PyQt6.QtGui import QAction
@@ -20,7 +22,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AudioSourceEntry
+from anki_miner.config import AudioSourceEntry, insert_above_first_enabled_jpod101
 from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
@@ -41,6 +43,8 @@ from anki_miner.utils.robust_fs import RmtreeOutcome, robust_rmtree
 
 shutil = robust_fs.shutil
 
+logger = logging.getLogger(__name__)
+
 
 def _robust_rmtree(target: Path) -> RmtreeOutcome:
     """Panel-local seam for post-commit cleanup."""
@@ -54,9 +58,13 @@ class _AddSourceDialog(QDialog):
     """
 
     # (kind, English label). Labels go through self.tr at construction.
+    # custom_json first: the placeholder URL is the local-audio-yomichan
+    # server root, which speaks the audioSourceList JSON contract — naming
+    # that server on the direct-audio kind steered users into a source that
+    # silently missed on every word (JSON bodies never validate as audio).
     _KINDS: list[tuple[str, str]] = [
-        ("custom", "Custom URL (local-audio-yomichan / any audio URL)"),
-        ("custom_json", "Custom JSON list (audioSourceList)"),
+        ("custom_json", "Custom JSON list (local-audio-yomichan server)"),
+        ("custom", "Custom URL (a direct audio file URL)"),
     ]
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -420,13 +428,22 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         return AudioSourceEntry(kind=entry.kind, pack_id=entry.pack_id, url=entry.url, enabled=enabled)
 
     def add_source_entry(self, entry: AudioSourceEntry) -> None:
-        """Append an online audio source to the chain and persist immediately.
+        """Add an online audio source above jpod101 and persist immediately.
 
         Reads the current enabled/order state off the row widgets first (via
-        ``get_chain``) so an in-progress toggle isn't lost, appends *entry*, then
-        emits ``chain_changed`` which the settings tab persists.
+        ``get_chain``) so an in-progress toggle isn't lost, splices *entry* in
+        above the first enabled jpod101 entry (the chain is first-hit-wins, so
+        a source below jpod101 is never consulted), then emits ``chain_changed``
+        which the settings tab persists.
         """
-        self._write_chain([*self.get_chain(), entry])
+        # Host only, never the full URL: the query string is the user's own
+        # source list and has no place in a diagnostics bundle.
+        logger.info(
+            "Online audio source added: kind=%s host=%s",
+            entry.kind,
+            urlsplit(entry.url).netloc if entry.url else "-",
+        )
+        self._write_chain(insert_above_first_enabled_jpod101(self.get_chain(), (entry,)))
         self._rebuild_list()
         self.chain_changed.emit()
 

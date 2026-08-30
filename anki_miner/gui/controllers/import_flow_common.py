@@ -291,6 +291,20 @@ class ModalImportFlowMixin:
             logger.warning("Import scan dispatch failed: error=%s", type(exc).__name__)
             _on_error(str(exc))
 
+    def _cancel_active_scan(self) -> None:
+        """Abandon the in-flight discovery scan on user cancel.
+
+        Bumps the generation so a worker that raced past its cancel checkpoint
+        delivers into the superseded path (logged, not banner'd) instead of the
+        caller's callbacks. The caller owns the UI consequences (closing its
+        busy dialog, releasing the mutation token) — a cancelled worker may
+        never emit, so nothing here can be relied on to fire a callback.
+        """
+        self._scan_generation += 1
+        if still_running(self._scan_worker):
+            assert self._scan_worker is not None
+            self._scan_worker.cancel()
+
     def _create_modal_import_dialog(
         self,
         *,

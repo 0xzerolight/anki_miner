@@ -116,6 +116,9 @@ ALLOWLIST: dict[str, set[str]] = {
         # `urlsplit(line)` validating pasted URLs in _collect_urls: pure string
         # parsing, no network I/O. Cheap.
         "widgets/download_tab.py",
+        # `urlsplit(entry.url).netloc` logging the host of an added online audio
+        # source: pure string parsing, no I/O.
+        "widgets/panels/audio_pack_settings_panel.py",
     },
     # shutil.which — a single cheap PATH scan to test for a binary, cached on the
     # widget (`_alass_is_available` / `_ffmpeg_is_available`); readers use the cache.

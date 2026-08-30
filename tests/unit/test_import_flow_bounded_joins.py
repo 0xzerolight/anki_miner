@@ -333,7 +333,7 @@ class TestAudioPackBoundedJoin:
         monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(pack_dir)))
         monkeypatch.setattr(
             "anki_miner.gui.controllers.audio_pack_import_flow.scan_importable_packs",
-            lambda _root, *, cancel_check=None: [(pack_dir, "nhk16")],
+            lambda _root, *, cancel_check=None, progress=None: [(pack_dir, "nhk16")],
         )
         return new
 

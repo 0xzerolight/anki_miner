@@ -730,6 +730,18 @@ Continue anyway?</source>
 </context><context>
     <name>AudioPackImportFlow</name>
     <message>
+        <source>Scanning folder for audio packs…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Scanning %1 …</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That folder could not be scanned.</source>
         <translation>无法扫描该文件夹。</translation>
     </message>
@@ -774,10 +786,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>导入已完成，但无法更新设置。</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3943,6 +3951,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
         <translation>单词音频来源连接/证书失败——本次运行跳过音频，将在下次运行时重试</translation>

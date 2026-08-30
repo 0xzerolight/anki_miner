@@ -906,3 +906,27 @@ class TestScanImportablePacks:
             ]
         )
         assert not any(p == user_files for p, _ in results), "parent must never be reported as a pack"
+
+
+class TestScanProgress:
+    def test_scan_reports_each_child_before_detection(self, tmp_path):
+        # The scan can walk a huge tree per child; the caller needs a live
+        # "which folder is being looked at" signal for its busy dialog.
+        ajt = tmp_path / "ajt_pack"
+        ajt.mkdir()
+        _write_json(ajt / "index.json", {"headwords": {}, "files": {}})
+        (ajt / "media").mkdir()
+        plain = tmp_path / "plain"
+        plain.mkdir()
+        (plain / "readme.txt").write_text("nothing")
+
+        seen: list[str] = []
+        scan_importable_packs(tmp_path, progress=seen.append)
+
+        assert "ajt_pack" in seen
+        assert "plain" in seen
+
+    def test_scan_progress_optional(self, tmp_path):
+        _write_json(tmp_path / "index.json", {"headwords": {}, "files": {}})
+        (tmp_path / "media").mkdir()
+        assert (tmp_path, "ajt") in scan_importable_packs(tmp_path)

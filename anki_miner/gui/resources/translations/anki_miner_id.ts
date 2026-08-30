@@ -730,6 +730,18 @@ Tetap lanjutkan?</translation>
 </context><context>
     <name>AudioPackImportFlow</name>
     <message>
+        <source>Scanning folder for audio packs…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Scanning %1 …</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That folder could not be scanned.</source>
         <translation>Folder itu tidak dapat dipindai.</translation>
     </message>
@@ -774,10 +786,6 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3943,6 +3951,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
         <translation>Kegagalan koneksi/sertifikat sumber audio kata — audio dilewati pada proses ini, akan dicoba ulang pada proses berikutnya</translation>

@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtWidgets import QMessageBox, QProgressDialog
 
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.gui.utils import file_dialogs
@@ -227,7 +227,7 @@ class TestAddPackNoPacks:
         warnings = _capture_warnings(monkeypatch)
         scan_thread: dict[str, int] = {}
 
-        def _fail_scan(_path, *, cancel_check=None):
+        def _fail_scan(_path, *, cancel_check=None, progress=None):
             scan_thread["id"] = threading.get_ident()
             raise OSError("permission denied")
 
@@ -1255,3 +1255,55 @@ class TestScanSupersession:
         assert any(
             "superseded" in record.message.lower() for record in caplog.records
         ), "the superseded scan is still logged, just not banner'd"
+
+
+# ---------------------------------------------------------------------------
+# add_pack: scan-phase busy dialog
+# ---------------------------------------------------------------------------
+
+
+class TestScanBusyDialog:
+    def test_scan_shows_busy_dialog_and_cancel_releases_buttons(self, tab, monkeypatch, stub_worker, tmp_path):
+        # The pre-import folder scan ran 68 minutes on a real pack with every
+        # button disabled and nothing on screen (support case 2026-08-30).
+        chosen = tmp_path / "packs"
+        chosen.mkdir()
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(chosen)))
+        flow = tab._audio_pack_import_flow
+
+        def _pending_scan(work, on_done, on_error, *, pass_cancel_check=False):
+            pass  # scan never completes: the dialog carries the wait
+
+        flow._run_latest_scan = _pending_scan
+        cancelled: list[bool] = []
+        monkeypatch.setattr(type(flow), "_cancel_active_scan", lambda self: cancelled.append(True), raising=False)
+
+        flow.add_pack()
+
+        dlgs = [d for d in tab.findChildren(QProgressDialog) if d.isVisible()]
+        assert dlgs, "scan phase must show a busy dialog"
+        dlg = dlgs[-1]
+        dlg.canceled.emit()
+        assert cancelled
+        assert not dlg.isVisible()
+        assert flow._mutation_token is None
+        assert stub_worker.call_count == 0
+
+    def test_scan_dialog_closed_when_scan_completes(self, tab, monkeypatch, stub_worker, tmp_path):
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        monkeypatch.setattr(file_dialogs, "pick_directory", lambda *a, on_done, **kw: on_done(str(empty)))
+        warnings = _capture_warnings(monkeypatch)
+        tab._audio_pack_import_flow.add_pack()
+        assert warnings, "zero-pack warning still surfaces"
+        assert not [d for d in tab.findChildren(QProgressDialog) if d.isVisible()]
+
+    def test_cancel_active_scan_bumps_generation_and_cancels_worker(self, tab):
+        flow = tab._audio_pack_import_flow
+        worker = MagicMock()
+        worker.isRunning.return_value = True
+        flow._scan_worker = worker
+        before = flow._scan_generation
+        flow._cancel_active_scan()
+        assert flow._scan_generation == before + 1
+        worker.cancel.assert_called_once()

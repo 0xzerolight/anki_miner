@@ -731,6 +731,18 @@ Continuer quand même ?</translation>
 </context><context>
     <name>AudioPackImportFlow</name>
     <message>
+        <source>Scanning folder for audio packs…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Scanning %1 …</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>That folder could not be scanned.</source>
         <translation>Impossible d’analyser ce dossier.</translation>
     </message>
@@ -775,10 +787,6 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
     <message>
         <source>The import finished, but the settings could not be updated.</source>
         <translation>L’importation est terminée, mais les paramètres n’ont pas pu être mis à jour.</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Annuler</translation>
     </message>
     <message>
         <source>Cancelling…</source>
@@ -3945,6 +3953,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     </message>
 </context><context>
     <name>EpisodeProcessor</name>
+    <message>
+        <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
         <translation>Échec de connexion/certificat de la source d'audio de mot — audio ignoré pour cette exécution, nouvel essai à la prochaine exécution</translation>
