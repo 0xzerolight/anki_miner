@@ -1708,6 +1708,14 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Perbarui otomatis pengunduh yt-dlp bawaan, perbarui sesuai permintaan, atau arahkan ke biner Anda sendiri.</translation>
     </message>
     <message>
+        <source>Mine Japanese, Korean or Chinese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>i+1 sentence mining</source>
         <translation>Mining kalimat i+1</translation>
     </message>
@@ -4406,14 +4414,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Lewati kata yang mengandung karakter hanja, sehingga dek berisi kosakata hangul murni.</translation>
     </message>
     <message>
-        <source>Mining Language</source>
-        <translation>Bahasa Mining</translation>
-    </message>
-    <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation>Bahasa yang di-mining. Terpisah dari bahasa antarmuka (Pengaturan -&gt; Tampilan &amp; Bahasa). Beralih akan mengganti kamus, filter, dek, dan bidang kartu ke pengaturan milik bahasa tersebut.</translation>
-    </message>
-    <message>
         <source>Word Frequency</source>
         <translation>Frekuensi Kata</translation>
     </message>
@@ -4752,26 +4752,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
-    </message>
-    <message>
-        <source>Download Korean model</source>
-        <translation>Unduh model Korea</translation>
-    </message>
-    <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Unduh model bahasa Korea ke folder Anki Miner. Instalasi bundel menyertakan mesin Korea tanpa modelnya.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Model Korea</translation>
-    </message>
-    <message>
-        <source>Installed</source>
-        <translation>Terpasang</translation>
-    </message>
-    <message>
-        <source>Not installed</source>
-        <translation>Tidak terpasang</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5868,6 +5848,40 @@ Lanjutkan?</translation>
     <message>
         <source>Show main window</source>
         <translation>Tampilkan jendela utama</translation>
+    </message>
+</context><context>
+    <name>MiningLanguageSettingsPanel</name>
+    <message>
+        <source>Language</source>
+        <translation>Bahasa</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>Bahasa Mining</translation>
+    </message>
+    <message>
+        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
+        <translation>Bahasa yang di-mining. Terpisah dari bahasa antarmuka (Pengaturan -&gt; Tampilan &amp; Bahasa). Beralih akan mengganti kamus, filter, dek, dan bidang kartu ke pengaturan milik bahasa tersebut.</translation>
+    </message>
+    <message>
+        <source>Download Korean model</source>
+        <translation>Unduh model Korea</translation>
+    </message>
+    <message>
+        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
+        <translation>Unduh model bahasa Korea ke folder Anki Miner. Instalasi bundel menyertakan mesin Korea tanpa modelnya.</translation>
+    </message>
+    <message>
+        <source>Korean model</source>
+        <translation>Model Korea</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Terpasang</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Tidak terpasang</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
@@ -7638,6 +7652,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Mining</source>
         <translation>Mining</translation>
+    </message>
+    <message>
+        <source>Mining Language</source>
+        <translation>Bahasa Mining</translation>
     </message>
     <message>
         <source>Filtering</source>
