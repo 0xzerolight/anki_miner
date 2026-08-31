@@ -34,6 +34,9 @@ EXPECTED_FIELDS = (
     "render_hooks",
     "content_style",
     "unavailable_reason",
+    "extra_card_fields",
+    "smoke_sentence",
+    "english_name",
 )
 
 

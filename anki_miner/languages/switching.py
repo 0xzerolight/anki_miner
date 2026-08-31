@@ -40,6 +40,35 @@ LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
 )
 
 
+def blank_scoped_defaults() -> dict[str, object]:
+    """Type-derived blank value for every ``LANGUAGE_SCOPED_FIELDS`` name.
+
+    Shared by every language's own ``_scoped_defaults()``: tuple fields blank
+    to ``()``, bool fields to ``False``, str fields to ``""``, and everything
+    else (``anki_fields``, ``blacklist_path``, ``whitelist_path`` today) to
+    ``None`` — ``anki_fields`` is always overridden by the caller, and
+    ``blacklist_path``/``whitelist_path`` are already ``None`` on a blank
+    ``AnkiMinerConfig()``. Never hand-written: a field appended to
+    ``LANGUAGE_SCOPED_FIELDS`` lands here automatically, typed from whatever
+    the config dataclass gives it as a default.
+    """
+    from anki_miner.config.config import AnkiMinerConfig
+
+    blank = AnkiMinerConfig()
+    defaults: dict[str, object] = {}
+    for name in LANGUAGE_SCOPED_FIELDS:
+        current = getattr(blank, name)
+        if isinstance(current, tuple):
+            defaults[name] = ()
+        elif isinstance(current, bool):
+            defaults[name] = False
+        elif isinstance(current, str):
+            defaults[name] = ""
+        else:
+            defaults[name] = None
+    return defaults
+
+
 def switch_language(config: AnkiMinerConfig, new_code: str) -> AnkiMinerConfig:
     """Return a new config with ``new_code`` active and the scoped fields swapped.
 

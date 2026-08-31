@@ -62,8 +62,8 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         self._db = known_word_db
         self._language = language
         # Every listed word is mined content: the face follows the mining
-        # language. None keeps today's Japanese face.
-        self._content_style = content_style or get_profile("ja").content_style
+        # language. None keeps today's Japanese face for the ja default.
+        self._content_style = content_style or get_profile(self._language).content_style
         self._dialog_generation = 0
         # The list may never have been written if the user only just enabled the
         # feature — initialize so reads/writes don't hit a missing file.

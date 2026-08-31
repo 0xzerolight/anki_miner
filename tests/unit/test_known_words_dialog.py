@@ -490,6 +490,19 @@ class TestJapaneseTypeface:
             assert dlg.word_list.item(row).font().pixelSize() == -1
 
 
+class TestContentStyleFollowsLanguage:
+    """No explicit content_style: the fallback follows the dialog's own
+    ``language`` param, not a hardcoded ja."""
+
+    def test_default_content_style_follows_the_language_param(self, qtbot, tmp_path):
+        from anki_miner.languages.registry import get_profile
+
+        db = _db_with_user_words(tmp_path)
+        dlg = KnownWordsManagerDialog(db, language="zh")
+        qtbot.addWidget(dlg)
+        assert dlg._content_style == get_profile("zh").content_style
+
+
 class TestImeSafety:
     """D49 — the filter field holds Japanese, so Return must stay text entry."""
 

@@ -19,7 +19,11 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.language_choices import available_mining_languages, mining_language_display_name
+from anki_miner.gui.utils.language_choices import (
+    available_mining_languages,
+    mining_language_display_name,
+    mining_language_english_name,
+)
 from anki_miner.gui.utils.language_gate import field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
@@ -177,6 +181,10 @@ class MiningLanguageSettingsPanel(FormPanel):
     def _build_language_pack_row(self, code: str, pack: LanguagePack) -> LanguagePackRow:
         """Build (and register) one language's download row."""
         display_name = mining_language_display_name(code)
+        # Every string on the row is the native name, so "Korean" reached
+        # nothing. English is not translated and never changes, so it is read
+        # here rather than re-resolved on every search.
+        english_name = mining_language_english_name(code)
 
         button = ModernButton(tr_format(self.tr("Download %1 pack"), display_name), variant="secondary")
         button.setToolTip(
@@ -204,7 +212,7 @@ class MiningLanguageSettingsPanel(FormPanel):
             container,
             anchor=f"language_pack_{code}",
             anchor_focus=button,
-            anchor_text=lambda: (button.text(), button.toolTip()),
+            anchor_text=lambda: (button.text(), button.toolTip(), english_name),
         )
         # The whole row (label included) disappears where the pack buys nothing.
         # NOT language-gated: a row is about a language the user is not on yet,

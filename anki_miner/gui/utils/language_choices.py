@@ -56,3 +56,16 @@ def mining_language_display_name(code: str) -> str:
         return get_profile(code).display_name
     except (LookupError, ValueError, ImportError):
         return code.upper()
+
+
+def mining_language_english_name(code: str) -> str:
+    """The English name of *code*, or the bare code where no profile builds.
+
+    For surfaces that must be findable without typing the native script: the
+    pack rows render 한국어 / 中文 in every string they own, so settings search
+    matched neither "Korean" nor "Chinese" until this fed the search index.
+    """
+    try:
+        return get_profile(code).english_name or code.upper()
+    except (LookupError, ValueError, ImportError):
+        return code.upper()

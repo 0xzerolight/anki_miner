@@ -5,6 +5,14 @@ from __future__ import annotations
 import pytest
 
 from anki_miner.gui import app as app_module
+from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages.registry import get_profile
+
+
+@pytest.mark.parametrize("code", AVAILABLE_LANGUAGES)
+def test_every_available_language_resolves_a_smoke_line(code):
+    line = app_module._LANGUAGE_SMOKE_LINES.get(code) or get_profile(code).smoke_sentence
+    assert line
 
 
 def test_ja_leg_passes_and_prints_the_marker(capsys):

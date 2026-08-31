@@ -290,6 +290,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>量詞欄位</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>儲存從字典詞條中解析出的量詞。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>拼音欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>儲存單字的拼音讀音；若已開啟聲調上色，則會帶顏色。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>繁體字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>當另一種字形變體不同時，儲存該變體的寫法。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>韓文漢字欄位</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>儲存單字中包含的韓文漢字。留空＝略過。</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>不在 Anki 中 — 在選取有效項目或於 Anki 建立前，採集會失敗。</translation>
     </message>
@@ -456,38 +488,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>以純假名儲存例句。</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>量詞欄位</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>儲存從字典詞條中解析出的量詞。留空＝略過。</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>拼音欄位</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>儲存單字的拼音讀音；若已開啟聲調上色，則會帶顏色。留空＝略過。</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>繁體字欄位</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>當另一種字形變體不同時，儲存該變體的寫法。留空＝略過。</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>韓文漢字欄位</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>儲存單字中包含的韓文漢字。留空＝略過。</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -3216,8 +3216,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>單字欄位為空白</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>非日文</translation>
+        <source>not the mining language</source>
+        <translation>非採集語言</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>

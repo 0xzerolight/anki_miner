@@ -69,17 +69,17 @@ SCRIPT_FILTER_HELPERS: dict[str, str] = {
     ),
 }
 
-#: Capability whose profile supplies the option-driven script-filter rows.
+#: Capabilities whose profile supplies the option-driven script-filter rows.
 #: Japanese keeps its own hand-built rows under ``kana_filters``: they carry
 #: helper prose, search anchors derived from their panel attributes, and a third
 #: option (``mixed_kana_only``) that deliberately has no checkbox because it has
 #: no config field. Rebuilding those from options would move ja's extracted
 #: strings and anchors, and a ja user must see zero change.
-_OPTION_DRIVEN_FILTER_CAPABILITY = "hangul_filters"
+_OPTION_DRIVEN_FILTER_CAPABILITIES = ("hangul_filters",)
 
 
-def _capability_script_filter_options(capability: str) -> tuple[ScriptFilterOption, ...]:
-    """Script-filter options declared by the registered profile with *capability*.
+def _capability_script_filter_options(capabilities: tuple[str, ...]) -> tuple[ScriptFilterOption, ...]:
+    """Script-filter options declared by the registered profiles with any of *capabilities*.
 
     Resolved from the registry rather than from a language code, and NOT from
     ``available_mining_languages`` -- that one drops a language whose engine is
@@ -87,15 +87,18 @@ def _capability_script_filter_options(capability: str) -> tuple[ScriptFilterOpti
     were never built. Options with no config field of their own are skipped:
     there is no boolean for a checkbox to write.
     """
-    for code in AVAILABLE_LANGUAGES:
-        try:
-            profile = get_profile(code)
-        except (LookupError, ValueError, ImportError) as exc:
-            logger.debug("No profile for %r while building script-filter rows: %s", code, exc)
-            continue
-        if capability in profile.capabilities:
-            return tuple(opt for opt in profile.script.filter_options() if opt.config_field)
-    return ()
+    options: list[ScriptFilterOption] = []
+    for capability in capabilities:
+        for code in AVAILABLE_LANGUAGES:
+            try:
+                profile = get_profile(code)
+            except (LookupError, ValueError, ImportError) as exc:
+                logger.debug("No profile for %r while building script-filter rows: %s", code, exc)
+                continue
+            if capability in profile.capabilities:
+                options.extend(opt for opt in profile.script.filter_options() if opt.config_field)
+                break
+    return tuple(options)
 
 
 # How tall the excluded-deck list is allowed to grow, in rows rather than
@@ -484,7 +487,7 @@ class FilteringSettingsPanel(FormPanel):
 
         self.script_filter_checkboxes: dict[str, QCheckBox] = {}
         self._script_filter_fields: dict[str, str] = {}
-        for option in _capability_script_filter_options(_OPTION_DRIVEN_FILTER_CAPABILITY):
+        for option in _capability_script_filter_options(_OPTION_DRIVEN_FILTER_CAPABILITIES):
             label = SCRIPT_FILTER_LABELS.get(option.option_id, option.label)
             helper = SCRIPT_FILTER_HELPERS.get(option.option_id, "")
             checkbox = QCheckBox(QCoreApplication.translate(_TR_CONTEXT, label))
@@ -625,15 +628,28 @@ class FilteringSettingsPanel(FormPanel):
         )
         if self._script_type_section_label is not None:
             self._language_gate_pairs.append((self._script_type_section_label, "kana_filters"))
-        # The option-driven rows join the same list, gated on the capability
-        # that supplied them. EXTENDED, never assigned (see the zh note below).
+        # The option-driven rows join the same list. This is a cross product,
+        # not a per-option pairing: every checkbox here is paired with EVERY
+        # capability in _OPTION_DRIVEN_FILTER_CAPABILITIES, because
+        # _capability_script_filter_options() pools options from all of them
+        # without keeping each option's originating capability. apply_language_gate
+        # calls setVisible(cap in capabilities) per pair in order, so with a
+        # second entry the last capability's setVisible call would win for
+        # every checkbox regardless of which capability actually supplied it.
+        # Harmless today because there is exactly one entry. Before adding a
+        # second, pair each option with its own capability at collection time
+        # instead of this cross product. EXTENDED, never assigned (see the zh
+        # note below).
         self._language_gate_pairs.extend(
-            (w, _OPTION_DRIVEN_FILTER_CAPABILITY)
+            (w, capability)
+            for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
             for cb in self.script_filter_checkboxes.values()
             for w in field_row_widgets(self, cb)
         )
         if self._script_filter_section_label is not None:
-            self._language_gate_pairs.append((self._script_filter_section_label, _OPTION_DRIVEN_FILTER_CAPABILITY))
+            self._language_gate_pairs.extend(
+                (self._script_filter_section_label, capability) for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
+            )
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for cb in self.wordset_checkboxes.values() for w in field_row_widgets(self, cb)
         )

@@ -8,6 +8,7 @@ stay exactly as written and later stages only append.
 from __future__ import annotations
 
 import dataclasses
+import importlib
 import inspect
 import os
 import subprocess
@@ -113,6 +114,14 @@ def test_available_languages_contains_ja():
     assert "ja" in available_languages()
 
 
+@pytest.mark.parametrize("code", CODES)
+def test_language_package_exports_build_profile(code):
+    """The registry's auto-discovery loop calls ``<package>.build_profile()``
+    lazily; every registered code's package must actually export it."""
+    module = importlib.import_module(f"anki_miner.languages.{code}")
+    assert callable(module.build_profile)
+
+
 def test_languages_package_carries_no_import_time_gui_edge():
     import subprocess
     import sys
@@ -167,12 +176,22 @@ def test_switch_language_activates_every_registered_language(code):
 
 @pytest.mark.parametrize("code", CODES)
 def test_card_fields_and_hooks_agree(code):
-    """Hook keys are the profile's OWN logical keys, not the ja dataclass's."""
+    """Hook keys are the profile's OWN logical keys, not the ja dataclass's.
+
+    ``OPTIONAL_FIELD_KEYS`` is frozen legacy: it carries the ja/ko/zh keys
+    because they predate ``LanguageProfile.extra_card_fields``, and it never
+    grows again. A later language's key satisfies this by being DECLARED on its
+    own profile — which is what ``AnkiService`` threads into ``build_note`` as
+    ``extra_optional_keys`` — so the union is the right right-hand side. Every
+    language shipped today keeps passing on the central set alone; the union
+    only matters for a profile-declared key (see
+    ``tests/unit/languages/test_eu_boundary_stub.py``).
+    """
     profile = get_profile(code)
     assert set(profile.card_field_defaults) >= REQUIRED_FIELD_KEYS  # ruff SIM300: no Yoda side
     hook_keys = {name for hook in profile.render_hooks for name in hook.field_names()}
     assert hook_keys <= set(profile.card_field_defaults)
-    assert hook_keys <= OPTIONAL_FIELD_KEYS
+    assert hook_keys <= (OPTIONAL_FIELD_KEYS | {spec.key for spec in profile.extra_card_fields})
 
 
 @pytest.mark.parametrize("code", CODES)
@@ -211,6 +230,34 @@ def test_zh_lookup_yields_the_traditional_variant_with_opencc():
     pytest.importorskip("opencc")
     _clear_zh_converter_caches()
     assert ("銀行", 0) in get_profile("zh").lookup.candidates(PROBE["zh"], "", None)
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_english_name_is_nonempty_ascii(code):
+    name = get_profile(code).english_name
+    assert name and name.isascii()
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_smoke_sentence_is_nonempty(code):
+    assert get_profile(code).smoke_sentence
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_extra_card_fields_match_the_render_hooks_exactly(code):
+    profile = get_profile(code)
+    spec_keys = {spec.key for spec in profile.extra_card_fields}
+    hook_keys = {name for hook in profile.render_hooks for name in hook.field_names()}
+    assert spec_keys <= EXTRA_HOOK_FIELDS
+    assert spec_keys == hook_keys
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_extra_card_field_capabilities_are_declared(code):
+    profile = get_profile(code)
+    for spec in profile.extra_card_fields:
+        assert spec.capability in CAPABILITY_VOCABULARY
+        assert spec.capability in profile.capabilities
 
 
 def test_zh_lookup_stays_contract_shaped_without_opencc(monkeypatch):

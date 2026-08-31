@@ -9,11 +9,13 @@ registers a builder of its own resets it with ``_CACHE.clear()``.
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import threading
 from collections.abc import Callable
 from typing import Any
 
+from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.profile import LanguageProfile
 
 logger = logging.getLogger(__name__)
@@ -32,35 +34,40 @@ def _register(code: str, builder: Callable[[], LanguageProfile]) -> None:
     _BUILDERS[code] = builder
 
 
-def _ja_builder() -> LanguageProfile:
-    from anki_miner.languages.ja import build_profile
+def _make_builder(code: str) -> Callable[[], LanguageProfile]:
+    """A lazy, code-specific loader — the import stays inside the closure, not
+    at module scope, so a ja session never pays for (or fails on) the zh/ko
+    engines' optional dependency sets.
 
-    return build_profile()
+    A factory, not an inline closure in the loop below: a closure that reads
+    the loop variable `code` directly late-binds to whatever `code` was on
+    its LAST iteration once actually called, not the value at definition
+    time. The factory's parameter freezes it instead.
+    """
 
+    def _build() -> LanguageProfile:
+        module = importlib.import_module(f"anki_miner.languages.{code}")
+        return module.build_profile()  # type: ignore[no-any-return]
 
-_register("ja", _ja_builder)
-
-
-def _zh_builder() -> LanguageProfile:
-    # The import lives in the builder, not at module scope: a ja session must
-    # never pay for (or fail on) the zh engine's optional dependency set.
-    from anki_miner.languages.zh import build_profile
-
-    return build_profile()
-
-
-_register("zh", _zh_builder)
+    return _build
 
 
-def _ko_builder() -> LanguageProfile:
-    # Same reason as zh: the import stays in the builder so a ja session never
-    # pays for (or fails on) the ko engine's optional dependency set.
-    from anki_miner.languages.ko import build_profile
+def _discover() -> None:
+    """Register every ``AVAILABLE_LANGUAGES`` code with a package on disk.
 
-    return build_profile()
+    The ``find_spec`` gate runs HERE, at registration time, never inside the
+    lazy builder above: ``config_language`` degrades an unknown code by
+    checking ``language not in _BUILDERS`` membership, so a whitelisted code
+    without a package must never enter ``_BUILDERS`` in the first place.
+    ``find_spec`` locates the module without executing it — this loop imports
+    no language package, only its own already-imported parent.
+    """
+    for code in AVAILABLE_LANGUAGES:
+        if importlib.util.find_spec(f"anki_miner.languages.{code}") is not None:
+            _register(code, _make_builder(code))
 
 
-_register("ko", _ko_builder)
+_discover()
 
 
 def config_language(config: Any) -> str:

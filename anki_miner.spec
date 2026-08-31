@@ -244,21 +244,37 @@ if platform.system() == "Windows":
         ],
     )
 
-# Per-language first-party modules PyInstaller's bytecode analysis cannot see:
-# both are reached only through importlib with an f-string target —
-# "anki_miner.languages.<code>.tokenizer" from tagger_provider._build, and
-# "anki_miner.languages.<code>.pack" from
-# services/language_pack_installer.load_pack. Without the tokenizer pin the
-# frozen app ships nothing able to drive a downloaded engine pack; without the
-# pack pin load_pack takes its designed pip-absent path (returns None), no pack
-# root is ever appended to sys.path, and get_tagger dies as "No tokenizer
-# registered for language". Generated from AVAILABLE_LANGUAGES so language N+1
-# needs no edit here; find_spec-guarded because ja has neither module (its
-# engine is bundled, so it has no pack), mirroring the per-code guards in
-# languages/registry.py. FIRST-PARTY ONLY — the engines themselves (jieba/
-# pypinyin/opencc/kiwipiepy) stay in `excludes` below and arrive as packs.
+# Per-language first-party modules PyInstaller's bytecode analysis cannot see.
+# Three kinds, all reached only through importlib with an f-string target:
+#
+# - "anki_miner.languages.<code>" itself, from registry._discover()'s
+#   importlib.import_module(f"anki_miner.languages.{code}") — the ONLY static
+#   import of a language package used to be inside registry.py's hand-written
+#   _ja_builder/_zh_builder/_ko_builder, which bytecode analysis could follow
+#   like any other `from ... import ...`. Auto-discovery replaced those with a
+#   dynamic import, so nothing else statically names "anki_miner.languages.ja"
+#   anywhere in the tree (ja has neither of the two modules below, so it can't
+#   ride in as their parent package either) — without this pin the frozen app
+#   loses the ja package outright.
+# - "anki_miner.languages.<code>.tokenizer" from tagger_provider._build.
+# - "anki_miner.languages.<code>.pack" from
+#   services/language_pack_installer.load_pack. Without the tokenizer pin the
+#   frozen app ships nothing able to drive a downloaded engine pack; without the
+#   pack pin load_pack takes its designed pip-absent path (returns None), no pack
+#   root is ever appended to sys.path, and get_tagger dies as "No tokenizer
+#   registered for language".
+#
+# Generated from AVAILABLE_LANGUAGES so language N+1 needs no edit here;
+# find_spec-guarded per entry because ja has neither tokenizer nor pack (its
+# engine is bundled, so it has no pack), mirroring the per-code guard in
+# languages/registry.py's own _discover(). FIRST-PARTY ONLY — the engines
+# themselves (jieba/pypinyin/opencc/kiwipiepy) stay in `excludes` below and
+# arrive as packs.
 language_hiddenimports = ["anki_miner.languages.pack_spec"]  # the manifests' own import
 for _code in AVAILABLE_LANGUAGES:
+    _package = f"anki_miner.languages.{_code}"
+    if importlib.util.find_spec(_package) is not None:
+        language_hiddenimports.append(_package)
     for _leaf in ("tokenizer", "pack"):
         _module = f"anki_miner.languages.{_code}.{_leaf}"
         if importlib.util.find_spec(_module) is not None:

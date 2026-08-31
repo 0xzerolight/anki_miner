@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 __all__ = [
     "AudioDefaults",
     "CaptionLangs",
+    "CardFieldSpec",
     "CardRenderHook",
     "ContentTextStyle",
     "DictKeyFolding",
@@ -201,6 +202,29 @@ class PosDefaults:
 
 
 @dataclass(frozen=True)
+class CardFieldSpec:
+    """One extra logical card field a language's render hooks add.
+
+    ``key`` is the logical ``anki_fields`` key (matches a hook's
+    ``field_names()`` entry). ``capability`` names the profile capability that
+    gates surfacing this field in the UI — must be in ``CAPABILITY_VOCABULARY``
+    (test_language_contract.py) and in the owning profile's own
+    ``capabilities``. ``placeholder`` is an untranslated Anki field-name
+    suggestion, never shown as-is without going through i18n at the call site.
+    ``raw_html`` marks a value that is pre-rendered markup, inserted verbatim
+    instead of html.escape()d: ``AnkiService`` feeds these keys to
+    ``build_note`` as ``extra_raw_html_keys``. The ja/ko/zh keys are already in
+    ``services/anki_note_builder.py::_RAW_HTML_FIELD_KEYS``, which is frozen —
+    a later language's key is carried by this flag alone.
+    """
+
+    key: str
+    capability: str
+    placeholder: str
+    raw_html: bool = False
+
+
+@dataclass(frozen=True)
 class ContentTextStyle:
     """Typography for surfaces displaying MINED CONTENT (not chrome).
 
@@ -245,3 +269,16 @@ class LanguageProfile:
     #: report leaves it unset. The probe runs at call time (zh answers from
     #: ``find_spec``), never at construction: the profile itself always builds.
     unavailable_reason: Callable[[], str | None] | None = None
+    #: Extra logical fields this language's render hooks add, for UI surfaces
+    #: (field mapping pickers) that need to describe them without importing the
+    #: hooks. Trailing + defaulted like the two below: ``dataclasses.replace``
+    #: and positional construction of an existing profile keep working.
+    extra_card_fields: tuple[CardFieldSpec, ...] = ()
+    #: One in-language sentence for ``ANKI_MINER_SMOKE=<code>`` bundle smokes
+    #: and any UI preview. Copied verbatim from ``gui/app.py`` —
+    #: ``_LANGUAGE_SMOKE_LINES`` is not imported here (this module stays a
+    #: Qt-free leaf); each language package owns its own literal.
+    smoke_sentence: str = ""
+    #: English display name, for surfaces that cannot render the native script
+    #: (log lines, ASCII-only widgets). ``display_name`` stays the native form.
+    english_name: str = ""

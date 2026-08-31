@@ -16,12 +16,20 @@ from anki_miner.languages.ko.script import (
 )
 from anki_miner.languages.profile import (
     CaptionLangs,
+    CardFieldSpec,
     ContentTextStyle,
     LanguageProfile,
     PosDefaults,
 )
 
 __all__ = ["build_profile"]
+
+#: Copied verbatim from gui/app.py::_LANGUAGE_SMOKE_LINES["ko"].
+KO_SMOKE_SENTENCE = "학생이 밥을 먹었어요."
+
+#: One spec per KoHanjaHook field (render.py). Placeholder is untranslated, the
+#: same convention as KO_CARD_FIELDS' own Anki-field-name suggestions.
+KO_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (CardFieldSpec(key="hanja", capability="hanja", placeholder="Hanja"),)
 
 #: Korean cards start from the same core fields as Japanese, with every
 #: JA-specific field unmapped ("" = feature off, the existing empty-name skip).
@@ -84,27 +92,15 @@ class KoLookupStrategy:
 def _scoped_defaults() -> dict[str, object]:
     """First-visit values for EVERY language-scoped field.
 
-    Derived by iterating LANGUAGE_SCOPED_FIELDS (never hand-written, so a new
-    scoped field cannot silently miss a Korean default), typed from a blank
-    config, then overridden. Nothing is inherited from the JA dataclass defaults:
-    a first Korean switch must not arrive with the jmdict chain, the JA name
-    wordsets, `ja` subtitle langs or the JA deck name.
+    Starts from ``blank_scoped_defaults()`` (never hand-written, so a new
+    scoped field cannot silently miss a Korean default), then overridden.
+    Nothing is inherited from the JA dataclass defaults: a first Korean switch
+    must not arrive with the jmdict chain, the JA name wordsets, `ja` subtitle
+    langs or the JA deck name.
     """
-    from anki_miner.config.config import AnkiMinerConfig
-    from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
+    from anki_miner.languages.switching import blank_scoped_defaults
 
-    blank = AnkiMinerConfig()
-    defaults: dict[str, object] = {}
-    for name in LANGUAGE_SCOPED_FIELDS:
-        current = getattr(blank, name)
-        if isinstance(current, tuple):
-            defaults[name] = ()
-        elif isinstance(current, bool):
-            defaults[name] = False
-        elif isinstance(current, str):
-            defaults[name] = ""
-        else:
-            defaults[name] = current
+    defaults = blank_scoped_defaults()
     defaults["downloader_subtitle_langs"] = "ko"
     defaults["expression_audio_chain"] = KO_AUDIO.default_chain
     defaults["allowed_pos"] = ko_morphology.KO_ALLOWED_POS
@@ -161,4 +157,7 @@ def build_profile() -> LanguageProfile:
         # builds with neither installed, so this probe is the only thing that
         # keeps the selector and the switch off an install that cannot mine.
         unavailable_reason=ko_missing_required_reason,
+        extra_card_fields=KO_EXTRA_CARD_FIELDS,
+        smoke_sentence=KO_SMOKE_SENTENCE,
+        english_name="Korean",
     )

@@ -291,6 +291,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Campo classificatore</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Memorizza il classificatore estratto dalla voce del dizionario. Vuoto = salta.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Campo pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Memorizza la lettura in pinyin della parola, colorata in base al tono se l'opzione è attiva. Vuoto = salta.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Campo caratteri tradizionali</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Memorizza la parola nell'altra variante di scrittura, quando differisce. Vuoto = salta.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Campo hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Memorizza i caratteri hanja contenuti nella parola. Vuoto = salta.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Non è in Anki — il mining non riuscirà finché non se ne seleziona uno reale o lo si crea in Anki.</translation>
     </message>
@@ -457,38 +489,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Memorizza la frase come kana semplice.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Campo classificatore</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Memorizza il classificatore estratto dalla voce del dizionario. Vuoto = salta.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Campo pinyin</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Memorizza la lettura in pinyin della parola, colorata in base al tono se l'opzione è attiva. Vuoto = salta.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Campo caratteri tradizionali</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Memorizza la parola nell'altra variante di scrittura, quando differisce. Vuoto = salta.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Campo hanja</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Memorizza i caratteri hanja contenuti nella parola. Vuoto = salta.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -3218,8 +3218,8 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
         <translation>campo parola vuoto</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>non giapponese</translation>
+        <source>not the mining language</source>
+        <translation>non è la lingua di mining</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>

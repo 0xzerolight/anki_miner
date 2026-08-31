@@ -127,3 +127,102 @@ class TestDuplicateOptions:
         config = AnkiMinerConfig(allow_duplicate_cards=True)
         note = build_note(_payload(_word()), config, set()).note
         assert note["options"] == {"allowDuplicate": True, "duplicateScope": "deck"}
+
+
+class TestProfileDeclaredExtraKeys:
+    """Language N+1's card fields, passed per call instead of added centrally.
+
+    ``OPTIONAL_FIELD_KEYS``/``_RAW_HTML_FIELD_KEYS`` are frozen; a new
+    language's keys arrive through these two keyword arguments, which
+    ``AnkiService`` fills from the active profile's ``extra_card_fields``.
+    """
+
+    _STUB = "stub_extra"
+    _STUB_HTML = "stub_extra_html"
+
+    def test_legacy_positional_call_matches_explicit_empty_extras(self):
+        # scripts/engine_golden_contract_v2.py calls build_note(payload, config,
+        # stored_files) positionally and may not be edited: both arguments
+        # default, and defaulting them changes nothing.
+        word = _word()
+        positional = build_note(_payload(word), AnkiMinerConfig(), set()).note
+        explicit = build_note(
+            _payload(word),
+            AnkiMinerConfig(),
+            set(),
+            extra_optional_keys=frozenset(),
+            extra_raw_html_keys=frozenset(),
+        ).note
+        assert positional == explicit
+        assert list(positional["fields"]) == list(explicit["fields"])
+
+    def test_extra_optional_key_is_gated_like_an_optional_field(self):
+        config = _config(**{self._STUB: "Stub"})
+        payload = _payload(_word(), extra_fields={self._STUB: "<b>x</b>"})
+
+        without = build_note(payload, config, set()).note["fields"]
+        assert "Stub" not in without
+
+        with_extra = build_note(
+            payload,
+            config,
+            set(),
+            extra_optional_keys=frozenset({self._STUB}),
+        ).note["fields"]
+        # Optional pass semantics: escaped, and only when mapped.
+        assert with_extra["Stub"] == "&lt;b&gt;x&lt;/b&gt;"
+        unmapped = build_note(
+            payload,
+            _config(**{self._STUB: ""}),
+            set(),
+            extra_optional_keys=frozenset({self._STUB}),
+        ).note["fields"]
+        assert "Stub" not in unmapped
+
+    def test_extra_optional_key_skips_when_empty(self):
+        config = _config(**{self._STUB: "Stub"})
+        fields = build_note(
+            _payload(_word(), extra_fields={self._STUB: ""}),
+            config,
+            set(),
+            extra_optional_keys=frozenset({self._STUB}),
+        ).note["fields"]
+        assert "Stub" not in fields
+
+    def test_extra_raw_html_key_is_emitted_verbatim(self):
+        config = _config(**{self._STUB_HTML: "StubHtml"})
+        fields = build_note(
+            _payload(_word(), extra_fields={self._STUB_HTML: '<span class="tone">x</span>'}),
+            config,
+            set(),
+            extra_optional_keys=frozenset({self._STUB_HTML}),
+            extra_raw_html_keys=frozenset({self._STUB_HTML}),
+        ).note["fields"]
+        assert fields["StubHtml"] == '<span class="tone">x</span>'
+        assert "&lt;" not in fields["StubHtml"]
+
+    def test_extra_raw_html_key_skips_when_empty_or_absent(self):
+        config = _config(**{self._STUB_HTML: "StubHtml"})
+        kwargs = {
+            "extra_optional_keys": frozenset({self._STUB_HTML}),
+            "extra_raw_html_keys": frozenset({self._STUB_HTML}),
+        }
+        empty = build_note(
+            _payload(_word(), extra_fields={self._STUB_HTML: ""}),
+            config,
+            set(),
+            **kwargs,
+        ).note["fields"]
+        assert "StubHtml" not in empty
+        absent = build_note(_payload(_word()), config, set(), **kwargs).note["fields"]
+        assert "StubHtml" not in absent
+
+    def test_extra_raw_html_key_unmapped_writes_nothing(self):
+        fields = build_note(
+            _payload(_word(), extra_fields={self._STUB_HTML: "<b>x</b>"}),
+            AnkiMinerConfig(),
+            set(),
+            extra_optional_keys=frozenset({self._STUB_HTML}),
+            extra_raw_html_keys=frozenset({self._STUB_HTML}),
+        ).note["fields"]
+        assert all(value != "<b>x</b>" for value in fields.values())
