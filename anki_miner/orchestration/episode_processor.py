@@ -1986,6 +1986,35 @@ class EpisodeProcessor:
             for word in words
         ]
 
+    def _apply_strict_card_order(
+        self,
+        words: list[TokenizedWord],
+        all_words: list[TokenizedWord],
+    ) -> list[TokenizedWord]:
+        """Re-sort ``words`` into first-appearance order when the setting is on.
+
+        ``all_words`` is the phase-1 parse output, which is already appearance
+        order and mined_form-deduped on both entrypoints (``parse_subtitle_file``
+        and ``parse_text_units``), so ``mined_form`` is a stable key that
+        survives every phase-2 filter, the i+1 sentence swap and the curator's
+        sentence-variant substitution — none of which change the card front.
+
+        This is the ONLY site that restores order, which is why it runs after
+        curation: from here to ``addNotes`` every stage is strictly positional
+        (phase 4's three result lists are index-parallel, phase 5 zips them,
+        ``create_cards_batch`` only ever subtracts), so this sort is the order
+        Anki receives and therefore the new-card positions it assigns. Running
+        last also means it deliberately overrides all three upstream
+        reorderings: the whitelist force-include prepend, the Word Curator's
+        clicked column sort, and the season-mode merged pool order. ``sorted``
+        is stable, so a word with no phase-1 slot (should not occur) keeps its
+        relative position at the end rather than being dropped.
+        """
+        if not self.config.strict_card_order:
+            return words
+        order = {word.mined_form: index for index, word in enumerate(all_words)}
+        return sorted(words, key=lambda word: order.get(word.mined_form, len(order)))
+
     def process_episode(
         self,
         video_file: Path,
@@ -2116,6 +2145,8 @@ class EpisodeProcessor:
                 if isinstance(outcome, ProcessingResult):
                     return outcome
                 unknown_words = self._materialize_line_expansions(outcome, subtitle_file, subtitle_offset)
+
+            unknown_words = self._apply_strict_card_order(unknown_words, all_words)
 
             with timed_phase("extract", logger):
                 media_results = self._phase3_extract(
@@ -2542,6 +2573,8 @@ class EpisodeProcessor:
                     # A nonzero count means a wiring change made them reachable
                     # without adding materialization — fail loud, not silent.
                     logger.warning("reading curation: dropping line expansion on %d word(s)", dropped)
+
+            unknown_words = self._apply_strict_card_order(unknown_words, all_words)
 
             with timed_phase("reading-media", logger):
                 media_results = self._phase3_reading_media(
