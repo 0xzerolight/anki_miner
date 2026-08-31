@@ -1132,6 +1132,33 @@ def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> N
     )
 
 
+def _warn_if_active_language_unavailable(window: MainWindow) -> None:
+    """Boot-time signal for a config language whose engine stack is missing.
+
+    ``config.language`` can name zh/ko while the install lacks that language's
+    pack — a bundle upgrade that stripped the engines (Task 6) is one way there
+    — and without this the gap would surface only mid-run. Screen-issue banner,
+    never modal (D24): reuses the header chip's jump route
+    (``_open_mining_language_settings``, ``main_window.py:995``) so the action
+    lands on the selector itself.
+    """
+    code = config_language(window.config)
+    if code == "ja":
+        return
+    probe = get_profile(code).unavailable_reason
+    reason = probe() if probe is not None else None
+    if not reason:
+        return
+    window.show_screen_issue(
+        ScreenIssue(
+            summary=reason,
+            action_id="language.open-settings",
+            action_text=QCoreApplication.translate("App", "Open Settings"),
+        ),
+        action=window._open_mining_language_settings,
+    )
+
+
 _in_excepthook = False
 
 
@@ -1885,6 +1912,16 @@ def main():
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
     window.commit_boot(suppress_optional=installer_smoke)
+
+    # Config is final and the window (with its screen-issue banner) exists, so
+    # this is the earliest point a stale config.language — e.g. a bundle
+    # upgrade that stripped that language's engines (Task 6) — can be surfaced.
+    # Optional like every other boot step below: a probe failure must not take
+    # the rest of startup down with it.
+    try:
+        _warn_if_active_language_unavailable(window)
+    except Exception:  # noqa: BLE001 — bucket A: boot continues without the banner.
+        logger.exception("Could not check the active mining language's availability")
 
     # Offer what the last session left behind (D16-C). After translators and
     # every addTab, so the question is translated and Restore has somewhere to
