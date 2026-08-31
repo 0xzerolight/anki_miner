@@ -176,12 +176,22 @@ def test_switch_language_activates_every_registered_language(code):
 
 @pytest.mark.parametrize("code", CODES)
 def test_card_fields_and_hooks_agree(code):
-    """Hook keys are the profile's OWN logical keys, not the ja dataclass's."""
+    """Hook keys are the profile's OWN logical keys, not the ja dataclass's.
+
+    ``OPTIONAL_FIELD_KEYS`` is frozen legacy: it carries the ja/ko/zh keys
+    because they predate ``LanguageProfile.extra_card_fields``, and it never
+    grows again. A later language's key satisfies this by being DECLARED on its
+    own profile — which is what ``AnkiService`` threads into ``build_note`` as
+    ``extra_optional_keys`` — so the union is the right right-hand side. Every
+    language shipped today keeps passing on the central set alone; the union
+    only matters for a profile-declared key (see
+    ``tests/unit/languages/test_eu_boundary_stub.py``).
+    """
     profile = get_profile(code)
     assert set(profile.card_field_defaults) >= REQUIRED_FIELD_KEYS  # ruff SIM300: no Yoda side
     hook_keys = {name for hook in profile.render_hooks for name in hook.field_names()}
     assert hook_keys <= set(profile.card_field_defaults)
-    assert hook_keys <= OPTIONAL_FIELD_KEYS
+    assert hook_keys <= (OPTIONAL_FIELD_KEYS | {spec.key for spec in profile.extra_card_fields})
 
 
 @pytest.mark.parametrize("code", CODES)
