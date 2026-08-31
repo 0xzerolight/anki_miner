@@ -5141,14 +5141,14 @@ Adicionar %3 palavra(s) à sua lista de conhecidas?</translation>
         <translation>Remover TODAS as palavras que você adicionou à lista local de palavras conhecidas? Isso não pode ser desfeito. O cache sincronizado do Anki não é afetado.</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>Baixando modelo coreano…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>Modelo coreano instalado com sucesso.</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5890,24 +5890,20 @@ Continuar?</translation>
         <translation>O idioma que você minera. É separado do idioma da interface (Configurações -&gt; Aparência e Idioma). Alternar troca dicionários, filtros, baralho e campos do cartão pelas configurações do próprio idioma.</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>Baixar modelo coreano</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Baixe o modelo de idioma coreano para a pasta do Anki Miner. Instalações empacotadas incluem o mecanismo coreano sem o seu modelo.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Modelo coreano</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>Instalado</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>Não instalado</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

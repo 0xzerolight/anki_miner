@@ -5128,14 +5128,14 @@ Add %3 word(s) to your known list?</source>
         <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか？この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>韓国語モデルをダウンロードしています…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>韓国語モデルのインストールが完了しました。</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5876,24 +5876,20 @@ Continue?</source>
         <translation>マイニングする言語です。インターフェース言語（設定 -&gt; 外観と言語）とは別の設定です。切り替えると、辞書、フィルター、デッキ、カードのフィールドがその言語専用の設定に入れ替わります。</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>韓国語モデルをダウンロード</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>韓国語の言語モデルを Anki Miner のフォルダにダウンロードします。バンドル版インストールには韓国語エンジンのみが含まれ、モデルは含まれていません。</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>韓国語モデル</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>インストール済み</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>未インストール</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

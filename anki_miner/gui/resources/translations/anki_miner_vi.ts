@@ -5128,14 +5128,14 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
         <translation>Gỡ bỏ TẤT CẢ các từ bạn đã thêm vào danh sách từ đã biết cục bộ? Không thể hoàn tác. Bộ nhớ đệm đồng bộ với Anki không bị ảnh hưởng.</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>Đang tải mô hình tiếng Hàn…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>Đã cài đặt mô hình tiếng Hàn thành công.</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5876,24 +5876,20 @@ Tiếp tục?</translation>
         <translation>Ngôn ngữ được khai thác. Tách biệt với ngôn ngữ giao diện (Cài đặt -&gt; Diện mạo &amp; Ngôn ngữ). Khi chuyển đổi, từ điển, bộ lọc, bộ thẻ và các trường thẻ sẽ đổi sang cài đặt riêng của ngôn ngữ đó.</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>Tải mô hình tiếng Hàn</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Tải mô hình ngôn ngữ tiếng Hàn vào thư mục của Anki Miner. Bản cài đóng gói có sẵn công cụ tiếng Hàn nhưng không kèm mô hình.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Mô hình tiếng Hàn</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>Đã cài đặt</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>Chưa cài đặt</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

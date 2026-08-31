@@ -5141,14 +5141,14 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Supprimer TOUS les mots que vous avez ajoutés à la liste locale de mots connus ? Cette action est irréversible. Le cache synchronisé depuis Anki n'est pas affecté.</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>Téléchargement du modèle coréen…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>Modèle coréen installé avec succès.</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5890,24 +5890,20 @@ Continuer ?</translation>
         <translation>La langue que vous extrayez. Distincte de la langue de l'interface (Paramètres -&gt; Apparence et langue). Le changement remplace les dictionnaires, les filtres, le paquet et les champs de carte par les réglages propres à cette langue.</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>Télécharger le modèle coréen</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Télécharger le modèle linguistique coréen dans le dossier d'Anki Miner. Les installations groupées fournissent le moteur coréen sans son modèle.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Modèle coréen</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>Installé</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>Non installé</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

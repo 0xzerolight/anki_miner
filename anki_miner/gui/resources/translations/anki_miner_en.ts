@@ -5093,13 +5093,13 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
+        <source>Downloading the %1 pack…</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
+        <source>%1 pack installed successfully.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -5837,15 +5837,11 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download Korean model</source>
+        <source>Download %1 pack</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Korean model</source>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5853,7 +5849,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Not installed</source>
+        <source>Not installed - about %1 MB download</source>
         <translation type="unfinished" />
     </message>
 </context><context>

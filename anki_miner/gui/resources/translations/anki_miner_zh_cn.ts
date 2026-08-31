@@ -5128,14 +5128,14 @@ Add %3 word(s) to your known list?</source>
         <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>正在下载韩语模型…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>韩语模型安装成功。</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5876,24 +5876,20 @@ Continue?</source>
         <translation>要挖词的语言。与界面语言（设置 -&gt; 外观和语言）相互独立。切换后，词典、过滤器、牌组和卡片字段都会换成该语言自己的设置。</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>下载韩语模型</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>将韩语语言模型下载到 Anki Miner 的文件夹。打包安装自带韩语引擎，但不含其模型。</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>韩语模型</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>已安装</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>未安装</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

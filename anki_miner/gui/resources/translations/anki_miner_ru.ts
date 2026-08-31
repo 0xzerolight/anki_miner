@@ -5154,14 +5154,14 @@ Add %3 word(s) to your known list?</source>
         <translation>Удалить ВСЕ слова, добавленные вами в локальный список известных слов? Это нельзя отменить. Синхронизированный с Anki кэш не затрагивается.</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>Скачивание корейской модели…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>Корейская модель успешно установлена.</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5904,24 +5904,20 @@ Continue?</source>
         <translation>Язык, который вы майните. Не связан с языком интерфейса (Настройки -&gt; Внешний вид и язык). Переключение меняет словари, фильтры, колоду и поля карточек на настройки этого языка.</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>Скачать корейскую модель</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Скачать модель корейского языка в папку Anki Miner. В упакованных сборках корейский движок поставляется без своей модели.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Корейская модель</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>Установлено</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>Не установлено</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

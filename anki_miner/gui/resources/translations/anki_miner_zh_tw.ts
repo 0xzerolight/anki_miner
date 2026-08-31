@@ -5128,14 +5128,14 @@ Add %3 word(s) to your known list?</source>
         <translation>要移除你加入本機已知單字清單的所有單字嗎？此操作無法復原。不會影響與 Anki 同步的快取。</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>正在下載韓文模型…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>韓文模型已成功安裝。</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5876,24 +5876,20 @@ Continue?</source>
         <translation>要採集的語言。與介面語言（設定 -&gt; 外觀與語言）各自獨立。切換後，字典、篩選器、牌組與卡片欄位都會換成該語言自己的設定。</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>下載韓文模型</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>將韓文語言模型下載至 Anki Miner 的資料夾。套裝安裝內含韓文引擎，但不包含其模型。</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>韓文模型</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>已安裝</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>未安裝</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>

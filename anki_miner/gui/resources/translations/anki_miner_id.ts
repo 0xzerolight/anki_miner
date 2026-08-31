@@ -5128,14 +5128,14 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
         <translation>Hapus SEMUA kata yang Anda tambahkan ke daftar kata yang dikenal lokal? Ini tidak dapat dibatalkan. Cache yang tersinkron dengan Anki tidak terpengaruh.</translation>
     </message>
 </context><context>
-    <name>KoModelDownloadWorker</name>
+    <name>LanguagePackDownloadWorker</name>
     <message>
-        <source>Downloading the Korean model…</source>
-        <translation>Mengunduh model Korea…</translation>
+        <source>Downloading the %1 pack…</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Korean model installed successfully.</source>
-        <translation>Model Korea berhasil dipasang.</translation>
+        <source>%1 pack installed successfully.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5876,24 +5876,20 @@ Lanjutkan?</translation>
         <translation>Bahasa yang di-mining. Terpisah dari bahasa antarmuka (Pengaturan -&gt; Tampilan &amp; Bahasa). Beralih akan mengganti kamus, filter, dek, dan bidang kartu ke pengaturan milik bahasa tersebut.</translation>
     </message>
     <message>
-        <source>Download Korean model</source>
-        <translation>Unduh model Korea</translation>
+        <source>Download %1 pack</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Download the Korean language model into Anki Miner's folder. Bundled installs ship the Korean engine without its model.</source>
-        <translation>Unduh model bahasa Korea ke folder Anki Miner. Instalasi bundel menyertakan mesin Korea tanpa modelnya.</translation>
-    </message>
-    <message>
-        <source>Korean model</source>
-        <translation>Model Korea</translation>
+        <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Installed</source>
         <translation>Terpasang</translation>
     </message>
     <message>
-        <source>Not installed</source>
-        <translation>Tidak terpasang</translation>
+        <source>Not installed - about %1 MB download</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiningTabBase</name>
