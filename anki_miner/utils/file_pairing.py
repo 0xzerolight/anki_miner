@@ -6,7 +6,12 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt")
+#: Mining subtitle formats, best first. Richest format wins when a folder holds
+#: several variants for one episode: ASS/SSA carry styling and typesetting, SRT
+#: carries plain cues, and WebVTT is the poorest of the four (its positioning
+#: and cue settings are dropped on parse), so it sorts last and is only ever
+#: picked when nothing better sits beside the video.
+DEFAULT_SUBTITLE_PRIORITY: tuple[str, ...] = (".ass", ".ssa", ".srt", ".vtt")
 
 #: Stem suffix Utilities → Retime appends to its output, so a retimed subtitle
 #: sits beside the original instead of replacing it. Discovery prefers a file
@@ -118,8 +123,8 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
         video_path: Video (or media) file whose sibling subtitle is sought.
         priority: Ordered lowercase extensions (e.g. ``(".ass", ".srt")``) to
             accept, best first.  Defaults to :data:`DEFAULT_SUBTITLE_PRIORITY`
-            (``.ass > .ssa > .srt``), preserving mining behavior byte-for-byte.
-            Callers may pass a wider set (e.g. including ``.vtt``).
+            (``.ass > .ssa > .srt > .vtt``).  Callers may pass a narrower set to
+            exclude a format, or a wider one to accept extras.
 
     Matching is case-insensitive on both stem and extension, and NFC-normalized
     on the stem, so a ``.SRT`` (a differing-case stem, or an NFD-encoded stem) is
@@ -201,8 +206,9 @@ class FilePairMatcher:
                 mining behavior byte-for-byte.  Callers may pass a wider set
                 (e.g. audio-only extensions).
             subtitle_extensions: Lowercase subtitle extensions to accept.
-                Defaults to :data:`SUBTITLE_EXTENSIONS`, preserving mining
-                behavior.  Callers may pass a wider set (e.g. including ``.vtt``).
+                Defaults to :data:`SUBTITLE_EXTENSIONS`.  Callers may pass their
+                own set (Condense supplies its own so its media-side extensions
+                stay in step with its subtitle-side ones).
             prefer_retimed: When True (the default) a ``<stem>_retimed`` subtitle
                 outranks every other candidate for the same episode, so mining a
                 folder that also holds the off-timed original uses the retime.

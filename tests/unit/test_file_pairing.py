@@ -92,9 +92,9 @@ class TestFilePairMatcher:
 
             assert len(pairs) == 1
 
-        def test_custom_subtitle_extensions_finds_vtt(self, tmp_path):
-            """Default set excludes .vtt; a caller-supplied set including it pairs
-            the .vtt subtitle (condenser use case, D12)."""
+        def test_default_subtitle_extensions_pair_vtt(self, tmp_path):
+            """.vtt is in the mining default set, so a .vtt subtitle pairs with
+            no caller-supplied extension set."""
             video_dir = tmp_path / "video"
             video_dir.mkdir()
             sub_dir = tmp_path / "subs"
@@ -103,15 +103,25 @@ class TestFilePairMatcher:
             (video_dir / "Show_01.mkv").touch()
             (sub_dir / "Show_01.vtt").touch()
 
-            # Default: .vtt is invisible → no pair.
-            assert FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir) == []
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
 
-            # Custom subtitle extensions including .vtt → one pair.
-            pairs = FilePairMatcher.find_pairs_by_episode_number(
-                video_dir, sub_dir, subtitle_extensions=frozenset({".vtt"})
-            )
             assert len(pairs) == 1
             assert pairs[0].subtitle.name == "Show_01.vtt"
+
+        def test_richer_format_outranks_vtt_by_default(self, tmp_path):
+            """With both present the default priority prefers .srt over .vtt."""
+            video_dir = tmp_path / "video"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+
+            (video_dir / "Show_01.mkv").touch()
+            (sub_dir / "Show_01.vtt").touch()
+            (sub_dir / "Show_01.srt").touch()
+
+            pairs = FilePairMatcher.find_pairs_by_episode_number(video_dir, sub_dir)
+
+            assert [pair.subtitle.name for pair in pairs] == ["Show_01.srt"]
 
         def test_custom_video_extensions_finds_audio(self, tmp_path):
             """Audio-only inputs pair when the caller supplies audio media
@@ -177,7 +187,11 @@ class TestFilePairMatcher:
                 (("Show_01.srt", "Show_01.ssa", "Show_01.ass"), None, "Show_01.ass"),
                 (("Show_01.srt", "Show_01.ssa"), None, "Show_01.ssa"),
                 (("Show_01.vtt", "Show_01.srt"), frozenset({".vtt", ".srt"}), "Show_01.srt"),
-                (("Zulu_01.vtt", "Alpha_01.sub"), frozenset({".vtt", ".sub"}), "Alpha_01.sub"),
+                # A format in DEFAULT_SUBTITLE_PRIORITY outranks one that is not,
+                # whatever the names: .vtt is ranked, .sub (MicroDVD) is not.
+                (("Zulu_01.vtt", "Alpha_01.sub"), frozenset({".vtt", ".sub"}), "Zulu_01.vtt"),
+                # Two equally unranked formats fall through to the name ordering.
+                (("Zulu_01.sub", "Alpha_01.idx"), frozenset({".sub", ".idx"}), "Alpha_01.idx"),
                 (("Zulu_01.vtt", "Alpha_01.vtt"), frozenset({".vtt"}), "Alpha_01.vtt"),
             ],
         )
