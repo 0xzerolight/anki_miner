@@ -3219,7 +3219,7 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
     </message>
     <message>
         <source>not the mining language</source>
-        <translation type="unfinished" />
+        <translation>non è la lingua di mining</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>

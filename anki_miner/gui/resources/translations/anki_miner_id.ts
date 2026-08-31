@@ -3217,7 +3217,7 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     </message>
     <message>
         <source>not the mining language</source>
-        <translation type="unfinished" />
+        <translation>bukan bahasa mining</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>

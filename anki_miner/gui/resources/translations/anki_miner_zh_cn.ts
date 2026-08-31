@@ -3217,7 +3217,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>not the mining language</source>
-        <translation type="unfinished" />
+        <translation>非挖词语言</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>

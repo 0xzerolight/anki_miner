@@ -3217,7 +3217,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>not the mining language</source>
-        <translation type="unfinished" />
+        <translation>không phải ngôn ngữ khai thác</translation>
     </message>
     <message>
         <source>duplicate within the deck</source>
