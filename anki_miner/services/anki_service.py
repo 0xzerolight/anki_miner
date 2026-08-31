@@ -17,18 +17,20 @@ from anki_miner.models import AnkiWriteState, CardPayload
 from anki_miner.services._ankiconnect import _expect_list, post_action, post_multi
 from anki_miner.services.anki_media_store import AnkiMediaStore
 from anki_miner.services.anki_note_builder import (
-    OPTIONAL_FIELD_KEYS as _OPTIONAL_FIELD_KEYS,
-)
-from anki_miner.services.anki_note_builder import (
-    REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
-)
-from anki_miner.services.anki_note_builder import (
+    _RAW_HTML_FIELD_KEYS,
+    BuiltNote,
     _strip_for_dedup,
     build_note,
     configured_target_field_names,
     field_mapping_error,
     field_target_collision_message,
     missing_note_type_message,
+)
+from anki_miner.services.anki_note_builder import (
+    OPTIONAL_FIELD_KEYS as _OPTIONAL_FIELD_KEYS,
+)
+from anki_miner.services.anki_note_builder import (
+    REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
 )
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -152,11 +154,26 @@ class AnkiService:
         self.config = config
         # Resolved here, not at the call sites: fifteen constructions exist and
         # only one is a composition root, so a caller-supplied default would
-        # leave fourteen scanning for Japanese under a Korean config.
-        if script is None:
-            from anki_miner.languages.registry import config_language, get_profile
+        # leave fourteen scanning for Japanese under a Korean config. The lookup
+        # is unconditional even when `script` is injected, because the extra
+        # card-field keys below come off the same profile; `get_profile` answers
+        # from a process-wide cache, and the import stays function-local (see
+        # the TYPE_CHECKING note at the top of the module).
+        from anki_miner.languages.registry import config_language, get_profile
 
-            script = get_profile(config_language(config)).script
+        profile = get_profile(config_language(config))
+        if script is None:
+            script = profile.script
+        # Logical card-field keys this language adds beyond anki_note_builder's
+        # frozen sets, computed once and threaded into every build_note call.
+        # ja/ko/zh declare only keys those sets already carry, so both come out
+        # empty and the note stays byte-identical; a fourth language's keys
+        # arrive here instead of growing the central sets.
+        declared = frozenset(spec.key for spec in profile.extra_card_fields)
+        self._extra_optional_keys = declared - _OPTIONAL_FIELD_KEYS
+        self._extra_raw_html_keys = frozenset(
+            spec.key for spec in profile.extra_card_fields if spec.raw_html
+        ) - frozenset(_RAW_HTML_FIELD_KEYS)
         # Unannotated on purpose: mypy takes the narrowed ScriptSupport from the
         # parameter, and an annotation here would be evaluated at runtime on
         # Python <= 3.13 (this module has no `from __future__ import
@@ -710,6 +727,21 @@ class AnkiService:
         """Install the live Phase-5 cancellation predicate for one call."""
         self._cancelled_check = cancelled
 
+    def _build_note(self, item: CardPayload, stored_files: set[str]) -> BuiltNote:
+        """``build_note`` with this language's extra card-field keys attached.
+
+        The one place the two profile-derived key sets meet the builder, so the
+        dedup probe, the addibility probe and the submitted note are all mapped
+        the same way.
+        """
+        return build_note(
+            item,
+            self.config,
+            stored_files,
+            extra_optional_keys=self._extra_optional_keys,
+            extra_raw_html_keys=self._extra_raw_html_keys,
+        )
+
     def create_cards_batch(
         self,
         word_data_list: list[CardPayload],
@@ -778,7 +810,7 @@ class AnkiService:
             seen: set[str] = set()
             candidate_payloads: list[CardPayload] = []
             for item in word_data_list:
-                note = build_note(item, self.config, set()).note
+                note = self._build_note(item, set()).note
                 fields = note.get("fields") or {}
                 first_value = next(iter(fields.values()), "")
                 key = _strip_for_dedup(first_value if isinstance(first_value, str) else "")
@@ -831,7 +863,7 @@ class AnkiService:
                 # uploaded. Excluded-deck admission deliberately permits collection
                 # duplicates, but still validates every locally admitted note with
                 # duplicates allowed so bad fields fail before media side effects.
-                probe_notes = [build_note(item, self.config, set()).note for item in candidate_batch]
+                probe_notes = [self._build_note(item, set()).note for item in candidate_batch]
                 if excluded_deck_admission:
                     self._validate_notes_addible(probe_notes)
                     batch = candidate_batch
@@ -857,7 +889,7 @@ class AnkiService:
                 # anki_note_builder).
                 notes = []
                 for item in batch:
-                    built = build_note(item, self.config, stored_files)
+                    built = self._build_note(item, stored_files)
                     if built.used_precomputed_bold:
                         bold_used += 1
                     if built.used_bold_fallback:

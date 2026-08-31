@@ -211,8 +211,11 @@ class CardFieldSpec:
     (test_language_contract.py) and in the owning profile's own
     ``capabilities``. ``placeholder`` is an untranslated Anki field-name
     suggestion, never shown as-is without going through i18n at the call site.
-    ``raw_html`` mirrors ``services/anki_note_builder.py::_RAW_HTML_FIELD_KEYS``
-    membership — set True only for a key listed there.
+    ``raw_html`` marks a value that is pre-rendered markup, inserted verbatim
+    instead of html.escape()d: ``AnkiService`` feeds these keys to
+    ``build_note`` as ``extra_raw_html_keys``. The ja/ko/zh keys are already in
+    ``services/anki_note_builder.py::_RAW_HTML_FIELD_KEYS``, which is frozen —
+    a later language's key is carried by this flag alone.
     """
 
     key: str

@@ -4734,3 +4734,57 @@ class TestAddNotesRaw:
 
         mock_pa.assert_not_called()
         assert service.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+
+# ---------------------------------------------------------------------------
+# TestProfileExtraFieldKeys
+# ---------------------------------------------------------------------------
+
+
+class TestProfileExtraFieldKeys:
+    """The service derives build_note's extra key sets from the active profile.
+
+    ja/ko/zh declare nothing the frozen central sets in anki_note_builder do not
+    already carry, so both sets come out empty and every note stays
+    byte-identical. The subtraction is what a fourth language exercises.
+    """
+
+    @pytest.mark.parametrize("code", ["ja", "ko", "zh"])
+    def test_shipped_languages_add_nothing(self, test_config, code):
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, language=code))
+
+        assert service._extra_optional_keys == frozenset()
+        assert service._extra_raw_html_keys == frozenset()
+
+    def test_declared_keys_outside_the_central_sets_are_threaded(self, test_config):
+        """A profile whose extra_card_fields names an unlisted key surfaces it."""
+        from dataclasses import replace
+        from unittest.mock import patch as _patch
+
+        from anki_miner.languages.profile import CardFieldSpec
+        from anki_miner.languages.registry import get_profile
+
+        stub_profile = replace(
+            get_profile("ja"),
+            extra_card_fields=(
+                CardFieldSpec(key="stub_extra", capability="hanja", placeholder="Stub"),
+                CardFieldSpec(key="stub_extra_html", capability="hanja", placeholder="StubHtml", raw_html=True),
+            ),
+        )
+        with _patch("anki_miner.languages.registry.get_profile", return_value=stub_profile):
+            service = AnkiService(test_config)
+
+        assert service._extra_optional_keys == frozenset({"stub_extra", "stub_extra_html"})
+        assert service._extra_raw_html_keys == frozenset({"stub_extra_html"})
+
+    def test_zh_and_ko_declare_fields_the_central_sets_already_carry(self):
+        """Guards the emptiness above from going vacuous."""
+        from anki_miner.languages.registry import get_profile
+        from anki_miner.services.anki_note_builder import OPTIONAL_FIELD_KEYS
+
+        for code in ("ko", "zh"):
+            keys = {spec.key for spec in get_profile(code).extra_card_fields}
+            assert keys
+            assert keys <= OPTIONAL_FIELD_KEYS

@@ -27,6 +27,11 @@ REQUIRED_FIELD_KEYS = {
     "sentence_furigana",
 }
 
+# FROZEN LEGACY SET — it never grows again. The ja/ko/zh keys below are here
+# because they predate ``LanguageProfile.extra_card_fields``; a new language
+# declares its card fields on its own profile and ``AnkiService`` threads them
+# into ``build_note`` as ``extra_optional_keys``. Adding a key here instead
+# would make every language pay for it.
 OPTIONAL_FIELD_KEYS = {
     "pitch_position",
     "pitch_category",
@@ -117,6 +122,12 @@ def field_mapping_error(
 # glossary), NOT html.escape()d by the OPTIONAL pass — escaping would turn the
 # tags into literal text. They follow the skip-when-empty contract: an absent
 # value leaves the field untouched rather than blanking it.
+#
+# FROZEN LEGACY TUPLE, like OPTIONAL_FIELD_KEYS above: it never grows again. A
+# new language's raw-HTML key arrives per call as ``extra_raw_html_keys``, from
+# the ``raw_html=True`` entries of its profile's ``extra_card_fields``. Order is
+# load-bearing — it fixes the note's field order for these keys, so extras are
+# appended after this tuple, never interleaved.
 _RAW_HTML_FIELD_KEYS = ("frequency", "pitch_graph", "pitch_text", "expression_pinyin")
 
 
@@ -176,7 +187,14 @@ class BuiltNote:
     used_bold_fallback: bool
 
 
-def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str]) -> BuiltNote:
+def build_note(
+    item: CardPayload,
+    config: AnkiMinerConfig,
+    stored_files: set[str],
+    *,
+    extra_optional_keys: frozenset[str] = frozenset(),
+    extra_raw_html_keys: frozenset[str] = frozenset(),
+) -> BuiltNote:
     """Map one CardPayload to the note dict ``addNotes`` expects.
 
     Args:
@@ -185,6 +203,13 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         stored_files: Filenames confirmed stored in Anki's media collection;
             media fields only reference files in this set so cards never point
             at missing media.
+        extra_optional_keys: Logical field keys the active language declares
+            beyond the frozen ``OPTIONAL_FIELD_KEYS``, gated identically
+            (mapped name non-empty AND value non-empty, value html.escape()d).
+        extra_raw_html_keys: The subset of those whose value is pre-rendered
+            markup, handled like ``_RAW_HTML_FIELD_KEYS``: emitted verbatim,
+            omitted when empty. Both default empty, so the three-argument call
+            — ja/ko/zh and the frozen engine-goldens exporter — is unchanged.
 
     Returns:
         The note dict plus flags recording whether the bolded-sentence path
@@ -212,12 +237,15 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
     # turn the tags into literal text. Sibling scalar fields (frequency_sort,
     # pitch_position) stay in the escaped OPTIONAL pass — escaping a number/digit
     # string is a no-op.
-    raw_html_values = dict.fromkeys(_RAW_HTML_FIELD_KEYS, "")
+    # Profile-declared raw-HTML keys are appended AFTER the frozen tuple, so a
+    # language that declares none leaves the note's field order untouched.
+    raw_html_keys = _RAW_HTML_FIELD_KEYS + tuple(sorted(extra_raw_html_keys.difference(_RAW_HTML_FIELD_KEYS)))
+    raw_html_values = dict.fromkeys(raw_html_keys, "")
     if extra_fields:
-        for raw_key in _RAW_HTML_FIELD_KEYS:
+        for raw_key in raw_html_keys:
             if raw_key in extra_fields:
                 raw_html_values[raw_key] = extra_fields[raw_key] or ""
-        extra_fields = {k: v for k, v in extra_fields.items() if k not in _RAW_HTML_FIELD_KEYS} or None
+        extra_fields = {k: v for k, v in extra_fields.items() if k not in raw_html_keys} or None
 
     # Build field values (only reference successfully stored media)
     picture_html = ""
@@ -271,6 +299,11 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         "sentence_furigana": sentence_furigana_field,
         "sentence_reading": html.escape(word.sentence_reading),
     }
+    # Profile-declared raw-HTML keys only; the four above are already in place
+    # at their frozen positions.
+    for raw_key in raw_html_keys:
+        if raw_key not in field_data:
+            field_data[raw_key] = raw_html_values[raw_key]
     fields = {}
     for key, value in field_data.items():
         anki_field_name = config.anki_fields.get(key, "")
@@ -282,15 +315,16 @@ def build_note(item: CardPayload, config: AnkiMinerConfig, stored_files: set[str
         # follow the optional gating contract: omit entirely when the value is
         # empty so a word with no data leaves the field untouched rather than
         # blanking it.
-        if key in _RAW_HTML_FIELD_KEYS and not value:
+        if key in raw_html_keys and not value:
             continue
         fields[anki_field_name] = value
 
     # Add optional fields if configured and data available
     if extra_fields:
+        optional_keys = OPTIONAL_FIELD_KEYS | extra_optional_keys
         for key, value in extra_fields.items():
             anki_field_name = config.anki_fields.get(key, "")
-            if key in OPTIONAL_FIELD_KEYS and anki_field_name and value:
+            if key in optional_keys and anki_field_name and value:
                 fields[anki_field_name] = html.escape(str(value))
 
     # JP Mining Note-style card-type marker: stamp a constant "x" into the one
