@@ -95,7 +95,11 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
     """Spec §13 item 3: a gui_config.json written by the pre-multi-language
     build loads with every pre-existing field equal to its recorded value, and
     the only added keys are Stage 0's `language` / `language_stash` plus task
-    2A.11's two language-scoped fields, which load as their ja-inert defaults."""
+    2A.11's two language-scoped fields, which load as their ja-inert defaults.
+
+    Fields added after that stage join the set as they land. `strict_card_order`
+    is deliberately NOT in LANGUAGE_SCOPED_FIELDS: card creation order is the
+    same decision in every language, so it stays global and survives a switch."""
     raw = PRE_CHANGE_CONFIG.read_text(encoding="utf-8")
     recorded = json.loads(raw)
     isolated_config_file.write_text(raw, encoding="utf-8")
@@ -112,5 +116,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "language_stash",
         "script_variant",
         "reading_tone_color",
+        "strict_card_order",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
