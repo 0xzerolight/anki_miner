@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,23 @@ class TestUnavailableReason:
         # true probe and a nonsense name is a false one — no import executed.
         assert availability._installed("json") is True
         assert availability._installed("definitely_not_a_real_package_zzz") is False
+
+    def test_a_frozen_build_names_the_pack_not_pip(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(availability, "_installed", lambda name: name != "jieba")
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+        reason = availability.zh_missing_required_reason()
+
+        assert reason == ("Chinese mining needs the Chinese language pack. Download it in Settings -> Mining Language.")
+        assert "pip install" not in (reason or "")
+
+    def test_a_pip_build_is_unaffected_by_the_frozen_tier(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.setattr(availability, "_installed", lambda name: name != "jieba")
+
+        reason = availability.zh_missing_required_reason() or ""
+
+        assert 'pip install "anki-miner[zh]"' in reason
 
 
 def test_zh_modules_never_import_the_extra_at_module_level() -> None:

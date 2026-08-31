@@ -223,6 +223,8 @@ class TestShutdownJoinsOffThreadWorkers:
             "prewarm_worker",
         ):
             setattr(ctrl, attr, None)
+        # Dict-keyed, unlike the handles above: shutdown() iterates it.
+        ctrl.language_pack_workers = {}
         ctrl._join_worker_for_close = MagicMock(return_value=True)
 
         tabs = MagicMock(spec=QTabWidget)

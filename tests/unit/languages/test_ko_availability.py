@@ -11,6 +11,7 @@ tokenizer registered" long after the user made the choice.
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 import pytest
@@ -54,6 +55,40 @@ class TestMissingRequiredReason:
         # true probe and a nonsense name is a false one - no import executed.
         assert availability._installed("json") is True
         assert availability._installed("definitely_not_a_real_package_zzz") is False
+
+    def test_a_frozen_build_names_the_pack_not_pip(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # A frozen bundle has no pip: naming the extra would be dead advice, so
+        # every missing tier collapses onto the one button-naming sentence.
+        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+        reason = availability.ko_missing_required_reason()
+
+        assert reason == ("Korean mining needs the Korean language pack. Download it in Settings -> Mining Language.")
+        assert "pip install" not in (reason or "")
+
+    def test_a_frozen_build_with_only_the_model_missing_still_names_the_pack(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "kiwipiepy_model" else object())
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+        reason = availability.ko_missing_required_reason()
+
+        assert reason == ("Korean mining needs the Korean language pack. Download it in Settings -> Mining Language.")
+
+    def test_a_pip_build_is_unaffected_by_the_frozen_tier(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+
+        reason = availability.ko_missing_required_reason() or ""
+
+        assert 'pip install "anki-miner[ko]"' in reason
+
+    def test_the_download_hint_names_the_current_settings_path(self) -> None:
+        # No stale "Filtering ->" segment - Mining Language moved out from under it.
+        assert "Filtering" not in availability.KO_MODEL_DOWNLOAD_HINT
+        assert "Settings -> Mining Language" in availability.KO_MODEL_DOWNLOAD_HINT
 
 
 def test_the_profile_wires_the_required_only_probe() -> None:

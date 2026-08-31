@@ -106,13 +106,18 @@ class BackgroundTaskController(QObject):
     ytdlp_update_result = pyqtSignal(object)  # YtdlpUpdateResult
     jmdict_migration_finished = pyqtSignal(str, dict)  # (dict_id, meta)
 
-    #: Korean model pack download handle. Declared on the CLASS, unlike its
-    #: siblings below, so it is part of the controller's published attribute set
-    #: rather than an instance-only name: ``shutdown`` reads every handle by
-    #: name, and the attribute-spec'd stand-ins the shutdown suites drive it with
-    #: only know what the class declares. ``__init__`` still binds the instance
-    #: copy, and ``_start_install``/``_release_worker`` only ever touch that one.
-    ko_model_download_worker: InstallWorker | None = None
+    #: Language-pack download handles, keyed by language code. Declared on the
+    #: CLASS, unlike its siblings below, so it is part of the controller's
+    #: published attribute set rather than an instance-only name: ``shutdown``
+    #: reads every handle by name, and the attribute-spec'd stand-ins the
+    #: shutdown suites drive it with only know what the class declares. The dict
+    #: here is a declaration, never data — ``__init__`` binds a fresh instance
+    #: copy, and nothing else ever touches this one.
+    #:
+    #: Keyed rather than one attribute per language: the set of languages is
+    #: manifest data, so a per-language attribute would have to be invented again
+    #: for every language added.
+    language_pack_workers: dict[str, InstallWorker | None] = {}
 
     def __init__(self, window: MainWindow) -> None:
         """Initialize the controller.
@@ -143,7 +148,7 @@ class BackgroundTaskController(QObject):
         self.cuda_pack_download_worker: InstallWorker | None = None
         self.onnx_pack_download_worker: InstallWorker | None = None
         self.vulkan_model_download_worker: InstallWorker | None = None
-        self.ko_model_download_worker = None
+        self.language_pack_workers = {}
         self.restyle_cards_worker: RestyleCardsWorker | None = None
         # The recommended-resource download. Adopted rather than started here:
         # the session owns the run, but the download is now backgroundable, so
@@ -351,30 +356,49 @@ class BackgroundTaskController(QObject):
             on_finished,
         )
 
-    def start_ko_model_download(
+    def start_language_pack_download(
         self,
-        ko_model_root: Path,
+        code: str,
+        root: Path,
         on_status: Callable[[str], None],
         on_finished: Callable[[bool, str], None],
     ) -> None:
-        """Start a Korean model pack download worker unless one is already running.
+        """Start *code*'s language-pack download unless one is already running for it.
+
+        The guard is per language, not per controller: two packs may be fetched
+        at once, and each row owns its own button.
 
         Args:
-            ko_model_root: Directory where the Korean model will be placed;
-                ``services.ko_model_installer.ko_model_root()``.
-            on_status: Slot for ``status(str)`` — typically
-                ``SettingsTab.set_ko_model_status``.
+            code: Language code with a pack manifest (``"ko"``, ``"zh"``).
+            root: Directory where the pack will be placed;
+                ``services.language_pack_installer.language_pack_root(code)``.
+            on_status: Slot for ``status(str)`` — typically a per-code binding of
+                ``SettingsTab.set_language_pack_status``.
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
-        from anki_miner.gui.workers.install_worker import InstallWorker, ko_model_task
+        from anki_miner.gui.utils.language_choices import mining_language_display_name
+        from anki_miner.gui.workers.install_worker import InstallWorker, language_pack_task
 
-        self._start_install(
-            "ko_model_download_worker",
-            lambda: InstallWorker(ko_model_task(ko_model_root), parent=self),
-            on_status,
-            on_finished,
-        )
+        if still_running(self.language_pack_workers.get(code)):
+            return
+
+        # Resolved here rather than passed in: the starter is the last place that
+        # can name the language before the worker leaves the GUI thread, and its
+        # callers (the app wiring) carry a code, not a name.
+        display_name = mining_language_display_name(code)
+        worker = InstallWorker(language_pack_task(code, root, display_name), parent=self)
+        self.language_pack_workers[code] = worker
+        worker.status.connect(on_status)
+        worker.result_ready.connect(on_finished)
+        worker.finished.connect(lambda w=worker: self._release_language_pack_worker(code, w))
+        worker.start()
+
+    def _release_language_pack_worker(self, code: str, worker) -> None:
+        """Free a finished language-pack worker. Mirrors :meth:`_release_worker`."""
+        if self.language_pack_workers.get(code) is worker:
+            self.language_pack_workers[code] = None
+        worker.deleteLater()
 
     def start_vad_pack_download(
         self,
@@ -632,8 +656,8 @@ class BackgroundTaskController(QObject):
 
         # Controller-owned workers: validation, update check, yt-dlp update,
         # JMdict migration, ASR model download, alass install, CUDA pack download,
-        # onnxruntime (VAD) pack download, Vulkan model download, Korean model
-        # download.
+        # onnxruntime (VAD) pack download, Vulkan model download, and every
+        # in-flight language-pack download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
@@ -643,7 +667,11 @@ class BackgroundTaskController(QObject):
         join(self.cuda_pack_download_worker)
         join(self.onnx_pack_download_worker)
         join(self.vulkan_model_download_worker)
-        join(self.ko_model_download_worker)
+        # Dict-keyed, so the join has to iterate rather than name a handle: a
+        # language missed here is a QThread Qt destroys mid-download, which hangs
+        # or aborts the close.
+        for language_pack_worker in list(self.language_pack_workers.values()):
+            join(language_pack_worker)
         join(self.restyle_cards_worker)
         join(self.resource_download_worker)
 

@@ -5,7 +5,7 @@ from .base import AnkiMinerException
 from .cancel import OperationCancelled
 from .media import SubtitleParseError
 from .subtitle import AlassNotFoundError, SubtitleRetimeError
-from .validation import SetupError
+from .validation import DownloadFailed, SetupError
 from .youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
@@ -20,6 +20,7 @@ from .youtube import (
 __all__ = [
     "AnkiMinerException",
     "SetupError",
+    "DownloadFailed",
     "OperationCancelled",
     "AnkiConnectionError",
     "SubtitleParseError",

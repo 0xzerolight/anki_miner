@@ -62,14 +62,25 @@ def test_the_lock_pins_the_ko_engine() -> None:
 
 
 def test_the_release_preflight_builds_against_the_zh_extra() -> None:
-    """The preflight venv must carry the engine the release bundles."""
+    """The preflight venv must carry the engine the zh pack delivers.
+
+    Not what the release legs install (.[asr]) — the point is the opposite: the
+    exclude that keeps jieba out of the frozen graph is only provable on a build
+    where jieba is installed.
+    """
     preflight = (PROJECT_ROOT / "scripts" / "release_preflight.sh").read_text(encoding="utf-8")
     assert '".[asr,zh,ko]"' in preflight
     assert '".[asr]"' not in preflight
 
 
-def test_every_release_leg_bundles_the_zh_extra() -> None:
+def test_no_release_leg_installs_the_zh_extra() -> None:
+    """The engines are excluded from the frozen graph and arrive as packs.
+
+    The pip extras stay (a source install still gets a working zh), but a release
+    leg installing them would only slow the build; the bundle smokes are handed
+    real engines by ``scripts/fetch_language_pack_seeds.py`` instead.
+    """
     matrix = json.loads((PROJECT_ROOT / ".github" / "release-matrix.json").read_text(encoding="utf-8"))
     assert matrix
     for leg in matrix:
-        assert "zh" in leg["install_target"], f"{leg['platform']} ships no zh engine"
+        assert "zh" not in leg["install_target"], f"{leg['platform']} still installs the zh engine"

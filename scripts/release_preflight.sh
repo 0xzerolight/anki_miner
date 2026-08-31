@@ -2,9 +2,16 @@
 # Local release-CI preflight — run BEFORE pushing any v* tag.
 #
 # Mirrors the Linux build job of .github/workflows/release.yml as faithfully as
-# a Linux box allows: isolated venv (.[asr,zh,ko] + pinned PyInstaller), SHA-verified
+# a Linux box allows: isolated venv (pinned PyInstaller), SHA-verified
 # vendor fetch (ffmpeg + alass + yt-dlp + libmpv), PyInstaller build, the three bundle smokes
 # (via scripts/bundle_smoke.sh — the same script CI runs), then AppImage + .deb.
+#
+# ONE deliberate divergence: this venv installs .[asr,zh,ko] where the release
+# legs install .[asr]. The zh/ko engines arrive as downloadable language packs
+# and the spec excludes them from the frozen graph — but an exclude can only be
+# proven by freezing on a machine where the thing excluded IS installed, and
+# this is the only build that has them. On a runner that never had jieba, an
+# exclude that did nothing would look exactly like one that worked.
 #
 # CANNOT reproduce (CI-only, by platform): Windows Inno Setup, the Windows
 # from-source bootloader, macOS arch-native ffmpeg. The three smokes are pure
@@ -74,8 +81,9 @@ if [ ! -x "$PY" ]; then
   python3 -m venv "$VENV" || die "venv create failed"
   "$PIP" install --upgrade pip >/dev/null || die "pip upgrade failed"
 fi
-# Install/refresh the bundle deps exactly as CI does: .[asr,zh,ko] constrained by
-# the lock, plus the pinned PyInstaller. Idempotent — pip no-ops if satisfied.
+# Bundle deps constrained by the lock, plus the pinned PyInstaller. Idempotent —
+# pip no-ops if satisfied. zh/ko are ON TOP of the release legs' .[asr] on
+# purpose: see the divergence note in the header.
 "$PIP" install ".[asr,zh,ko]" -c requirements.lock || die "pip install .[asr,zh,ko] failed"
 "$PIP" install "pyinstaller==${PYINSTALLER_VERSION}" || die "pyinstaller install failed"
 echo "pyinstaller: $("$VENV/bin/pyinstaller" --version)"

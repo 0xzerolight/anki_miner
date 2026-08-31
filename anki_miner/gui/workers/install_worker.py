@@ -1,4 +1,4 @@
-"""One parametrized install/download worker + the five per-resource tasks.
+"""One parametrized install/download worker + the six per-resource tasks.
 
 Collapses the ex-quintuplet of near-identical worker modules (alass install,
 ASR model download, CUDA pack, onnxruntime/VAD pack, Vulkan ggml model) into a
@@ -73,7 +73,8 @@ class InstallWorker(CancellableWorker):
         #: Each progress-reporting task builder overwrites this with its own
         #: origin worker context (the fr/zh_cn variants diverge — non-breaking
         #: space / fullwidth parens — between contexts). alass/ASR never emit
-        #: progress, so the default here is only a harmless fallback.
+        #: progress; the language packs do and deliberately keep this default,
+        #: since a context of their own would only duplicate the same template.
         self._progress_ctx = "CudaPackDownloadWorker"
 
     @property
@@ -187,16 +188,37 @@ def cuda_pack_task(cuda_libs_root: Path) -> InstallTask:
     return _task
 
 
-def ko_model_task(ko_model_root: Path) -> InstallTask:
-    """Task: download + install the Korean (kiwipiepy) model (percentage progress)."""
+def language_pack_task(code: str, root: Path, display_name: str) -> InstallTask:
+    """Task: download + install one language's dependency pack (percentage progress).
+
+    *display_name* is the language's own name (한국어, 中文), and it is what the
+    user sees. The installer is GUI-free and prefixes its progress lines with the
+    CODE — ``"KO pack (1/2): downloading"`` — so the prefix is swapped here; the
+    rest of the line is kept verbatim, because the ``(i/n)`` count is the one
+    part only the installer knows.
+    """
 
     def _task(worker: InstallWorker) -> str:
-        from anki_miner.services.ko_model_installer import install_ko_model
+        from anki_miner.services.language_pack_installer import install_language_pack
 
-        worker._progress_ctx = "KoModelDownloadWorker"
-        worker.status.emit(QCoreApplication.translate("KoModelDownloadWorker", "Downloading the Korean model…"))
-        install_ko_model(ko_model_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
-        return QCoreApplication.translate("KoModelDownloadWorker", "Korean model installed successfully.")
+        code_prefix = code.upper()
+
+        def _on_progress(downloaded: int, total: int, message: str) -> None:
+            if message.startswith(f"{code_prefix} "):
+                message = display_name + message[len(code_prefix) :]
+            worker._on_progress(downloaded, total, message)
+
+        worker.status.emit(
+            tr_format(
+                QCoreApplication.translate("LanguagePackDownloadWorker", "Downloading the %1 pack…"),
+                display_name,
+            )
+        )
+        install_language_pack(code, root, progress=_on_progress, cancelled_check=worker.cancel_event.is_set)
+        return tr_format(
+            QCoreApplication.translate("LanguagePackDownloadWorker", "%1 pack installed successfully."),
+            display_name,
+        )
 
     return _task
 

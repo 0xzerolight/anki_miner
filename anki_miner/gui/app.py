@@ -68,6 +68,7 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.validation_service import ValidationService
@@ -301,7 +302,14 @@ def _run_language_bundled_smoke(code: str) -> int:
         profile.lookup.candidates(words[0].mined_form, words[0].orth_base, None)
         print(f"BUNDLED_SMOKE_PASS: language {code} tokenized {len(words)} words")
     except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
-        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        # The chained cause is the whole diagnosis here: the failure surfaces as
+        # get_tagger's flat "No tokenizer registered", raised FROM the
+        # ModuleNotFoundError that names the module the bundle is missing. CI
+        # only ever sees this line, so it carries both.
+        detail = f"{type(exc).__name__}: {exc}"
+        if exc.__cause__ is not None:
+            detail += f" (cause: {type(exc.__cause__).__name__}: {exc.__cause__})"
+        print(f"BUNDLED_SMOKE_FAIL: {detail}", file=sys.stderr)
         return 1
     return 0
 
@@ -1053,29 +1061,35 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
     )
 
 
-def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) -> None:
-    """Wire the Mining Language panel's "Download Korean model" button to the worker.
+def _connect_language_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Mining Language panel's per-language "Download … pack" buttons.
+
+    Not routed through ``_connect_download``: every callback has to be bound to
+    the language the button carries, and that code is only known per emission,
+    whereas ``set_status`` is bound once at connect time.
 
     The pack root is derived, not configured: it is a managed directory under the
     app home like ``cuda_libs_root``, but the tokenizer has to find it without a
-    config in scope, so ``ko_model_installer`` owns the one definition and both
-    sides call it.
+    config in scope, so ``language_pack_installer`` owns the one definition and
+    both sides call it.
     """
 
-    def _tail(request_arg: object, ok: bool, message: str) -> None:
-        settings_tab.mining_language_panel.notify_ko_model_download_finished()
+    def _on_requested(code: str) -> None:
+        def _on_status(text: str) -> None:
+            settings_tab.set_language_pack_status(code, text)
 
-    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
-        from anki_miner.services.ko_model_installer import ko_model_root
+        def _on_finished(ok: bool, message: str) -> None:
+            _on_status(message)
+            # Order is load-bearing: the panel's refresh and its combo
+            # repopulation both answer from find_spec, so the pack has to be
+            # importable BEFORE they run — otherwise the user downloads a pack
+            # and still cannot pick the language it unlocks.
+            ensure_language_packs_on_syspath()
+            settings_tab.mining_language_panel.notify_language_pack_download_finished(code)
 
-        window.background_tasks.start_ko_model_download(ko_model_root(), on_status, on_finished)
+        window.background_tasks.start_language_pack_download(code, language_pack_root(code), _on_status, _on_finished)
 
-    _connect_download(
-        settings_tab.ko_model_download_requested,
-        set_status=settings_tab.set_ko_model_status,
-        start=_start,
-        on_finished_tail=_tail,
-    )
+    settings_tab.language_pack_download_requested.connect(_on_requested)
 
 
 def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
@@ -1122,6 +1136,33 @@ def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> N
         set_status=settings_tab.set_vulkan_status,
         start=_start,
         on_finished_tail=_tail,
+    )
+
+
+def _warn_if_active_language_unavailable(window: MainWindow) -> None:
+    """Boot-time signal for a config language whose engine stack is missing.
+
+    ``config.language`` can name zh/ko while the install lacks that language's
+    pack — a bundle upgrade that stripped the engines (Task 6) is one way there
+    — and without this the gap would surface only mid-run. Screen-issue banner,
+    never modal (D24): reuses the header chip's jump route
+    (``_open_mining_language_settings``, ``main_window.py:995``) so the action
+    lands on the selector itself.
+    """
+    code = config_language(window.config)
+    if code == "ja":
+        return
+    probe = get_profile(code).unavailable_reason
+    reason = probe() if probe is not None else None
+    if not reason:
+        return
+    window.show_screen_issue(
+        ScreenIssue(
+            summary=reason,
+            action_id="language.open-settings",
+            action_text=QCoreApplication.translate("App", "Open Settings"),
+        ),
+        action=window._open_mining_language_settings,
     )
 
 
@@ -1376,18 +1417,18 @@ def compose_main_window(
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
     # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, Vulkan
-    # model, Korean model): each "Download …" button hands off to a background
-    # worker and refreshes its panel on finish. All six share the connect
-    # skeleton in _connect_download; the per-tool builders carry the differences.
-    # Five sit on the Subtitles panel; the Korean model sits on Filtering, beside
-    # the mining-language selector it unlocks.
+    # model, language packs): each "Download …" button hands off to a background
+    # worker and refreshes its panel on finish. The five Subtitles-panel ones
+    # share the connect skeleton in _connect_download; the per-tool builders
+    # carry the differences. The language packs sit on Mining Language, beside
+    # the selector they unlock, and wire per language code.
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
         _connect_vulkan_download,
-        _connect_ko_model_download,
+        _connect_language_pack_download,
     ):
         _connect(window, settings_tab)
     # Wire indexed-resource mutation hooks so replacing or deleting a store
@@ -1712,6 +1753,15 @@ def main():
        process is finished with its stores.
     """
     _scrub_pyinstaller_env()
+
+    # A downloaded language pack has to be on sys.path before anything can
+    # find_spec() its packages - the smoke dispatch immediately below, config
+    # load, Settings construction (the Mining Language panel probes on build)
+    # and the prewarm all do. Idempotent and never raises (services.
+    # language_pack_installer), so this can run unconditionally, this early,
+    # with nothing else set up yet.
+    ensure_language_packs_on_syspath()
+
     installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
@@ -1869,6 +1919,16 @@ def main():
     # Full widget composition and required version save now form one commit
     # boundary. No startup worker is started before this returns successfully.
     window.commit_boot(suppress_optional=installer_smoke)
+
+    # Config is final and the window (with its screen-issue banner) exists, so
+    # this is the earliest point a stale config.language — e.g. a bundle
+    # upgrade that stripped that language's engines (Task 6) — can be surfaced.
+    # Optional like every other boot step below: a probe failure must not take
+    # the rest of startup down with it.
+    try:
+        _warn_if_active_language_unavailable(window)
+    except Exception:  # noqa: BLE001 — bucket A: boot continues without the banner.
+        logger.exception("Could not check the active mining language's availability")
 
     # Offer what the last session left behind (D16-C). After translators and
     # every addTab, so the question is translated and Restore has somewhere to

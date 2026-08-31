@@ -42,3 +42,17 @@ def available_mining_languages() -> tuple[tuple[str, str], ...]:
             continue
         choices.append((profile.code, profile.display_name))
     return tuple(choices)
+
+
+def mining_language_display_name(code: str) -> str:
+    """The native name of *code*, or the bare code where no profile builds.
+
+    Separate from :func:`available_mining_languages`, which answers about what
+    can be MINED: the pack rows and the download worker name a language the
+    profile's own probe has ruled unavailable — that is precisely the language
+    the pack exists to unlock — so the name has to resolve without the probe.
+    """
+    try:
+        return get_profile(code).display_name
+    except (LookupError, ValueError, ImportError):
+        return code.upper()
