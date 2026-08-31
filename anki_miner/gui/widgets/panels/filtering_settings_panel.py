@@ -615,8 +615,18 @@ class FilteringSettingsPanel(FormPanel):
         )
         if self._script_type_section_label is not None:
             self._language_gate_pairs.append((self._script_type_section_label, "kana_filters"))
-        # The option-driven rows join the same list, gated on the capabilities
-        # that supplied them. EXTENDED, never assigned (see the zh note below).
+        # The option-driven rows join the same list. This is a cross product,
+        # not a per-option pairing: every checkbox here is paired with EVERY
+        # capability in _OPTION_DRIVEN_FILTER_CAPABILITIES, because
+        # _capability_script_filter_options() pools options from all of them
+        # without keeping each option's originating capability. apply_language_gate
+        # calls setVisible(cap in capabilities) per pair in order, so with a
+        # second entry the last capability's setVisible call would win for
+        # every checkbox regardless of which capability actually supplied it.
+        # Harmless today because there is exactly one entry. Before adding a
+        # second, pair each option with its own capability at collection time
+        # instead of this cross product. EXTENDED, never assigned (see the zh
+        # note below).
         self._language_gate_pairs.extend(
             (w, capability)
             for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
