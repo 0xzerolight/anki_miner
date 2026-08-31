@@ -56,14 +56,25 @@ def _make_sdist(members: dict[str, bytes]) -> bytes:
     return buf.getvalue()
 
 
-def _spec(payload: bytes, *, kind: str, member_prefix: str, exclude: tuple[str, ...] = ()) -> ArtifactSpec:
+def _spec(
+    payload: bytes,
+    *,
+    kind: str,
+    member_prefix: str,
+    exclude: tuple[str, ...] = (),
+    root_members: tuple[str, ...] = (),
+) -> ArtifactSpec:
     """An ArtifactSpec pinned to *payload*'s own digest, with a unique url."""
+    digest = hashlib.sha256(payload).hexdigest()
     return ArtifactSpec(
-        url=f"https://example.invalid/{member_prefix.strip('/').replace('/', '-')}.{kind}",
-        sha256=hashlib.sha256(payload).hexdigest(),
+        # The digest is in the url so two fixtures sharing a member_prefix do not
+        # overwrite each other in the downloader's payload table.
+        url=f"https://example.invalid/{member_prefix.strip('/').replace('/', '-')}-{digest[:8]}.{kind}",
+        sha256=digest,
         kind=kind,  # type: ignore[arg-type]
         member_prefix=member_prefix,
         exclude=exclude,
+        root_members=root_members,
     )
 
 
@@ -101,6 +112,24 @@ _SDIST_COMPONENT = PackComponent(
     universal=_SDIST_SPEC,
 )
 _PACK = LanguagePack(code="xx", approx_download_mb=1, components=(_WHEEL_COMPONENT, _SDIST_COMPONENT))
+
+# kiwipiepy's shape: the compiled extension sits at the WHEEL ROOT, beside the
+# package dir, and ``import kiwipiepy`` dies without it.
+_ROOT_WHEEL_BYTES = _make_wheel(
+    {
+        "xxroot/__init__.py": b"# package",
+        "_xxroot.abi3.so": b"native",
+        "xxroot-1.0.dist-info/METADATA": b"never extracted",
+    }
+)
+_ROOT_WHEEL_SPEC = _spec(_ROOT_WHEEL_BYTES, kind="wheel", member_prefix="xxroot/", root_members=("_xxroot.",))
+_ROOT_COMPONENT = PackComponent(
+    import_name="xxroot",
+    required=True,
+    sentinels=("__init__.py",),
+    universal=_ROOT_WHEEL_SPEC,
+)
+_ROOT_PACK = LanguagePack(code="xx", approx_download_mb=1, components=(_ROOT_COMPONENT,))
 
 
 class _Downloader:
@@ -146,7 +175,7 @@ class _Downloader:
 def downloader(monkeypatch) -> _Downloader:
     """Patched ``download_to_temp`` preloaded with the synthetic pack's artifacts."""
     fake = _Downloader()
-    fake.register((_WHEEL_SPEC, _WHEEL_BYTES), (_SDIST_SPEC, _SDIST_BYTES))
+    fake.register((_WHEEL_SPEC, _WHEEL_BYTES), (_SDIST_SPEC, _SDIST_BYTES), (_ROOT_WHEEL_SPEC, _ROOT_WHEEL_BYTES))
     monkeypatch.setattr(installer, "download_to_temp", fake)
     return fake
 
@@ -168,6 +197,13 @@ def synthetic_pack(monkeypatch) -> LanguagePack:
 
     monkeypatch.setattr(installer, "load_pack", _load)
     return _PACK
+
+
+@pytest.fixture
+def root_member_pack(monkeypatch) -> LanguagePack:
+    """Serve :data:`_ROOT_PACK` for code ``xx`` (one component + a root member)."""
+    monkeypatch.setattr(installer, "load_pack", lambda code: _ROOT_PACK if code == "xx" else None)
+    return _ROOT_PACK
 
 
 @pytest.fixture
@@ -624,6 +660,153 @@ class TestRefusals:
         assert list(root.glob("*.part")) == []
         assert list(root.glob(".staging-*")) == []
         assert not (root / "xxpkg").exists()
+
+
+class TestRootMembers:
+    """Some wheels put a top-level module BESIDE the package dir.
+
+    kiwipiepy is exactly that: ``_kiwipiepy.abi3.so`` (41 MB) sits at the wheel
+    root and ``kiwipiepy/_wrap.py`` does ``import _kiwipiepy``. Extracting only
+    the package dir promotes a component whose sentinels pass and whose import
+    raises ModuleNotFoundError.
+    """
+
+    def test_a_root_member_lands_beside_the_component_dir(self, home, root_member_pack, downloader) -> None:
+        root = installer.language_pack_root("xx")
+
+        installer.install_language_pack("xx", root)
+
+        assert (root / "xxroot" / "__init__.py").read_bytes() == b"# package"
+        # The pack root IS the sys.path entry, so a top-level sibling module has
+        # to sit here rather than inside the package dir.
+        assert (root / "_xxroot.abi3.so").read_bytes() == b"native"
+        assert not (root / "xxroot" / "_xxroot.abi3.so").exists()
+        assert not (root / "xxroot-1.0.dist-info").exists()
+
+    def test_a_component_missing_its_root_member_is_not_satisfied(self, home, root_member_pack, monkeypatch) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        root = installer.language_pack_root("xx")
+        _write_component(root, _ROOT_COMPONENT)
+
+        assert installer.component_satisfied("xx", _ROOT_COMPONENT) is False
+        assert installer.component_path("xx", "xxroot") is None
+        assert installer.is_installed("xx") is False
+
+        (root / "_xxroot.abi3.so").write_bytes(b"native")
+
+        assert installer.component_satisfied("xx", _ROOT_COMPONENT) is True
+        assert installer.is_installed("xx") is True
+
+    def test_a_component_missing_its_root_member_is_repaired_by_reinstalling(
+        self, home, root_member_pack, downloader, monkeypatch
+    ) -> None:
+        # Without the disk-tier check the component would count as satisfied
+        # forever and no retry could ever fetch the extension module.
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        root = installer.language_pack_root("xx")
+        _write_component(root, _ROOT_COMPONENT)
+
+        installer.install_language_pack("xx", root)
+
+        assert downloader.urls == [_ROOT_WHEEL_SPEC.url]
+        assert (root / "_xxroot.abi3.so").read_bytes() == b"native"
+
+    def test_an_archive_without_the_declared_root_member_refuses(self, home, monkeypatch, downloader) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        payload = _make_wheel({"xxroot/__init__.py": b"x"})  # the .so never shipped
+        spec = _spec(payload, kind="wheel", member_prefix="xxroot/", root_members=("_xxroot.",))
+        downloader.register((spec, payload))
+        comp = PackComponent(import_name="xxroot", required=True, sentinels=("__init__.py",), universal=spec)
+        monkeypatch.setattr(
+            installer, "load_pack", lambda _code: LanguagePack(code="xx", approx_download_mb=1, components=(comp,))
+        )
+        root = installer.language_pack_root("xx")
+
+        with pytest.raises(SetupError, match=r"_xxroot\."):
+            installer.install_language_pack("xx", root)
+
+        assert not (root / "xxroot").exists()
+
+    def test_a_traversing_root_member_refuses(self, home, monkeypatch, downloader) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        payload = _make_wheel({"xxroot/__init__.py": b"x", "_xxroot/../../escaped.so": b"pwned"})
+        spec = _spec(payload, kind="wheel", member_prefix="xxroot/", root_members=("_xxroot",))
+        downloader.register((spec, payload))
+        comp = PackComponent(import_name="xxroot", required=True, sentinels=("__init__.py",), universal=spec)
+        monkeypatch.setattr(
+            installer, "load_pack", lambda _code: LanguagePack(code="xx", approx_download_mb=1, components=(comp,))
+        )
+        root = installer.language_pack_root("xx")
+
+        with pytest.raises(SetupError, match="unsafe path"):
+            installer.install_language_pack("xx", root)
+
+        assert not (root / "escaped.so").exists()
+        assert not (root.parent / "escaped.so").exists()
+        assert not (home / "escaped.so").exists()
+
+
+class TestCustomInstallRoot:
+    """``root`` steers the skip logic, not only where the bytes land.
+
+    Task 6's CI seed script installs into ``$RUNNER_TEMP/lang_pack_seeds/<code>``.
+    Reading satisfaction from the canonical root there would re-download every
+    run, or (worse, on a runner with the extra pip-installed) seed nothing.
+    """
+
+    def test_satisfaction_reads_the_root_it_is_given(self, home, synthetic_pack, monkeypatch, tmp_path) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        seed = tmp_path / "seed"
+        _write_component(installer.language_pack_root("xx"), _WHEEL_COMPONENT)
+
+        assert installer.component_satisfied("xx", _WHEEL_COMPONENT) is True
+        assert installer.component_satisfied("xx", _WHEEL_COMPONENT, seed) is False
+
+        _write_component(seed, _WHEEL_COMPONENT)
+
+        assert installer.component_satisfied("xx", _WHEEL_COMPONENT, seed) is True
+
+    def test_a_custom_root_never_answers_from_the_importable_tier(self, home, tmp_path) -> None:
+        comp = PackComponent(import_name="json", required=True, sentinels=("nothing-here",), universal=_WHEEL_SPEC)
+
+        assert installer.component_satisfied("xx", comp) is True
+        assert installer.component_satisfied("xx", comp, installer.language_pack_root("xx")) is True
+        assert installer.component_satisfied("xx", comp, tmp_path / "seed") is False
+
+    def test_seeding_downloads_even_when_the_canonical_root_already_has_it(
+        self, home, synthetic_pack, downloader, monkeypatch, tmp_path
+    ) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        for comp in _PACK.components:
+            _write_component(installer.language_pack_root("xx"), comp)
+        seed = tmp_path / "seed"
+
+        installer.install_language_pack("xx", seed)
+
+        assert len(downloader.urls) == 2
+        assert (seed / "xxpkg" / "data.txt").read_bytes() == b"payload"
+        assert (seed / "xxmodel" / "model.bin").read_bytes() == b"weights"
+
+    def test_a_second_seed_into_the_same_root_downloads_nothing(
+        self, home, synthetic_pack, downloader, monkeypatch, tmp_path
+    ) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        seed = tmp_path / "seed"
+
+        installer.install_language_pack("xx", seed)
+        assert len(downloader.urls) == 2
+        downloader.urls.clear()
+
+        installer.install_language_pack("xx", seed)
+
+        assert downloader.urls == []
+
+    def test_is_installed_stays_canonical(self, home, synthetic_pack, monkeypatch, tmp_path) -> None:
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        for comp in _PACK.components:
+            _write_component(tmp_path / "seed", comp)
+
+        assert installer.is_installed("xx") is False
 
 
 class TestSysPathInjection:

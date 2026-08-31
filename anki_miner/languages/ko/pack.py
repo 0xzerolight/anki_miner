@@ -1,7 +1,11 @@
 """Dependency-pack manifest for Korean mining.
 
 kiwipiepy ships an abi3 wheel (built once against the stable ABI, so one
-per-platform pin covers every CPython minor version — ``abi=None``).
+per-platform pin covers every CPython minor version — ``abi=None``). Its
+compiled core sits at the WHEEL ROOT, not inside ``kiwipiepy/``:
+``kiwipiepy/_wrap.py`` does ``import _kiwipiepy``, so the ~41 MB
+``_kiwipiepy.abi3.so`` (``.pyd`` on Windows) is declared as a ``root_members``
+prefix and lands beside the package dir in the pack root.
 kiwipiepy_model's pin is the same sdist bytes the retired ko model installer
 downloaded into ``ko_model/``; keep them identical or a version bump re-fetches
 the ~88 MB model for users who already have it.
@@ -27,6 +31,7 @@ _KIWIPIEPY = PackComponent(
             sha256="46a0a9fd36727736e8010ff54c655639f5df1c2ec34b92679cd3a94e8734d81f",
             kind="wheel",
             member_prefix="kiwipiepy/",
+            root_members=("_kiwipiepy.",),
         ),
         ("linux", "aarch64"): ArtifactSpec(
             # kiwipiepy-0.23.2-cp39-abi3-manylinux2014_aarch64.manylinux_2_17_aarch64.whl
@@ -38,6 +43,7 @@ _KIWIPIEPY = PackComponent(
             sha256="c9cbe16ab16236935e8c596209ead8513c3fc54c162e7218fa06d484522812bc",
             kind="wheel",
             member_prefix="kiwipiepy/",
+            root_members=("_kiwipiepy.",),
         ),
         ("win32", "AMD64"): ArtifactSpec(
             # kiwipiepy-0.23.2-cp39-abi3-win_amd64.whl
@@ -49,6 +55,7 @@ _KIWIPIEPY = PackComponent(
             sha256="2ee49d007b55955ffe4d91d56c9adaae6f358f8c6d5c281efbdf8162ecbad3e2",
             kind="wheel",
             member_prefix="kiwipiepy/",
+            root_members=("_kiwipiepy.",),
         ),
         ("darwin", "arm64"): ArtifactSpec(
             # kiwipiepy-0.23.2-cp39-abi3-macosx_11_0_arm64.whl
@@ -60,6 +67,7 @@ _KIWIPIEPY = PackComponent(
             sha256="8410195a640b1c3ec164e69f3249e2d7c9b3dcd2222f5a5a245eed1c27f1ca55",
             kind="wheel",
             member_prefix="kiwipiepy/",
+            root_members=("_kiwipiepy.",),
         ),
         ("darwin", "x86_64"): ArtifactSpec(
             # kiwipiepy-0.23.2-cp39-abi3-macosx_10_14_x86_64.whl
@@ -71,6 +79,7 @@ _KIWIPIEPY = PackComponent(
             sha256="951aa58836697f467d4436fefddb91ccb864673415f3dcd805c67f757100cb2e",
             kind="wheel",
             member_prefix="kiwipiepy/",
+            root_members=("_kiwipiepy.",),
         ),
     },
 )

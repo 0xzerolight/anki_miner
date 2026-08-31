@@ -22,6 +22,13 @@ class ArtifactSpec:
     kind: Literal["wheel", "sdist"]
     member_prefix: str  # archive prefix stripped on extraction, e.g. "jieba-0.42.1/jieba/"
     exclude: tuple[str, ...] = ()  # package-relative prefixes never extracted
+    #: Archive member-name PREFIXES extracted alongside the package and placed
+    #: at the PACK ROOT, keeping their archive-relative path. For the top-level
+    #: sibling modules a wheel puts beside its package dir — kiwipiepy's
+    #: ``_kiwipiepy.abi3.so``, which ``kiwipiepy/_wrap.py`` imports by name.
+    #: The pack root is the ``sys.path`` entry, so that is where such a module
+    #: has to land. Prefix form so one pin covers ``.abi3.so`` and ``.pyd``.
+    root_members: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

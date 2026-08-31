@@ -12,7 +12,10 @@ from the retired ``ko_model_installer`` it takes sdist extraction and the model
 sentinels. One directory per language, ``language_packs/<code>/``, holds one
 extracted top-level package per component (``language_packs/ko/kiwipiepy_model/``,
 ``language_packs/zh/jieba/``), and :func:`ensure_language_packs_on_syspath` puts
-those roots on ``sys.path`` so a plain ``import jieba`` resolves.
+those roots on ``sys.path`` so a plain ``import jieba`` resolves. Because the
+root IS the ``sys.path`` entry, a wheel's top-level sibling modules
+(``_kiwipiepy.abi3.so``) are promoted there beside the package dir — see
+``ArtifactSpec.root_members``.
 
 A component is skipped when it is already satisfied — by an importable package
 (a pip install with the language's extra needs no pack at all) or by an
@@ -35,6 +38,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import os
 import platform
 import shutil
 import sys
@@ -44,7 +48,7 @@ import zipfile
 from collections.abc import Callable, Iterator
 from functools import cache
 from importlib.util import find_spec
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
 from anki_miner.config import paths
@@ -177,18 +181,57 @@ def _sentinels_present(directory: Path, sentinels: tuple[str, ...]) -> bool:
     return all((directory / name).is_file() for name in sentinels)
 
 
-def _candidate_dirs(code: str, import_name: str) -> Iterator[Path]:
-    """Yield the directories that could hold *import_name*, best first."""
-    yield language_pack_root(code) / import_name
+def _root_members_for(comp: PackComponent) -> tuple[str, ...]:
+    """Return the root-member prefixes *comp*'s artifact declares here.
+
+    Empty when no artifact resolves for this platform/Python: an already-extracted
+    pack from another interpreter must not be judged against prefixes we cannot
+    read off a spec.
+    """
+    spec = _artifact_for(comp)
+    return () if spec is None else spec.root_members
+
+
+def _root_member_present(base: Path, prefix: str) -> bool:
+    """Return True when at least one file under *base* matches *prefix*.
+
+    Prefix-matched rather than named: one manifest entry (``_kiwipiepy.``) covers
+    ``.abi3.so`` and ``.pyd``, and any auditwheel sibling that shares the stem.
+    """
+    pure = PurePosixPath(prefix)
+    parent = base / pure.parent
+    try:
+        return any(entry.is_file() and entry.name.startswith(pure.name) for entry in parent.iterdir())
+    except OSError:
+        return False
+
+
+def _component_complete(base: Path, comp: PackComponent) -> bool:
+    """Return True when *base* holds a usable extraction of *comp*.
+
+    Both halves must be there: the package dir with every sentinel, AND one file
+    per declared root-member prefix beside it. A kiwipiepy dir without
+    ``_kiwipiepy.abi3.so`` passes its sentinels and raises ModuleNotFoundError on
+    import, so counting it as installed would be an unrepairable state — nothing
+    would ever download the missing half.
+    """
+    if not _sentinels_present(base / comp.import_name, comp.sentinels):
+        return False
+    return all(_root_member_present(base, prefix) for prefix in _root_members_for(comp))
+
+
+def _candidate_bases(code: str, import_name: str) -> Iterator[Path]:
+    """Yield the pack roots that could hold *import_name*, best first."""
+    yield language_pack_root(code)
     if code == _LEGACY_KO_CODE and import_name == _LEGACY_KO_COMPONENT:
-        yield legacy_ko_model_root() / import_name
+        yield legacy_ko_model_root()
 
 
 def _installed_dir(code: str, comp: PackComponent) -> Path | None:
     """Return the extracted directory providing *comp*, or None."""
-    for directory in _candidate_dirs(code, comp.import_name):
-        if _sentinels_present(directory, comp.sentinels):
-            return directory
+    for base in _candidate_bases(code, comp.import_name):
+        if _component_complete(base, comp):
+            return base / comp.import_name
     return None
 
 
@@ -206,21 +249,38 @@ def component_path(code: str, import_name: str) -> Path | None:
     return None if comp is None else _installed_dir(code, comp)
 
 
-def component_satisfied(code: str, comp: PackComponent) -> bool:
-    """Return True when *comp* needs no download in this install.
+def component_satisfied(code: str, comp: PackComponent, root: Path | None = None) -> bool:
+    """Return True when *comp* needs no download into *root*.
 
-    Satisfied by an importable package of that name (a pip install with the
-    language's extra) OR by a sentinel-complete extracted directory (the pack,
-    or the legacy ``ko_model/`` tier).
+    For the canonical root (``root=None``, or *root* equal to
+    :func:`language_pack_root`) the full ladder applies: an importable package of
+    that name (a pip install with the language's extra) OR a complete extracted
+    component (the pack, or the legacy ``ko_model/`` tier).
+
+    For any OTHER root the answer comes from that directory alone — no
+    ``find_spec``, no legacy tier. Two reasons, both about the same caller:
+    ``install_language_pack`` is asked to FILL a directory (CI seeds one under
+    ``$RUNNER_TEMP`` for the release smokes), and a runner that pip-installed the
+    language extra would otherwise report every component satisfied and seed an
+    empty tree. Answering from the given root also makes the skip contract hold:
+    a second seed into the same directory downloads nothing.
+
+    *root* is compared as given, not resolved: an equal-but-differently-spelled
+    canonical path falls to the disk-only branch, which at worst downloads
+    something a pip install already provided.
     """
-    return _importable(comp.import_name) or _installed_dir(code, comp) is not None
+    if root is None or root == language_pack_root(code):
+        return _importable(comp.import_name) or _installed_dir(code, comp) is not None
+    return _component_complete(root, comp)
 
 
 def is_installed(code: str) -> bool:
     """Return True when every required component of *code*'s pack is satisfied.
 
-    False for a language with no pack manifest: there is nothing to install and
-    nothing installed.
+    The CANONICAL root only — this is the app's own "is Korean ready?" question,
+    and a seeded directory somewhere else is not an answer to it. False for a
+    language with no pack manifest: there is nothing to install and nothing
+    installed.
     """
     pack = load_pack(code)
     if pack is None:
@@ -242,18 +302,22 @@ def install_language_pack(
 ) -> Path:
     """Download, verify, and install *code*'s missing pack components into *root*.
 
-    Components already satisfied (importable, or extracted with every sentinel
-    present) are skipped, so a bundled install that ships an engine downloads
-    only what it lacks. Each remaining component is downloaded to a ``.part``
-    file inside *root*, sha256-verified, extracted into a fresh staging dir and
-    atomically ``os.replace``d onto ``root/<import_name>``. The ``.part``
-    artifact is always removed. A cancellation or any failure leaves nothing
-    partial promoted; components installed earlier in the same call stay.
+    Components already satisfied in *root* are skipped (see
+    :func:`component_satisfied` for what that means for a non-canonical root), so
+    a bundled install that ships an engine downloads only what it lacks. Each
+    remaining component is downloaded to a ``.part`` file inside *root*,
+    sha256-verified, extracted into a fresh staging dir and atomically
+    ``os.replace``d onto ``root/<import_name>``, with any declared root members
+    promoted beside it. The ``.part`` artifact is always removed. A cancellation
+    or any failure leaves nothing partial promoted; components installed earlier
+    in the same call stay.
 
     Args:
         code: Language code with a ``languages/<code>/pack.py`` manifest.
-        root: Managed directory for the pack; created if missing. Typically
-            :func:`language_pack_root`.
+        root: Managed directory for the pack; created if missing. Usually
+            :func:`language_pack_root`; the release CI seeds a scratch directory
+            instead, which is why every check here reads *root* rather than the
+            canonical location.
         progress: Optional ``(downloaded, total, message)`` callback.
         cancelled_check: Optional zero-arg predicate. Checked before each heavy
             step (download, verify, extract); on cancellation no partial package
@@ -278,7 +342,10 @@ def install_language_pack(
     # fetched, rather than half-installing and failing on the last component.
     plan: list[tuple[PackComponent, ArtifactSpec]] = []
     for comp in pack.components:
-        if component_satisfied(code, comp):
+        # Satisfaction is read from the root being filled, so seeding a
+        # non-canonical directory neither skips everything nor re-downloads what
+        # a previous seed into it already put there.
+        if component_satisfied(code, comp, root):
             continue
         spec = _artifact_for(comp)
         if spec is None:
@@ -371,45 +438,85 @@ def _wanted(name: str, spec: ArtifactSpec) -> str | None:
     return relative
 
 
-def _extract_wheel(part_path: Path, pkg_dir: Path, spec: ArtifactSpec) -> int:
-    """Stream the wheel's package members into *pkg_dir*; return the count."""
-    extracted = 0
+def _wanted_root(name: str, spec: ArtifactSpec) -> str | None:
+    """Return the pack-root-relative path for a declared root member, or None.
+
+    Matched against the RAW archive member name, and the member keeps that path
+    under the pack root. For a wheel — the only kind that has these in practice —
+    the archive root is the layout site-packages would get, so
+    ``_kiwipiepy.abi3.so`` lands directly beside ``kiwipiepy/``.
+    """
+    if not any(name.startswith(prefix) for prefix in spec.root_members):
+        return None
+    return name
+
+
+def _member_destination(name: str, spec: ArtifactSpec, pkg_dir: Path, root_stage: Path) -> tuple[Path, bool] | None:
+    """Return where archive member *name* is staged and whether it is a root member."""
+    relative = _wanted(name, spec)
+    if relative is not None:
+        return _safe_member_path(pkg_dir, relative), False
+    root_relative = _wanted_root(name, spec)
+    if root_relative is not None:
+        return _safe_member_path(root_stage, root_relative), True
+    return None
+
+
+def _extract_wheel(part_path: Path, pkg_dir: Path, root_stage: Path, spec: ArtifactSpec) -> int:
+    """Stream the wheel's wanted members out; return the PACKAGE member count.
+
+    Root members are staged too but not counted: the gate on them is per declared
+    prefix, checked on the staged tree.
+    """
+    package_count = 0
     with zipfile.ZipFile(part_path) as zf:
         for name in zf.namelist():
             if name.endswith("/"):
                 continue
-            relative = _wanted(name, spec)
-            if relative is None:
+            target = _member_destination(name, spec, pkg_dir, root_stage)
+            if target is None:
                 continue
-            dest = _safe_member_path(pkg_dir, relative)
+            dest, is_root = target
             dest.parent.mkdir(parents=True, exist_ok=True)
             # Streamed: a wheel member can be tens of MB and reading it whole
             # would spike the resident set of a GUI process.
             with zf.open(name) as source, dest.open("wb") as out:
                 shutil.copyfileobj(source, out)
-            extracted += 1
-    return extracted
+            if not is_root:
+                package_count += 1
+    return package_count
 
 
-def _extract_sdist(part_path: Path, pkg_dir: Path, spec: ArtifactSpec) -> int:
-    """Stream the sdist's package members into *pkg_dir*; return the count."""
-    extracted = 0
+def _extract_sdist(part_path: Path, pkg_dir: Path, root_stage: Path, spec: ArtifactSpec) -> int:
+    """Stream the sdist's wanted members out; return the PACKAGE member count."""
+    package_count = 0
     with tarfile.open(part_path, mode="r:gz") as tf:
         for member in tf:
             if not member.isfile():
                 continue
-            relative = _wanted(member.name, spec)
-            if relative is None:
+            target = _member_destination(member.name, spec, pkg_dir, root_stage)
+            if target is None:
                 continue
-            dest = _safe_member_path(pkg_dir, relative)
+            dest, is_root = target
             dest.parent.mkdir(parents=True, exist_ok=True)
             source = tf.extractfile(member)
             if source is None:  # pragma: no cover - isfile() already excludes these
                 continue
             with source, dest.open("wb") as out:
                 shutil.copyfileobj(source, out)
-            extracted += 1
-    return extracted
+            if not is_root:
+                package_count += 1
+    return package_count
+
+
+def _promote_root_members(root_stage: Path, root: Path) -> None:
+    """Move every staged root member into the pack root, keeping its path."""
+    for staged in sorted(root_stage.rglob("*")):
+        if not staged.is_file():
+            continue
+        dest = root / staged.relative_to(root_stage)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        os.replace(staged, dest)
 
 
 def _extract_component(part_path: Path, root: Path, comp: PackComponent, spec: ArtifactSpec) -> None:
@@ -417,17 +524,25 @@ def _extract_component(part_path: Path, root: Path, comp: PackComponent, spec: A
 
     Members under ``spec.member_prefix`` are written into a fresh staging dir
     with their relative structure preserved and the prefix stripped; packaging
-    metadata and excluded subtrees are skipped. The staged package dir then
-    replaces ``root/<import_name>``.
+    metadata and excluded subtrees are skipped. Members matching
+    ``spec.root_members`` are staged separately, because they belong at the pack
+    root rather than inside the package dir.
+
+    Promotion order is root members first, package dir last: the package dir is
+    what satisfaction keys on, so it becomes visible only once its siblings are
+    already in place.
     """
     staging = Path(tempfile.mkdtemp(prefix=f".staging-pack-{comp.import_name}-", dir=root))
     pkg_dir = staging / comp.import_name
+    # A sibling of pkg_dir inside the same staging dir, so a root member named
+    # after the package cannot collide with the package tree mid-extraction.
+    root_stage = staging / "__root__"
     try:
         try:
             if spec.kind == "wheel":
-                extracted = _extract_wheel(part_path, pkg_dir, spec)
+                extracted = _extract_wheel(part_path, pkg_dir, root_stage, spec)
             else:
-                extracted = _extract_sdist(part_path, pkg_dir, spec)
+                extracted = _extract_sdist(part_path, pkg_dir, root_stage, spec)
         except (zipfile.BadZipFile, tarfile.TarError) as exc:
             logger.warning(
                 "Language pack install failed: stage=extract component=%s exc=%s",
@@ -440,9 +555,13 @@ def _extract_component(part_path: Path, root: Path, comp: PackComponent, spec: A
             raise SetupError(f"the {comp.import_name} archive contained no {spec.member_prefix} payload")
 
         missing = [name for name in comp.sentinels if not (pkg_dir / name).is_file()]
+        # A repackaged wheel that moved or dropped the extension module must
+        # refuse here, not promote a package dir whose import raises.
+        missing += [prefix + "*" for prefix in spec.root_members if not _root_member_present(root_stage, prefix)]
         if missing:
             raise SetupError(f"the {comp.import_name} archive is missing {', '.join(missing)}")
 
+        _promote_root_members(root_stage, root)
         atomic_replace_dir(pkg_dir, root / comp.import_name)
     finally:
         # Best-effort cleanup on success or an already-failing extraction path.
@@ -479,7 +598,7 @@ def ensure_language_packs_on_syspath() -> None:
             if pack is None or not pack_supported(code):
                 continue
             root = language_pack_root(code)
-            if any(_sentinels_present(root / comp.import_name, comp.sentinels) for comp in pack.components):
+            if any(_component_complete(root, comp) for comp in pack.components):
                 appended |= _append_to_syspath(root)
 
         legacy_root = legacy_ko_model_root()
@@ -489,7 +608,7 @@ def ensure_language_packs_on_syspath() -> None:
             if legacy_pack is not None
             else None
         )
-        if legacy_comp is not None and _sentinels_present(legacy_root / _LEGACY_KO_COMPONENT, legacy_comp.sentinels):
+        if legacy_comp is not None and _component_complete(legacy_root, legacy_comp):
             appended |= _append_to_syspath(legacy_root)
 
         if appended:
