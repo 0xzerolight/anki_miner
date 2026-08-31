@@ -1,10 +1,11 @@
 """Anki configuration settings panel."""
 
+import logging
 from collections.abc import Mapping
 from dataclasses import replace
 from typing import Literal, cast
 
-from PyQt6.QtCore import QCoreApplication, Qt, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QFormLayout,
@@ -20,6 +21,8 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel, StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton
+from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages.profile import CardFieldSpec
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.note_presets import (
     NOTE_PRESETS,
@@ -28,6 +31,51 @@ from anki_miner.services.note_presets import (
     preset_for_note_type_name,
 )
 from anki_miner.utils.i18n import tr_format
+
+logger = logging.getLogger(__name__)
+
+#: tr-context for the profile-derived card-field rows. Spelled explicitly
+#: because those labels reach the loop as data: ``self.tr(label)`` would work at
+#: runtime, but pylupdate parses the source rather than running it, so only the
+#: literals below reach a catalogue.
+_TR_CONTEXT = "AnkiSettingsPanel"
+
+#: ``CardFieldSpec.key`` -> (label, helper) for every extra card field a
+#: registered profile declares. Carried verbatim from the hand-built rows this
+#: table replaced, context included, so the existing catalogue entries keep
+#: matching. A key missing here falls back to a title-cased key at runtime and
+#: fails ``test_hook_field_mapping_rows``: the fallback is readable English but
+#: is never extracted, so it can never be translated.
+_HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
+    "measure_word": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Measure Word Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the classifier parsed from the dictionary entry. Blank = skip.",
+        ),
+    ),
+    "expression_pinyin": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Pinyin Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.",
+        ),
+    ),
+    "expression_traditional": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Traditional Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the word in the other script variant, when it differs. Blank = skip.",
+        ),
+    ),
+    "hanja": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Hanja Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the hanja characters contained in the word. Blank = skip.",
+        ),
+    ),
+}
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
 # Each key is a card data type; the list is lowercase/stripped patterns that
@@ -134,6 +182,27 @@ def select_or_insert(combo: QComboBox, name: str, *, known: bool = True) -> None
                 Qt.ItemDataRole.ToolTipRole,
             )
     combo.setCurrentIndex(index)
+
+
+def profile_card_field_specs() -> tuple[CardFieldSpec, ...]:
+    """Every extra card field any registered profile declares, deduped by key.
+
+    Resolved from the registry rather than from ``available_mining_languages``:
+    that one drops a language whose engine is missing, and a config already set
+    to it would then gate rows into view that were never built. First
+    declaration of a key wins, so two languages sharing one logical field share
+    one row (and one anchor id) instead of colliding.
+    """
+    specs: dict[str, CardFieldSpec] = {}
+    for code in AVAILABLE_LANGUAGES:
+        try:
+            profile = get_profile(code)
+        except (LookupError, ValueError, ImportError) as exc:
+            logger.debug("No profile for %r while building card-field rows: %s", code, exc)
+            continue
+        for spec in profile.extra_card_fields:
+            specs.setdefault(spec.key, spec)
+    return tuple(specs.values())
 
 
 class AnkiSettingsPanel(FormPanel):
@@ -396,44 +465,29 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the sentence as plain kana."),
         )
 
-        # Chinese measure word / classifier. The canonical zh schema gives it a
-        # named field; ja and ko never see the row and never write the key.
-        self.measure_word_field_input = QLineEdit()
-        self.measure_word_field_input.setPlaceholderText("MeasureWord")
-        self.add_field(
-            self.tr("Measure Word Field"),
-            self.measure_word_field_input,
-            helper=self.tr("Stores the classifier parsed from the dictionary entry. Blank = skip."),
-        )
-
-        # Chinese pinyin reading of the word. Same rule as the row above: the
-        # mapped name is the on/off switch, so with no row the render hook can
-        # never reach a note.
-        self.expression_pinyin_field_input = QLineEdit()
-        self.expression_pinyin_field_input.setPlaceholderText("Pinyin")
-        self.add_field(
-            self.tr("Pinyin Field"),
-            self.expression_pinyin_field_input,
-            helper=self.tr("Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip."),
-        )
-
-        # Traditional spelling of a word mined in simplified (and the reverse).
-        self.expression_traditional_field_input = QLineEdit()
-        self.expression_traditional_field_input.setPlaceholderText("Traditional")
-        self.add_field(
-            self.tr("Traditional Field"),
-            self.expression_traditional_field_input,
-            helper=self.tr("Stores the word in the other script variant, when it differs. Blank = skip."),
-        )
-
-        # Korean hanja. ja and zh never see the row and never write the key.
-        self.hanja_field_input = QLineEdit()
-        self.hanja_field_input.setPlaceholderText("Hanja")
-        self.add_field(
-            self.tr("Hanja Field"),
-            self.hanja_field_input,
-            helper=self.tr("Stores the hanja characters contained in the word. Blank = skip."),
-        )
+        # One row per extra card field the registered profiles declare (Korean
+        # hanja, the three Chinese ones). Derived rather than hand-written: the
+        # mapped field NAME is each key's on/off switch, so a declared field
+        # with no row here is a feature nobody can turn on. Every row is gated
+        # on its spec's capability, so a language that cannot fill the key never
+        # sees the row and never writes the key.
+        self._hook_field_inputs: dict[str, QLineEdit] = {}
+        for spec in profile_card_field_specs():
+            label, helper = _HOOK_FIELD_ROW_TEXTS.get(spec.key, ("", ""))
+            field_input = QLineEdit()
+            field_input.setPlaceholderText(spec.placeholder)
+            # setattr, not a local: the anchor id and the attribute the tests
+            # and any deep link address the row by are both ``<key>_field_input``.
+            setattr(self, f"{spec.key}_field_input", field_input)
+            self.add_field(
+                QCoreApplication.translate(_TR_CONTEXT, label) if label else spec.key.replace("_", " ").title(),
+                field_input,
+                helper=QCoreApplication.translate(_TR_CONTEXT, helper) if helper else "",
+                # Loop-built, so pass the id the attribute would have derived.
+                anchor=f"{spec.key}_field_input",
+            )
+            self._hook_field_inputs[spec.key] = field_input
+            self._language_gate_pairs.extend((w, spec.capability) for w in field_row_widgets(self, field_input))
 
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
@@ -594,16 +648,6 @@ class AnkiSettingsPanel(FormPanel):
             )
             for w in field_row_widgets(self, field)
         )
-        self._language_gate_pairs.extend(
-            (w, "measure_word") for w in field_row_widgets(self, self.measure_word_field_input)
-        )
-        self._language_gate_pairs.extend(
-            (w, "pinyin") for w in field_row_widgets(self, self.expression_pinyin_field_input)
-        )
-        self._language_gate_pairs.extend(
-            (w, "script_variants") for w in field_row_widgets(self, self.expression_traditional_field_input)
-        )
-        self._language_gate_pairs.extend((w, "hanja") for w in field_row_widgets(self, self.hanja_field_input))
 
         self.add_stretch()
 
@@ -917,12 +961,7 @@ class AnkiSettingsPanel(FormPanel):
         # Language-scoped keys are contributed only while their row is on screen
         # (or the mapping already carried them). Keeps a ja anki_fields
         # byte-identical instead of seeding it with an empty zh key.
-        for key, widget in (
-            ("measure_word", self.measure_word_field_input),
-            ("expression_pinyin", self.expression_pinyin_field_input),
-            ("expression_traditional", self.expression_traditional_field_input),
-            ("hanja", self.hanja_field_input),
-        ):
+        for key, widget in self._hook_field_inputs.items():
             if widget.isVisibleTo(self) or key in self._loaded_fields:
                 owned[key] = widget.text().strip()
         return {**self._loaded_fields, **owned}
@@ -946,10 +985,8 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_reading_field_input.setText(fields.get("expression_reading", ""))
         self.sentence_furigana_field_input.setText(fields.get("sentence_furigana", "SentenceFurigana"))
         self.sentence_reading_field_input.setText(fields.get("sentence_reading", ""))
-        self.measure_word_field_input.setText(fields.get("measure_word", ""))
-        self.expression_pinyin_field_input.setText(fields.get("expression_pinyin", ""))
-        self.expression_traditional_field_input.setText(fields.get("expression_traditional", ""))
-        self.hanja_field_input.setText(fields.get("hanja", ""))
+        for key, widget in self._hook_field_inputs.items():
+            widget.setText(fields.get(key, ""))
         self.pitch_position_field_input.setText(fields.get("pitch_position", ""))
         self.pitch_category_field_input.setText(fields.get("pitch_category", ""))
         self.pitch_graph_field_input.setText(fields.get("pitch_graph", ""))
