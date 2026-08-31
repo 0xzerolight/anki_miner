@@ -17,11 +17,11 @@ root IS the ``sys.path`` entry, a wheel's top-level sibling modules
 (``_kiwipiepy.abi3.so``) are promoted there beside the package dir — see
 ``ArtifactSpec.root_members``.
 
-A component is skipped when it is already satisfied — by an importable package
-(a pip install with the language's extra needs no pack at all) or by an
-extracted directory whose sentinels are all present. That is what keeps the
-download proportional: a bundled Korean user fetches the model, not the engine
-that shipped beside it.
+A component is skipped when it is already satisfied — by an extracted directory
+whose sentinels are all present, or by a package importable from outside the
+pack roots (a pip install with the language's extra needs no pack at all). That
+is what keeps the download proportional: a bundled Korean user fetches the
+model, not the engine that shipped beside it.
 
 ``ko_model/`` is a READ-ONLY legacy tier: installs that downloaded the Korean
 model before packs existed keep working, and nothing is ever written there
@@ -101,9 +101,10 @@ def language_pack_root(code: str) -> Path:
 def legacy_ko_model_root(config_dir: Path | None = None) -> Path:
     """Return the pre-pack Korean model directory (read-only).
 
-    The directory the retired ``ko_model_installer`` wrote, and the one the
-    bundle smoke still seeds. Nothing writes here any more; it is consulted so
-    an existing 88 MB download keeps counting as installed.
+    The directory the retired ``ko_model_installer`` wrote. Nothing writes here
+    any more — the bundle smoke seeds ``language_packs/<code>/`` like an install
+    would — and it is consulted only so an existing 88 MB download from before
+    packs existed keeps counting as installed.
 
     Args:
         config_dir: Optional override for the app home; defaults to
@@ -161,12 +162,59 @@ def pack_supported(code: str) -> bool:
     return all(_artifact_for(comp) is not None for comp in pack.components if comp.required)
 
 
-def _importable(name: str) -> bool:
-    """Return True when *name* is importable, without importing it."""
+def _pack_roots(code: str) -> tuple[Path, ...]:
+    """Return every directory this module may have put *code*'s packages in."""
+    roots = [language_pack_root(code)]
+    if code == _LEGACY_KO_CODE:
+        roots.append(legacy_ko_model_root())
+    return tuple(roots)
+
+
+def _resolved(path: Path) -> Path:
+    """Resolve *path* for comparison, tolerating an unresolvable one."""
     try:
-        return find_spec(name) is not None
+        return path.resolve()
+    except OSError:  # pragma: no cover - resolve() is non-strict; only exotic FS errors land here
+        return path
+
+
+def _spec_locations(spec: object) -> Iterator[Path]:
+    """Yield the filesystem locations *spec* would import from.
+
+    ``origin`` is None for a namespace package — exactly what a pack dir whose
+    ``__init__.py`` went missing becomes — so its search locations are read too,
+    and they are what identifies it. Built-in and frozen modules yield nothing,
+    which is right: they are never pack-provided.
+    """
+    origin = getattr(spec, "origin", None)
+    if isinstance(origin, str) and origin not in ("built-in", "frozen"):
+        yield Path(origin)
+    for entry in getattr(spec, "submodule_search_locations", None) or ():
+        if isinstance(entry, str):
+            yield Path(entry)
+
+
+def _importable_outside_packs(code: str, name: str) -> bool:
+    """Return True when *name* imports from somewhere this module does not own.
+
+    The pip tier: a source install with the language's extra has the package in
+    site-packages and needs no pack at all. A resolution that lands INSIDE a pack
+    root is not an answer, because the pack root is on ``sys.path`` as soon as
+    one component is complete — see :func:`component_satisfied`. Nothing is
+    imported; ``find_spec`` only locates.
+    """
+    try:
+        spec = find_spec(name)
     except (ImportError, ValueError):
         return False
+    if spec is None:
+        return False
+    roots = [_resolved(root) for root in _pack_roots(code)]
+    for location in _spec_locations(spec):
+        resolved = _resolved(location)
+        if any(resolved == root or root in resolved.parents for root in roots):
+            return False
+    return True
 
 
 def _sentinels_present(directory: Path, sentinels: tuple[str, ...]) -> bool:
@@ -253,9 +301,19 @@ def component_satisfied(code: str, comp: PackComponent, root: Path | None = None
     """Return True when *comp* needs no download into *root*.
 
     For the canonical root (``root=None``, or *root* equal to
-    :func:`language_pack_root`) the full ladder applies: an importable package of
-    that name (a pip install with the language's extra) OR a complete extracted
-    component (the pack, or the legacy ``ko_model/`` tier).
+    :func:`language_pack_root`) the full ladder applies: a complete extracted
+    component (the pack, or the legacy ``ko_model/`` tier) OR a package importable
+    from OUTSIDE both of those directories (a pip install with the language's
+    extra).
+
+    The outside qualifier is load-bearing. :func:`ensure_language_packs_on_syspath`
+    puts the pack root on ``sys.path`` as soon as any one component is complete,
+    so from then on ``find_spec`` resolves the pack's OWN copy of every package it
+    holds. An importable tier that accepted that would report a damaged component
+    — an antivirus quarantine of ``_kiwipiepy.abi3.so``, a half-deleted package
+    dir — as installed, disabling the one button that would repair it. A
+    pack-provided package therefore has to pass :func:`_component_complete` like
+    any other; a site-packages one is unaffected.
 
     For any OTHER root the answer comes from that directory alone — no
     ``find_spec``, no legacy tier. Two reasons, both about the same caller:
@@ -270,7 +328,7 @@ def component_satisfied(code: str, comp: PackComponent, root: Path | None = None
     something a pip install already provided.
     """
     if root is None or root == language_pack_root(code):
-        return _importable(comp.import_name) or _installed_dir(code, comp) is not None
+        return _installed_dir(code, comp) is not None or _importable_outside_packs(code, comp.import_name)
     return _component_complete(root, comp)
 
 

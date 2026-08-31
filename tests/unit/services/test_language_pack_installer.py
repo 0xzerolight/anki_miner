@@ -13,12 +13,15 @@ the disk tier is ever consulted, and the disk tier is what is under test.
 from __future__ import annotations
 
 import hashlib
+import importlib
+import importlib.util
 import io
 import platform
 import sys
 import tarfile
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -356,6 +359,91 @@ class TestComponentSatisfied:
 
         assert installer.component_satisfied("xx", _WHEEL_COMPONENT) is True
         assert (installer.language_pack_root("xx") / "xxpkg" / "data.txt").is_file()
+
+
+class TestPackProvidedImportsStayGated:
+    """A package the pack itself provides must still clear the sentinel gate.
+
+    Once ANY component is complete the pack root is on ``sys.path``, so
+    ``find_spec`` answers from the pack's own copy. Taking that as the importable
+    tier's answer would report a half-deleted component installed: the row says
+    "Installed", the button is disabled, and mining dies on ModuleNotFoundError
+    with nothing in the app able to repair it.
+    """
+
+    def test_a_quarantined_root_member_is_not_hidden_by_the_packs_own_import(
+        self, home, root_member_pack, clean_syspath
+    ) -> None:
+        root = installer.language_pack_root("xx")
+        _write_component(root, _ROOT_COMPONENT)
+        native = root / "_xxroot.abi3.so"
+        native.write_bytes(b"native")
+        sys.path.append(str(root))
+        importlib.invalidate_caches()
+
+        assert installer.component_satisfied("xx", _ROOT_COMPONENT) is True
+        assert installer.is_installed("xx") is True
+
+        native.unlink()  # e.g. an antivirus quarantine of the compiled extension
+        importlib.invalidate_caches()
+
+        # find_spec still resolves xxroot - out of the pack root, which is why it
+        # cannot be the answer.
+        assert importlib.util.find_spec("xxroot") is not None
+        assert installer.component_satisfied("xx", _ROOT_COMPONENT) is False
+        assert installer.is_installed("xx") is False
+
+    def test_a_pack_root_namespace_package_is_pack_provided(self, home, root_member_pack, clean_syspath) -> None:
+        # The sentinel gone leaves a dir with no __init__.py: find_spec answers
+        # with a namespace package, whose origin is None and whose identity is
+        # only in submodule_search_locations.
+        root = installer.language_pack_root("xx")
+        directory = _write_component(root, _ROOT_COMPONENT)
+        (root / "_xxroot.abi3.so").write_bytes(b"native")
+        (directory / "__init__.py").unlink()
+        sys.path.append(str(root))
+        importlib.invalidate_caches()
+
+        spec = importlib.util.find_spec("xxroot")
+        assert spec is not None and spec.origin is None
+
+        assert installer.component_satisfied("xx", _ROOT_COMPONENT) is False
+        assert installer.is_installed("xx") is False
+
+    def test_a_package_from_outside_the_pack_still_satisfies(
+        self, home, root_member_pack, monkeypatch, tmp_path
+    ) -> None:
+        # The pip-install case the importable tier exists for: nothing on disk
+        # under the pack root, and no download owed.
+        site_packages = tmp_path / "site-packages" / "xxroot"
+        site_packages.mkdir(parents=True)
+        (site_packages / "__init__.py").write_bytes(b"")
+        monkeypatch.setattr(
+            installer,
+            "find_spec",
+            lambda _name: SimpleNamespace(
+                origin=str(site_packages / "__init__.py"),
+                submodule_search_locations=[str(site_packages)],
+            ),
+        )
+
+        assert installer.component_satisfied("xx", _ROOT_COMPONENT) is True
+        assert installer.is_installed("xx") is True
+
+    def test_the_legacy_ko_root_counts_as_pack_provided(self, home, monkeypatch) -> None:
+        model = _ko_model_component()
+        legacy = _install_legacy_ko_model(home)
+        (legacy / model.sentinels[0]).unlink()
+        monkeypatch.setattr(
+            installer,
+            "find_spec",
+            lambda _name: SimpleNamespace(
+                origin=str(legacy / "__init__.py"),
+                submodule_search_locations=[str(legacy)],
+            ),
+        )
+
+        assert installer.component_satisfied("ko", model) is False
 
 
 class TestLegacyKoTier:
