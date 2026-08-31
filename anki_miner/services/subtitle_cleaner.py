@@ -41,6 +41,7 @@ __all__ = [
     "clean_for_alignment",
     "clean_reference",
     "map_deltas_back",
+    "transcode_for_alignment",
 ]
 
 #: ASS style names that mark an event as something other than dialogue. The
@@ -196,6 +197,53 @@ def clean_for_alignment(src: Path, dest: Path) -> CleanedForAlignment | None:
         cleaned.save(str(dest), encoding="utf-8")
     except Exception:  # noqa: BLE001 — an unwritable copy falls back to as-is alignment
         logger.warning("subtitle cleaner: could not write %s", dest, exc_info=True)
+        return None
+    return CleanedForAlignment(path=dest, kept_indices=kept_indices, total_events=total)
+
+
+def transcode_for_alignment(src: Path, dest: Path) -> CleanedForAlignment | None:
+    """Write *src* to *dest* in *dest*'s format, dropping only what cannot survive it.
+
+    The escape hatch for a format the aligners cannot read at all: alass v2
+    accepts SubRip/SubStationAlpha/VobSub and errors out on WebVTT, so a .vtt
+    retime would otherwise lose two of its four engines. Reached only when
+    :func:`clean_for_alignment` declines (too few dialogue cues, or an
+    unparsable file) — when it succeeds it has already transcoded, because
+    ``pysubs2.save`` takes its format from the destination extension.
+
+    Unlike :func:`clean_for_alignment` this drops nothing for being
+    non-dialogue: with the cue floor already unmet, dropping more would leave
+    less to align against. It drops only what the target writer would drop
+    anyway — comments (SRT and WebVTT have no such concept) and non-positive
+    spans — because ``kept_indices`` must match the cue count the aligner sees
+    or :func:`map_deltas_back` discards every candidate.
+
+    Returns None when *src* cannot be parsed or *dest* cannot be written; the
+    caller then aligns the original directly, which is the pre-transcode
+    behaviour.
+    """
+    try:
+        subs = _load(src)
+    except Exception:  # noqa: BLE001 — an unparsable input falls back to as-is alignment
+        logger.warning("subtitle cleaner: could not parse %s for transcode", src, exc_info=True)
+        return None
+
+    total = len(subs.events)
+    kept_indices = [
+        i
+        for i, event in enumerate(subs.events)
+        if getattr(event, "is_comment", None) is not True and event.end > event.start
+    ]
+    kept_set = set(kept_indices)
+
+    transcoded = pysubs2.SSAFile()
+    transcoded.styles = subs.styles.copy()
+    transcoded.info = subs.info.copy()
+    transcoded.events = [event.copy() for i, event in enumerate(subs.events) if i in kept_set]
+    try:
+        transcoded.save(str(dest), encoding="utf-8")
+    except Exception:  # noqa: BLE001 — an unwritable copy falls back to as-is alignment
+        logger.warning("subtitle cleaner: could not write transcode %s", dest, exc_info=True)
         return None
     return CleanedForAlignment(path=dest, kept_indices=kept_indices, total_events=total)
 
