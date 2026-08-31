@@ -165,7 +165,10 @@ if os.path.isdir(vulkan_loader_license_dir):
     )
 
 # kiwipiepy (Korean analyser) LGPL-3.0 notices: shipped whenever the license dir
-# exists. Lands at sys._MEIPASS/licenses/kiwipiepy/ in the bundle.
+# exists. Lands at sys._MEIPASS/licenses/kiwipiepy/ in the bundle. The engine
+# itself is excluded from the graph and arrives as a language pack the app
+# downloads — the notice ships anyway, because the app is what delivers the
+# engine to the user and the LGPL notice has to travel with it.
 kiwipiepy_license_dir = os.path.join(project_root, "licenses", "kiwipiepy")
 kiwipiepy_license_datas = []
 if os.path.isdir(kiwipiepy_license_dir):
@@ -298,26 +301,14 @@ a = Analysis(
         # startup. Bytecode analysis should find the IMPORT opcode; pinned
         # here like mpv/ffsubsync so the graph never loses it.
         "budoux",
-        # zh engine: jieba.posseg / pypinyin / opencc are imported
-        # function-locally in anki_miner/languages/zh/ so a missing extra
-        # degrades instead of failing startup. Bytecode analysis finds those
-        # IMPORT opcodes; pinned here like mpv/ffsubsync so the graph never
-        # loses them, and so the matching PyInstaller-Hooks/ hooks always fire.
-        "jieba.posseg",
-        "pypinyin",
-        "opencc",
-        # kiwipiepy: imported function-locally in languages/ko/tokenizer.py so a
-        # missing [ko] extra degrades to an "install anki-miner[ko]" notice
-        # instead of an import error at startup. Pinned into the graph like mpv
-        # so the matching hooks always run.
-        "kiwipiepy",
-        # The tokenizer module itself: tagger_provider._build resolves
+        # The zh/ko tokenizer modules: tagger_provider._build resolves
         # "anki_miner.languages.<lang>.tokenizer" through importlib with an
         # f-string, which bytecode analysis cannot follow, and zh/__init__.py
-        # deliberately never imports it (the engine loads lazily). Without this
-        # pin the frozen app ships jieba but not the module that uses it, and
-        # get_tagger("zh") dies as "No tokenizer registered". The ko line is
-        # here for the same reason, with kiwipiepy standing in for jieba.
+        # deliberately never imports it (the engine loads lazily). Without these
+        # pins the frozen app ships no module able to drive the downloaded
+        # engine pack, and get_tagger("zh") dies as "No tokenizer registered".
+        # FIRST-PARTY ONLY: the engines themselves (jieba/pypinyin/opencc/
+        # kiwipiepy) are excluded below and arrive as language packs.
         "anki_miner.languages.zh.tokenizer",
         "anki_miner.languages.ko.tokenizer",
     ],
@@ -354,13 +345,20 @@ a = Analysis(
         # does `import av` at package load), so it MUST be bundled or the offline
         # ASR bundle smoke fails with ModuleNotFoundError: No module named 'av'.
         "onnxruntime",
-        # The Korean model (kiwipiepy_model, ~88 MB) ships as an on-demand
-        # download pack (services/language_pack_installer.py), not in the bundle:
-        # bundling it grew the artifacts 20% on Linux and 30% on Windows for a
-        # language most users never mine. kiwipiepy's own native loader imports
-        # the package by name — invisible to bytecode analysis, and the release
-        # build venv installs the [ko] extra, so only this exclude guarantees the
-        # model stays out. languages/ko/tokenizer.py resolves the pack instead.
+        # Mining-language engines: every non-Japanese engine ships as an
+        # on-demand download pack (services/language_pack_installer.py), not in
+        # the bundle. Bundling them grew the artifacts ~20% on Linux and ~30% on
+        # Windows for languages most users never mine, and a zh/ko user pays the
+        # download once instead. The release build venv no longer installs the
+        # [zh]/[ko] extras, so nothing pulls these in — but kiwipiepy's own
+        # native loader imports kiwipiepy_model by name (invisible to bytecode
+        # analysis), and a dev building from a `.[languages]` venv would
+        # otherwise ship all of them. These excludes make their absence a
+        # guarantee; languages/<code>/tokenizer.py resolves the pack instead.
+        "jieba",
+        "pypinyin",
+        "opencc",
+        "kiwipiepy",
         "kiwipiepy_model",
         # yt-dlp ships as the vendored standalone EXECUTABLE (vendor/yt-dlp above),
         # which is the only form the app ever uses — every call site spawns it as a
