@@ -3216,8 +3216,8 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>trường từ trống</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>không phải tiếng Nhật</translation>
+        <source>not the mining language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>duplicate within the deck</source>

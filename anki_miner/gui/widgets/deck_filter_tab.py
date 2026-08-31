@@ -493,7 +493,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def _drop_reason_labels(self) -> dict[str, str]:
         return {
             "no_expression": self.tr("empty word field"),
-            "not_japanese": self.tr("not Japanese"),
+            "not_japanese": self.tr("not the mining language"),
             "duplicate_in_source": self.tr("duplicate within the deck"),
             "known": self.tr("already known or carded"),
             "unranked": self.tr("no frequency rank"),

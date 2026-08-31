@@ -3201,7 +3201,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>not Japanese</source>
+        <source>not the mining language</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -3218,8 +3218,8 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>campo de palavra vazio</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>não é japonês</translation>
+        <source>not the mining language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>duplicate within the deck</source>

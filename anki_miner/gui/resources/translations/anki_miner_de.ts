@@ -3218,8 +3218,8 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>leeres Wortfeld</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>kein Japanisch</translation>
+        <source>not the mining language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>duplicate within the deck</source>

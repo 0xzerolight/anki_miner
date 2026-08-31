@@ -3216,8 +3216,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>单词字段为空</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>非日语</translation>
+        <source>not the mining language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>duplicate within the deck</source>

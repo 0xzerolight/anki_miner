@@ -53,10 +53,6 @@ _YTDLP_FETCH_TIMEOUT_S = 3 * 60 * 60
 # knob (ARC-004: inlined, never surfaced in any panel).
 YOUTUBE_MAX_HEIGHT = 720
 
-# Adjective naming the mining language in the "wrote no <X> subtitle" failure.
-# ja renders the pre-existing wording byte-for-byte.
-_SUB_LABELS = {"ja": "Japanese", "ko": "Korean", "zh": "Chinese"}
-
 
 class YouTubeFetcherService:
     """Probe and download YouTube video+subtitles via yt-dlp.
@@ -785,7 +781,7 @@ class YouTubeFetcherService:
         raise YouTubeFetchError(f"yt-dlp {label} probe failed (exit {returncode}): {chr(10).join(lines)}")
 
     def _resolve_outputs(self, workspace: Path, video_id: str, sub_mode: SubMode) -> FetchedMedia:
-        from anki_miner.languages.registry import config_language
+        from anki_miner.languages.registry import config_language, get_profile
 
         captions = self._captions()
         suffixes = tuple(f".{code}." for code in dict.fromkeys((captions.primary, *captions.codes)))
@@ -829,7 +825,7 @@ class YouTubeFetcherService:
             # "There are no subtitles for the requested languages" as an info line
             # while still exiting 0, so we only learn this after paying for the whole
             # download. Deterministic, so the queue worker must not retry it.
-            label = _SUB_LABELS.get(config_language(self._config), "source")
+            label = get_profile(config_language(self._config)).english_name or "source"
             raise NoSourceSubtitlesError(
                 f"yt-dlp downloaded the video but wrote no {label} subtitle "
                 f"(mode={sub_mode}). The track listed at probe time was not available "

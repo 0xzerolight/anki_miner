@@ -27,7 +27,7 @@ def ko_config(monkeypatch, test_config):
     """
     from tests.unit.languages.stub_registry import register_stub_profile
 
-    register_stub_profile(monkeypatch, "ko", captions=KO)
+    register_stub_profile(monkeypatch, "ko", captions=KO, english_name="Korean")
     return dataclasses.replace(test_config, language="ko")
 
 

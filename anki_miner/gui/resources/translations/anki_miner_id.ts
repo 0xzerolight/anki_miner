@@ -3216,8 +3216,8 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>bidang kata kosong</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>bukan bahasa Jepang</translation>
+        <source>not the mining language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>duplicate within the deck</source>

@@ -3220,8 +3220,8 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>пустое поле слова</translation>
     </message>
     <message>
-        <source>not Japanese</source>
-        <translation>не японский</translation>
+        <source>not the mining language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>duplicate within the deck</source>
