@@ -65,10 +65,12 @@ def pack_on_disk(code: str, pack: LanguagePack) -> bool:
 
 @dataclass(frozen=True)
 class LanguagePackRow:
-    """The widgets of one language's pack row, and what the row is about."""
+    """The widgets of one language's pack row, and the size it advertises.
 
-    code: str
-    display_name: str
+    Keyed by code in ``language_pack_rows``, so the row carries no code of its
+    own.
+    """
+
     approx_download_mb: int
     button: ModernButton
     status_label: QLabel
@@ -208,8 +210,6 @@ class MiningLanguageSettingsPanel(FormPanel):
         # NOT language-gated: a row is about a language the user is not on yet,
         # so a capability gate would hide the one control that gets them there.
         return LanguagePackRow(
-            code=code,
-            display_name=display_name,
             approx_download_mb=pack.approx_download_mb,
             button=button,
             status_label=status_label,
