@@ -290,6 +290,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Bidang Kata Penggolong</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan kata penggolong yang diuraikan dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Bidang Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Menyimpan bacaan pinyin dari kata, diwarnai berdasarkan nada bila opsi itu aktif. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Bidang Aksara Tradisional</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Menyimpan kata dalam varian aksara lainnya, bila berbeda. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Bidang Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Menyimpan karakter hanja yang terkandung dalam kata. Kosong = lewati.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Tidak ada di Anki — mining akan gagal sampai Anda memilih yang benar atau membuatnya di Anki.</translation>
     </message>
@@ -456,38 +488,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Menyimpan kalimat sebagai kana polos.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Bidang Kata Penggolong</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Menyimpan kata penggolong yang diuraikan dari entri kamus. Kosong = lewati.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Bidang Pinyin</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Menyimpan bacaan pinyin dari kata, diwarnai berdasarkan nada bila opsi itu aktif. Kosong = lewati.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Bidang Aksara Tradisional</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Menyimpan kata dalam varian aksara lainnya, bila berbeda. Kosong = lewati.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Bidang Hanja</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Menyimpan karakter hanja yang terkandung dalam kata. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>

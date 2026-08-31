@@ -290,6 +290,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>量詞フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>辞書項目から解析した量詞を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>ピンインフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>単語のピンイン読みを格納します。声調による色分けが有効な場合は色付きになります。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>繁体字フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>字体バリエーションが異なる場合に、もう一方の字体で単語を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>韓国漢字フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>単語に含まれる韓国漢字を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Anki にありません — 実在するものを選択するか Anki で作成するまで、マイニングは失敗します。</translation>
     </message>
@@ -456,38 +488,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>例文をかなのみで格納します。</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>量詞フィールド</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>辞書項目から解析した量詞を格納します。空欄 = スキップ。</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>ピンインフィールド</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>単語のピンイン読みを格納します。声調による色分けが有効な場合は色付きになります。空欄 = スキップ。</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>繁体字フィールド</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>字体バリエーションが異なる場合に、もう一方の字体で単語を格納します。空欄 = スキップ。</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>韓国漢字フィールド</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>単語に含まれる韓国漢字を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>

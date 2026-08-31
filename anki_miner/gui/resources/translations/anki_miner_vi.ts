@@ -290,6 +290,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Trường Lượng từ</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Lưu lượng từ được phân tích từ mục từ điển. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Trường Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Lưu cách đọc pinyin của từ, được tô màu theo thanh điệu khi tùy chọn đó bật. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Trường Phồn thể</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Lưu từ ở biến thể chữ viết còn lại, khi có khác biệt. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Trường Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Lưu các ký tự hanja có trong từ. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Không có trong Anki — việc khai thác sẽ thất bại cho đến khi chọn một mục thực hoặc tạo nó trong Anki.</translation>
     </message>
@@ -456,38 +488,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Lưu câu dưới dạng kana thuần túy.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Trường Lượng từ</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Lưu lượng từ được phân tích từ mục từ điển. Để trống = bỏ qua.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Trường Pinyin</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Lưu cách đọc pinyin của từ, được tô màu theo thanh điệu khi tùy chọn đó bật. Để trống = bỏ qua.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Trường Phồn thể</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Lưu từ ở biến thể chữ viết còn lại, khi có khác biệt. Để trống = bỏ qua.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Trường Hanja</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Lưu các ký tự hanja có trong từ. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>

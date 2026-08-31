@@ -290,6 +290,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation type="unfinished" />
     </message>
@@ -455,38 +487,6 @@
     </message>
     <message>
         <source>Stores the sentence as plain kana.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>

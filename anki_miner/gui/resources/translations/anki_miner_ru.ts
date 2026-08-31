@@ -292,6 +292,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Поле счётного слова</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит счётное слово, разобранное из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Поле пиньиня</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Хранит чтение слова в пиньине, раскрашенное по тонам, если эта опция включена. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Поле традиционного написания</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Хранит слово в другом варианте письменности, если он отличается. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Поле ханчи</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Хранит знаки ханчи, содержащиеся в слове. Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Нет в Anki — майнинг не будет работать, пока вы не выберете существующий тип или не создадите его в Anki.</translation>
     </message>
@@ -458,38 +490,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Хранит предложение в виде чистой каны.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Поле счётного слова</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Хранит счётное слово, разобранное из словарной статьи. Пусто = пропустить.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Поле пиньиня</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Хранит чтение слова в пиньине, раскрашенное по тонам, если эта опция включена. Пусто = пропустить.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Поле традиционного написания</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Хранит слово в другом варианте письменности, если он отличается. Пусто = пропустить.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Поле ханчи</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Хранит знаки ханчи, содержащиеся в слове. Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>

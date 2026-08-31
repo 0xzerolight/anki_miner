@@ -291,6 +291,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Campo de Classificador</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Armazena o classificador extraído do verbete do dicionário. Em branco = ignorar.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Campo de Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Armazena a leitura em pinyin da palavra, colorida por tom quando essa opção está ativada. Em branco = ignorar.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Campo de Caracteres Tradicionais</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Armazena a palavra na outra variante de escrita, quando ela difere. Em branco = ignorar.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Campo de Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Armazena os caracteres hanja contidos na palavra. Em branco = ignorar.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Não está no Anki — a mineração falhará até você escolher um existente ou criá-lo no Anki.</translation>
     </message>
@@ -457,38 +489,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Armazena a frase como kana simples.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Campo de Classificador</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Armazena o classificador extraído do verbete do dicionário. Em branco = ignorar.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Campo de Pinyin</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Armazena a leitura em pinyin da palavra, colorida por tom quando essa opção está ativada. Em branco = ignorar.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Campo de Caracteres Tradicionais</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Armazena a palavra na outra variante de escrita, quando ela difere. Em branco = ignorar.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Campo de Hanja</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Armazena os caracteres hanja contidos na palavra. Em branco = ignorar.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>

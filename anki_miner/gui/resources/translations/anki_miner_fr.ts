@@ -291,6 +291,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Champ Classificateur</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Stocke le classificateur extrait de l'entrée du dictionnaire. Vide = ignorer.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Champ Pinyin</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Stocke la lecture en pinyin du mot, colorée selon le ton si cette option est activée. Vide = ignorer.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Champ Caractères traditionnels</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Stocke le mot dans l'autre variante d'écriture, lorsqu'elle diffère. Vide = ignorer.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Champ Hanja</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Stocke les caractères hanja contenus dans le mot. Vide = ignorer.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Absent d’Anki — l’extraction échouera jusqu’à ce que vous en choisissiez un véritable ou le créiez dans Anki.</translation>
     </message>
@@ -457,38 +489,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Stocke la phrase en kana simple.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Champ Classificateur</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Stocke le classificateur extrait de l'entrée du dictionnaire. Vide = ignorer.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Champ Pinyin</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Stocke la lecture en pinyin du mot, colorée selon le ton si cette option est activée. Vide = ignorer.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Champ Caractères traditionnels</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Stocke le mot dans l'autre variante d'écriture, lorsqu'elle diffère. Vide = ignorer.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Champ Hanja</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Stocke les caractères hanja contenus dans le mot. Vide = ignorer.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>

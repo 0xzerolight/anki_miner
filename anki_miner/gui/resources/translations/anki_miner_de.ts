@@ -291,6 +291,38 @@
 </context><context>
     <name>AnkiSettingsPanel</name>
     <message>
+        <source>Measure Word Field</source>
+        <translation>Zähleinheitswort-Feld</translation>
+    </message>
+    <message>
+        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Speichert das aus dem Wörterbucheintrag ermittelte Zähleinheitswort. Leer = überspringen.</translation>
+    </message>
+    <message>
+        <source>Pinyin Field</source>
+        <translation>Pinyin-Feld</translation>
+    </message>
+    <message>
+        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <translation>Speichert die Pinyin-Lesung des Wortes, nach Ton eingefärbt, wenn das aktiviert ist. Leer = überspringen.</translation>
+    </message>
+    <message>
+        <source>Traditional Field</source>
+        <translation>Langzeichen-Feld</translation>
+    </message>
+    <message>
+        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
+        <translation>Speichert das Wort in der anderen Schriftvariante, sofern sie abweicht. Leer = überspringen.</translation>
+    </message>
+    <message>
+        <source>Hanja Field</source>
+        <translation>Hanja-Feld</translation>
+    </message>
+    <message>
+        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
+        <translation>Speichert die im Wort enthaltenen Hanja-Zeichen. Leer = überspringen.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Nicht in Anki — das Sammeln schlägt fehl, bis Sie einen vorhandenen auswählen oder ihn in Anki erstellen.</translation>
     </message>
@@ -457,38 +489,6 @@
     <message>
         <source>Stores the sentence as plain kana.</source>
         <translation>Speichert den Satz als reines Kana.</translation>
-    </message>
-    <message>
-        <source>Measure Word Field</source>
-        <translation>Zähleinheitswort-Feld</translation>
-    </message>
-    <message>
-        <source>Stores the classifier parsed from the dictionary entry. Blank = skip.</source>
-        <translation>Speichert das aus dem Wörterbucheintrag ermittelte Zähleinheitswort. Leer = überspringen.</translation>
-    </message>
-    <message>
-        <source>Pinyin Field</source>
-        <translation>Pinyin-Feld</translation>
-    </message>
-    <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Speichert die Pinyin-Lesung des Wortes, nach Ton eingefärbt, wenn das aktiviert ist. Leer = überspringen.</translation>
-    </message>
-    <message>
-        <source>Traditional Field</source>
-        <translation>Langzeichen-Feld</translation>
-    </message>
-    <message>
-        <source>Stores the word in the other script variant, when it differs. Blank = skip.</source>
-        <translation>Speichert das Wort in der anderen Schriftvariante, sofern sie abweicht. Leer = überspringen.</translation>
-    </message>
-    <message>
-        <source>Hanja Field</source>
-        <translation>Hanja-Feld</translation>
-    </message>
-    <message>
-        <source>Stores the hanja characters contained in the word. Blank = skip.</source>
-        <translation>Speichert die im Wort enthaltenen Hanja-Zeichen. Leer = überspringen.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
