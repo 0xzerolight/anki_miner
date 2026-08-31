@@ -106,6 +106,17 @@ def test_the_first_party_tokenizer_and_pack_modules_stay_pinned() -> None:
         assert entry in generated, f"anki_miner.spec does not pin {entry}"
 
 
+def test_every_language_package_itself_stays_pinned() -> None:
+    """registry._discover() reaches every code's package through an f-string
+    importlib.import_module, with no other static import left to find it —
+    ja in particular has neither a tokenizer nor a pack module to ride in on.
+    """
+    generated = generated_language_hiddenimports()
+    for code in AVAILABLE_LANGUAGES:
+        entry = f"anki_miner.languages.{code}"
+        assert entry in generated, f"anki_miner.spec does not pin {entry}"
+
+
 def test_the_generator_pins_only_modules_that_exist() -> None:
     """Japanese has neither module — its engine is bundled, so it has no pack."""
     generated = generated_language_hiddenimports()

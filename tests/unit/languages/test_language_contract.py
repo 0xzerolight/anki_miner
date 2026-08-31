@@ -8,6 +8,7 @@ stay exactly as written and later stages only append.
 from __future__ import annotations
 
 import dataclasses
+import importlib
 import inspect
 import os
 import subprocess
@@ -111,6 +112,14 @@ def test_render_hooks_take_the_config_keyword_only(code):
 
 def test_available_languages_contains_ja():
     assert "ja" in available_languages()
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_language_package_exports_build_profile(code):
+    """The registry's auto-discovery loop calls ``<package>.build_profile()``
+    lazily; every registered code's package must actually export it."""
+    module = importlib.import_module(f"anki_miner.languages.{code}")
+    assert callable(module.build_profile)
 
 
 def test_languages_package_carries_no_import_time_gui_edge():
