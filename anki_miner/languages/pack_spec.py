@@ -21,7 +21,11 @@ class ArtifactSpec:
     sha256: str
     kind: Literal["wheel", "sdist"]
     member_prefix: str  # archive prefix stripped on extraction, e.g. "jieba-0.42.1/jieba/"
-    exclude: tuple[str, ...] = ()  # package-relative prefixes never extracted
+    #: Package-relative paths never extracted. An entry ending in ``/`` is a
+    #: directory prefix and drops the whole subtree; every other entry matches
+    #: that EXACT path, so excluding ``finalseg/prob_start.p`` leaves the
+    #: ``.py`` beside it alone.
+    exclude: tuple[str, ...] = ()
     #: Archive member-name PREFIXES extracted alongside the package and placed
     #: at the PACK ROOT, keeping their archive-relative path. For the top-level
     #: sibling modules a wheel puts beside its package dir — kiwipiepy's

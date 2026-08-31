@@ -87,10 +87,14 @@ _WHEEL_BYTES = _make_wheel(
         "xxpkg/data.txt": b"payload",
         "xxpkg/sub/deep.txt": b"deep",
         "xxpkg/tests/heavy.bin": b"never extracted",
+        # The near-miss pair jieba's manifest is made of: an excluded pickle and
+        # the module a suffix away from it that the package actually imports.
+        "xxpkg/table.p": b"never extracted",
+        "xxpkg/table.py": b"# the real table",
         "xxpkg-1.0.dist-info/METADATA": b"never extracted",
     }
 )
-_WHEEL_SPEC = _spec(_WHEEL_BYTES, kind="wheel", member_prefix="xxpkg/", exclude=("tests/",))
+_WHEEL_SPEC = _spec(_WHEEL_BYTES, kind="wheel", member_prefix="xxpkg/", exclude=("tests/", "table.p"))
 
 _SDIST_BYTES = _make_sdist(
     {
@@ -523,6 +527,21 @@ class TestInstall:
         assert not (root / "xxpkg-1.0.dist-info").exists()
         assert not (root / "PKG-INFO").exists()
         assert not (root / "xxmodel-1.0").exists()
+
+    def test_a_file_exclude_takes_only_the_exact_path(self, home, synthetic_pack, downloader, monkeypatch) -> None:
+        """``table.p`` goes, ``table.py`` stays — prefix matching ate both.
+
+        jieba's manifest excludes the Jython ``.p`` pickles by exact filename;
+        as prefixes those also matched the ``.py`` tables CPython imports, so an
+        installed pack could not ``import jieba`` at all.
+        """
+        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        root = installer.language_pack_root("xx")
+
+        installer.install_language_pack("xx", root)
+
+        assert not (root / "xxpkg" / "table.p").exists()
+        assert (root / "xxpkg" / "table.py").read_bytes() == b"# the real table"
 
     def test_a_satisfied_component_is_not_downloaded_again(self, home, synthetic_pack, downloader, monkeypatch) -> None:
         monkeypatch.setattr(installer, "find_spec", lambda _name: None)

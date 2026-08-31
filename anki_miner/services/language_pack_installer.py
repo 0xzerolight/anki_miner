@@ -486,12 +486,20 @@ def _wanted(name: str, spec: ArtifactSpec) -> str | None:
     """Return the package-relative path for archive member *name*, or None.
 
     None for anything outside ``member_prefix`` (a wheel's ``.dist-info``, an
-    sdist's ``PKG-INFO``) and for anything under an ``exclude`` prefix.
+    sdist's ``PKG-INFO``) and for anything an ``exclude`` entry matches. An
+    entry ending in ``/`` is a directory prefix and takes the whole subtree;
+    every other entry matches that EXACT relative path and nothing else.
+
+    Plain prefix matching also swallowed each excluded file's neighbours a
+    suffix away: jieba's ``finalseg/prob_start.p`` exclude took
+    ``finalseg/prob_start.py`` with it — the table CPython imports — so the
+    installed pack died on ``import jieba``.
     """
     if not name.startswith(spec.member_prefix):
         return None
     relative = name[len(spec.member_prefix) :]
-    if not relative or any(relative.startswith(excluded) for excluded in spec.exclude):
+    excluded = any(relative.startswith(entry) if entry.endswith("/") else relative == entry for entry in spec.exclude)
+    if not relative or excluded:
         return None
     return relative
 
